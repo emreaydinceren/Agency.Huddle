@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Search;
 
@@ -21,13 +22,16 @@ namespace Agency.Huddle.App.Library;
 /// <param name="beforeRewriteWriteForTests">The D8 rewrite-loop test seam (8.5.i-b): stored here, invoked
 /// by the rewrite loop after a linking note's rewritten text is computed and before it is written.
 /// <see langword="null"/> for the ordinary path.</param>
+/// <param name="history">Records the Human's saves, creates, renames and moves in a document's History
+/// (DocHistory spec §6.4, §6.5). <see langword="null"/> when built by hand without one: nothing is recorded.</param>
 internal sealed class LibraryFileService(
     LibraryPathResolver resolver,
     IRecycleBin recycleBin,
     WikiLinkIndex index,
     IOptions<TeamOptions> options,
     ILogger<LibraryFileService> logger,
-    Func<LibraryPath, Task>? beforeRewriteWriteForTests = null) : IDisposable
+    Func<LibraryPath, Task>? beforeRewriteWriteForTests = null,
+    DocHistoryRecorder? history = null) : IDisposable
 {
     /// <summary>The most of a file read up front to detect its kind (Spec §6.4).</summary>
     private const int DetectionHeadBytes = 8192;
@@ -47,9 +51,9 @@ internal sealed class LibraryFileService(
     /// failed: the target was held open without <see cref="FileShare.Delete"/>, or is read-only.</summary>
     private static readonly CompositeFormat SaveFailedReasonFormat = CompositeFormat.Parse("Couldn't save {0}: it's in use or read-only.");
 
-    /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): a Teammate definition's frontmatter Name
-    /// changed, and the Teammates page is the only rename path.</summary>
-    private const string RenameOnTeammatesPageReason = "Rename teammates on the Teammates page.";
+    /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): an Agent definition's frontmatter Name
+    /// changed, and the Agents page is the only rename path.</summary>
+    private const string RenameOnAgentsPageReason = "Rename agents on the Agents page.";
 
     /// <summary>The buffer size, in bytes, an upload is copied with.</summary>
     private const int UploadBufferSize = 80 * 1024;
@@ -70,16 +74,16 @@ internal sealed class LibraryFileService(
     /// definition rather than a copy.</summary>
     internal static readonly CompositeFormat CouldNotCreateReasonFormat = CompositeFormat.Parse("Couldn't create {0}.");
 
-    /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Teammates root.</summary>
-    private const string CreateAtTeammatesRootReason = "Add teammates on the Teammates page.";
-    private const string PlaceAtTeammatesRootReason = "Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.";
+    /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Agents root.</summary>
+    private const string CreateAtAgentsRootReason = "Add agents on the Agents page.";
+    private const string PlaceAtAgentsRootReason = "Files can't be renamed or moved directly in the Agents folder. Agents are managed on the Agents page.";
 
-    /// <summary>The app's own "layout already migrated" marker in the Teammates root; internal state, so never listed.</summary>
-    private const string TeammateLayoutMarker = ".layout-migrated";
+    /// <summary>The app's own "layout already migrated" marker in the Agents root; internal state, so never listed.</summary>
+    private const string AgentLayoutMarker = ".layout-migrated";
 
     /// <summary>Settled text (corrections-B4 item 21) refusing a <c>.md</c> file created directly in a
-    /// Teammate folder.</summary>
-    private const string CreateMdInTeammateFolderReason = "A teammate folder holds only its definition; use work/.";
+    /// Agent folder.</summary>
+    private const string CreateMdInAgentFolderReason = "An agent folder holds only its definition; use work/.";
 
     /// <summary>The default extension for a new note whose name has no known Spec §6.11 extension (corrections-B4 item 23).</summary>
     private const string DefaultNoteExtension = ".md";
@@ -114,8 +118,8 @@ internal sealed class LibraryFileService(
     /// <summary>Settled text (corrections-B5 D8 items 10-11) for a linking note with <see cref="TextFileFormat.MixedLineEndings"/>: ADR-0028 byte-exactness wins, so it is skipped rather than normalised.</summary>
     private static readonly CompositeFormat NoteMixedLineEndingsReasonFormat = CompositeFormat.Parse("{0} has mixed line endings; update its links by hand.");
 
-    /// <summary>Settled text (corrections-B5 D8 items 10, 12) for a linking note that is a Teammate definition: rewriting it would restart the teammate and clear its memory.</summary>
-    private static readonly CompositeFormat NoteIsTeammateDefinitionReasonFormat = CompositeFormat.Parse("{0} is a teammate definition; update its links by hand.");
+    /// <summary>Settled text (corrections-B5 D8 items 10, 12) for a linking note that is an Agent definition: rewriting it would restart the agent and clear its memory.</summary>
+    private static readonly CompositeFormat NoteIsAgentDefinitionReasonFormat = CompositeFormat.Parse("{0} is an agent definition; update its links by hand.");
 
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
@@ -127,6 +131,7 @@ internal sealed class LibraryFileService(
     /// <see cref="ApplyNoteRewriteAsync"/> after a linking note's rewritten text is computed and before it is
     /// written, so a test can mutate the note on disk to prove the stamp check without a race.</summary>
     private readonly Func<LibraryPath, Task>? beforeRewriteWriteForTests = beforeRewriteWriteForTests;
+    private readonly DocHistoryRecorder? history = history;
 
     /// <summary>Serialises rename and move (with their D8 rewrite loop) so two never interleave
     /// (corrections-B5 D8 item 10). An instance field: <see cref="LibraryFileService"/> owns it and disposes
@@ -186,20 +191,7 @@ internal sealed class LibraryFileService(
         {
             ct.ThrowIfCancellationRequested();
             bool isFolder = child is DirectoryInfo;
-            if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
-            {
-                continue;
-            }
-
-            if (!isFolder && child.Name.StartsWith('.') && child.Name.EndsWith(".upload", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (!isFolder
-                && folder.Root.Kind == LibraryRootKind.Teammates
-                && folder.RelativePath.Length == 0
-                && string.Equals(child.Name, TeammateLayoutMarker, StringComparison.Ordinal))
+            if (IsHiddenListing(folder, child, ignoredFolders, hideUnderscoreFolders))
             {
                 continue;
             }
@@ -220,6 +212,31 @@ internal sealed class LibraryFileService(
 
         entries.Sort(CompareEntries);
         return Task.FromResult<IReadOnlyList<LibraryEntry>>(entries);
+    }
+
+    /// <summary>Whether a folder entry is left out of a listing by name alone: a hidden folder, an in-flight upload temp file, or the Agents layout marker.</summary>
+    /// <param name="folder">The folder being listed.</param>
+    /// <param name="child">The entry under consideration.</param>
+    /// <param name="ignoredFolders">The folder names the listing hides.</param>
+    /// <param name="hideUnderscoreFolders">True when <c>_</c>-prefixed folders are hidden too.</param>
+    /// <returns><see langword="true"/> when the entry must not be listed.</returns>
+    private static bool IsHiddenListing(LibraryPath folder, FileSystemInfo child, IReadOnlyList<string> ignoredFolders, bool hideUnderscoreFolders)
+    {
+        bool isFolder = child is DirectoryInfo;
+        if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
+        {
+            return true;
+        }
+
+        if (!isFolder && child.Name.StartsWith('.') && child.Name.EndsWith(".upload", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return !isFolder
+            && folder.Root.Kind == LibraryRootKind.Agents
+            && folder.RelativePath.Length == 0
+            && string.Equals(child.Name, AgentLayoutMarker, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -249,7 +266,7 @@ internal sealed class LibraryFileService(
             max,
             this.options.Value.Library.MaxIndexedFiles,
             (entry, _) => ValueTask.FromResult<LibraryTextHit?>(IsNameMatch(entry.Path, needle) ? new LibraryTextHit(entry, MatchTier.NameContains, null) : null),
-            ct);
+            ct).ConfigureAwait(false);
 
         return new LibrarySearchResult([.. found.Hits.Select(static hit => hit.Entry)], found.Truncated);
     }
@@ -300,11 +317,11 @@ internal sealed class LibraryFileService(
             search.MaxVisitedEntries,
             async (entry, token) =>
             {
-                (LibraryTextHit? hit, bool overSize) = await TestEntryAsync(entry, needle, search, isExcluded, readContent, token);
+                (LibraryTextHit? hit, bool overSize) = await TestEntryAsync(entry, needle, search, isExcluded, readContent, token).ConfigureAwait(false);
                 skippedOverSize |= overSize;
                 return hit;
             },
-            ct);
+            ct).ConfigureAwait(false);
 
         return skippedOverSize && !walked.Truncated ? walked with { Truncated = true } : walked;
     }
@@ -356,7 +373,7 @@ internal sealed class LibraryFileService(
         byte[] bytes;
         try
         {
-            bytes = await File.ReadAllBytesAsync(entry.Path.FullPath, ct);
+            bytes = await File.ReadAllBytesAsync(entry.Path.FullPath, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -397,7 +414,7 @@ internal sealed class LibraryFileService(
             IReadOnlyList<LibraryEntry> children;
             try
             {
-                children = await this.ListAsync(folder, ct);
+                children = await this.ListAsync(folder, ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -414,7 +431,7 @@ internal sealed class LibraryFileService(
 
                 ct.ThrowIfCancellationRequested();
                 visited++;
-                if (await test(entry, ct) is { } hit)
+                if (await test(entry, ct).ConfigureAwait(false) is { } hit)
                 {
                     hits.Add(hit);
                     if (hits.Count > max)
@@ -512,13 +529,13 @@ internal sealed class LibraryFileService(
             throw new FileNotFoundException(ex.Message, fresh.FullPath, ex);
         }
 
-        await using (stream)
+        await using (stream.ConfigureAwait(false))
         {
             long length = stream.Length;
             DateTimeOffset lastWriteUtc = new(File.GetLastWriteTimeUtc(stream.SafeFileHandle), TimeSpan.Zero);
 
             string fileName = Path.GetFileName(fresh.FullPath);
-            (byte[] head, LibraryFileKind kind) = await DetectKindAsync(stream, fileName, length, ct);
+            (byte[] head, LibraryFileKind kind) = await DetectKindAsync(stream, fileName, length, ct).ConfigureAwait(false);
 
             if (kind == LibraryFileKind.Image
                 || (kind == LibraryFileKind.Other && !LibraryFileKinds.IsTextExtension(fileName)))
@@ -540,7 +557,7 @@ internal sealed class LibraryFileService(
             {
                 content = new byte[length];
                 Array.Copy(head, content, head.Length);
-                await stream.ReadExactlyAsync(content.AsMemory(head.Length), ct);
+                await stream.ReadExactlyAsync(content.AsMemory(head.Length), ct).ConfigureAwait(false);
             }
 
             if (!TextFileCodec.TryDecode(content, LineEnding.CrLf, out string? text, out TextFileFormat? format))
@@ -548,7 +565,7 @@ internal sealed class LibraryFileService(
                 return new LibraryDocumentContent(fresh, kind, null, null, false, UnsupportedTextFormatReason, length, lastWriteUtc);
             }
 
-            bool editable = kind == LibraryFileKind.Markdown;
+            bool editable = kind == LibraryFileKind.Markdown && !fresh.ReadOnly;
             return new LibraryDocumentContent(fresh, kind, text, format, editable, null, length, lastWriteUtc);
         }
     }
@@ -581,7 +598,8 @@ internal sealed class LibraryFileService(
 
         try
         {
-            await using FileStream stream = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            FileStream stream = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            await using var streamScope = stream.ConfigureAwait(false);
             if (stream.Length > maxBytes)
             {
                 return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
@@ -590,14 +608,14 @@ internal sealed class LibraryFileService(
             using MemoryStream buffer = new((int)stream.Length);
             byte[] chunk = new byte[81920];
             int read;
-            while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+            while ((read = await stream.ReadAsync(chunk, ct).ConfigureAwait(false)) > 0)
             {
                 if (buffer.Length + read > maxBytes)
                 {
                     return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
                 }
 
-                buffer.Write(chunk, 0, read);
+                await buffer.WriteAsync(chunk.AsMemory(0, read), ct).ConfigureAwait(false);
             }
 
             byte[] bytes = buffer.ToArray();
@@ -624,7 +642,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Writes <paramref name="editorText"/> to <paramref name="file"/> (Spec §6.4 <c>WriteTextAsync</c>;
     /// ADR-0028): re-resolves the path first (corrections-B4 item 12, never trusting the caller's
-    /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses a Teammate definition's
+    /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses an Agent definition's
     /// frontmatter Name change (Spec §6.12, item 18), then writes atomically through
     /// <see cref="AtomicFile"/> (item 15). A missing parent folder is created lazily only when it resolves as
     /// a Team or Project folder (Spec §6.2; item 17).
@@ -637,6 +655,25 @@ internal sealed class LibraryFileService(
     /// <exception cref="FileNotFoundException">A missing parent folder is not a Team or Project folder.</exception>
     internal async Task<LibraryResult<LibraryEntry>> WriteTextAsync(LibraryPath file, string editorText, TextFileFormat format, CancellationToken ct)
     {
+        LibraryResult<LibraryEntry> result = await this.WriteTextCoreAsync(file, editorText, format, ct).ConfigureAwait(false);
+        if (result.Value is { } saved)
+        {
+            // Only a save the Human made is a Human entry (DocHistory spec §6.4). A link rewrite after a rename or
+            // move goes through WriteTextCoreAsync, so it records nothing.
+            this.history?.HumanSaved(saved.Path);
+        }
+
+        return result;
+    }
+
+    /// <summary>Everything <see cref="WriteTextAsync"/> does except report the save to the History.</summary>
+    /// <param name="file">The file to write; re-resolved against the current tree before use.</param>
+    /// <param name="editorText">The editor's text, with <c>\n</c>-only newlines.</param>
+    /// <param name="format">The recorded encoding, BOM and line ending from <see cref="ReadAsync"/>.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The fresh <see cref="LibraryEntry"/> on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryEntry>> WriteTextCoreAsync(LibraryPath file, string editorText, TextFileFormat format, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(editorText);
         ArgumentNullException.ThrowIfNull(format);
@@ -647,6 +684,11 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryEntry>(null, resolveError);
         }
 
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryEntry>(null, LibraryPath.ReadOnlyReason);
+        }
+
         string fileName = Path.GetFileName(fresh.FullPath);
 
         if (!File.Exists(fresh.FullPath))
@@ -655,27 +697,10 @@ internal sealed class LibraryFileService(
         }
         else
         {
-            LibraryFileKind kind;
-            long currentLength;
-            using (FileStream probe = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            string? refusal = await this.RecheckEditableAsync(fresh, fileName, editorText, ct).ConfigureAwait(false);
+            if (refusal is not null)
             {
-                currentLength = probe.Length;
-                (_, kind) = await DetectKindAsync(probe, fileName, currentLength, ct);
-            }
-
-            bool editable = kind == LibraryFileKind.Markdown;
-            if (!editable || currentLength > this.options.Value.Library.MaxEditableBytes)
-            {
-                return new LibraryResult<LibraryEntry>(null, ViewOnlyWriteRefusalReason);
-            }
-
-            if (fresh.Role == LibraryNodeRole.TeammateDefinition)
-            {
-                string oldText = await File.ReadAllTextAsync(fresh.FullPath, ct);
-                if (TeammateNameChanged(oldText, editorText))
-                {
-                    return new LibraryResult<LibraryEntry>(null, RenameOnTeammatesPageReason);
-                }
+                return new LibraryResult<LibraryEntry>(null, refusal);
             }
         }
 
@@ -689,7 +714,7 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryEntry>(null, ex.Message);
         }
 
-        bool saved = await AtomicFile.TryWriteAsync(fresh.FullPath, bytes, ct);
+        bool saved = await AtomicFile.TryWriteAsync(fresh.FullPath, bytes, ct).ConfigureAwait(false);
         if (!saved)
         {
             return new LibraryResult<LibraryEntry>(null, string.Format(CultureInfo.InvariantCulture, SaveFailedReasonFormat, fileName));
@@ -702,11 +727,46 @@ internal sealed class LibraryFileService(
         return new LibraryResult<LibraryEntry>(entry, null);
     }
 
+    /// <summary>Re-checks, at write time, that an existing file is still an editable Markdown file and that an Agent definition's Name is unchanged.</summary>
+    /// <param name="fresh">The re-resolved file.</param>
+    /// <param name="fileName">The file's name.</param>
+    /// <param name="editorText">The text about to be written.</param>
+    /// <param name="ct">Cancels the check.</param>
+    /// <returns>The refusal reason, or <see langword="null"/> when the write may go ahead.</returns>
+    private async Task<string?> RecheckEditableAsync(LibraryPath fresh, string fileName, string editorText, CancellationToken ct)
+    {
+        LibraryFileKind kind;
+        long currentLength;
+        FileStream probe = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        await using (probe.ConfigureAwait(false))
+        {
+            currentLength = probe.Length;
+            (_, kind) = await DetectKindAsync(probe, fileName, currentLength, ct).ConfigureAwait(false);
+        }
+
+        bool editable = kind == LibraryFileKind.Markdown;
+        if (!editable || currentLength > this.options.Value.Library.MaxEditableBytes)
+        {
+            return ViewOnlyWriteRefusalReason;
+        }
+
+        if (fresh.Role == LibraryNodeRole.AgentDefinition)
+        {
+            string oldText = await File.ReadAllTextAsync(fresh.FullPath, ct).ConfigureAwait(false);
+            if (AgentNameChanged(oldText, editorText))
+            {
+                return RenameOnAgentsPageReason;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Creates a new note under <paramref name="folder"/> (Spec §6.4 create row): a name with no known
     /// Spec §6.11 extension gets <c>.md</c> appended (corrections-B4 item 23), otherwise it is kept as-is.
-    /// Validated with <see cref="LibraryNames.Validate"/>, refused directly at the Teammates root or for a
-    /// <c>.md</c> file directly in a Teammate folder (item 21). Uses <see cref="FileMode.CreateNew"/> so a
+    /// Validated with <see cref="LibraryNames.Validate"/>, refused directly at the Agents root or for a
+    /// <c>.md</c> file directly in an Agent folder (item 21). Uses <see cref="FileMode.CreateNew"/> so a
     /// race becomes an <see cref="IOException"/>, resolved to the settled exists text (item 19). The returned
     /// path is re-resolved after creation (item 22).
     /// </summary>
@@ -731,12 +791,17 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryPath>(null, resolveError);
         }
 
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason);
+        }
+
         string finalName = LibraryFileKinds.HasKnownExtension(name) ? name : name + DefaultNoteExtension;
 
-        string? teammatesError = TeammatesDestinationRefusal(fresh, finalName);
-        if (teammatesError is not null)
+        string? agentsError = AgentsDestinationRefusal(fresh, finalName);
+        if (agentsError is not null)
         {
-            return new LibraryResult<LibraryPath>(null, teammatesError);
+            return new LibraryResult<LibraryPath>(null, agentsError);
         }
 
         if (!this.TryResolveCreateTarget(fresh, finalName, out LibraryPath? target, out string? targetError))
@@ -746,8 +811,9 @@ internal sealed class LibraryFileService(
 
         try
         {
-            using FileStream stream = new(target.FullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-            await stream.FlushAsync(ct);
+            FileStream stream = new(target.FullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            await using var streamScope = stream.ConfigureAwait(false);
+            await stream.FlushAsync(ct).ConfigureAwait(false);
         }
         catch (IOException)
         {
@@ -759,13 +825,19 @@ internal sealed class LibraryFileService(
         }
 
         InvalidateOverlapping(this.resolver, this.index, target.FullPath);
-        return this.ReResolveCreated(fresh, finalName);
+        LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, finalName);
+        if (created.Value is { } createdPath)
+        {
+            this.history?.HumanCreated(createdPath);
+        }
+
+        return created;
     }
 
     /// <summary>
     /// Creates a new folder under <paramref name="folder"/> (Spec §6.4 create row). Existence is checked
     /// BEFORE <see cref="Directory.CreateDirectory(string)"/> (corrections-B4 item 20: it is idempotent and
-    /// can't signal "exists" on its own). Refused directly at the Teammates root (item 21). The returned path
+    /// can't signal "exists" on its own). Refused directly at the Agents root (item 21). The returned path
     /// is re-resolved after creation (item 22).
     /// </summary>
     /// <param name="folder">The already-resolved folder to create the new folder in; re-resolved before use.</param>
@@ -789,10 +861,15 @@ internal sealed class LibraryFileService(
             return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
         }
 
-        string? teammatesError = TeammatesDestinationRefusal(fresh, null);
-        if (teammatesError is not null)
+        if (fresh.ReadOnly)
         {
-            return Task.FromResult(new LibraryResult<LibraryPath>(null, teammatesError));
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason));
+        }
+
+        string? agentsError = AgentsDestinationRefusal(fresh, null);
+        if (agentsError is not null)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, agentsError));
         }
 
         if (!this.TryResolveCreateTarget(fresh, name, out LibraryPath? target, out string? targetError))
@@ -844,7 +921,7 @@ internal sealed class LibraryFileService(
         ArgumentNullException.ThrowIfNull(file);
         ct.ThrowIfCancellationRequested();
 
-        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _))
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _) || fresh.ReadOnly)
         {
             return Task.CompletedTask;
         }
@@ -892,35 +969,25 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryUpload>(null, resolveError);
         }
 
+        if (fresh.ReadOnly)
+        {
+            return new LibraryResult<LibraryUpload>(null, LibraryPath.ReadOnlyReason);
+        }
+
         string couldNotSave = string.Format(CultureInfo.InvariantCulture, UploadCouldNotSaveFormat, name);
         string tempPath = Path.Combine(fresh.FullPath, $".{Guid.NewGuid():N}.upload");
         try
         {
             Directory.CreateDirectory(fresh.FullPath);
 
-            long size = 0;
             byte[] head = new byte[UploadHeadBytes];
-            int headLength;
-            await using (FileStream temp = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, UploadBufferSize, useAsync: true))
+            long? copied = await CopyToTempAsync(content, tempPath, maxBytes, ct).ConfigureAwait(false);
+            if (copied is not { } size)
             {
-                byte[] buffer = new byte[UploadBufferSize];
-                int read;
-                while ((read = await content.ReadAsync(buffer, ct)) > 0)
-                {
-                    size += read;
-                    if (size > maxBytes)
-                    {
-                        return new LibraryResult<LibraryUpload>(null, UploadTooLargeMessage(name, maxBytes));
-                    }
-
-                    await temp.WriteAsync(buffer.AsMemory(0, read), ct);
-                }
+                return new LibraryResult<LibraryUpload>(null, UploadTooLargeMessage(name, maxBytes));
             }
 
-            await using (FileStream reader = new(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, UploadBufferSize, useAsync: true))
-            {
-                headLength = await reader.ReadAsync(head, ct);
-            }
+            int headLength = await ReadHeadAsync(tempPath, head, ct).ConfigureAwait(false);
 
             UploadKind kind = UploadKinds.Classify(head.AsSpan(0, headLength));
             if (UploadKinds.IsRefused(kind))
@@ -928,36 +995,7 @@ internal sealed class LibraryFileService(
                 return new LibraryResult<LibraryUpload>(null, UploadKinds.RefusalText(kind) ?? couldNotSave);
             }
 
-            for (int attempt = 1; attempt <= MaxUploadNameAttempts; attempt++)
-            {
-                string candidate = attempt == 1 ? name : UploadNames.FreeName(name, attempt);
-                if (!this.TryResolveCreateTarget(fresh, candidate, out LibraryPath? target, out _))
-                {
-                    return new LibraryResult<LibraryUpload>(null, couldNotSave);
-                }
-
-                if (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    File.Move(tempPath, target.FullPath, overwrite: false);
-                }
-                catch (IOException) when (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
-                {
-                    continue;
-                }
-
-                InvalidateOverlapping(this.resolver, this.index, target.FullPath);
-                LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, candidate);
-                return created.Value is null
-                    ? new LibraryResult<LibraryUpload>(null, created.Error)
-                    : new LibraryResult<LibraryUpload>(new LibraryUpload(created.Value, kind, size), null);
-            }
-
-            return new LibraryResult<LibraryUpload>(null, couldNotSave);
+            return this.MoveTempToFreeName(fresh, name, tempPath, kind, size, couldNotSave);
         }
         catch (IOException)
         {
@@ -973,10 +1011,95 @@ internal sealed class LibraryFileService(
         }
     }
 
+    /// <summary>Copies <paramref name="content"/> to a new temp file while counting its bytes, stopping at the first byte over the cap.</summary>
+    /// <param name="content">The bytes to save.</param>
+    /// <param name="tempPath">The temp file to create; closed before this method returns.</param>
+    /// <param name="maxBytes">The most bytes accepted.</param>
+    /// <param name="ct">Cancels the copy.</param>
+    /// <returns>The number of bytes copied, or <see langword="null"/> when the content is over the cap.</returns>
+    private static async Task<long?> CopyToTempAsync(Stream content, string tempPath, long maxBytes, CancellationToken ct)
+    {
+        long size = 0;
+        FileStream temp = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, UploadBufferSize, useAsync: true);
+        await using (temp.ConfigureAwait(false))
+        {
+            byte[] buffer = new byte[UploadBufferSize];
+            int read;
+            while ((read = await content.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+            {
+                size += read;
+                if (size > maxBytes)
+                {
+                    return null;
+                }
+
+                await temp.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+            }
+        }
+
+        return size;
+    }
+
+    /// <summary>Reopens the temp file for reading and fills <paramref name="head"/> with its first bytes.</summary>
+    /// <param name="tempPath">The temp file, already closed for writing.</param>
+    /// <param name="head">The buffer to fill.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The number of bytes read into <paramref name="head"/>.</returns>
+    private static async Task<int> ReadHeadAsync(string tempPath, byte[] head, CancellationToken ct)
+    {
+        FileStream reader = new(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, UploadBufferSize, useAsync: true);
+        await using (reader.ConfigureAwait(false))
+        {
+            return await reader.ReadAsync(head, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Moves an accepted upload's temp file to the first free name in <paramref name="fresh"/> and re-resolves it.</summary>
+    /// <param name="fresh">The re-resolved destination folder.</param>
+    /// <param name="name">The requested file name; later attempts append a number.</param>
+    /// <param name="tempFile">The temp file holding the upload.</param>
+    /// <param name="kind">The classified kind of the upload.</param>
+    /// <param name="size">The upload's size in bytes.</param>
+    /// <param name="couldNotSave">The refusal text when no name could be used.</param>
+    /// <returns>The saved file with its kind and size, or a refusal reason.</returns>
+    private LibraryResult<LibraryUpload> MoveTempToFreeName(LibraryPath fresh, string name, string tempFile, UploadKind kind, long size, string couldNotSave)
+    {
+        for (int attempt = 1; attempt <= MaxUploadNameAttempts; attempt++)
+        {
+            string candidate = attempt == 1 ? name : UploadNames.FreeName(name, attempt);
+            if (!this.TryResolveCreateTarget(fresh, candidate, out LibraryPath? target, out _))
+            {
+                return new LibraryResult<LibraryUpload>(null, couldNotSave);
+            }
+
+            if (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
+            {
+                continue;
+            }
+
+            try
+            {
+                File.Move(tempFile, target.FullPath, overwrite: false);
+            }
+            catch (IOException) when (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
+            {
+                continue;
+            }
+
+            InvalidateOverlapping(this.resolver, this.index, target.FullPath);
+            LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, candidate);
+            return created.Value is null
+                ? new LibraryResult<LibraryUpload>(null, created.Error)
+                : new LibraryResult<LibraryUpload>(new LibraryUpload(created.Value, kind, size), null);
+        }
+
+        return new LibraryResult<LibraryUpload>(null, couldNotSave);
+    }
+
     /// <summary>
     /// Renames <paramref name="item"/> within its own folder (Spec §6.4 rename/move row, minus the link
     /// rewrite (D8)). Checked in order: re-resolve, <see cref="LibraryNames.Validate"/>,
-    /// <see cref="LibraryProtection.For"/>, the Teammates destination rules (item 21/26, shared with
+    /// <see cref="LibraryProtection.For"/>, the Agents destination rules (item 21/26, shared with
     /// <see cref="CreateFileAsync"/>), then existence. A rename that only changes case
     /// (<see cref="FolderSnapshot.PathComparer"/> treats old and new as equal, item 24) routes through a
     /// temporary sibling so the platform's case-insensitive filesystem doesn't treat it as a no-op; the
@@ -988,95 +1111,44 @@ internal sealed class LibraryFileService(
     /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
     internal async Task<LibraryResult<LibraryMoveResult>> RenameAsync(LibraryPath item, string newName, CancellationToken ct)
     {
+        LibraryResult<LibraryMoveResult> result = await this.RenameCoreAsync(item, newName, ct).ConfigureAwait(false);
+        this.CarryHistory(item, result);
+        return result;
+    }
+
+    /// <summary>The body of <see cref="RenameAsync"/>, before the History follows the item.</summary>
+    /// <param name="item">The already-resolved item to rename; re-resolved before use.</param>
+    /// <param name="newName">The item's new name, in the same folder.</param>
+    /// <param name="ct">Cancels the rename.</param>
+    /// <returns>The move result on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryMoveResult>> RenameCoreAsync(LibraryPath item, string newName, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(newName);
         ct.ThrowIfCancellationRequested();
 
-        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        if (!this.TryPlanRename(item, newName, out RenamePlan? plan, out string? refusal))
         {
-            return new LibraryResult<LibraryMoveResult>(null, resolveError);
+            return new LibraryResult<LibraryMoveResult>(null, refusal);
         }
 
-        string parentRelativePath = ParentRelativePath(fresh.RelativePath);
-        if (!this.resolver.TryResolve(fresh.Root.Id, parentRelativePath, out LibraryPath? parent, out string? parentError))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, parentError);
-        }
-
-        string? nameError = LibraryNames.Validate(newName);
-        if (nameError is not null)
-        {
-            return new LibraryResult<LibraryMoveResult>(null, nameError);
-        }
-
-        LibraryProtection protection = LibraryProtection.For(fresh);
-        if (!protection.CanRename)
-        {
-            return new LibraryResult<LibraryMoveResult>(null, protection.Reason);
-        }
-
-        string? teammatesError = TeammatesDestinationRefusal(parent, newName, PlaceAtTeammatesRootReason);
-        if (teammatesError is not null)
-        {
-            return new LibraryResult<LibraryMoveResult>(null, teammatesError);
-        }
-
-        if (!this.TryResolveCreateTarget(parent, newName, out LibraryPath? target, out string? targetError))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, targetError);
-        }
-
-        bool caseOnly = !string.Equals(fresh.FullPath, target.FullPath, StringComparison.Ordinal)
-            && FolderSnapshot.PathComparer.Equals(fresh.FullPath, target.FullPath);
-
-        if (!caseOnly && (Directory.Exists(target.FullPath) || File.Exists(target.FullPath)))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, newName));
-        }
-
+        LibraryPath fresh = plan.Fresh;
+        LibraryPath parent = plan.Parent;
+        LibraryPath target = plan.Target;
         bool isFolder = fresh.Role != LibraryNodeRole.File;
         string name = Path.GetFileName(fresh.FullPath);
 
-        await this.moveGate.WaitAsync(ct);
+        await this.moveGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
             bool indexAvailable = this.index.IsAvailable(fresh.Root.Id);
             IReadOnlyList<string> preMoveFiles = indexAvailable ? this.index.FilesUnder(fresh.Root.Id, string.Empty) : [];
 
-            try
+            string? moveError = TryMoveItem(fresh.FullPath, target.FullPath, isFolder, plan.CaseOnly, name);
+            if (moveError is not null)
             {
-                if (caseOnly)
-                {
-                    string tempPath = fresh.FullPath + ".renaming-" + Guid.NewGuid().ToString("N");
-                    MoveEntry(fresh.FullPath, tempPath, isFolder);
-                    try
-                    {
-                        MoveEntry(tempPath, target.FullPath, isFolder);
-                    }
-                    catch (IOException)
-                    {
-                        MoveEntry(tempPath, fresh.FullPath, isFolder);
-                        throw;
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        MoveEntry(tempPath, fresh.FullPath, isFolder);
-                        throw;
-                    }
-                }
-                else
-                {
-                    MoveEntry(fresh.FullPath, target.FullPath, isFolder);
-                }
-            }
-            catch (IOException)
-            {
-                return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name));
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name));
+                return new LibraryResult<LibraryMoveResult>(null, moveError);
             }
 
             InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
@@ -1088,7 +1160,7 @@ internal sealed class LibraryFileService(
             }
 
             (IReadOnlyList<string> rewrittenNotes, IReadOnlyList<LibraryNoteFailure> failedNotes) = await this.RewriteLinksAfterMoveAsync(
-                target, fresh.RelativePath, target.RelativePath, isFolder, preMoveFiles);
+                target, fresh.RelativePath, target.RelativePath, isFolder, preMoveFiles).ConfigureAwait(false);
 
             return this.ReResolveMoved(parent, newName, rewrittenNotes, failedNotes);
         }
@@ -1098,11 +1170,248 @@ internal sealed class LibraryFileService(
         }
     }
 
+    /// <summary>The validated inputs of a rename: the re-resolved item, its parent folder, the target path, and whether only the case changes.</summary>
+    /// <param name="Fresh">The re-resolved item.</param>
+    /// <param name="Parent">The item's parent folder.</param>
+    /// <param name="Target">The resolved target path.</param>
+    /// <param name="CaseOnly">True when old and new names differ only in case.</param>
+    private sealed record RenamePlan(LibraryPath Fresh, LibraryPath Parent, LibraryPath Target, bool CaseOnly);
+
+    /// <summary>The validated inputs of a move: the re-resolved item and destination folder, the target path and the item's name.</summary>
+    /// <param name="Fresh">The re-resolved item.</param>
+    /// <param name="FreshTarget">The re-resolved destination folder.</param>
+    /// <param name="Target">The resolved target path.</param>
+    /// <param name="Name">The item's file name.</param>
+    private sealed record MovePlan(LibraryPath Fresh, LibraryPath FreshTarget, LibraryPath Target, string Name);
+
+    /// <summary>Runs the rename checks of <see cref="RenameAsync"/> in their documented order.</summary>
+    /// <param name="item">The item to rename; re-resolved before use.</param>
+    /// <param name="newName">The item's new name.</param>
+    /// <param name="plan">The validated inputs when the method returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal reason when the method returns <see langword="false"/>.</param>
+    /// <returns><see langword="true"/> when the rename may go ahead.</returns>
+    private bool TryPlanRename(
+        LibraryPath item,
+        string newName,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out RenamePlan? plan,
+        out string? refusal)
+    {
+        plan = null;
+        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            refusal = resolveError;
+            return false;
+        }
+
+        if (fresh.ReadOnly)
+        {
+            refusal = LibraryPath.ReadOnlyReason;
+            return false;
+        }
+
+        string parentRelativePath = ParentRelativePath(fresh.RelativePath);
+        if (!this.resolver.TryResolve(fresh.Root.Id, parentRelativePath, out LibraryPath? parent, out string? parentError))
+        {
+            refusal = parentError;
+            return false;
+        }
+
+        string? nameError = LibraryNames.Validate(newName);
+        if (nameError is not null)
+        {
+            refusal = nameError;
+            return false;
+        }
+
+        LibraryProtection protection = LibraryProtection.For(fresh);
+        if (!protection.CanRename)
+        {
+            refusal = protection.Reason;
+            return false;
+        }
+
+        string? agentsError = AgentsDestinationRefusal(parent, newName, PlaceAtAgentsRootReason);
+        if (agentsError is not null)
+        {
+            refusal = agentsError;
+            return false;
+        }
+
+        if (!this.TryResolveCreateTarget(parent, newName, out LibraryPath? target, out string? targetError))
+        {
+            refusal = targetError;
+            return false;
+        }
+
+        bool caseOnly = !string.Equals(fresh.FullPath, target.FullPath, StringComparison.Ordinal)
+            && FolderSnapshot.PathComparer.Equals(fresh.FullPath, target.FullPath);
+
+        if (!caseOnly && (Directory.Exists(target.FullPath) || File.Exists(target.FullPath)))
+        {
+            refusal = string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, newName);
+            return false;
+        }
+
+        plan = new RenamePlan(fresh, parent, target, caseOnly);
+        refusal = null;
+        return true;
+    }
+
+    /// <summary>Runs the move checks of <see cref="MoveAsync"/> in their documented order.</summary>
+    /// <param name="item">The item to move; re-resolved before use.</param>
+    /// <param name="targetFolder">The destination folder; re-resolved before use.</param>
+    /// <param name="plan">The validated inputs when the method returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal reason when the method returns <see langword="false"/>.</param>
+    /// <returns><see langword="true"/> when the move may go ahead.</returns>
+    private bool TryPlanMove(
+        LibraryPath item,
+        LibraryPath targetFolder,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out MovePlan? plan,
+        out string? refusal)
+    {
+        plan = null;
+        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            refusal = resolveError;
+            return false;
+        }
+
+        if (!this.resolver.TryResolve(targetFolder.Root.Id, targetFolder.RelativePath, out LibraryPath? freshTarget, out string? targetResolveError))
+        {
+            refusal = targetResolveError;
+            return false;
+        }
+
+        if (IsMoveRefused(fresh, freshTarget, out refusal))
+        {
+            return false;
+        }
+
+        string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(fresh.FullPath));
+
+        if (!this.TryResolveCreateTarget(freshTarget, name, out LibraryPath? target, out string? targetError))
+        {
+            refusal = targetError;
+            return false;
+        }
+
+        if (Directory.Exists(target.FullPath) || File.Exists(target.FullPath))
+        {
+            refusal = string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, name);
+            return false;
+        }
+
+        plan = new MovePlan(fresh, freshTarget, target, name);
+        refusal = null;
+        return true;
+    }
+
+    /// <summary>Applies the move rules that need only the two re-resolved paths, in their documented order.</summary>
+    /// <param name="fresh">The re-resolved item.</param>
+    /// <param name="freshTarget">The re-resolved destination folder.</param>
+    /// <param name="refusal">The refusal reason when the method returns <see langword="true"/>; otherwise <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the move is refused.</returns>
+    private static bool IsMoveRefused(LibraryPath fresh, LibraryPath freshTarget, out string? refusal)
+    {
+        refusal = null;
+        if (fresh.ReadOnly || freshTarget.ReadOnly)
+        {
+            refusal = LibraryPath.ReadOnlyReason;
+            return true;
+        }
+
+        LibraryProtection protection = LibraryProtection.For(fresh);
+        if (!protection.CanMove)
+        {
+            refusal = protection.Reason;
+            return true;
+        }
+
+        if (!string.Equals(fresh.Root.Id, freshTarget.Root.Id, StringComparison.Ordinal))
+        {
+            refusal = MoveAcrossRootsReason;
+            return true;
+        }
+
+        string itemFullPath = Path.TrimEndingDirectorySeparator(fresh.FullPath);
+        string targetFullPath = Path.TrimEndingDirectorySeparator(freshTarget.FullPath);
+
+        if (fresh.Role == LibraryNodeRole.Folder && IsSameOrWithin(targetFullPath, itemFullPath))
+        {
+            refusal = MoveIntoOwnSubfolderReason;
+            return true;
+        }
+
+        string name = Path.GetFileName(itemFullPath);
+
+        string? agentsError = AgentsDestinationRefusal(freshTarget, name, PlaceAtAgentsRootReason);
+        if (agentsError is not null)
+        {
+            refusal = agentsError;
+            return true;
+        }
+
+        if (fresh.Role == LibraryNodeRole.Folder && fresh.Root.Kind == LibraryRootKind.Teams && ContainsTasksSubtree(itemFullPath))
+        {
+            refusal = MoveTasksSubtreeReason;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Moves an item on disk, routing a case-only rename through a temporary sibling.</summary>
+    /// <param name="sourcePath">The item's current full path.</param>
+    /// <param name="targetPath">The item's new full path.</param>
+    /// <param name="isFolder">True when the item is a folder.</param>
+    /// <param name="caseOnly">True when the names differ only in case, so the move goes through a temporary sibling.</param>
+    /// <param name="name">The item's name, for the refusal text.</param>
+    /// <returns>The refusal reason when the move failed because something is in use, or <see langword="null"/> on success.</returns>
+    private static string? TryMoveItem(string sourcePath, string targetPath, bool isFolder, bool caseOnly, string name)
+    {
+        try
+        {
+            if (caseOnly)
+            {
+                string tempPath = sourcePath + ".renaming-" + Guid.NewGuid().ToString("N");
+                MoveEntry(sourcePath, tempPath, isFolder);
+                try
+                {
+                    MoveEntry(tempPath, targetPath, isFolder);
+                }
+                catch (IOException)
+                {
+                    MoveEntry(tempPath, sourcePath, isFolder);
+                    throw;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    MoveEntry(tempPath, sourcePath, isFolder);
+                    throw;
+                }
+            }
+            else
+            {
+                MoveEntry(sourcePath, targetPath, isFolder);
+            }
+
+            return null;
+        }
+        catch (IOException)
+        {
+            return string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name);
+        }
+    }
+
     /// <summary>
     /// Moves <paramref name="item"/> into <paramref name="targetFolder"/> (Spec §6.4 rename/move row, minus
     /// the link rewrite (D8)). Checked in order: re-resolve both paths, <see cref="LibraryProtection.For"/>,
     /// same root (settled here), into its own subtree (settled here; corrections-B4 item 25, compared on
-    /// resolved full paths with <see cref="FolderSnapshot.PathComparer"/>), the Teammates destination rules
+    /// resolved full paths with <see cref="FolderSnapshot.PathComparer"/>), the Agents destination rules
     /// (item 21/26, shared with <see cref="CreateFileAsync"/>), the <c>_tasks</c> subtree rule under the Teams
     /// root (item 28), then existence.
     /// </summary>
@@ -1112,82 +1421,44 @@ internal sealed class LibraryFileService(
     /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
     internal async Task<LibraryResult<LibraryMoveResult>> MoveAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
     {
+        LibraryResult<LibraryMoveResult> result = await this.MoveCoreAsync(item, targetFolder, ct).ConfigureAwait(false);
+        this.CarryHistory(item, result);
+        return result;
+    }
+
+    /// <summary>The body of <see cref="MoveAsync"/>, before the History follows the item.</summary>
+    /// <param name="item">The already-resolved item to move; re-resolved before use.</param>
+    /// <param name="targetFolder">The folder to move it into.</param>
+    /// <param name="ct">Cancels the move.</param>
+    /// <returns>The move result on success, or a refusal reason.</returns>
+    private async Task<LibraryResult<LibraryMoveResult>> MoveCoreAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(targetFolder);
         ct.ThrowIfCancellationRequested();
 
-        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        if (!this.TryPlanMove(item, targetFolder, out MovePlan? plan, out string? refusal))
         {
-            return new LibraryResult<LibraryMoveResult>(null, resolveError);
+            return new LibraryResult<LibraryMoveResult>(null, refusal);
         }
 
-        if (!this.resolver.TryResolve(targetFolder.Root.Id, targetFolder.RelativePath, out LibraryPath? freshTarget, out string? targetResolveError))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, targetResolveError);
-        }
-
-        LibraryProtection protection = LibraryProtection.For(fresh);
-        if (!protection.CanMove)
-        {
-            return new LibraryResult<LibraryMoveResult>(null, protection.Reason);
-        }
-
-        if (!string.Equals(fresh.Root.Id, freshTarget.Root.Id, StringComparison.Ordinal))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, MoveAcrossRootsReason);
-        }
-
-        string itemFullPath = Path.TrimEndingDirectorySeparator(fresh.FullPath);
-        string targetFullPath = Path.TrimEndingDirectorySeparator(freshTarget.FullPath);
-
-        if (fresh.Role == LibraryNodeRole.Folder && IsSameOrWithin(targetFullPath, itemFullPath))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, MoveIntoOwnSubfolderReason);
-        }
-
-        string name = Path.GetFileName(itemFullPath);
-
-        string? teammatesError = TeammatesDestinationRefusal(freshTarget, name, PlaceAtTeammatesRootReason);
-        if (teammatesError is not null)
-        {
-            return new LibraryResult<LibraryMoveResult>(null, teammatesError);
-        }
-
-        if (fresh.Role == LibraryNodeRole.Folder && fresh.Root.Kind == LibraryRootKind.Teams && ContainsTasksSubtree(itemFullPath))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, MoveTasksSubtreeReason);
-        }
-
-        if (!this.TryResolveCreateTarget(freshTarget, name, out LibraryPath? target, out string? targetError))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, targetError);
-        }
-
-        if (Directory.Exists(target.FullPath) || File.Exists(target.FullPath))
-        {
-            return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, name));
-        }
-
+        LibraryPath fresh = plan.Fresh;
+        LibraryPath freshTarget = plan.FreshTarget;
+        LibraryPath target = plan.Target;
+        string name = plan.Name;
         bool isFolder = fresh.Role != LibraryNodeRole.File;
 
-        await this.moveGate.WaitAsync(ct);
+        await this.moveGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
             bool indexAvailable = this.index.IsAvailable(fresh.Root.Id);
             IReadOnlyList<string> preMoveFiles = indexAvailable ? this.index.FilesUnder(fresh.Root.Id, string.Empty) : [];
 
-            try
+            string? moveError = TryMoveItem(fresh.FullPath, target.FullPath, isFolder, false, name);
+            if (moveError is not null)
             {
-                MoveEntry(fresh.FullPath, target.FullPath, isFolder);
-            }
-            catch (IOException)
-            {
-                return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name));
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name));
+                return new LibraryResult<LibraryMoveResult>(null, moveError);
             }
 
             InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
@@ -1199,7 +1470,7 @@ internal sealed class LibraryFileService(
             }
 
             (IReadOnlyList<string> rewrittenNotes, IReadOnlyList<LibraryNoteFailure> failedNotes) = await this.RewriteLinksAfterMoveAsync(
-                target, fresh.RelativePath, target.RelativePath, isFolder, preMoveFiles);
+                target, fresh.RelativePath, target.RelativePath, isFolder, preMoveFiles).ConfigureAwait(false);
 
             return this.ReResolveMoved(freshTarget, name, rewrittenNotes, failedNotes);
         }
@@ -1229,6 +1500,11 @@ internal sealed class LibraryFileService(
             return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
         }
 
+        if (fresh.ReadOnly)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, LibraryPath.ReadOnlyReason));
+        }
+
         LibraryProtection protection = LibraryProtection.For(fresh);
         if (!protection.CanDelete)
         {
@@ -1244,28 +1520,28 @@ internal sealed class LibraryFileService(
         return Task.FromResult(new LibraryResult<LibraryPath>(fresh, null));
     }
 
-    /// <summary>The Teammates destination rules (corrections-B4 item 21, applied to rename/move destinations
-    /// too by item 26): refuses a destination directly at the Teammates root, and a <c>.md</c>
-    /// <paramref name="finalName"/> landing directly in a Teammate folder. Shared by
+    /// <summary>The Agents destination rules (corrections-B4 item 21, applied to rename/move destinations
+    /// too by item 26): refuses a destination directly at the Agents root, and a <c>.md</c>
+    /// <paramref name="finalName"/> landing directly in an Agent folder. Shared by
     /// <see cref="CreateFileAsync"/>, <see cref="CreateFolderAsync"/>, <see cref="RenameAsync"/> and
     /// <see cref="MoveAsync"/> so the rule lives in one place.</summary>
     /// <param name="destinationFolder">The already-resolved destination folder.</param>
     /// <param name="finalName">The final file name being placed in <paramref name="destinationFolder"/>, or
     /// <see langword="null"/> when creating a folder (the <c>.md</c> check does not apply).</param>
-    /// <param name="rootReason">What to say when the destination is the Teammates root itself: the create wording
-    /// by default, or <see cref="PlaceAtTeammatesRootReason"/> for a rename or move.</param>
-    private static string? TeammatesDestinationRefusal(LibraryPath destinationFolder, string? finalName, string rootReason = CreateAtTeammatesRootReason)
+    /// <param name="rootReason">What to say when the destination is the Agents root itself: the create wording
+    /// by default, or <see cref="PlaceAtAgentsRootReason"/> for a rename or move.</param>
+    private static string? AgentsDestinationRefusal(LibraryPath destinationFolder, string? finalName, string rootReason = CreateAtAgentsRootReason)
     {
-        if (destinationFolder.Root.Kind == LibraryRootKind.Teammates && destinationFolder.RelativePath.Length == 0)
+        if (destinationFolder.Root.Kind == LibraryRootKind.Agents && destinationFolder.RelativePath.Length == 0)
         {
             return rootReason;
         }
 
         if (finalName is not null
-            && destinationFolder.Role == LibraryNodeRole.TeammateFolder
+            && destinationFolder.Role == LibraryNodeRole.AgentFolder
             && string.Equals(Path.GetExtension(finalName), ".md", StringComparison.OrdinalIgnoreCase))
         {
-            return CreateMdInTeammateFolderReason;
+            return CreateMdInAgentFolderReason;
         }
 
         return null;
@@ -1295,6 +1571,17 @@ internal sealed class LibraryFileService(
         }
 
         return Directory.EnumerateDirectories(folderFullPath, TasksFolderName, SearchOption.AllDirectories).Any();
+    }
+
+    /// <summary>After a successful rename or move, moves the item's History with it (DocHistory spec §6.5).</summary>
+    /// <param name="item">The item before the move.</param>
+    /// <param name="result">The rename or move outcome.</param>
+    private void CarryHistory(LibraryPath item, LibraryResult<LibraryMoveResult> result)
+    {
+        if (result.Value is { } moved)
+        {
+            this.history?.Moved(item, moved.NewPath);
+        }
     }
 
     /// <summary>Moves a file or folder without overwrite, dispatching to <see cref="File.Move(string, string)"/>
@@ -1374,7 +1661,7 @@ internal sealed class LibraryFileService(
             }
 
             string newNote = RemapPath(oldNote, oldRelative, newRelative, wasFolder);
-            await this.ApplyNoteRewriteAsync(movedTarget, oldNote, newNote, oldRelative, newRelative, wasFolder, preMoveFiles, postMoveFiles, rewritten, failed);
+            await this.ApplyNoteRewriteAsync(movedTarget, oldNote, newNote, oldRelative, newRelative, wasFolder, preMoveFiles, postMoveFiles, rewritten, failed).ConfigureAwait(false);
         }
 
         rewritten.Sort(StringComparer.Ordinal);
@@ -1385,7 +1672,7 @@ internal sealed class LibraryFileService(
     /// <summary>
     /// Reads, rewrites and writes back the single note at <paramref name="newNote"/> (corrections-B5 D8
     /// items 9b, 10, and the 8.5.i-b listing/exception fix): the note is PLANNED first, from its raw bytes,
-    /// so a Teammate definition, a note no longer editable or over
+    /// so an Agent definition, a note no longer editable or over
     /// <see cref="LibraryOptions.MaxEditableBytes"/>, or one with <see cref="TextFileFormat.MixedLineEndings"/>
     /// is listed only when it actually has an edit to make - never merely because it matches one of those
     /// shapes. Once an edit is confirmed, the note's text is re-read through <see cref="ReadAsync"/> and
@@ -1417,7 +1704,7 @@ internal sealed class LibraryFileService(
         List<string> rewritten,
         List<LibraryNoteFailure> failed)
     {
-        if (!this.resolver.TryResolve(movedTarget.Root.Id, newNote, out LibraryPath? notePath, out _))
+        if (!this.resolver.TryResolve(movedTarget.Root.Id, newNote, out LibraryPath? notePath, out _) || notePath.ReadOnly)
         {
             return;
         }
@@ -1434,51 +1721,114 @@ internal sealed class LibraryFileService(
             return;
         }
 
-        if (notePath.Role == LibraryNodeRole.TeammateDefinition)
+        if (notePath.Role == LibraryNodeRole.AgentDefinition)
         {
-            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteIsTeammateDefinitionReasonFormat, fileName)));
+            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteIsAgentDefinitionReasonFormat, fileName)));
             return;
         }
 
-        LibraryDocumentContent content;
-        try
+        LibraryDocumentContent? content = await this.TryReadRewriteContentAsync(notePath, fileName, newNote, failed).ConfigureAwait(false);
+        if (content is null)
         {
-            content = await this.ReadAsync(notePath, CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-        {
-            return;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, SaveFailedReasonFormat, fileName)));
             return;
         }
 
-        if (!content.Editable || content.Text is null || content.Format is null)
+        if (!TryGetRewritableText(content, fileName, newNote, failed, out string? text, out TextFileFormat? format))
         {
-            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteTooLargeToUpdateReasonFormat, fileName)));
             return;
         }
 
-        TextFileFormat format = content.Format;
-        if (format.MixedLineEndings)
-        {
-            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteMixedLineEndingsReasonFormat, fileName)));
-            return;
-        }
-
-        List<(WikiLink Link, string NewTarget)> edits = PlanEdits(content.Text, preMoveFiles, oldNote, newNote, oldRelative, newRelative, wasFolder, postMoveFiles);
+        List<(WikiLink Link, string NewTarget)> edits = PlanEdits(text, preMoveFiles, oldNote, newNote, oldRelative, newRelative, wasFolder, postMoveFiles);
         if (edits.Count == 0)
         {
             return;
         }
 
-        string rewrittenText = WikiLinkRewriter.Rewrite(content.Text, edits);
+        string rewrittenText = WikiLinkRewriter.Rewrite(text, edits);
 
+        await this.WriteRewrittenNoteAsync(notePath, content, format, rewrittenText, newNote, fileName, rewritten, failed).ConfigureAwait(false);
+    }
+
+    /// <summary>Re-reads a linking note through <see cref="ReadAsync"/> for the final rewrite pass.</summary>
+    /// <param name="notePath">The note's resolved path.</param>
+    /// <param name="fileName">The note's file name, for the failure text.</param>
+    /// <param name="newNote">The note's post-move root-relative path, for the failure entry.</param>
+    /// <param name="failed">Appended with a failure reason for a locked or access-denied read.</param>
+    /// <returns>The note's content, or <see langword="null"/> when the note vanished or could not be read (a failure is listed for the latter).</returns>
+    private async Task<LibraryDocumentContent?> TryReadRewriteContentAsync(LibraryPath notePath, string fileName, string newNote, List<LibraryNoteFailure> failed)
+    {
+        try
+        {
+            return await this.ReadAsync(notePath, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, SaveFailedReasonFormat, fileName)));
+            return null;
+        }
+    }
+
+    /// <summary>Checks that a linking note can be rewritten: editable text without mixed line endings.</summary>
+    /// <param name="content">The note's content from <see cref="ReadAsync"/>.</param>
+    /// <param name="fileName">The note's file name, for the failure text.</param>
+    /// <param name="newNote">The note's post-move root-relative path, for the failure entry.</param>
+    /// <param name="failed">Appended with a failure reason when the note can't be updated.</param>
+    /// <param name="text">The note's text when the method returns <see langword="true"/>.</param>
+    /// <param name="format">The note's recorded format when the method returns <see langword="true"/>.</param>
+    /// <returns><see langword="true"/> when the note may be rewritten.</returns>
+    private static bool TryGetRewritableText(
+        LibraryDocumentContent content,
+        string fileName,
+        string newNote,
+        List<LibraryNoteFailure> failed,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? text,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TextFileFormat? format)
+    {
+        text = null;
+        format = null;
+        if (!content.Editable || content.Text is null || content.Format is null)
+        {
+            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteTooLargeToUpdateReasonFormat, fileName)));
+            return false;
+        }
+
+        if (content.Format.MixedLineEndings)
+        {
+            failed.Add(new LibraryNoteFailure(newNote, string.Format(CultureInfo.InvariantCulture, NoteMixedLineEndingsReasonFormat, fileName)));
+            return false;
+        }
+
+        text = content.Text;
+        format = content.Format;
+        return true;
+    }
+
+    /// <summary>Writes a rewritten linking note back, after the stamp check (Length and LastWriteUtc) that catches a concurrent edit.</summary>
+    /// <param name="notePath">The note's resolved path.</param>
+    /// <param name="content">The content the rewrite was planned from.</param>
+    /// <param name="format">The note's recorded format.</param>
+    /// <param name="rewrittenText">The rewritten text to write.</param>
+    /// <param name="newNote">The note's post-move root-relative path.</param>
+    /// <param name="fileName">The note's file name, for the failure text.</param>
+    /// <param name="rewritten">Appended with <paramref name="newNote"/> on a successful write.</param>
+    /// <param name="failed">Appended with a failure reason when the note can't be updated.</param>
+    private async Task WriteRewrittenNoteAsync(
+        LibraryPath notePath,
+        LibraryDocumentContent content,
+        TextFileFormat format,
+        string rewrittenText,
+        string newNote,
+        string fileName,
+        List<string> rewritten,
+        List<LibraryNoteFailure> failed)
+    {
         if (this.beforeRewriteWriteForTests is not null)
         {
-            await this.beforeRewriteWriteForTests(notePath);
+            await this.beforeRewriteWriteForTests(notePath).ConfigureAwait(false);
         }
 
         long currentLength;
@@ -1500,7 +1850,7 @@ internal sealed class LibraryFileService(
             return;
         }
 
-        LibraryResult<LibraryEntry> writeResult = await this.WriteTextAsync(notePath, rewrittenText, format, CancellationToken.None);
+        LibraryResult<LibraryEntry> writeResult = await this.WriteTextCoreAsync(notePath, rewrittenText, format, CancellationToken.None).ConfigureAwait(false);
         if (writeResult.Error is not null)
         {
             failed.Add(new LibraryNoteFailure(newNote, writeResult.Error));
@@ -1804,7 +2154,7 @@ internal sealed class LibraryFileService(
     {
         int headLength = (int)Math.Min(DetectionHeadBytes, length);
         byte[] head = new byte[headLength];
-        await stream.ReadExactlyAsync(head, ct);
+        await stream.ReadExactlyAsync(head, ct).ConfigureAwait(false);
         LibraryFileKind kind = LibraryFileKinds.Detect(fileName, head);
         return (head, kind);
     }
@@ -1846,12 +2196,12 @@ internal sealed class LibraryFileService(
     }
 
     /// <summary>
-    /// Whether a Teammate definition's frontmatter Name differs between its current on-disk text and the text
+    /// Whether an Agent definition's frontmatter Name differs between its current on-disk text and the text
     /// about to be saved, compared <see cref="StringComparison.Ordinal"/> (corrections-B4 item 18). Either text
     /// failing to parse an identity is not treated as a change here; <see cref="TextFileCodec"/> and the caller
     /// have already accepted the bytes as text.
     /// </summary>
-    private static bool TeammateNameChanged(string oldText, string newText)
+    private static bool AgentNameChanged(string oldText, string newText)
     {
         if (!PersonaFrontmatter.TryReadIdentity(oldText, out PersonaIdentity? oldIdentity, out _)
             || !PersonaFrontmatter.TryReadIdentity(newText, out PersonaIdentity? newIdentity, out _))

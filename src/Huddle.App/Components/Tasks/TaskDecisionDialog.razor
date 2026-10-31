@@ -1,0 +1,91 @@
+@using Agency.Huddle.App.Tasks.HumanGate
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject IProofSource ProofSource
+
+@*
+    The Board's decision dialog (Spec §6.9): a drop of a gated card from Needs You into Done, with complete
+    Proof, opens the decision card over the Board. It loads the Task and the Proof itself and follows
+    TaskChanged, so the card never shows a stale version. Accept, Request changes and Decline close it with
+    the decision; Cancel or Escape close it cancelled and the card stays where it was.
+*@
+
+<MudDialog>
+    <DialogContent>
+        @if (this.task is not null)
+        {
+            <div class="task-decision-dialog-text">
+                <div class="task-decision-dialog-title">@this.task.Title</div>
+                @if (!string.IsNullOrWhiteSpace(this.task.Description))
+                {
+                    <div class="task-decision-dialog-description">@this.task.Description</div>
+                }
+            </div>
+            <TaskDecisionCard Task="this.task" Proof="this.proof" Blocked="false"
+                              OnDecided="this.Decided" OnReload="this.ReloadAsync" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Size="Size.Medium" OnClick="this.Cancel">@HumanGateCopy.CancelButton</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private TaskItem? task;
+    private Proof proof = Proof.Empty;
+
+    /// <summary>The dialog instance, for closing with a result.</summary>
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The Task being decided.</summary>
+    [Parameter, EditorRequired]
+    public required TaskId TaskId { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Load();
+    }
+
+    /// <summary>Re-reads the Task and its Proof.</summary>
+    private void Load()
+    {
+        this.task = this.Store.Get(this.TaskId);
+        this.proof = this.task is null ? Proof.Empty : this.ProofSource.For(this.task);
+    }
+
+    /// <summary>Reloads when the Task this dialog decides changed.</summary>
+    /// <param name="change">The change.</param>
+    private void OnTaskChanged(TaskChange change)
+    {
+        if (change.After.Id == this.TaskId)
+        {
+            _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+            {
+                this.Load();
+                this.StateHasChanged();
+                return System.Threading.Tasks.Task.CompletedTask;
+            });
+        }
+    }
+
+    /// <summary>Re-reads the Task after the card found it changed.</summary>
+    private Task ReloadAsync()
+    {
+        this.Load();
+        return System.Threading.Tasks.Task.CompletedTask;
+    }
+
+    /// <summary>Closes with the decision the card saved.</summary>
+    /// <param name="decision">The decision.</param>
+    private void Decided(TaskDecision decision) => this.Dialog?.Close(DialogResult.Ok(decision));
+
+    /// <summary>Closes without a decision.</summary>
+    private void Cancel() => this.Dialog?.Cancel();
+
+    /// <inheritdoc />
+    public void Dispose() => this.Events.TaskChanged -= this.OnTaskChanged;
+}

@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Search;
 /// <summary>
 /// The Library group's provider (Global Search spec §8.3 and §8.6): walks every visible Library Root
 /// concurrently through <c>LibraryFileService.SearchTextAsync</c>, and leaves out Persona and
-/// Task files, which the Teammates and Tasks groups list instead. Under the Reference purpose (D-8, D-29) it
+/// Task files, which the Agents and Tasks groups list instead. Under the Reference purpose (D-8, D-29) it
 /// matches file names only, opens no file, and drops folders and paths that contain a backtick.
 /// </summary>
 /// <remarks>
@@ -19,13 +19,15 @@ internal sealed class LibrarySearchProvider(
     LibraryPathResolver resolver,
     LibraryFileService files,
     IOptions<TeamOptions> options,
-    Func<LibraryRoot, CancellationToken, Task>? beforeRootForTests = null) : ISearchProvider
+    Func<LibraryRoot, CancellationToken, Task>? beforeRootForTests = null,
+    WikiLinkIndex? wikiLinks = null) : ISearchProvider
 {
     private readonly LibraryRootStore roots = roots;
     private readonly LibraryPathResolver resolver = resolver;
     private readonly LibraryFileService files = files;
     private readonly IOptions<TeamOptions> options = options;
     private readonly Func<LibraryRoot, CancellationToken, Task>? beforeRootForTests = beforeRootForTests;
+    private readonly WikiLinkIndex? wikiLinks = wikiLinks;
 
     /// <summary>The group this provider fills.</summary>
     public SearchFilter Group => SearchFilter.Library;
@@ -65,7 +67,7 @@ internal sealed class LibrarySearchProvider(
             LibraryRoot root = visible[index];
             if (this.beforeRootForTests is { } hook)
             {
-                await hook(root, token);
+                await hook(root, token).ConfigureAwait(false);
             }
 
             if (!this.resolver.TryResolve(root.Id, string.Empty, out LibraryPath? scope, out _))
@@ -73,8 +75,8 @@ internal sealed class LibrarySearchProvider(
                 return;
             }
 
-            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, !reference, token);
-        });
+            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, !reference, token).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         // Merge in root order, never in completion order, so equal-ranked hits keep one order from run to run (§7.4).
         List<LibraryHit> hits = [];
@@ -88,7 +90,65 @@ internal sealed class LibrarySearchProvider(
             }
         }
 
+        if (this.wikiLinks is { } aliasIndex)
+        {
+            truncated |= await this.AddAliasHitsAsync(aliasIndex, visible, query, hits, teamsRoot, ct).ConfigureAwait(false);
+        }
+
         return new SearchResult([.. hits], truncated);
+    }
+
+    /// <summary>
+    /// Adds the notes found by an alias (front matter properties spec D-7), as a note is found by its file name. A note already listed keeps one hit,
+    /// the better ranked of the two; the hit shows the file name with the alias that matched beside it. Alias hits count toward the cap of their root, and the index is built off the search
+    /// thread and stops when <paramref name="ct"/> is cancelled.
+    /// </summary>
+    /// <param name="index">The link index that holds each note's aliases.</param>
+    /// <param name="visible">The roots searched.</param>
+    /// <param name="query">The search; its phrase, purpose and cap apply.</param>
+    /// <param name="hits">The hits so far; updated in place.</param>
+    /// <param name="teamsRoot">The full path of the Teams root.</param>
+    /// <param name="ct">Cancels the search.</param>
+    /// <returns><see langword="true"/> when an alias hit was dropped because its root was at the cap.</returns>
+    private async Task<bool> AddAliasHitsAsync(WikiLinkIndex index, List<LibraryRoot> visible, SearchQuery query, List<LibraryHit> hits, string teamsRoot, CancellationToken ct)
+    {
+        string phrase = query.Text.Trim();
+        bool reference = query.Purpose == SearchPurpose.Reference;
+        bool truncated = false;
+        foreach (LibraryRoot root in visible)
+        {
+            IReadOnlyList<(string NotePath, string Alias)> found = await Task.Run(() => index.NotesByAlias(root.Id, phrase, ct), ct).ConfigureAwait(false);
+            int inRoot = hits.Count(hit => string.Equals(hit.RootId, root.Id, StringComparison.Ordinal));
+            foreach ((string notePath, string alias) in found)
+            {
+                MatchTier? tier = SearchMatch.Tier(alias, phrase);
+                if (tier is not { } matchTier
+                    || !this.resolver.TryResolve(root.Id, notePath, out LibraryPath? note, out _)
+                    || IsExcludedPath(note, isFolder: false, teamsRoot)
+                    || (reference && note.FullPath.Contains('`')))
+                {
+                    continue;
+                }
+
+                LibraryHit hit = HitFor(root, notePath, isFolder: false, string.Concat("Alias: ", alias), matchTier);
+                int listed = hits.FindIndex(existing => string.Equals(existing.RootId, root.Id, StringComparison.Ordinal) && string.Equals(existing.RelativePath, notePath, StringComparison.Ordinal));
+                if (listed < 0 && inRoot >= query.MaxHits)
+                {
+                    truncated = true;
+                }
+                else if (listed < 0)
+                {
+                    hits.Add(hit);
+                    inRoot++;
+                }
+                else if (matchTier < hits[listed].Tier)
+                {
+                    hits[listed] = hit;
+                }
+            }
+        }
+
+        return truncated;
     }
 
     /// <summary>
@@ -100,15 +160,21 @@ internal sealed class LibrarySearchProvider(
     private static bool IsReferenceable(LibraryEntry entry) => !entry.IsFolder && !entry.Path.FullPath.Contains('`');
 
     /// <summary>
-    /// Whether an entry is never a Library hit (OP-10, §8.6): a Teammate's definition file, or a Task file
+    /// Whether an entry is never a Library hit (OP-10, §8.6): an Agent's definition file, or a Task file
     /// under the Teams root. Tested on the full path, so a pinned root that contains the data directory is covered too.
     /// </summary>
     /// <param name="entry">The entry the walk visited.</param>
     /// <param name="teamsRoot">The full path of the Teams root.</param>
     /// <returns><see langword="true"/> when the entry must not be a hit.</returns>
-    private static bool IsExcluded(LibraryEntry entry, string teamsRoot) =>
-        entry.Path.Role == LibraryNodeRole.TeammateDefinition
-        || (!entry.IsFolder && TaskLayout.TryMap(teamsRoot, entry.Path.FullPath, out _, out _));
+    private static bool IsExcluded(LibraryEntry entry, string teamsRoot) => IsExcludedPath(entry.Path, entry.IsFolder, teamsRoot);
+
+    /// <summary>The rule of <see cref="IsExcluded"/> for a path that was not walked, such as a note found by its alias.</summary>
+    /// <param name="path">The path to test.</param>
+    /// <param name="isFolder">Whether the path is a folder.</param>
+    /// <param name="teamsRoot">The full path of the Teams root.</param>
+    private static bool IsExcludedPath(LibraryPath path, bool isFolder, string teamsRoot) =>
+        path.Role == LibraryNodeRole.AgentDefinition
+        || (!isFolder && TaskLayout.TryMap(teamsRoot, path.FullPath, out _, out _));
 
     /// <summary>Maps one walked entry to a Library hit, naming its Team when it sits under the Teams root (OP-4).</summary>
     /// <param name="root">The root the entry was found under.</param>
@@ -116,18 +182,27 @@ internal sealed class LibrarySearchProvider(
     /// <returns>The Library hit.</returns>
     private static LibraryHit ToHit(LibraryRoot root, LibraryTextHit hit)
     {
-        LibraryEntry entry = hit.Entry;
-        string relative = entry.Path.RelativePath;
+        return HitFor(root, hit.Entry.Path.RelativePath, hit.Entry.IsFolder, hit.Snippet, hit.Tier);
+    }
+
+    /// <summary>Builds a Library hit for a path in <paramref name="root"/>, naming its Team when it sits under the Teams root (OP-4).</summary>
+    /// <param name="root">The root the path is in.</param>
+    /// <param name="relative">The path relative to the root.</param>
+    /// <param name="isFolder">Whether the path is a folder.</param>
+    /// <param name="snippet">The snippet to show beside the name, or <see langword="null"/>.</param>
+    /// <param name="tier">How well the hit matched.</param>
+    private static LibraryHit HitFor(LibraryRoot root, string relative, bool isFolder, string? snippet, MatchTier tier)
+    {
         int lastSlash = relative.LastIndexOf('/');
         string folder = lastSlash < 0 ? string.Empty : relative[..lastSlash];
 
         string? team = null;
-        if (root.Kind == LibraryRootKind.Teams && (lastSlash >= 0 || entry.IsFolder))
+        if (root.Kind == LibraryRootKind.Teams && (lastSlash >= 0 || isFolder))
         {
             int firstSlash = relative.IndexOf('/');
             team = firstSlash < 0 ? relative : relative[..firstSlash];
         }
 
-        return new LibraryHit(root.Id, root.DisplayName, relative, folder, entry.IsFolder, hit.Snippet, team, hit.Tier);
+        return new LibraryHit(root.Id, root.DisplayName, relative, folder, isFolder, snippet, team, tier);
     }
 }

@@ -1,61 +1,5 @@
 namespace Agency.Huddle.App.Search;
 
-/// <summary>What the dropdown needs to draw one view: the parsed box, the state of each expected group update, and the sticky term (spec §6.3, §6.4).</summary>
-/// <param name="Parse">The parse of the box text.</param>
-/// <param name="States">The state of each group and side, keyed by filter and scope. A missing key is an update that has not arrived.</param>
-/// <param name="StickyTerm">The term of the last search, or null when there was none.</param>
-/// <param name="BoxIsEmpty">Whether the box is empty.</param>
-public sealed record SearchDropdownInput(
-    SearchParse Parse,
-    IReadOnlyDictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> States,
-    string? StickyTerm,
-    bool BoxIsEmpty);
-
-/// <summary>One row of the dropdown: a group heading, a result card, or a notice under a group.</summary>
-public abstract record SearchDropdownRow;
-
-/// <summary>A group heading. <see cref="IsSearching"/> is true while an active group has no result yet.</summary>
-/// <param name="Id">The element id of the group, <c>search-group-{group}-{scope}</c> in lower case.</param>
-/// <param name="Text">The heading text, as spec §6.3 names it.</param>
-/// <param name="IsArchived">Whether the heading is the archived side of its category.</param>
-/// <param name="IsSearching">Whether the group is still searching.</param>
-public sealed record SearchHeadingRow(string Id, string Text, bool IsArchived, bool IsSearching) : SearchDropdownRow;
-
-/// <summary>One result card, in render order.</summary>
-/// <param name="OptionId">The element id, <c>search-option-{n}</c>, counted from zero in render order.</param>
-/// <param name="GroupId">The id of the group heading the card sits under.</param>
-/// <param name="Hit">The result the card shows.</param>
-public sealed record SearchCardRow(string OptionId, string GroupId, SearchHit Hit) : SearchDropdownRow;
-
-/// <summary>A line of text under a group: a failure, a truncation note, or a no-match line.</summary>
-/// <param name="Text">The text, exactly as spec §6.3 decides it.</param>
-/// <param name="Kind">Which notice this is.</param>
-public sealed record SearchNoticeRow(string Text, SearchNoticeKind Kind) : SearchDropdownRow;
-
-/// <summary>The kinds of notice a group can show under its cards.</summary>
-public enum SearchNoticeKind
-{
-    /// <summary>The provider threw: <c>Couldn't search &lt;Group&gt;.</c></summary>
-    Failed,
-    /// <summary>The provider cut the search short: <c>Results may be incomplete.</c></summary>
-    Truncated,
-    /// <summary>One filter, no hit: <c>Nothing in &lt;Group&gt; matches '&lt;term&gt;'.</c></summary>
-    NoMatch,
-}
-
-/// <summary>Everything the dropdown draws for one search: the rows, and the lines that sit outside the groups.</summary>
-/// <param name="Rows">The group headings, cards and notices, in render order.</param>
-/// <param name="Header">The sticky header, or null.</param>
-/// <param name="QuietLine">The line shown when the box does not search, or null.</param>
-/// <param name="EmptyLine">The line shown when every expected update arrived and no group has a hit, or null.</param>
-/// <param name="Announcement">The text for the polite live region, once every expected update arrived, or null.</param>
-public sealed record SearchDropdownView(
-    IReadOnlyList<SearchDropdownRow> Rows,
-    string? Header,
-    string? QuietLine,
-    string? EmptyLine,
-    string? Announcement);
-
 /// <summary>Turns the search state into the dropdown's rows and strings, with no renderer (spec §6.3, §6.4, §11; D-9).</summary>
 public static class SearchDropdownModel
 {
@@ -75,7 +19,7 @@ public static class SearchDropdownModel
     private static readonly SearchFilter[] AllGroups =
     [
         SearchFilter.Teams,
-        SearchFilter.Teammates,
+        SearchFilter.Agents,
         SearchFilter.Library,
         SearchFilter.Tasks,
         SearchFilter.Rooms,
@@ -85,7 +29,7 @@ public static class SearchDropdownModel
     private static readonly SearchSlot[] Slots =
     [
         new(SearchFilter.Teams, SearchScope.Active, "Teams", "search-group-teams-active"),
-        new(SearchFilter.Teammates, SearchScope.Active, "Teammates", "search-group-teammates-active"),
+        new(SearchFilter.Agents, SearchScope.Active, "Agents", "search-group-agents-active"),
         new(SearchFilter.Library, SearchScope.Active, "Library", "search-group-library-active"),
         new(SearchFilter.Tasks, SearchScope.Active, "Tasks", "search-group-tasks-active"),
         new(SearchFilter.Tasks, SearchScope.Archived, "Closed Tasks", "search-group-tasks-archived"),
@@ -218,7 +162,7 @@ public static class SearchDropdownModel
         rows.Add(new SearchHeadingRow(slot.Id, slot.Heading, slot.Scope == SearchScope.Archived, false));
         if (noMatchLine)
         {
-            // Browsing Teams or Teammates with an empty box has no term to name.
+            // Browsing Teams or Agents with an empty box has no term to name.
             string noMatch = parse.Phrase.Length == 0
                 ? $"Nothing in {slot.Heading}."
                 : $"Nothing in {slot.Heading} matches '{parse.Phrase}'.";

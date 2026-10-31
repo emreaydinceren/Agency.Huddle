@@ -1,18 +1,10 @@
 namespace Agency.Huddle.Seeder;
 
-/// <summary>A folder the seeder must never wipe.</summary>
-/// <param name="Path">The folder.</param>
-/// <param name="BlocksDescendants">
-/// <see langword="true"/> when nothing inside the folder may be wiped either (the repository);
-/// <see langword="false"/> when only the folder itself and its ancestors are protected (the user profile,
-/// so a seed root under the profile or the temp folder is still allowed).
-/// </param>
-internal sealed record ProtectedFolder(string Path, bool BlocksDescendants);
-
 /// <summary>
 /// Decides whether a folder may be wiped and then deletes it. The seeder's "clean slate" promise is
 /// only safe because of this class: it deletes a folder wholesale, so it refuses everything it cannot
 /// prove is a seed root the seeder made itself.
+/// Seeder spec §4 (SEED-SAFE-1 to -5).
 /// </summary>
 internal static class SeedRootGuard
 {
@@ -55,7 +47,7 @@ internal static class SeedRootGuard
             return null;
         }
 
-        if (new DirectoryInfo(full).Attributes.HasFlag(FileAttributes.ReparsePoint))
+        if ((new DirectoryInfo(full).Attributes & FileAttributes.ReparsePoint) != 0)
         {
             return $"'{full}' is a symbolic link or junction.";
         }
@@ -169,7 +161,7 @@ internal static class SeedRootGuard
         EnumerationOptions options = new() { RecurseSubdirectories = true, AttributesToSkip = 0, IgnoreInaccessible = true };
         foreach (string entry in Directory.EnumerateFileSystemEntries(folder, "*", options))
         {
-            if (File.GetAttributes(entry).HasFlag(FileAttributes.ReparsePoint))
+            if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0)
             {
                 return entry;
             }

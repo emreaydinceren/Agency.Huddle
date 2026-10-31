@@ -47,7 +47,7 @@
             @if (this.Catalog.Types.Count == 0)
             {
                 <tr>
-                    <td colspan="5"><EmptyState Text="No team types found." /></td>
+                    <td colspan="5"><EmptyState Title="No team types found" Text="Add a team type to the catalog folder and it will be listed here." /></td>
                 </tr>
             }
         </tbody>
@@ -57,7 +57,7 @@
         @foreach (var problem in this.Catalog.Problems)
         {
             <MudPaper Outlined="true" Class="pa-3 mb-2 teamtypes-problem">
-                <MudText Typo="Typo.subtitle2" Class="teamtypes-problem-id">@problem.TypeId</MudText>
+                <MudText Typo="Typo.subtitle1" Class="teamtypes-problem-id">@problem.TypeId</MudText>
                 <MudText Typo="Typo.caption" Class="teamtypes-problem-file d-block">@problem.Path</MudText>
                 <MudText Class="teamtypes-problem-message">@problem.Message</MudText>
             </MudPaper>
@@ -66,7 +66,7 @@
         @foreach (var problem in this.Catalog.Pool.Problems)
         {
             <MudPaper Outlined="true" Class="pa-3 mb-2 teamtypes-pool-problem">
-                <MudText Typo="Typo.subtitle2" Class="teamtypes-problem-id">@problem.Id</MudText>
+                <MudText Typo="Typo.subtitle1" Class="teamtypes-problem-id">@problem.Id</MudText>
                 <MudText Typo="Typo.caption" Class="teamtypes-problem-file d-block">@problem.Source</MudText>
                 <MudText Class="teamtypes-problem-message">@problem.Message</MudText>
             </MudPaper>

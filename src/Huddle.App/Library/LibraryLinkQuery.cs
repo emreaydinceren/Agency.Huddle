@@ -13,9 +13,20 @@ internal static class LibraryLinkQuery
     {
         ArgumentNullException.ThrowIfNull(file);
 
+        return LibraryLinkQuery.BuildPageUri(file.Root.Id, file.RelativePath);
+    }
+
+    /// <summary>The <c>/library</c> page address for the file at <paramref name="relativePath"/> in the root <paramref name="rootId"/>, escaped as the page reads it back.</summary>
+    /// <param name="rootId">The root's id.</param>
+    /// <param name="relativePath">The file's path under the root.</param>
+    public static string BuildPageUri(string rootId, string relativePath)
+    {
+        ArgumentNullException.ThrowIfNull(rootId);
+        ArgumentNullException.ThrowIfNull(relativePath);
+
         return string.Create(
             System.Globalization.CultureInfo.InvariantCulture,
-            $"/library?root={Uri.EscapeDataString(file.Root.Id)}&path={Uri.EscapeDataString(file.RelativePath)}");
+            $"/library?root={Uri.EscapeDataString(rootId)}&path={Uri.EscapeDataString(relativePath)}");
     }
 
     /// <summary>The raw (still percent-encoded) value of a <c>library=</c> query parameter in <paramref name="location"/>, or <see langword="null"/> when there is none.</summary>

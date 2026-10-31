@@ -1,7 +1,8 @@
 @*
     The compact provenance line shown wherever a Skill appears (SK-8, SK-9): "Publisher · repo link · abc1234 · MIT"
-    for an imported Skill, plus a "modified locally" chip when its folder no longer matches the imported hash.
-    A Skill that was not imported shows only where it came from: "Built in" or "Yours". A repo URL that is not
+    for an imported Skill, then its Source, plus a "modified locally" chip when its folder no longer matches the imported hash,
+    and a "Source removed" chip when the copy's Source is no longer in the registry.
+    A Skill that was not imported shows only where it came from: "Built-in" or "Yours". A repo URL that is not
     http or https is shown as text, never as a link.
 *@
 @using Agency.Huddle.App.Skills
@@ -23,15 +24,24 @@
         <span class="skill-provenance-commit">@SkillProvenanceLine.ShortCommit(provenance.Commit)</span>
         <span aria-hidden="true"> · </span>
         <span class="skill-provenance-license">@SkillProvenanceLine.LicenseLabel(provenance.License)</span>
+        @if (provenance.EffectiveSource is { } sourceId)
+        {
+            <span aria-hidden="true"> · </span>
+            <span class="skill-provenance-source">@sourceId</span>
+        }
+        @if (this.SourceRemoved)
+        {
+            <StatusChip Color="Color.Default" Icon="@Icons.Material.Filled.LinkOff" Class="skill-provenance-source-removed ml-1">Source removed</StatusChip>
+        }
         @if (this.Skill.ModifiedLocally)
         {
-            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="skill-provenance-modified ml-1">modified locally</MudChip>
+            <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Edit" Class="skill-provenance-modified ml-1">modified locally</StatusChip>
         }
     </MudText>
 }
 else
 {
-    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance skill-provenance-origin mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built in")</MudText>
+    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance skill-provenance-origin mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built-in")</MudText>
 }
 
 @code {
@@ -40,6 +50,10 @@ else
     /// <summary>The Skill whose provenance to show.</summary>
     [Parameter, EditorRequired]
     public required Skill Skill { get; set; }
+
+    /// <summary>True when the copy's Source is no longer in the registry: the copy keeps working, and the line says so.</summary>
+    [Parameter]
+    public bool SourceRemoved { get; set; }
 
     private static bool IsWebLink(string repo) =>
         Uri.TryCreate(repo, UriKind.Absolute, out Uri? uri)

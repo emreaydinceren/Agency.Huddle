@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The renovation planner's Evidence line is the check, and the Human agrees every price and date.
 
+## Definition of Done
+
+- Quotes and facts checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Scope first, then permits and estimates, then quotes, then the schedule.

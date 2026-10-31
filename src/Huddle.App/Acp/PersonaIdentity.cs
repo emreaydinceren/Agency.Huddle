@@ -40,7 +40,7 @@ namespace Agency.Huddle.App.Acp;
 /// record keeps compiling.
 /// </param>
 /// <param name="Builtin">
-/// Marks this Persona as one of the app's built-in Teammates — <c>chief-of-staff</c> is the only
+/// Marks this Persona as one of the app's built-in Agents — <c>chief-of-staff</c> is the only
 /// value V1 gives meaning to (Spec §6.3) — or <see langword="null"/> when the Persona is not a
 /// built-in. Read from the <c>_builtin</c> frontmatter key; a blank value reads as
 /// <see langword="null"/>, not an empty string.

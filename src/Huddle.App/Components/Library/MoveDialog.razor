@@ -3,7 +3,12 @@
     folders the item may move into - within one root only, and inside Scope when the explorer is scoped
     (corrections-B6 item 26) - and this dialog calls LibraryFileService.MoveAsync itself once a folder is
     picked, checking BeforeChangeAsync right before the write (corrections-B6 item 21).
+
+    The folders are drawn as the tree is: each row is a picker-row with a folder icon, indented 16px for every level
+    below the first folder, in the depth-first order LibraryFileOps lists them, so four folders called "memory" are told
+    apart by the parent above them (audit B10). The dialog is a ShortPicker, 600px.
 *@
+@using System.Globalization
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 
@@ -11,14 +16,16 @@
 
 <MudDialog>
     <DialogContent>
-        <MudList T="string"
+        <MudList T="string" Dense="true"
                  SelectionMode="SelectionMode.SingleSelection"
                  SelectedValue="@this.selectedRelativePath"
                  SelectedValueChanged="this.OnFolderSelected"
                  aria-label="Destination folder">
             @foreach (var folder in this.Folders)
             {
-                <MudListItem T="string" Value="@folder.Path.RelativePath" Text="@folder.DisplayName" />
+                <MudListItem T="string" Value="@folder.Path.RelativePath" Text="@folder.DisplayName"
+                             Icon="@Icons.Material.Outlined.Folder" Class="picker-row"
+                             Style="@this.IndentStyle(folder.Path)" title="@folder.Path.RelativePath" />
             }
         </MudList>
         @if (this.error is not null)
@@ -33,8 +40,11 @@
 </MudDialog>
 
 @code {
-    /// <summary>How LibraryFileOps shows this dialog: the shared picker options (medium, full width, close button).</summary>
-    public static DialogOptions Options => HuddleDialogOptions.Picker;
+    private const int IndentPerLevel = 16;
+    private const int BaseIndent = 12;
+
+    /// <summary>How LibraryFileOps shows this dialog: the short picker (600px, a pick-one list).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.ShortPicker;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -53,6 +63,18 @@
 
     private string? selectedRelativePath;
     private string? error;
+
+    /// <summary>The row's start padding: the base inset plus 16px for each level the folder sits below the first one listed.</summary>
+    private string? IndentStyle(LibraryPath folder)
+    {
+        int depth = Depth(folder) - (this.Folders.Count > 0 ? Depth(this.Folders[0].Path) : 0);
+        return depth <= 0
+            ? null
+            : string.Create(CultureInfo.InvariantCulture, $"padding-inline-start: {BaseIndent + (depth * IndentPerLevel)}px");
+    }
+
+    private static int Depth(LibraryPath folder) =>
+        folder.RelativePath.Length == 0 ? 0 : folder.RelativePath.Count(static c => c == '/') + 1;
 
     private void OnFolderSelected(string? relativePath) => this.selectedRelativePath = relativePath;
 

@@ -2,49 +2,6 @@ using Agency.Huddle.App.Search;
 
 namespace Agency.Huddle.App.References;
 
-/// <summary>One selectable row of the reference picker: a hit, the text it inserts, and how it is drawn (spec §5.3, §11).</summary>
-/// <param name="Id">The element id of the row, <c>{listboxId}-{n}</c>, counted from zero across the groups.</param>
-/// <param name="Hit">The result the row shows.</param>
-/// <param name="InsertText">The text the pick writes into the Composer.</param>
-/// <param name="Dimmed">Whether the row is drawn dimmed: a Teammate who is not a Member.</param>
-/// <param name="Note">The line the card shows under its title, or null.</param>
-/// <param name="AccessibleName">The card's own text, with the note after a comma when there is one.</param>
-public sealed record ReferencePickerRow(string Id, SearchHit Hit, string InsertText, bool Dimmed, string? Note, string AccessibleName);
-
-/// <summary>A group of the picker: its heading and its rows, in render order (spec §5.3).</summary>
-/// <param name="Heading">The heading text, as spec §5.7 names it.</param>
-/// <param name="Rows">The rows of the group.</param>
-public sealed record ReferencePickerGroup(string Heading, IReadOnlyList<ReferencePickerRow> Rows);
-
-/// <summary>Everything the picker draws for one search: the groups, the lines outside them, and the highlight (spec §5.3, §5.7, §11).</summary>
-/// <param name="Groups">The groups that have rows, in order.</param>
-/// <param name="EmptyText">The line shown when there is no row, or null.</param>
-/// <param name="Footer">The footer line that names the prefixes.</param>
-/// <param name="LiveText">The text for the polite live region.</param>
-/// <param name="HighlightIndex">The index of the highlighted row among all rows, clamped into them.</param>
-public sealed record ReferencePickerView(IReadOnlyList<ReferencePickerGroup> Groups, string? EmptyText, string Footer, string LiveText, int HighlightIndex);
-
-/// <summary>The state the picker is built from: the parsed trigger and token, the group states and the Room's Members (spec §5.3).</summary>
-/// <param name="Trigger">The trigger character, <c>@</c> or <c>#</c>.</param>
-/// <param name="Token">The text after the trigger.</param>
-/// <param name="Filter">The filter the box is set to.</param>
-/// <param name="Groups">The state of each group and side, keyed by filter and scope. A missing key is an update that has not arrived.</param>
-/// <param name="MemberNames">The names of the Room's Members, compared ignoring case.</param>
-/// <param name="LibraryRootPaths">The full path of each Library Root, keyed by root id.</param>
-/// <param name="InviteCommand">Whether the box starts with <c>/invite </c>, which shows the Teammates group only.</param>
-/// <param name="ListboxId">The element id of the list, which the row ids extend.</param>
-/// <param name="Highlight">The index the highlight was last set to.</param>
-internal sealed record ReferencePickerInput(
-    char Trigger,
-    string Token,
-    SearchFilter Filter,
-    IReadOnlyDictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> Groups,
-    IReadOnlySet<string> MemberNames,
-    IReadOnlyDictionary<string, string> LibraryRootPaths,
-    bool InviteCommand,
-    string ListboxId,
-    int Highlight);
-
 /// <summary>Turns the picker's state into its groups, rows and lines, with no renderer (spec §5.3, §5.7, §11; D-6, D-22, D-23, D-25, D-27).</summary>
 internal static class ReferencePickerModel
 {
@@ -61,9 +18,9 @@ internal static class ReferencePickerModel
     private const int LibraryMinChars = 3;
 
     /// <summary>The footer line of spec §5.7.</summary>
-    private const string FooterText = "Narrow with teammate: task: room: team: lib:";
+    private const string FooterText = "Narrow with agent: task: room: team: lib:";
 
-    /// <summary>The note on a Teammate who is not a Member of the Room (D-22).</summary>
+    /// <summary>The note on an Agent who is not a Member of the Room (D-22).</summary>
     private const string NotMemberNote = "Not in this Room";
 
     /// <summary>The prefix of the note on a Team Room (D-27).</summary>
@@ -75,7 +32,7 @@ internal static class ReferencePickerModel
     /// <summary>The groups in their order: the active side first, in the order of spec §5.3.</summary>
     private static readonly SearchSlot[] ActiveSlots =
     [
-        new(SearchFilter.Teammates, SearchScope.Active, "Teammates"),
+        new(SearchFilter.Agents, SearchScope.Active, "Agents"),
         new(SearchFilter.Tasks, SearchScope.Active, "Tasks"),
         new(SearchFilter.Rooms, SearchScope.Active, "Rooms"),
         new(SearchFilter.Teams, SearchScope.Active, "Teams"),
@@ -142,7 +99,7 @@ internal static class ReferencePickerModel
         return new ReferencePickerView(built, emptyText, footer, liveText, highlight);
     }
 
-    /// <summary>The groups the picker searches for this state, in order: one filter, All, or the Teammates alone under <c>/invite </c>.</summary>
+    /// <summary>The groups the picker searches for this state, in order: one filter, All, or the Agents alone under <c>/invite </c>.</summary>
     /// <param name="input">The input.</param>
     /// <returns>The slots, active side first.</returns>
     private static List<SearchSlot> SelectedSlots(ReferencePickerInput input)
@@ -175,7 +132,7 @@ internal static class ReferencePickerModel
     {
         if (input.InviteCommand)
         {
-            return group == SearchFilter.Teammates;
+            return group == SearchFilter.Agents;
         }
 
         return input.Filter == SearchFilter.All || input.Filter == group;
@@ -190,10 +147,10 @@ internal static class ReferencePickerModel
     private static List<Draft> DraftsFor(SearchSlot slot, SearchResult result, ReferencePickerInput input, HashSet<string> members)
     {
         IEnumerable<SearchHit> hits = result.Hits;
-        if (slot.Group == SearchFilter.Teammates)
+        if (slot.Group == SearchFilter.Agents)
         {
             // A Member comes first unless the box is /invite, where the people it can add come first (D-22, D-23).
-            hits = hits.OrderBy(hit => hit is TeammateHit teammate && members.Contains(teammate.Name) != input.InviteCommand ? 0 : 1);
+            hits = hits.OrderBy(hit => hit is AgentHit agent && members.Contains(agent.Name) != input.InviteCommand ? 0 : 1);
         }
 
         return hits.Take(CapFor(input.Filter, slot.Group)).Select(hit => DraftFor(hit, input, members)).ToList();
@@ -222,9 +179,9 @@ internal static class ReferencePickerModel
     {
         switch (hit)
         {
-            case TeammateHit teammate:
-                bool isMember = members.Contains(teammate.Name);
-                return new Draft(hit, string.Concat("@", teammate.Name), !isMember, isMember ? null : NotMemberNote);
+            case AgentHit agent:
+                bool isMember = members.Contains(agent.Name);
+                return new Draft(hit, string.Concat("@", agent.Name), !isMember, isMember ? null : NotMemberNote);
             case RoomHit room:
                 return new Draft(hit, InsertFor(hit), false, RoomNote(room));
             case LibraryHit library:
@@ -277,7 +234,7 @@ internal static class ReferencePickerModel
         return string.Concat("`", path, "`");
     }
 
-    /// <summary>The line for an empty picker: the Library's three characters, the task line for <c>#</c>, or the Teammate line for <c>@</c> (spec §5.7).</summary>
+    /// <summary>The line for an empty picker: the Library's three characters, the task line for <c>#</c>, or the Agent line for <c>@</c> (spec §5.7).</summary>
     /// <param name="input">The input.</param>
     /// <returns>The line.</returns>
     private static string EmptyTextFor(ReferencePickerInput input)

@@ -19,7 +19,7 @@ Sidebar                         Page
       Marketing Project                                      Files | Tasks
       2025 Taxes Project
     Household ▸
-  Teammates
+  Agents
   Tasks ▾
   Library ▾
 ```
@@ -28,7 +28,7 @@ This is the design for **Team pages** and **Project pages**. It adds a **Teams**
 sidebar, listing each Team with its Projects nested below it. Selecting a Team opens a page with
 three tabs:
 
-- **Members** lists the Teammates whose `teams` field names the Team. Since 2026-10-14 it is
+- **Members** lists the Agents whose `teams` field names the Team. Since 2026-10-14 it is
   Build a team's Hire section for the Team (see §6.7).
 - **Details** (added 2026-10-14, always the last tab of a Team page, never on a Project page) is
   Build a team's type and details sections for the Team (`TeamDetails`): the type and name are
@@ -41,7 +41,7 @@ A Project page has **Files** and **Tasks** only. A Project has no members of its
 by its Team.
 
 The spec also adds **Team Memory**. A Team folder and each Project folder hold a `memory/` folder
-that every member of the Team shares. It uses the same convention as a Teammate's own `memory/`:
+that every member of the Team shares. It uses the same convention as an Agent's own `memory/`:
 one Markdown file per fact, with the fact on the first line. It is listed in each member's system
 prompt when a session starts, and later edits arrive through File Changes.
 
@@ -79,7 +79,7 @@ Give each Team a home in the interface that matches the home it already has on d
 Since the Library shipped, `{DataDir}/Teams/<Team>/[<Project>/]` holds a Team's notes, its
 Projects and its Tasks (ADR-0030). The interface has no Team-shaped view of that tree:
 
-- Membership is visible only as a filter on the Teammates page.
+- Membership is visible only as a filter on the Agents page.
 - Notes are one root among several in the Library pane.
 - Tasks are reachable only through a saved View.
 
@@ -89,7 +89,7 @@ This spec closes that gap, and adds the one capability the tree was missing.
    Project. The list is built from the same two sources Tasks and the Library already use:
    Persona `teams` labels and Team folders on disk.
 2. **Membership is edited where it is read.** *+ Add member* and *Remove* write the Team label
-   into, or out of, the Teammate's `teams` frontmatter. That field is still the only source of
+   into, or out of, the Agent's `teams` frontmatter. That field is still the only source of
    membership. The page never keeps a second list.
 3. **Files and Tasks are scoped, not copied.** The Files tab is `LibraryExplorer` with a
    `LibraryLocation("teams", "<Team>[/<Project>]")` scope (Library spec §6.16). The Tasks tab is
@@ -97,16 +97,16 @@ This spec closes that gap, and adds the one capability the tree was missing.
    store, index or file format.
 4. **A Project scopes shared memory.** `Teams/<Team>/memory/` and
    `Teams/<Team>/<Project>/memory/` hold facts that every member of the Team keeps across
-   sessions. It is the Team-wide counterpart of a Teammate's private `work/memory/`
+   sessions. It is the Team-wide counterpart of an Agent's private `work/memory/`
    (FileChanges spec §6.15).
 5. **Nothing new to learn.** Each tab has the same shape: an action button, a search box, and
    the content below them. The search box filters by name only (§3).
 
 **Why this matters.** The product claim in [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md#what-a-team-is-for) is
 that a team does what one agent cannot. It depends on context kept for one job and on memory that
-outlives a session. Until now both were per Teammate. A Project was a folder the Agents could
+outlives a session. Until now both were per Agent. A Project was a folder the Agents could
 read, but nothing told an Agent what the Team had already decided. Team Memory makes a decision
-reached in one Room with one Teammate part of every member's starting context.
+reached in one Room with one Agent part of every member's starting context.
 
 ---
 
@@ -128,8 +128,8 @@ reached in one Room with one Teammate part of every member's starting context.
 | T11 | The Human tries to create a Project named `memory` | Refused inline: *"memory" is reserved for the Team's shared Memory.* |
 | T12 | **Nova writes `Teams/Business/Marketing Project/memory/launch-date.md`** | **Ada's next Turn lists `added …\memory\launch-date.md (by Nova…)` through File Changes. Ada's next new session lists it under *Team Memory › Business › Marketing Project*** |
 | T13 | Kim is on an Adapter with `ReadsFiles: false` | Kim's system prompt has no Team Memory block, exactly as it has no personal Memory block |
-| T14 | A folder `Teams/Legal/` exists, but no Teammate carries the label `Legal` | Legal is listed with a muted *No members* hint rather than an error. Its page works, and *+ Add member* makes it a real Team |
-| T15 | A Teammate carries `teams: [Ops]` and `Teams/Ops/` doesn't exist yet | Ops is listed. The Files tab shows an empty tree, and the first save creates the folder (Library spec §6.16) |
+| T14 | A folder `Teams/Legal/` exists, but no Agent carries the label `Legal` | Legal is listed with a muted *No members* hint rather than an error. Its page works, and *+ Add member* makes it a real Team |
+| T15 | An Agent carries `teams: [Ops]` and `Teams/Ops/` doesn't exist yet | Ops is listed. The Files tab shows an empty tree, and the first save creates the folder (Library spec §6.16) |
 
 ---
 
@@ -141,11 +141,11 @@ reached in one Room with one Teammate part of every member's starting context.
 | Renaming, moving or deleting a Team or Project | A Team rename relabels every member (each restarts) and refiles every Task (each wakes its assignee, ADR-0026). It needs its own design. The Library already refuses these operations on Team and Project folders |
 | Members of a Project | A Project is worked by its Team. Per-Project membership would be a second membership source beside `teams` |
 | Full-text search | The Library spec defers it (§12 there). The search boxes filter by name |
-| Creating a Teammate from *+ Add member* | The Teammates page owns creation. *+ Add member* picks an existing Teammate |
+| Creating an Agent from *+ Add member* | The Agents page owns creation. *+ Add member* picks an existing Agent |
 | Team settings (colour, icon, description) | No place to store them that isn't a second source of truth. V2 could use a `Teams/<Team>/_team.md` |
 | Permissions | A Team is still never a permission ([language.md](engineering/language.md), *Team*). Every Agent can still read every Team folder with its own tools |
 | A Team-level Budget or token Budget | Budgets stay per Room and per Persona |
-| Changing how personal Memory works | `Teammates/<Name>/work/memory/` is unchanged. Team Memory sits beside it |
+| Changing how personal Memory works | `Agents/<Name>/work/memory/` is unchanged. Team Memory sits beside it |
 
 ---
 
@@ -155,13 +155,13 @@ reached in one Room with one Teammate part of every member's starting context.
    Task's Team and Project are its location. Team Memory is files. The pages read these sources
    and never cache them into another store. `team.db` is not touched.
 2. **Reuse the delivered components unchanged where possible.** `LibraryExplorer`, `TaskBoard`,
-   `TeammateAvatar`, `StatusDot`, `TeamFolderProvisioner` and `MemoryIndex` already do the work.
+   `AgentAvatar`, `StatusDot`, `TeamFolderProvisioner` and `MemoryIndex` already do the work.
    Where one has to change, the change is additive: a new optional parameter or a new public
    method, never a changed default.
 3. **The route owns the tab.** As in `Settings.razor`, `MudTabs` is driven, never authoritative.
    The active tab comes from the URL, so every tab of every Team can be bookmarked.
 4. **A restart is never a surprise.** Any action that rewrites a Persona's text restarts that
-   Teammate (`PersonaSupervisor.NeedsRestart`). The page says so before the Human confirms,
+   Agent (`PersonaSupervisor.NeedsRestart`). The page says so before the Human confirms,
    using the Library's persona-save warning wording (Library spec L5).
 5. **Reserved names are reserved everywhere at once.** `memory` joins `_`- and `.`-prefixed
    names as a folder that is never a Project. The check lives in one function that Tasks, the
@@ -180,7 +180,7 @@ reached in one Room with one Teammate part of every member's starting context.
 ```text
                 ┌──────────────────────────── Browser (Blazor Server circuit) ───────────────────────────┐
                 │                                                                                        │
-                │  MainLayout ── RoomList ── TeamsNav ── Teammates ── TaskViewNav ── LibraryNavLink       │
+                │  MainLayout ── RoomList ── TeamsNav ── Agents ── TaskViewNav ── LibraryNavLink       │
                 │                              │  (new)                                                   │
                 │                              ▼                                                          │
                 │   TeamPage.razor  /teams/{Team}/{Tab?}  ·  /teams/{Team}/projects/{Project}/{Tab?}     │
@@ -217,7 +217,7 @@ reached in one Room with one Teammate part of every member's starting context.
   FileChangeTracker: Teams/<label>/ is already a Watched Folder (memory/ is not pruned)
 
   Disk ({DataDir})
-  ├── Teammates/<Name>/<Name>.md           teams: [Business, Household]
+  ├── Agents/<Name>/<Name>.md           teams: [Business, Household]
   │   └── work/memory/*.md                  personal Memory (unchanged)
   └── Teams/
       ├── Business/                         Team folder
@@ -252,7 +252,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
 | `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
-| `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `TeammateChoice` on 2026-10-14) | §6.7 |
+| `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `AgentChoice` on 2026-10-14) | §6.7 |
 | `Components/Teams/TeamDetails.razor` | Details tab, last on a Team page (added 2026-10-14) | §2 |
 | `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
 | `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
@@ -262,7 +262,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 
 | File | Change | § |
 | --- | --- | --- |
-| `Components/Layout/MainLayout.razor` | `<TeamsNav />` between `<RoomList />` and the Teammates link | §6.5 |
+| `Components/Layout/MainLayout.razor` | `<TeamsNav />` between `<RoomList />` and the Agents link | §6.5 |
 | `Components/Library/LibraryExplorer.razor` | New optional two-way `Filter` / `FilterChanged` parameters and a public parameterless `NewNoteAsync()` method | §6.8 |
 | `Components/Library/LibraryFileOps.razor` | New public `NewNoteAsync(LibraryPath folder)`: opens the New note prompt in that folder and returns the created path (or `null`); it raises no `OnChanged`, so the explorer refreshes itself | §6.8 |
 | `Components/Library/LibraryTree.razor` | New public `RevealAsync(LibraryPath folder)` (a folder hit expands its ancestors and selects it), and a reload that keeps the expanded folders | §6.8 |
@@ -359,7 +359,7 @@ deletes their private unions.
   `PersonaFrontmatter.WriteListField(text, PersonaFrontmatter.TeamsKey, labels)`, and save with
   `PersonaStore.Update(name, text, model, effort)`.
 - Leave every other byte of the definition alone. `WriteListField` already guarantees that for
-  `skills` in `TeammateCard` (`TeammateCard.razor:1267`).
+  `skills` in `AgentProfileCard` (`AgentProfileCard.razor:1267`).
 
 **Internal flow (add).**
 
@@ -371,7 +371,7 @@ deletes their private unions.
      folder match exactly.
 3. `WriteListField`, then `Update`. `Update` validates, writes, republishes the index and raises
    `PersonasChanged` once. From there:
-   - `PersonaSupervisor` restarts the Teammate (`NeedsRestart`: the text changed);
+   - `PersonaSupervisor` restarts the Agent (`NeedsRestart`: the text changed);
    - `TeamFolderProvisioner.SyncFolders` creates the folder if it is missing;
    - `TaskStore` recomputes orphans;
    - `TeamCatalog` rebuilds and raises `Changed`.
@@ -389,7 +389,7 @@ nothing in Huddle deletes a Team folder.
   order preservation (TP-T3).
 - The built-in Chief of Staff can be a member like any other Persona (TP-0 answer). The built-in
   marker is the frontmatter key `_builtin`, and `PersonaStore.Update` never reads it, so an edit is
-  accepted. The picker lists the Chief of Staff like any other Teammate: there is no disabled row.
+  accepted. The picker lists the Chief of Staff like any other Agent: there is no disabled row.
 - `ITeamMembership` (`Add`, `Remove`) is the `internal` interface the Members tab and the dialog
   depend on; `TeamMembership` implements it over `PersonaStore` and `ITeamCatalog`.
 - `Add` returns `Rejected` without writing when the Team's display spelling cannot survive a
@@ -404,13 +404,13 @@ nothing in Huddle deletes a Team folder.
 
 - One save per click. There is no bulk add in V1: each add is a restart, and the dialog makes
   each one explicit.
-- Concurrency: `PersonaStore.Update` is last-write-wins on the file, exactly as the Teammate card
+- Concurrency: `PersonaStore.Update` is last-write-wins on the file, exactly as the Agent card
   is. `TeamMembership` serialises its own read-modify-write under a private lock, because
   `Update`'s gate covers only validate-and-write: two concurrent adds would otherwise read the same
   text and the second would drop the first label.
-- **Known limit: a Teammate card left open while a member is added silently drops that
+- **Known limit: an Agent card left open while a member is added silently drops that
   membership on save.** The card reads its text once when editing begins
-  (`TeammateCard.BeginEditAsync`), never refreshes on `PersonasChanged`, and saves that text
+  (`AgentProfileCard.BeginEditAsync`), never refreshes on `PersonasChanged`, and saves that text
   unconditionally. So an add (or remove) made while a card is open is undone by the card's next
   save. This was first written here as benign; it is not. It is accepted as last-write-wins, with
   no code change (correction S17).
@@ -500,7 +500,7 @@ Project or for the Team as a whole. They are visible to every member at every ne
 | --- | --- | --- |
 | `Teams/<Team>/memory/*.md` | The whole Team | Any member Agent, with its own file tools, or the Human in the Library |
 | `Teams/<Team>/<Project>/memory/*.md` | One Project | Same |
-| `Teammates/<Name>/work/memory/*.md` | One Teammate, private (unchanged) | That Teammate |
+| `Agents/<Name>/work/memory/*.md` | One Agent, private (unchanged) | That Agent |
 
 The file format is the same as personal Memory: one fact per file, with the fact on the first
 non-blank line (FileChanges spec §6.15). `MemoryIndex.Build` already parses that, so it is reused
@@ -546,7 +546,7 @@ internal static TeamMemorySnapshot Build(
 
 **The cap** is `Team:Teams:MaxMemoryEntries` (default **50**), across every Team of one Persona.
 It is separate from `FileChanges:MaxMemoryEntries` (100, personal), so a busy Team can't crowd
-out a Teammate's own Memory.
+out an Agent's own Memory.
 
 **Rendering.** A new block follows the personal Memory block. With the default Prompts it reads:
 
@@ -609,7 +609,7 @@ depends on the Room scope that §3 defers.
 
 | Row | Markup | Behaviour |
 | --- | --- | --- |
-| Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team with no members shows a muted `MudText` *No members* after its name |
+| Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team row trails its member count (`span.sidebar-row-meta`, tooltip *3 members* or *No members*) in place of the old muted *No members* text |
 | Project | `MudNavLink Href="/teams/{team}/projects/{project}" Class="nav-project-link"`, indented one level | Navigates |
 | Action | `NavTabLink Href="/teams/build" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **Build a team** | Opens the Build a team page (the sidebar's *New team* and *New team from a type* links were removed) |
 
@@ -617,11 +617,12 @@ depends on the Room scope that §3 defers.
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
 and keeps each keyboard-reachable.
 
-**Expansion state** is kept in `window.huddleStorage` under `teamsNav:collapsed`, a JSON array of
-the lower-cased names of the Teams the Human **collapsed**. Absent means every Team is expanded, so
+**Expansion state** is kept in `window.huddleStorage` under `teamsNav:expanded`, a JSON array of
+the lower-cased names of the Teams the Human **opened**. Absent means every Team is collapsed, so
 that rule also holds for a Team created later. Missing, unreadable or malformed storage means the
-same. The Team of the current route is expanded even when it is in the set, so the active Project
-is never hidden; the chevron collapses it again after the next navigation.
+same. The old `teamsNav:collapsed` key is ignored. The Team of the current route is expanded even
+when it is not in the set, so the active Project is never hidden; the chevron collapses it again
+after the next navigation. A list over 8 rows ends in *Show all (N)*.
 
 **Creation.** `TeamsNav` creates through `ITeamFolders` (`Agency.Huddle.App.Library`), which
 `TeamFolderProvisioner` implements. It never touches the disk itself.
@@ -718,46 +719,51 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
 - `MudTabs ActivePanelIndex` is computed from the route. `ActivePanelIndexChanged` calls
   `NavigationManager.NavigateTo(...)`. The page never flips a local field (the `Settings.razor`
   rule). The tab headers have no `href`: the route drives the tab, and a click only navigates.
-- **Breadcrumbs.** The page draws none. The shell's Top Bar (`TopBar`, drawing `PageBreadcrumbs`,
-  see the Tabs specification) reads *Teams › Team* on a Team page and *Teams › Team › Project* on
-  a Project page, with the Team a link to `/teams/<Team>`. The labels are the Tab's title, which is
-  the route's spelling until the Tab is retitled; the page's own title still takes the catalog's.
-  The page no longer draws a title of its own.
+- **Title and breadcrumbs.** The page names itself with a `PageHeader` h1: the Team's name on a Team
+  page, with **Duplicate** in the header's `Actions` on the right of the same row, and the Project's
+  name on a Project page. The shell's Top Bar (`TopBar`, drawing `PageBreadcrumbs`, see the Tabs
+  specification) therefore holds only the ancestors: *Teams* on a Team page and *Teams › Team* on a
+  Project page, with the Team a link to `/teams/<Team>`.
 - `KeepPanelsAlive` is **off**. Only the active tab is rendered, so a Team with 5,000 files
   doesn't build its tree while the Human reads Members.
 
 **Unknown Team.** When `TeamCatalog.Find(Team)` is null, the page shows
-`MudAlert Severity.Warning` *There is no Team named "X".*, with a link to the Teammates page.
+`MudAlert Severity.Warning` *There is no Team named "X".*, with a link to the Agents page.
 An unknown Project shows the same pattern, *There is no Project named "X" in Team "Business".*,
 with a link to its Team. Both alerts carry `role="alert"`. Neither page creates anything on a
 stray URL.
 
-**Title.** `<PageTitle>` is `Business — Huddle` or `Marketing Project · Business — Huddle`, and
-plain `Huddle` for an unknown Team or Project.
+**Title.** The document title is the bare name (`PageHeader` sets it): `Business` or
+`Marketing Project`, and plain `Huddle` for an unknown Team or Project.
 
 ### 6.7 Members tab
 
 > **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
 > for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
-> cards and a roster of the members (status dot, Edit, Message, and a Remove menu with *Remove
-> from Team* and *Delete Teammate*) beside new drafts, a Manager select, and one *Save changes*.
-> There is no search box, no *+ Add member* and no `AddMemberDialog`: a Teammate joins a Team by
+> cards (220px wide, two scrolling rows in `.role-grid`; the description clamps to three lines; Add is a small
+> outlined button at the bottom left with *Suggested* to its right) and a roster of the members (a 40px
+> avatar carrying the presence badge, no status dot beside the name; the name at 14px/600, the role at 13px, *Member*,
+> *New* or *1 skill* as meta text; Edit, Message and a Remove menu with *Remove from Team* and *Delete Agent* on
+> one row) beside new drafts, a Manager select, and one *Save changes*. The "Roles" and "Roster" headings are
+> 14px/600 with a 12px count (*Roster · 4 members*, *Roles · N roles available*). The save bar
+> (`.build-team-savebar`) renders only while there are unsaved changes and is sticky to the bottom of the pane.
+> There is no search box, no *+ Add member* and no `AddMemberDialog`: an Agent joins a Team by
 > being hired into it, or through its `teams:` line. `ITeamMembership.Remove` still does *Remove
 > from Team*, and Message still calls `EnsureTeamOneToOneAsync`. The text below records the
 > original design.
 
-**Purpose.** See who is in the Team, add Teammates, remove them.
+**Purpose.** See who is in the Team, add Agents, remove them.
 
 **The list.** A `MudList<string>` rendered as rows, not tiles, because the mock-up is a list and a
-Team usually holds 2–8 Teammates. Each row, left to right:
+Team usually holds 2–8 Agents. Each row, left to right:
 
-- `StatusDot State=…`, resolved exactly as `Teammates.razor` does:
+- `StatusDot State=…`, resolved exactly as `Agents.razor` does:
   `PersonaStatusResolver.Resolve(Gateway.IsOnline(id), Health.Get(name))`;
-- `TeammateAvatar Name=… Avatar=… Size=Size.Small`;
+- `AgentAvatar Name=… Avatar=… Size=Size.Small`;
 - Name, as `Typo.body1`;
 - `Title · Alias`, as `Typo.body2`, muted;
-- at the end, a `MudMenu` `⋯` with **Open card** (opens `TeammateCard` through
-  `DialogService.ShowAsync<TeammateCard>` exactly as `Teammates.razor:252` does) and **Remove
+- at the end, a `MudMenu` `⋯` with **Open card** (opens `AgentProfileCard` through
+  `DialogService.ShowAsync<AgentProfileCard>` exactly as `Agents.razor:252` does) and **Remove
   from Team**.
 
 Rows are sorted by Name, `StringComparer.OrdinalIgnoreCase`. Clicking a row opens the card.
@@ -773,28 +779,28 @@ naming why nothing was removed.
 
 **+ Add member** opens `AddMemberDialog`:
 
-- a `MudAutocomplete<string>` over loaded Teammates who are **not** already members.
+- a `MudAutocomplete<string>` over loaded Agents who are **not** already members.
   `SearchFunc` matches Name, Alias and Title, ignoring case. `Strict="true"`, so only an existing
   Name can be chosen. The items show avatar, Name and Title;
-- once a Teammate is picked, a `MudAlert Severity.Warning`:
+- once an Agent is picked, a `MudAlert Severity.Warning`:
   *Adding Kim restarts it and clears its conversation memory.*;
-- **Add** (disabled until a Teammate is picked) and **Cancel**.
+- **Add** (disabled until an Agent is picked) and **Cancel**.
 
 On **Add** the dialog calls `ITeamMembership.Add` itself, synchronously. On `Added` it closes with
-the Teammate's Name as its result (`DialogResult.Ok(name)`), and `TeamMembers`, which opened it,
+the Agent's Name as its result (`DialogResult.Ok(name)`), and `TeamMembers`, which opened it,
 shows the `Snackbar` *Kim added to Business.* On any other result the dialog stays open with the
 reason, as a `MudAlert Severity.Error` with `role="alert"` (rules.md: `MudAlert` renders no role by
 default). The reason is *Kim is already in Business.* for `AlreadyMember`, *Kim no longer exists.*
 for `NotFound`, and the result's `Problem` otherwise. The dialog receives the candidates as
-`TeammateChoice` records (Name, Title, Alias), a snapshot taken when it opens.
+`AgentChoice` records (Name, Title, Alias), a snapshot taken when it opens.
 
 **Search** filters the loaded rows in memory: Name, Alias or Title contains the text, ignoring
 case (`StringComparison.OrdinalIgnoreCase`). No match shows *No members match "zz".* With no
 members at all, the empty state reads *No members yet.* with the same *+ Add member* action.
 
-**Why not the Teammates tile component?** There is no reusable tile (`Teammates.razor:93-106`
+**Why not the Agents tile component?** There is no reusable tile (`Agents.razor:93-106`
 builds it inline), and a tile grid does not match the design. `TeamMembers` builds its rows from
-the two reusable pieces, `TeammateAvatar` and `StatusDot`. Extracting a shared row component is
+the two reusable pieces, `AgentAvatar` and `StatusDot`. Extracting a shared row component is
 V2, once a third caller exists.
 
 ### 6.8 Files tab
@@ -916,7 +922,7 @@ No new file format and no database change. Only conventions are added:
 | `Teams/<Team>/<Project>/` | Project: any non-reserved child of a Team folder | Rule narrowed: `memory` is reserved |
 | `Teams/<Team>/<Project>/memory/*.md` | Project Team Memory | **Yes** |
 | `Teams/<Team>/[<Project>/]_tasks/…` | Tasks (unchanged) | — |
-| `Teammates/<Name>/<Name>.md`, frontmatter `teams:` | Membership (unchanged); written by §6.2 | Newly written by the UI |
+| `Agents/<Name>/<Name>.md`, frontmatter `teams:` | Membership (unchanged); written by §6.2 | Newly written by the UI |
 
 `memory/` is **not** created ahead of time. It appears when an Agent or the Human first writes
 into it. The prompt tells Agents to create it (§6.4).
@@ -959,13 +965,13 @@ public sealed record TeamPageFeatures(bool Library, bool Tasks);
 ```
 
 `TeamSummary`, `TeamPageTab`, `TeamPageFeatures`, `MembershipOutcome`, `MembershipResult`,
-`TeammateChoice` and `NewTeamDialogMode` are `public` because they cross a `[Parameter]` or dialog
+`AgentChoice` and `NewTeamDialogMode` are `public` because they cross a `[Parameter]` or dialog
 boundary (rules.md, CS0053). Everything else is `internal`: the services, the helpers, and the
 interfaces `ITeamCatalog`, `ITeamMembership` and `ITeamFolders`.
 
 ```csharp
-/// <summary>One Teammate the Add member dialog offers.</summary>
-public sealed record TeammateChoice(string Name, string Title, string Alias);   // Components/Teams
+/// <summary>One Agent the Add member dialog offers.</summary>
+public sealed record AgentChoice(string Name, string Title, string Alias);   // Components/Teams
 
 /// <summary>What NewTeamDialog is naming.</summary>
 public enum NewTeamDialogMode { Team, Project }                                 // Components/Teams
@@ -998,7 +1004,7 @@ lines here.
 
 | `window.huddleStorage` key | Holds |
 | --- | --- |
-| `teamsNav:collapsed` | JSON array of lower-cased names of the Teams whose Projects are hidden. Absent means all expanded, also for a Team created later |
+| `teamsNav:expanded` | JSON array of lower-cased names of the Teams the Human opened. Absent means all collapsed, also for a Team created later |
 | `library:team:<scope>…` | Set by `LibraryExplorer` from `StateKey` (expanded folders, open file, divider) |
 
 Both follow the Library's rule: failed or missing storage means defaults, never an error.
@@ -1006,7 +1012,7 @@ Both follow the Library's rule: failed or missing storage means defaults, never 
 ### 7.6 Data flow
 
 ```text
-TeammateCard / TeamMembership ──Update──► Teammates/<Name>/<Name>.md
+AgentProfileCard / TeamMembership ──Update──► Agents/<Name>/<Name>.md
                                               │ PersonasChanged
           ┌───────────────────────────────────┼─────────────────────────────┐
           ▼                                   ▼                             ▼
@@ -1146,11 +1152,11 @@ rule (§6.4).
   correct because each rebuild reads the latest state.
 - `TeamMembership` holds one private lock across each whole read-modify-write, because
   `PersonaStore.Update`'s own gate covers only validate-and-write. `PersonasChanged` subscribers
-  run while that lock is held, so none of them may call `ITeamMembership`. Against the Teammate
+  run while that lock is held, so none of them may call `ITeamMembership`. Against the Agent
   card, `Update` is still the only serialisation point, and the last write wins (§6.2).
 - The Files search holds one `CancellationTokenSource` per page. A new term cancels and disposes
   the previous one. Results from a cancelled walk are never rendered.
-- A membership change restarts the Teammate on the supervisor's thread. The page doesn't wait for
+- A membership change restarts the Agent on the supervisor's thread. The page doesn't wait for
   the restart. It re-renders when the catalog changes, which happens before the restart
   completes, and the member's `StatusDot` shows its state moving through
   *starting → online*.
@@ -1163,14 +1169,14 @@ rule (§6.4).
 | --- | --- | --- |
 | Catalog rebuild | < 1 ms for 20 Teams and 8 Personas | O(labels + folders + Σ persona teams) |
 | Sidebar render | One row per Team plus its expanded Projects | No IO |
-| Members tab | In-memory, at most `Acp:MaxTeammates` (8) rows | — |
+| Members tab | In-memory, at most `Acp:MaxAgents` (8) rows | — |
 | Files search | Walks at most `Library:MaxIndexedFiles` (5,000) entries, typically < 100 ms on SSD | Capped at 200 hits, cancellable |
 | Tasks tab | `TaskQuery.Filter` over all Tasks, the same cost as the Tasks page | — |
 | Team Memory at session start | One directory enumeration and one first-line read per memory file, at most 50 listed | Capped by `Team:Teams:MaxMemoryEntries`. Unlisted files are counted, not read |
 | Prompt size | Worst case about 50 × 200 characters ≈ 10 KB added to a system prompt | Prompt text is configurable |
 
 **Scaling note.** A Persona in many Teams pays one directory listing per Team and per Project at
-session start. With 8 Teammates, 5 Teams and 10 Projects each, that is at most 55 listings for
+session start. With 8 Agents, 5 Teams and 10 Projects each, that is at most 55 listings for
 each session start, and each listing only happens when that session starts. The cost is
 negligible next to starting the Adapter process.
 
@@ -1181,7 +1187,7 @@ negligible next to starting the Adapter process.
 | # | Case | Behaviour |
 | --- | --- | --- |
 | E-1 | A label and a folder differ only by case (`business` vs `Business/`) | One Team, shown with the folder's spelling. An add writes the folder spelling |
-| E-2 | An existing Team already has a Project folder named `memory` holding Tasks | After upgrade it is no longer a Project, and its Tasks in `memory/_tasks/` are ignored and no longer listed. **Mitigation:** at start-up, `TaskStore` logs one Warning for each Team folder whose `memory/_tasks/` (a folder named `memory` in any case) holds files, naming the Team and the files and telling the Human to move them. It logs once, from the constructor after the first scan, not on a watcher rebuild. Huddle never moves them itself. **Two limits:** (1) the legacy Teammate-layout migration (`TeammateLayoutMigration.LegacyTaskPath`) can still move legacy `Tasks/<Team>/memory/*.md` files into `Teams/<Team>/memory/_tasks/`; the code is unchanged and this Warning reports those files too. (2) Once stranded, those Tasks leave `All`, so `HighestNumber` no longer sees their numbers; the persisted id counter protects Huddle-created ones, but a hand-copied, higher-numbered file could have its number reused |
+| E-2 | An existing Team already has a Project folder named `memory` holding Tasks | After upgrade it is no longer a Project, and its Tasks in `memory/_tasks/` are ignored and no longer listed. **Mitigation:** at start-up, `TaskStore` logs one Warning for each Team folder whose `memory/_tasks/` (a folder named `memory` in any case) holds files, naming the Team and the files and telling the Human to move them. It logs once, from the constructor after the first scan, not on a watcher rebuild. Huddle never moves them itself. **Two limits:** (1) the legacy Agent-layout migration (`AgentLayoutMigration.LegacyTaskPath`) can still move legacy `Tasks/<Team>/memory/*.md` files into `Teams/<Team>/memory/_tasks/`; the code is unchanged and this Warning reports those files too. (2) Once stranded, those Tasks leave `All`, so `HighestNumber` no longer sees their numbers; the persisted id counter protects Huddle-created ones, but a hand-copied, higher-numbered file could have its number reused |
 | E-3 | A label is invalid as a folder name (`R&D/Legal`) | The provisioner already skips it. The Team is listed with `HasFolder = false`. The Files tab's scope fails `LibraryPathResolver` and shows the Library's scope `MudAlert`. *New project* is hidden for that Team |
 | E-4 | The Human removes the last member | The Team stays listed with *No members*, because its folder exists. Its Tasks stay, and Tasks marks them orphaned |
 | E-5 | A label is removed from the last Persona and no folder exists | The Team disappears from the sidebar. An open page for it shows *There is no Team named …* |
@@ -1195,7 +1201,7 @@ negligible next to starting the Adapter process.
 | E-13 | Both Library and Tasks disabled | A Team page has Members only. A Project page shows the *turned off* alert. Projects are still listed, because folders exist |
 | E-14 | A Persona in 12 Teams | The Team Memory cap applies across all of them. Later Teams are counted, not listed. The Teams are processed in `teams` order, so the Human controls priority by ordering the list |
 | E-15 | The Human navigates away during an add | The save still completes, because `PersonaStore.Update` is synchronous once called. The snackbar may be lost. The next visit shows the member |
-| E-16 | The built-in Chief of Staff is added | It is added like any other Teammate: `PersonaStore.Update` accepts a built-in Persona (marker `_builtin`), and the picker lists it enabled (§6.2) |
+| E-16 | The built-in Chief of Staff is added | It is added like any other Agent: `PersonaStore.Update` accepts a built-in Persona (marker `_builtin`), and the picker lists it enabled (§6.2) |
 | E-17 | A search term matching over 200 files | The first 200 are listed, with *Showing the first 200 matches — refine the search.* |
 | E-18 | A new Team's name contains `,` `;` `[` `]` or a control character (`Sales, EMEA`, a pasted newline) | `TeamNames.ValidateTeamName` refuses it in the dialog: *A Team name can't contain commas, semicolons or square brackets.* A label is stored in a comma-separated `teams` list, and `,`, `;`, `\n` and `\r` do not round-trip through `WriteListField`; the brackets do, so refusing them is conservative. A label that is already unwritable (a hand-edited or legacy one) makes `TeamMembership.Add` return `Rejected` and write nothing |
 
@@ -1245,11 +1251,11 @@ a decision in Team Memory.
 
 | # | Decision | Alternatives rejected | Why |
 | --- | --- | --- | --- |
-| D-1 | **Teams is its own sidebar group, between Chats and Teammates** (revised by [ADR-0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md): a Team's Rooms are listed under it) | Teams nested inside the Chats group; Rooms nested under Teams | Rooms are not scoped to Teams (D-9), so nesting either inside the other would imply a relationship that doesn't exist. Chosen by the Human |
-| D-2 | **Membership stays the `teams` frontmatter field; the page writes it** | A `Teams/<Team>/team.md` member list; membership in `team.db` | A Team is a label, not a folder (2026-09-12, decisions.md). A second list would drift from the field the Supervisor, the Watched Folders and `/teammates` read |
-| D-3 | **Each add or remove restarts the Teammate, with a warning first** | Hot-apply `teams` without a restart; exclude `teams` from `NeedsRestart` | A new Team changes the Watched Folders and the Team Memory in the system prompt, so a restart is what makes the change real. Hiding it would leave an Agent that isn't told about its new Team |
-| D-4 | **Team Memory in `Teams/<Team>/memory/` and `…/<Project>/memory/`, listed in every member's system prompt** | Notes only, with no prompt listing; per-Teammate, per-Project folders in each Work Dir; Project-only memory | Same convention and parser as personal Memory; one copy of each fact for the whole Team; reaches Agents through channels they already have. Chosen by the Human. See ADR-0032 |
-| D-5 | **The folder is called `memory`, reserved as a Project name** | `_memory/` (reserved by prefix) | The Human wanted the same name Teammates use. `_memory/` would be hidden in the Library and pruned from File Changes, both by existing rules, so it would need two exceptions. Reserving one word needs one check in one function |
+| D-1 | **Teams is its own sidebar group, between Chats and Agents** (revised by [ADR-0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md): a Team's Rooms are listed under it) | Teams nested inside the Chats group; Rooms nested under Teams | Rooms are not scoped to Teams (D-9), so nesting either inside the other would imply a relationship that doesn't exist. Chosen by the Human |
+| D-2 | **Membership stays the `teams` frontmatter field; the page writes it** | A `Teams/<Team>/team.md` member list; membership in `team.db` | A Team is a label, not a folder (2026-09-12, decisions.md). A second list would drift from the field the Supervisor, the Watched Folders and `/agents` read |
+| D-3 | **Each add or remove restarts the Agent, with a warning first** | Hot-apply `teams` without a restart; exclude `teams` from `NeedsRestart` | A new Team changes the Watched Folders and the Team Memory in the system prompt, so a restart is what makes the change real. Hiding it would leave an Agent that isn't told about its new Team |
+| D-4 | **Team Memory in `Teams/<Team>/memory/` and `…/<Project>/memory/`, listed in every member's system prompt** | Notes only, with no prompt listing; per-Agent, per-Project folders in each Work Dir; Project-only memory | Same convention and parser as personal Memory; one copy of each fact for the whole Team; reaches Agents through channels they already have. Chosen by the Human. See ADR-0032 |
+| D-5 | **The folder is called `memory`, reserved as a Project name** | `_memory/` (reserved by prefix) | The Human wanted the same name Agents use. `_memory/` would be hidden in the Library and pruned from File Changes, both by existing rules, so it would need two exceptions. Reserving one word needs one check in one function |
 | D-6 | **One shared Team Memory cap, separate from the personal cap** | Reuse `FileChanges:MaxMemoryEntries`; no cap | Reusing it would let Team facts crowd out personal ones. With no cap, a busy Team would inflate every member's prompt |
 | D-7 | **Search filters by name only; Files search is a flat result list** | Full-text; filtering the tree in place | Full-text is deferred by the Library spec. Filtering a lazily loaded tree in place means loading every folder anyway, and flickers as it expands. A flat list with folder paths is quicker to scan |
 | D-8 | **The route owns the tab; the search text does not go in the URL** | `?q=` in the URL; one shared search box across tabs | The tab being bookmarkable matches Settings. Search is transient, and one term rarely makes sense across Members, Files and Tasks |

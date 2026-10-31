@@ -1,6 +1,6 @@
 @*
     The reusable Library control (Task 12.7, Spec §6.16): a tree and a document viewer scoped by
-    Scopes, hosted by the Library Pane, the /library page and, later, Project/Team/Teammate pages.
+    Scopes, hosted by the Library Pane, the /library page and, later, Project/Team/Agent pages.
 
     A LibraryLocation is never a path: every scope goes through LibraryPathResolver.TryResolveScope
     just like any other Library path, so a scoped explorer can never show more than the full Library
@@ -43,6 +43,7 @@
 *@
 @using System.Globalization
 @using Microsoft.AspNetCore.Components
+@using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
 @implements IDisposable
@@ -74,10 +75,27 @@
     else
     {
         <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
-                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" Class="@this.SplitClass()">
+                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" PanelGap="1" Class="@this.SplitClass()">
             <FirstPanel>
                 @* The tree is never unmounted while filtered (nothing persists its expansion): it is
                    hidden, and the results render beside it. *@
+                @* L2c: the tree panel's own header, shared by every host: search, New note, New folder, in one row that is the
+                   same height as the document toolbar beside it (audit B2). *@
+                <div class="library-explorer-tree-header">
+                    <SearchField Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search notes"
+                                 AriaLabel="Search notes" Compact="true" Class="library-explorer-search" />
+                    @if (this.PrimaryScope() is not null)
+                    {
+                        <div class="library-explorer-tree-actions">
+                            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote"
+                                       OnClick="this.NewNoteAsync" Class="library-explorer-new-note">New note</MudButton>
+                            <MudTooltip Text="New folder">
+                                <MudIconButton Icon="@ActionIcons.NewFolder" Size="Size.Small" aria-label="New folder"
+                                               OnClick="this.NewFolderAsync" Class="library-explorer-new-folder" />
+                            </MudTooltip>
+                        </div>
+                    }
+                </div>
                 <div class="@this.TreeClass()">
                     <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" ShowScopeRoot="@this.ShowScopeRoot" SelectedPath="@this.selectedPath" SelectedPathChanged="@this.OnSelectedPathChanged" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
                 </div>
@@ -119,11 +137,11 @@
                 else if (this.resultTerm is null)
                 {
                     @* Nothing is open: say what to do rather than leave the whole pane blank. *@
-                    <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.Description" Text="Select a note to read it, or start a new one.">
+                    <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.Description" Title="No note open" Text="Select a note in the tree to read it, or start a new one.">
                         <Action>
                             @if (this.SingleScope() is not null)
                             {
-                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@ActionIcons.Add" OnClick="this.NewNoteAsync">New note</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote" OnClick="this.NewNoteAsync">New note</MudButton>
                             }
                         </Action>
                     </EmptyState>
@@ -142,6 +160,7 @@
 
     private LibraryPath? currentPath;
     private LibraryPath? publishedPath;
+    private LibraryPath? revealedPath;
     private bool locationPublished;
     private LibraryPath? selectedPath;
     private bool unavailable;
@@ -156,6 +175,8 @@
 
     private const string TruncatedText = "Showing the first 200 matches — refine the search.";
 
+    private string? searchText;
+    private string? hostFilter;
     private string searchedTerm = string.Empty;
     private string? resultTerm;
     private IReadOnlyList<SearchRow> hits = [];
@@ -217,13 +238,16 @@
     [Parameter]
     public EventCallback<LibraryPath?> OnOpenFileChanged { get; set; }
 
-    /// <summary>A name filter (Spec §6.8). Null or blank shows the tree; otherwise the tree is hidden (never
-    /// unmounted) and the name matches under every scope render beside it. The explorer does not debounce.</summary>
+    /// <summary>An optional starting or host-kept name filter (Spec §6.8). The explorer shows its own search
+    /// field (<c>L2c</c>) in every host; a host that remembers the text passes it here and adopts it again
+    /// whenever the value changes. Null or blank shows the tree; otherwise the tree is hidden (never
+    /// unmounted) and the name matches under every scope render beside it.</summary>
     [Parameter]
     public string? Filter { get; set; }
 
-    /// <summary>Raised with <see langword="null"/> when a folder hit clears the filter, so a two-way host
-    /// updates its own value.</summary>
+    /// <summary>Raised with the field's text (blank as <see langword="null"/>) after the field's debounce,
+    /// and with <see langword="null"/> when a folder hit clears the filter, so a two-way host updates its
+    /// own value.</summary>
     [Parameter]
     public EventCallback<string?> FilterChanged { get; set; }
 
@@ -238,7 +262,26 @@
     /// this runs on the first mount and on every parent render, and most of those carry the same term.</summary>
     protected override async Task OnParametersSetAsync()
     {
-        string normalised = (this.Filter ?? string.Empty).Trim();
+        if (!string.Equals(this.Filter, this.hostFilter, StringComparison.Ordinal))
+        {
+            this.hostFilter = this.Filter;
+            this.searchText = this.Filter;
+        }
+
+        await this.RunSearchAsync();
+    }
+
+    /// <summary>The field's debounced text: keeps it, tells the host, and searches.</summary>
+    private async Task OnSearchChangedAsync(string? value)
+    {
+        this.searchText = value;
+        await this.FilterChanged.InvokeAsync(string.IsNullOrWhiteSpace(value) ? null : value);
+        await this.RunSearchAsync();
+    }
+
+    private async Task RunSearchAsync()
+    {
+        string normalised = (this.searchText ?? string.Empty).Trim();
         if (string.Equals(normalised, this.searchedTerm, StringComparison.Ordinal))
         {
             return;
@@ -341,6 +384,8 @@
         this.resultTerm = null;
         this.hits = [];
         this.truncated = false;
+        this.searchText = null;
+        this.searchedTerm = string.Empty;
         await this.FilterChanged.InvokeAsync(null);
         if (this.tree is not null)
         {
@@ -356,6 +401,7 @@
             await this.TryOpenInitialFileAsync();
             this.TryOpenFromQuery(this.Navigation.Uri);
             await this.RestoreStateAsync();
+            await this.TryOpenDefaultDocumentAsync();
         }
 
         if (this.OnOpenFileChanged.HasDelegate && (!this.locationPublished || this.currentPath != this.publishedPath))
@@ -363,6 +409,26 @@
             this.locationPublished = true;
             this.publishedPath = this.currentPath;
             await this.OnOpenFileChanged.InvokeAsync(this.currentPath);
+        }
+
+        await this.RevealOpenFileAsync();
+    }
+
+    /// <summary>Expands the tree down to the open file and selects it, however the file was opened: the tree,
+    /// a search hit, a link, <see cref="InitialFile"/>, the query or the remembered state. Runs once per
+    /// file; a tree whose nodes are not loaded yet leaves it for the next render.</summary>
+    private async Task RevealOpenFileAsync()
+    {
+        if (this.tree is null
+            || this.currentPath is not { } open
+            || (this.revealedPath is not null && LibraryPathComparer.Instance.Equals(open, this.revealedPath)))
+        {
+            return;
+        }
+
+        if (await this.tree.RevealAsync(open))
+        {
+            this.revealedPath = open;
         }
     }
 
@@ -489,18 +555,47 @@
 
     private LibraryPath? PrimaryScope() => this.resolvedScopes.Count > 0 ? this.resolvedScopes[0] : null;
 
-    /// <summary>Opens the New note dialog in the folder selected in the tree when it lies inside the first
-    /// scope (a selected file counts as its parent folder), else in the first scope's folder, and opens the
-    /// created note in the document area. Returns when the dialog closes; cancelling creates and opens nothing.</summary>
-    public async Task NewNoteAsync()
+    /// <summary>Where New note and New folder create: the folder selected in the tree when it lies inside the
+    /// first scope (a selected file counts as its parent folder), else the first scope's folder.</summary>
+    private LibraryPath? CreateTarget()
     {
         LibraryPath? scope = this.PrimaryScope();
-        if (scope is null || this.fileOps is null)
+        if (scope is not null && this.SelectedFolder() is { } selected && ContainsOrEquals(scope, selected))
+        {
+            return selected;
+        }
+
+        return scope;
+    }
+
+    /// <summary>Opens the New folder dialog in <see cref="CreateTarget"/> and shows the created folder in the
+    /// tree. Returns when the dialog closes; cancelling creates nothing.</summary>
+    public async Task NewFolderAsync()
+    {
+        LibraryPath? target = this.CreateTarget();
+        if (target is null || this.fileOps is null)
         {
             return;
         }
 
-        LibraryPath target = this.SelectedFolder() is { } selected && ContainsOrEquals(scope, selected) ? selected : scope;
+        LibraryPath? created = await this.fileOps.NewFolderAsync(target);
+        if (created is not null)
+        {
+            await this.OnFileOpsChangedAsync(new LibraryChange(null, created, []));
+            await this.InvokeAsync(this.StateHasChanged);
+        }
+    }
+
+    /// <summary>Opens the New note dialog in <see cref="CreateTarget"/> and opens the
+    /// created note in the document area. Returns when the dialog closes; cancelling creates and opens nothing.</summary>
+    public async Task NewNoteAsync()
+    {
+        LibraryPath? target = this.CreateTarget();
+        if (target is null || this.fileOps is null)
+        {
+            return;
+        }
+
         LibraryPath? created = await this.fileOps.NewNoteAsync(target);
         if (created is not null)
         {
@@ -587,6 +682,25 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the root's own first document (<see cref="LibraryRoots.DefaultDocument"/>, SKILLS.md for the Skill
+    /// Sources root) when the explorer shows exactly that one root and nothing else opened it: an initial file, the
+    /// query and a remembered selection all ran first and win.</summary>
+    private Task TryOpenDefaultDocumentAsync()
+    {
+        if (this.currentPath is not null
+            || this.resolvedScopes.Count != 1
+            || this.resolvedScopes[0] is not { RelativePath.Length: 0 } scope
+            || LibraryRoots.DefaultDocument(scope.Root) is not { } defaultDocument
+            || !this.Resolver.TryResolve(scope.Root.Id, defaultDocument, out LibraryPath? resolved, out _)
+            || !File.Exists(resolved.FullPath))
+        {
+            return Task.CompletedTask;
+        }
+
+        this.currentPath = resolved;
+        return this.InvokeAsync(this.StateHasChanged);
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>

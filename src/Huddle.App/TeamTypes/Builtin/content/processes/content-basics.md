@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The editor-in-chief's Evidence line is the check before a piece is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Edit pass: document reviewed by verify
+- Claims checked: evidence from verify
+
 ## Cadence
 
 - Keep no more than two pieces in progress per Writer.

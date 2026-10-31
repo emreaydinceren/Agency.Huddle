@@ -6,19 +6,6 @@ using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>The Tasks UI's presence badge for an assignee, per Spec §10.8.</summary>
-public enum PresenceState
-{
-    /// <summary>The assignee has a Turn running right now.</summary>
-    Awake,
-
-    /// <summary>The assignee is online but has no Turn running.</summary>
-    Asleep,
-
-    /// <summary>The assignee is not online.</summary>
-    Offline,
-}
-
 /// <summary>Resolves the Tasks UI's presence badge from an Agent's online and busy state.</summary>
 internal static class TaskPresence
 {
@@ -45,7 +32,7 @@ internal static class TaskPresence
 
     /// <summary>
     /// One presence lookup by Name, shared by the Board, <c>TaskDetail</c> and <c>TaskTriggerService.Preview</c>
-    /// (corrections-B5): resolves the Teammate, its online state and whether it has a Turn running, then
+    /// (corrections-B5): resolves the Agent, its online state and whether it has a Turn running, then
     /// calls <see cref="Resolve(bool, bool)"/>.
     /// </summary>
     /// <param name="name">The assignee's Name.</param>

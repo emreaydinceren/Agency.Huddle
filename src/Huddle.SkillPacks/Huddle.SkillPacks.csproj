@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.SkillPacks</RootNamespace>
+    <AssemblyName>Agency.Huddle.SkillPacks</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Tests.Common" />
+    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
+    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
+    <InternalsVisibleTo Include="Huddle.Tests.Components" />
+    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
+    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Schemas\*.schema.json" LogicalName="Agency.Huddle.SkillPacks.Schemas.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

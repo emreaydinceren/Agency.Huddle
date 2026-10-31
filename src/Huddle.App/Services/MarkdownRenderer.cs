@@ -60,7 +60,25 @@ public static partial class MarkdownRenderer
     /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
     /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
     public static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library) =>
-        MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null);
+        MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null, mentions: null);
+
+    /// <summary>
+    /// Renders <paramref name="markdown"/> to HTML as the three-argument overload does, additionally wrapping
+    /// each Mention written in plain text in a <c>&lt;span class="mention"&gt;</c> - with <c>mention--me</c>
+    /// added for one of <see cref="MentionMarks.OwnHandles"/> - so the stylesheet can draw it as a pill. A
+    /// Mention is an <c>@</c> followed by a known handle, matched as <see cref="MentionParser"/> matches it
+    /// (longest first, <see cref="StringComparison.OrdinalIgnoreCase"/>, ending at a word boundary); the text
+    /// keeps the characters as typed. Text inside code, a link or an autolink is never marked, and an unknown
+    /// <c>@word</c> or an email address stays plain text. With <paramref name="mentions"/>
+    /// <see langword="null"/>, behaviour is identical to
+    /// <see cref="ToHtml(string, ITaskReferenceResolver?, ILibraryReferenceResolver?)"/>.
+    /// </summary>
+    /// <param name="markdown">The Markdown text to render.</param>
+    /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
+    /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
+    /// <param name="mentions">The Room's mentionable handles and the Human's own, or <see langword="null"/> to mark none.</param>
+    public static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, MentionMarks? mentions) =>
+        MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null, mentions);
 
     /// <summary>
     /// Renders <paramref name="markdown"/> to HTML as the two-argument overload does, additionally linking
@@ -73,7 +91,7 @@ public static partial class MarkdownRenderer
     /// <param name="library">The resolver for wikilinks and relative links, or <see langword="null"/> to link none.</param>
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
     internal static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryNoteResolver? library, LibraryPath? from) =>
-        MarkdownRenderer.Render(markdown, tasks, library: null, noteLibrary: library, from: from);
+        MarkdownRenderer.Render(markdown, tasks, library: null, noteLibrary: library, from: from, mentions: null);
 
     /// <summary>The single render path shared by every public and internal <see cref="ToHtml(string)"/> overload.</summary>
     /// <param name="markdown">The Markdown text to render.</param>
@@ -81,7 +99,8 @@ public static partial class MarkdownRenderer
     /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
     /// <param name="noteLibrary">The resolver for wikilinks and relative links, or <see langword="null"/> outside a note.</param>
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
-    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from)
+    /// <param name="mentions">The handles to draw as Mention pills, or <see langword="null"/> to mark none.</param>
+    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from, MentionMarks? mentions)
     {
         // An unguessable per-render marker, not something a note's own authored text could ever contain: only
         // an image href this call itself resolved through RewriteRelativeLinks carries it, so IsSafe can trust
@@ -106,6 +125,11 @@ public static partial class MarkdownRenderer
 
         if (noteLibrary is not null && from is not null)
         {
+            foreach ((HeadingBlock block, string id) in MarkdownOutline.IdsFor(document))
+            {
+                block.GetAttributes().Id = id;
+            }
+
             MarkdownRenderer.RewriteRelativeLinks(document, noteLibrary, from, trustToken);
             MarkdownRenderer.LinkWikiLinks(document, noteLibrary, from, markdown);
         }
@@ -113,6 +137,14 @@ public static partial class MarkdownRenderer
         if (library is not null)
         {
             MarkdownRenderer.LinkLibraryPaths(document, library, markdown);
+        }
+
+        // Last, so a Task, Library or Room link written over the same characters wins and the Mention inside it
+        // is left alone, exactly as any text inside a link is.
+        if (mentions is not null)
+        {
+            renderer.ObjectRenderers.Insert(0, new MentionInlineRenderer());
+            MarkdownRenderer.MarkMentions(document, mentions, markdown);
         }
 
         renderer.Render(document);
@@ -250,9 +282,12 @@ public static partial class MarkdownRenderer
                 continue;
             }
 
-            if (match.Index > consumed)
+            // A "#" written straight before the id ("#PLAT-12") is part of the reference, so the chip takes it in
+            // and draws the id alone, rather than leaving a stray "#" in front of the chip.
+            int start = match.Index > consumed && text[match.Index - 1] == '#' ? match.Index - 1 : match.Index;
+            if (start > consumed)
             {
-                replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, match.Index));
+                replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, start));
             }
 
             replacements.Add(MarkdownRenderer.CreateLink(reference, match.Value));
@@ -313,7 +348,9 @@ public static partial class MarkdownRenderer
         link.GetAttributes().AddClass("task-ref");
         if (reference.Status is { } status)
         {
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
             link.GetAttributes().AddClass(string.Create(CultureInfo.InvariantCulture, $"task-ref-status-{TaskColors.For(status).ToString().ToLowerInvariant()}"));
+#pragma warning restore HAA0102
         }
 
         if (reference.Closed)
@@ -343,7 +380,9 @@ public static partial class MarkdownRenderer
     {
         foreach (LinkInline link in document.Descendants<LinkInline>().ToList())
         {
-            if (link.Url is null)
+            // A Task, Room or Team link is already an app address ("/tasks/item/PLAT-12", "/rooms/{id}"), which the
+            // resolver would otherwise read as Library-root-relative and point at a note that does not exist.
+            if (link.Url is null || MarkdownRenderer.IsAppReference(link))
             {
                 continue;
             }
@@ -368,6 +407,12 @@ public static partial class MarkdownRenderer
             }
         }
     }
+
+    /// <summary>Whether <paramref name="link"/> was already marked as a Task, Room or Team reference by an earlier pass.</summary>
+    /// <param name="link">The link to check.</param>
+    private static bool IsAppReference(LinkInline link) =>
+        link.GetAttributes().Classes is { } classes
+        && classes.Exists(static name => name is "task-ref" or "room-ref" or "team-ref");
 
     /// <summary>
     /// Finds every run of consecutive sibling <see cref="LiteralInline"/>s in <paramref name="document"/> and
@@ -486,7 +531,15 @@ public static partial class MarkdownRenderer
         foreach ((int start, int length, Func<string, Inline> build) in matches)
         {
             MarkdownRenderer.AppendKeptRange(replacements, positions, ref literalIndex, cursor, start);
-            replacements.Add(build(markdown.Substring(start, length)));
+            Inline built = build(markdown.Substring(start, length));
+            if (built is LiteralInline)
+            {
+                // A declined match comes back as a literal holding the raw token exactly, so it keeps its exact
+                // raw-source position and a later literal-run pass (Mentions) can still scan this run.
+                built.Span = new SourceSpan(start, start + length - 1);
+            }
+
+            replacements.Add(built);
             cursor = start + length;
         }
 
@@ -548,16 +601,17 @@ public static partial class MarkdownRenderer
                 continue;
             }
 
-            LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
+            LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), reference.RelativePath);
             link.GetAttributes().AddClass("library-ref");
             if (!reference.Exists)
             {
                 link.GetAttributes().AddClass("library-ref-missing");
             }
 
+            // A file in a message is its name, not its absolute path in monospace; the relative path is the tooltip (audit B5b).
             code.InsertBefore(link);
             code.Remove();
-            link.AppendChild(code);
+            link.AppendChild(new LiteralInline(MarkdownRenderer.FileNameOf(path)));
         }
     }
 
@@ -613,6 +667,155 @@ public static partial class MarkdownRenderer
         MarkdownRenderer.SpliceRunMatches(run, matches, markdown);
     }
 
+    /// <summary>
+    /// Wraps every Mention of one of <paramref name="mentions"/>' handles written in plain literal-run text in a
+    /// <see cref="MentionInline"/>. Names and Aliases are sorted together, longest first, as
+    /// <see cref="MentionParser"/> sorts them, so "@Emily Lee" marks "Emily Lee" and not "Emily" in a Room that
+    /// holds both; an Agent's handle precedes an equal-length own handle.
+    /// </summary>
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    /// <param name="mentions">The handles to mark.</param>
+    /// <param name="markdown">The original raw Markdown text.</param>
+    private static void MarkMentions(MarkdownDocument document, MentionMarks mentions, string markdown)
+    {
+        List<(string Handle, bool Own)> candidates = [.. mentions.Handles
+            .Select(static handle => (Handle: handle, Own: false))
+            .Concat(mentions.OwnHandles.Select(static handle => (Handle: handle, Own: true)))
+            .Where(static candidate => candidate.Handle.Length > 0)
+            .OrderByDescending(static candidate => candidate.Handle.Length)];
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        MarkdownRenderer.ForEachLiteralRun(document, run => MarkdownRenderer.MarkMentionsInRun(run, candidates, markdown));
+    }
+
+    /// <summary>
+    /// Scans one literal run's raw source slice for Mentions, deciding each one with
+    /// <see cref="MentionParser.CanStartMention"/> and <see cref="MentionParser.MatchesHandleAt"/> against the
+    /// whole of <paramref name="markdown"/> - so the characters either side of the run count, just as they do when
+    /// the Message is parsed for Mentions - and splices a <see cref="MentionInline"/> in for each via
+    /// <see cref="SpliceRunMatches"/>. A match must end inside the run, and never overlaps a literal whose text is
+    /// not its raw source character for character (an escape such as <c>\@</c>), so it cannot be mis-sliced.
+    /// </summary>
+    /// <param name="run">Consecutive sibling literals to scan; left untouched when empty or no Mention is found.</param>
+    /// <param name="candidates">Every handle to mark, longest first, with whether it is one of the Human's own.</param>
+    /// <param name="markdown">The original raw Markdown text.</param>
+    private static void MarkMentionsInRun(List<LiteralInline> run, List<(string Handle, bool Own)> candidates, string markdown)
+    {
+        if (!MarkdownRenderer.HasUsableSpans(run, markdown))
+        {
+            return;
+        }
+
+        int runStart = run[0].Span.Start;
+        int runEndExclusive = run[^1].Span.End + 1;
+        List<(int Start, int Length, Func<string, Inline> Build)> matches = [];
+        for (int i = runStart; i < runEndExclusive; i++)
+        {
+            if (!MentionParser.CanStartMention(markdown, i))
+            {
+                continue;
+            }
+
+            foreach ((string handle, bool own) in candidates)
+            {
+                int end = i + 1 + handle.Length;
+                if (end > runEndExclusive
+                    || !MentionParser.MatchesHandleAt(markdown, i + 1, handle)
+                    || MarkdownRenderer.OverlapsRemappedLiteral(run, i, end))
+                {
+                    continue;
+                }
+
+                Func<string, Inline> build = own ? MarkdownRenderer.CreateOwnMention : MarkdownRenderer.CreateMention;
+                matches.Add((i, end - i, build));
+
+                // Resume past the handle just consumed, as MentionParser does, so a word inside a multi-word Name
+                // cannot be re-read as a Mention of someone else.
+#pragma warning disable S127 // Deliberate scan-advance past the matched handle, mirroring MentionParser.Parse.
+                i = end - 1;
+#pragma warning restore S127
+                break;
+            }
+        }
+
+        MarkdownRenderer.SpliceRunMatches(run, matches, markdown);
+    }
+
+    /// <summary>Whether <c>[start, endExclusive)</c> overlaps a literal in <paramref name="run"/> whose raw source
+    /// span differs in length from its text (an escape such as <c>\@</c>).</summary>
+    /// <param name="run">The literal run being scanned.</param>
+    /// <param name="start">The match's raw-source start, inclusive.</param>
+    /// <param name="endExclusive">The match's raw-source end, exclusive.</param>
+    private static bool OverlapsRemappedLiteral(List<LiteralInline> run, int start, int endExclusive) =>
+        run.Exists(literal => literal.Span.Length != literal.Content.Length
+            && literal.Span.Start < endExclusive
+            && literal.Span.End >= start);
+
+    /// <summary>Builds the pill for a Mention of an Agent.</summary>
+    /// <param name="rawToken">The Mention exactly as typed, <c>@</c> included.</param>
+    private static MentionInline CreateMention(string rawToken) => MarkdownRenderer.CreateMentionInline(rawToken, own: false);
+
+    /// <summary>Builds the pill for a Mention of the Human, which also carries <c>mention--me</c>.</summary>
+    /// <param name="rawToken">The Mention exactly as typed, <c>@</c> included.</param>
+    private static MentionInline CreateOwnMention(string rawToken) => MarkdownRenderer.CreateMentionInline(rawToken, own: true);
+
+    /// <summary>Builds a <see cref="MentionInline"/> classed <c>mention</c> (and <c>mention--me</c> when
+    /// <paramref name="own"/>) whose only child is a literal holding <paramref name="rawToken"/>, so the
+    /// renderer HTML-escapes the text like any other literal.</summary>
+    /// <param name="rawToken">The Mention exactly as typed, <c>@</c> included.</param>
+    /// <param name="own">Whether the handle is one of the Human's own.</param>
+    private static MentionInline CreateMentionInline(string rawToken, bool own)
+    {
+        MentionInline mention = new();
+        mention.GetAttributes().AddClass("mention");
+        if (own)
+        {
+            mention.GetAttributes().AddClass("mention--me");
+        }
+
+        mention.AppendChild(new LiteralInline(rawToken));
+        return mention;
+    }
+
+    /// <summary>A Mention in Message text, rendered by <see cref="MentionInlineRenderer"/> as a <c>span</c>.</summary>
+    private sealed class MentionInline : ContainerInline;
+
+    /// <summary>
+    /// Renders a <see cref="MentionInline"/> as <c>&lt;span class="mention"&gt;…&lt;/span&gt;</c>. The tag and
+    /// class names are constants; the text is the inline's literal child, which Markdig escapes, so no
+    /// authored character ever reaches the page as markup.
+    /// </summary>
+    private sealed class MentionInlineRenderer : HtmlObjectRenderer<MentionInline>
+    {
+        /// <summary>Writes <paramref name="obj"/> as a <c>span</c> carrying its classes, or just its text when HTML output is off.</summary>
+        /// <param name="renderer">The HTML renderer being written to.</param>
+        /// <param name="obj">The Mention to write.</param>
+        protected override void Write(Markdig.Renderers.HtmlRenderer renderer, MentionInline obj)
+        {
+            if (renderer.EnableHtmlForInline)
+            {
+                renderer.Write("<span").WriteAttributes(obj).Write('>');
+            }
+
+            renderer.WriteChildren(obj);
+            if (renderer.EnableHtmlForInline)
+            {
+                renderer.Write("</span>");
+            }
+        }
+    }
+
+    /// <summary>The name at the end of a chat-text path, for either separator or a <c>file:</c> URL; the whole text when it has no separator.</summary>
+    /// <param name="path">The matched path text.</param>
+    private static string FileNameOf(string path)
+    {
+        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
+        return name.Length > 0 ? name : path;
+    }
+
     /// <summary>Resolves <paramref name="path"/> through <paramref name="library"/>: a <c>library-ref</c>
     /// <see cref="LinkInline"/> when it resolves (dimmed via <c>library-ref-missing</c> when the file no longer
     /// exists), or a plain literal holding <paramref name="path"/> exactly as written when it does not.</summary>
@@ -626,8 +829,8 @@ public static partial class MarkdownRenderer
             return new LiteralInline(path);
         }
 
-        LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
-        link.AppendChild(new LiteralInline(path));
+        LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), reference.RelativePath);
+        link.AppendChild(new LiteralInline(MarkdownRenderer.FileNameOf(path)));
         link.GetAttributes().AddClass("library-ref");
         if (!reference.Exists)
         {
@@ -670,7 +873,7 @@ public static partial class MarkdownRenderer
                 // A fresh node wrapping the SAME Content StringSlice (a value type: no aliasing risk) - the
                 // original literal cannot be reused directly, since it is still attached to the tree at this
                 // point and InsertAfter refuses a node that already has a parent.
-                replacements.Add(new LiteralInline(literal.Content));
+                replacements.Add(new LiteralInline(literal.Content) { Span = literal.Span });
             }
             else
             {
@@ -678,7 +881,14 @@ public static partial class MarkdownRenderer
                 int contentEnd = contentStart + (overlapEndExclusive - overlapStart) - 1;
                 if (contentStart >= literal.Content.Start && contentEnd <= literal.Content.End)
                 {
-                    replacements.Add(new LiteralInline(new StringSlice(literal.Content.Text, contentStart, contentEnd)));
+                    LiteralInline kept = new(new StringSlice(literal.Content.Text, contentStart, contentEnd));
+                    if (literal.Span.Length == literal.Content.Length)
+                    {
+                        // Carried over only when the raw source maps 1:1 to the text, as CreatePositionedLiteral does.
+                        kept.Span = new SourceSpan(overlapStart, overlapEndExclusive - 1);
+                    }
+
+                    replacements.Add(kept);
                 }
                 else
                 {
@@ -722,16 +932,8 @@ public static partial class MarkdownRenderer
             return new LiteralInline(rawToken);
         }
 
-        string text = link.Alias ?? (link.Heading is null ? link.Target : string.Concat(link.Target, "#", link.Heading));
-        string? title = null;
-        if (!reference.Exists)
-        {
-            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, link.Target);
-        }
-        else if (reference.IsAmbiguous)
-        {
-            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, link.Target);
-        }
+        string text = MarkdownRenderer.WikiLinkLabel(link);
+        string? title = MarkdownRenderer.WikiLinkTitle(reference, link.Target);
 
         LinkInline result = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), title ?? string.Empty);
         result.AppendChild(new LiteralInline(text));
@@ -744,12 +946,32 @@ public static partial class MarkdownRenderer
         return result;
     }
 
+    /// <summary>The text a wikilink shows: its alias when it has one, otherwise its target with the heading appended. Shared with the Properties block so a link in a property reads as it does in the body.</summary>
+    /// <param name="link">The parsed wikilink.</param>
+    internal static string WikiLinkLabel(WikiLink link) =>
+        link.Alias ?? (link.Heading is null ? link.Target : string.Concat(link.Target, "#", link.Heading));
+
+    /// <summary>The title of a wikilink that resolved to no note or tied between several, or <see langword="null"/> for a link that resolved cleanly (Spec §6.5 rules 3 and 4).</summary>
+    /// <param name="reference">What the wikilink resolved to.</param>
+    /// <param name="target">The link's target as written.</param>
+    internal static string? WikiLinkTitle(LibraryReference reference, string target)
+    {
+        if (!reference.Exists)
+        {
+            return string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, target);
+        }
+
+        return reference.IsAmbiguous
+            ? string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, target)
+            : null;
+    }
+
     /// <summary>Builds a <c>?library=</c> href: the root id, then the relative path with each <c>/</c>-separated
     /// segment individually percent-encoded (so a literal <c>/</c> stays a path separator; Spec §6.6). The
     /// heading, when the wikilink had one, is never included - v1 links to the file only.</summary>
     /// <param name="rootId">The Library root id.</param>
     /// <param name="relativePath">The forward-slash relative path from the root.</param>
-    private static string BuildLibraryHref(string rootId, string relativePath) =>
+    internal static string BuildLibraryHref(string rootId, string relativePath) =>
         MarkdownRenderer.BuildRootRelativeHref("?library=", rootId, relativePath);
 
     /// <summary>Builds a <c>/library-files/</c> href (Task 12.8's endpoint) for an image: the root id, then the

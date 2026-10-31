@@ -12,46 +12,50 @@
 @inject NavigationManager Navigation
 @inject AvatarStore Avatars
 
+@* The picker is a floating panel like Invite's (audit B10 "New chat"): anchored under the link or the Team row, Edge outline,
+   32px/13px rows, Cancel then Start chat. It floats over the rows below it and moves nothing. *@
 <div class="new-chat">
     @if (this.Team is null)
     {
-        <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
     }
-    <MudCollapse Expanded="@this.isOpen">
-        @if (this.isOpen)
-        {
-            <div class="new-chat-panel">
-                @if (this.Team is not null)
-                {
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Team</MudText>
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close new chat" OnClick="this.CloseAsync" />
-                    </MudStack>
-                }
+    @if (this.isOpen)
+    {
+        <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New chat" : $"New chat in {this.Team}")">
+            @if (this.Team is not null)
+            {
+                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Team</MudText>
+            }
 
-                @if (this.agents.Count == 0)
+            @if (this.agents.Count == 0)
+            {
+                <EmptyState Title="No agents have connected yet" Text="Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json." />
+            }
+            else
+            {
+                <div class="new-chat-agents">
+                    @foreach (var agent in this.agents)
+                    {
+                        var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
+                        var agentId = agent.Id;
+                        <div class="new-chat-agent">
+                            <MudCheckBox T="bool" Dense="true" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
+                                <AgentLabel Name="@agent.Name" State="status.State" Avatar="this.Avatars.Get(agent.Name)" />
+                            </MudCheckBox>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="new-chat-actions">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="new-chat-cancel" OnClick="this.CloseAsync">Cancel</MudButton>
+                @if (this.agents.Count > 0)
                 {
-                    <EmptyState Text="No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json." />
-                }
-                else
-                {
-                    <div class="new-chat-agents">
-                        @foreach (var agent in this.agents)
-                        {
-                            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
-                            var agentId = agent.Id;
-                            <div>
-                                <MudCheckBox T="bool" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
-                                    <TeammateLabel Name="@agent.Name" State="status.State" Avatar="this.Avatars.Get(agent.Name)" />
-                                </MudCheckBox>
-                            </div>
-                        }
-                    </div>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" Size="Size.Small" OnClick="this.StartChatAsync">Start chat</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" Size="Size.Small" OnClick="this.StartChatAsync">Start chat</MudButton>
                 }
             </div>
-        }
-    </MudCollapse>
+        </div>
+    }
 </div>
 
 @code {
@@ -59,7 +63,7 @@
     private IReadOnlyList<User> agents = [];
     private bool isOpen;
 
-    /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Teammates first.</summary>
+    /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Agents first.</summary>
     [Parameter]
     public string? Team { get; set; }
 
@@ -67,7 +71,7 @@
     [Parameter]
     public EventCallback OnStarted { get; set; }
 
-    /// <summary>Raised when the Team panel's close icon is used, so the host that opened the panel can close it. No chat has been started.</summary>
+    /// <summary>Raised when the panel's Cancel button is used, so the host that opened the panel can close it. No chat has been started.</summary>
     [Parameter]
     public EventCallback OnClosed { get; set; }
 
@@ -127,6 +131,7 @@
     private async Task CloseAsync()
     {
         this.isOpen = false;
+        this.selectedAgentIds.Clear();
         await this.OnClosed.InvokeAsync();
     }
 

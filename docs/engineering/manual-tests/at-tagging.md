@@ -1,6 +1,6 @@
 # References in a Message: the @ picker, Copy link and the Referenced items header
 
-Prove, in a real browser against the running app, what the Reference picker writes, how a reference renders and resolves, what an Agent is told, and how the picker behaves under the 90% zoom and on a narrow window. The automated suite covers the pure text functions, the providers and the prompt against fakes; it cannot see the caret, the zoom, the keyboard, the screen reader or the wire, so each of those is checked here.
+Prove, in a real browser against the running app, what the Reference picker writes, how a reference renders and resolves, what an Agent is told, and how the picker behaves at the default 100% render and on a narrow window. The automated suite covers the pure text functions, the providers and the prompt against fakes; it cannot see the caret, the zoom, the keyboard, the screen reader or the wire, so each of those is checked here.
 
 **12 tests** · all free · about 2.1 hours.
 
@@ -9,7 +9,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 ## Setup
 
 1. Run [`P-BUILD`](common.md#p-build), then [`P-LAUNCH-FREE`](common.md#p-launch-free) in `T-A` and wait for `Now listening on: http://localhost:5100`. No Adapter is needed except for ATTAG-07.
-2. Make the data the tests reference, once, before ATTAG-01: a Team named `Marketing` with a Team Room; a root Room named `Nova` and a Room named `Nova` scoped to `Marketing`; a Room named `findings` with the Message `login fails`; a Library file named `plan.md` under the Teams root; a Task with a visible id. Use two Teammates, `Nova` and `Emily Lee`, both Members of a three-member Room.
+2. Make the data the tests reference, once, before ATTAG-01: a Team named `Marketing` with a Team Room; a root Room named `Nova` and a Room named `Nova` scoped to `Marketing`; a Room named `findings` with the Message `login fails`; a Library file named `plan.md` under the Teams root; a Task with a visible id. Use two Agents, `Nova` and `Emily Lee`, both Members of a three-member Room.
 3. Use the browser you will test in, at its normal zoom unless a test says otherwise. Never test through a private window.
 
 ## Tests
@@ -30,34 +30,34 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 **Pass if**
 
 - Steps 1 and 2 open the picker. Step 3 does not open it in either address.
-- Step 4 lists Tasks only, and no Teammate, Room or Library row.
+- Step 4 lists Tasks only, and no Agent, Room or Library row.
 
 **Fail if**
 
 - The picker opens inside an address, or `#` lists anything but Tasks.
 
-### ATTAG-02 — Picking a Teammate writes its Name and wakes only that Teammate (AT-M2)
+### ATTAG-02 — Picking an Agent writes its Name and wakes only that Agent (AT-M2)
 
 **Free** · about 10 min
 
-*Proves a pick writes the Teammate's Name, a multi-word Name and a search by Alias both work, the picked Teammate replies and the others do not, and a non-Member is dimmed and not woken.*
+*Proves a pick writes the Agent's Name, a multi-word Name and a search by Alias both work, the picked Agent replies and the others do not, and a non-Member is dimmed and not woken.*
 
 **Steps**
 
 1. In *findings*, type `@Emily` and pick `Emily Lee`. Read the composer.
 2. Type `@Ni` and search by the Alias of `Nova`. Pick it.
-3. Send a Message that mentions one Teammate. Read which Teammates reply.
+3. Send a Message that mentions one Agent. Read which Agents reply.
 4. Open the picker in a Room that does not hold `Nova` and read its row.
 
 **Pass if**
 
 - Step 1 writes `@Emily Lee ` with a trailing space. Step 2 writes the Name, not the Alias typed.
-- Only the picked Teammate replies in step 3.
+- Only the picked Agent replies in step 3.
 - Step 4 shows the non-Member dimmed with `Not in this Room` and it is not woken by a send.
 
 **Fail if**
 
-- The picker writes the Alias, or a Teammate that was not picked replies.
+- The picker writes the Alias, or an Agent that was not picked replies.
 
 ### ATTAG-03 — A Task pick writes the plain id and the hash key gives the same text (AT-M3)
 
@@ -159,7 +159,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 **Setup**
 
-1. Give the Teammate the Adapter named `mock-acp`, then set the log key `Logging:LogLevel:Agency.Huddle.Acp.Wire` to `Trace` and restart the app. Read the console for the wire lines.
+1. Give the Agent the Adapter named `mock-acp`, then set the log key `Logging:LogLevel:Agency.Huddle.Acp.Wire` to `Trace` and restart the app. Read the console for the wire lines.
 
 **Steps**
 
@@ -206,16 +206,16 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 - A Message is sent while the picker is open, or the count is not announced.
 
-### ATTAG-09 — The picker height at 90 percent zoom and on a narrow window (AT-M9)
+### ATTAG-09 — The picker height and a narrow window (AT-M9)
 
 **Free** · about 10 min
 
-*Proves the picker opens above the composer, fits the height rule under the 90% zoom, scrolls inside itself and never overflows sideways on a 400 px window. Chrome and Edge.*
+*Proves the picker opens above the composer, fits the height rule (the smaller of 320 px and 40% of the window, plain `vh`, no page zoom), scrolls inside itself and never overflows sideways on a 400 px window. Chrome and Edge.*
 
 **Steps**
 
-1. Set the browser zoom to 90%. Type `@` with a long list and open DevTools.
-2. In the console, run `document.querySelector('.composer-picker').getBoundingClientRect().height` and `Math.min(320 * 0.9, 0.4 * window.innerHeight)`.
+1. Leave the browser zoom at 100% (the app applies no zoom of its own, ADR-0056). Type `@` with a long list and open DevTools.
+2. In the console, run `document.querySelector('.composer-picker').getBoundingClientRect().height` and `Math.min(320, 0.4 * window.innerHeight)`.
 3. Compare the two numbers.
 4. Narrow the window to 400 px and read the picker's right edge.
 

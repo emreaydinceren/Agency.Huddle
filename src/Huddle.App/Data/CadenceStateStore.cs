@@ -1,15 +1,8 @@
-using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Agency.Huddle.App.Data;
-
-/// <summary>What the cadence service last did for one Team.</summary>
-/// <param name="Team">The Team's name, compared ignoring case.</param>
-/// <param name="LastDigestUtc">When the digest last fired, or the baseline set on first sight; <see langword="null"/> before either.</param>
-/// <param name="LastRetroUtc">When the retro last fired, or the baseline set on first sight; <see langword="null"/> before either.</param>
-/// <param name="DoneAtLastRetro">The number of Done Tasks at <paramref name="LastRetroUtc"/>; <see langword="null"/> before the baseline.</param>
-public sealed record CadenceState(string Team, DateTimeOffset? LastDigestUtc, DateTimeOffset? LastRetroUtc, int? DoneAtLastRetro);
 
 /// <summary>
 /// Stores, per Team, when its digest and retro last fired, in the same <c>team.db</c> as the other stores but in its
@@ -93,7 +86,9 @@ public sealed class CadenceStateStore
         _ = command.Parameters.AddWithValue("$team", state.Team);
         _ = command.Parameters.AddWithValue("$digest", FormatTime(state.LastDigestUtc));
         _ = command.Parameters.AddWithValue("$retro", FormatTime(state.LastRetroUtc));
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
         _ = command.Parameters.AddWithValue("$done", state.DoneAtLastRetro is { } done ? done : DBNull.Value);
+#pragma warning restore HAA0601
         _ = command.ExecuteNonQuery();
     }
 

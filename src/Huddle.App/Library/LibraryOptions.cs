@@ -47,13 +47,15 @@ public sealed class LibraryOptions
     /// <summary>The most chips in one Message's composer, matching <see cref="MaxReferencedDocuments"/>.</summary>
     public int MaxUploadsPerMessage { get; set; } = 10;
 
+    /// <summary>The default path of the types file inside a Library Root: the reference app's own settings folder and file. The one place the path is written; the seeder reads it from here too.</summary>
+    public const string DefaultPropertyTypesFile = ".obsidian/types.json";
+
+    /// <summary>
+    /// The path of the front matter types file inside every Library Root, <c>/</c>-separated and relative to the root
+    /// (<c>Team:Library:PropertyTypesFile</c>). Empty turns the types file off, so property types come from the value alone.
+    /// </summary>
+    public string PropertyTypesFile { get; set; } = DefaultPropertyTypesFile;
+
     /// <summary>The Uploads folder under <c>DataDir</c>, per spec 6.6 (<c>Team:Library:Uploads:Dir</c>).</summary>
     public LibraryUploadsOptions Uploads { get; set; } = new();
-}
-
-/// <summary>Bound from <c>Team:Library:Uploads</c>, per spec 6.1 and 6.6: where chat uploads are saved in the Library.</summary>
-public sealed class LibraryUploadsOptions
-{
-    /// <summary>The Uploads root's folder, relative to <c>DataDir</c>.</summary>
-    public string Dir { get; set; } = "Uploads";
 }

@@ -1,6 +1,6 @@
 @*
     The Settings page's Library tab (Spec §6.10): the two built-in Library Roots (Teams,
-    Teammates) plus any pinned root, drawn straight off LibraryRootStore.Roots - never re-derived
+    Agents) plus any pinned root, drawn straight off LibraryRootStore.Roots - never re-derived
     here, the same "no local snapshot" shape SkillsPanel uses for SkillStore.All. A built-in root
     can be hidden but never removed (a MudSwitch, no Remove button); a pinned root can be removed
     but never hidden. Adding a folder requires it to exist on disk (LibraryRootStore.Save does not
@@ -9,6 +9,7 @@
     LibraryRootStore.Reset, which deletes library-roots.json.
 *@
 
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 @implements IDisposable
 
@@ -16,7 +17,7 @@
 @inject IDialogService DialogService
 
 <SettingsIntro>
-    A Library Root is a folder the Library can read and change. Teams and Teammates are always
+    A Library Root is a folder the Library can read and change. Teams and Agents are always
     here; pin any other folder to add it.
 </SettingsIntro>
 
@@ -45,7 +46,7 @@
                     {
                         @if (string.Equals(this.confirmingRemoveId, root.Id, StringComparison.Ordinal))
                         {
-                            <InlineConfirm Prompt="@($"Remove '{root.DisplayName}'?")" ConfirmText="Remove" OnConfirm="@(() => this.RemoveAsync(root))" OnCancel="this.CancelRemove" />
+                            <InlineConfirm Prompt="@($"Remove {ConfirmCopy.Quote(root.DisplayName)}?")" ConfirmText="Remove" OnConfirm="@(() => this.RemoveAsync(root))" OnCancel="this.CancelRemove" />
                         }
                         else
                         {
@@ -54,7 +55,12 @@
                     }
                     else
                     {
-                        <MudSwitch T="bool" Value="@this.IsHidden(root.Id)" ValueChanged="@((bool hidden) => this.ToggleHiddenAsync(root.Id, hidden))" Class="library-panel-hide-switch" Label="Hide">Hide</MudSwitch>
+                        @if (root.ReadOnly)
+                        {
+                            <MudText Typo="Typo.caption" HtmlTag="span" Class="library-panel-read-only mud-text-secondary mr-2">Read only</MudText>
+                        }
+
+                        <MudSwitch T="bool" Value="@this.IsHidden(root.Id)" ValueChanged="@((bool hidden) => this.ToggleHiddenAsync(root.Id, hidden))" Class="library-panel-hide-switch" Label="Hide" />
                     }
                 </td>
             </tr>
@@ -69,9 +75,9 @@
     <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="library-panel-add-error">@this.addError</MudAlert>
 }
 
-<MudStack Row="true" Spacing="2" Class="mt-2 library-panel-add-row">
-    <MudTextField T="string" Label="Name" @bind-Value="this.name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-name-field" />
-    <MudTextField T="string" Label="Path" @bind-Value="this.path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-path-field" />
+<MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-2 library-panel-add-row">
+    <MudTextField T="string" Placeholder="Name" aria-label="Name" @bind-Value="this.name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-name-field toolbar-compact" />
+    <MudTextField T="string" Placeholder="Path" aria-label="Path" @bind-Value="this.path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-path-field toolbar-compact" />
     <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
 </MudStack>
 

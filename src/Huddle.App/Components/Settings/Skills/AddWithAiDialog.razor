@@ -1,0 +1,259 @@
+@*
+    Add with your AI tool (Skill Packs spec §6.9.7, G5 and G5a): four tasks, the fields each needs, the prompt
+    SkillPromptBuilder builds from them, Copy path and Copy prompt inside the body, three numbered steps, and Close. It writes
+    nothing: no file, no seen keys, no setting other than the circuit's path form. A required field left empty keeps the
+    prompt and both copy buttons disabled and turns its helper text red. The prompt box is a block of text, not an input
+    (CV5 bans ReadOnly), so the Human selects it with the mouse when the clipboard refuses.
+    Parameters are read once at open: an open dialog ignores new ones.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Checking
+@using Agency.Huddle.SkillPacks.Resolving
+@using CheckSeverity = Agency.Huddle.SkillPacks.Checking.Severity
+
+@inject SkillRegistry Registry
+@inject RoleLister Roles
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudDialog Class="add-with-ai-dialog">
+    <DialogContent>
+        <MudRadioGroup T="SkillTask" Value="@this.task" ValueChanged="@((SkillTask value) => this.task = value)" Class="add-with-ai-tasks">
+            @foreach ((SkillTask option, string label, string line) in Tasks)
+            {
+                <div class="mb-1">
+                    <MudRadio T="SkillTask" Value="@option" Color="Color.Primary" Dense="true" Class="@($"add-with-ai-task-{option.ToString().ToLowerInvariant()}")">@label</MudRadio>
+                    <MudText Typo="Typo.caption" Class="add-with-ai-task-line d-block ml-8 mud-text-secondary">@line</MudText>
+                </div>
+            }
+        </MudRadioGroup>
+
+        <div class="add-with-ai-fields mt-3">
+            @switch (this.task)
+            {
+                case SkillTask.Add:
+                    <MudTextField T="string" @bind-Value="this.where" Immediate="true" Label="Where are the Skills?" MaxLength="500" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  HelperText="A link or a folder." HelperTextOnFocus="false" Error="@string.IsNullOrWhiteSpace(this.where)" Class="add-with-ai-where mb-2" />
+                    <MudTextField T="string" @bind-Value="this.purpose" Immediate="true" Label="What are they for?" MaxLength="300" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  HelperText="Optional." Class="add-with-ai-purpose" />
+                    break;
+                case SkillTask.FindForRole:
+                    <MudSelect T="string" @bind-Value="this.roleId" Label="Role" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="The role to find Packs for."
+                               Error="@string.IsNullOrWhiteSpace(this.roleId)" Class="add-with-ai-role mb-2">
+                        @foreach (RoleInfo role in this.Roles.List())
+                        {
+                            <MudSelectItem T="string" Value="@role.Id">@role.Title</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField T="string" @bind-Value="this.purpose" Immediate="true" Label="What should it get better at?" MaxLength="300" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  HelperText="Optional." Class="add-with-ai-purpose" />
+                    break;
+                case SkillTask.CheckForUpdates:
+                    <MudSwitch T="bool" @bind-Value="this.allSources" Color="Color.Primary" Label="All Sources" Class="add-with-ai-all-sources" />
+                    @if (!this.allSources)
+                    {
+                        @foreach (ResolvedSource source in this.Registry.Current.Resolved.Sources)
+                        {
+                            string id = source.Id;
+                            <MudCheckBox T="bool" Value="@this.pickedSources.Contains(id)" ValueChanged="@((bool on) => this.Pick(id, on))" Label="@id" Dense="true" Class="add-with-ai-source" />
+                        }
+                    }
+                    break;
+                case SkillTask.Fix:
+                    <MudSelect T="string" @bind-Value="this.rowKey" Label="Which row?" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Rows that are Broken or Not downloaded."
+                               Error="@string.IsNullOrWhiteSpace(this.rowKey)" Class="add-with-ai-row">
+                        @foreach (FixRow row in this.FixRows)
+                        {
+                            <MudSelectItem T="string" Value="@row.Key">@row.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                    break;
+            }
+        </div>
+
+        <pre class="@($"add-with-ai-prompt long-text-field mt-3{(this.Prompt is null ? " add-with-ai-prompt-disabled" : string.Empty)}")" aria-disabled="@(this.Prompt is null ? "true" : null)">@(this.Prompt ?? "Fill in the field above to see the prompt.")</pre>
+
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            <CopyPathMenu Disabled="@(this.Prompt is null)" FormatChanged="@((PathFormat _) => this.StateHasChanged())" />
+            <MudTooltip Text="Copies the prompt to your clipboard. Paste it into your AI tool." ShowOnFocus="true">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@(this.Prompt is null)" Class="add-with-ai-copy" OnClick="this.CopyAsync">Copy prompt</MudButton>
+            </MudTooltip>
+        </div>
+
+        <ol class="add-with-ai-steps mt-3 mb-1">
+            <li>Select Copy prompt.</li>
+            <li>Paste it into Claude Code, Codex or a similar tool.</li>
+            <li>Come back here; what it added is ready to use.</li>
+        </ol>
+        <MudText Typo="Typo.caption" Class="add-with-ai-nowhere mud-text-secondary">Huddle sends this nowhere. It goes to your clipboard only.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="add-with-ai-close" OnClick="this.Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>The four tasks of G5a with the line under each.</summary>
+    private static readonly (SkillTask Task, string Label, string Line)[] Tasks =
+    [
+        (SkillTask.Add, "Add from a link or folder", "Your AI tool fetches what you point to, writes the Pack or catalog files, checks them and adds the rows."),
+        (SkillTask.FindForRole, "Find Packs for a role", "Your AI tool looks through the catalogs you already have, suggests up to three Packs for the role and asks you before it fetches anything."),
+        (SkillTask.CheckForUpdates, "Check for updates", "Your AI tool pulls newer commits for the Sources you pick and updates their files. Huddle then shows Update available where Agents' copies differ."),
+        (SkillTask.Fix, "Fix a problem", "Your AI tool reads what Huddle reported about a row and repairs the row or the files it points to."),
+    ];
+
+    private readonly HashSet<string> pickedSources = new(StringComparer.Ordinal);
+    private SkillTask task;
+    private string? where;
+    private string? purpose;
+    private string? roleId;
+    private bool allSources = true;
+    private string? rowKey;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The task to open on: <c>add</c>, <c>find</c>, <c>update</c> or <c>fix</c>; anything else is <c>add</c>.</summary>
+    [Parameter]
+    public string? Task { get; set; }
+
+    /// <summary>The role to pre-fill for <c>find</c>.</summary>
+    [Parameter]
+    public string? RoleId { get; set; }
+
+    /// <summary>Comma-separated Source ids to tick for <c>update</c>; empty means all.</summary>
+    [Parameter]
+    public string? SourceIds { get; set; }
+
+    /// <summary>The pack or catalog file to pre-select for <c>fix</c>.</summary>
+    [Parameter]
+    public string? RowPath { get; set; }
+
+    /// <summary>One row the Fix task can name.</summary>
+    /// <param name="Key">The row key.</param>
+    /// <param name="Label">"Document skills — Broken (P005)".</param>
+    /// <param name="Table">Packs or Catalogs.</param>
+    /// <param name="LocalPath">The row's Local path cell.</param>
+    /// <param name="FilePath">The file it resolved to, or null.</param>
+    /// <param name="State">The state's chip text.</param>
+    /// <param name="Findings">What was reported about it.</param>
+    private sealed record FixRow(string Key, string Label, string Table, string LocalPath, string? FilePath, string State, IReadOnlyList<Finding> Findings);
+
+    /// <summary>The rows that are Broken or Not downloaded.</summary>
+    private IReadOnlyList<FixRow> FixRows
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            IReadOnlyList<RoleInfo> roles = this.Roles.List();
+            List<FixRow> rows = [];
+            foreach (PackEntry pack in snapshot.Resolved.Packs)
+            {
+                PackView view = PackView.From(this.Registry, pack, roles);
+                if (view.State is ItemState.Broken or ItemState.NotDownloaded)
+                {
+                    rows.Add(Row(snapshot.Resolved.RowKey(pack), view.Title, pack.Row, pack.FilePath, view.State, view.Findings));
+                }
+            }
+
+            foreach (ResolvedCatalog catalog in snapshot.Resolved.Catalogs)
+            {
+                ItemCheckState state = snapshot.Checked.StateOf(catalog.StateKey) ?? ItemCheckState.Broken;
+                if (state != ItemCheckState.Usable)
+                {
+                    ItemState shown = state == ItemCheckState.Broken ? ItemState.Broken : ItemState.NotDownloaded;
+                    IReadOnlyList<Finding> findings = [.. catalog.Findings, .. snapshot.Checked.Findings.Where(finding => catalog.FilePath is not null && string.Equals(finding.File, catalog.FilePath, StringComparison.OrdinalIgnoreCase))];
+                    rows.Add(Row(snapshot.Resolved.RowKey(catalog), catalog.Title, catalog.Row, catalog.FilePath, shown, findings));
+                }
+            }
+
+            return rows;
+        }
+    }
+
+    /// <summary>The prompt for the chosen task, or null while a required field is empty.</summary>
+    internal string? Prompt
+    {
+        get
+        {
+            PathFormat format = this.PathChoice.Format;
+            switch (this.task)
+            {
+                case SkillTask.Add:
+                    return string.IsNullOrWhiteSpace(this.where) ? null : this.Prompts.Add(this.where, this.purpose, format);
+                case SkillTask.FindForRole:
+                    RoleInfo? role = this.Roles.List().FirstOrDefault(candidate => string.Equals(candidate.Id, this.roleId, StringComparison.Ordinal));
+                    return role is null ? null : this.Prompts.FindForRole(role.Id, role.Title, this.purpose, format);
+                case SkillTask.CheckForUpdates:
+                    IReadOnlyList<string> ids = this.allSources ? [.. this.Registry.Current.Resolved.Sources.Select(static source => source.Id)] : [.. this.pickedSources.Order(StringComparer.Ordinal)];
+                    return ids.Count == 0 ? null : this.Prompts.Update(ids, format);
+                case SkillTask.Fix:
+                    FixRow? row = this.FixRows.FirstOrDefault(candidate => candidate.Key == this.rowKey);
+                    return row is null ? null : this.Prompts.Fix(row.Table, row.LocalPath, row.State, row.Findings, format);
+                default:
+                    return null;
+            }
+        }
+    }
+
+    /// <summary>Reads the parameters once.</summary>
+    protected override void OnInitialized()
+    {
+        this.task = this.Task?.ToLowerInvariant() switch
+        {
+            "find" => SkillTask.FindForRole,
+            "update" => SkillTask.CheckForUpdates,
+            "fix" => SkillTask.Fix,
+            _ => SkillTask.Add,
+        };
+        this.roleId = this.RoleId;
+        if (!string.IsNullOrWhiteSpace(this.SourceIds))
+        {
+            this.allSources = false;
+            this.pickedSources.UnionWith(this.SourceIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        if (!string.IsNullOrWhiteSpace(this.RowPath))
+        {
+            this.rowKey = this.FixRows.FirstOrDefault(row => string.Equals(row.FilePath, this.RowPath, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(row.LocalPath, this.RowPath, StringComparison.OrdinalIgnoreCase))?.Key;
+        }
+    }
+
+    /// <summary>A Fix row with its label.</summary>
+    private static FixRow Row(string key, string title, Agency.Huddle.SkillPacks.Reading.RegistryRow row, string? file, ItemState state, IReadOnlyList<Finding> findings)
+    {
+        string text = SkillStateText.For(state).Text;
+        string? code = findings.FirstOrDefault(static finding => finding.Severity == CheckSeverity.Error)?.Code;
+        string label = code is null ? $"{title} — {text}" : $"{title} — {text} ({code})";
+        return new FixRow(key, label, row.TableName, row.LocalPath.FirstText, file, text, findings);
+    }
+
+    /// <summary>Ticks or unticks a Source.</summary>
+    private void Pick(string id, bool on)
+    {
+        if (on)
+        {
+            this.pickedSources.Add(id);
+        }
+        else
+        {
+            this.pickedSources.Remove(id);
+        }
+    }
+
+    /// <summary>Copies the prompt.</summary>
+    private async Task CopyAsync()
+    {
+        if (this.Prompt is { } prompt)
+        {
+            _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
+        }
+    }
+
+    /// <summary>Closes the dialog.</summary>
+    private void Close() => this.Dialog?.Close();
+}

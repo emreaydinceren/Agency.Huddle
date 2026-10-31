@@ -1,21 +1,21 @@
 @*
     The Prompts tab's content: every model-facing prompt, grouped and editable. The parent
     (Settings.razor) owns all state - this component holds none of its own, the same split
-    Teammates.razor uses with TeammateCard: Groups already carries each field's pending value,
+    Agents.razor uses with AgentProfileCard: Groups already carries each field's pending value,
     computed flags and validation Issues, and every edit or reset request is handed back to the
     parent through a callback rather than written here.
 
     Every [Parameter] below is deliberately non-string (PromptEdit for the edited value, plain string
-    only for ResetRequested's key - see the note there) for the same reason TeammateCard's are: a
+    only for ResetRequested's key - see the note there) for the same reason AgentProfileCard's are: a
     string parameter bound as Foo="this.bar" compiles cleanly and silently passes the literal text
-    instead of a field's value (see TeammatesRazorSourceTests), and a non-string parameter cannot be
+    instead of a field's value (see AgentsRazorSourceTests), and a non-string parameter cannot be
     mis-bound that way at all. PromptEdit itself carries the one string value this panel does hand
     back (the edited text), wrapped so the Razor attribute binds a record instance rather than a bare
     string.
 
     Stage 3 (the MudBlazor migration) converts this panel's controls per docs/engineering's rules and
     the migration brief's Part A mapping: the textarea becomes a MudTextField (with the old
-    ".teammate-card-hint" helper span folded into its HelperText), the three status spans become
+    ".agent-profile-card-hint" helper span folded into its HelperText), the three status spans become
     MudChip, the issue list becomes one MudAlert per issue, the section wrapper becomes a MudPaper,
     and the Reset button becomes a secondary MudButton. The field wrapper, its header row, the field
     label and the placeholder list are left exactly as they were - Part A does not name them, and
@@ -23,28 +23,31 @@
 *@
 
 @using Agency.Huddle.App.Prompts
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 @foreach (var group in this.Groups)
 {
     <MudPaper Outlined="true" Class="pa-3 mb-4">
-        <MudText Typo="Typo.h6" HtmlTag="h2" Class="prompts-group-heading">@group.Label</MudText>
+        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="prompts-group-heading">@group.Label</MudText>
 
         @foreach (var field in group.Fields)
         {
-            <div class="prompts-field">
+            <div class="@(this.IsHighlighted(field.Key) ? "prompts-field search-hit-flash" : "prompts-field")" id="@PromptFieldId(field.Key)">
                 <div class="prompts-field-header">
                     <span class="prompts-field-label">@field.Label</span>
                     @if (field.Timing == PromptTiming.NextSession)
                     {
-                        <MudChip T="string" Size="Size.Small" title="Applies to teammates started after the change">Next session</MudChip>
+                        <span class="chip-meta" title="Applies to agents started after the change">Next session</span>
                     }
                     @if (field.IsModified)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Modified</MudChip>
+                        <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Edit">Modified</StatusChip>
                     }
                     @if (field.HasUnsavedChange)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Unsaved</MudChip>
+                        <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.FiberManualRecord">Unsaved</StatusChip>
                     }
                 </div>
 
@@ -55,6 +58,7 @@
                               HelperText="@field.HelperText"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
+                              Class="long-text-field markdown-field"
                               Immediate="true" />
 
                 @if (field.Placeholders.Count > 0)
@@ -100,6 +104,40 @@
     /// <summary>Raised when a field's Reset button is clicked, carrying that field's key.</summary>
     [Parameter]
     public EventCallback<string> ResetRequested { get; set; }
+
+    private string? highlight;
+    private bool scrolled;
+
+    /// <summary>The element id of a prompt's field, which <c>?highlight=</c> scrolls to.</summary>
+    /// <param name="key">The prompt's key.</param>
+    internal static string PromptFieldId(string key) => $"prompt-field-{key}";
+
+    /// <summary>Reads <c>?highlight=&lt;key&gt;</c>, as a Helper card's "Edit the prompt" link sets it.</summary>
+    protected override void OnInitialized()
+    {
+        this.highlight = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("highlight", out var values) ? values.ToString() : null;
+    }
+
+    /// <summary>Scrolls the highlighted field into view once it is drawn.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.scrolled || string.IsNullOrEmpty(this.highlight) || !this.Groups.Any(group => group.Fields.Any(field => this.IsHighlighted(field.Key))))
+        {
+            return;
+        }
+
+        this.scrolled = true;
+        try
+        {
+            _ = await this.JS.InvokeAsync<bool>("teamScroll.intoView", PromptFieldId(this.highlight));
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the scroll; there is nothing left to scroll.
+        }
+    }
+
+    private bool IsHighlighted(string key) => string.Equals(key, this.highlight, StringComparison.Ordinal);
 
     private Task OnFieldInput(string key, string? text)
     {

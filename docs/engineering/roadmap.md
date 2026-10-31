@@ -26,13 +26,13 @@ reminder that the remaining three on that line are cheap for the same reason.
 
 | # | Item | Single place to change | Already in the code |
 | --- | --- | --- | --- |
-| ~~1~~ | ~~Renaming a Teammate~~ — **delivered 2026-09-15** | `PersonaStore`, and every per-Persona store | shipped; the ghost was an **id**, not a cascade rule — see [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md) |
+| ~~1~~ | ~~Renaming an Agent~~ — **delivered 2026-09-15** | `PersonaStore`, and every per-Persona store | shipped; the ghost was an **id**, not a cascade rule — see [ADR-0011](../adr/0011-a-rename-moves-the-agent-not-its-history.md) |
 | ~~2~~ | ~~A cap on agent-to-agent conversation~~ — **delivered 2026-09-12** | `ChatService`, then `ReplyGate.cs` and `PersonaRunner` | shipped; the two counts moved onto the Envelope, which the plan did not foresee |
 | ~~3~~ | ~~Streaming and failure surfacing~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped with 4 and 5; the roadmap named three failures and the code had twenty-one |
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
-| 7 | Theme import — **half delivered 2026-09-16** | a JSON-to-`MudTheme` mapper, for an *arbitrary* supplied Theme | seventeen of VS Code's bundled Themes are already **in** `ThemeCatalog`, converted by hand, and the mapping they used is written down — see [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) |
+| 7 | Theme import — **half delivered 2026-09-16** | a JSON-to-`MudTheme` mapper, for an *arbitrary* supplied Theme | seventeen of VS Code's bundled Themes were in `ThemeCatalog` from 2026-09-16 until they were removed on 2026-10-17; the mapping they used is still written down in the superseded [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) |
 | ~~8~~ | ~~Following a Room without being Mentioned~~ — **delivered 2026-09-16** | `ReplyGate.cs`, a new App Tool pair | shipped; the follow set became a Singleton rather than a per-runner field, which retro-amended [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
@@ -40,23 +40,23 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
-| ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
+| ~~15~~ | ~~An Agent chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `AgentAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
 | ~~16~~ | ~~An Agent asks the Human with a Question~~ — **delivered 2026-10-01** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | shipped; it copied the Skills spec's Proposal card, which shipped with item 17. **ACP elicitation was built as its follow-up on 2026-10-01**, beside `ask_human`: an `ElicitationCard`, the idle-watchdog pause (which item 20 can now reuse), and a Transcript Message for every answer — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
-| ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
+| ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Agents/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 | ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
 | ~~20~~ | ~~Sprints~~ — **delivered 2026-10-05** | `SprintStore`, `ISprintCatalog`, then `Components/Tasks/SprintLabels.cs` and View/filter changes | shipped: a Sprint is an id and a name in `sprints.md`, a Task holds the id, a Sprint disappears when the last Task leaves it. No dates, state or screen. Appendix B follow-ups are candidates — see [the Sprints spec](../Huddle.Sprints-Specifications.md) and [ADR-0037](../adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) |
 | 21 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 21](#21-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
-| 22 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 21's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
-| 23 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `TeammateCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 23](#23-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
+| 22 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `AgentProfileCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 21's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
+| 23 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `AgentProfileCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 23](#23-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
 | 24 | Non-text prompts — **A built 2026-10-01 (live checks passed); B (the Human attaches a file to a Message) built, see [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md)** | A (done): `LibraryDocumentCollector`, `RoomSession`, then `IAgentSession.PromptAsync`. B: `Composer.razor`, then wherever the bytes are kept | `claude-agent-acp` advertises `image` and `embeddedContext` and `dotacp` types the blocks; A now sends a named image, and for an Adapter with no file tools a document's text, as Prompt blocks ([ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md)). B's cheapest route reuses A — see [item 24](#24-non-text-prompts--a-designed-2026-10-01-b-proposed-neither-built) and [the Prompt blocks spec](../Huddle.PromptBlocks-Specifications.md) |
 | 25 | An in-app Quit button — **designed, not built** | a button in the app UI, `IHostApplicationLifetime.StopApplication()` | the `stop` verb and `/_desktop/stop` endpoint already wire the shutdown path; a UI button is the cheapest addition, see [Known limits](known-limits.md) |
 | 26 | Persistent Room memory — **proposed 2026-10-11, not built; Off by default for every Room** | phase 1: `AcpOptions.TranscriptCatchUpMessages` (read in `RoomSession`'s first-Turn Transcript read) behind a Settings value; phases 2 to 4: a Room Digest and Loose ends under `{DataDir}/room-memory/`, a consolidator, `recall` and `remember` App Tools, the Brief on `TranscriptTail`, and planned session Rotation | today a lost or un-resumable session sees only the last 20 Messages, and a live one decays as its context fills. Room Memory is a per-Room setting the Human turns on with a stated reason, never a default; every Room keeps the free Baseline (the Transcript, a configurable catch-up depth, and `recall`). **Phase 1, the next step, is the catch-up depth as an in-app setting**; open question: one global value or per Persona. See [the Persistent Memory spec](../Huddle.PersistentMemory-Specifications.md) and [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md) |
 
-## 1. Renaming a Teammate
+## 1. Renaming an Agent
 
 > **Delivered 2026-09-15**, with
-> [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md) as the
+> [ADR-0011](../adr/0011-a-rename-moves-the-agent-not-its-history.md) as the
 > decision in full. Two halves shipped hours apart: the card gained discrete Name,
 > Title and Alias boxes over the frontmatter (through a new
 > `PersonaFrontmatter.WriteScalarField`, because `Compose` emits only the four
@@ -93,7 +93,7 @@ doing it early rather than late.
 
 The decision that has to come first is what a rename means to the chat surface.
 Removal leaves the Agent, its Rooms and its Transcripts behind on purpose; for a
-rename the same no-cascade rule reads as a bug, because the Teammate is still
+rename the same no-cascade rule reads as a bug, because the Agent is still
 there and the history is filed under a Name that no longer exists.
 
 ## 2. A cap on agent-to-agent conversation — DELIVERED 2026-09-12
@@ -209,7 +209,7 @@ failures reach a log and nowhere else: authentication expiry, which arrives as
 JSON-RPC error `-32000` on session creation rather than as an empty auth-methods
 list; a missing Adapter, which is the `InvalidOperationException` thrown by
 `DotAcpAgentHostFactory`; and a Model the agent does not advertise, which is a
-warning by deliberate design. An offline or degraded badge on the Teammate tile
+warning by deliberate design. An offline or degraded badge on the Agent tile
 plus a posted Message covers all three, and the value rises with every Adapter
 added, because each one brings its own ways to be misconfigured.
 
@@ -337,8 +337,14 @@ something else is supplying the values.
 
 ## 7. Theme import
 
+> **Amended 2026-10-17.** The seventeen VS Code Themes described below were removed (a palette
+> cannot carry a skin); the catalog now holds twelve authored Themes
+> ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), superseded).
+> The note after this one records what was true between 2026-09-16 and then. An importer for an
+> arbitrary supplied Theme is still open.
+
 > **Amended 2026-09-16 by [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
-> and half of it is now shipped.** The catalog holds nineteen Themes: `huddle`
+> and half of it is now shipped.** (The ports were removed on 2026-10-17; see the amendment above.) The catalog then held nineteen Themes: `huddle`
 > ("Huddle Light") and `huddle-dark`, plus seventeen of the colour Themes bundled with
 > Visual Studio Code. They needed **no importer** — they were converted once, by hand,
 > into ordinary C# under `Themes/VsCode/`, one file per Theme. Nothing reads theme JSON
@@ -642,7 +648,7 @@ every one of those stores has to pick a side:
   all mostly disappears.
 
 The first is the recommendation, and it is what makes this item the practical
-path into [item 1](#1-renaming-a-teammate): a rename becomes an edit to one
+path into [item 1](#1-renaming-an-agent): a rename becomes an edit to one
 frontmatter field, once the file's own name stops being asked to also be the
 Member's. Item 1's other concern — removing a Persona leaves its Agent, Rooms and
 Transcripts behind by design — is untouched either way and stays item 1's to
@@ -693,7 +699,7 @@ or Effort change already does.
 >   keeping each file's path, size and modified time. **A baseline is kept per Room**: an edit
 >   is listed in every Room except the one it was made in. So when Nova adds to its own
 >   `memory.md` in one Room, its other Rooms are told. The Agent's own edits are recognised
->   from its `Edit`, `Delete` and `Move` tool calls, not from timing, so a Teammate's write made
+>   from its `Edit`, `Delete` and `Move` tool calls, not from timing, so an Agent's write made
 >   at the same moment is never lost.
 > - **The snapshot survives a restart.** It is saved as JSON at
 >   `{DataDir}/file-state/<Name>.json`.
@@ -701,7 +707,7 @@ or Effort change already does.
 >   `{WorkDir}/memory/`. Every new session's system prompt carries an index of those files,
 >   and File Changes carries later edits to its other Rooms, marked *by you, in Room 'X'*.
 > - **Three sources of Watched Folders.** The Agent's own Work Dir, always; a `watches`
->   frontmatter list of Teammate Names or folders inside `DataDir`; and a `watch_folder` App
+>   frontmatter list of Agent Names or folders inside `DataDir`; and a `watch_folder` App
 >   Tool, whose subscriptions also survive a restart.
 >
 > **What is not yet verified.** Memory depends on isolating a Persona's session from the
@@ -794,7 +800,7 @@ safe, and it is now built.
 > **Delivered**, by a route this entry did not foresee. Agency.NET shipped an **ACP agent**
 > (`agency-acp`), so the second backend is not a library bridged in-process — it is a second
 > process speaking the protocol `src/Huddle.Acp` already speaks. The Adapter became a per-Persona
-> choice written in frontmatter as `adapter:`, selected from a dropdown on the Teammate card, and
+> choice written in frontmatter as `adapter:`, selected from a dropdown on the Agent card, and
 > everything downstream — the pipe, the Reply Gate, the Budget, the Rooms, every App Tool —
 > learned nothing. See [Huddle.Adapters-Specifications.md](../Huddle.Adapters-Specifications.md).
 >
@@ -940,7 +946,7 @@ Four details are load-bearing:
   through `session/new`; an OpenAI-compatible endpoint advertises nothing of the
   sort. `IAgentSession.EffortLevels` already documents an empty list as a *real*
   answer — "this model offers no effort choice" — rather than a failed probe, and
-  the Teammate card already renders that case. A local-backed session returns
+  the Agent card already renders that case. A local-backed session returns
   empty, the control disappears, and the `persona_efforts` row sits unread.
 
 **The Model catalog gets cheaper, not dearer.** `ModelCatalogProbe` spawns a
@@ -991,7 +997,7 @@ Six dependencies here are real:
   on the frontmatter `name`, so **editing `name:` is a rename** and
   `PersonaStore.Update` moves both rows by hand.
   What item 1 still owns is the harder half this bullet named: the no-cascade
-  decision. A renamed Teammate leaves its Agent, Rooms and Transcripts behind
+  decision. A renamed Agent leaves its Agent, Rooms and Transcripts behind
   under the old Name. The card no longer hides the rename, though — Edit offers
   Name, Title and Alias as discrete boxes over the frontmatter and states the
   consequence in place, so what is missing is the cascade, not the control.
@@ -1087,7 +1093,7 @@ design, and it ships without waiting for item 18.
 
 **11 before 18.** With a session per Room, a preference stated in one Room reaches the
 others only through Memory, which is part of item 11's design. Built the other way
-round, a Teammate would visibly forget "I told you C#" in its next Room.
+round, an Agent would visibly forget "I told you C#" in its next Room.
 
 **17 no longer constrains 11 or 18.** Skills has landed, so the files both share with it
 (`DotAcpAgentHostFactory`, `PersonaSupervisor`, `PersonaFrontmatter`, `PromptCatalog`)
@@ -1109,7 +1115,7 @@ inert, not assumed so.
 decisions. Three are worth knowing before touching anything nearby:
 
 **A Prompt edit never restarts a session.** A system prompt is fixed at
-`session/new`, so a `NextSession` Prompt is silently inert on a running Teammate
+`session/new`, so a `NextSession` Prompt is silently inert on a running Agent
 and the settings page badges exactly those fields. Restarting instead would have
 thrown away an Agent's conversation memory on every reworded sentence.
 
@@ -1138,7 +1144,7 @@ item nobody has started.
 > on this list is how a document goes quietly stale.
 
 A Room was permanent. That followed from a real argument — a Room and its
-Transcript are chat facts that outlive the Teammate which created them, which is
+Transcript are chat facts that outlive the Agent which created them, which is
 why removing a Persona still does not cascade. But *"removing a Persona must not
 destroy a Room"* and *"a Human may never put a Room away"* are different claims,
 and only the first follows. The sidebar is the app's primary navigation and it
@@ -1167,13 +1173,13 @@ beside `ReplyGate` and `AgentGateway.DeliverAsync`.
 What it deliberately gave up is
 [ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
 one-two-Member-Room-per-Agent invariant. An archived Room is excluded from
-`FindRoomWithExactMembersAsync`, so starting a chat with that Teammate creates a
+`FindRoomWithExactMembersAsync`, so starting a chat with that Agent creates a
 fresh Room; unarchive the old one afterwards and two identically-named Rooms hold
 the same two Members. Reuse-and-unarchive would have preserved the invariant and
 was the recommendation; this was the repo owner's call, and it is recorded in
 [Known limits](known-limits.md) rather than left to be rediscovered.
 
-## 15. A Teammate chooses its own Avatar — DELIVERED 2026-09-22
+## 15. An Agent chooses its own Avatar — DELIVERED 2026-09-22
 
 > **Delivered**, with
 > [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) as the
@@ -1201,7 +1207,7 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > gets an avatar for free as well.
 >
 > Three things the work turned up that no plan foresaw. `MudColorPicker.Value` is
-> non-nullable, so binding it would have given every Teammate a colour nobody chose,
+> non-nullable, so binding it would have given every Agent a colour nobody chose,
 > just from opening the card — [Traps](traps.md) carries it. `MudColor`'s constructor
 > **throws** on an unparseable string, and a render that throws on Blazor Server takes
 > the circuit with it, so `AvatarStore` validates a hand-edited `background` on read
@@ -1213,7 +1219,7 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > `PersonaRenamed` is raised from — the in-app path and the watcher — because a `.md`
 > deleted in an editor is noticed only by the second. The rename call sits **above**
 > `OnPersonaRenamed`'s no-Agent-row early return, which is the subtlest line in the
-> change: that guard fires for every Teammate in a stock installation, where
+> change: that guard fires for every Agent in a stock installation, where
 > `Acp:Enabled` is false and nothing has ever connected.
 
 ## 16. An Agent asks the Human with a Question — DELIVERED 2026-10-01
@@ -1234,7 +1240,7 @@ Huddle's own version of the tappable-options tool Claude's apps offer. An Agent 
 one, pick any, or rank. They wait on one card in the Room. The Human's tap posts the
 answer as a Message from the Human that quotes each Question and Mentions the asker,
 so the ordinary Reply Gate wakes the asker. Only the Human is ever asked; an Agent
-that wants an answer from another Teammate Mentions it in plain text.
+that wants an answer from another Agent Mentions it in plain text.
 
 Three rules carry the design, and each is easy to lose in a refactor:
 
@@ -1273,8 +1279,8 @@ See §6.8, §6.8a and D-13 to D-19 of [the Questions spec](../Huddle.Questions-S
 > `read_skill`. The first Skill, `team-building`, ships inside the assembly and can be
 > overridden file by file under `{DataDir}/Skills/`. A **built-in Chief of Staff**,
 > recognised only by `_builtin: chief-of-staff`, is written at startup when missing; it
-> holds that Skill, greets a new Human unprompted, and proposes Teammates with
-> `propose_teammates`. The Human answers on a Proposal card in the Room, and the outcome is
+> holds that Skill, greets a new Human unprompted, and proposes Agents with
+> `propose_agents`. The Human answers on a Proposal card in the Room, and the outcome is
 > posted as the Human's own Message, which wakes the proposer through the ordinary Reply
 > Gate.
 >
@@ -1345,7 +1351,7 @@ The same test found three more problems:
   in the Human's profile.
 
 **The change: a Room Session for each (Persona, Room),** holding that Room's Turns
-and nothing else. What makes the Agent one Teammate stays per Persona: its Persona
+and nothing else. What makes the Agent one Agent stays per Persona: its Persona
 text, Work Dir, Memory, App Tools and Adapter process. Only Memory and File Changes
 ([item 11](#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23)) cross between
 Rooms.
@@ -1368,12 +1374,12 @@ How the sessions are run:
 > [ADR-0027](../adr/0027-the-library-sees-only-configured-roots.md),
 > [ADR-0028](../adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md) and
 > [ADR-0029](../adr/0029-between-the-human-and-an-agent-the-last-write-wins.md), now **Accepted**,
-> and [ADR-0031](../adr/0031-teammates-and-teams-are-sibling-folders.md), also **Accepted**.
+> and [ADR-0031](../adr/0031-agents-and-teams-are-sibling-folders.md), also **Accepted**.
 > [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) stays **Proposed**
 > until the Tasks effort agrees on the Team folder holding its Tasks.
 >
 > What shipped:
-> - **Teammate folders.** Personas moved to `Teammates/<Name>/`, with their Work Dir inside, and a
+> - **Agent folders.** Personas moved to `Agents/<Name>/`, with their Work Dir inside, and a
 >   one-time migration of the old `Teams/*.md` + `work/` layout.
 > - **Team folders under `Teams/`.** They are provisioned and watched as a Library Root.
 > - **Explorer and editor.** A file explorer and a CodeMirror source editor (vendored under
@@ -1410,7 +1416,7 @@ Today nobody is asked. `DotAcpPersonaHost.BuildOptions` gives every session a
 `WorkDirPermissionHandler`, which answers every `session/request_permission` itself: it picks
 `allow_once`, else `allow_always`, and refuses only a tool call that names a path under
 `~/.claude`. No setting controls this, because `AcpOptions` has no permission member, and every
-Teammate gets the same handler.
+Agent gets the same handler.
 
 **What a live Turn showed, 2026-09-29.** With `Team:Acp:TraceWire=true`, the Chief of Staff was
 asked to read a file outside its Work Dir. The Adapter (`claude-agent-acp` 0.75.1) sent
@@ -1483,7 +1489,7 @@ the folder. They are chosen by `kind`, never by `optionId`, which is Adapter-def
 - **The default.** `Ask` out of the box changes every install; `AutoApprove` as the default with
   `Ask` as an opt-in changes none. The Human chose to keep auto-approve for now. A global
   `Team:Acp:PermissionMode` (`Ask` or `AutoApprove`) is the smallest first step.
-- **Scope.** Global first. A per-Teammate choice needs a store outside the `Persona` record, for
+- **Scope.** Global first. A per-Agent choice needs a store outside the `Persona` record, for
   the reason an Avatar does (item 15): a field in frontmatter would restart the session on every
   change.
 - **An unanswered card.** Reject after a configurable wait (10 minutes is a starting point), so an
@@ -1502,7 +1508,7 @@ and probably `Chat.razor` and `RoomEvents`, though neither blocks the other.
 > **Phase 1 delivered as code on 2026-09-30.** The design is
 > [Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md), recorded in
 > [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md). A Persona may have a **Work Mode**: the
-> ACP `mode` option, chosen on the Teammate card from the list its Adapter advertises, stored in
+> ACP `mode` option, chosen on the Agent card from the list its Adapter advertises, stored in
 > `persona_work_modes`, applied after Model and Effort and read back. `bypassPermissions`, `auto`
 > and `plan` are hidden by default (`Team:Acp:HiddenModes`; `plan` since the live run of
 > 2026-10-01, see below), and a Persona in `plan` mode cannot leave it. Only the Human sets it.

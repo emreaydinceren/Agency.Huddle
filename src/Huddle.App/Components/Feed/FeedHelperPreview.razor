@@ -1,0 +1,84 @@
+@*
+    The read-only preview of a Helper inside an expanded Feed card (Helpers in the Feed spec 5.5): its name and whether it is on, the
+    Adapter, Model and Effort it runs on, today's usage and the last result and error with their times. It reads the Helper's stores
+    when it is drawn and writes nothing; the card's Open Helper settings button is the way to change anything.
+*@
+@using Agency.Huddle.App.Components.Settings.Helpers
+@using Agency.Huddle.App.Helpers
+@using Agency.Huddle.App.Data
+@inject HelperRegistry Registry
+@inject HelperSettingsResolver Resolver
+@inject HelperBudget Budget
+@inject HelperStatusStore Statuses
+@inject TimeProvider Clock
+
+@if (this.helper is null)
+{
+    <div class="feed-preview feed-preview-deleted">This Helper is no longer available</div>
+}
+else
+{
+    <div class="feed-preview feed-helper-preview" data-helper="@this.helper.Id.Value">
+        <div class="feed-preview-head">
+            <span class="feed-preview-tile" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" /></span>
+            <span class="feed-preview-title">@this.helper.DisplayName</span>
+        </div>
+        <dl class="feed-preview-grid">
+            <dt>Status</dt>
+            <dd class="feed-helper-state">@(this.settings.Enabled ? HelpersCopy.ChipOn : HelpersCopy.ChipOff)</dd>
+            <dt>Runs on</dt>
+            <dd class="feed-helper-runs-on">@this.RunsOn</dd>
+            <dt>Today</dt>
+            <dd class="feed-helper-usage">@this.UsageText</dd>
+            @if (this.status.LastRunAt is { } ranAt && this.status.LastResult is { } result)
+            {
+                <dt>Last run</dt>
+                <dd class="feed-helper-last-run">@(this.TimeOfDay(ranAt) + " · " + result)</dd>
+            }
+            @if (this.status.LastErrorAt is { } failedAt && this.status.LastError is { } error)
+            {
+                <dt>Last error</dt>
+                <dd class="feed-helper-last-error">@(this.TimeOfDay(failedAt) + " · " + error)</dd>
+            }
+        </dl>
+    </div>
+}
+
+@code {
+    private IHelperAgent? helper;
+    private HelperSettings settings = new(false, null, null, null, 1, 10, 10, 60);
+    private HelperUsage usage = HelperUsage.None;
+    private HelperStatus status = HelperStatus.None;
+
+    /// <summary>The id of the Helper to preview, such as <c>NeedsHuman</c>. A Helper this build no longer registers is not previewed.</summary>
+    [Parameter, EditorRequired]
+    public required string HelperId { get; set; }
+
+    private string RunsOn => string.Join(" · ", new[] { this.settings.Adapter ?? "Default Adapter", this.settings.Model ?? "default Model", this.settings.Effort ?? "default Effort" });
+
+    private string UsageText
+    {
+        get
+        {
+            string text = HelpersCopy.Usage(this.usage.Calls, this.settings.DailyCap + this.usage.Granted);
+            return this.usage.Skipped > 0 ? text + " · " + HelpersCopy.Skipped(this.usage.Skipped) : text;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.helper = this.Registry.Find(new HelperId(this.HelperId));
+        if (this.helper is null)
+        {
+            return;
+        }
+
+        this.settings = this.Resolver.For(this.helper);
+        this.usage = this.Budget.Today(this.helper.Id);
+        this.status = this.Statuses.Get(this.helper.Id);
+    }
+
+    private string TimeOfDay(DateTimeOffset at) =>
+        TimeZoneInfo.ConvertTime(at, this.Clock.LocalTimeZone).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+}

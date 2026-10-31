@@ -1,0 +1,26 @@
+@* <summary>
+     The positioning frame that lets a presence badge sit on an avatar's bottom-right rim. It wraps the avatar from
+     outside because <c>AgentAvatar</c> keeps its single <c>MudAvatar</c> root (a <c>MudAvatar</c> clips its
+     children, so the badge cannot live inside it). With no <see cref="Cue"/> it renders the avatar alone.
+   </summary> *@
+<span class="presence-anchor">
+    @this.ChildContent
+    @if (this.Cue is { } cue)
+    {
+        <PresenceBadge Cue="cue" OnAvatar="true" Detail="@this.Detail" />
+    }
+</span>
+
+@code {
+    /// <summary>The avatar to anchor the badge to.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The state to badge the avatar with, or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public PresenceCue? Cue { get; set; }
+
+    /// <summary>Extra tooltip words after the state name; see <see cref="PresenceBadge.Detail"/>.</summary>
+    [Parameter]
+    public string? Detail { get; set; }
+}

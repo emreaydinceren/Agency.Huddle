@@ -16,13 +16,13 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
 1. RESET under PROFILE B and PROFILE C always means `P-RESET-ROOMS` — it clears every Room, Member list and Transcript while leaving the Persona library alone. Under `P-LAUNCH-UAT` RESET means `P-STOP` and then re-running its seeder line, which wipes and rebuilds the data folder back to Ada, Bo and their two empty Rooms. Budget counters are in memory; a restart clears them.
-2. **`P-LAUNCH-UAT` — free, the mock Teammates Ada and Bo.** Run [`P-LAUNCH-UAT`](common.md#p-launch-uat) as written; Ada and Bo go **Online** and each has a two-Member Room named after itself. The Budget defaults to `40`. Where a test names another Budget, add `--Team:AgentMessageBudget=<N>` as one more argument on the `dotnet run --project src/Huddle.App` line of that procedure (a backtick-continued line like the others), or set `$env:Team__AgentMessageBudget = '<N>'` in `T-A` before that line; the seeder line is unchanged. Both only take effect at startup, so changing the value means `P-STOP` and a relaunch. `<DataDir>` in a path below is `<data>` as [Common procedures](common.md) defines it: `C:\seeds\huddle\uat\data` under this lane and `<repo>\src\Huddle.App\App_Data` under the others, so `O-TRANSCRIPT` is `<data>\rooms\<RoomId>.jsonl` and `O-DB` is `<data>\team.db`.
+2. **`P-LAUNCH-UAT` — free, the mock Agents Ada and Bo.** Run [`P-LAUNCH-UAT`](common.md#p-launch-uat) as written; Ada and Bo go **Online** and each has a two-Member Room named after itself. The Budget defaults to `40`. Where a test names another Budget, add `--Team:AgentMessageBudget=<N>` as one more argument on the `dotnet run --project src/Huddle.App` line of that procedure (a backtick-continued line like the others), or set `$env:Team__AgentMessageBudget = '<N>'` in `T-A` before that line; the seeder line is unchanged. Both only take effect at startup, so changing the value means `P-STOP` and a relaunch. `<DataDir>` in a path below is `<data>` as [Common procedures](common.md) defines it: `C:\seeds\huddle\uat\data` under this lane and `<repo>\src\Huddle.App\App_Data` under the others, so `O-TRANSCRIPT` is `<data>\rooms\<RoomId>.jsonl` and `O-DB` is `<data>\team.db`.
 3. **PROFILE B — free, scripted pipe clients you control.** Needed wherever a test names a wire envelope as its oracle. `P-LAUNCH-FREE` plus `$env:Team__AgentMessageBudget = '40'` (or whatever budget the test names) set before `dotnet run`, then one `P-ECHO-BOT` terminal per Agent the test names. `O-WIRE` is the primary oracle for this whole area.
 4. **PROFILE C — paid, real Personas.** `P-LAUNCH-PAID` with `$env:Team__AgentMessageBudget` set to the small number the test names. Every Persona must already be Haiku / low.
 5. Learn the `O-LOG` lines you will read all day, verbatim: `Room '{RoomId}' refused a message from '{AgentName}': its budget of {N} agent messages since a human last spoke is spent.` (warning) / `Room '{RoomId}' was extended to {N} agent messages.` / `Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {N} agent messages.` (warning) / `Persona '{PersonaName}' has spent its token budget of {N} and is taking no more turns until a human speaks to it.` / `Invited agent '{AgentName}' ({AgentId}) into room '{RoomId}'.` / `Created direct room '{RoomId}' for agent '{AgentName}'.`
 6. In `O-DB`, `SELECT COUNT(*) FROM room_members WHERE room_id='…'` is what makes a Room two-Member or group — that count and nothing else. The Room's grey member line in the browser is an acceptable substitute.
-7. READ THIS BEFORE FILING ANYTHING. Both free kinds of Agent implement the Reply Gate. The mock Teammates of `P-LAUNCH-UAT` are real Personas on the free mock adapter, so they go through the real Reply Gate and the real Budget checks. `tools/echo-bot.ps1` is a raw pipe client that mirrors the same decision (budget check first, then member-count-or-mention) from the fields already on the `messagePosted` envelope; following never enters into it, because a pipe client has no `mcp__team__follow_room` tool to call and can never be following a Room. So a two-Member Room answers an un-mentioned Message under `P-LAUNCH-UAT` or PROFILE B — that is the correct behaviour per ADR-0004, not silence to expect. The free tests below can therefore observe the Reply Gate's own decisions directly — answer-without-mention in a two-Member Room, Mention-gating once a third Member joins, and decline-before-Turn once the Budget is spent — without needing a real model. Following (roadmap item 8) is invisible to both by construction and is exercised only by real Personas in `app-tools.md`'s APPTOOLS-23 to -25. (Catch-up buffering is still not something a free test observes reliably, so that piece remains a paid-tests concern.)
-8. THE MOCK RE-QUOTES MENTIONS. A mock Teammate's reply is the whole prompt echoed back, so a reply to a Message that names `@Ada @Bo` itself names both of them. In a Room of three or more Members that Mentions the other Teammate, so Ada and Bo can keep answering each other until the Budget is spent, and in a Room with no cap they never stop. Every `P-LAUNCH-UAT` test below therefore either names ONE Teammate per Message or says what to expect from a Message that names two; none of them sends a two-Mention Message to an uncapped Room. The echo also carries Catch-up and Transcript lines (a Teammate's first Turn in a Room includes up to 20 earlier Messages), so a reply can name a Teammate that your own Message did not: an earlier Message in the Room that names `@Bo` can wake Bo again. A test that needs Bo to stay silent therefore runs in a Room whose Transcript never named Bo. A reply that arrives only because the mock re-quoted a Mention is the echo, not a Reply Gate defect. The pipe bot `tools/echo-bot.ps1` strips `@` from what it quotes and never has this effect.
+7. READ THIS BEFORE FILING ANYTHING. Both free kinds of Agent implement the Reply Gate. The mock Agents of `P-LAUNCH-UAT` are real Personas on the free mock adapter, so they go through the real Reply Gate and the real Budget checks. `tools/echo-bot.ps1` is a raw pipe client that mirrors the same decision (budget check first, then member-count-or-mention) from the fields already on the `messagePosted` envelope; following never enters into it, because a pipe client has no `mcp__team__follow_room` tool to call and can never be following a Room. So a two-Member Room answers an un-mentioned Message under `P-LAUNCH-UAT` or PROFILE B — that is the correct behaviour per ADR-0004, not silence to expect. The free tests below can therefore observe the Reply Gate's own decisions directly — answer-without-mention in a two-Member Room, Mention-gating once a third Member joins, and decline-before-Turn once the Budget is spent — without needing a real model. Following (roadmap item 8) is invisible to both by construction and is exercised only by real Personas in `app-tools.md`'s APPTOOLS-23 to -25. (Catch-up buffering is still not something a free test observes reliably, so that piece remains a paid-tests concern.)
+8. THE MOCK RE-QUOTES MENTIONS. A mock Agent's reply is the whole prompt echoed back, so a reply to a Message that names `@Ada @Bo` itself names both of them. In a Room of three or more Members that Mentions the other Agent, so Ada and Bo can keep answering each other until the Budget is spent, and in a Room with no cap they never stop. Every `P-LAUNCH-UAT` test below therefore either names ONE Agent per Message or says what to expect from a Message that names two; none of them sends a two-Mention Message to an uncapped Room. The echo also carries Catch-up and Transcript lines (an Agent's first Turn in a Room includes up to 20 earlier Messages), so a reply can name an Agent that your own Message did not: an earlier Message in the Room that names `@Bo` can wake Bo again. A test that needs Bo to stay silent therefore runs in a Room whose Transcript never named Bo. A reply that arrives only because the mock re-quoted a Mention is the echo, not a Reply Gate defect. The pipe bot `tools/echo-bot.ps1` strips `@` from what it quotes and never has this effect.
 
 ## Tests
 
@@ -39,10 +39,10 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Steps**
 
-1. Click **Invite teammate** at the right of the Room header.
+1. Click **Invite agent** at the right of the Room header.
 2. In the panel that opens, click `Bo`.
 3. Read the blue strip at the top of the panel.
-4. Click **Invite teammate** again to close the panel.
+4. Click **Invite agent** again to close the panel.
 5. Read the sidebar entry, the Room heading and the grey member line, WITHOUT reloading the page.
 6. Type `good morning everyone` and press Enter.
 7. Wait 15 seconds without touching anything.
@@ -51,10 +51,10 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Pass if — all of these**
 
-- The blue strip (an Info alert, `InviteTeammate.razor:23`) reads exactly `Invited Bo. Room is now "Ada, Bo".`
+- The blue strip (an Info alert, `InviteAgent.razor:23`) reads exactly `Invited Bo. Room is now "Ada, Bo".`
 - With no page refresh, the sidebar entry and the Room heading both change to `Ada, Bo` and the member line becomes `You, Ada, Bo`.
 - Step 6 produces no reply at all from either Agent, AND a quiet blue note appears above the
-  composer reading `No teammate was @-mentioned — name one to ask for a reply.` That note is the
+  composer reading `No agent was @-mentioned — name one to ask for a reply.` That note is the
   point of the silence being legible at all; before #40 step 6 looked identical to a broken app.
 - The note disappears the moment step 8's Message posts, because that one names somebody.
 - Step 8 produces exactly one reply, from `Ada`, and it contains the text you sent.
@@ -70,7 +70,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If `Bo` does not appear in the **Invite teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
+If `Bo` does not appear in the **Invite agent** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Agents page for `Bo` reading Online, then restart from RESET. If the badge beside `Bo` in the panel is a hollow grey ring rather than a green check circle, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -157,7 +157,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 
 **Inconclusive if**
 
-If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile reads Offline — the **Invite teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
+If `Ada` is offline (a hollow grey ring on Ada's avatar on the Agents page, or the tile reads Offline — the **Invite agent** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -187,9 +187,9 @@ If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile rea
 - Step 3's Message posts normally and appears in the transcript with sender `You`.
 - Nothing at all follows step 3 by way of a reply, a red strip, an error banner, or an entry in
   `T-A` at Warning level. What DOES appear is the quiet blue note above the composer reading
-  `No teammate was @-mentioned — name one to ask for a reply.` Read its wording closely: it says
-  *no teammate*, not *nobody*, precisely because `@You` IS a Mention - of the Human, who is not a
-  Teammate and is never delivered to. A note here reading "nobody was mentioned" would be false,
+  `No agent was @-mentioned — name one to ask for a reply.` Read its wording closely: it says
+  *no agent*, not *nobody*, precisely because `@You` IS a Mention - of the Human, who is not an
+  Agent and is never delivered to. A note here reading "nobody was mentioned" would be false,
   and this test is the case that proves it.
 - The tail of the `.jsonl` shows one agent line after `@Ada @Ada @Ada hi`, and the `@You are needed` line with no agent line after it.
 
@@ -197,7 +197,7 @@ If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile rea
 
 - Three replies arrive at step 2 -> duplicate Mentions are not collapsing; with a real Persona this is three billed Turns for one Mention, and a Message naming an Agent five times would cost five.
 - Step 3 shows a red strip or an error -> Mentioning the Human is being treated as an error rather than as a Mention that simply reaches no Agent, which will make `@You` unusable in ordinary conversation. The blue `role="status"` note is NOT this: it is an Info consequence, not a failure.
-- The note at step 3 says "nobody" rather than "no teammate" -> the copy has drifted into a claim that is false in this exact case.
+- The note at step 3 says "nobody" rather than "no agent" -> the copy has drifted into a claim that is false in this exact case.
 - An Agent replies to `@You are needed` -> the Human is being delivered to, or the Mention resolved to the wrong Member.
 
 **Inconclusive if**
@@ -245,7 +245,7 @@ If the Human's display name is not `You` (it is configurable), step 3 names nobo
 
 **Inconclusive if**
 
-If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Teammates page that both `Ada` and `Bo` read Online before judging (the **Invite teammate** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
+If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Agents page that both `Ada` and `Bo` read Online before judging (the **Invite agent** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
 
 > [!NOTE]
 > The line is deliberately suppressed when the Room is uncapped; that case is REPLYGATEBUDGET-16.
@@ -268,7 +268,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 4. Type `@Ada hi` and press Enter.
 5. Wait 8 seconds, then read everything between the transcript and the composer.
 6. Read the sender name of every Message in the transcript.
-7. Click **Teammates** in the sidebar and read the state under the `Ada` tile, then use the browser Back button.
+7. Click **Agents** in the sidebar and read the state under the `Ada` tile, then use the browser Back button.
 8. Read `T-A`.
 
 **Pass if — all of these**
@@ -276,7 +276,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 - `Ada`'s reply lands (it contains `hi`), and then a `budget-prompt` block appears between the transcript and the composer, separated from the transcript by a plain rule, whose `budget-prompt-text` paragraph is in the danger colour and reads exactly `Agents have sent 1 replies since you last spoke, and are paused.`
 - That block carries exactly two buttons, labelled **Continue** and **Leave paused**, and above
   them a second, grey `budget-prompt-warning` paragraph reading
-  `Continue will deliver the last message again, and it is a teammate's own — a teammate is
+  `Continue will deliver the last message again, and it is an agent's own — an agent is
   never delivered its own message, so this will wake nobody. Say something instead.` (the em dash is the UI's, `Chat.razor:143`) It is there because the
   Room's last Message is `Ada`'s own reply, and an Agent is never delivered its own Message.
 - No context-only note appears. This is a two-Member Room, so a Message is answered without a
@@ -284,7 +284,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 - No other strip appears above the composer — in particular no alert listing `Ada is Degraded` or `Ada is Offline`.
 - Every Message in the transcript is from `You` or from `Ada`; there is no Message from a `system` or similar sender announcing the pause.
 - `T-A` shows NO `refused a message from` warning yet (nothing has tried to post a second time).
-- The Teammates page still shows `Ada` as Online.
+- The Agents page still shows `Ada` as Online.
 
 **Fail if — any of these**
 
@@ -317,8 +317,8 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 1. Run `P-LAUNCH-UAT` with a Budget of `1` (Setup item 2). Re-running its seeder line is the reset.
 2. Wait for Ada and Bo to go **Online**.
 3. Open `http://localhost:5100`, click the Room named `Ada`, and note the Room id from the URL.
-4. Click **Invite teammate**, click `Bo`, and confirm the header renames to `Ada, Bo`.
-5. Click **Invite teammate** again to close the panel.
+4. Click **Invite agent**, click `Bo`, and confirm the header renames to `Ada, Bo`.
+5. Click **Invite agent** again to close the panel.
 6. Type `@Ada @Bo go` and press Enter.
 7. Wait 10 seconds and count the agent Messages that appear.
 8. Read `T-A`.
@@ -339,7 +339,7 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 
 **Inconclusive if**
 
-If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Teammates page that both read Online first (the **Invite teammate** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Teammate and NO `refused a message from` line, the second Teammate started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
+If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Agents page that both read Online first (the **Invite agent** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Agent and NO `refused a message from` line, the second Agent started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
 
 > [!NOTE]
 > This layer refuses AFTER the Turn that produced the Message has already happened. With a real Persona the model has thought and the text is thrown away. That is the documented price of putting the authority on the write path, not a defect; the layer that avoids the spend is covered in REPLYGATEBUDGET-33.
@@ -468,7 +468,7 @@ If the whole page fails to load after F5, the server has stopped — check `T-A`
 
 **Before you start**
 
-- The two-Member `Ada` Room from REPLYGATEBUDGET-07 is paused with the pause block showing, under a run whose `Team__AgentMessageBudget` is `1`. Use that Room, not the `Ada, Bo` Room of REPLYGATEBUDGET-08: there the last Message may name another Teammate, and Continue would then genuinely wake it and add a Message, which this test does not expect.
+- The two-Member `Ada` Room from REPLYGATEBUDGET-07 is paused with the pause block showing, under a run whose `Team__AgentMessageBudget` is `1`. Use that Room, not the `Ada, Bo` Room of REPLYGATEBUDGET-08: there the last Message may name another Agent, and Continue would then genuinely wake it and add a Message, which this test does not expect.
 - You know the Room id and the current line count of its `.jsonl`.
 
 **Steps**
@@ -533,7 +533,7 @@ If nothing at all changes after the click — the pause block stays, no log line
 **Pass if — all of these**
 
 - The `.` posts normally, appears in the transcript with sender `You`, and is never refused.
-- Immediately after step 3 the pause block and the grey budget line are both gone, and no Agent answers the `.` (three Members and no Mention): the quiet blue note `No teammate was @-mentioned — name one to ask for a reply.` appears instead.
+- Immediately after step 3 the pause block and the grey budget line are both gone, and no Agent answers the `.` (three Members and no Mention): the quiet blue note `No agent was @-mentioned — name one to ask for a reply.` appears instead.
 - After `Ada` replies at step 5, the line read at step 6 reads `Paused — 1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
 - The tail of the `.jsonl` shows your `.` line with `"senderId":"human"`, then `@Ada hi`, then Ada's reply.
 - `T-A` shows no refusal warning naming the Human.
@@ -587,7 +587,7 @@ If no reply arrives at step 5, you cannot read the Granted figure at all: confir
 
 **Inconclusive if**
 
-If `Bo` is not Online there is no working `Bo` Room to switch to — check the Teammates page and restart from RESET. If both Rooms happen to have the same name after earlier invites, use the Room ids in the URL to tell them apart.
+If `Bo` is not Online there is no working `Bo` Room to switch to — check the Agents page and restart from RESET. If both Rooms happen to have the same name after earlier invites, use the Room ids in the URL to tell them apart.
 
 > [!NOTE]
 > Sidebar switching is deliberately fast here; a stale-state bug shows as a flash of the wrong figures rather than a permanent wrong reading, so watch the moment of the switch.
@@ -643,7 +643,7 @@ If the Room id changes after the restart you ran RESET by mistake, or an Agent r
 
 **Steps**
 
-This test uses two pipe bots (PROFILE B), not the mock Teammates: with the cap removed, the mock pair re-quotes Catch-up lines that name each other and answers itself forever (Setup item 8), whereas `tools/echo-bot.ps1` strips `@` from what it quotes and cannot loop.
+This test uses two pipe bots (PROFILE B), not the mock Agents: with the cap removed, the mock pair re-quotes Catch-up lines that name each other and answers itself forever (Setup item 8), whereas `tools/echo-bot.ps1` strips `@` from what it quotes and cannot loop.
 
 1. Run `P-RESET-ROOMS`, then start the app under PROFILE B with the Budget set before `dotnet run`: `$env:Team__Acp__Enabled = 'false'`, `$env:Team__AgentMessageBudget = '0'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 2. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`; in a third terminal run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`. Confirm each prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
@@ -682,7 +682,7 @@ If replies stop arriving mid-run, check that each bot terminal is still running 
 
 **Before you start**
 
-- The app is running under `P-LAUNCH-FREE` (no Teammate is needed for this test).
+- The app is running under `P-LAUNCH-FREE` (no Agent is needed for this test).
 - No `prompts.json` exists yet: confirm with `Test-Path <data>\prompts.json` — it should print `False` on a fresh install.
 
 **Steps**
@@ -704,7 +704,7 @@ If replies stop arriving mid-run, check that each bot terminal is still running 
 - Step 1 prints `False` — no override file exists until a save.
 - **Chat rules** default text (hard line breaks in the editor are not part of the match; read it as running prose, `PromptCatalog.cs:86-92`) begins `A Room with two members is a private conversation with the human: answer every message. A Room with three or more members is a group: answer only when you are @-mentioned.`
 - **Help: budget** default text contains the sentence `A refusal that says the budget is spent is final: do not retry it, and do not work around it by posting to another Room.`
-- **Chat rules** carries a badge reading `Next session`, whose tooltip says it applies to teammates started after the change.
+- **Chat rules** carries a badge reading `Next session`, whose tooltip says it applies to agents started after the change.
 - **Help: budget** carries no `Next session` badge (its Timing is Live, `PromptCatalog.cs:633-650`).
 - After the edit and before saving, the field shows an `Unsaved` badge; the **Save** button is enabled only while there is something to save.
 - After saving, `prompts.json` exists and contains ONLY the one changed key — not the full set of defaults.
@@ -713,7 +713,7 @@ If replies stop arriving mid-run, check that each bot terminal is still running 
 
 - `prompts.json` exists before you have ever saved -> absent no longer means 'nothing overridden', so a future default change would never reach an installed system.
 - `prompts.json` contains every prompt after saving one -> the same problem: every default is frozen at whatever shipped the day of the first save.
-- **Chat rules** has no `Next session` badge -> the Human is given no signal that their edit will not reach a running Teammate until it restarts, so an edit that silently never takes effect looks like a broken prompt.
+- **Chat rules** has no `Next session` badge -> the Human is given no signal that their edit will not reach a running Agent until it restarts, so an edit that silently never takes effect looks like a broken prompt.
 - A `Next session` badge appears on the `Help:` fields -> the badge is decoration rather than a statement about timing, which makes it worthless on the fields that need it.
 
 **Inconclusive if**
@@ -806,7 +806,7 @@ If `T-B` prints a line containing `"code":"invalidName"`, the Name was rejected 
 
 - `Emily` replies to `@Emily Lee any news?` -> the parser is reading the shorter Name and treating `Lee` as ordinary text; every Mention of a two-word Name in a Room that also holds the one-word Name reaches the wrong person, silently and with no error.
 - BOTH reply to `@Emily Lee any news?` -> the scan did not advance past the handle it consumed, so the words inside a multi-word Name are being re-read as further Mentions; with real Personas that is a billed Turn for someone who was never addressed.
-- Step 7 produces a red strip reading `Unknown agent @Emily` -> the invite command truncated the Name at the first space, so no Teammate whose Name contains a space can ever be invited from the composer.
+- Step 7 produces a red strip reading `Unknown agent @Emily` -> the invite command truncated the Name at the first space, so no Agent whose Name contains a space can ever be invited from the composer.
 - Nobody replies to `@emily lee any news?` while `@Emily Lee any news?` works -> the multi-word match is case-sensitive.
 
 **Inconclusive if**
@@ -905,7 +905,7 @@ If `T-B` prints `"code":"invalidName"`, the quoted Name was mistyped — it must
 
 **Free** · about 12 min
 
-*Prevents the expensive false positive — waking a Teammate every time someone pastes an email address or writes a longer word starting with their Name — without over-blocking the legitimate case.*
+*Prevents the expensive false positive — waking an Agent every time someone pastes an email address or writes a longer word starting with their Name — without over-blocking the legitimate case.*
 
 **Before you start**
 
@@ -934,8 +934,8 @@ If `T-B` prints `"code":"invalidName"`, the quoted Name was mistyped — it must
 
 **Fail if — any of these**
 
-- `Ad` replies to `@Ada` -> a Mention is not ending at a word boundary, so any Teammate whose Name is a prefix of another is woken by Mentions meant for the longer one; with a real Persona that is a billed Turn for nothing.
-- `example` replies to `mail me@example.com` -> every pasted email address wakes a Teammate. This is the most expensive false positive in the product.
+- `Ad` replies to `@Ada` -> a Mention is not ending at a word boundary, so any Agent whose Name is a prefix of another is woken by Mentions meant for the longer one; with a real Persona that is a billed Turn for nothing.
+- `example` replies to `mail me@example.com` -> every pasted email address wakes an Agent. This is the most expensive false positive in the product.
 - `see-@Ada` gets no reply -> `-` was wrongly added to the blocked set, so a legitimate Mention after a hyphen silently reaches nobody.
 - `you@@Ada` produces a reply -> the doubled `@` is not being treated as joining two things, so text like an escaped handle wakes an Agent.
 
@@ -1064,7 +1064,7 @@ If only one bot is connected, only one post is attempted and no refusal can occu
 - The sender's terminal prints no envelope for its own Message at any point.
 - `T-A` shows exactly one `Room '…' was extended to 2 agent messages.` line.
 - Neither the `.jsonl` line count nor the visible Message count changed.
-- If the re-delivered Message names nobody (the usual case with the echo bots), a quiet blue note above the composer reads `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` (`Chat.razor:181`). Its absence is not a failure when the Message did name an Agent; it is the observation, not the oracle.
+- If the re-delivered Message names nobody (the usual case with the echo bots), a quiet blue note above the composer reads `Budget granted and the last message was delivered again, but it names no agent. Mention one by name to get an answer.` (`Chat.razor:181`). Its absence is not a failure when the Message did name an Agent; it is the observation, not the oracle.
 
 **Fail if — any of these**
 
@@ -1104,7 +1104,7 @@ Whether the woken Agent actually replies depends on the re-parsed Mentions in th
 **Pass if — all of these**
 
 - BEFORE clicking at step 7, the pause block carries an extra grey line reading `Continue will
-  deliver the last message again, and it is a teammate's own — a teammate is never delivered its
+  deliver the last message again, and it is an agent's own — an agent is never delivered its
   own message, so this will wake nobody. Say something instead.` The Human is told the button
   cannot work BEFORE pressing it, which is the whole of product observation 5.
 - `T-A` shows exactly one `Room '…' was extended to 2 agent messages.` line — the grant definitely happened.
@@ -1139,16 +1139,16 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 **Before you start**
 
 - No app running.
-- No Persona that would clash: `<data>\Teammates\` has no `Jarvis` folder. A Persona lives at `<data>\Teammates\<Name>\<Name>.md` (`TeammatePaths.cs`); `<data>\Teams\` holds Team folders and Tasks, never Personas. The built-in `Chief of Staff` folder is always there and is not a clash.
+- No Persona that would clash: `<data>\Agents\` has no `Jarvis` folder. A Persona lives at `<data>\Agents\<Name>\<Name>.md` (`AgentPaths.cs`); `<data>\Teams\` holds Team folders and Tasks, never Personas. The built-in `Chief of Staff` folder is always there and is not a clash.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false` — no model is needed for this test and none must start).
-3. Open `http://localhost:5100`, click **Teammates** in the sidebar, and click **New teammate**.
+3. Open `http://localhost:5100`, click **Agents** in the sidebar, and click **New agent**.
 4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, leave Teams blank, and type `You are Jarvis.` into the Persona body.
-5. Leave Model and Effort at `Use the agent's default` and click **Add teammate**.
-6. Confirm a tile named `Jarvis` now appears on the Teammates page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`, and that `<data>\Teammates\Jarvis\Jarvis.md` now exists.
+5. Leave Model and Effort at `Agent default` and click **Add agent**.
+6. Confirm a tile named `Jarvis` now appears on the Agents page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`, and that `<data>\Agents\Jarvis\Jarvis.md` now exists.
 7. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 8. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 9. Click the Room named `Jarvis` in the sidebar, type `/invite @Ada` and press Enter so the Room has three Members.
@@ -1170,36 +1170,36 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 - `@jar` reaches nobody while `@Jarvis` works and the Persona file loaded cleanly -> Aliases are not being folded into Mention resolution at all, so every shorter handle silently reaches nobody.
 - `@jarring` or `x@jar` wakes `Jarvis` -> an Alias is not respecting word boundaries, which is the same expensive false positive as REPLYGATEBUDGET-22 with a shorter, more collision-prone handle.
 - The `"mentions"` array names `jar` rather than `Jarvis` -> the wire is carrying something that is not a Member, which no client can resolve.
-- Step 14 reports `Unknown agent @jar` -> the invite path does not resolve Aliases, so the two ways of naming a Teammate disagree.
+- Step 14 reports `Unknown agent @jar` -> the invite path does not resolve Aliases, so the two ways of naming an Agent disagree.
 
 **Inconclusive if**
 
 If `Jarvis.md` appears under **Files that didn't load**, read the reason there and fix it — the Alias cannot resolve from a file that did not load, and the test proves nothing. If the pipe client's Name and the Persona Name do not match exactly (`Jarvis`), the Alias has no Member to point at and its silence is CORRECT, not a defect: Aliases are library-wide but resolve only against the Members of the Room. If a real model process starts, `Team__Acp__Enabled` was not `false` — Ctrl+C immediately.
 
 > [!NOTE]
-> Delete the folder `<data>\Teammates\Jarvis\` when finished (or run `P-RESET-TEAMS`), or later tests will see an extra Persona. Do not delete anything under `<data>\Teams\`.
+> Delete the folder `<data>\Agents\Jarvis\` when finished (or run `P-RESET-TEAMS`), or later tests will see an extra Persona. Do not delete anything under `<data>\Teams\`.
 
 ### REPLYGATEBUDGET-28 — A longer Alias beats a shorter Name, and an equal-length Name beats an Alias
 
 **Free** · about 15 min
 
-*Pins two tie-breaks that nothing in the compiler protects and whose failure is a silent mis-routing to the wrong Teammate.*
+*Pins two tie-breaks that nothing in the compiler protects and whose failure is a silent mis-routing to the wrong Agent.*
 
 **Before you start**
 
 - No app running.
-- `<data>\Teammates\` has no `Other` or `Jarvis` folder left by an earlier test. The built-in `Chief of Staff` folder stays.
+- `<data>\Agents\` has no `Other` or `Jarvis` folder left by an earlier test. The built-in `Chief of Staff` folder stays.
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then delete any leftover `Other` and `Jarvis` folders under `<data>\Teammates\`. Do not touch `<data>\Teams\` (Team folders and Tasks) or the `Chief of Staff` folder.
+1. Run `P-RESET-ROOMS`, then delete any leftover `Other` and `Jarvis` folders under `<data>\Agents\`. Do not touch `<data>\Teams\` (Team folders and Tasks) or the `Chief of Staff` folder.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false`).
-3. CASE A. On **Teammates**, click **New teammate** and create Name `Other`, Title `Someone else`, Alias `Emily Lee`, body `You are Other.`, then click **Add teammate**.
+3. CASE A. On **Agents**, click **New agent** and create Name `Other`, Title `Someone else`, Alias `Emily Lee`, body `You are Other.`, then click **Add agent**.
 4. Confirm `Other.md` is not listed under **Files that didn't load**.
 5. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Emily`; in TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Other`.
 6. Click the Room named `Emily`, type `/invite @Other` and press Enter, and confirm three Members.
 7. Type `@Emily Lee any news?` and press Enter, wait 5 seconds, then read both terminals and the Room.
-8. CASE B. On **Teammates**, click **New teammate** and create Name `Jarvis`, Title `Butler`, Alias `Jar`, body `You are Jarvis.`, then click **Add teammate**.
+8. CASE B. On **Agents**, click **New agent** and create Name `Jarvis`, Title `Butler`, Alias `Jar`, body `You are Jarvis.`, then click **Add agent**.
 9. In a fourth terminal — TERMINAL D — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jar`; in a fifth — TERMINAL E — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 10. Click the Room named `Jar`, type `/invite @Jarvis` and press Enter, and confirm three Members.
 11. Type `@Jar are you there?` and press Enter, wait 5 seconds, then read TERMINAL D and TERMINAL E and the Room.
@@ -1211,8 +1211,8 @@ If `Jarvis.md` appears under **Files that didn't load**, read the reason there a
 
 **Fail if — any of these**
 
-- CASE A routes to `Emily` -> Names and Aliases are being matched in two separate passes rather than sorted together, so a short Name that happens to sit at a word boundary steals a longer Alias's Mention. Silent: the wrong Teammate simply answers.
-- CASE B routes to `Jarvis` -> the tie between an equal-length Name and Alias is being won by the Alias; a Teammate can then be shadowed out of their own Name by somebody else's shorthand. Also silent.
+- CASE A routes to `Emily` -> Names and Aliases are being matched in two separate passes rather than sorted together, so a short Name that happens to sit at a word boundary steals a longer Alias's Mention. Silent: the wrong Agent simply answers.
+- CASE B routes to `Jarvis` -> the tie between an equal-length Name and Alias is being won by the Alias; an Agent can then be shadowed out of their own Name by somebody else's shorthand. Also silent.
 - BOTH reply in either case -> the scan did not advance past the handle it consumed.
 
 **Inconclusive if**
@@ -1220,7 +1220,7 @@ If `Jarvis.md` appears under **Files that didn't load**, read the reason there a
 If either Persona file is listed under **Files that didn't load**, read the reason: an Alias that duplicates another Persona's Name is rejected by design, so Case B cannot be built from two Persona files — it needs a pipe client named `Jar` (as written) alongside a Persona `Jarvis`. If the bot Names do not exactly match the Persona Names, the Aliases resolve to nobody and both cases are inconclusive. If a Room already contains an unexpected fourth Member from an earlier invite, RESET and rebuild.
 
 > [!NOTE]
-> Delete the `Other` and `Jarvis` folders from `<data>\Teammates\` when finished. These two orderings are decided by a stable sort over one combined candidate list; there is no compiler or analyser signal if that ordering is ever swapped, which is why they are tested by hand.
+> Delete the `Other` and `Jarvis` folders from `<data>\Agents\` when finished. These two orderings are decided by a stable sort over one combined candidate list; there is no compiler or analyser signal if that ordering is ever swapped, which is why they are tested by hand.
 
 ### REPLYGATEBUDGET-29 — Reconnecting re-attaches to the same Room, but after an invite a fresh two-Member Room appears
 
@@ -1279,7 +1279,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 1. Type `@nobodyhere hello` and press Enter, then wait 10 seconds and watch the whole page.
 2. Read both bot terminals for that Message.
-3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Invite teammate** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
+3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Invite agent** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
 4. In `T-B` press Ctrl+C to take `Ada` offline, and wait 5 seconds.
 5. Click **New chat** again and note the colour of the dot beside `Ada`, then close the panel.
 6. Type `@Ada are you there?` and press Enter, then wait 10 seconds.
@@ -1290,16 +1290,16 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 - Step 1's Message posts normally and produces no composer error, no highlight, and no indication
   that the `@` in particular matched nobody. It DOES produce the quiet blue note above the
-  composer reading `No teammate was @-mentioned — name one to ask for a reply.` — which is
+  composer reading `No agent was @-mentioned — name one to ask for a reply.` — which is
   correct and is not about the unresolvable handle: the same note appears for a plain
   `hello` in this Room. The product still never reports an unresolvable Mention as a failure.
-- At step 6, with `Ada` offline and `Bo` online, there is NO note at all. A Teammate WAS
-  named, so "no teammate was @-mentioned" would be false; the Room stays silent rather than say
+- At step 6, with `Ada` offline and `Bo` online, there is NO note at all. An Agent WAS
+  named, so "no agent was @-mentioned" would be false; the Room stays silent rather than say
   something untrue. Explaining that `Ada` is offline is deliberately not built - see
   `docs/engineering/known-limits.md`.
 - Both terminals show that envelope with `"mentioned":false`.
-- At step 3 both dots are green (`agent-dot online`, `var(--mud-palette-success)`, `app.css:67-69`).
-- At step 5 the dot beside `Ada` is red — `agent-dot offline`, painted with `var(--mud-palette-error)` (`app.css:71-73`; its hover title reads `offline`). There is no grey dot in the design.
+- At step 3 both dots are green (`agent-dot online`, the Success colour mixed 20% toward black, with a white check).
+- At step 5 the badge beside `Ada` is a hollow grey ring — `agent-dot offline` (its hover title reads `offline`). It is not red; red is Degraded's dash.
 - At step 6, with `Ada` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
 - After restarting at step 8, the same Message produces a reply.
 
@@ -1308,7 +1308,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 - An error or warning appears for `@nobodyhere hello`, or any note that singles out the
   unresolvable handle -> the product is reporting an unresolvable Mention as a failure, which
   will fire on ordinary prose containing an `@`. The generic context-only note is not this.
-- A note appears at step 6, while `Ada` is offline and named -> the Room is claiming no Teammate
+- A note appears at step 6, while `Ada` is offline and named -> the Room is claiming no Agent
   was mentioned when one was.
 - `@Ada are you there?` produces a reply while `Ada` is stopped -> something other than the live connection is answering.
 - After restarting `Ada`, the Messages it missed while offline are delivered to it -> there is no queue in this version by design; a queue appearing would change the whole delivery model.
@@ -1324,23 +1324,23 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 **💰 Spends money** · about 15 min
 
-*The only way to observe the Reply Gate's answer-everything branch inside a real model's Turn, because the free lanes cannot show what a model does with it. Proves a private conversation does not require the Human to @-name their Teammate in every sentence. The New teammate and Edit cards used here are real `MudDialog`s and their Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
+*The only way to observe the Reply Gate's answer-everything branch inside a real model's Turn, because the free lanes cannot show what a model does with it. Proves a private conversation does not require the Human to @-name their Agent in every sentence. The New agent and Edit cards used here are real `MudDialog`s and their Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 
 - No app running.
 - You are willing to spend ONE real, billed model Turn for Ada, plus the Chief of Staff's Greeting Turn (Haiku / low once step 3 is done).
-- `<data>\Teammates\` holds no `Ada` folder (a Persona lives at `<data>\Teammates\<Name>\<Name>.md`) and nothing but the built-in `Chief of Staff` besides.
+- `<data>\Agents\` holds no `Ada` folder (a Persona lives at `<data>\Agents\<Name>\<Name>.md`) and nothing but the built-in `Chief of Staff` besides.
 - The built-in Chief of Staff is made cheap before the paid launch (step 3). It is seeded at every start with no stored Model, and with ACP on and an empty direct Room it takes a Greeting Turn at the account-default Model, which is billed (`PersonaRunner.cs:481-495`). `P-RESET-ROOMS` deletes `team.db`, which holds the stored Models, so this has to be redone after every reset. The same applies to REPLYGATEBUDGET-32 to -36.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with `P-LAUNCH-FREE` (`$env:Team__Acp__Enabled = 'false'`), only so you can create the Persona without starting a model.
-3. Open `http://localhost:5100`, click **Teammates**, click **New teammate**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Invite teammate**. Then, still on **Teammates**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
+3. Open `http://localhost:5100`, click **Agents**, click **New agent**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Invite agent**. Then, still on **Agents**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 4. Stop the app with Ctrl+C.
 5. Start the app with PROFILE C: `$env:Team__Acp__Enabled = 'true'`, `$env:Team__AgentMessageBudget = '4'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-6. Open `http://localhost:5100`, click **Teammates**, and wait until the `Ada` tile reads **Online**.
+6. Open `http://localhost:5100`, click **Agents**, and wait until the `Ada` tile reads **Online**.
 7. Click the `Ada` tile, click **Edit**, set **Model** to the entry whose name contains `Haiku`, set **Effort** to `low`, and click **Save**. Wait until the tile reads **Online** again.
 8. Close the card, click the Room named `Ada` in the sidebar, and confirm the member line reads exactly `You, Ada`.
 9. Type `what is 2 plus 2` — with no `@` anywhere — and press Enter.
@@ -1397,7 +1397,7 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 
 - Neither of the two un-mentioned Messages produces a reply, a streaming row, or any model activity in `T-A`.
 - Each of them DOES produce the quiet blue note above the composer reading
-  `No teammate was @-mentioned — name one to ask for a reply.` It is replaced by nothing once step 6's
+  `No agent was @-mentioned — name one to ask for a reply.` It is replaced by nothing once step 6's
   Mention lands. This is the cheapest confirmation that the Catch-up path was taken deliberately
   rather than the delivery having failed.
 - The reply to step 6 names BOTH earlier facts — the Friday deadline and the 10 percent cut.
@@ -1405,8 +1405,8 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 
 **Fail if — any of these**
 
-- `Ada` replies to either un-mentioned Message -> the absolute rule that nothing reaches the model until it is Mentioned has broken; in a busy group Room every Teammate would take a billed Turn on every Message.
-- The reply knows nothing of the earlier Messages -> the Catch-up buffer is being dropped rather than carried, so a Teammate joining a conversation mid-way answers blind.
+- `Ada` replies to either un-mentioned Message -> the absolute rule that nothing reaches the model until it is Mentioned has broken; in a busy group Room every Agent would take a billed Turn on every Message.
+- The reply knows nothing of the earlier Messages -> the Catch-up buffer is being dropped rather than carried, so an Agent joining a conversation mid-way answers blind.
 - Two or three Turns appear in `T-A` for the three Messages -> the un-mentioned Messages each bought a Turn.
 
 **Inconclusive if**
@@ -1432,10 +1432,10 @@ If the app or the Persona restarted, or her session in this Room was stopped, be
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
-2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas on **Teammates**: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.` Then open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
+2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas on **Agents**: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.` Then open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 3. Stop the app with Ctrl+C.
 4. Start the app with PROFILE C and `$env:Team__AgentMessageBudget = '6'` — set this BEFORE `dotnet run`.
-5. On **Teammates**, wait until both tiles read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
+5. On **Agents**, wait until both tiles read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
 6. In the sidebar click **New chat**, tick both `Ana` and `Ben`, and click **Start chat**.
 7. Confirm the member line names three people.
 8. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
@@ -1480,7 +1480,7 @@ If the models simply stop talking to each other before six (they may not obey th
 **Steps**
 
 1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE` (`Team__Acp__Enabled` `false`).
-2. On **Teammates**, set the **Chief of Staff**, `Ana` and `Ben` each to the Haiku entry for **Model**
+2. On **Agents**, set the **Chief of Staff**, `Ana` and `Ben` each to the Haiku entry for **Model**
    and `low` for **Effort** via **Edit** and **Save**. `P-RESET-ROOMS` deletes `team.db`, which is where
    the stored Model and Effort live, so all three cards come back reading `Agent default` /
    `Model default` however they were left in REPLYGATEBUDGET-33, and the Chief of Staff's Greeting
@@ -1537,7 +1537,7 @@ Model replies are not deterministic, and 'does the reply account for that Messag
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Teammates** set the **Chief of Staff** and the Persona to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models; the Greeting Turn would otherwise bill at the account default). Stop the app with Ctrl+C, then start it with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Agents** set the **Chief of Staff** and the Persona to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models; the Greeting Turn would otherwise bill at the account default). Stop the app with Ctrl+C, then start it with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
 2. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
 3. Click the Room named after the Persona and note the Room id.
 4. Type `@<Persona> reply once, then immediately post a second short message into this same room.` and press Enter.
@@ -1573,7 +1573,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **💰 Spends money** · about 25 min
 
-*Documents a known gap so it is not filed as a bug, and tests the guard that does catch it: a spent per-Persona token Budget must show as Degraded with a reason on the Teammate tile, not only in the log.*
+*Documents a known gap so it is not filed as a bug, and tests the guard that does catch it: a spent per-Persona token Budget must show as Degraded with a reason on the Agent tile, not only in the log.*
 
 **Before you start**
 
@@ -1594,7 +1594,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Teammates** set the **Chief of Staff**, `Ana` and `Ben` to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models), and stop the app with Ctrl+C.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Agents** set the **Chief of Staff**, `Ana` and `Ben` to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models), and stop the app with Ctrl+C.
 2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '6'` and
    `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`. The Room Budget has to be
    comfortably larger than 2: the token Budget is only ever reached on an Agent-to-Agent Turn (see
@@ -1608,7 +1608,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 8. Go to the Room the Persona created, which has both Personas in it.
 9. Type `@<Persona> start a short back-and-forth with <the other Persona>.` and let them bounce.
    Watch `T-A` for the token-budget line; stop as soon as it appears, or when the Room reaches its cap.
-10. Click **Teammates** and read the Persona's tile, then open its card and read the line under the status.
+10. Click **Agents** and read the Persona's tile, then open its card and read the line under the status.
 11. Type one more short Message to the Persona and observe whether it takes a Turn.
 12. Send a final Message and then check whether the tile returns to **Online**.
 
@@ -1617,13 +1617,13 @@ A model may simply choose not to attempt a second post, in which case nothing is
 - A new Room appears in the sidebar, and it has its own untouched Budget: no pause block, no budget line, until an agent Message lands there.
 - `T-A` shows a `rooms` entry being created for it (and `team.db`'s `rooms` table gains a row).
 - Once the token budget is spent, `T-A` prints `Persona '…' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
-- At that moment the Persona's tile reads **Degraded**, and its card shows, in red, the reason line `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:266-269`, `TeammateCard.razor:114-116`).
+- At that moment the Persona's tile reads **Degraded**, and its card shows, in red, the reason line `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:266-269`, `AgentProfileCard.razor:114-116`).
 - After the Human speaks to it again, the Persona takes Turns again and the tile returns to **Online**.
 
 **Fail if — any of these**
 
-- The token budget is spent but the tile still reads **Online** and only the log says anything -> the guard is silent in the UI, so a Teammate that has stopped working looks identical to one that is idle.
-- The tile goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so a Teammate is permanently disabled by one busy afternoon.
+- The token budget is spent but the tile still reads **Online** and only the log says anything -> the guard is silent in the UI, so an Agent that has stopped working looks identical to one that is idle.
+- The tile goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so an Agent is permanently disabled by one busy afternoon.
 - No new Room is created at step 5, and the Persona was asked for a room with a SECOND agent in it -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it. (If you asked for a room containing only the Persona itself, you have hit the short-circuit described above, not a defect.)
 
 **Inconclusive if**

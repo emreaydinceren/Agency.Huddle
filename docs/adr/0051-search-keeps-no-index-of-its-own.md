@@ -12,7 +12,7 @@ date: 2026-10-12
 
 ## The defect
 
-Global Search finds Teams, Teammates, Library entries, Tasks and Rooms from one box. Doing that fast
+Global Search finds Teams, Agents, Library entries, Tasks and Rooms from one box. Doing that fast
 invites an index: the names of every Library entry, the text of every file, the lines of every
 Transcript, built once and queried many times. An index has a price the product does not need to pay.
 It must be **built** (a first search that waits, or a background job that competes for the disk), it
@@ -28,7 +28,7 @@ keeps nothing between searches.**
 
 What is rejected is any structure that holds names or text for the purpose of search: an inverted
 index, a name table, a cache of file contents, a Transcript digest, and the code that builds and
-invalidates them. The sources that are already in memory (Teams, Teammates, Tasks) are read where they
+invalidates them. The sources that are already in memory (Teams, Agents, Tasks) are read where they
 are. The Library is walked from disk on every search. A Room's Transcript is read whole.
 
 ### Why re-reading is acceptable

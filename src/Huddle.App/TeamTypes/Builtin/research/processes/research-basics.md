@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The research lead's Evidence line is the check before an answer is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Sources checked: evidence from verify
+- Skeptic review: document reviewed by verify
+
 ## Cadence
 
 - Agree the scope before searching, and keep one question in progress at a time.

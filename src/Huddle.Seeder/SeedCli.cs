@@ -3,7 +3,7 @@ using Agency.Huddle.Seeder.Scenarios;
 
 namespace Agency.Huddle.Seeder;
 
-/// <summary>The command line: parsing, running and reporting. Kept out of <c>Program</c> so it can be tested with fake writers and a fake clock.</summary>
+/// <summary>The command line: parsing, running and reporting. Kept out of <c>Program</c> so it can be tested with fake writers and a fake clock. Seeder spec §3 (SEED-CLI-1 to -4).</summary>
 internal static class SeedCli
 {
     /// <summary>Parses the arguments, runs the seeder and prints the result.</summary>
@@ -18,20 +18,20 @@ internal static class SeedCli
         (SeedRequest? request, string? message, int exitCode) = Parse(args, clock);
         if (request is null)
         {
-            (exitCode == 0 ? output : error).WriteLine(message);
+            await (exitCode == 0 ? output : error).WriteLineAsync(message).ConfigureAwait(false);
             return exitCode;
         }
 
         try
         {
-            output.WriteLine($"Wiping and rebuilding {request.Root} ({request.Scenario.Name}, run date {request.Today:yyyy-MM-dd})...");
-            SeedSummary summary = await SeedRunner.RunAsync(request, SeedRootGuard.DefaultProtectedFolders(), ct);
+            await output.WriteLineAsync($"Wiping and rebuilding {request.Root} ({request.Scenario.Name}, run date {request.Today:yyyy-MM-dd})...").ConfigureAwait(false);
+            SeedSummary summary = await SeedRunner.RunAsync(request, SeedRootGuard.DefaultProtectedFolders(), ct).ConfigureAwait(false);
             Report(summary, output);
             return 0;
         }
         catch (InvalidOperationException ex)
         {
-            error.WriteLine(ex.Message);
+            await error.WriteLineAsync(ex.Message).ConfigureAwait(false);
             return 1;
         }
     }
@@ -99,7 +99,7 @@ internal static class SeedCli
 
     private static string Help()
     {
-        string scenarios = string.Join("\n", ScenarioCatalog.All.Select(s => $"  {s.Name,-14} {s.Description}"));
+        string scenarios = string.Join('\n', ScenarioCatalog.All.Select(s => $"  {s.Name,-14} {s.Description}"));
         return $"""
             huddle-seed: wipe a seed folder and rebuild a complete Huddle data set in it.
 
@@ -121,7 +121,7 @@ internal static class SeedCli
     private static void Report(SeedSummary summary, TextWriter output)
     {
         output.WriteLine();
-        output.WriteLine($"Seeded {summary.Plan.Teammates.Count} Teammates, {summary.Plan.Teams.Count} Teams, {summary.Plan.Tasks.Count} Tasks,");
+        output.WriteLine($"Seeded {summary.Plan.Agents.Count} Agents, {summary.Plan.Teams.Count} Teams, {summary.Plan.Tasks.Count} Tasks,");
         output.WriteLine($"{summary.Plan.Rooms.Count} Rooms ({summary.Plan.Rooms.Sum(r => r.Messages.Count)} messages), {summary.Plan.Files.Count} note and memory files.");
         output.WriteLine($"Manifest: {Path.Combine(summary.Root, "manifest.md")}");
         output.WriteLine();

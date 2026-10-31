@@ -1,0 +1,562 @@
+@*
+    The Task read view (T15, docs/Huddle.TaskReadView-Specifications.md): what the detail drawer (T7) shows for an existing Task.
+    Every value TaskDetail edits is drawn here as text, a chip or a link, so there is no form control for a Task field, no Save and
+    no footer. Edit opens the Task in the edit page's own Tab (D-2). What stays live is what never edits a field: the decision card,
+    Ask on a Proof row, and the menu (Copy id, Copy link, Make a copy…, Close task… and Reopen). It loads the Task itself and
+    redraws on TaskEvents, so a Save in the edit page shows here at once.
+*@
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject TaskService Service
+@inject TaskActivity Activity
+@inject SprintStore Sprints
+@inject ITeamDirectory Directory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject TurnActivity Turns
+@inject IOptions<TeamOptions> Options
+@inject IHumanIdentity Human
+@inject TimeProvider Clock
+@inject IDialogService Dialogs
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject TabService Tabs
+@inject ILibraryReferenceResolver LibraryResolver
+@inject IProofSource ProofSource
+
+<div class="task-read-view">
+@if (this.deleted)
+{
+    <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
+    <div class="task-read-view-actions">
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</MudButton>
+    </div>
+}
+else if (this.loaded is { } task)
+{
+    @* The header the drawer used to draw: the id and its Project or Team above the Task's title. Only where the host has no header of its own. *@
+    @if (this.ShowHeader)
+    {
+        <div class="task-read-view-header">
+            <div class="task-read-view-eyebrow">@($"{task.Id} · {task.Location.Project ?? task.Location.Team}")</div>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="task-read-view-title">@task.Title</MudText>
+        </div>
+    }
+
+    @* T15a: the action row. The Closed chip sits at its left; Edit is the only button, outlined, so the decision card's Accept stays the one filled primary. *@
+    <div class="task-read-view-actions">
+        @if (task.Location.Closed)
+        {
+            <StatusChip Icon="@Icons.Material.Filled.Lock" Class="task-detail-closed-chip">Closed</StatusChip>
+        }
+        <span class="task-read-view-actions-spacer"></span>
+        <MudTooltip Text="@this.EditLabel(task)">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
+                       aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</MudButton>
+        </MudTooltip>
+        <MudTooltip Text="Copy id">
+            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {task.Id}")"
+                           Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(task.Id))" />
+        </MudTooltip>
+        <TaskActionsMenu @ref="this.actionsMenu" Id="task.Id" OnCopyId="@(() => this.CopyIdAsync(task.Id))" OnCopyLink="@(() => this.CopyLinkAsync(task.Id))">
+            <ExtraItems>
+                <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy…</MudMenuItem>
+                @if (task.Location.Closed)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.LockOpen" Class="task-detail-close" OnClick="this.CloseOrReopenAsync">Reopen</MudMenuItem>
+                }
+                else
+                {
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Lock" Class="task-detail-close menu-item-destructive" OnClick="this.CloseOrReopenAsync">Close task…</MudMenuItem>
+                }
+            </ExtraItems>
+        </TaskActionsMenu>
+    </div>
+
+    @* T15c: a Request's chip, triage and labels, as TaskDetail draws them. *@
+    @if (RequestFields.TryRead(task, out RequestFields? request) && request is not null)
+    {
+        <div class="task-detail-request">
+            <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.MoveToInbox" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</StatusChip>
+            @if (TaskDetail.RequestTriageText(request.Triage, task.Status) is { } triageText)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip task-detail-request-triage">@triageText</MudChip>
+            }
+            @if (!string.IsNullOrEmpty(request.Requester))
+            {
+                <span class="task-detail-request-label">Requested by</span> <span class="task-detail-request-requester">@request.Requester</span>
+            }
+            @if (!string.IsNullOrEmpty(request.DeclineReason))
+            {
+                <span class="task-detail-request-label">Decline reason</span> <span class="task-detail-request-decline-reason">@request.DeclineReason</span>
+            }
+            @if (!string.IsNullOrEmpty(request.ConfirmedBy))
+            {
+                <span class="task-detail-request-label">Confirmed by</span> <span class="task-detail-request-confirmed-by">@request.ConfirmedBy</span>
+            }
+        </div>
+    }
+
+    @* T15d: the property grid, one label and value per field. An empty value is a dash, so rows never jump. *@
+    <dl class="task-read-view-props">
+        <div class="task-read-view-prop task-read-view-status">
+            <dt>Status</dt>
+            <dd><TaskStateDot State="task.Status" /> <TaskStatusChip Status="task.Status" /></dd>
+        </div>
+
+        @if (task.Status == TaskState.Duplicate)
+        {
+            <div class="task-read-view-prop is-wide task-read-view-duplicate-of">
+                <dt>Duplicate of</dt>
+                <dd>@this.TaskLink(task.DuplicateOf)</dd>
+            </div>
+        }
+        else if (task.Status is TaskState.Cancelled or TaskState.Rejected)
+        {
+            <div class="task-read-view-prop is-wide task-read-view-reason">
+                <dt>Reason</dt>
+                <dd>@this.Text(TaskReadView.ReasonOf(task))</dd>
+            </div>
+        }
+
+        <div class="task-read-view-prop task-read-view-priority">
+            <dt>Priority</dt>
+            <dd><TaskPriorityChip Priority="task.Priority" /></dd>
+        </div>
+
+        <div class="task-read-view-prop is-wide task-read-view-assignee">
+            <dt>Assignee</dt>
+            <dd>
+                @if (task.Assignee is { } assignee)
+                {
+                    <TaskAssignee Name="@assignee" Presence="@this.PresenceOf(assignee)" />
+                }
+                else
+                {
+                    @this.Empty()
+                }
+                @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
+                {
+                    <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
+                }
+            </dd>
+        </div>
+
+        <div class="task-read-view-prop task-read-view-team">
+            <dt>Team</dt>
+            <dd>@this.Text(task.Location.Team)</dd>
+        </div>
+        <div class="task-read-view-prop task-read-view-project">
+            <dt>Project</dt>
+            <dd>@this.Text(task.Location.Project)</dd>
+        </div>
+
+        <div class="task-read-view-prop task-read-view-sprint">
+            <dt>Sprint</dt>
+            <dd>
+                @if (task.Sprint is { } sprint)
+                {
+                    @SprintLabels.Text(this.Sprints, sprint)
+                    @if (this.Sprints.Get(sprint) is null)
+                    {
+                        <MudTooltip Text="@SprintLabels.MissingText">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                        </MudTooltip>
+                    }
+                }
+                else
+                {
+                    @this.Empty()
+                }
+            </dd>
+        </div>
+        <div class="task-read-view-prop task-read-view-parent">
+            <dt>Parent</dt>
+            <dd>@this.TaskLink(task.Parent)</dd>
+        </div>
+
+        <div class="task-read-view-prop is-wide task-read-view-blocked-by">
+            <dt>Blocked by</dt>
+            <dd>
+                @if (task.BlockedBy.Count == 0)
+                {
+                    @this.Empty()
+                }
+                else
+                {
+                    @foreach (TaskId blockerId in task.BlockedBy)
+                    {
+                        <span class="task-read-view-blocker">
+                            @this.TaskLink(blockerId)
+                            <span class="task-read-view-blocker-status">@(this.Store.Get(blockerId)?.Status.ToWire() ?? "?")</span>
+                        </span>
+                    }
+                }
+            </dd>
+        </div>
+
+        <div class="task-read-view-prop is-wide task-read-view-tags">
+            <dt>Tags</dt>
+            <dd>
+                @if (task.Tags.Count == 0)
+                {
+                    @this.Empty()
+                }
+                else
+                {
+                    @TaskFieldView.Tags(task.Tags)
+                }
+            </dd>
+        </div>
+
+        <div class="task-read-view-prop task-read-view-start-date">
+            <dt>Start date</dt>
+            <dd>@this.DateText(task.StartDate)</dd>
+        </div>
+        <div class="@(TaskDates.IsOverdue(task, this.Clock) ? "task-read-view-prop task-read-view-due-date task-overdue" : "task-read-view-prop task-read-view-due-date")">
+            <dt>Due date</dt>
+            <dd>
+                @if (task.DueDate is { } due && TaskDates.IsOverdue(task, this.Clock))
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
+                    <span title="@TaskDates.Tooltip(due)">@TaskDates.Human(due, this.Clock)</span>
+                }
+                else
+                {
+                    @this.DateText(task.DueDate)
+                }
+            </dd>
+        </div>
+
+        <div class="task-read-view-prop is-wide task-read-view-origin">
+            <dt>Origin</dt>
+            <dd>
+                @if (task.OriginRoomId is { } originRoomId)
+                {
+                    @if (this.originRoomName is not null)
+                    {
+                        <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
+                    }
+                    else
+                    {
+                        @:(Room no longer exists)
+                    }
+                }
+                else
+                {
+                    @this.Empty()
+                }
+            </dd>
+        </div>
+    </dl>
+
+    @* T15e: today's Description preview, always: no Edit | Preview toggle, no Link or Attach. *@
+    <section class="task-read-view-description" aria-labelledby="task-read-view-heading-description">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-read-view-heading-description">Description</MudText>
+        @if (string.IsNullOrWhiteSpace(task.Description))
+        {
+            <div class="task-read-view-description-empty">No description.</div>
+        }
+        else
+        {
+            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(task.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+        }
+    </section>
+
+    @* T15f: the Human gate as text, on a gated Task only. *@
+    @if (task.IsGated)
+    {
+        <TaskHumanGate ReadOnly="true" HumanGate="@task.HumanGate" Action="@task.Action" Assignee="@task.Assignee" HumanName="@this.Human.Name" />
+    }
+
+    @if (this.proof.Total > 0)
+    {
+        <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
+    }
+
+    @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
+    {
+        <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="false" OnReload="this.OnDecisionReload" />
+    }
+
+    @* T15g: the History and the footer meta, as TaskDetail ends. *@
+    <section class="task-detail-history">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
+        <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
+    </section>
+
+    <div class="task-detail-footer-meta">
+        <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
+        <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
+        @if (task.ClosedAt is { } closedAt)
+        {
+            <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
+        }
+    </div>
+}
+</div>
+
+@code {
+    private TaskItem? loaded;
+    private bool deleted;
+    private Proof proof = Proof.Empty;
+    private string? originRoomName;
+    private TaskActionsMenu? actionsMenu;
+    private bool disposed;
+    private TaskId? shownId;
+
+    /// <summary>The Task to show. The host keys this component on the id, so it loads once, as <see cref="TaskDetail"/> does.</summary>
+    [Parameter, EditorRequired]
+    public TaskId Id { get; set; }
+
+    /// <summary>Whether to draw the Task's id line and title above the action row; the Right sidebar's Task panel has no header of its own.</summary>
+    [Parameter]
+    public bool ShowHeader { get; set; }
+
+    /// <summary>Raised by the Close button of the "This Task was deleted" alert: the host closes what holds the view.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised after Edit has opened the edit page's Tab, just before this view navigates there: the host closes the drawer without replacing the URL (D-2: the drawer closes first).</summary>
+    [Parameter]
+    public EventCallback OnEdit { get; set; }
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+        this.Activity.Changed += this.OnActivityChanged;
+        this.Sprints.SprintsChanged += this.OnSprintsChanged;
+        this.Refresh();
+        await this.RefreshOriginRoomAsync();
+    }
+
+    /// <summary>Loads the Task again when the host passes another id without recreating the view.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.shownId is { } shown && shown != this.Id)
+        {
+            this.Refresh();
+            await this.RefreshOriginRoomAsync();
+        }
+    }
+
+    /// <summary>Re-reads <see cref="Id"/> from the store: the Task, and its Proof.</summary>
+    private void Refresh()
+    {
+        this.shownId = this.Id;
+        TaskItem? current = this.Store.Get(this.Id);
+        if (current is null)
+        {
+            this.deleted = true;
+            this.loaded = null;
+            return;
+        }
+
+        this.deleted = false;
+        this.loaded = current;
+        try
+        {
+            this.proof = this.ProofSource.For(current);
+        }
+        catch (IOException)
+        {
+            // A Document the Proof reads is locked or missing for a moment; no Proof is shown until the next change.
+            this.proof = Proof.Empty;
+        }
+    }
+
+    /// <summary>Resolves the Origin Room's name, or leaves it <see langword="null"/> when there is none or it no longer exists.</summary>
+    private async Task RefreshOriginRoomAsync()
+    {
+        if (this.loaded?.OriginRoomId is not { } roomId)
+        {
+            this.originRoomName = null;
+            return;
+        }
+
+        Room? room = await this.Directory.GetRoomAsync(roomId, CancellationToken.None);
+        this.originRoomName = room?.Name;
+    }
+
+    /// <summary>Marshals a requery onto the render's synchronisation context, tolerating a disposed component.</summary>
+    private void Dispatch() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+    {
+        if (this.disposed)
+        {
+            return;
+        }
+
+        this.Refresh();
+        await this.RefreshOriginRoomAsync();
+        this.StateHasChanged();
+    });
+
+    private void OnTaskChanged(TaskChange change)
+    {
+        if (change.After.Id == this.Id || change.After.Parent == this.Id)
+        {
+            this.Dispatch();
+        }
+    }
+
+    private void OnTasksReloaded() => this.Dispatch();
+
+    private void OnActivityChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private void OnSprintsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private void OnDecisionReload()
+    {
+        this.Refresh();
+        this.StateHasChanged();
+    }
+
+    /// <summary>The tooltip and accessible name of Edit.</summary>
+    /// <param name="task">The Task Edit opens.</param>
+    private string EditLabel(TaskItem task) => $"Edit {task.Id} in a new tab";
+
+    /// <summary>
+    /// Edit (D-2, B3, B4): opens <c>/tasks/item/{id}/edit</c> as a permanent Tab - a preview would be replaced by the next preview opened in its
+    /// group and drop an edit in progress - one per Task, because the Tab key is <c>task-edit:{id}</c> and <see cref="TabService.Open"/> reuses
+    /// a Tab with the same key. The host closes the drawer first.
+    /// </summary>
+    private async Task EditAsync()
+    {
+        if (this.loaded is not { } task)
+        {
+            return;
+        }
+
+        Tab target = this.Tabs.Open($"/tasks/item/{Uri.EscapeDataString(task.Id.ToString())}/edit");
+        this.Tabs.Keep(target.Id);
+        await this.OnEdit.InvokeAsync();
+        this.Navigation.NavigateTo(target.Url);
+    }
+
+    /// <summary>Copy id, called straight from the click so the browser's clipboard permission stays inside the click's own user activation.</summary>
+    /// <param name="id">The Task id to copy.</param>
+    private Task CopyIdAsync(TaskId id) => TaskClipboard.CopyIdAsync(this.JS, this.Snackbar, id, CancellationToken.None);
+
+    /// <summary>Copy link: the base address plus the item route for <paramref name="id"/>.</summary>
+    /// <param name="id">The Task id the link opens.</param>
+    private Task CopyLinkAsync(TaskId id) => TaskClipboard.CopyLinkAsync(this.JS, this.Snackbar, this.Navigation.BaseUri, id, CancellationToken.None);
+
+    /// <summary>Make a copy…: opens a new Task that starts as a copy of this one in the edit page's own Tab, and closes the drawer. Writes nothing until it is saved.</summary>
+    private async Task MakeACopyAsync()
+    {
+        if (this.loaded is not { } task)
+        {
+            return;
+        }
+
+        await this.OnEdit.InvokeAsync();
+        TaskTabs.OpenCopy(this.Tabs, this.Navigation, task.Id);
+    }
+
+    /// <summary>Close task… asks first and then closes; Reopen undoes it. There is nothing pending to save in the read view.</summary>
+    private async Task CloseOrReopenAsync()
+    {
+        if (this.loaded is not { } task)
+        {
+            return;
+        }
+
+        TaskActor actor = TaskActors.Human(this.Human);
+        if (task.Location.Closed)
+        {
+            this.Apply(this.Service.Reopen(task.Id, actor));
+            return;
+        }
+
+        string consequence = task.Assignee is { } assignee
+            ? $"{assignee} is notified. You can reopen it from this menu."
+            : "You can reopen it from this menu.";
+        bool confirmed = await MenuDialogs.AfterClosingAsync(
+            this.actionsMenu?.Menu,
+            () => this.Dialogs.ConfirmAsync($"Close {task.Id}?", $"This ends the task. {consequence}", "Close task"));
+        if (confirmed)
+        {
+            this.Apply(this.Service.Close(task.Id, actor));
+        }
+    }
+
+    /// <summary>Shows the Task a close or reopen saved; any other outcome leaves the view as it was and the store's event redraws it.</summary>
+    /// <param name="result">The service's answer.</param>
+    private void Apply(TaskResult result)
+    {
+        if (result is TaskResult.Saved saved)
+        {
+            this.loaded = saved.Task;
+        }
+    }
+
+    /// <summary>
+    /// The reason the Task was Cancelled or Rejected. A Task file holds no Reason field - Save writes it into the Change log entry as
+    /// <c>(reason: …)</c> - so this reads it back from the newest entry that has one, ahead of a trailing gate-override note.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    internal static string? ReasonOf(TaskItem task)
+    {
+        const string marker = " (reason: ";
+        const string gateNote = " (gate overridden by Human:";
+        for (int index = task.ChangeLog.Count - 1; index >= 0; index--)
+        {
+            string summary = task.ChangeLog[index].Summary;
+            int gate = summary.LastIndexOf(gateNote, StringComparison.Ordinal);
+            string trimmed = gate >= 0 ? summary[..gate] : summary;
+            int start = trimmed.LastIndexOf(marker, StringComparison.Ordinal);
+            if (start >= 0 && trimmed.EndsWith(')'))
+            {
+                return trimmed[(start + marker.Length)..^1];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The assignee's presence, or <see langword="null"/> when they are not a known Agent (the Human has none).</summary>
+    /// <param name="name">The assignee's name.</param>
+    private PresenceState? PresenceOf(string name) =>
+        string.IsNullOrWhiteSpace(name) ? null : TaskPresence.For(name, this.Directory, this.Gateway, this.Health, this.Turns);
+
+    /// <summary>An empty value: a dash in Quiet ink, so rows never jump.</summary>
+    private RenderFragment Empty() => @<span class="task-read-view-empty" aria-label="None">—</span>;
+
+    /// <summary>Plain text for a value, or the dash when it is blank.</summary>
+    /// <param name="value">The value.</param>
+    private RenderFragment Text(string? value) => string.IsNullOrWhiteSpace(value) ? this.Empty() : @<text>@value</text>;
+
+    /// <summary>A date in the Human's words, or the dash when there is none.</summary>
+    /// <param name="date">The date.</param>
+    private RenderFragment DateText(DateOnly? date) => date is { } value
+        ? @<span title="@TaskDates.Tooltip(value)">@TaskDates.Human(value, this.Clock)</span>
+        : this.Empty();
+
+    /// <summary>A Task id as a link that opens that Task in the drawer, or the dash for none.</summary>
+    /// <param name="id">The Task to link, or <see langword="null"/>.</param>
+    private RenderFragment TaskLink(TaskId? id) => id is { } linked
+        ? @<MudLink Href="@($"/tasks/item/{Uri.EscapeDataString(linked.ToString())}")" Class="task-read-view-task-link">@linked.ToString()</MudLink>
+        : this.Empty();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.disposed = true;
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+        this.Activity.Changed -= this.OnActivityChanged;
+        this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+    }
+}

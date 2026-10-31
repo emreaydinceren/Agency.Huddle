@@ -149,7 +149,9 @@ public sealed partial class DotAcpAgentHost(
             throw new AgentException($"session/new failed: {ex.Message}", ex);
         }
 
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         string sessionId = (string)response.SessionId;
+#pragma warning restore HAA0601
         return await this.RegisterAndConfigureAsync(
             sessionId, activeConnection, activeAdapter, options, response.ConfigOptions, cancellationToken).ConfigureAwait(false);
     }
@@ -234,8 +236,13 @@ public sealed partial class DotAcpAgentHost(
         // switch, so both the advertised catalog and any resolution must use the snapshot true
         // AFTER the model switch, never the pre-switch response.
         session.SetEffortLevels(EffortConfigOptions.Read(currentConfigOptions));
+        string? currentModel = ModelConfigOptions.CurrentValue(currentConfigOptions);
 
         currentConfigOptions = await this.ApplyEffortAsync(activeConnection, sessionId, options.Effort, currentConfigOptions, cancellationToken).ConfigureAwait(false);
+
+        // Read back after each apply, like the mode below, so these are the EFFECTIVE values when the
+        // adapter clamped a request. Left unfiltered: the "default" effort sentinel is the app's to interpret.
+        session.SetCurrentRuntime(currentModel, EffortConfigOptions.CurrentValue(currentConfigOptions));
 
         // Mode is last: the adapter can change it as a side effect of a model switch (it falls "auto"
         // back to "acceptEdits" on a model that does not support it), so a request is judged against
@@ -576,7 +583,9 @@ public sealed partial class DotAcpAgentHost(
         {
             if (method is dotacp.protocol.AuthMethodAgent agentMethod)
             {
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
                 mapped.Add(new AuthMethodInfo((string)agentMethod.Id, agentMethod.Name, agentMethod.Description));
+#pragma warning restore HAA0601
             }
         }
 

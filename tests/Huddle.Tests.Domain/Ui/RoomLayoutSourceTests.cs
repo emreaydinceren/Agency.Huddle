@@ -1,0 +1,164 @@
+using Agency.Huddle.Tests.Css;
+namespace Agency.Huddle.Tests.Ui;
+
+/// <summary>
+/// Source-text guards for the two layout defects that only showed on screen when an Agent's form was put
+/// to the Human (the elicitation bridge): a Room whose Transcript was taller than the window could not
+/// be scrolled at all, and a form taller than the window pushed Send and the composer out of reach.
+/// Nothing in this suite renders a browser, so each property is pinned in the stylesheet or the markup
+/// that carries it, the same kind of assertion <c>AppStylesheetTests</c> and
+/// <c>ThemeSourceTests</c> make; the real check was looking at it in the browser pane.
+/// </summary>
+public sealed class RoomLayoutSourceTests
+{
+    /// <summary>
+    /// The Room's own column may shrink below its content. A flex item's <c>min-height</c> is <c>auto</c>
+    /// by default, which refuses to go under the content's height; without <c>min-height: 0</c> the column
+    /// grew past the window, <c>.main-column</c> clipped its top, and <c>.message-list</c> never got a
+    /// bounded height to scroll in, so the header and every earlier Message were unreachable.
+    /// </summary>
+    [Fact]
+    public void AppCss_RoomColumn_MayShrinkSoTheMessageListScrolls()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".room-column");
+
+        Assert.Contains("min-height: 0;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// <c>Chat.razor</c> puts the shrink class on the column that holds the header, the message list, the
+    /// cards and the composer. The rule above is inert unless the element wears it.
+    /// </summary>
+    [Fact]
+    public void ChatPage_TheRoomColumnWearsTheShrinkClass()
+    {
+        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Chat.razor"));
+
+        Assert.Contains("<MudStack Class=\"h-100 room-column\" Spacing=\"0\">", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+    }
+
+    /// <summary>
+    /// The Elicitation card is capped at half the window, so a long form cannot push Send, Skip and the
+    /// composer off the page.
+    /// </summary>
+    [Fact]
+    public void AppCss_ElicitationCard_IsCappedAtHalfTheWindow()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".elicitation-card");
+
+        Assert.Contains("max-height: 50vh;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("display: flex;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex-direction: column;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The fields scroll inside the capped card while the actions stay in view. <c>min-height: 0</c> is
+    /// what lets the flex child shrink below its content and scroll instead of overflowing the card.
+    /// </summary>
+    [Fact]
+    public void AppCss_ElicitationCard_FieldsScrollAndActionsStayPut()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string fields = CssText.RuleBody(css, ".elicitation-card-fields");
+        string actions = CssText.RuleBody(css, ".elicitation-card .agent-card-actions");
+
+        Assert.Contains("overflow-y: auto;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("min-height: 0;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex: 0 0 auto;", actions, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The card has no scoped stylesheet. Its root is a <c>MudPaper</c> and its controls are Mud
+    /// components, which Blazor's CSS isolation never stamps its attribute onto, so every
+    /// <c>::deep</c> rule there compiled to a selector with no scoped ancestor and silently never
+    /// applied. Rules for a card of Mud components live in <c>app.css</c> (see MudBlazorImplementation.md).
+    /// </summary>
+    [Fact]
+    public void ElicitationCard_HasNoScopedStylesheetThatCouldNeverMatch()
+    {
+        string scoped = CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ElicitationCard.razor.css");
+
+        Assert.False(File.Exists(scoped), "ElicitationCard.razor.css must not exist: ::deep cannot reach a MudPaper root, so its rules never apply. Put them in app.css.");
+    }
+
+    /// <summary>
+    /// A Question card's option buttons are one-line 32px rows (audit C8, the height of the Send and
+    /// Dismiss buttons beside them) and keep the case the Agent wrote. The rule is global because the buttons
+    /// are <c>MudButton</c>s, which Blazor's CSS isolation never stamps its attribute onto.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardOption_IsTouchSizedAndKeepsItsCase()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-option");
+
+        Assert.Contains("min-height: 32px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// An Elicitation card's radio and checkbox options are one-line 32px rows like the Question card's: a fixed
+    /// 32px height, and the label and description truncate on one line instead of wrapping.
+    /// </summary>
+    [Fact]
+    public void AppCss_ElicitationCardOption_IsAOneLine32pxRow()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string row = CssText.RuleBody(css, ".elicitation-card-option");
+        string text = CssText.RuleBody(css, ".elicitation-card-option-text");
+
+        Assert.Contains("height: 32px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("44px", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("white-space: nowrap;", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("text-overflow: ellipsis;", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>A ranking row, whose arrow buttons are <c>MudIconButton</c>s, is at least 44 pixels tall.</summary>
+    [Fact]
+    public void AppCss_QuestionCardRankRow_IsTouchSized()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-rank-row");
+
+        Assert.Contains("min-height: 44px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The Send row sits below the last Question. Its element is a <c>MudStack</c> that is a direct child
+    /// of the <c>MudPaper</c> root, so a scoped <c>::deep</c> rule had no scoped ancestor to hang from
+    /// and its margin never applied.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardActions_SitBelowTheQuestions()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".agent-card-actions");
+
+        Assert.Contains("margin-top: 12px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The two rules that styled plain elements keep their effect after the move: each Question is set
+    /// off from the one above, and a ranking row's label takes the space the arrows leave.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardPlainElements_KeepTheirSpacingAndFlex()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.Contains("margin-top: 12px;", CssText.RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex: 1 1 auto;", CssText.RuleBody(css, ".question-card-rank-label"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The Question card has no scoped stylesheet. Its root is a <c>MudPaper</c> and its controls are Mud
+    /// components, so a <c>::deep</c> rule there only matched what happened to sit inside the plain
+    /// <c>div</c> wrapping each Question - the Send row, outside it, never matched - and reshaping that
+    /// div would have broken the rest without a test failing. Rules for a card of Mud components live in
+    /// <c>app.css</c> (see MudBlazorImplementation.md).
+    /// </summary>
+    [Fact]
+    public void QuestionCard_HasNoScopedStylesheetThatCouldNeverMatch()
+    {
+        string scoped = CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "QuestionCard.razor.css");
+
+        Assert.False(File.Exists(scoped), "QuestionCard.razor.css must not exist: ::deep cannot reach a MudPaper root or its Mud children, so its rules apply by accident or never. Put them in app.css.");
+    }
+}

@@ -4,7 +4,6 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -14,26 +13,19 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// Task through <see cref="TaskService.Close"/>. Offered only to a Persona holding a Skill that lists it.
 /// </summary>
 internal sealed class ConfirmRequestTool(
-    ITeamCatalog teams,
     TaskService tasks,
     TaskStore store,
-    PersonaStore personas,
-    ProcessGateService gates,
+    IRequestConfirmers confirmers,
     IRequestNotifier notifier,
     ITeamDirectory directory,
     string callerAgentId,
     IPromptSource prompts) : IAppTool
 {
-    /// <summary>The role coverage step a confirming member must have.</summary>
-    private const string VerifyCoverage = "verify";
-
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "confirm_request";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.confirmRequest.description", NoValues);
+    public string Description => prompts.Render("tool.confirmRequest.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()
@@ -52,7 +44,7 @@ internal sealed class ConfirmRequestTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -73,19 +65,14 @@ internal sealed class ConfirmRequestTool(
             return lookupRefusal;
         }
 
-        bool isRequesterQa = this.IsVerifierOf(fields.FromTeam, actor.Name);
+        bool isRequesterQa = confirmers.IsVerifierOf(fields.FromTeam, actor.Name);
         RequestTransition transition = RequestLifecycle.Apply(new RequestState(request.Status.ToWire(), fields.Triage), RequestEvent.Confirm, isRequesterQa);
         if (!transition.Allowed)
         {
             return transition.Error ?? string.Empty;
         }
 
-        string note = (noteText ?? string.Empty).Trim();
-        TaskPatch patch = new()
-        {
-            Description = note.Length > 0 ? string.Concat(request.Description, "\n\n## Confirmation\n", note) : null,
-            ExtraFields = [.. (fields with { ConfirmedBy = actor.Name }).ToFrontmatter()],
-        };
+        TaskPatch patch = BuildConfirmationPatch(request, fields, actor, noteText);
 
         if (!TaskToolText.TryRun(() => tasks.Update(request.Id, patch, request.Version, actor), out TaskResult? updateResult, out string updateRunRefusal))
         {
@@ -109,9 +96,24 @@ internal sealed class ConfirmRequestTool(
             return closeRefusal;
         }
 
-        await notifier.NotifyAsync(closed, RequestEvent.Confirm, transition.Wake, actor.Name, cancellationToken);
+        await notifier.NotifyAsync(closed, RequestEvent.Confirm, transition.Wake, actor.Name, cancellationToken).ConfigureAwait(false);
 
         return string.Create(CultureInfo.InvariantCulture, $"Confirmed {closed.Id}; it is closed.");
+    }
+
+    /// <summary>Builds the patch that records <c>confirmed_by</c> and appends the optional note under a Confirmation heading.</summary>
+    /// <param name="request">The Request being confirmed.</param>
+    /// <param name="fields">The Request fields as they are.</param>
+    /// <param name="actor">The confirming caller.</param>
+    /// <param name="noteText">The raw <c>note</c> argument, if any.</param>
+    private static TaskPatch BuildConfirmationPatch(TaskItem request, RequestFields fields, TaskActor actor, string? noteText)
+    {
+        string note = (noteText ?? string.Empty).Trim();
+        return new TaskPatch
+        {
+            Description = note.Length > 0 ? string.Concat(request.Description, "\n\n## Confirmation\n", note) : null,
+            ExtraFields = [.. (fields with { ConfirmedBy = actor.Name }).ToFrontmatter()],
+        };
     }
 
     /// <summary>Puts back the Request fields and body that confirming changed, after closing was refused.</summary>
@@ -122,24 +124,5 @@ internal sealed class ConfirmRequestTool(
     {
         TaskPatch patch = new() { Description = original.Description, ExtraFields = [.. fields.ToFrontmatter()] };
         _ = TaskToolText.TryRun(() => tasks.Update(original.Id, patch, null, actor), out _, out _);
-    }
-
-    /// <summary>Whether <paramref name="member"/> belongs to <paramref name="team"/> in a role whose coverage includes <c>verify</c>.</summary>
-    /// <param name="team">The requesting Team's name.</param>
-    /// <param name="member">The caller's name.</param>
-    /// <returns><see langword="true"/> for a QA member of that Team.</returns>
-    private bool IsVerifierOf(string team, string member)
-    {
-        TeamSummary? summary = teams.Find(team);
-        if (summary is null || !summary.Members.Contains(member, StringComparer.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return personas.Get(member) is { } persona
-            && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
-            && identity.Role is { } role
-            && gates.CoverageOf(role) is { } coverage
-            && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
     }
 }

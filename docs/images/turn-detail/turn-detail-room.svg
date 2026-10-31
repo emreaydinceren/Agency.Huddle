@@ -37,7 +37,7 @@ text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
 <line class="rule" x1="76" y1="294" x2="724" y2="294"/>
 <text class="mut" x="76" y="318">▾</text><text class="run b" x="96" y="318">◐</text><text class="ink" x="118" y="318">Edit notes.md</text><text class="mut s" x="690" y="318" text-anchor="end">line 12</text>
 <rect class="code" x="96" y="330" width="628" height="110" rx="6"/>
-<text class="mut mono s" x="110" y="350">…\Teammates\Chief of Staff\work\notes.md</text>
+<text class="mut mono s" x="110" y="350">…\Agents\Chief of Staff\work\notes.md</text>
 <rect class="rembg" x="108" y="360" width="604" height="30" rx="3"/><rect class="rembar" x="108" y="360" width="4" height="30"/>
 <text class="mut s b" x="122" y="379">Removed</text><text class="ink mono" x="190" y="379">− Teh meeting is on Friday.</text>
 <rect class="addbg" x="108" y="396" width="604" height="30" rx="3"/><rect class="addbar" x="108" y="396" width="4" height="30"/>

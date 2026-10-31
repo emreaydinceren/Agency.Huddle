@@ -6,7 +6,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Renders <c>manifest.md</c>: every entity that was created and the facts a tester can assert, generated from the same plan that was written.</summary>
+/// <summary>Renders <c>manifest.md</c>: every entity that was created and the facts a tester can assert, generated from the same plan that was written. Seeder spec §5, step 10; SEED-RT-7.</summary>
 internal static partial class ManifestWriter
 {
     private static readonly string[] Finished = ["Done", "Cancelled", "Duplicate", "Rejected"];
@@ -28,12 +28,18 @@ internal static partial class ManifestWriter
         text.Append("| Data folder | `").Append(Path.Combine(root, "data")).Append("` |\n");
         text.Append("| Human | ").Append(plan.HumanName).Append(" |\n\n");
 
-        AppendTeammates(text, plan, ids);
+        AppendAgents(text, plan, ids);
         AppendTeams(text, plan);
         AppendTasks(text, plan);
+        AppendSprints(text, plan);
+        AppendRequests(text, plan);
         AppendRooms(text, plan, ids);
+        AppendUploads(text, plan, root, ids);
+        AppendTaskAttachments(text, plan, root);
+        AppendDocHistory(text, plan);
         AppendViews(text, plan);
         AppendNotes(text, plan);
+        AppendFiles(text, plan);
         AppendCoverage(text, plan);
         return text.ToString();
     }
@@ -63,7 +69,8 @@ internal static partial class ManifestWriter
         Dictionary<string, IReadOnlyList<string>> links = new(StringComparer.OrdinalIgnoreCase);
         foreach (SeedFile file in NoteFiles(plan))
         {
-            links[NoteName(file)] = [.. WikiLink().Matches(file.Content).Select(m => m.Groups[1].Value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
+            // A link can name a folder too ([[API v2/API-v2-Design]]); the note is the last segment.
+            links[NoteName(file)] = [.. WikiLink().Matches(file.Content).Select(m => m.Groups[1].Value.Trim().Split('/')[^1]).Distinct(StringComparer.OrdinalIgnoreCase)];
         }
 
         return links;
@@ -77,10 +84,10 @@ internal static partial class ManifestWriter
 
     private static string NoteName(SeedFile file) => Path.GetFileNameWithoutExtension(file.RelativePath);
 
-    private static void AppendTeammates(StringBuilder text, SeedPlan plan, DatabaseResult ids)
+    private static void AppendAgents(StringBuilder text, SeedPlan plan, DatabaseResult ids)
     {
-        text.Append("## Teammates\n\n| Name | Alias | Title | Teams | Skills | User id |\n| --- | --- | --- | --- | --- | --- |\n");
-        foreach (SeedTeammate t in plan.Teammates)
+        text.Append("## Agents\n\n| Name | Alias | Title | Teams | Skills | User id |\n| --- | --- | --- | --- | --- | --- |\n");
+        foreach (SeedAgent t in plan.Agents)
         {
             text.Append(CultureInfo.InvariantCulture, $"| {t.Name} | {t.Alias} | {t.Title} | {Join(t.Teams, "none")} | {Join(t.Skills, "none")} | `{ids.UserIds[t.Name]}` |\n");
         }
@@ -93,7 +100,7 @@ internal static partial class ManifestWriter
         text.Append("## Teams\n\n| Team | Members | Projects | Tasks | Memory facts |\n| --- | --- | --- | --- | --- |\n");
         foreach (SeedTeam team in plan.Teams)
         {
-            string[] members = [.. plan.Teammates.Where(t => t.Teams.Contains(team.Name, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
+            string[] members = [.. plan.Agents.Where(t => t.Teams.Contains(team.Name, StringComparer.OrdinalIgnoreCase)).Select(t => t.Name)];
             int tasks = plan.Tasks.Count(t => t.Location.Team == team.Name);
             int memory = plan.Files.Count(f => f.RelativePath.StartsWith($"Teams/{team.Name}/", StringComparison.Ordinal) && f.RelativePath.Contains("/memory/", StringComparison.Ordinal));
             text.Append(CultureInfo.InvariantCulture, $"| {team.Name} | {Join(members, "none")} | {Join(team.Projects, "none")} | {tasks} | {memory} |\n");
@@ -116,13 +123,115 @@ internal static partial class ManifestWriter
 
     private static void AppendRooms(StringBuilder text, SeedPlan plan, DatabaseResult ids)
     {
-        text.Append("## Rooms\n\n| Name | Room id | Members | Messages | Archived |\n| --- | --- | --- | --- | --- |\n");
+        text.Append("## Rooms\n\n| Name | Scope | Room id | Members | Messages | Archived | References |\n| --- | --- | --- | --- | --- | --- | --- |\n");
         foreach (SeedRoom r in plan.Rooms)
         {
-            text.Append(CultureInfo.InvariantCulture, $"| {r.Name} | `{ids.RoomIds[r.Key]}` | {plan.HumanName}, {Join(r.Members, "none")} | {r.Messages.Count} | {(r.Archived ? "yes" : "no")} |\n");
+            string scope = RoomScope(r);
+            string references = r.WithReferences ? "stored" : "none (text scan)";
+            text.Append(CultureInfo.InvariantCulture, $"| {r.Name} | {scope} | `{ids.RoomIds[r.Key]}` | {plan.HumanName}, {Join(r.Members, "none")} | {r.Messages.Count} | {(r.Archived ? "yes" : "no")} | {references} |\n");
+        }
+
+        text.Append("\nWaiting on the Human (Needs you): ")
+            .Append(Join(plan.Rooms.Where(r => !r.Archived && r.Messages.Count > 0 && r.Messages[^1].Sender != plan.HumanName && r.Messages[^1].Text.Contains("@" + plan.HumanName, StringComparison.Ordinal)).Select(r => r.Name).ToList(), "none"))
+            .Append("\n\n");
+    }
+
+    private static string RoomScope(SeedRoom room)
+    {
+        if (room.Team is null)
+        {
+            return "root";
+        }
+
+        return room.IsTeamRoom ? $"{room.Team} Team Room" : $"{room.Team} chat";
+    }
+
+    private static void AppendSprints(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Sprints\n\nThe highest number is the current Sprint (`@current`).\n\n| Id | Name | Tasks |\n| --- | --- | --- |\n");
+        foreach (SeedSprint sprint in plan.Sprints)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"| {sprint.Id} | {sprint.Name} | {Join(plan.Tasks.Where(t => t.Sprint == sprint.Id).Select(t => t.Id).ToList(), "none")} |\n");
         }
 
         text.Append('\n');
+    }
+
+    private static void AppendRequests(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Requests\n\n| Id | Kind | From | To | Requester | Triage | Status | Confirmed by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+        foreach (SeedTask t in plan.Tasks)
+        {
+            if (t.Request is not { } request)
+            {
+                continue;
+            }
+
+            string triage = request.Triage.Length == 0 ? "untriaged" : request.Triage;
+            text.Append(CultureInfo.InvariantCulture, $"| {t.Id} | {request.Kind} | {request.FromTeam} | {t.Location.Team} | {request.Requester} | {triage} | {t.Status} | {(request.ConfirmedBy.Length == 0 ? "-" : request.ConfirmedBy)} |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendUploads(StringBuilder text, SeedPlan plan, string root, DatabaseResult ids)
+    {
+        text.Append("## Uploads\n\n| Room | File | Path |\n| --- | --- | --- |\n");
+        string dataDir = Path.Combine(root, "data");
+        foreach (SeedUpload upload in plan.Uploads)
+        {
+            SeedRoom room = plan.Rooms.First(r => r.Key == upload.RoomKey);
+            text.Append(CultureInfo.InvariantCulture, $"| {room.Name} | {upload.FileName} | `{Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName)}` |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendTaskAttachments(StringBuilder text, SeedPlan plan, string root)
+    {
+        text.Append("## Task attachments\n\nEach is a code-span line at the end of the Task's description. An uploaded file lives in `Uploads/Tasks/<ID>/`.\n\n");
+        text.Append("| Task | Kind | Path |\n| --- | --- | --- |\n");
+        string dataDir = Path.Combine(root, "data");
+        foreach (SeedTask task in plan.Tasks.Where(static t => t.Attachments.Count > 0))
+        {
+            foreach (string attachment in task.Attachments)
+            {
+                string kind = plan.TaskUploads.Any(u => string.Equals(u.RelativePath, attachment, StringComparison.Ordinal)) ? "uploaded" : "linked";
+                text.Append(CultureInfo.InvariantCulture, $"| {task.Id} | {kind} | `{SeedIo.Resolve(dataDir, attachment)}` |\n");
+            }
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendDocHistory(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Document history\n\nEvery other Markdown note has no History (\"No edits logged.\").\n\n");
+        text.Append("| Document | Entries | Authors | Kinds | History file |\n| --- | --- | --- | --- | --- |\n");
+        foreach (IGrouping<string, SeedDocEdit> document in plan.DocHistory.GroupBy(static e => e.RelativePath, StringComparer.Ordinal))
+        {
+            string authors = string.Join(", ", document.Select(static e => e.Actor).Distinct(StringComparer.Ordinal));
+            string kinds = string.Join(", ", document.Select(static e => e.Kind).Distinct().Select(static kind => Enum.GetName(kind)));
+            text.Append(CultureInfo.InvariantCulture, $"| `{document.Key}` | {document.Count()} | {authors} | {kinds} | `{DocHistoryWriter.HistoryPath(document.Key)}` |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendFiles(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Other Library files and avatars\n\n");
+        foreach (SeedBinaryFile file in plan.BinaryFiles)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"- `{file.RelativePath}` ({file.Content.Length} bytes)\n");
+        }
+
+        foreach (SeedFile file in plan.Files.Where(f => !f.RelativePath.EndsWith(".md", StringComparison.Ordinal)))
+        {
+            text.Append(CultureInfo.InvariantCulture, $"- `{file.RelativePath}` (plain text)\n");
+        }
+
+        text.Append("\nA reference to a Library file that no longer exists (shows \"not found\" in Documents in this chat): `Customer-Update-Draft.md` in the Incident 0412 war room.\n\n");
     }
 
     private static void AppendViews(StringBuilder text, SeedPlan plan)
@@ -151,7 +260,24 @@ internal static partial class ManifestWriter
             && Allows(filter, "states", task.Status)
             && Allows(filter, "priorities", task.Priority)
             && AllowsAssignee(plan, filter, task)
-            && AllowsBlocked(plan, filter, task);
+            && AllowsBlocked(plan, filter, task)
+            && AllowsSprint(plan, filter, task);
+    }
+
+    private static bool AllowsSprint(SeedPlan plan, JsonElement filter, SeedTask task)
+    {
+        if (!filter.TryGetProperty("sprints", out JsonElement list))
+        {
+            return true;
+        }
+
+        string? current = plan.Sprints.Count == 0 ? null : plan.Sprints.MaxBy(s => s.Number)?.Id;
+        return list.EnumerateArray().Select(e => e.GetString()).Any(s => s switch
+        {
+            "@current" => task.Sprint is not null && string.Equals(task.Sprint, current, StringComparison.Ordinal),
+            "@none" => task.Sprint is null,
+            _ => string.Equals(task.Sprint, s, StringComparison.OrdinalIgnoreCase),
+        });
     }
 
     private static bool Allows(JsonElement filter, string property, string value) =>
@@ -207,9 +333,9 @@ internal static partial class ManifestWriter
         text.Append("- Duplicates: ").Append(Join(plan.Tasks.Where(t => t.DuplicateOf is not null).Select(t => $"{t.Id} of {t.DuplicateOf}").ToList(), "none")).Append('\n');
         text.Append("- Unassigned: ").Append(Join(plan.Tasks.Where(t => t.Assignee is null).Select(t => t.Id).ToList(), "none")).Append('\n');
         text.Append("- Assigned to the Human: ").Append(Join(plan.Tasks.Where(t => t.Assignee == plan.HumanName).Select(t => t.Id).ToList(), "none")).Append('\n');
-        text.Append("- Teammates in two or more Teams: ").Append(Join(plan.Teammates.Where(t => t.Teams.Count >= 2).Select(t => t.Name).ToList(), "none")).Append('\n');
-        text.Append("- Teammates in no Team: ").Append(Join(plan.Teammates.Where(t => t.Teams.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
-        text.Append("- Teams with no members: ").Append(Join(plan.Teams.Where(t => !plan.Teammates.Any(m => m.Teams.Contains(t.Name, StringComparer.OrdinalIgnoreCase))).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Agents in two or more Teams: ").Append(Join(plan.Agents.Where(t => t.Teams.Count >= 2).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Agents in no Team: ").Append(Join(plan.Agents.Where(t => t.Teams.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
+        text.Append("- Teams with no members: ").Append(Join(plan.Teams.Where(t => !plan.Agents.Any(m => m.Teams.Contains(t.Name, StringComparer.OrdinalIgnoreCase))).Select(t => t.Name).ToList(), "none")).Append('\n');
         text.Append("- Teams with no Projects: ").Append(Join(plan.Teams.Where(t => t.Projects.Count == 0).Select(t => t.Name).ToList(), "none")).Append('\n');
         text.Append("- Projects with no Tasks: ").Append(Join(plan.Teams.SelectMany(t => t.Projects.Select(p => (Team: t.Name, Project: p))).Where(x => !plan.Tasks.Any(t => t.Location.Team == x.Team && t.Location.Project == x.Project)).Select(x => $"{x.Team}/{x.Project}").ToList(), "none")).Append('\n');
     }

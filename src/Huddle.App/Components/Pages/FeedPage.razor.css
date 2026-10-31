@@ -1,0 +1,167 @@
+/* The Feed Tab (Feed spec 6.9): the Live chip, the read-only note, and the one-row filter bar. */
+.feed-page {
+    max-width: 760px;
+    margin-inline: auto;
+}
+
+::deep .feed-live-chip {
+    height: 20px;
+    margin: 0 0 0 8px;
+    background: var(--hu-feed-live-background);
+    border: 1px solid var(--hu-feed-live-line);
+    color: var(--hu-feed-live-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 550;
+}
+
+.feed-live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--mud-palette-success) 22%, transparent);
+}
+
+.feed-readonly {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 16px;
+    padding: 8px 12px;
+    border: 1px solid var(--hu-feed-note-line);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--hu-feed-note-background);
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.feed-readonly ::deep .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+.feed-readonly-text {
+    color: var(--mud-palette-text-secondary);
+    font-size: inherit;
+}
+
+/* Nordic's paper frame is dashed. */
+:root:has([data-hu-surface="paper"]) .feed-readonly {
+    border-style: dashed;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.feed-filter-bar ::deep .feed-category-control {
+    max-width: 100%;
+    background: var(--hu-control-track);
+}
+
+.feed-filter-bar ::deep .feed-category-control .mud-toggle-item {
+    color: var(--hu-control-ink);
+}
+
+.feed-filter-bar ::deep .feed-category-control .mud-toggle-item.huddle-segmented-active-item {
+    color: var(--hu-control-selected-ink);
+    font-weight: 600;
+}
+
+.feed-filter-bar ::deep .feed-category-control .huddle-segmented-indicator {
+    border-color: var(--hu-control-selected-line);
+}
+
+.feed-filter-bar ::deep .feed-count {
+    margin-left: 4px;
+    font-size: var(--mud-typography-caption-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--hu-text-subtle);
+}
+
+.feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
+    color: var(--hu-control-selected-ink);
+}
+
+/* Nordic draws a count as a small rounded pill, tinted for the selected segment and for Needs you. */
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control {
+    border-radius: calc(var(--mud-default-borderradius) * 1.25);
+    border: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 999px;
+    background: var(--hu-ground-rail);
+    font-weight: 600;
+    line-height: 18px;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
+    background: var(--hu-tone-primary-soft);
+    color: var(--hu-tone-primary-ink);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count-needsyou {
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+}
+
+.feed-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+}
+
+.feed-filter-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+::deep .feed-team-select {
+    width: 160px;
+}
+
+::deep .feed-team-select .mud-input-slot {
+    font-size: var(--mud-typography-caption-size);
+    padding-block: 4px;
+}
+
+::deep .feed-team-select .mud-input-outlined-border {
+    border-color: var(--hu-line-control);
+}
+
+::deep .feed-team-select-set .mud-input-outlined-border {
+    border-color: var(--hu-control-set-line);
+}
+
+::deep .feed-team-select-set .mud-input,
+::deep .feed-team-select-set .mud-input-slot,
+::deep .feed-team-select-set .mud-select-input {
+    background: var(--hu-control-set-background);
+    color: var(--hu-control-set-ink);
+}
+
+::deep .feed-show-more {
+    margin: 8px 0;
+}
+
+/* Nordic Paper closes the Feed with a quiet italic note under the last card; the other Themes do not show it. */
+.feed-end {
+    display: none;
+}
+
+:root:has([data-hu-reading="book"]) .feed-end {
+    display: block;
+    margin: 32px auto 0;
+    max-width: 52ch;
+    font: italic 400 var(--mud-typography-body2-size) / 1.55 var(--font-read);
+    color: var(--mud-palette-text-secondary);
+    text-align: center;
+}

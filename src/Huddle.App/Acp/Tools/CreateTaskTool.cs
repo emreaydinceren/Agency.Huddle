@@ -1,6 +1,7 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
@@ -23,13 +24,17 @@ internal sealed class CreateTaskTool(
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+    /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
+    private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
+
+    /// <summary>The optional string arguments read after the two lists, in check order.</summary>
+    private static readonly string[] TrailingNames = ["start_date", "due_date", "sprint"];
 
     /// <inheritdoc />
     public string Name => "create_task";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.createTask.description", NoValues);
+    public string Description => prompts.Render("tool.createTask.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -67,6 +72,8 @@ internal sealed class CreateTaskTool(
             ["start_date"] = new JsonObject { ["type"] = "string" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
+            ["human_gate"] = new JsonObject { ["type"] = "boolean" },
+            ["action"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "title", "team" },
     };
@@ -78,139 +85,23 @@ internal sealed class CreateTaskTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!TaskToolText.TryGetString(arguments, "title", out string? titleText, out string titleTypeRefusal))
+        if (!TryReadRawArguments(arguments, out RawArguments? raw, out string rawRefusal))
         {
-            return titleTypeRefusal;
+            return rawRefusal;
         }
 
-        if (string.IsNullOrWhiteSpace(titleText))
+        if (!string.IsNullOrWhiteSpace(raw.OriginRoomId))
         {
-            return "'title' is a required argument.";
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamTypeRefusal))
-        {
-            return teamTypeRefusal;
-        }
-
-        if (string.IsNullOrWhiteSpace(teamText))
-        {
-            return "'team' is a required argument.";
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "project", out string? projectText, out string projectTypeRefusal))
-        {
-            return projectTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "description", out string? descriptionText, out string descriptionTypeRefusal))
-        {
-            return descriptionTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "status", out string? statusText, out string statusTypeRefusal))
-        {
-            return statusTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "priority", out string? priorityText, out string priorityTypeRefusal))
-        {
-            return priorityTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "assignee", out string? assigneeText, out string assigneeTypeRefusal))
-        {
-            return assigneeTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "originRoomId", out string? originRoomIdText, out string originRoomIdTypeRefusal))
-        {
-            return originRoomIdTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "parent", out string? parentText, out string parentTypeRefusal))
-        {
-            return parentTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetStringList(arguments, "blocked_by", out IReadOnlyList<string>? blockedByText, out string blockedByTypeRefusal))
-        {
-            return blockedByTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetStringList(arguments, "tags", out IReadOnlyList<string>? tagsText, out string tagsTypeRefusal))
-        {
-            return tagsTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "start_date", out string? startDateText, out string startDateTypeRefusal))
-        {
-            return startDateTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "due_date", out string? dueDateText, out string dueDateTypeRefusal))
-        {
-            return dueDateTypeRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "sprint", out string? sprintText, out string sprintTypeRefusal))
-        {
-            return sprintTypeRefusal;
-        }
-
-        if (!string.IsNullOrWhiteSpace(originRoomIdText))
-        {
-            string? membershipRefusal = await this.CheckOriginRoomMembershipAsync(originRoomIdText, cancellationToken).ConfigureAwait(false);
+            string? membershipRefusal = await this.CheckOriginRoomMembershipAsync(raw.OriginRoomId, cancellationToken).ConfigureAwait(false);
             if (membershipRefusal is not null)
             {
                 return membershipRefusal;
             }
         }
 
-        TaskState status = TaskState.Backlog;
-        if (!string.IsNullOrWhiteSpace(statusText))
+        if (!this.TryParseValues(raw, out ParsedValues? values, out string valuesRefusal))
         {
-            if (!TaskStates.TryParse(statusText, out status))
-            {
-                return string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{statusText}'.");
-            }
-
-            if (status.IsWontDo())
-            {
-                return "Create the task first; to mark it Cancelled, Duplicate or Rejected, call update_task.";
-            }
-        }
-
-        TaskPriority priority = TaskPriority.Medium;
-        if (!string.IsNullOrWhiteSpace(priorityText) && !TaskPriorities.TryParse(priorityText, out priority))
-        {
-            return string.Create(CultureInfo.InvariantCulture, $"'priority' has an unknown value '{priorityText}'.");
-        }
-
-        if (!TryParseDate(startDateText, "start_date", out DateOnly? startDate, out string startDateRefusal))
-        {
-            return startDateRefusal;
-        }
-
-        if (!TryParseDate(dueDateText, "due_date", out DateOnly? dueDate, out string dueDateRefusal))
-        {
-            return dueDateRefusal;
-        }
-
-        SprintId? sprintId = null;
-        if (!string.IsNullOrWhiteSpace(sprintText) && !TaskToolText.TryResolveSprint(sprints, sprintText, out sprintId, out string sprintRefusal))
-        {
-            return sprintRefusal;
-        }
-
-        if (!TryParseTaskId(parentText, out TaskId? parentId, out string parentRefusal))
-        {
-            return parentRefusal;
-        }
-
-        if (!TryParseTaskIds(blockedByText, out List<TaskId>? blockedByIds, out string blockedByRefusal))
-        {
-            return blockedByRefusal;
+            return valuesRefusal;
         }
 
         (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
@@ -219,33 +110,227 @@ internal sealed class CreateTaskTool(
             return actorRefusal;
         }
 
-        string? resolvedAssignee = null;
-        if (!string.IsNullOrEmpty(assigneeText))
+        if (!TaskToolText.TryGetBool(arguments, "human_gate", false, out bool humanGate, out string gateRefusal)
+            || !TaskToolText.TryGetString(arguments, "action", out string? action, out gateRefusal))
         {
-            resolvedAssignee = string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
+            return gateRefusal;
         }
 
-        TaskDraft draft = new(
-            titleText,
-            teamText,
-            string.IsNullOrEmpty(projectText) ? null : projectText,
-            status,
-            priority,
-            resolvedAssignee,
-            originRoomIdText,
-            parentId,
-            blockedByIds,
-            tagsText,
-            startDate,
-            dueDate,
-            descriptionText ?? "",
-            sprintId);
+        TaskDraft draft = BuildDraft(raw, values, actor) with
+        {
+            HumanGate = humanGate,
+            Action = string.IsNullOrWhiteSpace(action) ? null : action,
+        };
 
         if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out string runRefusal))
         {
             return runRefusal;
         }
 
+        return this.DescribeResult(result, actor);
+    }
+
+    /// <summary>
+    /// Reads every argument's text in the order the checks run: <c>title</c> and <c>team</c> first (required), then the
+    /// optional strings, the two lists and the remaining strings. The first wrong-typed value is the refusal.
+    /// </summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="raw">The argument texts when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadRawArguments(JsonObject arguments, [NotNullWhen(true)] out RawArguments? raw, out string refusal)
+    {
+        raw = null;
+        if (!TryReadRequired(arguments, out string title, out string team, out refusal))
+        {
+            return false;
+        }
+
+        if (!TryGetStrings(arguments, LeadingNames, out string?[] leading, out refusal))
+        {
+            return false;
+        }
+
+        if (!TaskToolText.TryGetStringList(arguments, "blocked_by", out IReadOnlyList<string>? blockedBy, out refusal))
+        {
+            return false;
+        }
+
+        if (!TaskToolText.TryGetStringList(arguments, "tags", out IReadOnlyList<string>? tags, out refusal))
+        {
+            return false;
+        }
+
+        if (!TryGetStrings(arguments, TrailingNames, out string?[] trailing, out refusal))
+        {
+            return false;
+        }
+
+        raw = new RawArguments(
+            title,
+            team,
+            leading[0],
+            leading[1],
+            leading[2],
+            leading[3],
+            leading[4],
+            leading[5],
+            leading[6],
+            blockedBy,
+            tags,
+            trailing[0],
+            trailing[1],
+            trailing[2]);
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads the two required arguments, <c>title</c> then <c>team</c>, each checked for type and then for blank.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="title">The title text when this returns <see langword="true"/>.</param>
+    /// <param name="team">The team text when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadRequired(JsonObject arguments, out string title, out string team, out string refusal)
+    {
+        title = string.Empty;
+        team = string.Empty;
+        if (!TaskToolText.TryGetString(arguments, "title", out string? titleText, out refusal))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(titleText))
+        {
+            refusal = "'title' is a required argument.";
+            return false;
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out refusal))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(teamText))
+        {
+            refusal = "'team' is a required argument.";
+            return false;
+        }
+
+        title = titleText;
+        team = teamText;
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads several optional string arguments in order, stopping at the first one that is not a string.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="names">The argument names, in the order they are checked.</param>
+    /// <param name="values">One text per name (null when absent) when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryGetStrings(JsonObject arguments, string[] names, out string?[] values, out string refusal)
+    {
+        values = new string?[names.Length];
+        for (int index = 0; index < names.Length; index++)
+        {
+            if (!TaskToolText.TryGetString(arguments, names[index], out values[index], out refusal))
+            {
+                return false;
+            }
+        }
+
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// Parses what the argument texts mean, in the §11.2 order: <c>status</c> (never a Won't do state), <c>priority</c>,
+    /// the two dates, the sprint, the parent id and the blocking ids.
+    /// </summary>
+    /// <param name="raw">The argument texts.</param>
+    /// <param name="values">The parsed values when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryParseValues(RawArguments raw, [NotNullWhen(true)] out ParsedValues? values, out string refusal)
+    {
+        values = null;
+        TaskState status = TaskState.Backlog;
+        if (!string.IsNullOrWhiteSpace(raw.Status))
+        {
+            if (!TaskStates.TryParse(raw.Status, out status))
+            {
+                refusal = string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{raw.Status}'.");
+                return false;
+            }
+
+            if (status.IsWontDo())
+            {
+                refusal = "Create the task first; to mark it Cancelled, Duplicate or Rejected, call update_task.";
+                return false;
+            }
+        }
+
+        TaskPriority priority = TaskPriority.Medium;
+        if (!string.IsNullOrWhiteSpace(raw.Priority) && !TaskPriorities.TryParse(raw.Priority, out priority))
+        {
+            refusal = string.Create(CultureInfo.InvariantCulture, $"'priority' has an unknown value '{raw.Priority}'.");
+            return false;
+        }
+
+        if (!TryParseDate(raw.StartDate, "start_date", out DateOnly? startDate, out refusal)
+            || !TryParseDate(raw.DueDate, "due_date", out DateOnly? dueDate, out refusal))
+        {
+            return false;
+        }
+
+        SprintId? sprintId = null;
+        if (!string.IsNullOrWhiteSpace(raw.Sprint) && !TaskToolText.TryResolveSprint(sprints, raw.Sprint, out sprintId, out refusal))
+        {
+            return false;
+        }
+
+        if (!TryParseTaskId(raw.Parent, out TaskId? parentId, out refusal)
+            || !TryParseTaskIds(raw.BlockedBy, out List<TaskId>? blockedByIds, out refusal))
+        {
+            return false;
+        }
+
+        values = new ParsedValues(status, priority, startDate, dueDate, sprintId, parentId, blockedByIds);
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Assembles the draft; an assignee of <c>me</c> becomes the caller's name.</summary>
+    /// <param name="raw">The argument texts.</param>
+    /// <param name="values">The parsed values.</param>
+    /// <param name="actor">The caller, as resolved by <see cref="TaskToolText.ResolveActorAsync"/>.</param>
+    private static TaskDraft BuildDraft(RawArguments raw, ParsedValues values, TaskActor actor)
+    {
+        string? resolvedAssignee = null;
+        if (!string.IsNullOrEmpty(raw.Assignee))
+        {
+            resolvedAssignee = string.Equals(raw.Assignee, "me", StringComparison.Ordinal) ? actor.Name : raw.Assignee;
+        }
+
+        return new TaskDraft(
+            raw.Title,
+            raw.Team,
+            string.IsNullOrEmpty(raw.Project) ? null : raw.Project,
+            values.Status,
+            values.Priority,
+            resolvedAssignee,
+            raw.OriginRoomId,
+            values.ParentId,
+            values.BlockedByIds,
+            raw.Tags,
+            values.StartDate,
+            values.DueDate,
+            raw.Description ?? "",
+            values.SprintId);
+    }
+
+    /// <summary>Words the outcome of <see cref="TaskService.Create"/> for the model.</summary>
+    /// <param name="result">The service result.</param>
+    /// <param name="actor">The caller.</param>
+    private string DescribeResult(TaskResult? result, TaskActor actor)
+    {
         return result switch
         {
             TaskResult.Saved saved => this.BuildSuccessText(saved, actor),
@@ -384,4 +469,52 @@ internal sealed class CreateTaskTool(
         refusal = string.Empty;
         return true;
     }
+
+    /// <summary>The argument texts exactly as the model sent them, once each has been checked to be the right JSON type.</summary>
+    /// <param name="Title">The non-blank title.</param>
+    /// <param name="Team">The non-blank team.</param>
+    /// <param name="Project">The project, if any.</param>
+    /// <param name="Description">The description, if any.</param>
+    /// <param name="Status">The status text, if any.</param>
+    /// <param name="Priority">The priority text, if any.</param>
+    /// <param name="Assignee">The assignee, if any.</param>
+    /// <param name="OriginRoomId">The origin Room id, if any.</param>
+    /// <param name="Parent">The parent id text, if any.</param>
+    /// <param name="BlockedBy">The blocking id texts, if any.</param>
+    /// <param name="Tags">The tags, if any.</param>
+    /// <param name="StartDate">The start date text, if any.</param>
+    /// <param name="DueDate">The due date text, if any.</param>
+    /// <param name="Sprint">The sprint text, if any.</param>
+    private sealed record RawArguments(
+        string Title,
+        string Team,
+        string? Project,
+        string? Description,
+        string? Status,
+        string? Priority,
+        string? Assignee,
+        string? OriginRoomId,
+        string? Parent,
+        IReadOnlyList<string>? BlockedBy,
+        IReadOnlyList<string>? Tags,
+        string? StartDate,
+        string? DueDate,
+        string? Sprint);
+
+    /// <summary>The values parsed out of <see cref="RawArguments"/>.</summary>
+    /// <param name="Status">The initial status.</param>
+    /// <param name="Priority">The priority.</param>
+    /// <param name="StartDate">The start date, if any.</param>
+    /// <param name="DueDate">The due date, if any.</param>
+    /// <param name="SprintId">The sprint, if any.</param>
+    /// <param name="ParentId">The parent Task, if any.</param>
+    /// <param name="BlockedByIds">The blocking Tasks, if any.</param>
+    private sealed record ParsedValues(
+        TaskState Status,
+        TaskPriority Priority,
+        DateOnly? StartDate,
+        DateOnly? DueDate,
+        SprintId? SprintId,
+        TaskId? ParentId,
+        List<TaskId>? BlockedByIds);
 }

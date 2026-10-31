@@ -34,6 +34,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
+    private readonly ContextFill? contextFill;
     private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
@@ -72,6 +73,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart), passed to every Room Session this pool creates.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
+    /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -90,7 +92,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null)
+        ReferenceExpander? references = null,
+        ContextFill? contextFill = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -117,6 +120,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
         this.references = references;
+        this.contextFill = contextFill;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
@@ -124,16 +128,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
         this.gate = new TurnGate(configuredConcurrency);
 
-        var configuredLiveCap = options.MaxLiveSessions;
-        this.effectiveMaxLiveSessions = Math.Max(configuredLiveCap, configuredConcurrency);
-        if (this.effectiveMaxLiveSessions != configuredLiveCap)
-        {
-            this.logger.LogWarning(
-                "MaxLiveSessions {Configured} is below MaxConcurrentTurns {Concurrent}; raised to {Effective}.",
-                configuredLiveCap,
-                configuredConcurrency,
-                this.effectiveMaxLiveSessions);
-        }
+        this.effectiveMaxLiveSessions = RoomSessionPool.ResolveLiveSessionCap(logger, options.MaxLiveSessions, configuredConcurrency);
+
 
         if (!this.sessionPerRoom)
         {
@@ -152,6 +148,26 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         }
     }
 
+    /// <summary>The live-session cap actually used: the configured cap, raised to the concurrency limit when it is lower (with a warning).</summary>
+    /// <param name="logger">Receives the warning when the cap is raised.</param>
+    /// <param name="configuredLiveCap">The configured <c>MaxLiveSessions</c>.</param>
+    /// <param name="configuredConcurrency">The effective concurrent-Turn limit.</param>
+    private static int ResolveLiveSessionCap(ILogger logger, int configuredLiveCap, int configuredConcurrency)
+    {
+        int effective = Math.Max(configuredLiveCap, configuredConcurrency);
+        if (effective != configuredLiveCap)
+        {
+            logger.LogWarning(
+                "MaxLiveSessions {Configured} is below MaxConcurrentTurns {Concurrent}; raised to {Effective}.",
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
+                configuredLiveCap,
+                configuredConcurrency,
+                effective);
+#pragma warning restore HAA0601
+        }
+
+        return effective;
+    }
     /// <summary>The models the session opened at start advertises, or empty when nothing opened yet.</summary>
     internal IReadOnlyList<AgentModelOption> Models => this.startupSession?.Models ?? [];
 
@@ -172,7 +188,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     {
         if (!this.sessionPerRoom)
         {
-            await this.sharedSession!.OpenAsync(cancellationToken);
+            await this.sharedSession!.OpenAsync(cancellationToken).ConfigureAwait(false);
             this.startupSession = this.sharedSession;
             return;
         }
@@ -189,7 +205,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         // D22 correction 6 / P-5 invariant 1's exception: this open runs before any ticket exists for
         // it and before the read loop's consumers can offer one, so it bypasses the gate entirely -
         // safe only because it completes before anything else could contend for a slot.
-        await session.OpenAsync(cancellationToken);
+        await session.OpenAsync(cancellationToken).ConfigureAwait(false);
         this.startupSession = session;
     }
 
@@ -287,11 +303,13 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         if (victim is null)
         {
             this.logger.LogWarning(
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 "No Idle Room Session was evictable at the live cap of {Cap}; opening anyway.", this.effectiveMaxLiveSessions);
+#pragma warning restore HAA0601
             return;
         }
 
-        await victim.CloseAsync();
+        await victim.CloseAsync().ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -306,7 +324,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
         if (this.sweepTimer is not null)
         {
-            await this.sweepTimer.DisposeAsync();
+            await this.sweepTimer.DisposeAsync().ConfigureAwait(false);
         }
 
         // try/finally: the host owns the Adapter process, so it is disposed even when a session throws
@@ -323,17 +341,17 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
                 foreach (var session in sessions)
                 {
-                    await session.DisposeAsync();
+                    await session.DisposeAsync().ConfigureAwait(false);
                 }
             }
             else if (this.sharedSession is not null)
             {
-                await this.sharedSession.DisposeAsync();
+                await this.sharedSession.DisposeAsync().ConfigureAwait(false);
             }
         }
         finally
         {
-            await this.host.DisposeAsync();
+            await this.host.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -363,7 +381,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             libraryDocs: this.libraryDocs,
             readsFiles: this.readsFiles,
             elicitationBridge: this.elicitationBridge,
-            references: this.references);
+            references: this.references,
+            contextFill: this.contextFill);
 
     private RoomSession GetOrCreateSession(string roomId)
     {
@@ -385,7 +404,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         {
             try
             {
-                await session.CloseAsync();
+                await session.CloseAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {

@@ -2,16 +2,22 @@
     Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3;
     corrections-B5 D12-12). Save returns the typed reason (null when empty), Skip returns no reason,
     and the close button (or Escape) cancels the move. The title, "Mark {id} as {State}", is passed
-    by the caller.
+    by the caller. With Required (the decision card's Request changes and Decline) the field is
+    labelled Reason, there is no Skip, and the confirm button, labelled ConfirmText, stays disabled
+    while the field is blank.
 *@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" Label="Reason (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" />
+        <MudTextField T="string" Label="@(this.Required ? HumanGateCopy.ReasonLabel : "Reason (optional)")" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Immediate="true" />
     </DialogContent>
     <DialogActions>
-        <MudButton Size="Size.Medium" OnClick="this.Skip">Skip</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save">Save</MudButton>
+        @if (!this.Required)
+        {
+            <MudButton Size="Size.Medium" OnClick="this.Skip">Skip</MudButton>
+        }
+        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
+                   Disabled="@(this.Required && string.IsNullOrWhiteSpace(this.reason))">@this.ConfirmText</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -19,6 +25,14 @@
     /// <summary>The dialog instance, for closing with a result.</summary>
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>Whether a reason must be typed before the dialog can be confirmed.</summary>
+    [Parameter]
+    public bool Required { get; set; }
+
+    /// <summary>The confirm button's text.</summary>
+    [Parameter]
+    public string ConfirmText { get; set; } = "Save";
 
     private string? reason;
 

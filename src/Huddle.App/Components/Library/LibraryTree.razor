@@ -14,15 +14,19 @@
     the only way to tell those roots apart.
 
     A right-click on a row opens that row's MudMenu at the pointer; there is no "..." button. The menu
-    lists New note, New folder, Copy path, Rename and Delete; Rename/Delete are disabled by LibraryProtection.For, with a settled,
-    locally-owned reason text as the item's SECONDARY text (never tooltip-only, item 26) - the wording
-    is duplicated here on purpose rather than read from LibraryProtection.Reason, per item 26.
+    lists New note, New folder, Copy path, Rename, Move and Delete; an item that opens a dialog ends in an ellipsis,
+    and Delete comes last after a divider in Error ink. LibraryProtection.For decides which of Rename, Move and
+    Delete a node may have, with a settled, locally-owned reason text. A node that is protected does not list Rename, Move or Delete as three
+    disabled items repeating one reason: those items are left out and the menu ends in one Quiet-ink note
+    (audit B10). The wording is duplicated here on purpose rather than read from LibraryProtection.Reason,
+    per item 26.
 
     Orphan Team folders come from TeamFolderCatalog.List over TaskStore.Teams (item 25), the same
     source the board itself uses, so the two surfaces can never disagree about which folders are
     orphans.
 *@
 @implements IDisposable
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
 @inject LibraryFileService FileService
@@ -31,7 +35,7 @@
 @inject TaskStore Tasks
 
 <MudTreeView T="LibraryPath" Items="@this.topItems" Comparer="LibraryPathComparer.Instance"
-             ServerData="@this.LoadChildrenAsync"
+             ServerData="@this.LoadChildrenAsync" ExpandOnClick="true"
              SelectedValue="@this.SelectedPath" SelectedValueChanged="@this.OnSelectedValueChangedAsync"
              Class="@(this.dragged is null ? "library-tree" : "library-tree library-tree-dragging")">
     <ItemTemplate Context="item">
@@ -56,9 +60,11 @@
                         <span class="library-tree-node-name" @onclick="@(() => this.OnNameClickAsync(value))">@item.Text</span>
                         @if (this.orphanFlags.TryGetValue(value, out bool isOrphan) && isOrphan)
                         {
-                            <span class="library-tree-orphan" aria-label="@OrphanReason(item.Text ?? string.Empty)">
-                                <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" Color="Color.Warning" />
-                            </span>
+                            <MudTooltip Text="@OrphanReason(item.Text ?? string.Empty)">
+                                <span class="library-tree-orphan" role="img" aria-label="@OrphanReason(item.Text ?? string.Empty)">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" />
+                                </span>
+                            </MudTooltip>
                         }
                         <MudMenu @ref="this.rowMenus[value]" PositionAtCursor="true" Class="library-tree-menu">
                             <ActivatorContent Context="menuContext">
@@ -73,13 +79,17 @@
                                         <MudDivider />
                                     }
 
-                                    <MudMenuItem Disabled="@action.Disabled" Icon="@action.Icon" OnClick="@(() => this.RaiseActionAsync(action.Kind, value))">
+                                    <MudMenuItem Icon="@action.Icon" IconColor="@(action.Kind == LibraryTreeActionKind.Delete ? Color.Error : Color.Default)"
+                                                 Class="@(action.Kind == LibraryTreeActionKind.Delete ? "menu-item-destructive" : null)"
+                                                 OnClick="@(() => this.RaiseFromMenuAsync(action.Kind, value))">
                                         <div class="library-tree-menu-label">@action.Label</div>
-                                        @if (action.Reason is not null)
-                                        {
-                                            <div class="library-tree-menu-reason">@action.Reason</div>
-                                        }
                                     </MudMenuItem>
+                                }
+
+                                @if (NoteFor(value, this.ScopeFor(value)) is { } note)
+                                {
+                                    <MudDivider />
+                                    <div class="library-tree-menu-note" role="note">@note</div>
                                 }
                             </ChildContent>
                         </MudMenu>
@@ -121,7 +131,8 @@
 
 @code {
     private const string TeamProtectedReason = "Team and Project folders can't be renamed, moved or deleted here.";
-    private const string TeammateProtectedReason = "Teammate folders can't be renamed, moved or deleted here.";
+    private const string AgentProtectedReason = "Agent folders can't be renamed, moved or deleted here.";
+    private const string ScopeProtectedReason = "This folder can't be renamed, moved or deleted here.";
     private const string RootProtectedReason = "A Library root can't be renamed, moved or deleted.";
 
     private readonly Dictionary<LibraryPath, bool> orphanFlags = new(LibraryPathComparer.Instance);
@@ -195,19 +206,20 @@
     }
 
     /// <summary>
-    /// Reveals <paramref name="folder"/>: expands each ancestor from the top (loading its children when they
-    /// are not loaded yet), then selects the folder itself. Works flattened too, where the top items are the
-    /// scope's own children. A folder not under any shown node changes nothing.
+    /// Reveals <paramref name="folder"/>, a folder or a file: expands each ancestor from the top (loading its
+    /// children when they are not loaded yet), then selects the node itself. Works flattened too, where the top
+    /// items are the scope's own children. A path not under any shown node changes nothing.
     /// </summary>
-    /// <param name="folder">The folder to reveal.</param>
-    public async Task RevealAsync(LibraryPath folder)
+    /// <param name="folder">The folder or file to reveal.</param>
+    /// <returns>Whether a shown node holds <paramref name="folder"/>, so the reveal was attempted.</returns>
+    public async Task<bool> RevealAsync(LibraryPath folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
 
         TreeItemData<LibraryPath>? current = FindAncestorOrSelf(this.topItems, folder);
         if (current is null)
         {
-            return;
+            return false;
         }
 
         ClearSelection(this.topItems);
@@ -227,6 +239,7 @@
 
         this.StateHasChanged();
         await this.SelectedPathChanged.InvokeAsync(folder);
+        return true;
     }
 
     private static TreeItemData<LibraryPath>? FindAncestorOrSelf(IEnumerable<ITreeItemData<LibraryPath>>? level, LibraryPath folder)
@@ -348,13 +361,21 @@
     private async Task RaiseActionAsync(LibraryTreeActionKind kind, LibraryPath path) =>
         await this.OnAction.InvokeAsync(new LibraryTreeAction(kind, path, null));
 
+    /// <summary>Raises an action chosen in a row's menu after closing that menu, so an action that opens a dialog
+    /// does not leave the menu's popover above the dialog's scrim (audit B10e).</summary>
+    private async Task RaiseFromMenuAsync(LibraryTreeActionKind kind, LibraryPath path)
+    {
+        this.rowMenus.TryGetValue(path, out MudMenu? menu);
+        await MenuDialogs.AfterClosingAsync(menu, () => this.RaiseActionAsync(kind, path));
+    }
+
     private string NodeClass(LibraryPath path) =>
         this.dropTarget is not null && LibraryPathComparer.Instance.Equals(this.dropTarget, path)
             ? "library-tree-node library-tree-drop-target"
             : "library-tree-node";
 
     /// <summary>Whether a row may be picked up: only what <see cref="LibraryProtection"/> lets move, so a root,
-    /// Team, Project or Teammate node never starts a drag.</summary>
+    /// Team, Project or Agent node never starts a drag.</summary>
     private bool CanDrag(LibraryPath path) => LibraryProtection.For(path, this.ScopeFor(path)).CanMove;
 
     private void OnDragStart(LibraryPath path)
@@ -502,17 +523,17 @@
     {
         LibraryNodeRole.TeamFolder => Icons.Material.Outlined.Groups,
         LibraryNodeRole.ProjectFolder => Icons.Material.Outlined.FolderSpecial,
-        LibraryNodeRole.TeammateFolder => Icons.Material.Outlined.Person,
+        LibraryNodeRole.AgentFolder => Icons.Material.Outlined.Person,
         _ => isFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.InsertDriveFile,
     };
 
-    private static string OrphanReason(string teamName) => $"No teammate has the Team label \"{teamName}\".";
+    private static string OrphanReason(string teamName) => $"No agent has the Team label \"{teamName}\".";
 
     private static string? ReasonFor(LibraryNodeRole role) => role switch
     {
         LibraryNodeRole.Root => RootProtectedReason,
         LibraryNodeRole.TeamFolder or LibraryNodeRole.ProjectFolder => TeamProtectedReason,
-        LibraryNodeRole.TeammateFolder or LibraryNodeRole.TeammateDefinition or LibraryNodeRole.WorkDir => TeammateProtectedReason,
+        LibraryNodeRole.AgentFolder or LibraryNodeRole.AgentDefinition or LibraryNodeRole.WorkDir => AgentProtectedReason,
         _ => null,
     };
 
@@ -521,26 +542,57 @@
     private LibraryPath? ScopeFor(LibraryPath path) =>
         this.Scopes.Contains(path, LibraryPathComparer.Instance) ? path : null;
 
+    /// <summary>The one note that closes a menu whose node is protected: why Rename, Move and Delete are not
+    /// offered. <see langword="null"/> when the node can be changed.</summary>
+    private static string? NoteFor(LibraryPath path, LibraryPath? scope)
+    {
+        if (path.ReadOnly)
+        {
+            return LibraryPath.ReadOnlyReason;
+        }
+
+        LibraryProtection protection = LibraryProtection.For(path, scope);
+        return protection.CanRename && protection.CanMove && protection.CanDelete
+            ? null
+            : ReasonFor(path.Role) ?? ScopeProtectedReason;
+    }
+
+    /// <summary>The actions a node's menu offers. An action the node's protection forbids is left out rather than
+    /// shown disabled; <see cref="NoteFor"/> gives the one reason (audit B10).</summary>
     private static IReadOnlyList<MenuAction> MenuActionsFor(LibraryPath path, LibraryPath? scope)
     {
         LibraryProtection protection = LibraryProtection.For(path, scope);
-        string? reason = ReasonFor(path.Role);
 
-        List<MenuAction> actions =
-        [
-            new(LibraryTreeActionKind.NewNote, "New note", Icons.Material.Outlined.NoteAdd, false, null, false),
-            new(LibraryTreeActionKind.NewFolder, "New folder", Icons.Material.Outlined.CreateNewFolder, false, null, false),
-        ];
+        // A read-only node (the Skill Sources folder, Skill Packs spec §6.11.3) offers nothing that writes: no New note
+        // or New folder either, only Copy path and whatever reads.
+        List<MenuAction> actions = path.ReadOnly
+            ? []
+            :
+            [
+                new(LibraryTreeActionKind.NewNote, "New note…", Icons.Material.Outlined.NoteAdd, false),
+                new(LibraryTreeActionKind.NewFolder, "New folder…", Icons.Material.Outlined.CreateNewFolder, false),
+            ];
 
         if (path.Role == LibraryNodeRole.TeamFolder)
         {
-            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New project", Icons.Material.Outlined.FolderSpecial, false, null, false));
+            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New project…", Icons.Material.Outlined.FolderSpecial, false));
         }
 
-        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", ActionIcons.Copy, false, null, true));
-        actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", Icons.Material.Outlined.DriveFileRenameOutline, !protection.CanRename, protection.CanRename ? null : reason, true));
-        actions.Add(new MenuAction(LibraryTreeActionKind.Move, "Move…", Icons.Material.Outlined.DriveFileMove, !protection.CanMove, protection.CanMove ? null : reason, false));
-        actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", Icons.Material.Outlined.Delete, !protection.CanDelete, protection.CanDelete ? null : reason, false));
+        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", ActionIcons.Copy, true));
+        if (protection.CanRename)
+        {
+            actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename…", Icons.Material.Outlined.DriveFileRenameOutline, true));
+        }
+
+        if (protection.CanMove)
+        {
+            actions.Add(new MenuAction(LibraryTreeActionKind.Move, "Move…", Icons.Material.Outlined.DriveFileMove, false));
+        }
+
+        if (protection.CanDelete)
+        {
+            actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete…", Icons.Material.Outlined.Delete, true));
+        }
 
         return actions;
     }
@@ -549,8 +601,6 @@
     /// <param name="Kind">Which action this row raises.</param>
     /// <param name="Label">The visible menu text.</param>
     /// <param name="Icon">The Material icon drawn before the label.</param>
-    /// <param name="Disabled">Whether the action is disabled for this node.</param>
-    /// <param name="Reason">When disabled, the settled reason shown as secondary text.</param>
     /// <param name="DividerBefore">Whether a divider separates this row from the one above.</param>
-    private readonly record struct MenuAction(LibraryTreeActionKind Kind, string Label, string Icon, bool Disabled, string? Reason, bool DividerBefore);
+    private readonly record struct MenuAction(LibraryTreeActionKind Kind, string Label, string Icon, bool DividerBefore);
 }

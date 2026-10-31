@@ -1,22 +1,6 @@
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Distinguishes "leave this field alone" (<see langword="default"/>, <see cref="IsSet"/> false)
-/// from "set this field to a value, possibly null" (<see cref="Set(T)"/>) - Spec §9.1. A plain
-/// nullable can't carry that distinction for a field whose "clear" value is itself
-/// <see langword="null"/>, such as <see cref="TaskPatch.Assignee"/>.
-/// </summary>
-/// <typeparam name="T">The type of value carried when set.</typeparam>
-/// <param name="IsSet">Whether this field is being changed at all.</param>
-/// <param name="Value">The new value, meaningful only when <paramref name="IsSet"/> is <see langword="true"/>.</param>
-internal readonly record struct Optional<T>(bool IsSet, T Value)
-{
-    /// <summary>Creates a set <see cref="Optional{T}"/> carrying <paramref name="value"/>.</summary>
-    /// <param name="value">The value to set the field to.</param>
-    public static Optional<T> Set(T value) => new(true, value);
-}
-
-/// <summary>
 /// Only the fields being changed are non-null (or, for a field whose "clear" state is itself
 /// <see langword="null"/>, set through an <see cref="Optional{T}"/>) - Spec §9.1. Passed to
 /// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor, bool)"/>.
@@ -59,6 +43,12 @@ internal sealed record TaskPatch
     /// <summary>The Task's new Sprint. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it.</summary>
     public Optional<SprintId?> Sprint { get; init; }
 
+    /// <summary>The Task's new Human gate flag. <see cref="Optional{T}.Set(T)"/> with <see langword="false"/> clears it.</summary>
+    public Optional<bool> HumanGate { get; init; }
+
+    /// <summary>The Task's new action line. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it.</summary>
+    public Optional<string?> Action { get; init; }
+
     /// <summary>The Task's new description, or <see langword="null"/> to leave it unchanged.</summary>
     public string? Description { get; init; }
 
@@ -85,7 +75,7 @@ internal sealed record TaskPatch
         this.Title is null && this.Status is null && this.Priority is null &&
         !this.Assignee.IsSet && !this.Parent.IsSet && this.BlockedBy is null &&
         !this.DuplicateOf.IsSet && this.Tags is null && !this.StartDate.IsSet &&
-        !this.DueDate.IsSet && !this.Sprint.IsSet && this.Description is null && this.Team is null &&
+        !this.DueDate.IsSet && !this.Sprint.IsSet && !this.HumanGate.IsSet && !this.Action.IsSet && this.Description is null && this.Team is null &&
         !this.Project.IsSet && this.Reason is null && !this.ApprovedBy.IsSet && this.ExtraFields is null;
 
     /// <summary>
@@ -98,7 +88,14 @@ internal sealed record TaskPatch
     internal IReadOnlyList<TaskField> Fields()
     {
         List<TaskField> fields = [];
+        this.AddCoreFields(fields);
+        this.AddRelationFields(fields);
+        return fields;
+    }
 
+    /// <summary>Adds the title, status, priority, assignee, parent and blocked-by fields this patch sets.</summary>
+    private void AddCoreFields(List<TaskField> fields)
+    {
         if (this.Title is not null)
         {
             fields.Add(TaskField.Title);
@@ -128,7 +125,11 @@ internal sealed record TaskPatch
         {
             fields.Add(TaskField.BlockedBy);
         }
+    }
 
+    /// <summary>Adds the duplicate-of, tags, dates, Sprint, description and location fields this patch sets.</summary>
+    private void AddRelationFields(List<TaskField> fields)
+    {
         if (this.DuplicateOf.IsSet)
         {
             fields.Add(TaskField.DuplicateOf);
@@ -154,6 +155,16 @@ internal sealed record TaskPatch
             fields.Add(TaskField.Sprint);
         }
 
+        if (this.HumanGate.IsSet)
+        {
+            fields.Add(TaskField.HumanGate);
+        }
+
+        if (this.Action.IsSet)
+        {
+            fields.Add(TaskField.Action);
+        }
+
         if (this.Description is not null)
         {
             fields.Add(TaskField.Description);
@@ -163,8 +174,6 @@ internal sealed record TaskPatch
         {
             fields.Add(TaskField.Location);
         }
-
-        return fields;
     }
 
     /// <summary>
@@ -198,6 +207,8 @@ internal sealed record TaskPatch
             StartDate = this.StartDate.IsSet ? this.StartDate.Value : current.StartDate,
             DueDate = this.DueDate.IsSet ? this.DueDate.Value : current.DueDate,
             Sprint = this.Sprint.IsSet ? this.Sprint.Value : current.Sprint,
+            HumanGate = this.HumanGate.IsSet ? this.HumanGate.Value : current.HumanGate,
+            Action = this.Action.IsSet ? this.Action.Value : current.Action,
             Description = this.Description ?? current.Description,
             Location = current.Location with { Team = team, Project = project },
             UnknownFields = unknownFields,

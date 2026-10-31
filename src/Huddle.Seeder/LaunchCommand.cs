@@ -1,6 +1,6 @@
 namespace Agency.Huddle.Seeder;
 
-/// <summary>Builds the command that runs Huddle against a seeded data folder without spending money.</summary>
+/// <summary>Builds the command that runs Huddle against a seeded data folder without spending money. Seeder spec §3 (SEED-CLI-4, SEED-INV-10).</summary>
 internal static class LaunchCommand
 {
     /// <summary>The port used for the seeded instance, chosen not to clash with the normal one on 5100.</summary>

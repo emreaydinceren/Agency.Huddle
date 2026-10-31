@@ -1,0 +1,58 @@
+@*
+    The Helpers tab (wireframe G9): an intro, where the Human's choices are stored, and one card per registered Helper.
+    When Adapters are off the cards are read only and a notice says why (Helpers Spec §6.7).
+*@
+
+@using Agency.Huddle.App.Helpers
+@using Microsoft.Extensions.Options
+@inject HelperRegistry Registry
+@inject IOptions<TeamOptions> Options
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<SettingsIntro>@HelpersCopy.Intro</SettingsIntro>
+
+<StoredAt Label="Stored at" Path="@this.StorePath" />
+
+@if (!this.Options.Value.Acp.Enabled)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">@HelpersCopy.AdaptersOff</MudAlert>
+}
+
+@foreach (IHelperAgent entry in this.Registry.All)
+{
+    <HelperCard HelperId="@entry.Id.Value" AdaptersOn="@this.Options.Value.Acp.Enabled" @key="@entry.Id.Value" />
+}
+
+@code {
+    private const string AnchorPrefix = "helper-";
+
+    private bool scrolled;
+
+    private string StorePath => System.IO.Path.Combine(this.Options.Value.DataDir, "team.db");
+
+    /// <summary>Scrolls to the card the address names (<c>#helper-NeedsHuman</c>, as a Feed item's link sets it) once it is drawn.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.scrolled)
+        {
+            return;
+        }
+
+        string fragment = new Uri(this.Navigation.Uri).Fragment.TrimStart('#');
+        if (!fragment.StartsWith(AnchorPrefix, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.scrolled = true;
+        try
+        {
+            _ = await this.Js.InvokeAsync<bool>("teamScroll.intoView", fragment);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the scroll; there is nothing left to scroll.
+        }
+    }
+}

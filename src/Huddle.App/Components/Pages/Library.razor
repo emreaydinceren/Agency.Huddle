@@ -35,9 +35,11 @@
 @inject IOptions<TeamOptions> Options
 @inject TabService Tabs
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4 library-page">
+@* pa-0: the page is two panes edge to edge on the shell's one surface; each pane pads itself (16px sides, 24px
+   above its content) and the split's hairline divider runs the full height. *@
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-0 library-page">
     @* The shell breadcrumb (S1a) names the page, so it has no h1 of its own; PageTitle still sets the document title. *@
-    <PageTitle>Library</PageTitle>
+    <FocusedPageTitle Title="Library" />
     @if (!this.Enabled)
     {
         <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>

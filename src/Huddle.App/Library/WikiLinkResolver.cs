@@ -1,10 +1,5 @@
 namespace Agency.Huddle.App.Library;
 
-/// <summary>The outcome of <see cref="WikiLinkResolver.Resolve(IReadOnlyList{string}, string, string)"/>.</summary>
-/// <param name="Path">The resolved root-relative note path, or <see langword="null"/> when nothing matches.</param>
-/// <param name="IsAmbiguous">Whether several notes tied at the shortest distance from the linking note.</param>
-internal sealed record WikiLinkResolution(string? Path, bool IsAmbiguous);
-
 /// <summary>
 /// Pure Spec §6.5 wikilink resolution ("Resolution follows Obsidian"), over a flat list of
 /// root-relative note paths. Holds no state and touches no disk; the caller supplies the note
@@ -174,6 +169,16 @@ internal static class WikiLinkResolver
 
     /// <summary>A name with no Spec §6.11 known extension (<see cref="LibraryFileKinds.HasKnownExtension"/>) matches <c>&lt;name&gt;.md</c>.</summary>
     private static string WithMarkdownExtension(string name) => LibraryFileKinds.HasKnownExtension(name) ? name : name + ".md";
+
+    /// <summary>How many folder steps lead from <paramref name="fromNote"/>'s folder to <paramref name="candidateNote"/>'s: zero in the same folder, one into a sub-folder or up to the parent, and so on. The same measure that makes the nearest note win in <see cref="Resolve"/>.</summary>
+    /// <param name="fromNote">The root-relative path of the linking note.</param>
+    /// <param name="candidateNote">The root-relative path of the note that might be linked.</param>
+    internal static int FolderDistance(string fromNote, string candidateNote)
+    {
+        ArgumentNullException.ThrowIfNull(fromNote);
+        ArgumentNullException.ThrowIfNull(candidateNote);
+        return Distance(FolderSegments(fromNote), FolderSegments(candidateNote));
+    }
 
     private static string[] FolderSegments(string notePath)
     {

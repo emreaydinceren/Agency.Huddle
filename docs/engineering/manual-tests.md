@@ -72,7 +72,7 @@ window, and relaunch. The variable lives only in that terminal session — reope
 you must set it again.
 
 > [!NOTE]
-> Opening a Model or Effort picker — the New/Edit teammate form — spawns one short-lived probe
+> Opening a Model or Effort picker — the New/Edit agent form — spawns one short-lived probe
 > Adapter even with the guard on. That is by design: the probe never starts a Turn, so it spends
 > nothing, and gating it on `Acp:Enabled` would leave the picker empty in the default
 > configuration (`docs/engineering/rules.md` has the reasoning). Expect that row to appear and
@@ -93,7 +93,7 @@ Three more rules that cost money when broken:
 
 ### 0.3 The Model and Effort convention
 
-These are the app's own per-Persona settings on the Teammate card, not your own tooling. They
+These are the app's own per-Persona settings on the Agent card, not your own tooling. They
 decide what every paid test costs, so treat them as binding.
 
 | Situation | Model | Effort |
@@ -173,13 +173,12 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | A restart loses a Turn that was mid-stream | A Draft is in memory only and is never written to the Transcript. |
 | The application does not follow the OS switching to dark | Deliberate since 2026-09-21: a Theme *is* a light one or a dark one, and there is no System option any more. Pick a Theme from the Dark group. See [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md). |
 | Changing the Theme repaints with no page load | `MudThemeProvider` lives in the render tree, so a Theme change is an ordinary re-render. The full reload the CSS-based system needed is gone. |
-| There is no light Monokai, and no dark Solarized Light | An imported VS Code Theme is single-mode upstream, so it ships as one Theme in one group. The Themes that do have both are listed as two — `Huddle Light` and `Huddle Dark`, `Dark+` and `Light+`, and so on. |
-| `Dark High Contrast` does not look like VS Code's high contrast | VS Code draws HC borders everywhere from `contrastBorder`, which MudBlazor's palette has no equivalent for. It lands as a strong-contrast ordinary Theme. |
+| Every Theme is half of a light and dark pair | A Theme is one palette in one mode, so each design ships as two Themes — `Huddle Light` and `Huddle Dark`, `Lumen Light` and `Lumen Dark`, and so on. There is no High contrast group. |
 | The same Theme appears in a second browser and a private window | The choice lives in `appearance.json`, per installation, not in `localStorage`. |
-| Renaming a Teammate leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
+| Renaming an Agent leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
 | Stopping an Agent stops it in one Room only | Stop ends that Persona's session in that Room (one session per Persona per Room, ADR-0024); its sessions in other Rooms keep running. |
 | Tool activity never appears in scrollback | It belongs to the Draft and goes when the Draft does. |
-| An editing Prompt does not restart a running Teammate | A `Next session` Prompt is deliberately inert until that Teammate restarts. The badge says so. |
+| An editing Prompt does not restart a running Agent | A `Next session` Prompt is deliberately inert until that Agent restarts. The badge says so. |
 | The Model picker is stale after upgrading the Adapter | The catalog is probed once per app run and cached. Restart the app. |
 | A `node` row appears in `O-ADAPTERS` right after New/Edit, in a lane the guard says spends nothing | The Model/Effort probe runs even with `Acp:Enabled` false — it never starts a Turn, so it costs nothing. Only a row that persists is a real Adapter. |
 | `mcp__team__` appears in tool names | Deliberate. The `Team:` config root and the `mcp__team__` prefix are the two identifiers that keep the old code name. |
@@ -187,7 +186,9 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 ### 0.7 Recording results
 
 Results go in the [Tracker](manual-tests/tracker.md) — one row per test,
-carrying a status and the issue number of anything that failed.
+carrying a status and the issue number of anything that failed. Each run also gets a row in the
+[Run log](manual-tests/run-log.md), under that test's section, so the history of every test stays
+in one file after the tracker row moves on.
 
 Set a row to **Testing** when you pick a test up, so a second tester does not start the same
 one, then to **Pass** or **Fail** when you conclude. A Blocked or Inconclusive run leaves the
@@ -207,16 +208,22 @@ the [Tracker](manual-tests/tracker.md), never here.
 
 ### Areas
 
-- [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Teammate card's command line.
+- [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Agent card's command line.
 - [Adapters](manual-tests/adapters.md): choosing an Adapter per Persona and running two at once.
 - [App Tools](manual-tests/app-tools.md): the Tools a real model calls through progressive discovery.
 - [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the accent colour.
 - [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
+- [Document history](manual-tests/doc-history.md): the byline, the History and the History panel, and how often Agents log.
+- [Human gate](manual-tests/human-gate.md): the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page for gated Tasks.
+- [Helpers](manual-tests/helpers.md): the Helpers tab, Save and Reset, the Needs Human judgement on an Agent's Task, the Human's override, the daily cap with Continue, and a failing Adapter.
 - [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.
 - [Creating Rooms and inviting Agents](manual-tests/invite-rooms.md): Room creation, invitations and Room naming.
 - [Library explorer and editor](manual-tests/library.md): the Library tree, document view and editor.
 - [Model and Effort](manual-tests/model-effort.md): the pickers, the catalog probe and the runner restart.
 - [Needs You](manual-tests/needs-you.md): the sidebar card of Rooms waiting on the Human.
+- [Feed](manual-tests/feed.md): the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart.
+- [Remote access](manual-tests/remote-access.md): the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action.
+- [Right sidebar](manual-tests/right-sidebar.md): the panels by Subject, Outline scrolling, collapse and focus.
 - [Persona lifecycle](manual-tests/persona-lifecycle.md): supervisor, work folders, health and restarts.
 - [The named pipe](manual-tests/pipe-external.md): external agents and the wire.
 - [Prompt blocks](manual-tests/prompt-blocks.md): images in a Prompt, the cap, the size limit and Adapter Profiles.
@@ -227,16 +234,17 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Room Sessions](manual-tests/room-sessions.md): per-Room context, resume and Stop (ADR-0024).
 - [Shell and navigation](manual-tests/shell-nav.md): the application shell, navigation and layout.
 - [Skills](manual-tests/skills.md): the Chief of Staff, team-building and the Family Health Advisor.
+- [Skill Packs](manual-tests/skill-packs.md): SKILLS.md, adding with a real AI tool, choosing a Pack, updates, the move, shared folders, an unplugged drive and a withdrawn Source.
 - [Startup and configuration](manual-tests/startup-config.md): start-up, configuration and first-run state.
 - [Turn streaming](manual-tests/streaming-turn.md): Drafts, Stop and failure surfacing.
 - [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.
 - [Chat uploads](manual-tests/uploads.md): the paperclip, paste and drop in the composer, the chips, the Message's path lines, the Library's Uploads root and Room delete.
 - [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
-- [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
+- [Agent card](manual-tests/agent-profile-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.
 - [References](manual-tests/at-tagging.md): the `@` picker, what a pick writes, the Room and Team links, Copy link and the Referenced items header.
-- [Teammates page](manual-tests/teammates-library.md): tiles, Teams grouping, the filter and rejected files.
+- [Agents page](manual-tests/agents-library.md): tiles, Teams grouping, the filter and rejected files.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 

@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The chief of staff's Evidence line is the check, and the founder sends everything.
 
+## Definition of Done
+
+- Numbers checked: evidence from verify
+- Memo reviewed: document reviewed by verify
+
 ## Cadence
 
 - Plan the week on its first day and review it on its last. Prepare each meeting brief a day ahead.

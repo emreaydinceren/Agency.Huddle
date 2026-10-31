@@ -1,26 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Agency.Huddle.App.FileChanges;
 
-/// <summary>A Watched Folder entry, resolved to a full path, per FC §6.2-§6.3.</summary>
-/// <param name="Entry">The entry as written (or as passed to <see cref="WatchedFolderResolver.TryResolve"/>).</param>
-/// <param name="FullPath">The entry's resolved full path.</param>
-/// <param name="PruneUnderscore">
-/// True when this folder sits inside the Teams root, per Spec §6.13: its scan prunes any
-/// <c>_</c>-prefixed sub-folder (a Team's Tasks or drafts folder), so Task files never appear in
-/// File Changes.
-/// </param>
-internal sealed record WatchedFolder(string Entry, string FullPath, bool PruneUnderscore = false);
-
 /// <summary>
-/// Resolves a Watched Folder entry — a Teammate Name, a full path, or a path relative to
+/// Resolves a Watched Folder entry — an Agent Name, a full path, or a path relative to
 /// <c>DataDir</c> — into a <see cref="WatchedFolder"/>, or refuses it with a reason, per
 /// FC §6.2-§6.3. Pure apart from <see cref="Path.GetFullPath(string)"/>; never touches the disk.
 /// </summary>
-internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, TeammatePaths teammatePaths)
+internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, AgentPaths agentPaths)
 {
     /// <summary>
     /// The folder names Huddle reserves for its own data, compared case-insensitively: an entry
@@ -31,25 +21,25 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Teamm
 
     /// <summary>
     /// Resolves <paramref name="entry"/>. Checks, in order: not blank; a <c>./</c>/<c>.\</c>
-    /// prefix means a folder relative to <c>DataDir</c>; else a Teammate Name (matched
-    /// case-insensitively against <paramref name="teammateNames"/>) resolves to that Teammate's
+    /// prefix means a folder relative to <c>DataDir</c>; else an Agent Name (matched
+    /// case-insensitively against <paramref name="agentNames"/>) resolves to that Agent's
     /// Work Dir; else a fully qualified path resolves to itself; else the entry is relative to
     /// <c>DataDir</c>, with either separator. The resolved full path must then lie inside
     /// <c>DataDir</c>, must not be <c>DataDir</c> itself, and its first segment relative to
     /// <c>DataDir</c> must not be a <see cref="ReservedFolders"/> entry.
     /// </summary>
     /// <param name="entry">The entry text, as written in frontmatter or passed to <c>watch_folder</c>.</param>
-    /// <param name="teammateNames">Every Teammate's Name, for the Teammate-Name resolution step.</param>
+    /// <param name="agentNames">Every Agent's Name, for the Agent-Name resolution step.</param>
     /// <param name="folder">The resolved <see cref="WatchedFolder"/>, when this returns <see langword="true"/>.</param>
     /// <param name="reason">The refusal reason, when this returns <see langword="false"/>.</param>
     internal bool TryResolve(
         string entry,
-        IReadOnlyCollection<string> teammateNames,
+        IReadOnlyCollection<string> agentNames,
         [NotNullWhen(true)] out WatchedFolder? folder,
         [NotNullWhen(false)] out string? reason)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        ArgumentNullException.ThrowIfNull(teammateNames);
+        ArgumentNullException.ThrowIfNull(agentNames);
 
         folder = null;
         reason = null;
@@ -61,7 +51,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Teamm
         }
 
         string dataDir = options.Value.DataDir;
-        string fullPath = this.ResolveFullPath(entry, dataDir, teammateNames);
+        string fullPath = this.ResolveFullPath(entry, dataDir, agentNames);
 
         if (string.Equals(fullPath, dataDir, StringComparison.OrdinalIgnoreCase))
         {
@@ -115,17 +105,17 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Teamm
     }
 
     /// <summary>Resolves <paramref name="entry"/> to a full path, per the ordered rules in FC §6.3, before the containment checks run.</summary>
-    private string ResolveFullPath(string entry, string dataDir, IReadOnlyCollection<string> teammateNames)
+    private string ResolveFullPath(string entry, string dataDir, IReadOnlyCollection<string> agentNames)
     {
         if (entry.StartsWith("./", StringComparison.Ordinal) || entry.StartsWith(".\\", StringComparison.Ordinal))
         {
             return Path.GetFullPath(Path.Combine(dataDir, WatchedFolderResolver.NormalizeSeparators(entry[2..])));
         }
 
-        string? canonicalName = teammateNames.FirstOrDefault(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase));
+        string? canonicalName = agentNames.FirstOrDefault(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase));
         if (canonicalName is not null)
         {
-            return Path.GetFullPath(teammatePaths.WorkDir(canonicalName));
+            return Path.GetFullPath(agentPaths.WorkDir(canonicalName));
         }
 
         if (Path.IsPathFullyQualified(entry))

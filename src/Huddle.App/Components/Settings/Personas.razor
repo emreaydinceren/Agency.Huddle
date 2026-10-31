@@ -5,7 +5,7 @@
     this tab shows facts, it does not change them - so, unlike Appearance, it has no local state,
     no store subscription and no save path.
 
-    The Persona path is resolved through TeammatePaths, the same helper PersonaStore's own
+    The Persona path is resolved through AgentPaths, the same helper PersonaStore's own
     constructor uses, rather than a public property on PersonaStore itself. The database path is
     computed the same way SqliteTeamDirectory's own constructor computes it (Path.Combine off
     TeamOptions.DataDir, which ServiceCollectionExtensions' PostConfigure<TeamOptions> has already
@@ -18,7 +18,7 @@
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @inject IOptions<TeamOptions> Options
-@inject TeammatePaths TeammatePaths
+@inject AgentPaths AgentPaths
 
 <SettingsIntro>
     Persona files and the room database live in plain folders and files on disk, so you can back
@@ -33,10 +33,10 @@
 @code {
     /// <summary>
     /// Where <see cref="Agency.Huddle.App.Acp.PersonaStore"/> scans for and watches Persona
-    /// Markdown files - <see cref="TeammatePaths.DefinitionsRoot"/>, the same helper its own
+    /// Markdown files - <see cref="AgentPaths.DefinitionsRoot"/>, the same helper its own
     /// constructor uses.
     /// </summary>
-    private string TeamsDirPath => this.TeammatePaths.DefinitionsRoot;
+    private string TeamsDirPath => this.AgentPaths.DefinitionsRoot;
 
     /// <summary>
     /// Where <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> opens the room database -

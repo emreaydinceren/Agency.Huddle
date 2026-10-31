@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 
@@ -16,7 +17,10 @@ namespace Agency.Huddle.App.NeedsYou;
 /// </summary>
 internal sealed class NeedsYouTracker
 {
+    private static readonly NeedsYouReason[] AllReasons = [NeedsYouReason.Mention, NeedsYouReason.Question, NeedsYouReason.Form, NeedsYouReason.Budget];
+
     private readonly Lock gate = new();
+    private readonly IFeedPublisher? feed;
     private readonly Dictionary<string, RoomState> rooms = new(StringComparer.Ordinal);
     private readonly HashSet<string> heard = new(StringComparer.Ordinal);
     private readonly QuestionStore questions;
@@ -32,14 +36,17 @@ internal sealed class NeedsYouTracker
     /// <param name="teamDirectory">Read when a Room is deleted, to drop its entry.</param>
     /// <param name="logger">Receives a failed prune.</param>
     /// <param name="timeProvider">The clock for reasons that carry no time of their own; defaults to the system clock.</param>
+    /// <param name="feed">Told when a reason begins or ends (Feed spec §6.5.2); <see langword="null"/> posts nothing.</param>
     public NeedsYouTracker(
         RoomEvents events,
         QuestionStore questions,
         ElicitationStore forms,
         ITeamDirectory teamDirectory,
         ILogger<NeedsYouTracker> logger,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IFeedPublisher? feed = null)
     {
+        this.feed = feed;
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(questions);
         ArgumentNullException.ThrowIfNull(forms);
@@ -76,6 +83,19 @@ internal sealed class NeedsYouTracker
         }
     }
 
+    /// <summary>The reasons the Room holds now, whether or not the Human has dismissed it.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <returns>The reasons, or <see cref="NeedsYouReason.None"/>.</returns>
+    internal NeedsYouReason ReasonsHeld(string roomId)
+    {
+        lock (this.gate)
+        {
+            return this.rooms.TryGetValue(roomId, out RoomState? state)
+                ? state.Reasons.Keys.Aggregate(NeedsYouReason.None, static (flags, reason) => flags | reason)
+                : NeedsYouReason.None;
+        }
+    }
+
     /// <summary>
     /// Hides a Room until something new makes it wait again. Drops the Mention reason, which the tracker
     /// owns; the Question, Form and Budget reasons stay true in their stores, and the card or Form in the
@@ -108,13 +128,19 @@ internal sealed class NeedsYouTracker
     private void OnMessagePosted(MessagePostedEvent e)
     {
         string roomId = e.Room.Id;
+        if (string.Equals(e.Message.SenderId, KnownIds.Huddle, StringComparison.Ordinal))
+        {
+            // Huddle is neither the Human, whose post answers, nor an Agent, whose post asks (ADR-0065): it changes nothing here.
+            return;
+        }
+
         if (string.Equals(e.Message.SenderId, KnownIds.Human, StringComparison.Ordinal))
         {
             this.Apply(roomId, state =>
             {
                 state.Remove(NeedsYouReason.Mention);
                 state.Remove(NeedsYouReason.Budget);
-            });
+            }, room: e.Room);
 
             return;
         }
@@ -134,7 +160,7 @@ internal sealed class NeedsYouTracker
                 state.Set(NeedsYouReason.Budget, now, e.Message.SenderName);
                 state.Dismissed = false;
             }
-        });
+        }, room: e.Room);
     }
 
     /// <summary>A Continue granted more Budget, so the Budget reason ends. A Mention does not: Continue is not a reply.</summary>
@@ -206,23 +232,22 @@ internal sealed class NeedsYouTracker
     {
         try
         {
-            IReadOnlyList<Room> current = await this.teamDirectory.GetRoomsAsync();
+            IReadOnlyList<Room> current = await this.teamDirectory.GetRoomsAsync().ConfigureAwait(false);
             HashSet<string> alive = [.. current.Select(room => room.Id)];
-            bool changed;
+            string[] gone;
             lock (this.gate)
             {
-                string[] gone = [.. this.rooms.Keys.Where(id => !alive.Contains(id))];
+                gone = [.. this.rooms.Keys.Where(id => !alive.Contains(id))];
                 foreach (string id in gone)
                 {
                     _ = this.rooms.Remove(id);
                 }
-
-                changed = gone.Length > 0;
             }
 
-            if (changed)
+            if (gone.Length > 0)
             {
                 this.Changed?.Invoke();
+                this.ResolveAll(gone);
             }
         }
         catch (Exception ex)
@@ -238,9 +263,12 @@ internal sealed class NeedsYouTracker
     /// <param name="roomId">The Room to change.</param>
     /// <param name="mutate">The change.</param>
     /// <param name="live">Whether this is a live event, which stops a later startup <see cref="Seed"/> for the Room.</param>
-    private void Apply(string roomId, Action<RoomState> mutate, bool live = true)
+    /// <param name="room">The Room, when the event that caused the change carried it.</param>
+    private void Apply(string roomId, Action<RoomState> mutate, bool live = true, Room? room = null)
     {
         bool changed;
+        List<FeedMessage> arrived = [];
+        List<NeedsYouReason> left = [];
         lock (this.gate)
         {
             if (!live && this.heard.Contains(roomId))
@@ -255,6 +283,7 @@ internal sealed class NeedsYouTracker
 
             RoomState state = this.rooms.TryGetValue(roomId, out RoomState? existing) ? existing : new RoomState();
             NeedsYouEntry? before = NeedsYouTracker.ToEntry(roomId, state);
+            Dictionary<NeedsYouReason, ReasonInfo> held = new(state.Reasons);
             mutate(state);
             NeedsYouEntry? after = NeedsYouTracker.ToEntry(roomId, state);
 
@@ -268,13 +297,82 @@ internal sealed class NeedsYouTracker
             }
 
             changed = !Equals(before, after);
+            if (live)
+            {
+                arrived = [.. state.Reasons.Where(pair => !held.ContainsKey(pair.Key)).Select(pair => NeedsYouTracker.ToFeedMessage(roomId, room, pair.Key, pair.Value))];
+                left = [.. held.Keys.Where(reason => !state.Reasons.ContainsKey(reason))];
+            }
         }
 
         if (changed)
         {
             this.Changed?.Invoke();
         }
+
+        this.PublishFeed(roomId, arrived, left);
     }
+
+    /// <summary>Posts the reasons that arrived and resolves the ones that left. The Feed never decides; it is told after the lock is released.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <param name="arrived">The items for reasons the Room did not hold before.</param>
+    /// <param name="left">The reasons the Room no longer holds.</param>
+    private void PublishFeed(string roomId, List<FeedMessage> arrived, List<NeedsYouReason> left)
+    {
+        if (this.feed is null)
+        {
+            return;
+        }
+
+        foreach (FeedMessage message in arrived)
+        {
+            this.feed.Post(message);
+        }
+
+        foreach (NeedsYouReason reason in left)
+        {
+            this.feed.Resolve(roomId, NeedsYouTracker.SourceTypeOf(reason));
+        }
+    }
+
+    /// <summary>Resolves all four Room reasons for each Room that no longer exists.</summary>
+    /// <param name="roomIds">The deleted Rooms.</param>
+    private void ResolveAll(IEnumerable<string> roomIds)
+    {
+        if (this.feed is null)
+        {
+            return;
+        }
+
+        foreach (string roomId in roomIds)
+        {
+            foreach (NeedsYouReason reason in AllReasons)
+            {
+                this.feed.Resolve(roomId, NeedsYouTracker.SourceTypeOf(reason));
+            }
+        }
+    }
+
+    /// <summary>The Feed source type that records a reason.</summary>
+    /// <param name="reason">A single reason.</param>
+    private static FeedSourceType SourceTypeOf(NeedsYouReason reason) => reason switch
+    {
+        NeedsYouReason.Mention => FeedSourceType.RoomMention,
+        NeedsYouReason.Question => FeedSourceType.RoomQuestion,
+        NeedsYouReason.Form => FeedSourceType.RoomForm,
+        _ => FeedSourceType.RoomBudget,
+    };
+
+    /// <summary>Builds the Notification for a reason that has just begun. A Budget pause is Huddle's; the others are the Agent's.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <param name="room">The Room, when the event carried it; its Name and Team ride along.</param>
+    /// <param name="reason">The reason.</param>
+    /// <param name="info">Who began it.</param>
+    private static FeedMessage ToFeedMessage(string roomId, Room? room, NeedsYouReason reason, ReasonInfo info) => new(
+        NeedsYouTracker.SourceTypeOf(reason),
+        roomId,
+        reason == NeedsYouReason.Budget ? FeedActor.Huddle : new FeedActor(FeedActorKind.Agent, info.By),
+        true,
+        new RoomWaitPayload(roomId, room?.Name, room?.Team));
 
     /// <summary>The entry a Room shows, or <see langword="null"/> when it has no reasons or is dismissed.</summary>
     /// <param name="roomId">The Room's id.</param>

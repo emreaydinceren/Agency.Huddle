@@ -1,0 +1,37 @@
+.theme-lab-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.theme-lab-controls ::deep .mud-select {
+    max-width: 240px;
+}
+
+.theme-lab-inspect {
+    min-height: 3em;
+    margin: 8px 0 0;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    white-space: pre-wrap;
+    border: 1px solid var(--hu-ink-edge);
+}
+
+.theme-lab-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.theme-lab-note {
+    margin: 0 0 8px;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.theme-lab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}

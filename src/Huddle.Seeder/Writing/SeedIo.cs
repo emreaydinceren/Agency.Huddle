@@ -2,7 +2,7 @@ using System.Text;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>Writes text files the way Huddle expects them: UTF-8 without a byte-order mark, LF line endings, a final newline.</summary>
+/// <summary>Writes text files the way Huddle expects them: UTF-8 without a byte-order mark, LF line endings, a final newline. Seeder spec §5.</summary>
 internal static class SeedIo
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
@@ -25,6 +25,20 @@ internal static class SeedIo
         }
 
         File.WriteAllText(path, normalised, Utf8NoBom);
+    }
+
+    /// <summary>Writes <paramref name="bytes"/> to <paramref name="path"/>, creating the folder first.</summary>
+    /// <param name="path">The file to write.</param>
+    /// <param name="bytes">The content, written as it is.</param>
+    internal static void WriteBytes(string path, byte[] bytes)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllBytes(path, bytes);
     }
 
     /// <summary>Combines a data folder with a <c>/</c>-separated relative path.</summary>

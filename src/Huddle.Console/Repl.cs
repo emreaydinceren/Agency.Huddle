@@ -135,7 +135,8 @@ internal sealed partial class Repl(
                     Task<PromptResult> promptTask = session.PromptAsync(line, cancellationToken);
                     Task<StopReason?> renderTask = renderer.RenderTurnAsync(session.Events, cancellationToken);
                     await Task.WhenAll(promptTask, renderTask).ConfigureAwait(false);
-                    output.WriteLine($"(stop: {promptTask.Result.StopReason})", ConsoleStyle.Info);
+                    PromptResult promptResult = await promptTask.ConfigureAwait(false);
+                    output.WriteLine($"(stop: {promptResult.StopReason})", ConsoleStyle.Info);
                 }
                 catch (AgentDisconnectedException)
                 {

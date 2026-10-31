@@ -5,12 +5,12 @@
 [language.md](engineering/language.md) (**Skill**, **Proposal**, **Candidate**)
 
 This is the high-level design for three pieces of work that together let a new user describe
-a goal in conversation and have a Teammate assemble a team for it:
+a goal in conversation and have an Agent assemble a team for it:
 
 | Stream | Delivers | Depends on |
 | --- | --- | --- |
 | **S1 — Skills infrastructure** | Skill files, their resolution, the Skill Index in the system prompt, `read_skill`, tool grants by Skill, and the Skills UI | Nothing |
-| **S2 — Team-building tools** | `validate_teammate`, `propose_teammates`, the Proposal and its Approve / Decline, and `MaxTeammatesPerTeam` / `MaxLiveProcesses` | The two contracts in §5.3 only; runs in parallel with S1 |
+| **S2 — Team-building tools** | `validate_agent`, `propose_agents`, the Proposal and its Approve / Decline, and `MaxAgentsPerTeam` / `MaxLiveProcesses` | The two contracts in §5.3 only; runs in parallel with S1 |
 | **S3 — Content and the built-in Chief of Staff** | The `team-building` Skill's four files, the permanent Chief of Staff, and its unprompted Greeting | S1 and S2 |
 
 It is written for the engineers or agents building those streams, with no memory of the
@@ -28,26 +28,26 @@ recorded in §14 with the alternative it beat.
 
 ## 1. Goal
 
-Give every Huddle installation a Teammate that can turn *"I want help with X"* into a working
-team, and give every Teammate a way to carry know-how that costs nothing until it is needed.
+Give every Huddle installation an Agent that can turn *"I want help with X"* into a working
+team, and give every Agent a way to carry know-how that costs nothing until it is needed.
 
 Concretely:
 
 1. **A Skill** is a named folder of Markdown that teaches an Agent one kind of work. An Agent
    sees the name and one-line description of each Skill assigned to it on every Turn, and
    reads the body with `read_skill` only when the conversation calls for it.
-2. **An Agent can propose new Teammates, but never create them.** It validates Candidates
+2. **An Agent can propose new Agents, but never create them.** It validates Candidates
    for free, then holds a Proposal in a Room. The Human's **Approve** creates them; the
    outcome is posted as a Message from the Human, which wakes the proposer.
-3. **The Chief of Staff always exists, and speaks first.** It is the one built-in Teammate,
+3. **The Chief of Staff always exists, and speaks first.** It is the one built-in Agent,
    it holds the `team-building` Skill, and deleting it brings the default back at the next
    start. On a fresh install it posts a **Greeting** before the Human types anything.
-4. **Spend stays the Human's decision.** No App Tool creates a Teammate, a Candidate cannot
+4. **Spend stays the Human's decision.** No App Tool creates an Agent, a Candidate cannot
    pick a Model, Effort, Adapter or Skill, and the library has a ceiling.
 
 **Why this matters.** A fresh install today opens to an empty library: `App_Data/` is
 gitignored, so the repository ships no Personas at all. A new user must learn frontmatter,
-Names, Aliases, Teams and the Reply Gate before a single Teammate answers. This design
+Names, Aliases, Teams and the Reply Gate before a single Agent answers. This design
 replaces that learning curve with a conversation.
 
 ---
@@ -60,12 +60,12 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 | --- | --- | --- |
 | U1 | *"I need help researching competitors for a product launch."* (to the Chief of Staff) | The Chief of Staff recognises the Skill from its description, calls `read_skill`, interviews briefly, checks `list_agents`, and proposes a panel or pipeline. A Proposal card appears in the Room |
 | U2 | Clicks **Approve** on a Proposal of three Candidates | Three Persona files are written one at a time; a Message from the Human *"Approved. Created Vera, Quill and Iris. @Chief of Staff go ahead."* wakes the Chief of Staff, which opens a work Room with a `seed` |
-| U3 | *"Drop the Tester and make the Writer more concise."* | The Chief of Staff revises and calls `propose_teammates` again; the new Proposal **replaces** its own pending one |
-| U4 | Clicks **Decline** | *"Declined the proposed Teammates: Vera, Quill."* is posted as the Human, waking the proposer, which asks what to change |
-| U5 | Approves when the Team has 7 Teammates, the Proposal adds 3 to it, and `MaxTeammatesPerTeam` is 8 | Nothing is created; the posted Message says the Team's limit would be exceeded and by how much |
-| U6 | Another Agent calls `propose_teammates` in a Room where the Chief of Staff's Proposal waits | Refused: *"A Proposal from Chief of Staff is already waiting in this Room."* |
-| U7 | Assigns `team-building` to Nova on the Teammate card | Nova restarts with the Skill in its index and `validate_teammate` / `propose_teammates` in its tool list |
-| U8 | Writes `{DataDir}/Skills/meeting-notes/SKILL.md` by hand | The Skill appears on Settings › Skills as *Yours* within about half a second, and in the Teammate card's picker |
+| U3 | *"Drop the Tester and make the Writer more concise."* | The Chief of Staff revises and calls `propose_agents` again; the new Proposal **replaces** its own pending one |
+| U4 | Clicks **Decline** | *"Declined the proposed Agents: Vera, Quill."* is posted as the Human, waking the proposer, which asks what to change |
+| U5 | Approves when the Team has 7 Agents, the Proposal adds 3 to it, and `MaxAgentsPerTeam` is 8 | Nothing is created; the posted Message says the Team's limit would be exceeded and by how much |
+| U6 | Another Agent calls `propose_agents` in a Room where the Chief of Staff's Proposal waits | Refused: *"A Proposal from Chief of Staff is already waiting in this Room."* |
+| U7 | Assigns `team-building` to Nova on the Agent card | Nova restarts with the Skill in its index and `validate_agent` / `propose_agents` in its tool list |
+| U8 | Writes `{DataDir}/Skills/meeting-notes/SKILL.md` by hand | The Skill appears on Settings › Skills as *Yours* within about half a second, and in the Agent card's picker |
 | U9 | Edits `{DataDir}/Skills/team-building/roles.md` | The Skill shows as *Overridden*; the next `read_skill` returns the edited text; nobody restarts |
 | U10 | Clicks **Restore default** for `team-building` | The override folder is removed; the shipped text applies again |
 | U11 | Renames the Chief of Staff to "Alfred" | Alfred keeps the `_builtin` marker; no second Chief of Staff appears at the next start |
@@ -84,7 +84,7 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 | --- | --- |
 | **Executable Skills** — scripts, commands, plugins | A Skill is text. [ADR-0020](adr/0020-a-hook-is-a-prompt.md) renamed Hook to Prompt precisely because a name suggesting executable extension points was wrong here. Tools stay C# `IAppTool`s |
 | **Claude's native `.claude/skills/`** | Only `claude-agent-acp` honours it, it is an implicit channel `rules.md` already treats as a hazard, and the Human cannot see it (ADR-0021) |
-| **An Agent creating a Teammate directly** | Each Teammate is a billed process. Only the Human's Approve writes a Persona file |
+| **An Agent creating an Agent directly** | Each Agent is a billed process. Only the Human's Approve writes a Persona file |
 | **A Candidate choosing Model, Effort, Adapter or Skills** | Each grants tools or spends money. V2 at the earliest (§14, D-5) |
 | **Editing a Candidate on the Proposal card** | The Human replies in the Room; the Agent revises. V2 |
 | **In-app editing or creation of Skill files** | V1 is read-only in the UI; Skills are written in the Human's editor. V2 |
@@ -93,7 +93,7 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 | **Taking a default tool *away* from a Persona** | That is the rest of [Roadmap](engineering/roadmap.md) item 9. This spec builds only the *grant* half |
 | **A Skill marketplace, sharing or versioning** | No current feature asks for it; the hub's "simple over complete" rule applies |
 | **Shipping any Persona other than the Chief of Staff** | The repository ships no library; the Chief of Staff builds the rest |
-| **A Greeting from any Teammate but the Chief of Staff**, or on anything but an empty Room | One unprompted, paid Turn per install is a deliberate exception to "a Turn starts from a Message"; it stays one |
+| **A Greeting from any Agent but the Chief of Staff**, or on anything but an empty Room | One unprompted, paid Turn per install is a deliberate exception to "a Turn starts from a Message"; it stays one |
 | **Greeting when the Human first opens the Room** | Would need a new Envelope type and a `ProtocolVersion` bump to 4 in lockstep across every pipe client (§14, D-17) |
 
 ---
@@ -112,14 +112,14 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 4. **Defaults in code, overrides on disk.** Shipped Skills and the Chief of Staff's default
    text live in the assembly. A file on disk overrides; deleting the override restores the
    default ([ADR-0007](adr/0007-model-facing-text-is-configuration.md)).
-5. **Being wrong is loud, not disabling.** An unknown Skill degrades a Teammate rather than
+5. **Being wrong is loud, not disabling.** An unknown Skill degrades an Agent rather than
    rejecting it; an invalid override falls back to the default with a visible warning; a
    partial Approve reports exactly what failed.
 6. **The Human decides spend, one bounded grant at a time.** One Approve covers one
    Proposal, never "create freely from now on" ([ADR-0006](adr/0006-a-room-has-a-budget-for-agent-replies.md)).
 7. **Session-start facts are fixed for the session.** The Skill Index and tool grants are
    bound at `session/new`, like the system prompt and `tools/list`. Skill *bodies* are read
-   live. Editing a Skill never restarts a Teammate (the Prompt rule, `rules.md`).
+   live. Editing a Skill never restarts an Agent (the Prompt rule, `rules.md`).
 8. **Simple over complete.** No abstraction a current feature does not need. In-memory
    state where a restart losing it is acceptable; files where the Human owns the content.
 
@@ -153,8 +153,8 @@ Each row is a scenario the finished system must handle. §13 walks the first one
                                 │  │   ┌────────▼────────────────────────────────┐ │
                                 │  │   │ App Tools                               │ │
                                 │  │   │  read_skill ─────────────▶ SkillStore   │ │  S1
-                                │  │   │  validate_teammate ──┐                  │ │  S2
-                                │  │   │  propose_teammates ──┼─▶ CandidateChecker│ │
+                                │  │   │  validate_agent ──┐                  │ │  S2
+                                │  │   │  propose_agents ──┼─▶ CandidateChecker│ │
                                 │  │   │                      └─▶ ProposalStore  │ │
                                 │  │   └─────────────────────────────┬───────────┘ │
                                 │  │                                 │ ProposalChanged
@@ -167,9 +167,9 @@ Each row is a scenario the finished system must handle. §13 walks the first one
                                 │  │   │  └─ ChatService.PostAsync (as Human) ──┼──┼─▶ wakes proposer
                                 │  │   └────────────────────────────────────────┘  │
                                 │  │   ┌────────────────────────────────────────┐  │
-                                └──┼──▶│ BuiltinTeammateSeeder (startup)        │──┼─▶ PersonaStore.Add  S3
+                                └──┼──▶│ BuiltinAgentSeeder (startup)        │──┼─▶ PersonaStore.Add  S3
                                    │   └────────────────────────────────────────┘  │
-                                   │   Settings › Skills tab · Teammate card picker │  S1
+                                   │   Settings › Skills tab · Agent card picker │  S1
                                    └──────────────────────────────────────────────┘
 ```
 
@@ -180,11 +180,11 @@ Each row is a scenario the finished system must handle. §13 walks the first one
     SkillCatalog, SkillStore, Skill Index,│
     read_skill, SkillGrants, UI           │
                                           ├──▶ S3 Content + Chief of Staff
-  S2 Team-building tools ────────────────┤      team-building/*.md, BuiltinTeammateSeeder,
-    CandidateChecker, validate_teammate,  │      Reset to default, manual tests
-    ProposalStore, propose_teammates,     │
+  S2 Team-building tools ────────────────┤      team-building/*.md, BuiltinAgentSeeder,
+    CandidateChecker, validate_agent,  │      Reset to default, manual tests
+    ProposalStore, propose_agents,     │
     ProposalService, ProposalCard,        │
-    MaxTeammatesPerTeam                   │
+    MaxAgentsPerTeam                   │
     MaxLiveProcesses                      │
                                           │
   Shared contracts (§5.3) fixed first ────┘
@@ -214,7 +214,7 @@ section.
 ---
 name: team-building                       # required; equals the folder name
 description: Use when the Human wants...  # required; one line; what triggers the Skill
-tools: [validate_teammate, propose_teammates]   # optional; see §6.5
+tools: [validate_agent, propose_agents]   # optional; see §6.5
 ---
 ```
 
@@ -223,8 +223,8 @@ tools: [validate_teammate, propose_teammates]   # optional; see §6.5
 | Tool | Arguments | Returns (always a string, never throws for expected failures) |
 | --- | --- | --- |
 | `read_skill` | `name` (string, required), `file` (string, optional; a file name such as `roles.md`) | The file's text, prefixed with a one-line header naming the Skill and file, plus a list of the Skill's other files |
-| `validate_teammate` | `candidate` (object: `name`, `alias`, `title`, `body` required; `teams` array and `consult_when` string optional) | `Valid.` or one line per problem |
-| `propose_teammates` | `roomId` (string, required), `candidates` (array of the same object, 1..n) | `Proposed N Teammates in Room X; the Human has been asked to approve.` or the refusal |
+| `validate_agent` | `candidate` (object: `name`, `alias`, `title`, `body` required; `teams` array and `consult_when` string optional) | `Valid.` or one line per problem |
+| `propose_agents` | `roomId` (string, required), `candidates` (array of the same object, 1..n) | `Proposed N Agents in Room X; the Human has been asked to approve.` or the refusal |
 
 ---
 
@@ -341,7 +341,7 @@ public sealed record SkillResolution(IReadOnlyList<Skill> Skills, IReadOnlyList<
   an Info issue.
 - A file over 64 KB is skipped and reported as a Warning. The limit protects the context
   window of the Agent that reads it.
-- `SkillsChanged` never restarts a Teammate (Design Principle 7).
+- `SkillsChanged` never restarts an Agent (Design Principle 7).
 
 **V1 vs V2.** V2 adds write methods (`Save`, `Create`) for in-app editing. The snapshot and
 per-file resolution do not change.
@@ -376,7 +376,7 @@ never an error. A `skills` entry that names no Skill is **not** a parse error; i
 runtime warning (§6.4).
 
 **Implementation notes.**
-- The Teammate card's existing text editor preserves both fields verbatim, because Edit
+- The Agent card's existing text editor preserves both fields verbatim, because Edit
   mode round-trips the whole file text.
 - `consult_when` needs no code at all: every non-`_` frontmatter field already becomes a
   title-cased line of the job description.
@@ -384,7 +384,7 @@ runtime warning (§6.4).
 **Constraints.**
 - **Do not add `Skills` to the `Persona` record.** `PersonaSupervisor.NeedsRestart` compares
   `Persona` records by value, and a list member compares by *reference*. Every index refresh
-  would build a new list and restart every Teammate on every file event. `Skills` changes
+  would build a new list and restart every Agent on every file event. `Skills` changes
   already cause a restart correctly, because `Persona.Text` contains the frontmatter.
   Consumers that need the list parse it from `Text` or read it from `PersonaEntry`.
 - `_builtin` accepts one value in V1: `chief-of-staff`. Any other value is kept but has no
@@ -474,7 +474,7 @@ internal static class SkillGrants
 {
     /// <summary>Tools that exist only for Personas holding a Skill that lists them.</summary>
     internal static readonly FrozenSet<string> Grantable =
-        FrozenSet.ToFrozenSet(["validate_teammate", "propose_teammates"], StringComparer.Ordinal);
+        FrozenSet.ToFrozenSet(["validate_agent", "propose_agents"], StringComparer.Ordinal);
 
     internal static IReadOnlyList<IAppTool> Offer(IReadOnlyList<IAppTool> all, IReadOnlyList<Skill> skills);
 }
@@ -502,7 +502,7 @@ internal static class SkillGrants
 **Constraints.** **Gating is defined in code, never by Skill files.** This refines ADR-0021's
 wording ("a tool that some Skill lists is offered only to Personas assigned that Skill"). As
 first written, a Human's Skill listing `post_message` would have silently removed
-`post_message` from every other Teammate. §14, D-9 records the change.
+`post_message` from every other Agent. §14, D-9 records the change.
 
 **V1 vs V2.** Roadmap item 9's revocation half (`_tools`, taking a default tool away) is V2
 and composes with this: `offer` gains one more filter.
@@ -549,7 +549,7 @@ which `SkillStore` already guarantees.
 
 ---
 
-### 6.7 Skills UI — Teammate card picker and Settings › Skills (S1)
+### 6.7 Skills UI — Agent card picker and Settings › Skills (S1)
 
 **Purpose.** Let the Human see which Skills exist, assign them, and restore a shipped one.
 
@@ -557,7 +557,7 @@ which `SkillStore` already guarantees.
 
 | Surface | Behaviour |
 | --- | --- |
-| **Teammate card — Skills** (New and Edit) | A `MudSelect` with `MultiSelection` over `SkillStore.All`, each option showing the description as helper text. Writes the `skills` field into the card's text with `PersonaFrontmatter.WriteListField`, the list counterpart of the existing `WriteScalarField` the Adapter select uses. Helper text: *"Changing Skills restarts this Teammate."* An assigned Skill that no longer exists is listed with a warning chip, so it can be removed |
+| **Agent card — Skills** (New and Edit) | A `MudSelect` with `MultiSelection` over `SkillStore.All`, each option showing the description as helper text. Writes the `skills` field into the card's text with `PersonaFrontmatter.WriteListField`, the list counterpart of the existing `WriteScalarField` the Adapter select uses. Helper text: *"Changing Skills restarts this Agent."* An assigned Skill that no longer exists is listed with a warning chip, so it can be removed |
 | **Settings › Skills** (new tab) | Read-only table: Name, Description, Source (*Default* / *Overridden* / *Yours*), folder path, files, and Issues. **Restore default** on *Overridden* rows, with a confirm dialog naming the folder that will be deleted. A caption states the Skills folder path and that new Skills are written by hand |
 
 **Inputs / outputs.** In: `SkillStore`, `PersonaStore`. Out: text written through the card's
@@ -568,7 +568,7 @@ existing save path; `SkillStore.RestoreDefault`.
 
 **Implementation notes.**
 - `SettingsTab` gains `Skills`. Follow the Personas tab added in commit `9eeeafe` for layout.
-- Human-facing copy follows `language.md`: "Skill", "Teammate", never "ability" or "plugin".
+- Human-facing copy follows `language.md`: "Skill", "Agent", never "ability" or "plugin".
 - bUnit tests pair with `TeamWebApplicationFactory`, copying `SkillStore` into the bUnit
   container alongside the existing singletons.
 
@@ -577,12 +577,20 @@ from `Skill.FolderPath`, which the store computed, never from UI input.
 
 **V1 vs V2.** V2: in-app editing with validation (the Prompts pattern) and "New Skill".
 
+> [!NOTE]
+> **Superseded in part on 2026-10-18.** Settings › Skills is now three tabs (Skills, Packs, Sources),
+> and Skills from outside Huddle arrive through `SKILLS.md`, written by the Human's own AI tool, and
+> are copied into `{DataDir}/Skills/` when an Agent needs them. The Agent card's select also
+> offers those copyable Skills. Huddle no longer imports or downloads a Skill. See
+> [Huddle.SkillPacks-Specifications.md](Huddle.SkillPacks-Specifications.md) §6.9 and §6.10. This
+> section still describes the built-in, overridden and hand-written Skills, which work as before.
+
 ---
 
-### 6.8 CandidateChecker and `validate_teammate` (S2)
+### 6.8 CandidateChecker and `validate_agent` (S2)
 
 **Purpose.** Tell an Agent, for free and with no side effects, every reason a Candidate
-would not become a Teammate.
+would not become an Agent.
 
 **Responsibilities.**
 - Build the text a Candidate would be written as.
@@ -625,11 +633,11 @@ internal sealed class CandidateChecker(PersonaStore personas, ITeamDirectory dir
   `PersonaIndex` from the current entries plus every new text, and returns every rejection
   for the new texts. `Add` then calls the same code.
 - A Candidate JSON object carrying `skills`, `model`, `effort`, `adapter` or `_builtin` is a
-  problem (*"A Candidate cannot set 'model'; the Human sets it on the Teammate card."*),
+  problem (*"A Candidate cannot set 'model'; the Human sets it on the Agent card."*),
   not silently dropped, so the model learns the rule.
 - The Body is placed after the composed frontmatter. A Body that itself begins with `---` is
   a problem, because it would read as a second frontmatter block to a human editor.
-- `validate_teammate` wraps `CheckAsync` for one Candidate and is offered only through
+- `validate_agent` wraps `CheckAsync` for one Candidate and is offered only through
   `SkillGrants`.
 
 **Constraints.** Never throws for an invalid Candidate. `ChatException` from the store is
@@ -639,7 +647,7 @@ caught and turned into a problem string.
 
 ---
 
-### 6.9 ProposalStore and `propose_teammates` (S2)
+### 6.9 ProposalStore and `propose_agents` (S2)
 
 **Purpose.** Hold at most one pending Proposal per Room, and let an Agent create or replace
 it.
@@ -669,10 +677,10 @@ internal sealed class ProposalStore(RoomEvents events)
 }
 ```
 
-`propose_teammates` returns, on success:
+`propose_agents` returns, on success:
 
 ```text
-Proposed 3 Teammates (Vera, Quill, Iris) in Room 'Launch' (id 01H...). The Human has been
+Proposed 3 Agents (Vera, Quill, Iris) in Room 'Launch' (id 01H...). The Human has been
 asked to approve. Do not create Rooms for them or mention them yet; you will be told the
 outcome in this Room.
 ```
@@ -685,7 +693,7 @@ outcome in this Room.
       → Room archived?                     yes → "That Room is Archived."
       → candidates 1..n, parse             bad → problems
       → CandidateChecker.CheckAsync        bad → problems, one per line
-      → Team count + n ≤ MaxTeammatesPerTeam, and live count + n ≤ MaxLiveProcesses? (HireLimitGuard)          no  → "Team <Team> has 5 Teammates and the limit is 8 per Team;
+      → Team count + n ≤ MaxAgentsPerTeam, and live count + n ≤ MaxLiveProcesses? (HireLimitGuard)          no  → "Team <Team> has 5 Agents and the limit is 8 per Team;
                                                   propose at most 3."
       → ProposalStore.TryPut
             Refused(existing) → "A Proposal from <name> is already waiting in this Room."
@@ -710,7 +718,7 @@ replaced, dropped or restarted.
 
 ### 6.10 ProposalService — Approve and Decline (S2)
 
-**Purpose.** Turn the Human's answer into Teammates and a Message, exactly once.
+**Purpose.** Turn the Human's answer into Agents and a Message, exactly once.
 
 **Responsibilities.**
 - Take the Proposal atomically; a second click, from any tab, finds nothing.
@@ -741,7 +749,7 @@ public sealed record ProposalOutcome(
  p = proposals.TryTake(roomId, proposalId)       null → Gone (another tab won); post nothing
  count = personas.Entries.Count
  if HireLimitGuard refuses the Team or the live count (see §8 limit check)
-      → text = "Approved, but nothing was created: 7 Teammates exist, the limit is 8, and
+      → text = "Approved, but nothing was created: 7 Agents exist, the limit is 8, and
                 this Proposal adds 3. @<proposer>"
  else
       await creationGate.WaitAsync(ct)            (SemaphoreSlim(1,1), app-wide)
@@ -764,8 +772,8 @@ Outcome Message templates:
 | Created | `Approved. Created Vera, Quill and Iris. @Chief of Staff go ahead.` |
 | PartlyCreated | `Approved. Created Vera and Quill. Could not create Iris: Persona Alias 'iri' is also used by 'Teams/Iris.md'. @Chief of Staff` |
 | NoneCreated | `Approved, but nothing was created. Vera: …; Quill: …. @Chief of Staff` |
-| OverLimit | `Approved, but nothing was created: Team <Team> has 7 Teammates, the limit is 8 per Team, and this Proposal adds 3. @Chief of Staff` (a live-process refusal reads "N live processes are running, the limit is M live processes, and this Proposal adds K.") |
-| Declined | `Declined the proposed Teammates: Vera, Quill. @Chief of Staff` |
+| OverLimit | `Approved, but nothing was created: Team <Team> has 7 Agents, the limit is 8 per Team, and this Proposal adds 3. @Chief of Staff` (a live-process refusal reads "N live processes are running, the limit is M live processes, and this Proposal adds K.") |
+| Declined | `Declined the proposed Agents: Vera, Quill. @Chief of Staff` |
 
 **Implementation notes.**
 - **The texts are Human-authored Messages, so they are interface copy, not Prompts.** They
@@ -776,12 +784,12 @@ Outcome Message templates:
   longer exists gets no Mention, and the text omits it.
 - `creationGate` also closes the pre-existing race in `PersonaStore.Add`, but only between
   Proposals. S2 moves the same serialisation into `PersonaStore` itself (a `Lock` around
-  Check-then-Write in `Add` and `Update`) so the Teammate card is covered too.
+  Check-then-Write in `Add` and `Update`) so the Agent card is covered too.
 - Posting as the Human resets the Room's Budget (ADR-0006), which is correct: the Human
   just spoke.
 
 **Constraints.**
-- **No rollback.** A Teammate created before a later failure stays (§14, D-7).
+- **No rollback.** An Agent created before a later failure stays (§14, D-7).
 - The only all-or-nothing rule is the limit.
 - `PostAsync` failure after creation (e.g. the Room was deleted mid-Approve) is logged, and
   `ProposalOutcome.PostedText` is still returned so the card can show it.
@@ -813,27 +821,27 @@ derived from in-memory server state, answered by an in-process call.
 
 **Implementation notes.**
 - A separate component, `Components/Shared/ProposalCard.razor` (there is no `Components/Chat/`
-  folder; `Shared/` holds `TeammateCard.razor`), so `Chat.razor` gains only a
+  folder; `Shared/` holds `AgentProfileCard.razor`), so `Chat.razor` gains only a
   parameterised tag and a subscription.
-- The limit line reads *"This adds 3 Teammates; 5 of 8 exist."* It is recomputed on render
+- The limit line reads *"This adds 3 Agents; 5 of 8 exist."* It is recomputed on render
   from `PersonaStore.Entries.Count`.
 - The card is not rendered for an Archived Room.
 
-**Constraints.** Copy follows `language.md` (Teammate, Proposal, Approve, Decline). The card
-never says *"will be created"*; it says *"Approve creates these Teammates."*
+**Constraints.** Copy follows `language.md` (Agent, Proposal, Approve, Decline). The card
+never says *"will be created"*; it says *"Approve creates these Agents."*
 
 **V1 vs V2.** V2: per-Candidate checkboxes; inline edit.
 
 ---
 
-### 6.12 BuiltinTeammateSeeder and Reset to default (S3)
+### 6.12 BuiltinAgentSeeder and Reset to default (S3)
 
 **Purpose.** Guarantee the Chief of Staff exists, and let the Human return it to default.
 
 **Responsibilities.**
 - At startup, if no loaded Persona carries `_builtin: chief-of-staff`, write the default.
 - Pick a free Name and Alias if the defaults are taken.
-- Provide `ResetAsync(name)` for the Teammate card.
+- Provide `ResetAsync(name)` for the Agent card.
 
 **Inputs / outputs.** In: the embedded default `Builtin/chief-of-staff.md`, `PersonaStore`.
 Out: a Persona file; nothing else.
@@ -857,7 +865,7 @@ Out: a Persona file; nothing else.
   before `PersonaSupervisor` (`ServiceCollectionExtensions.cs:124`). The supervisor then sees
   the Chief of Staff in its first reconciliation, not via a later `PersonasChanged`.
 - Runs regardless of `Acp:Enabled`. Writing a file is free; only starting it spends.
-- The Teammate card replaces **Delete** with **Reset to default** when
+- The Agent card replaces **Delete** with **Reset to default** when
   `entry.Builtin == "chief-of-staff"`, with a confirm dialog: *"Restore the Chief of Staff's
   instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias,
   Rooms and history are kept."*
@@ -880,13 +888,13 @@ Out: a Persona file; nothing else.
 | File | Holds | Read when |
 | --- | --- | --- |
 | `SKILL.md` | Trigger description; step 0 for a new Human; the procedure: interview → take stock → choose a pattern → draft Candidates → validate → propose → after approval, kick off | Always, first |
-| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, a menu of every first team (31 in eight groups, pipelines marked as costing more), one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Teammates greeting it |
+| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, a menu of every first team (31 in eight groups, pipelines marked as costing more), one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Agents greeting it |
 | `team-patterns.md` | Panel, private companions, simulation, pipeline, self-organising; set-up, why it works, what to watch, examples, relative cost; what a team cannot do yet | When choosing a pattern |
 | `roles.md` | 30 roles in seven groups, with an index table, each with `consult_when` and a starter Body | When drafting Candidates |
 
 **Changes required from the draft** (it predates D-1):
-- Frontmatter `tools: [validate_teammate, propose_teammates]`.
-- Step 5 becomes: call `propose_teammates`, then **stop and wait**; the Proposal card is the
+- Frontmatter `tools: [validate_agent, propose_agents]`.
+- Step 5 becomes: call `propose_agents`, then **stop and wait**; the Proposal card is the
   question.
 - Step 6 begins when a Human Message *"Approved. Created …"* arrives. It no longer calls a
   create tool, and it reads `Could not create …` lines and offers to re-propose those.
@@ -896,7 +904,7 @@ Out: a Persona file; nothing else.
 
 **Constraints.** No `mcp__team__` literal in any file (`rules.md` row 55); tool names are
 bare. No explanation of Rooms, Mentions or Budgets in Candidate Bodies (the chat rules
-already reach every Teammate).
+already reach every Agent).
 
 **Status.** The content session reported on 2026-09-22 that all five changes above are
 made, and that the Skill now has four files. S3-T1 therefore arrives after its content, so
@@ -1000,6 +1008,7 @@ No new database table. Everything is a file the Human owns, or memory a restart 
 | Shipped Skill defaults | Assembly, `Skills/Defaults/**` | Code | ✅ | ✅ |
 | Chief of Staff default | Assembly, `Builtin/chief-of-staff.md` | Code | ✅ | ✅ |
 | Skill overrides and the Human's Skills | `{DataDir}/Skills/<name>/*.md` | Human | ✅ | ✅ (`-Clean` deletes only `team.db` and `Teams/`) |
+| A copied Skill's provenance | `{DataDir}/Skills/<name>/.source.json`: the **Source** id it came from, its origin, `copiedFrom` (the pointer folder), commit and folder hash ([Skill Packs](Huddle.SkillPacks-Specifications.md) §6.6) | App (`SkillCopier`) | ✅ | ✅ |
 | A Persona's Skills | `skills:` in its `.md` | Human | ✅ | ❌ |
 | Built-in marker | `_builtin:` in its `.md` | Human (written by the seeder) | ✅ | ❌ (re-seeded) |
 | Pending Proposals | `ProposalStore`, memory | App | ❌ | ❌ |
@@ -1021,8 +1030,8 @@ No new database table. Everything is a file the Human owns, or memory a restart 
 
 | Key | Type | Written by | Read by | In `list_agents`? |
 | --- | --- | --- | --- | --- |
-| `skills` | list | Teammate card, seeder | `SkillStore.Resolve`, factory, `read_skill` | No (`JobDescriptionExcludedKeys`) |
-| `_builtin` | scalar | Seeder | Seeder, Teammate card | No (`_` prefix) |
+| `skills` | list | Agent card, seeder | `SkillStore.Resolve`, factory, `read_skill` | No (`JobDescriptionExcludedKeys`) |
+| `_builtin` | scalar | Seeder | Seeder, Agent card | No (`_` prefix) |
 | `consult_when` | scalar | `ProposalService` via Candidate | Nothing new | **Yes**, as "Consult When: …" |
 
 **Candidate (tool input and in memory).**
@@ -1058,8 +1067,8 @@ All under `Team:`, beside the existing keys in `TeamOptions` and `AcpOptions`.
 | Key | Type | Default | Note |
 | --- | --- | --- | --- |
 | `Acp:SkillsDir` | string | `Skills` | Relative to `DataDir`. Created at startup |
-| `Acp:MaxTeammatesPerTeam` | int | `8` | Most Teammates one Team may hold. Checked at propose and at Approve; never on the Teammate card. **Zero or less disables it** |
-| `Acp:MaxLiveProcesses` | int | `16` | Most live Teammate processes across every Team. Checked at propose and at Approve; never on the Teammate card. **Zero or less disables it** |
+| `Acp:MaxAgentsPerTeam` | int | `8` | Most Agents one Team may hold. Checked at propose and at Approve; never on the Agent card. **Zero or less disables it** |
+| `Acp:MaxLiveProcesses` | int | `16` | Most live Agent processes across every Team. Checked at propose and at Approve; never on the Agent card. **Zero or less disables it** |
 
 Both are scalars, so the collection-initialiser rule (`rules.md` row 26) does not apply.
 
@@ -1070,7 +1079,7 @@ Both are scalars, so the collection-initialiser rule (`rules.md` row 26) does no
                                           ├──▶ Settings › Skills (live)
                                           └──▶ Skill Index + grants (at session/new only)
 
- propose_teammates ──▶ ProposalStore ──▶ ProposalCard ──Approve──▶ ProposalService
+ propose_agents ──▶ ProposalStore ──▶ ProposalCard ──Approve──▶ ProposalService
                                                                    ├─▶ PersonaStore.Add ─▶ Teams/*.md
                                                                    │        └─▶ PersonasChanged ─▶ PersonaSupervisor starts it
                                                                    └─▶ ChatService.PostAsync(as Human)
@@ -1110,7 +1119,7 @@ Both are scalars, so the collection-initialiser rule (`rules.md` row 26) does no
 | 3 | Body and Title | `Iris has a blank Title.` |
 | 4 | Collisions among Candidates | `Vera and Vela both use the Alias 'vee'.` |
 | 5 | Collisions with the library (`PersonaStore.Check`) | `Persona Alias 'jar' is also used by 'Teams/Jarvis.md'.` |
-| 6 | Reserved Names | `'You' is the Human's Name.` / `'echo' is a connected Agent that is not a Teammate.` |
+| 6 | Reserved Names | `'You' is the Human's Name.` / `'echo' is a connected Agent that is not an Agent.` |
 
 ### 8.4 Proposal replacement
 
@@ -1143,7 +1152,7 @@ Name or Alias of any loaded Persona and no `{Name}.md` on disk.
 | `SkillStore` rebuild | Keep the previous snapshot on I/O failure after three retries; log a Warning |
 | `ProposalService` | `ChatException` per Candidate → `Failed`. Anything else propagates to the card, which shows a generic error and leaves the Proposal taken (logged) |
 | Seeder | A failed write logs an Error and lets startup continue. The app is usable without the Chief of Staff |
-| UI | Copy per `language.md`; failures shown in a `MudAlert`, as the Teammate card does |
+| UI | Copy per `language.md`; failures shown in a `MudAlert`, as the Agent card does |
 
 ---
 
@@ -1152,10 +1161,10 @@ Name or Alias of any loaded Persona and no `{Name}.md` on disk.
 | What | Mode | Trigger | Cost |
 | --- | --- | --- | --- |
 | Skill snapshot | **Full rebuild**, debounced | Any watcher event under `SkillsDir` | O(files); a few ms for tens of files |
-| Skill Index and grants | **Per session**, at `session/new` | Teammate start or restart | One `Resolve`, O(assigned Skills) |
+| Skill Index and grants | **Per session**, at `session/new` | Agent start or restart | One `Resolve`, O(assigned Skills) |
 | `read_skill` body | **Per call**, live | Tool call | One dictionary lookup |
 | Persona index | Full rebuild (existing) | Persona file events, `Add`, `Update` | Unchanged |
-| Proposal | Point update | `propose_teammates`, Approve, Decline, archive | O(1) |
+| Proposal | Point update | `propose_agents`, Approve, Decline, archive | O(1) |
 | Built-in check | **Once**, at startup | Host start | O(Personas) |
 | Greeting check | **Once per runner start** | `Welcome` received and session created | O(Rooms in the `Welcome`); one file-length read per Room on the server |
 
@@ -1173,19 +1182,19 @@ was told and what it can call in agreement.
 | Worker | Kind | Lifetime | Concurrency notes |
 | --- | --- | --- | --- |
 | `SkillStore` watcher + debounce timer | `FileSystemWatcher` + `System.Threading.Timer` | App | Rebuild on the timer thread; snapshot swap is a `volatile` write; `SkillsChanged` raised outside locks |
-| `BuiltinTeammateSeeder` | `IHostedService`, `StartAsync` only | Startup | Runs before `PersonaSupervisor`; its `Add` raises `PersonasChanged` synchronously, which the supervisor has not subscribed to yet, so its first reconciliation picks the file up |
-| `PersonaSupervisor` (existing) | `BackgroundService` | App | Starts a Teammate created by Approve through `OnPersonasChanged`; unchanged |
+| `BuiltinAgentSeeder` | `IHostedService`, `StartAsync` only | Startup | Runs before `PersonaSupervisor`; its `Add` raises `PersonasChanged` synchronously, which the supervisor has not subscribed to yet, so its first reconciliation picks the file up |
+| `PersonaSupervisor` (existing) | `BackgroundService` | App | Starts an Agent created by Approve through `OnPersonasChanged`; unchanged |
 | `ProposalService.ApproveAsync` | Async on the Blazor circuit | Per click | `creationGate` serialises across circuits; `TryTake` makes it exactly-once |
 | `RoomEvents.ProposalChanged` | Event | App | Handlers marshal with `InvokeAsync`; the payload is only the Room id, and handlers re-read the store |
 
 **Ordering constraints.**
-1. `DataInitializer` → `BuiltinTeammateSeeder` → `PersonaSupervisor` (registration order).
+1. `DataInitializer` → `BuiltinAgentSeeder` → `PersonaSupervisor` (registration order).
 2. Within Approve: take → (limit check) → create serially → post → event.
 3. The Greeting is queued **after** `factory.CreateAsync` returns, and before any delivered
    Message is consumed. The runner's single consumer then runs it first. A Human who types
    while it streams is queued behind it and answered next.
-4. A new Teammate's session starts **after** its file exists. The Approve message may reach
-   the proposer before the new Teammates are Online. `SKILL.md` step 6 tells the proposer
+4. A new Agent's session starts **after** its file exists. The Approve message may reach
+   the proposer before the new Agents are Online. `SKILL.md` step 6 tells the proposer
    to confirm with `list_agents` before Mentioning them.
 
 ---
@@ -1198,14 +1207,14 @@ was told and what it can call in agreement.
 | System prompt growth per Skill | ~1 line, ≤ 500 chars | ≤ 5 Skills per Persona recommended | This is the only recurring cost of a Skill, paid on every Turn |
 | `read_skill` response | ≤ 64 KB; `SKILL.md` is about 14 KB ≈ 3–3.5k tokens per read | 64 KB hard cap | Paid only when read; supporting files only when a step sends the Agent there |
 | The Greeting | One Turn per install: `SKILL.md` + `onboarding.md` reads plus one reply, ≈ 5–8k tokens | Counts against the per-Persona token Budget | Paid once; repeats only after `-Clean` or a failed Greeting |
-| `validate_teammate` | < 5 ms | 50 ms | Builds one candidate `PersonaIndex`, O(Personas) |
-| Approve, 3 Candidates | < 100 ms to write; Teammates Online in seconds | — | File writes are serial; Adapter start dominates and is existing behaviour |
-| Idle cost per created Teammate | One `node` process + one loopback Kestrel | `MaxLiveProcesses` = 16 | Unmeasured past four ([Known limits](engineering/known-limits.md)); the ceiling bounds it |
+| `validate_agent` | < 5 ms | 50 ms | Builds one candidate `PersonaIndex`, O(Personas) |
+| Approve, 3 Candidates | < 100 ms to write; Agents Online in seconds | — | File writes are serial; Adapter start dominates and is existing behaviour |
+| Idle cost per created Agent | One `node` process + one loopback Kestrel | `MaxLiveProcesses` = 16 | Unmeasured past four ([Known limits](engineering/known-limits.md)); the ceiling bounds it |
 
 **Scaling notes.**
 - **Tokens, not CPU, are the constraint.** Keep descriptions short. The Settings tab warns
   above 300 characters.
-- **Processes are the second constraint.** `MaxLiveProcesses` exists because every live Teammate is a
+- **Processes are the second constraint.** `MaxLiveProcesses` exists because every live Agent is a
   process. Measure before raising the default.
 
 ---
@@ -1233,9 +1242,9 @@ was told and what it can call in agreement.
 | F-17 | Proposer's Persona deleted before Approve | Approve still creates; the text omits the Mention |
 | F-18 | Proposer's Persona restarted while waiting | No effect; the Proposal is keyed by Room, the proposer by Agent id |
 | F-19 | App restarts with a Proposal waiting | Lost. The proposer is not told; the Human asks again. Recorded in Known limits |
-| F-20 | `MaxTeammatesPerTeam` or `MaxLiveProcesses` ≤ 0 | No ceiling for that limit |
-| F-21 | New Teammates Mentioned before they are Online | The Mention resolves (Team Directory row exists within ms of start); delivery skips a disconnected Agent, so the first Mention may go unanswered. Mitigated by `SKILL.md` step 6 |
-| F-22 | Approve while `Acp:Enabled` is false | Files are created; Teammates stay Offline with the existing *"Teammates are switched off"* reason |
+| F-20 | `MaxAgentsPerTeam` or `MaxLiveProcesses` ≤ 0 | No ceiling for that limit |
+| F-21 | New Agents Mentioned before they are Online | The Mention resolves (Team Directory row exists within ms of start); delivery skips a disconnected Agent, so the first Mention may go unanswered. Mitigated by `SKILL.md` step 6 |
+| F-22 | Approve while `Acp:Enabled` is false | Files are created; Agents stay Offline with the existing *"Agents are switched off"* reason |
 | F-23 | Human removes `team-building` from the Chief of Staff | Allowed; it is the Human's file. The Chief of Staff loses the tools at restart. Reset to default restores it |
 | F-24 | Candidate `teams` contains `,` or `;` | Problem; it would split into two Teams on read (the `SplitTeams` round-trip hazard) |
 | F-25 | First start with ACP off | No session, so no Greeting; the Room stays empty and the Greeting happens at the first start with ACP on. Until then U17 covers a Human who types first |
@@ -1244,7 +1253,7 @@ was told and what it can call in agreement.
 | F-28 | The Chief of Staff's Room with the Human is deleted (ADR-0018) | `EnsureRoomForAsync` makes a fresh, empty Room at the next `hello`, so the Chief of Staff greets again. Accepted: deleting that Room is starting over with it |
 | F-29 | The Chief of Staff is edited before it ever greeted | The edit restarts it; the Room is still empty, so it greets with the edited instructions |
 | F-30 | The Human removed `team-building` from the Chief of Staff | It still greets, from the Prompt alone, without `onboarding.md` |
-| F-31 | A non-built-in Teammate with an empty Room | Never greets |
+| F-31 | A non-built-in Agent with an empty Room | Never greets |
 
 ---
 
@@ -1254,10 +1263,10 @@ Use case U1 → U2, on a fresh install with ACP enabled.
 
 ```text
  ┌ startup ────────────────────────────────────────────────────────────────────────────┐
- │ DataInitializer ▸ BuiltinTeammateSeeder: no _builtin → Add "Chief of Staff" (cos,   │
+ │ DataInitializer ▸ BuiltinAgentSeeder: no _builtin → Add "Chief of Staff" (cos,   │
  │ skills: [team-building]) ▸ PersonaSupervisor: start Chief of Staff                  │
  │   Resolve([team-building]) → ok · SkillGrants → [get_help, list_agents, …,          │
- │   read_skill, validate_teammate, propose_teammates] · system prompt + Skill Index   │
+ │   read_skill, validate_agent, propose_agents] · system prompt + Skill Index   │
  │ Chief of Staff runner: Welcome lists its Room with the Human, isEmpty = true        │
  │   → Greeting Turn: read_skill("team-building") → step 0 →                          │
  │     read_skill("team-building", "onboarding.md") → one greeting Message:           │
@@ -1272,13 +1281,13 @@ Use case U1 → U2, on a fresh install with ACP enabled.
    cos: list_agents → only itself
    cos: read_skill("team-building", "team-patterns.md") → pipeline, 3 specialists
    cos: read_skill("team-building", "roles.md") → Researcher, Analyst, Writer
-   cos: validate_teammate × 3 → one Alias clash → fixed → Valid ×3
-   cos: propose_teammates(roomId, [Vera, Quill, Iris]) → "Proposed 3 … wait"
+   cos: validate_agent × 3 → one Alias clash → fixed → Valid ×3
+   cos: propose_agents(roomId, [Vera, Quill, Iris]) → "Proposed 3 … wait"
         ProposalStore.TryPut → ProposalChanged → ProposalCard renders
    cos: "I've proposed a three-person pipeline; I'll coordinate. Approve when ready." [Message]
  Human clicks Approve
    ProposalService: TryTake ✓ · 1 + 3 ≤ 8 ✓ · Add Vera ✓ Add Quill ✓ Add Iris ✓
-   PersonasChanged → PersonaSupervisor starts three Teammates
+   PersonasChanged → PersonaSupervisor starts three Agents
    PostAsync(as Human): "Approved. Created Vera, Quill and Iris. @Chief of Staff go ahead."
    Budget reset · Reply Gate: Mentioned → cos Turn
    cos: list_agents → three present
@@ -1287,8 +1296,8 @@ Use case U1 → U2, on a fresh install with ACP enabled.
    cos (DM): "Work is under way in Launch. It may pause and ask you to continue."
 ```
 
-**Failure branch (U5).** At Approve, the Team already has 7 Teammates: OverLimit, nothing created, Message
-posted, cos wakes and offers to reuse existing Teammates or shrink the team.
+**Failure branch (U5).** At Approve, the Team already has 7 Agents: OverLimit, nothing created, Message
+posted, cos wakes and offers to reuse existing Agents or shrink the team.
 
 ---
 
@@ -1298,21 +1307,21 @@ Every decision taken in the design review of 2026-09-22, with what it beat.
 
 | ID | Decision | Alternative rejected | Why |
 | --- | --- | --- | --- |
-| D-1 | **Agent proposes; the Human's Approve creates.** `propose_teammates` replaces ADR-0021's `create_teammate` | A `create_teammate` tool guarded by prompt text; a Teammate created in a pending state and started from its card | A prompt is not a guard. The pending-Teammate route puts the decision away from the conversation that motivated it. Reusing the Budget pattern needs no Envelope. Posting the outcome as a Human Message wakes the proposer with no new mechanism |
-| D-2 | **Limits per Team and per install: `MaxTeammatesPerTeam` = 8 and `MaxLiveProcesses` = 16** (this row's original single cap, `MaxTeammates` = 8 counting every loaded Persona, is retired; HR-10, decision D1) | 4, the Known-limits figure; counting only Agent-proposed Teammates | 4 would be reached immediately by any real library. Counting all Personas bounds what actually costs: processes |
+| D-1 | **Agent proposes; the Human's Approve creates.** `propose_agents` replaces ADR-0021's `create_agent` | A `create_agent` tool guarded by prompt text; an Agent created in a pending state and started from its card | A prompt is not a guard. The pending-Agent route puts the decision away from the conversation that motivated it. Reusing the Budget pattern needs no Envelope. Posting the outcome as a Human Message wakes the proposer with no new mechanism |
+| D-2 | **Limits per Team and per install: `MaxAgentsPerTeam` = 8 and `MaxLiveProcesses` = 16** (this row's original single cap, `MaxAgents` = 8 counting every loaded Persona, is retired; HR-10, decision D1) | 4, the Known-limits figure; counting only Agent-proposed Agents | 4 would be reached immediately by any real library. Counting all Personas bounds what actually costs: processes |
 | D-3 | **The Chief of Staff is permanent**: re-written at startup when missing | Seed once and respect deletion | The Chief of Staff is how a Human builds everything else; losing it strands them |
 | D-4 | **Recognised by `_builtin: chief-of-staff`**; checked at startup only; the card offers Reset to default | Recognition by Name; recreation on deletion events | By-Name recognition duplicates on rename. Recreation on events races with file moves and gets both files rejected |
 | D-5 | **A Candidate carries only descriptive fields** | Letting it set Model, Effort, Adapter, Skills | Each grants tools or spends money; the Human sets them on the card, where the existing pickers and rules apply |
 | D-6 | **One Proposal per Room; the same proposer replaces, others are refused** | A queue; last-writer-wins | Revision is the common case; a queue asks the Human several questions at once |
-| D-7 | **Partial success with an honest report; no rollback** | All-or-nothing with rollback | Rollback deletes Teammates that are already starting. The honest Message lets the proposer re-propose the rest |
+| D-7 | **Partial success with an honest report; no rollback** | All-or-nothing with rollback | Rollback deletes Agents that are already starting. The honest Message lets the proposer re-propose the rest |
 | D-8 | **V1 Skills UI: card picker, read-only Settings tab, Restore default** | A full editor like Prompts | The Human writes Markdown in their own editor; a full editor is dozens of tests for V1 |
-| D-9 | **Grantable tools are a code-defined set** (refines ADR-0021) | "Any tool a Skill lists is gated" | As written, a Human's Skill could silently remove a default tool from every other Teammate |
+| D-9 | **Grantable tools are a code-defined set** (refines ADR-0021) | "Any tool a Skill lists is gated" | As written, a Human's Skill could silently remove a default tool from every other Agent |
 | D-10 | **Shipped defaults are embedded resources**, overridden per file on disk | C# raw strings like `PromptCatalog`; a generated file beside the binary | Skills are multi-file Markdown; embedding keeps them editable as `.md` in the repo and immutable at run time. Per-file override matches per-key Prompt overrides |
 | D-11 | **`read_skill` is offered only to Personas holding a Skill** | Offer it to everyone | Keeps every existing tool list and golden file unchanged; an Agent without Skills has nothing to read |
 | D-12 | **Skill Index is a new Prompt, omitted when empty** | Put Skills in `get_help` | A model must *see* the description to recognise the trigger; behind `get_help` it would never know to look |
 | D-13 | **Outcome texts are interface copy, not Prompts** | Put them in `PromptCatalog` | They are authored as the Human; a Prompt is text *we* send the model. Mixing them would let a Prompt edit change what the Human appears to have said |
-| D-14 | **Serialise `PersonaStore.Add`/`Update` inside the store** | A lock only in `ProposalService` | The race predates this feature and also affects the Teammate card |
-| D-15 | **`Skills` is not added to the `Persona` record** | Add it for convenience | A list member breaks record equality and would restart every Teammate on every refresh |
+| D-14 | **Serialise `PersonaStore.Add`/`Update` inside the store** | A lock only in `ProposalService` | The race predates this feature and also affects the Agent card |
+| D-15 | **`Skills` is not added to the `Persona` record** | Add it for convenience | A list member breaks record equality and would restart every Agent on every refresh |
 | D-16 | **The app greets a new Human unprompted**: the built-in Chief of Staff runs one Greeting Turn when its Room with the Human is empty | Wait for the Human to type first (V1 out of scope) | Decided by the Human on 2026-09-22. A new user should not face an empty Room and have to guess what to say |
 | D-17 | **Greet at first start, signalled by an additive `RoomInfo.IsEmpty`** | Greet on the Human's first view of the Room | First view needs a new Envelope type, so `ProtocolVersion` 3 → 4 with every client in lockstep. An additive field needs no bump, keeps the runner learning only from Envelopes, and retries itself because an empty Room stays empty. The cost is one paid Turn even if nobody is watching |
 | D-18 | **The Greeting trigger is a Prompt, `turn.greeting`, never a posted Message** | Post a Message as the Human to start it | The Transcript would show the Human saying what they never said (D-13) |
@@ -1372,7 +1381,7 @@ dotnet test  Huddle.slnx --
 | S1-I14 | Impl | Wire `SkillStore` + `SkillGrants` into `DotAcpAgentHostFactory`; `GetHelpTool` from the offered list | T14 green |
 | S1-T15 | Unit | `PersonaSupervisorTests.Start_UnknownSkill_ReportsDegradedWithReason` | Fails |
 | S1-I15 | Impl | Resolve warnings → `PersonaHealth.Report(Degraded)` | T15 green |
-| S1-T16 | Functional (bUnit) | `TeammateCardTests.SkillsSelect_PickTeamBuilding_WritesSkillsField` + `…_UnknownSkill_ShowsWarningChip` | Fails |
+| S1-T16 | Functional (bUnit) | `AgentProfileCardTests.SkillsSelect_PickTeamBuilding_WritesSkillsField` + `…_UnknownSkill_ShowsWarningChip` | Fails |
 | S1-I16 | Impl | Card picker + `WriteListField` | T16 green |
 | S1-T17 | Functional (bUnit) | `SettingsPageTests.SkillsTab_ListsSourceAndIssues` + `…_RestoreDefault_RemovesOverride` | Fails |
 | S1-I17 | Impl | `SettingsTab.Skills`, `SkillsPanel.razor` | T17 green |
@@ -1388,12 +1397,12 @@ dotnet test  Huddle.slnx --
 | S2-I2 | Impl | Lock inside `PersonaStore.Add`/`Update` (D-14) | T2 green |
 | S2-T3 | Unit | `CandidateCheckerTests`: each row of §8.3, and all problems reported together | Fails |
 | S2-I3 | Impl | `Candidate`, `CandidateCheck`, `CandidateChecker` | T3 green |
-| S2-T4 | Unit | `ValidateTeammateToolTests.InvokeAsync_Valid_ReturnsValid` + `…_ForbiddenField_ReturnsProblem` | Fails |
-| S2-I4 | Impl | `ValidateTeammateTool` + `tool.validateTeammate.description` | T4 green |
+| S2-T4 | Unit | `ValidateAgentToolTests.InvokeAsync_Valid_ReturnsValid` + `…_ForbiddenField_ReturnsProblem` | Fails |
+| S2-I4 | Impl | `ValidateAgentTool` + `tool.validateAgent.description` | T4 green |
 | S2-T5 | Unit | `ProposalStoreTests`: Stored; same proposer Replaced; other proposer Refused; `TryTake` once; `Drop` | Fails |
 | S2-I5 | Impl | `ProposalStore`, `Proposal`, `RoomEvents.ProposalChanged` | T5 green |
-| S2-T6 | Unit | `ProposeTeammatesToolTests`: unknown Room; not a Member; Archived; invalid Candidates; over limit; success text; replace | Fails |
-| S2-I6 | Impl | `ProposeTeammatesTool` + `Acp:MaxTeammates` + `tool.proposeTeammates.description` | T6 green |
+| S2-T6 | Unit | `ProposeAgentsToolTests`: unknown Room; not a Member; Archived; invalid Candidates; over limit; success text; replace | Fails |
+| S2-I6 | Impl | `ProposeAgentsTool` + `Acp:MaxAgents` + `tool.proposeAgents.description` | T6 green |
 | S2-T7 | Unit | `ChatServiceTests.SetRoomArchived_WithProposal_Drops` + `DeleteRoom_WithProposal_Drops` | Fails |
 | S2-I7 | Impl | `ChatService` → `ProposalStore.Drop` | T7 green |
 | S2-T8 | Functional | `ProposalServiceTests.Approve_ThreeValid_CreatesAllAndPostsHumanMessageMentioningProposer` (real `PersonaStore`, `ChatService`, `TempDataDir`) | Fails |
@@ -1408,21 +1417,21 @@ dotnet test  Huddle.slnx --
 | S2-I12 | Impl | `ProposalCard.razor`, `Chat.razor` wiring | T12 green |
 | S2-T13 | Unit | `PromptGoldenTests.ToolDescriptions_MatchesGolden` regenerated with the two new tools | Fails until regenerated |
 | S2-I13 | Impl | Regenerate golden and `prompts.default.json` | T13 green |
-| S2-D | Docs | `language.md` Proposal/Candidate drop "not built"; `Huddle.EngineeringGuide.md` config row for `MaxTeammates`; `known-limits.md` F-19; ADR-0006 cross-reference | Reviewed |
+| S2-D | Docs | `language.md` Proposal/Candidate drop "not built"; `Huddle.EngineeringGuide.md` config row for `MaxAgents`; `known-limits.md` F-19; ADR-0006 cross-reference | Reviewed |
 
 ### S3 — Content and the built-in Chief of Staff
 
 | # | Type | Task | Done when |
 | --- | --- | --- | --- |
-| S3-T1 | Unit | `SkillCatalogTests.TeamBuilding_Tools_AreExactlyTheGrantableTwo` + `…_NoFileContainsToolPrefix` + `…_SkillMd_NamesProposeTeammatesNotCreate` + `…_EverySupportingFile_IsNamedInSkillMd` + `…_Description_AtMost300Chars` | The content already exists, so show the red against a copy of the pre-§6.13 draft (`tools: [validate_teammate, create_teammate]`): each test must fail there |
+| S3-T1 | Unit | `SkillCatalogTests.TeamBuilding_Tools_AreExactlyTheGrantableTwo` + `…_NoFileContainsToolPrefix` + `…_SkillMd_NamesProposeAgentsNotCreate` + `…_EverySupportingFile_IsNamedInSkillMd` + `…_Description_AtMost300Chars` | The content already exists, so show the red against a copy of the pre-§6.13 draft (`tools: [validate_agent, create_agent]`): each test must fail there |
 | S3-I1 | Impl | Revise the Skill's files per §6.13 — **done** by the content session on 2026-09-22; do not rewrite them | T1 green against the current files |
-| S3-T2 | Unit | `BuiltinTeammateSeederTests.Start_EmptyLibrary_WritesChiefOfStaffWithMarkerAndSkill` | Fails |
-| S3-I2 | Impl | `BuiltinTeammateSeeder` + embedded `Builtin/chief-of-staff.md` + registration before the supervisor | T2 green |
+| S3-T2 | Unit | `BuiltinAgentSeederTests.Start_EmptyLibrary_WritesChiefOfStaffWithMarkerAndSkill` | Fails |
+| S3-I2 | Impl | `BuiltinAgentSeeder` + embedded `Builtin/chief-of-staff.md` + registration before the supervisor | T2 green |
 | S3-T3 | Unit | `…_MarkerPresentUnderOtherName_WritesNothing` + `…_NameTaken_WritesNumbered` + `…_EditedBody_NeverReverted` | Fails |
 | S3-I3 | Impl | Marker detection, free-name search | T3 green |
 | S3-T4 | Functional | `ServiceCollectionExtensionsTests.HostedServices_SeederRegisteredBeforeSupervisor` | Fails |
 | S3-I4 | Impl | Registration order | T4 green |
-| S3-T5 | Functional (bUnit) | `TeammateCardTests.BuiltinTeammate_ShowsResetNotDelete` + `…_Reset_RestoresDefaultsKeepsNameAndAlias` | Fails |
+| S3-T5 | Functional (bUnit) | `AgentProfileCardTests.BuiltinAgent_ShowsResetNotDelete` + `…_Reset_RestoresDefaultsKeepsNameAndAlias` | Fails |
 | S3-I5 | Impl | `ResetAsync`, card button and dialog | T5 green |
 | S3-T6 | Unit | `ProtocolJsonTests.Welcome_RoomInfoIsEmpty_SerialisesAsLiteralJson` + `…_IsEmptyAbsent_DeserialisesFalse` | Fails |
 | S3-I6 | Impl | `RoomInfo.IsEmpty` (trailing optional); `ProtocolVersion` unchanged | T6 green |
@@ -1444,8 +1453,8 @@ dotnet test  Huddle.slnx --
 
 | Stream | New | Changed |
 | --- | --- | --- |
-| S1 | `Skills/SkillCatalog.cs`, `SkillStore.cs`, `Skill.cs`, `SkillValidator.cs`, `SkillGrants.cs`, `Acp/Tools/ReadSkillTool.cs`, `Components/Settings/SkillsPanel.razor`, `Golden/systemPrompt.skills.txt` | `Huddle.App.csproj`, `PersonaFrontmatter.cs`, `PersonaIdentity.cs`, `PersonaEntry.cs`, `PersonaIndex.cs`, `SystemPromptComposer.cs`, `DotAcpAgentHostFactory.cs`, `PersonaSupervisor.cs`, `PromptCatalog.cs`, `prompts.default.json`, `AcpOptions.cs`, `ServiceCollectionExtensions.cs`, `TeammateCard.razor`, `SettingsTab.cs`, `Settings.razor` |
-| S2 | `Teammates/Candidate.cs`, `CandidateChecker.cs`, `Proposal.cs`, `ProposalStore.cs`, `ProposalService.cs`, `Acp/Tools/ValidateTeammateTool.cs`, `ProposeTeammatesTool.cs`, `Components/Shared/ProposalCard.razor` | `PersonaStore.cs`, `ChatService.cs`, `RoomEvents.cs`, `Chat.razor`, `AcpOptions.cs`, `PromptCatalog.cs`, `prompts.default.json`, `DotAcpAgentHostFactory.cs`, `ServiceCollectionExtensions.cs` |
-| S3 | `Builtin/chief-of-staff.md`, `Teammates/BuiltinTeammateSeeder.cs`, `manual-tests/skills.md`, `Golden/turnPromptGreeting.txt` | `Skills/Defaults/team-building/*.md`, `TeammateCard.razor`, `ServiceCollectionExtensions.cs`, `Huddle.Contracts/Messages.cs` (`RoomInfo`), `Data/IChatStore.cs`, `Data/FileChatStore.cs`, `Pipes/AgentConnection.cs`, `Acp/PersonaRunner.cs`, `PromptCatalog.cs`, `prompts.default.json` |
+| S1 | `Skills/SkillCatalog.cs`, `SkillStore.cs`, `Skill.cs`, `SkillValidator.cs`, `SkillGrants.cs`, `Acp/Tools/ReadSkillTool.cs`, `Components/Settings/SkillsPanel.razor`, `Golden/systemPrompt.skills.txt` | `Huddle.App.csproj`, `PersonaFrontmatter.cs`, `PersonaIdentity.cs`, `PersonaEntry.cs`, `PersonaIndex.cs`, `SystemPromptComposer.cs`, `DotAcpAgentHostFactory.cs`, `PersonaSupervisor.cs`, `PromptCatalog.cs`, `prompts.default.json`, `AcpOptions.cs`, `ServiceCollectionExtensions.cs`, `AgentProfileCard.razor`, `SettingsTab.cs`, `Settings.razor` |
+| S2 | `Agents/Candidate.cs`, `CandidateChecker.cs`, `Proposal.cs`, `ProposalStore.cs`, `ProposalService.cs`, `Acp/Tools/ValidateAgentTool.cs`, `ProposeAgentsTool.cs`, `Components/Shared/ProposalCard.razor` | `PersonaStore.cs`, `ChatService.cs`, `RoomEvents.cs`, `Chat.razor`, `AcpOptions.cs`, `PromptCatalog.cs`, `prompts.default.json`, `DotAcpAgentHostFactory.cs`, `ServiceCollectionExtensions.cs` |
+| S3 | `Builtin/chief-of-staff.md`, `Agents/BuiltinAgentSeeder.cs`, `manual-tests/skills.md`, `Golden/turnPromptGreeting.txt` | `Skills/Defaults/team-building/*.md`, `AgentProfileCard.razor`, `ServiceCollectionExtensions.cs`, `Huddle.Contracts/Messages.cs` (`RoomInfo`), `Data/IChatStore.cs`, `Data/FileChatStore.cs`, `Pipes/AgentConnection.cs`, `Acp/PersonaRunner.cs`, `PromptCatalog.cs`, `prompts.default.json` |
 
-Namespaces follow folders: `Agency.Huddle.App.Skills`, `Agency.Huddle.App.Teammates`.
+Namespaces follow folders: `Agency.Huddle.App.Skills`, `Agency.Huddle.App.Agents`.

@@ -110,6 +110,14 @@ cherry-picked rather than merged, which is a different sha and therefore not an 
 reliable checks are `git merge-base --is-ancestor origin/<branch> origin/main`, or, for a
 cherry-pick, confirming the actual content is present on `main`.
 
+**Two things that look like failures.** A successful `git push` to this Gitea prints a `remote:`
+hint line about creating a pull request; the tool can report that as exit 128 although the push
+went through, so confirm with `git ls-remote origin <branch>` before pushing again. And several
+worktrees editing `docs/Index.md` and `docs/adr/` will collide while `main` moves: run
+`git fetch origin` immediately before choosing an ADR number (the next free one on `origin/main`,
+not on your branch) and again before the commit. An ADR number taken early was already used on
+`main` when the branch landed (0066, renumbered to 0067).
+
 ## Pull Requests
 
 ```powershell
@@ -166,7 +174,7 @@ curl "$API/issues?state=open&type=issues" -H "Authorization: token ${GITEA_ACCES
 curl "$API/issues/12" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 
 # Already reported? q= matches title AND body, so a test id also finds the issues it blocks.
-curl "$API/issues?state=all&type=issues&q=TEAMMATECARD-02" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+curl "$API/issues?state=all&type=issues&q=AGENTPROFILECARD-02" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 
 curl "$API/issues/12/comments" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 ```
@@ -181,7 +189,7 @@ Useful query parameters: `state` (`open` | `closed` | `all`, default `open`), `t
 curl -X POST "$API/issues" \
   -H "Authorization: token ${GITEA_ACCESS_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{"title":"TEAMMATECARD-02: New teammate opens no card", "body":"..."}'
+  -d '{"title":"AGENTPROFILECARD-02: New agent opens no card", "body":"..."}'
 
 # Comment on one.
 curl -X POST "$API/issues/12/comments" \

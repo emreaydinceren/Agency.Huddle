@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Acp;
 /// docs/engineering/acp-session-config.md says not to cache a model list across spawns. That rule protects
 /// *selection*: which model id a real session actually starts against. Selection is re-resolved
 /// live, inside Huddle.Acp, on every session start — this class has no say in it. What is cached here
-/// is purely presentational, for populating a &lt;select&gt; in the Teammate card, and a slightly
+/// is purely presentational, for populating a &lt;select&gt; in the Agent card, and a slightly
 /// stale presentational list is far cheaper than spawning a fresh adapter process on every card
 /// open.
 /// </remarks>
@@ -25,7 +25,10 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // for, and nothing has asked to tune how long a one-off probe is allowed to hang.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(20);
 
-    private readonly TeammatePaths teammatePaths;
+    /// <summary>The adapter's effort id meaning "let the model choose": a sentinel that names no level.</summary>
+    private const string EffortSentinelId = "default";
+
+    private readonly AgentPaths agentPaths;
     private readonly ILogger<ModelCatalogProbe> logger;
     private readonly AdapterProfileResolver resolver;
     private readonly IAdapterProbeRunner probeRunner;
@@ -60,10 +63,16 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     private readonly ConcurrentDictionary<string, SessionCatalog> effortCache =
         new(StringComparer.Ordinal);
 
+    // What the Adapter itself runs on when nothing is chosen, per RESOLVED profile id: the current model
+    // and effort ids the throwaway session reported on a probe that requested no model. Set only by a
+    // successful null-model probe, like the caches above, so a failure caches nothing.
+    private readonly ConcurrentDictionary<string, AdapterDefaults> defaultsCache =
+        new(StringComparer.Ordinal);
+
     private readonly WorkModePolicy workModePolicy;
 
     /// <summary>Builds the probe over its resolver and its process-spawning seam.</summary>
-    /// <param name="teammatePaths">Locates the Work Dir root the probe spawns into.</param>
+    /// <param name="agentPaths">Locates the Work Dir root the probe spawns into.</param>
     /// <param name="loggerFactory">Used to create this type's own logger.</param>
     /// <param name="resolver">Turns a requested Adapter id into a profile; never fails (Spec §6.2).</param>
     /// <param name="probeRunner">
@@ -73,19 +82,19 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// </param>
     /// <param name="workModePolicy">Decides which advertised Work Modes are offered (ADR-0033).</param>
     public ModelCatalogProbe(
-        TeammatePaths teammatePaths,
+        AgentPaths agentPaths,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
         IAdapterProbeRunner probeRunner,
         WorkModePolicy workModePolicy)
     {
-        ArgumentNullException.ThrowIfNull(teammatePaths);
+        ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(probeRunner);
         ArgumentNullException.ThrowIfNull(workModePolicy);
 
-        this.teammatePaths = teammatePaths;
+        this.agentPaths = agentPaths;
         this.logger = loggerFactory.CreateLogger<ModelCatalogProbe>();
         this.resolver = resolver;
         this.probeRunner = probeRunner;
@@ -141,8 +150,9 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
                 // This probe ran with no model requested, so its session's effort list IS the
                 // default-model answer for this Adapter - store it under the same key
                 // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
-                // leaving the model at "Use the agent's default" costs zero extra adapter spawns.
+                // leaving the model at "Agent default" costs zero extra adapter spawns.
                 this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
+                this.defaultsCache[profile.Id] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
             }
 
             return result.Models;
@@ -167,6 +177,52 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         // Filtered here, on the way out, so the cache holds what the Adapter advertised.
         return this.workModePolicy.Filter(catalog.Modes);
     }
+
+    /// <inheritdoc/>
+    public RuntimeNames PeekRuntime(string? adapterId, string? model, string? effort)
+    {
+        (AdapterProfile profile, _) = this.resolver.Resolve(adapterId);
+        this.modelCache.TryGetValue(profile.Id, out IReadOnlyList<AgentModelOption>? models);
+        this.defaultsCache.TryGetValue(profile.Id, out AdapterDefaults? defaults);
+
+        string? modelName = null;
+        if (model is not null)
+        {
+            modelName = ModelCatalogProbe.NameOfModel(models, model);
+        }
+        else if (defaults?.Model is { } defaultModel)
+        {
+            modelName = ModelCatalogProbe.NameOfModel(models, defaultModel) ?? defaultModel;
+        }
+
+        string? effortName = null;
+        if (effort is not null)
+        {
+            if (this.effortCache.TryGetValue(ModelCatalogProbe.EffortCacheKey(profile.Id, model), out SessionCatalog? catalog))
+            {
+                effortName = ModelCatalogProbe.NameOfEffort(catalog.EffortLevels, effort);
+            }
+        }
+        else if (model is null
+            && defaults?.Effort is { } defaultEffort
+            && !string.Equals(defaultEffort, ModelCatalogProbe.EffortSentinelId, StringComparison.Ordinal))
+        {
+            // Only the Adapter's default model has a known default effort; a chosen model's is never probed here.
+            effortName = this.effortCache.TryGetValue(ModelCatalogProbe.EffortCacheKey(profile.Id, null), out SessionCatalog? defaultCatalog)
+                ? ModelCatalogProbe.NameOfEffort(defaultCatalog.EffortLevels, defaultEffort) ?? defaultEffort
+                : defaultEffort;
+        }
+
+        return new RuntimeNames(modelName, effortName);
+    }
+
+    /// <summary>The display name of the model with id <paramref name="id"/> in <paramref name="models"/>, or null when absent.</summary>
+    private static string? NameOfModel(IReadOnlyList<AgentModelOption>? models, string id) =>
+        models?.FirstOrDefault(option => string.Equals(option.Id, id, StringComparison.Ordinal))?.Name;
+
+    /// <summary>The display name of the effort level with id <paramref name="id"/> in <paramref name="levels"/>, or null when absent.</summary>
+    private static string? NameOfEffort(IReadOnlyList<AgentEffortOption> levels, string id) =>
+        levels.FirstOrDefault(option => string.Equals(option.Id, id, StringComparison.Ordinal))?.Name;
 
     /// <summary>
     /// The throwaway session's effort ladder and Work Modes for one (Adapter, Model), served from the
@@ -207,6 +263,10 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
             if (succeeded)
             {
                 this.effortCache[key] = answered;
+                if (model is null)
+                {
+                    this.defaultsCache[profile.Id] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
+                }
             }
 
             return answered;
@@ -223,7 +283,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// cref="IAgentSession.EffortLevels"/> must stay a faithful report of what the agent actually
     /// advertised, because a protocol reader that silently drops an advertised option is exactly the
     /// class of failure <c>docs/engineering/traps.md</c> exists for. The reason the filter belongs
-    /// somewhere is that the Teammate card's blank "Use the agent's default" option already IS this
+    /// somewhere is that the Agent card's blank "Agent default" option already IS this
     /// choice, and already stores <c>null</c> for it — offering the sentinel too would be two
     /// options with one meaning, and would let the literal string <c>"default"</c> reach
     /// <c>persona_efforts</c>, where it would be sent on the wire as a real, named selection: a
@@ -246,7 +306,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
 
         return levels.Count == 0
             ? levels
-            : levels.Where(level => !string.Equals(level.Id, "default", StringComparison.Ordinal)).ToList();
+            : levels.Where(level => !string.Equals(level.Id, ModelCatalogProbe.EffortSentinelId, StringComparison.Ordinal)).ToList();
     }
 
     /// <summary>
@@ -261,10 +321,15 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     private sealed record ProbeResult(
         IReadOnlyList<AgentModelOption> Models,
         IReadOnlyList<AgentEffortOption> EffortLevels,
-        IReadOnlyList<AgentModeOption> Modes)
+        IReadOnlyList<AgentModeOption> Modes,
+        string? CurrentModel = null,
+        string? CurrentEffort = null)
     {
         internal static ProbeResult Empty { get; } = new ProbeResult([], [], []);
     }
+
+    /// <summary>The model and effort ids an Adapter reported running when none was requested.</summary>
+    private sealed record AdapterDefaults(string? Model, string? Effort);
 
     /// <summary>The effort ladder and the Work Modes of one (Adapter, Model), cached as a pair because one probe answers both.</summary>
     private sealed record SessionCatalog(
@@ -273,12 +338,12 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
 
     private async Task<(bool Succeeded, ProbeResult Result)> ProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
     {
-        // The Teammates ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
+        // The Agents ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
         // probe is not a Persona and has no name to scope a subdirectory to. Never the repo root or
         // AppContext.BaseDirectory either: the adapter auto-loads CLAUDE.md and
         // .claude/settings.json from its cwd, so either of those would silently hand the repo's own
         // instructions to a process that is only being asked what models it offers.
-        var probeCwd = this.teammatePaths.DefinitionsRoot;
+        var probeCwd = this.agentPaths.DefinitionsRoot;
         Directory.CreateDirectory(probeCwd);
 
         // profile is already resolved by the caller (GetAsync/GetEffortLevelsAsync) - resolving
@@ -298,7 +363,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         try
         {
             AdapterProbeOutcome outcome = await this.probeRunner.RunAsync(processOptions, probeCwd, model, timeoutCts.Token).ConfigureAwait(false);
-            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes));
+            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes, outcome.CurrentModel, outcome.CurrentEffort));
         }
         catch (AgentAuthenticationRequiredException ex)
         {
@@ -314,7 +379,9 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         }
         catch (OperationCanceledException ex)
         {
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             this.logger.LogWarning(ex, "Model catalog probe timed out after {Timeout}.", ModelCatalogProbe.ProbeTimeout);
+#pragma warning restore HAA0601
             return (false, ProbeResult.Empty);
         }
         catch (IOException ex)

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Agency.Huddle.App.Gateway;
 using Microsoft.Extensions.Primitives;
 
 namespace Agency.Huddle.App.Desktop;
@@ -26,8 +27,7 @@ internal static class DesktopStopEndpoint
     /// <returns>403 for a non-loopback caller, 401 for a missing, repeated or wrong token, otherwise 202.</returns>
     internal static IResult HandleAsync(HttpContext context, DesktopSession session, IDesktopShutdown shutdown)
     {
-        IPAddress? remote = context.Connection.RemoteIpAddress;
-        if (remote is not null && !IPAddress.IsLoopback(remote))
+        if (!IsLoopbackCaller(context))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -45,13 +45,29 @@ internal static class DesktopStopEndpoint
     }
 
     /// <summary>
+    /// Whether the caller is local (C-1): the ingress classifier's verdict the gate stored for the request is Loopback, which a forwarded or LAN
+    /// request is not. A request that never went through the gate (a direct call) falls back to the socket address, where a null address is allowed.
+    /// </summary>
+    /// <param name="context">The request.</param>
+    internal static bool IsLoopbackCaller(HttpContext context)
+    {
+        if (GatewayHttpItems.GetIngress(context) is { } ingress)
+        {
+            return ingress.Kind == IngressKind.Loopback;
+        }
+
+        IPAddress? remote = context.Connection.RemoteIpAddress;
+        return remote is null || IPAddress.IsLoopback(remote);
+    }
+
+    /// <summary>
     /// Compares two tokens in constant time by hashing both to 32 bytes first, so the inputs are always the
     /// same length and no length-dependent early exit exists.
     /// </summary>
     /// <param name="presented">The token the caller sent.</param>
     /// <param name="expected">The instance's real token.</param>
     /// <returns><see langword="true"/> when the tokens are identical.</returns>
-    private static bool TokensMatch(string presented, string expected)
+    internal static bool TokensMatch(string presented, string expected)
     {
         byte[] presentedHash = SHA256.HashData(Encoding.UTF8.GetBytes(presented));
         byte[] expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expected));

@@ -27,6 +27,8 @@ internal static class TaskDiff
         { TaskField.StartDate, "start_date" },
         { TaskField.DueDate, "due_date" },
         { TaskField.Sprint, "sprint" },
+        { TaskField.HumanGate, "human_gate" },
+        { TaskField.Action, "action" },
     };
 
     /// <summary>
@@ -44,7 +46,9 @@ internal static class TaskDiff
     public static string FieldLabel(TaskField field) => field switch
     {
         TaskField.Location => "team/project",
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         _ => WireKeys.TryGetValue(field, out string? key) ? key : field.ToString().ToLowerInvariant(),
+#pragma warning restore HAA0102
     };
 
     /// <summary>What changed, field by field, ignoring Path, Version and ChangeLog.</summary>
@@ -83,6 +87,8 @@ internal static class TaskDiff
         AddIfDifferent(changes, TaskField.StartDate, FormatDate(before.StartDate), FormatDate(after.StartDate));
         AddIfDifferent(changes, TaskField.DueDate, FormatDate(before.DueDate), FormatDate(after.DueDate));
         AddIfDifferent(changes, TaskField.Sprint, before.Sprint?.ToString(), after.Sprint?.ToString());
+        AddIfDifferent(changes, TaskField.HumanGate, GateText(before.HumanGate), GateText(after.HumanGate));
+        AddIfDifferent(changes, TaskField.Action, before.Action, after.Action);
 
         if (!string.Equals(before.Description, after.Description, StringComparison.Ordinal))
         {
@@ -133,6 +139,8 @@ internal static class TaskDiff
         TaskField.Description => "description edited",
         TaskField.Location => $"moved: {change.Old} → {change.New}",
         TaskField.Unknown => $"{change.Old} edited",
+        TaskField.HumanGate => change.New is null ? "human gate off" : "human gate on",
+        TaskField.Action => change.New is null ? "action cleared" : $"action set: {change.New}",
         TaskField.BlockedBy or TaskField.Tags => SummariseListChange(change),
         _ => SummariseScalarChange(change),
     };
@@ -180,6 +188,10 @@ internal static class TaskDiff
 
     private static string[] Split(string? value) =>
         string.IsNullOrEmpty(value) ? [] : value.Split(ListSeparator, StringSplitOptions.None);
+
+    /// <summary>The diff text of the gate flag: "true" when on, null when off (the key is absent).</summary>
+    /// <param name="humanGate">Whether the gate is on.</param>
+    private static string? GateText(bool humanGate) => humanGate ? "true" : null;
 
     private static string Dash(string? value) => string.IsNullOrEmpty(value) ? EmDash : value;
 

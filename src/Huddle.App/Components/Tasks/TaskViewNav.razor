@@ -1,5 +1,5 @@
 @*
-    Spec §13.1: the sidebar's list of Views, one MudNavGroup titled "Tasks" between the Teammates
+    Spec §13.1: the sidebar's list of Views, one MudNavGroup titled "Tasks" between the Agents
     MudNavMenu and the settings menu in MainLayout.razor. Copies RoomList.razor's own subscribe/
     unsubscribe and DispatchAsync shape (§13.11) - ViewStore is a singleton, so an undisposed
     subscription here would throw on the next publish after this component is torn down.
@@ -14,6 +14,7 @@
 
 @implements IDisposable
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ViewStore ViewStore
 @inject IOptions<TeamOptions> Options
 @inject IDialogService DialogService
@@ -23,13 +24,13 @@
 {
     <MudNavMenu Class="task-view-nav">
         <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
-            @foreach (TaskView view in this.ViewStore.Views)
+            @foreach (TaskView view in SidebarRows.Visible(this.ViewStore.Views, this.showAll, this.IsActiveView))
             {
                 <div @key="view.Id" class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(view.Id, e))"
                      @oncontextmenu:preventDefault="true">
                     <NavTabLink Href="@($"/tasks/{view.Id}")" TabTitle="@view.Name" Class="hover-reveal-link"
-                                Icon="@(view.Kind == ViewKind.Board ? Icons.Material.Filled.ViewWeek : Icons.Material.Filled.TableRows)">@view.Name</NavTabLink>
+                                Icon="@(view.Kind == ViewKind.Kanban ? Icons.Material.Outlined.ViewKanban : Icons.Material.Outlined.ViewList)"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
                     <MudMenu @ref="@this.menuRefs[view.Id]" Class="hover-reveal-menu">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the
@@ -38,22 +39,24 @@
                            than relying on MudMenu's default ActivationEvent handling
                            (RoomList.razor's own precedent). *@
                         <ActivatorContent Context="menuContext">
-                            <MudTooltip Text="View actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="View actions" Class="hover-reveal-menu-button"
-                                               OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
+                            @* No hover tooltip (it would stay up over the menu's first item); the activator names its View (design-system "Menus"). *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@MenuDialogs.ActivatorLabel(view.Name)" Class="hover-reveal-menu-button"
+                                           OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id))">Rename</MudMenuItem>
+                            @* Both items open a dialog: each ends in "…", the menu closes first, and Delete view… is last after a divider, in Error ink. *@
+                            <MudMenuItem OnClick="@(() => this.RenameViewAsync(view))">Rename…</MudMenuItem>
                             @if (!view.BuiltIn)
                             {
-                                <MudMenuItem OnClick="@(() => this.DeleteViewAsync(view))">Delete view</MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem Class="menu-item-destructive" OnClick="@(() => this.DeleteViewAsync(view))">Delete view…</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
                 </div>
             }
+            <ShowAllRow Total="this.ViewStore.Views.Count" Expanded="this.showAll" OnToggle="this.ToggleShowAll" />
             @foreach (InvalidView invalid in this.ViewStore.InvalidViews)
             {
                 @if (invalid.Id is { } id)
@@ -71,26 +74,49 @@
                     </div>
                 }
             }
-            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New view</MudNavLink>
+            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">New view</MudNavLink>
         </MudNavGroup>
     </MudNavMenu>
 
 }
 
 @code {
-    private bool expanded = true;
+    private bool expanded;
+    private bool showAll;
+    private string currentPath = string.Empty;
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so the nav follows every save, delete or hand edit of <c>views.json</c>.</summary>
     protected override void OnInitialized()
     {
         this.ViewStore.ViewsChanged += this.OnViewsChanged;
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+        this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+        this.expanded = SidebarRows.InSection(this.currentPath, "tasks");
     }
 
-    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/>.</summary>
+    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> and navigation.</summary>
     public void Dispose()
     {
         this.ViewStore.ViewsChanged -= this.OnViewsChanged;
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+    }
+
+    private bool IsActiveView(TaskView view) =>
+        string.Equals(this.currentPath, $"tasks/{view.Id}", StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleShowAll() => this.showAll = !this.showAll;
+
+    /// <summary>Opens the group when navigation lands inside Tasks; it never closes it.</summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+            this.expanded |= SidebarRows.InSection(this.currentPath, "tasks");
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>
@@ -122,6 +148,14 @@
         }
     }
 
+    /// <summary>Closes the row's menu, then opens the rename dialog for <paramref name="view"/> (design-system "Menus": the menu closes before the dialog opens).</summary>
+    /// <param name="view">The View to rename.</param>
+    private Task RenameViewAsync(TaskView view)
+    {
+        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        return MenuDialogs.AfterClosingAsync(menu, () => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id));
+    }
+
     /// <summary>
     /// Confirms through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>
     /// with the same Delete wording as the page's own menu, then removes <paramref name="view"/>
@@ -132,7 +166,8 @@
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)
     {
-        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
+        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        if (!await MenuDialogs.AfterClosingAsync(menu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
         {
             return;
         }

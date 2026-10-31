@@ -1,0 +1,46 @@
+/* The read-only Helper preview in an expanded Feed card (Helpers in the Feed spec 5.5): the same inset outlined box as the Task preview. */
+.feed-helper-preview {
+    padding: 12px;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.feed-helper-preview .feed-preview-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.feed-helper-preview .feed-preview-tile {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    padding: 4px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+}
+
+.feed-helper-preview .feed-preview-title {
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 600;
+}
+
+.feed-helper-preview .feed-preview-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 4px 16px;
+    margin: 0;
+}
+
+.feed-helper-preview .feed-preview-grid dt {
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-helper-preview .feed-preview-grid dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using Agency.Huddle.App.Avatars;
+using MudBlazor.Utilities;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -9,7 +11,7 @@ namespace Agency.Huddle.App.Teams;
 /// <see cref="Manager"/> form the team card other managers read.
 /// </summary>
 /// <param name="TeamType">The team type and version the Team was created from.</param>
-/// <param name="Manager">The manager Teammate's name, or <see langword="null"/> when none is set.</param>
+/// <param name="Manager">The manager Agent's name, or <see langword="null"/> when none is set.</param>
 /// <param name="Workspace">The workspace folder the Team works in, or <see langword="null"/>.</param>
 /// <param name="Owns">The one-line statement of what the Team owns, or <see langword="null"/>.</param>
 /// <param name="Process">The process document file name, normally <c>Process.md</c>.</param>
@@ -23,6 +25,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private const string OwnsKey = "owns";
     private const string ProcessKey = "process";
     private const string OnboardedKey = "onboarded";
+    private const string AvatarLabelKey = "avatarLabel";
+    private const string AvatarImageKey = "avatarImage";
+    private const string AvatarBackgroundKey = "avatarBackground";
 
     /// <summary>
     /// Frontmatter lines whose key this type does not know, in file order and verbatim. They are
@@ -35,6 +40,13 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     /// line so a restart does not repeat the post.
     /// </summary>
     public bool Onboarded { get; init; }
+
+    /// <summary>
+    /// The Team's avatar, kept in the optional <c>avatarLabel</c>, <c>avatarImage</c> and <c>avatarBackground</c> keys.
+    /// It lives here and not in <c>avatars.json</c> because that file is keyed by Name and shared with Agents and the
+    /// Human, so a Team named like an Agent would overwrite that Agent's avatar.
+    /// </summary>
+    public Avatar Avatar { get; init; } = Avatar.None;
 
     /// <summary>Parses the text of a <c>_team.md</c> file.</summary>
     /// <param name="text">The file text, with LF or CRLF line endings.</param>
@@ -55,21 +67,97 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             return false;
         }
 
-        int closing = -1;
-        for (int index = 1; index < lines.Length; index++)
-        {
-            if (string.Equals(lines[index].TrimEnd(), Delimiter, StringComparison.Ordinal))
-            {
-                closing = index;
-                break;
-            }
-        }
-
+        int closing = FindClosingDelimiter(lines);
         if (closing < 0)
         {
             return false;
         }
 
+        (Dictionary<string, string> values, List<string> unknown) = ReadFrontmatter(lines, closing);
+
+        if (!values.TryGetValue(TeamTypeKey, out string? teamTypeText) || !VersionedRef.TryParse(teamTypeText, out VersionedRef? teamType))
+        {
+            return false;
+        }
+
+        string process = values.GetValueOrDefault(ProcessKey, string.Empty);
+        string notes = string.Join('\n', lines[(closing + 1)..]);
+        file = new TeamFile(
+            teamType,
+            NullIfBlank(values.GetValueOrDefault(ManagerKey)),
+            NullIfBlank(values.GetValueOrDefault(WorkspaceKey)),
+            NullIfBlank(values.GetValueOrDefault(OwnsKey)),
+            string.IsNullOrWhiteSpace(process) ? TeamPaths.ProcessFileName : process,
+            notes)
+        {
+            UnknownLines = unknown,
+            Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
+            Avatar = ReadAvatar(values),
+        };
+        return true;
+    }
+
+    /// <summary>
+    /// Reads the three avatar keys. The label is trimmed as <see cref="Avatar.TrimLabel(string?)"/> trims every label. An image
+    /// name that is not a bare file name, and a background that is not a colour, are dropped: the first becomes a path and a
+    /// delete target and the second goes into an inline style, and this file is hand-edited.
+    /// </summary>
+    /// <param name="values">The known frontmatter values by key.</param>
+    /// <returns>The avatar, or <see cref="Avatar.None"/> when no key survives.</returns>
+    private static Avatar ReadAvatar(Dictionary<string, string> values)
+    {
+        string? label = Avatar.TrimLabel(values.GetValueOrDefault(AvatarLabelKey));
+        string? image = NullIfBlank(values.GetValueOrDefault(AvatarImageKey));
+        if (image is not null && !Avatar.IsBareImageName(image))
+        {
+            image = null;
+        }
+
+        return new Avatar(label, image, ValidColour(NullIfBlank(values.GetValueOrDefault(AvatarBackgroundKey))));
+    }
+
+    /// <summary>Returns <paramref name="raw"/> when MudBlazor parses it as a colour, else <see langword="null"/>.</summary>
+    /// <param name="raw">The stored background text, or <see langword="null"/>.</param>
+    private static string? ValidColour(string? raw)
+    {
+        if (raw is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            _ = new MudColor(raw);
+            return raw;
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Finds the closing frontmatter delimiter.</summary>
+    /// <param name="lines">The document lines; the first is the opening delimiter.</param>
+    /// <returns>The index of the closing delimiter line, or -1 when there is none.</returns>
+    private static int FindClosingDelimiter(string[] lines)
+    {
+        for (int index = 1; index < lines.Length; index++)
+        {
+            if (string.Equals(lines[index].TrimEnd(), Delimiter, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Reads the frontmatter lines into the known keys and the lines kept verbatim.</summary>
+    /// <param name="lines">The document lines.</param>
+    /// <param name="closing">The index of the closing delimiter line.</param>
+    /// <returns>The known values by key, and the lines that are not a known <c>key: value</c> pair.</returns>
+    private static (Dictionary<string, string> Values, List<string> Unknown) ReadFrontmatter(string[] lines, int closing)
+    {
         Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
         List<string> unknown = [];
         for (int index = 1; index < closing; index++)
@@ -97,25 +185,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             }
         }
 
-        if (!values.TryGetValue(TeamTypeKey, out string? teamTypeText) || !VersionedRef.TryParse(teamTypeText, out VersionedRef? teamType))
-        {
-            return false;
-        }
-
-        string process = values.GetValueOrDefault(ProcessKey, string.Empty);
-        string notes = string.Join('\n', lines[(closing + 1)..]);
-        file = new TeamFile(
-            teamType,
-            NullIfBlank(values.GetValueOrDefault(ManagerKey)),
-            NullIfBlank(values.GetValueOrDefault(WorkspaceKey)),
-            NullIfBlank(values.GetValueOrDefault(OwnsKey)),
-            string.IsNullOrWhiteSpace(process) ? TeamPaths.ProcessFileName : process,
-            notes)
-        {
-            UnknownLines = unknown,
-            Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
-        };
-        return true;
+        return (values, unknown);
     }
 
     /// <summary>Composes the file text: the frontmatter, then <see cref="Notes"/>. LF line endings only.</summary>
@@ -146,6 +216,10 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             builder.Append(OnboardedKey).Append(": true\n");
         }
 
+        AppendOptional(builder, AvatarLabelKey, this.Avatar.Label);
+        AppendOptional(builder, AvatarImageKey, this.Avatar.Image);
+        AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
+
         foreach (string line in this.UnknownLines)
         {
             builder.Append(line).Append('\n');
@@ -162,7 +236,10 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, WorkspaceKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, OwnsKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, ProcessKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, AvatarLabelKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, AvatarImageKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, AvatarBackgroundKey, StringComparison.OrdinalIgnoreCase);
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
@@ -175,6 +252,14 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         }
 
         return value;
+    }
+
+    private static void AppendOptional(StringBuilder builder, string key, string? value)
+    {
+        if (value is not null)
+        {
+            AppendScalar(builder, key, value);
+        }
     }
 
     private static void AppendScalar(StringBuilder builder, string key, string value) =>

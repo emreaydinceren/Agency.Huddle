@@ -29,7 +29,7 @@ internal interface IModelCatalog
     /// this time started with that model selected. The list is for exactly ONE model on exactly ONE
     /// Adapter — effort is downstream of model choice, not a sibling catalog beside it — and the
     /// adapter's own <c>"default"</c> sentinel entry is already removed before this returns: the
-    /// Teammate card's blank "Use the agent's default" option already IS that choice, and it stores
+    /// Agent card's blank "Agent default" option already IS that choice, and it stores
     /// <c>null</c>, so there is nothing left for the sentinel string to mean here.
     /// </summary>
     /// <remarks>
@@ -69,4 +69,22 @@ internal interface IModelCatalog
     /// <param name="model">The model id to probe against, or <see langword="null"/> for the adapter's own default.</param>
     /// <param name="cancellationToken">Cancels the probe.</param>
     ValueTask<IReadOnlyList<AgentModeOption>> GetWorkModesAsync(string? adapterId, string? model, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The display names of an Agent's Model and Effort, read from what earlier probes already cached.
+    /// It never probes and never waits: a surface that must not block (the avatar profile card) calls it
+    /// and falls back to the raw ids and its own default wording for whatever comes back null.
+    /// </summary>
+    /// <remarks>
+    /// A chosen id maps to its display name in the cached model list (or, for effort, the cached effort
+    /// list of that (Adapter, Model)). A <see langword="null"/> id means "none chosen", and then the name of
+    /// the Adapter's own default is returned, learned from the throwaway session's reported current values.
+    /// The Adapter's <c>"default"</c> effort sentinel names no level, so it counts as unknown. The default
+    /// Effort is only known for the Adapter's default model, so it is unknown when a model was chosen.
+    /// </remarks>
+    /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
+    /// <param name="model">The chosen model id, or <see langword="null"/> when none was chosen.</param>
+    /// <param name="effort">The chosen effort id, or <see langword="null"/> when none was chosen.</param>
+    /// <returns>The names that could be resolved from the cache; <see langword="null"/> members are unknown.</returns>
+    RuntimeNames PeekRuntime(string? adapterId, string? model, string? effort);
 }

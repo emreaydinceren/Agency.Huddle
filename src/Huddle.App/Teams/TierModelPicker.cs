@@ -1,18 +1,6 @@
-using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
-
-/// <summary>An adapter that answered its model probe, with the model ids it lists.</summary>
-/// <param name="AdapterId">The adapter id.</param>
-/// <param name="Models">The model ids the adapter advertises.</param>
-internal sealed record AdapterAvailability(string AdapterId, IReadOnlyList<string> Models);
-
-/// <summary>The adapter and model chosen for a tier.</summary>
-/// <param name="AdapterId">The chosen adapter id.</param>
-/// <param name="Model">The model id, or <see langword="null"/> for the adapter's default model.</param>
-internal sealed record ModelPick(string AdapterId, string? Model);
 
 /// <summary>
 /// Maps a role's tier to an adapter and model (HR-6, MS-3, NF-9, decision D10). Manifests name
@@ -62,29 +50,5 @@ internal static class TierModelPicker
         }
 
         return new ModelPick(chosen.AdapterId, model);
-    }
-}
-
-/// <summary>Builds the list of adapters that answered their model probe, for <see cref="TierModelPicker"/>.</summary>
-/// <param name="adapters">The configured adapters.</param>
-/// <param name="models">The model catalog probed per adapter.</param>
-internal sealed class AnsweredAdapters(AdapterCatalog adapters, IModelCatalog models)
-{
-    /// <summary>Probes each configured adapter and keeps those that listed at least one model.</summary>
-    /// <param name="cancellationToken">Cancels the probes.</param>
-    /// <returns>The adapters that answered, in configuration order.</returns>
-    public async ValueTask<IReadOnlyList<AdapterAvailability>> GetAsync(CancellationToken cancellationToken)
-    {
-        List<AdapterAvailability> answered = [];
-        foreach (AdapterProfile profile in adapters.Profiles)
-        {
-            IReadOnlyList<AgentModelOption> options = await models.GetAsync(profile.Id, cancellationToken).ConfigureAwait(false);
-            if (options.Count > 0)
-            {
-                answered.Add(new AdapterAvailability(profile.Id, [.. options.Select(static option => option.Id)]));
-            }
-        }
-
-        return answered;
     }
 }

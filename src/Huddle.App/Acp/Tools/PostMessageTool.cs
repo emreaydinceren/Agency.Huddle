@@ -9,11 +9,9 @@ using Agency.Huddle.App.Services;
 /// <summary>Posts a Message into a Room, as the calling Agent.</summary>
 internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IPromptSource prompts, OwnPosts ownPosts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "post_message";
 
-    public string Description => prompts.Render("tool.postMessage.description", NoValues);
+    public string Description => prompts.Render("tool.postMessage.description");
 
     public JsonObject InputSchema => new JsonObject
     {
@@ -47,7 +45,7 @@ internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IP
 
         try
         {
-            await chat.PostAsync(roomId, callerAgentId, text, ct: cancellationToken);
+            await chat.PostAsync(roomId, callerAgentId, text, ct: cancellationToken).ConfigureAwait(false);
             ownPosts.Record(callerAgentId, roomId, text);
             return $"Posted to room '{roomId}'.";
         }

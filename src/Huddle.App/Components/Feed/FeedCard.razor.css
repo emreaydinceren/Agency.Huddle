@@ -1,0 +1,398 @@
+/* One card of the Feed Tab (Feed spec 6.13). Colours come from the theme: Edge is --ink-edge, Quiet ink the secondary text, Accent the primary. */
+.feed-card {
+    position: relative;
+    margin: 0 0 8px;
+    padding: 12px 12px 12px 16px;
+    overflow: hidden;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--hu-feed-card-radius);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.4;
+    background-color: var(--mud-palette-surface);
+    box-shadow: var(--hu-shadow-card);
+    transition: box-shadow 0.15s ease;
+}
+
+/* The kind bar of Cobalt Soft: 3px in the kind's colour, the same one as the avatar badge. Zero wide in the other Themes. */
+.feed-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: var(--hu-feed-card-kindbar);
+    border-radius: 0 var(--mud-default-borderradius) var(--mud-default-borderradius) 0;
+    background: var(--feed-kind, var(--hu-feed-card-kindbar-ink));
+}
+
+.feed-kind-tasks {
+    --feed-kind: var(--mud-palette-primary);
+}
+
+.feed-kind-gates,
+.feed-kind-helpers,
+.feed-kind-devices,
+.feed-kind-needsyou {
+    --feed-kind: var(--mud-palette-warning);
+}
+
+.feed-kind-documents {
+    --feed-kind: var(--mud-palette-info);
+}
+
+.feed-kind-rooms {
+    --feed-kind: var(--mud-palette-secondary);
+}
+
+.feed-card:hover {
+    border-color: var(--hu-feed-card-hover-line);
+    background-color: var(--hu-feed-card-hover-fill);
+    box-shadow: var(--hu-feed-card-hover-shadow);
+}
+
+.feed-card-expanded,
+.feed-card-expanded:hover {
+    border-color: var(--hu-feed-card-open-line);
+    box-shadow: var(--hu-feed-card-open-shadow);
+}
+
+/* An unseen item's fill is laid over the card colour, so the default (transparent) leaves the card as it is. */
+.feed-card-unseen {
+    background-image: linear-gradient(var(--hu-feed-unseen-background), var(--hu-feed-unseen-background));
+}
+
+.feed-card-unseen .feed-card-summary {
+    font-weight: var(--hu-feed-unseen-weight);
+}
+
+/* Nordic: an item that waits on you has a cloudberry edge; a handled one is dimmed and flat. */
+:root:has([data-hu-surface="paper"]) .feed-card-waiting {
+    box-shadow: var(--hu-shadow-card), inset 3px 0 0 var(--hu-needs);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-waiting .feed-card-age {
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-resolved {
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--hu-ink-strip));
+    box-shadow: none;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-resolved .feed-card-summary {
+    color: var(--hu-text-subtle);
+}
+
+.feed-card-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background-color: var(--hu-feed-unseen-bar);
+}
+
+.feed-card-resolved .feed-card-avatar,
+.feed-card-resolved .feed-card-summary {
+    opacity: 0.7;
+}
+
+.feed-card-top {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    align-items: start;
+}
+
+.feed-card-avatar {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.feed-card-avatar-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.feed-card-avatar ::deep .mud-avatar,
+.feed-card-mark {
+    width: 40px;
+    height: 40px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.feed-card-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-edge);
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-badge {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--mud-palette-surface);
+    box-sizing: content-box;
+    color: var(--mud-palette-primary-text);
+    background-color: var(--mud-palette-primary);
+}
+
+.feed-card-badge ::deep .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.feed-badge-gates,
+.feed-badge-helpers,
+.feed-badge-devices,
+.feed-badge-needsyou {
+    color: var(--mud-palette-warning-text);
+    background-color: var(--mud-palette-warning);
+}
+
+.feed-badge-documents {
+    color: var(--mud-palette-info-text);
+    background-color: var(--mud-palette-info);
+}
+
+.feed-badge-rooms {
+    color: var(--mud-palette-secondary-text);
+    background-color: var(--mud-palette-secondary);
+}
+
+.feed-card-main {
+    min-width: 0;
+    cursor: pointer;
+}
+
+.feed-card-main:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+.feed-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+
+.feed-card-summary {
+    color: var(--hu-feed-summary-ink);
+}
+
+.feed-card-actor,
+.feed-card-purpose {
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Nordic Paper reads in serif: the summary in Literata, the reference chips in the UI face. */
+:root:has([data-hu-reading="book"]) .feed-card-summary {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-body1-size);
+    line-height: 1.55;
+}
+
+:root:has([data-hu-reading="book"]) .feed-card-summary ::deep .feed-chip {
+    font-family: var(--mud-typography-default-family);
+}
+
+.feed-card-more {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.feed-card-more:hover {
+    text-decoration: underline;
+}
+
+.feed-card-meta {
+    margin-top: 4px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-meta ::deep .feed-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    color: inherit;
+}
+
+.feed-card-meta ::deep .feed-meta-chip .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.feed-team-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* The Team's rounded square, drawn at the old monogram's slot rather than at the 24px Small avatar, so the meta line keeps its height. */
+.feed-team-chip ::deep .mud-avatar.feed-team-avatar {
+    width: 18px;
+    height: 18px;
+}
+
+.feed-card-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.feed-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    white-space: nowrap;
+}
+
+.feed-pill ::deep .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+.feed-pill-waiting {
+    background: var(--hu-tone-warning-soft);
+    border-color: var(--hu-tone-warning-line);
+    color: var(--hu-tone-warning-ink);
+}
+
+.feed-pill-assigned {
+    background: var(--hu-tone-info-soft);
+    border-color: var(--hu-selected-background-hover);
+    color: var(--hu-tone-info-ink);
+}
+
+.feed-pill-done {
+    background: var(--hu-tone-success-soft);
+    border-color: transparent;
+    color: var(--hu-tone-success-ink);
+}
+
+.feed-card-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.feed-card-age {
+    font-size: var(--mud-typography-caption-size);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-age-unseen {
+    color: var(--hu-accent-ink);
+    font-weight: 600;
+}
+
+.feed-card-age-unseen::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 4px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--hu-feed-unseen-dot);
+}
+
+.feed-card-chevron {
+    display: inline-flex;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.feed-card-chevron:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 8%, transparent);
+}
+
+.feed-card-members {
+    margin-top: 8px;
+}
+
+/* The expanded area. Cobalt Soft tints it; its top edge is the separator, flush with the card's sides. */
+.feed-card-details {
+    margin: 12px -12px -12px -16px;
+    padding: 0 12px 12px 16px;
+    background: var(--hu-feed-detail-background);
+    border-radius: 0 0 calc(var(--hu-feed-card-radius) - 1px) calc(var(--hu-feed-card-radius) - 1px);
+}
+
+.feed-card-edge {
+    margin: 0 -12px 12px -16px;
+    border: 0;
+    border-top: 1px solid var(--ink-edge);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-edge {
+    border-top-style: dashed;
+    border-color: var(--hu-line-control);
+}
+
+:root:has([data-hu-reading="book"]) .feed-card ::deep .feed-preview-title {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-h6-size);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.feed-card-caption {
+    margin-bottom: 8px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.feed-card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.feed-card ::deep .feed-preview-deleted {
+    padding: 12px;
+    border: 1px dashed var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}

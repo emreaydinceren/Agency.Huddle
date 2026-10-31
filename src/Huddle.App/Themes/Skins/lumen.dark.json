@@ -1,0 +1,52 @@
+{
+  "$schema": "skin.schema.json",
+  "id": "lumen-dark",
+  "label": "Lumen Dark",
+  "mode": "dark",
+  "order": 60,
+  "include": "lumen.light.json",
+  "shadows": {
+    "4-24": "0 0 0 1px rgba(255,255,255,.06), 0 12px 36px -6px rgba(0,0,0,.7)",
+    "25": "0 0 0 1px rgba(255,255,255,.1), 0 22px 48px -10px rgba(0,0,0,.8)"
+  },
+  "palette": {
+    "background": "#0b0b0f",
+    "surface": "#111117",
+    "drawerBackground": "#0e0e13",
+    "backgroundGray": "#15151c",
+    "tableHover": "#16161d",
+    "divider": "#333341",
+    "dividerLight": "#1f1f28",
+    "linesInputs": "#2d2d39",
+    "linesDefault": "#4b4b57",
+    "textPrimary": "#ececf1",
+    "textSecondary": "#898994",
+    "actionDefault": "#898994",
+    "drawerText": "#ececf1",
+    "drawerIcon": "#898994",
+    "textDisabled": "#7c7c80",
+    "primary": "#8379d8",
+    "primaryDarken": "#948bdf",
+    "primaryContrastText": "#0f0f14",
+    "secondary": "#14b8a6",
+    "tertiary": "#d788dd",
+    "success": "#22c55e",
+    "warning": "#f59e0b",
+    "error": "#f87171",
+    "info": "#2691d9",
+    "overlayDark": "rgba(0,0,0,0.6)"
+  },
+  "tokens": {
+    "note.prose.ink": "#d4d4dc",
+    "ground.rail": "palette.background",
+    "accent.ink": "mix(palette.primary 46%, palette.textPrimary)",
+    "current.background": "mix(palette.dividerLight 90%, palette.background)",
+    "selected.background.hover": "mix(palette.primary 20%, palette.background)",
+    "text.subtle": "mix(palette.textSecondary 71%, palette.textPrimary)",
+    "tone.primary.soft": "mix(palette.primary 12%, palette.background)",
+    "tone.success.soft": "mix(palette.success 10%, palette.background)",
+    "tone.warning.soft": "mix(palette.warning 10%, palette.background)",
+    "tone.error.soft": "mix(palette.error 9%, palette.background)",
+    "scrim": "palette.overlayDark"
+  }
+}

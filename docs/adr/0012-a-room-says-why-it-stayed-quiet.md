@@ -16,7 +16,7 @@ date: 2026-09-16
 > a `ProtocolVersion` bump this repo has twice refused to pay for a UI nicety. The copy still
 > instructs rather than predicts, for that reason rather than the original one.
 
-Silence is this product's main failure mode. Several mechanisms make a Teammate correctly say
+Silence is this product's main failure mode. Several mechanisms make an Agent correctly say
 nothing — a Message that Mentions nobody in a Room of three or more, a Room whose Budget is
 spent, a **Continue** that re-delivers a Message naming nobody — and until now the Room view
 showed the Human nothing at all for any of them. From the user's seat, *working as designed*
@@ -38,7 +38,7 @@ answers the question those two left: at **what scope**, and in **what words**.
 **A Room-level note, in the existing slot between the transcript and the composer, whose copy
 instructs rather than predicts.**
 
-> No teammate was @-mentioned — name one to ask for a reply.
+> No agent was @-mentioned — name one to ask for a reply.
 
 The scope and the wording are one decision, not two, and roadmap item 8 is what ties them.
 
@@ -81,16 +81,16 @@ Two further costs, either of which would have been sufficient on its own:
 
 Because `following` is unwired, `RoomReplyResolver` answers *what the delivery was labelled*,
 never what a runner did. Every sentence built on it has to survive that. So the Room says
-*"name one to ask for a reply"* and never *"no teammate will reply"* — an instruction stays true
+*"name one to ask for a reply"* and never *"no agent will reply"* — an instruction stays true
 whoever is listening, while a prediction is one `follow_room` call away from being a lie.
 
-It is `role="status"`, not `role="alert"`, following [ADR-0011](0011-a-rename-moves-the-teammate-not-its-history.md)'s
+It is `role="status"`, not `role="alert"`, following [ADR-0011](0011-a-rename-moves-the-agent-not-its-history.md)'s
 precedent: this is a consequence, not an interruption. `MudAlert` emits no role of its own
 (see [Traps](../engineering/traps.md)), so the attribute is written explicitly, as both existing
 strips already do.
 
-*"No teammate"*, not *"nobody"*: `@You` **is** a Mention, and so is a handle that resolved to
-the Human. The claim has to be about Teammates or it is false in its own test case.
+*"No agent"*, not *"nobody"*: `@You` **is** a Mention, and so is a handle that resolved to
+the Human. The claim has to be about Agents or it is false in its own test case.
 
 ## Reachability is a recipient filter, not an outcome
 
@@ -100,18 +100,18 @@ Persona has ever started. Without a filter, `@Nova hello` would resolve to `Expe
 note, raise no health strip — the strip needs a *Reason*, per [Rules](../engineering/rules.md) —
 and produce precisely the silence this ADR exists to remove.
 
-So an unreachable Agent is **not a recipient**. A Room whose Teammates are all Offline resolves
-to `NoRecipients`, which renders nothing. The note therefore never tells a Human to name a
-Teammate that cannot answer.
+So an unreachable Agent is **not a recipient**. A Room whose Agents are all Offline resolves
+to `NoRecipients`, which renders nothing. The note therefore never tells a Human to name an
+Agent that cannot answer.
 
 Filtering alone is not quite enough, and the gap is worth recording because it was found by
 reading a manual test rather than by reasoning about the code. `REPLYGATEBUDGET-30` puts one
 Agent offline and another online and then Mentions the offline one. Filtering leaves a reachable
 recipient that was not named, so the fold would land on `ContextOnly` and the Room would announce
-*"no teammate was @-mentioned"* — when one plainly was. `NoRecipients` would be equally false,
-because the other Teammate did receive it.
+*"no agent was @-mentioned"* — when one plainly was. `NoRecipients` would be equally false,
+because the other Agent did receive it.
 
-So a Mention of an unreachable Teammate is **its own outcome**, `MentionedUnreachable`, checked
+So a Mention of an unreachable Agent is **its own outcome**, `MentionedUnreachable`, checked
 before the fan-out and rendered as nothing by every surface. It is the deferred case arriving by
 a side door, and the point of naming it is that every other answer available at that moment is
 untrue.
@@ -134,7 +134,7 @@ mode a new strip is most likely to reintroduce.
   the ordinary end of almost every thread. Resolving those would put the note under nearly every
   final reply in every group Room. The note answers *"why did my message get no reply"*, so it
   belongs to the Message that asked.
-- **No note while a Draft is open in the Room.** A Teammate mid-Turn from an earlier Mention is
+- **No note while a Draft is open in the Room.** An Agent mid-Turn from an earlier Mention is
   visibly typing. *"Name one to ask for a reply"* rendered beside a streaming row is a worse lie
   than silence.
 
@@ -181,7 +181,7 @@ work.
 
 - **A posted Message, or a third `UserKind`** — settled twice already; see ADR-0006 and ADR-0008.
 - **A per-message annotation** — the item-8 argument above.
-- **Telling the Human that every Teammate is offline** — worth doing, not done here. Suppressing
+- **Telling the Human that every Agent is offline** — worth doing, not done here. Suppressing
   the note is what keeps it from being wrong in the meantime.
 - **Re-deriving the note on load** — buys a refreshed sentence at the price of a claim the data
   cannot support once membership has changed.

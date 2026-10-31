@@ -128,7 +128,7 @@ internal sealed class TurnGate(int maxConcurrent)
     {
         try
         {
-            await pending.WaitAsync(cancellationToken);
+            await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

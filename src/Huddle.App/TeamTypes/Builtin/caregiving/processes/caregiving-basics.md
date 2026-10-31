@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The care coordinator's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Facts checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - One weekly summary, with this week's appointments and the forms due within a month.

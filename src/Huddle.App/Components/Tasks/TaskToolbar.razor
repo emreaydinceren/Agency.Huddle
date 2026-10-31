@@ -14,32 +14,21 @@
 
 @if (this.SplitHeader)
 {
-    @* The Tasks page's own first row (wireframe): the counts on the left; the page's actions, Group by,
-       List | Kanban and "+ New task" on the right. Same dense MudToolBar as the row below, so the two
-       rows are the same height. *@
+    @* The Tasks page's own first row (wireframe T2): List | Kanban, then the counts, both on the left; the page's actions on
+       the right, where the page puts "New task" and the View menu in HeaderTrailing (T2 has no visible header). Group by is
+       the filter row's last control. Same dense MudToolBar as the row below, so the two rows are the same height. *@
     <MudToolBar Dense="true" Gutters="false" Class="task-toolbar-header">
+        @this.KindControl
         @this.HeaderLeading
         <MudSpacer />
         @this.HeaderActions
-        @* Group by is a filter-style chip, like Status below: "Group by: Assignee" with a menu of choices, and a clear button once one is chosen. *@
-        <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
-                        OnClear="this.ClearGroupingAsync" Class="task-toolbar-group">
-            <MudMenuItem OnClick="this.ClearGroupingAsync">None</MudMenuItem>
-            @foreach (TaskGroupField field in this.GroupChoices())
-            {
-                TaskGroupField chosen = field;
-                <MudMenuItem OnClick="@(() => this.OnGroupingChangedAsync(chosen))">@GroupFieldLabel(chosen)</MudMenuItem>
-            }
-        </TaskFilterChip>
-        @this.KindControl
-        @this.NewTaskButton
         @this.HeaderTrailing
     </MudToolBar>
 }
 
-<MudToolBar Dense="true" Gutters="false" Class="task-toolbar">
+<MudToolBar Dense="true" Gutters="false" WrapContent="true" Class="task-toolbar toolbar-hairline">
     @* The Filter menu leads the row, as an icon: every saved filter is chosen here and the ones set show as chips after it. *@
-    <MudMenu Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter">
+    <MudMenu Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter" PopoverClass="task-toolbar-filter-popover">
         @* The View editor's Team control (UX-050c, OP-8): a multi-select of the Teams known to the app. *@
         <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
                    SelectedValuesChanged="this.OnTeamFilterChangedAsync" Class="task-toolbar-filter-team">
@@ -197,19 +186,19 @@
 
     @if (!this.SplitHeader)
     {
-        @* With SplitHeader, Group by lives in the header row instead. *@
+        @* With SplitHeader, Group by is the chip at this row's right end instead. *@
         <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
             @this.GroupSelect
         </MudMenu>
     }
 
     @* Ad hoc like the filters in the Filter menu: toggles the effective View's Requests-only filter. *@
-    <MudChip T="string" Size="Size.Small" Class="task-toolbar-requests" Color="@(this.EffectiveView.Filter.RequestsOnly ? Color.Primary : Color.Default)"
+    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="@(this.EffectiveView.Filter.RequestsOnly ? "task-toolbar-requests filter-chip filter-chip-set" : "task-toolbar-requests filter-chip")"
              Icon="@(this.EffectiveView.Filter.RequestsOnly ? Icons.Material.Filled.Check : null)"
              aria-pressed="@(this.EffectiveView.Filter.RequestsOnly ? "true" : "false")"
              OnClick="this.OnRequestsToggledAsync">Requests</MudChip>
 
-    <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" Class="task-toolbar-search" />
+    <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" Compact="true" Class="task-toolbar-search" />
 
     @if (this.EffectiveView.Kind == ViewKind.List)
     {
@@ -217,6 +206,20 @@
                    Class="task-toolbar-dense" />
     }
 
+    @if (this.SplitHeader)
+    {
+        @* Group by is a filter-style chip, like Status: "Group by: Assignee" with a menu of choices, and a clear button once one is
+           chosen. It ends the row, pushed to the right edge (the one-row toolbar keeps its "Group, Sort" menu instead). *@
+        <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
+                        OnClear="this.ClearGroupingAsync" Class="task-toolbar-group">
+            <MudMenuItem OnClick="this.ClearGroupingAsync">None</MudMenuItem>
+            @foreach (TaskGroupField field in this.GroupChoices())
+            {
+                TaskGroupField chosen = field;
+                <MudMenuItem OnClick="@(() => this.OnGroupingChangedAsync(chosen))">@GroupFieldLabel(chosen)</MudMenuItem>
+            }
+        </TaskFilterChip>
+    }
 </MudToolBar>
 
 @code {
@@ -229,13 +232,13 @@
     [Parameter]
     public EventCallback<TaskView> EffectiveViewChanged { get; set; }
 
-    /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names.</summary>
+    /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names. With <see cref="SplitHeader"/> the page draws its own button, so this is raised only by the one-row toolbar.</summary>
     [Parameter]
     public EventCallback<NewTaskDefaults> OnNewTask { get; set; }
 
     /// <summary>
-    /// Whether "+ New task" and List | Board sit in their own first row above the filters, with
-    /// <see cref="HeaderActions"/> and <see cref="HeaderTrailing"/> (the Tasks page). Off, they lead the one row (the Team page's tab).
+    /// Whether List | Kanban sit in their own first row above the filters, with
+    /// <see cref="HeaderActions"/> and <see cref="HeaderTrailing"/> (the Tasks page, which puts its own "New task" in HeaderTrailing). Off, "+ New task" and List | Kanban lead the one row (the Team page's tab).
     /// </summary>
     [Parameter]
     public bool SplitHeader { get; set; }
@@ -273,7 +276,7 @@
         <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
         @if (this.EffectiveView.Kind == ViewKind.List)
         {
-            @* Status is a Group by choice on a List only: a Kanban's columns already are the statuses. *@
+            @* Status is a Group by choice on a List only: a Board's columns already are the statuses. *@
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.State">Status</MudSelectItem>
         }
     </MudSelect>;
@@ -290,8 +293,10 @@
     /// <summary>Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view" offers to persist it - the View editor's own Kind control is the saved counterpart.</summary>
     private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
                                                                    Class="task-toolbar-kind" ItemCount="2">
-        <MudToggleItem Value="ViewKind.List" Text="List" />
-        <MudToggleItem Value="ViewKind.Board" Text="Kanban" />
+        @* The same icons as the View's sidebar row (TaskViewNav). In the content, not SelectedIcon/UnselectedIcon: MudToggleGroup
+           draws those only with CheckMark on, and the segmented control turns it off. *@
+        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
+        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Outlined.ViewKanban" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
     </HuddleSegmentedControl>;
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
@@ -485,7 +490,7 @@
     /// <summary>The Group by chip's text: the chosen field's name, or "None".</summary>
     private string GroupText => this.PrimaryGrouping is { } grouping ? GroupFieldLabel(grouping) : "None";
 
-    /// <summary>The fields the Group by chip offers: State (shown as Status) only on a List, since a Kanban's columns already are the statuses.</summary>
+    /// <summary>The fields the Group by chip offers: State (shown as Status) only on a List, since a Board's columns already are the statuses.</summary>
     private List<TaskGroupField> GroupChoices() =>
     [
         TaskGroupField.Team,
@@ -518,14 +523,14 @@
         }
 
         TaskView updated;
-        if (kind == ViewKind.Board)
+        if (kind == ViewKind.Kanban)
         {
-            IReadOnlyList<BoardColumn> columns = this.ViewStore.Get(this.EffectiveView.Id) is { Kind: ViewKind.Board, Columns.Count: > 0 } saved
+            IReadOnlyList<BoardColumn> columns = this.ViewStore.Get(this.EffectiveView.Id) is { Kind: ViewKind.Kanban, Columns.Count: > 0 } saved
                 ? saved.Columns
                 : BoardLayout.DefaultColumns;
             updated = this.EffectiveView with
             {
-                Kind = ViewKind.Board,
+                Kind = ViewKind.Kanban,
                 Scope = ViewScope.Active,
                 Columns = columns,
                 Grouping = [.. this.EffectiveView.Grouping.Where(static field => field != TaskGroupField.State)],
@@ -554,8 +559,6 @@
 
     private Task OnNewTaskClickedAsync()
     {
-        string? team = this.EffectiveView.Filter.Teams.Count == 1 ? this.EffectiveView.Filter.Teams[0] : null;
-        string? project = this.EffectiveView.Filter.Projects.Count == 1 ? this.EffectiveView.Filter.Projects[0].Project : null;
-        return this.OnNewTask.InvokeAsync(new NewTaskDefaults(team, project));
+        return this.OnNewTask.InvokeAsync(NewTaskDefaults.For(this.EffectiveView));
     }
 }

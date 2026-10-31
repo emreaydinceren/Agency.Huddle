@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The support lead's Evidence line is the check, and the Human sends every reply.
 
+## Definition of Done
+
+- Answer verified: evidence from verify
+- Reply reviewed: document reviewed by verify
+
 ## Cadence
 
 - Urgent tickets first, then oldest first. Keep each drafter to a few tickets at a time.

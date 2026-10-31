@@ -10,10 +10,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
+1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
 2. Open each Room once and send `hello`, so each has a Transcript file. Note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar.
 3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's id>'`, `$bo = '<Bo's id>'`.
-4. This area makes an Agent Mention you by writing a Message line into the Transcript and relaunching, because the mock Teammates strip every `@` from what they echo. Define the helper once:
+4. This area makes an Agent Mention you by writing a Message line into the Transcript and relaunching, because the mock Agents strip every `@` from what they echo. Define the helper once:
 
    ```powershell
    function Ask([string]$room, [string]$who) {
@@ -38,7 +38,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Look at the sidebar. Note whether any card sits above `Chats`.
+1. Look at the sidebar. Note whether any card sits above `Rooms`.
 2. Run `Ask $bo 'Bo'`. Wait one minute. Run `Ask $ada 'Ada'`.
 3. Stop and relaunch the app. Open `http://localhost:5100/`.
 4. Look at the top of the sidebar.
@@ -46,8 +46,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 1 there is no card, and no empty box, above `Chats`.
-- At step 4 a card titled `Needs you` with a count of `2` sits above `Chats`, holding `Bo` first and `Ada` second (the longer wait first).
+- At step 1 there is no card, and no empty box, above `Rooms`.
+- At step 4 a card titled `Needs you` with a count of `2` sits above `Rooms`, holding `Bo` first and `Ada` second (the longer wait first).
 - Each row has an `@` icon, the Room's name, and a second line of the form `Bo · HH:mm` or `Ada · HH:mm`.
 
 ### NEEDSYOU-02 — Opening a Room does not clear it; posting in it does
@@ -62,7 +62,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Click the `Bo` row in the card. Read the Room, then click `Ada` in the Chats group.
+1. Click the `Bo` row in the card. Read the Room, then click `Ada` in the Rooms group.
 2. Look at the card.
 3. Return to `Bo`, type `Option two.` and press Enter.
 4. Look at the card.
@@ -81,7 +81,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Before you start**
 
 - No Mention is outstanding in `Ada` (sending a Message in step 1 would clear one anyway).
-- Ada is a mock Teammate. A prompt containing `[elicit:one]` makes it put one Form to you before it echoes.
+- Ada is a mock Agent. A prompt containing `[elicit:one]` makes it put one Form to you before it echoes.
 
 **Steps**
 
@@ -109,7 +109,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Use the `⋯` menu on the `Bo` Room in `Chats` and choose **Archive**.
+1. Use the `⋯` menu on the `Bo` Room in `Rooms` and choose **Archive**.
 2. Look at the card.
 3. Open **Archived chats** (bottom of the sidebar) and choose **Unarchive** on `Bo`.
 4. Look at the card.

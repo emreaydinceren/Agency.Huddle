@@ -1,24 +1,32 @@
 @*
     The one sentence that says what is missing and what to do next (design-system "Patterns worth
-    copying"; UX-R20, UX-077). Inline it is .empty-state; when it fills a pane it is .tab-empty.
+    copying"; UX-R20, UX-077; change list C7): a 32px icon, a title (14px/600), one sentence saying what
+    to do (13px, secondary) and an optional action, centred. Inline it is .empty-state; when it fills a pane it
+    is .tab-empty, sitting a third of the way down.
 *@
 
-<div class="@(this.FullPane ? "tab-empty" : "empty-state")">
+<div class="@(this.FullPane ? "tab-empty empty-state-centered" : "empty-state")">
     @if (this.Icon is not null)
     {
-        <MudIcon Icon="@this.Icon" Size="Size.Large" Class="mud-text-secondary" />
+        <MudIcon Icon="@this.Icon" Class="empty-state-icon mud-text-secondary" />
     }
-    <MudText Typo="Typo.body1" Class="mud-text-secondary" role="status">@this.Text</MudText>
+    <MudText Typo="Typo.subtitle1" Class="empty-state-title" role="status">@this.Title</MudText>
+    <MudText Typo="Typo.body2" Class="empty-state-text mud-text-secondary">@this.Text</MudText>
     @this.Action
 </div>
 
 @code {
-    /// <summary>The empty-state sentence: what is missing and what to do next.</summary>
+    /// <summary>The title line: what is missing, in a few words.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The empty-state sentence: what to do next.</summary>
     [Parameter]
     [EditorRequired]
     public string Text { get; set; } = string.Empty;
 
-    /// <summary>An optional MudBlazor icon name, shown above the text.</summary>
+    /// <summary>An optional MudBlazor icon name, shown above the title.</summary>
     [Parameter]
     public string? Icon { get; set; }
 

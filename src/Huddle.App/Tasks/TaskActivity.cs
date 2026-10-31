@@ -2,43 +2,6 @@ using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>What a wake attempt did, for one Task (Spec §10.6–§10.7).</summary>
-public enum WakeOutcome
-{
-    /// <summary>The assignee's session was posted to and will see the change.</summary>
-    Woken,
-
-    /// <summary>The assignee is not online, so no one was told.</summary>
-    Offline,
-
-    /// <summary>The Task's wake budget was already spent before this wake.</summary>
-    BudgetSpent,
-
-    /// <summary>Waking is paused for this Task; the change was saved and logged only.</summary>
-    WakePaused,
-
-    /// <summary>The wake could not be delivered (for example, no Room could be chosen).</summary>
-    Failed,
-}
-
-/// <summary>One recorded wake attempt for a Task, driving the "AI reacting" toast.</summary>
-/// <param name="TaskId">The Task the wake was for.</param>
-/// <param name="Assignee">The name of the Agent the wake targeted.</param>
-/// <param name="RoomId">The Room the wake was posted in, or <see langword="null"/> when none was chosen.</param>
-/// <param name="RoomName">The name of <paramref name="RoomId"/>'s Room, or <see langword="null"/> when none was chosen.</param>
-/// <param name="Outcome">What the wake attempt did.</param>
-/// <param name="At">When the wake attempt happened.</param>
-public sealed record WakeRecord(TaskId TaskId, string Assignee, string? RoomId, string? RoomName, WakeOutcome Outcome, DateTimeOffset At);
-
-/// <summary>The Agent-wake budget for one Task (Spec §10.6): a guard against Agents looping.</summary>
-/// <param name="Used">How many Agent-made wakes have been counted since the last Human change to the Task.</param>
-/// <param name="Granted">The total wakes allowed before the budget is exhausted.</param>
-public sealed record WakeBudget(int Used, int Granted)
-{
-    /// <summary>Whether the budget has no wakes left. A non-positive <see cref="Granted"/> never exhausts.</summary>
-    public bool Exhausted => this.Granted > 0 && this.Used >= this.Granted;
-}
-
 /// <summary>
 /// In-memory, per-Task record of Agent-made wake attempts (Spec §10.7) and the wake budget that
 /// guards against a looping Agent (Spec §10.6). A leaf singleton with no dependency but the

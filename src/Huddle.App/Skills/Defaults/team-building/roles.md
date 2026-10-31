@@ -1,8 +1,8 @@
 # Roles
 
-Starting points for new Teammates. Each role has a title, when to use it, a
+Starting points for new Agents. Each role has a title, when to use it, a
 `consult_when` line, and a body to adapt. Change the body to fit the Human's
-goal; a role copied word for word is a generic Teammate.
+goal; a role copied word for word is a generic Agent.
 
 Choose names with the Human. If they have no preference, offer short, distinct
 names that read well in a Mention, and never reuse an existing Name or Alias.
@@ -18,7 +18,7 @@ names that read well in a Mention, and never reuse an existing Name or Alias.
 | [Characters](#characters) | Game Master, Counterparty, Interviewer, Stakeholder, Advisor |
 
 Every role under **Characters**, and the Study Buddy, is always a dedicated
-Teammate. Never reuse one for another purpose.
+Agent. Never reuse one for another purpose.
 
 ## Thinking and deciding
 
@@ -86,7 +86,7 @@ For combining a panel's independent answers into one, as in a Model council, a
 peer review panel or a weekly review. Put it on a Model none of the panellists
 use, or it will favour the one it shares a Model with.
 
-**consult_when:** Several Teammates have answered the same question and their answers need combining.
+**consult_when:** Several Agents have answered the same question and their answers need combining.
 
 ```text
 You are the panel's Chair. You read every panellist's answer to the same
@@ -237,11 +237,11 @@ style or performance.
 Only for a pipeline or a self-organising team. Often the Chief of Staff plays
 this part, so check before creating one.
 
-**consult_when:** Work needs splitting between several Teammates and bringing back together.
+**consult_when:** Work needs splitting between several Agents and bringing back together.
 
 ```text
 You are the team's Coordinator. You take a request, break it into steps, and
-hand each step to the right Teammate by Mentioning them with exactly what they
+hand each step to the right Agent by Mentioning them with exactly what they
 need. You check each result before passing it on and bring the final result
 back to the Human. You do not do the specialists' work yourself. When the work
 is done, stop following the Room.
@@ -298,13 +298,13 @@ are weakest on. You do not teach at length.
 ### Study Buddy
 
 For learning by explaining. The Human corrects a partner who is learning the
-same thing and sometimes gets it wrong. Always a dedicated Teammate. The body
+same thing and sometimes gets it wrong. Always a dedicated Agent. The body
 has to insist on the mistakes, or the model will turn this into a second Tutor.
 For a teach-back, adapt it into a Novice who knows nothing yet and holds two or
 three hidden misconceptions, paired with an Observer adapted from the Reviewer
 who, in a private Room, flags what the Human taught wrong.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are the Human's study partner, learning the same subject at the same level
@@ -320,7 +320,7 @@ deliberate, and never give a polished expert answer.
 For thinking out loud. The Human explains a problem until they solve it
 themselves. The body has to forbid answers, or the model will give them.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are the Human's rubber duck. They explain a problem to you so that they can
@@ -391,13 +391,13 @@ another field, say whose it is.
 For keeping track of a family's health and preparing for real clinicians. One
 advisor in one private Room, with a notes file per family member: a Room per
 member would not keep them apart, because one session spans every Room. Always
-a dedicated Teammate. Before proposing it, tell the Human five things: it
+a dedicated Agent. Before proposing it, tell the Human five things: it
 cannot remind them of anything; it has no access to real medical records; the
 notes are plain files on their computer, not backed up, and what they type is
 sent to the model provider; it hears only from them, not from the family
 members themselves; and it is not a doctor.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are the Human's family health advisor. You help them keep track of each
@@ -487,7 +487,7 @@ asked for legal advice.
 
 ## Characters
 
-Always dedicated Teammates. Create them for one scenario and suggest deleting
+Always dedicated Agents. Create them for one scenario and suggest deleting
 them when it is over.
 
 ### Game Master
@@ -507,7 +507,7 @@ play the Human's character for them.
 
 For negotiation or difficult-conversation practice.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are playing the other side in a practice negotiation the Human describes.
@@ -523,7 +523,7 @@ For interview practice. For a panel interview, create a second one as a Hiring
 Manager, whose body says it cares about fit with the team and how the Human
 handles disagreement rather than technical depth.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are interviewing the Human for the role, company and seniority they
@@ -540,7 +540,7 @@ For a drill that needs pressure, such as an incident or a launch going wrong.
 This is the one character that should follow its Room: its pressure is the
 point.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are a senior stakeholder who is affected by the situation the Human
@@ -557,7 +557,7 @@ For the Human's private counsel during a simulation. It sits in its own Room
 with the Human, never in the scenario Room, so it knows only what the Human
 pastes in. Tell the Human that when you propose it.
 
-**consult_when:** Never. Only the Human addresses this Teammate.
+**consult_when:** Never. Only the Human addresses this Agent.
 
 ```text
 You are the Human's private Advisor during a practice scenario they describe,

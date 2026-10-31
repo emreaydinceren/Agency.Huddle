@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
 
@@ -14,6 +15,12 @@ namespace Agency.Huddle.App.Services;
 /// </remarks>
 public static class MentionParser
 {
+    /// <summary>
+    /// The handle that Mentions every Agent in the Room at once, so each takes a Turn. It never Mentions the
+    /// Human: it is a request for the Agents' Turns, and a Mention of the Human raises a Needs You card.
+    /// </summary>
+    internal const string AllHandle = "all";
+
     /// <summary>
     /// Parses <paramref name="text"/> for Mentions of <paramref name="members"/> by Name only. Delegates
     /// to <see cref="Parse(string, IReadOnlyList{User}, IReadOnlyList{MentionAlias})"/> with an empty
@@ -42,33 +49,14 @@ public static class MentionParser
         ArgumentNullException.ThrowIfNull(members);
         ArgumentNullException.ThrowIfNull(aliases);
 
-        // Longest handle first, so "@Emily Lee" resolves to "Emily Lee" and not to "Emily" in a Room
-        // that holds both. The longer reading is the safer default: a writer who meant Emily had no
-        // reason to type her surname after her Name. Names and Aliases are sorted together in ONE
-        // list, not scanned in two separate passes: a two-pass approach (all Names first, Aliases only
-        // as a fallback) would let a short Name win here whenever it happens to sit at a real word
-        // boundary - exactly the "Emily"/"Emily Lee" trap, just triggered by an Alias instead of a
-        // second Name.
-        //
-        // Names are concatenated BEFORE Aliases, deliberately: LINQ's OrderByDescending is a stable
-        // sort, so when a Name and an Alias tie in length, whichever one appears first in the
-        // un-sorted sequence wins that tie. Swap the two Concat operands below and an equal-length
-        // Alias would start silently beating a Name, with no compiler or analyser signal -
-        // Parse_NameBeatsAnEqualLengthAlias in MentionParserTests pins this ordering so a future edit
-        // cannot make that swap unnoticed.
-        var candidates = members
-            .Where(member => member.Name.Length > 0)
-            .Select(member => new Candidate(member.Name, member))
-            .Concat(ResolveAliasCandidates(members, aliases))
-            .OrderByDescending(candidate => candidate.Handle.Length)
-            .ToList();
+        var candidates = BuildCandidates(members, aliases);
 
         var result = new List<User>();
         var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
         for (var i = 0; i < text.Length; i++)
         {
-            if (text[i] != '@' || (i > 0 && IsBlockedBeforeAt(text[i - 1])))
+            if (!CanStartMention(text, i))
             {
                 continue;
             }
@@ -78,23 +66,17 @@ public static class MentionParser
                 var start = i + 1;
                 var end = start + candidate.Handle.Length;
 
-                if (end > text.Length ||
-                    string.Compare(text, start, candidate.Handle, 0, candidate.Handle.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                if (!MatchesHandleAt(text, start, candidate.Handle))
                 {
                     continue;
                 }
 
-                // A Mention ends at a word boundary, so "@echo" never Mentions a Member called
-                // "ech". Note that a space is NOT a boundary blocker: whether the space after
-                // "Emily" continues her Name is precisely what the member list just answered.
-                if (end < text.Length && IsNameCharacter(text[end]))
+                foreach (var member in candidate.Members)
                 {
-                    continue;
-                }
-
-                if (seenIds.Add(candidate.Member.Id))
-                {
-                    result.Add(candidate.Member);
+                    if (seenIds.Add(member.Id))
+                    {
+                        result.Add(member);
+                    }
                 }
 
                 // Resume past the handle just consumed (the loop's i++ steps onto `end`), so the
@@ -110,6 +92,87 @@ public static class MentionParser
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Builds every handle a Mention can resolve to, longest first, from the Members' Names and the
+    /// Aliases of those Members.
+    /// </summary>
+    /// <param name="members">The Room's Members.</param>
+    /// <param name="aliases">Every Alias currently known, library-wide.</param>
+    /// <returns>The candidates, ordered by descending handle length.</returns>
+    private static List<Candidate> BuildCandidates(IReadOnlyList<User> members, IReadOnlyList<MentionAlias> aliases)
+    {
+        // Longest handle first, so "@Emily Lee" resolves to "Emily Lee" and not to "Emily" in a Room
+        // that holds both. The longer reading is the safer default: a writer who meant Emily had no
+        // reason to type her surname after her Name. Names and Aliases are sorted together in ONE
+        // list, not scanned in two separate passes: a two-pass approach (all Names first, Aliases only
+        // as a fallback) would let a short Name win here whenever it happens to sit at a real word
+        // boundary - exactly the "Emily"/"Emily Lee" trap, just triggered by an Alias instead of a
+        // second Name.
+        //
+        // Names are concatenated BEFORE Aliases, deliberately: LINQ's OrderByDescending is a stable
+        // sort, so when a Name and an Alias tie in length, whichever one appears first in the
+        // un-sorted sequence wins that tie. Swap the two Concat operands below and an equal-length
+        // Alias would start silently beating a Name, with no compiler or analyser signal -
+        // Parse_NameBeatsAnEqualLengthAlias in MentionParserTests pins this ordering so a future edit
+        // cannot make that swap unnoticed. "@all" comes last for the same reason: a Member actually
+        // called "All" is named, not swept up with everyone else.
+        return members
+            .Where(member => member.Name.Length > 0)
+            .Select(member => new Candidate(member.Name, [member]))
+            .Concat(ResolveAliasCandidates(members, aliases))
+            .Concat(ResolveAllCandidate(members))
+            .OrderByDescending(candidate => candidate.Handle.Length)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Yields the <see cref="AllHandle"/> candidate, resolving to every Agent in <paramref name="members"/>, or
+    /// nothing when the Room holds no Agent.
+    /// </summary>
+    /// <param name="members">The Room's Members.</param>
+    private static IEnumerable<Candidate> ResolveAllCandidate(IReadOnlyList<User> members)
+    {
+        List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
+        if (agents.Count > 0)
+        {
+            yield return new Candidate(AllHandle, agents);
+        }
+    }
+
+    /// <summary>
+    /// Whether the character at <paramref name="index"/> is an <c>@</c> that can introduce a Mention: an
+    /// <c>@</c> not joined to the character before it (see <see cref="IsBlockedBeforeAt"/>). Shared with
+    /// <see cref="MarkdownRenderer"/>, so a Mention pill is drawn exactly where a Mention is counted.
+    /// </summary>
+    /// <param name="text">The text being scanned.</param>
+    /// <param name="index">The position to test; must lie inside <paramref name="text"/>.</param>
+    internal static bool CanStartMention(string text, int index)
+    {
+        return text[index] == '@' && (index == 0 || !IsBlockedBeforeAt(text[index - 1]));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="text"/> holds <paramref name="handle"/> at <paramref name="start"/>, compared
+    /// <see cref="StringComparison.OrdinalIgnoreCase"/>, and ending at a word boundary - so "@echo" never
+    /// Mentions a Member called "ech". A space is NOT a boundary blocker: whether the space after "Emily"
+    /// continues her Name is precisely what the longest-first member list answers. Shared with
+    /// <see cref="MarkdownRenderer"/>.
+    /// </summary>
+    /// <param name="text">The text being scanned.</param>
+    /// <param name="start">The position just after the <c>@</c>.</param>
+    /// <param name="handle">The Name or Alias to look for.</param>
+    internal static bool MatchesHandleAt(string text, int start, string handle)
+    {
+        int end = start + handle.Length;
+        if (end > text.Length ||
+            string.Compare(text, start, handle, 0, handle.Length, StringComparison.OrdinalIgnoreCase) != 0)
+        {
+            return false;
+        }
+
+        return end == text.Length || !IsNameCharacter(text[end]);
     }
 
     // '@' itself is here so "you@@echo" is not a Mention, and '_' and the alphanumerics so an
@@ -146,11 +209,11 @@ public static class MentionParser
             var owner = members.FirstOrDefault(member => string.Equals(member.Name, alias.Name, StringComparison.OrdinalIgnoreCase));
             if (owner is not null)
             {
-                yield return new Candidate(alias.Alias, owner);
+                yield return new Candidate(alias.Alias, [owner]);
             }
         }
     }
 
-    /// <summary>One handle - a Member's Name or a Persona's Alias - paired with the Member it resolves to, for the candidate scan.</summary>
-    private sealed record Candidate(string Handle, User Member);
+    /// <summary>One handle - a Member's Name, a Persona's Alias or <see cref="AllHandle"/> - paired with the Members it resolves to, for the candidate scan.</summary>
+    private sealed record Candidate(string Handle, IReadOnlyList<User> Members);
 }

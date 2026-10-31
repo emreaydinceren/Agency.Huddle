@@ -2,11 +2,11 @@ namespace Agency.Huddle.App.Acp;
 
 /// <summary>
 /// One ACP agent this installation can launch, and how to launch it. Public because
-/// <c>TeammateCard</c> binds it to a Razor <c>[Parameter]</c>, and Razor generates component
+/// <c>AgentProfileCard</c> binds it to a Razor <c>[Parameter]</c>, and Razor generates component
 /// classes as <c>public</c> — see Spec §6.1 and §6.6.
 /// </summary>
 /// <param name="Id">Stable identifier, stored in a Persona's frontmatter and compared <see cref="StringComparer.OrdinalIgnoreCase"/>.</param>
-/// <param name="DisplayName">The name rendered on the Teammate card.</param>
+/// <param name="DisplayName">The name rendered on the Agent card.</param>
 /// <param name="Description">Optional human-facing text, for example "cloud, spends money per turn".</param>
 /// <param name="Command">The executable or interpreter to launch.</param>
 /// <param name="Args">Explicit process arguments, or <see langword="null"/> to fall through to <paramref name="AdapterPath"/> or the locator.</param>
@@ -46,8 +46,8 @@ namespace Agency.Huddle.App.Acp;
 /// (RS §6.12: it reports <c>loadSession: false</c> and nothing is known of its resume support).
 /// </param>
 /// <param name="Commands">
-/// The names of the Adapter commands (<c>/compact</c>) a Human may run on a Teammate on this Adapter,
-/// from <c>Team:Acp:Adapters:*:Commands</c>; <see langword="null"/> means none. A Teammate offers a
+/// The names of the Adapter commands (<c>/compact</c>) a Human may run on an Agent on this Adapter,
+/// from <c>Team:Acp:Adapters:*:Commands</c>; <see langword="null"/> means none. An Agent offers a
 /// command only when its Adapter advertises it <i>and</i> this list names it (Commands spec §6.2).
 /// Defaults to <see langword="null"/> so every existing positional call site keeps compiling unchanged.
 /// </param>

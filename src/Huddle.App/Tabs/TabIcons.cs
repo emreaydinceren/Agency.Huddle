@@ -19,9 +19,11 @@ internal static class TabIcons
         "team" => Icons.Material.Outlined.Groups,
         "project" => Icons.Material.Filled.LibraryBooks,
         "tasks" => Icons.Material.Outlined.TaskAlt,
-        "teammates" => Icons.Material.Filled.Group,
+        "agents" => Icons.Material.Filled.Group,
         "settings" => Icons.Material.Filled.Settings,
         "library" => Icons.Material.Filled.MenuBook,
+        "needs-you" => Icons.Material.Filled.NotificationsActive,
+        "feed" => Icons.Material.Outlined.DynamicFeed,
         _ => Icons.Material.Filled.Description,
     };
 }

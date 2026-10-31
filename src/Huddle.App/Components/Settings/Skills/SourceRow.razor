@@ -1,0 +1,205 @@
+@*
+    One Source on the Sources tab (Skill Packs spec §6.9.3, G4f): its kind, id, URL, short commit, when and by what it was
+    fetched, a status chip, what it provides, and ⋯ (Show notes, Check for updates, Copy prompt when moved, Remove). A
+    deprecated or withdrawn Source gives its reason on the row, in text; a moved one says where it went and offers the prompt
+    that adds the new place.
+*@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Files
+@using Agency.Huddle.SkillPacks.Resolving
+
+@inject SkillRegistry Registry
+@inject SkillSourcesRemover Remover
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+@if (this.Source is { } source)
+{
+    <MudPaper Outlined="true" Class="source-row pa-3 mb-2" data-source="@source.Id">
+        <div class="d-flex flex-wrap align-center gap-2">
+            <MudIcon Icon="@KindIcon(source.File?.Kind)" Size="Size.Small" aria-hidden="true" />
+            <MudText Typo="Typo.subtitle2" Class="source-row-id">@source.Id</MudText>
+            <StatusChip Color="@StatusColor(source.Status)" Icon="@StatusIcon(source.Status)" Class="source-row-status">@source.Status</StatusChip>
+            <MudMenu @ref="this.menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button source-row-menu ml-auto"
+                     AriaLabel="@MenuDialogs.ActivatorLabel(source.Id)">
+                @foreach (string item in this.MenuItems(source))
+                {
+                    string chosen = item;
+                    <MudMenuItem Class="@($"source-row-menu-{chosen.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(chosen))">@chosen</MudMenuItem>
+                }
+            </MudMenu>
+        </div>
+        @if (source.File?.Url is { } url)
+        {
+            <MudLink Href="@url" Target="_blank" Typo="Typo.body2" Class="source-row-url d-block">@url</MudLink>
+        }
+        <MudText Typo="Typo.body2" Class="source-row-fetched mud-text-secondary">@this.FetchedLine(source)</MudText>
+        <MudText Typo="Typo.body2" Class="source-row-counts">@this.Counts(source)</MudText>
+        @if (source.Status is SourceStatus.Deprecated or SourceStatus.Withdrawn)
+        {
+            <MudText Typo="Typo.body2" Class="source-row-reason">@source.Status: @(source.File?.StatusReason ?? "no reason given")</MudText>
+        }
+        @if (source.Status == SourceStatus.Moved)
+        {
+            <div class="d-flex flex-wrap align-center gap-2 mt-1">
+                <MudText Typo="Typo.body2" Class="source-row-moved">This Source moved to @(source.File?.MovedTo ?? "another place").</MudText>
+                <MudTooltip Text="@SkillGuide.For("Copy prompt")" ShowOnFocus="true">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="source-row-copy-prompt" OnClick="this.CopyMovedPromptAsync">Copy prompt</MudButton>
+                </MudTooltip>
+            </div>
+        }
+    </MudPaper>
+}
+
+@code {
+    private const string ShowNotesItem = "Show notes";
+    private const string CheckItem = "Check for updates";
+    private const string CopyPromptItem = "Copy prompt";
+    private const string RemoveItem = "Remove";
+
+    private MudMenu? menu;
+
+    /// <summary>The Source id.</summary>
+    [Parameter]
+    public string SourceId { get; set; } = string.Empty;
+
+    /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
+    [Parameter]
+    public long Revision { get; set; }
+
+    /// <summary>The Source, or null when it is gone.</summary>
+    private ResolvedSource? Source => this.Registry.Current.Resolved.FindSource(this.SourceId);
+
+    /// <summary>The kind's icon.</summary>
+    private static string KindIcon(SourceKind? kind) => kind switch
+    {
+        SourceKind.Github => Icons.Custom.Brands.GitHub,
+        SourceKind.Git => Icons.Material.Filled.AccountTree,
+        _ => Icons.Material.Filled.Folder,
+    };
+
+    /// <summary>The status chip's colour.</summary>
+    private static Color StatusColor(SourceStatus status) => status switch
+    {
+        SourceStatus.Withdrawn => Color.Error,
+        SourceStatus.Moved => Color.Info,
+        SourceStatus.Active => Color.Success,
+        _ => Color.Default,
+    };
+
+    /// <summary>The status chip's icon.</summary>
+    private static string StatusIcon(SourceStatus status) => status switch
+    {
+        SourceStatus.Withdrawn => Icons.Material.Filled.Block,
+        SourceStatus.Moved => Icons.Material.Filled.DriveFileMove,
+        SourceStatus.Deprecated => Icons.Material.Filled.NotInterested,
+        _ => Icons.Material.Filled.CheckCircle,
+    };
+
+    /// <summary>"Commit 0123456 · fetched Oct 17, 2026 by Claude Code".</summary>
+    private string FetchedLine(ResolvedSource source)
+    {
+        if (source.File is not { } file)
+        {
+            return "No source.json, so Huddle does not know where it came from.";
+        }
+
+        string commit = file.Commit is { Length: >= 7 } sha ? $"Commit {sha[..7]} · " : string.Empty;
+        return $"{commit}fetched {Agency.Huddle.App.Tasks.HumanDate.Full(DateOnly.FromDateTime(file.FetchedAt.LocalDateTime))} by {file.FetchedBy}";
+    }
+
+    /// <summary>"2 Packs · 1 catalog · 61 Skills".</summary>
+    private string Counts(ResolvedSource source)
+    {
+        ResolvedRegistry resolved = this.Registry.Current.Resolved;
+        int packs = resolved.PacksOfSource(source.Id).Count;
+        int catalogs = resolved.CatalogsOfSource(source.Id).Count;
+        int skills = resolved.Skills.Count(skill => string.Equals(skill.Source, source.Id, StringComparison.OrdinalIgnoreCase));
+        string[] parts = [Plural.Of(packs, "Pack", "Packs"), Plural.Of(catalogs, "catalog", "catalogs"), Plural.Of(skills, "Skill", "Skills")];
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>The ⋯ items.</summary>
+    private IReadOnlyList<string> MenuItems(ResolvedSource source)
+    {
+        List<string> items = [];
+        if (source.HasNotes)
+        {
+            items.Add(ShowNotesItem);
+        }
+
+        items.Add(CheckItem);
+        if (source.Status == SourceStatus.Moved)
+        {
+            items.Add(CopyPromptItem);
+        }
+
+        if (source.Folder is not null)
+        {
+            items.Add(RemoveItem);
+        }
+
+        return items;
+    }
+
+    /// <summary>Runs a menu item.</summary>
+    private async Task OnMenuAsync(string item)
+    {
+        if (this.Source is not { } source)
+        {
+            return;
+        }
+
+        switch (item)
+        {
+            case ShowNotesItem when source.Folder is { } folder:
+                string notes = Path.GetRelativePath(this.Registry.SkillSourcesDir, Path.Combine(folder, "NOTES.md")).Replace('\\', '/');
+                this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, notes));
+                break;
+            case CheckItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => SkillDialogs.OpenAddWithAiAsync(this.DialogService, "update", sourceIds: source.Id));
+                break;
+            case CopyPromptItem:
+                await this.CopyMovedPromptAsync();
+                break;
+            case RemoveItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => this.RemoveAsync(source));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>Copies the prompt that adds the place the Source moved to.</summary>
+    private async Task CopyMovedPromptAsync()
+    {
+        if (this.Source?.File?.MovedTo is { } movedTo)
+        {
+            string prompt = this.Prompts.Add(movedTo, $"The Source {this.SourceId} moved here.", this.PathChoice.Format);
+            _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
+        }
+    }
+
+    /// <summary>Asks, removes the Source, re-reads and reports.</summary>
+    private async Task RemoveAsync(ResolvedSource source)
+    {
+        ResolvedRegistry resolved = this.Registry.Current.Resolved;
+        IReadOnlyList<string> rows = [.. resolved.PacksOfSource(source.Id).Select(static pack => pack.Title), .. resolved.CatalogsOfSource(source.Id).Select(static catalog => catalog.Title)];
+        string? clone = source.File?.LocalPath?.FirstText is { Length: > 0 } local ? local : null;
+        if (!await this.DialogService.ConfirmAsync("Remove Source?", RemovalText.SourceMessage(source.Id, rows, clone), "Remove Source", danger: true))
+        {
+            return;
+        }
+
+        RemovalOutcome outcome = this.Remover.RemoveSource(source.Id);
+        await this.Registry.RebuildAsync(RebuildScope.All, CancellationToken.None);
+        this.Snackbar.Add(outcome.Message, outcome.Ok ? Severity.Success : Severity.Error, configure: null, key: PackRemoval.SnackbarKey);
+    }
+}

@@ -12,8 +12,9 @@ date: 2026-10-08
 A **team type** describes a kind of Team: its roles, the candidates that fill them, its
 process and its skill packs. Every team type is a set of files. The built-in types ship
 embedded in the app, and the user's own types live in a folder beside the data. Code knows
-managers, roles, packs, gates and Requests, but never a role name. The full design is in the
-[Teams specification](../engineering/teams-spec.md), under *Data formats* and *Architecture*.
+managers, roles, packs, gates and Requests, but never a role name. The original
+Teams specification has been retired; this record, [ADR-0049](0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md)
+and the [Hiring Pool specification](../Huddle.HiringPool-Specifications.md) carry the design.
 
 ## The problem
 
@@ -30,7 +31,7 @@ research group, by writing files, not by changing the app.
 ```text
 TeamTypes/<type>/
   team-type.json            the manifest: roles, manager, retro role, skill packs
-  candidates/<role>.md      one candidate per role: who the Teammate is and what it does
+  candidates/<role>.md      one candidate per role: who the Agent is and what it does
   processes/<process>.md    a process template a Team copies into its Process.md
 ```
 
@@ -59,7 +60,7 @@ TeamTypes/<type>/
   built-in.
 - **Hiring checks everything before it writes anything.** `HireService.StartTeamAsync` checks
   every card, name, role limit and required role, then installs the missing Skills, and only
-  then hires the manager and the rest. A failed check or install leaves no Teammate behind.
+  then hires the manager and the rest. A failed check or install leaves no Agent behind.
   A member who already exists in the same Team and role of the same type, from an earlier start
   that timed out waiting for the manager, counts as started, so a retry does not collide with it.
 - **`FindTeam` reads, `EnsureTeam` creates.** `ITeamFolders.EnsureTeam` creates a Team folder
@@ -78,7 +79,7 @@ TeamTypes/<type>/
 | Alternative | Why not |
 | --- | --- |
 | Roles as C# classes or enums | Every new kind of Team becomes a release, and role names spread through the services that act on Teams |
-| One database table per team type | Candidates and processes are prose the Human reads and edits, and a file is the form they already take in Teammates and Skills |
+| One database table per team type | Candidates and processes are prose the Human reads and edits, and a file is the form they already take in Agents and Skills |
 | A single file per Team type holding all text inline | A process or candidate is long Markdown. Inline JSON strings are hard to read and to diff |
 | A user type that must copy every built-in file | A user who wants one changed candidate would have to copy the whole type, and the copy would drift from the built-in |
 | Models named in the manifest | A manifest would have to change whenever a model is retired. A tier name stays valid, and the model is picked in configuration |

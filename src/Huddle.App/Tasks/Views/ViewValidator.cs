@@ -57,9 +57,9 @@ internal static class ViewValidator
             problems.Add("A field can only be grouped by once.");
         }
 
-        if (view.Kind == ViewKind.Board && view.Grouping.Contains(TaskGroupField.State))
+        if (view.Kind == ViewKind.Kanban && view.Grouping.Contains(TaskGroupField.State))
         {
-            problems.Add("A Board cannot group by State.");
+            problems.Add("A Kanban cannot group by State.");
         }
     }
 
@@ -78,7 +78,7 @@ internal static class ViewValidator
 
         if (view.Scope == ViewScope.Closed)
         {
-            problems.Add("A Board's scope must be Active.");
+            problems.Add("A Kanban's scope must be Active.");
         }
 
         Dictionary<TaskState, int> occurrences = [];

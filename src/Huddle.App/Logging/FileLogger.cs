@@ -21,7 +21,9 @@ internal sealed class FileLogger(string categoryName, FileLoggerProvider owner) 
     /// <returns>A handle that pops the scope when disposed.</returns>
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull =>
+#pragma warning disable HAA0601 // The framework API takes the state as object, so the box cannot be avoided.
         owner.Scopes.Push(state);
+#pragma warning restore HAA0601
 
     /// <summary>
     /// Whether <paramref name="logLevel"/> reaches the file. Every level but

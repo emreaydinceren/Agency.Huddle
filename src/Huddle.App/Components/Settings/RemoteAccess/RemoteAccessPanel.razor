@@ -1,0 +1,542 @@
+@*
+    The Remote access tab (wireframe G10, Spec 6.12): the Gateway card (G10a), the requests waiting for approval (G10e), Pair a device (G10b),
+    Devices (G10d) and the Security check (G10f). Every change goes through GatewayAdminService, which refuses without operator.admin.
+    The countdowns and the lists refresh every second while the panel is mounted; the timer is disposed with it.
+*@
+
+@implements IDisposable
+@using System.Globalization
+@using System.Security.Claims
+@using Agency.Huddle.App.Gateway
+@using Microsoft.AspNetCore.Components.Authorization
+@inject GatewayAdminService Admin
+@inject IGatewayRuntimeView RuntimeView
+@inject TimeProvider Clock
+@inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime Js
+
+<SettingsIntro>@(this.StrictRunning ? RemoteAccessCopy.IntroStrictLocal : RemoteAccessCopy.Intro)</SettingsIntro>
+
+@if (this.error is not null)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" role="alert">@this.error</MudAlert>
+}
+
+@if (this.ready)
+{
+    @* ---- G10a Gateway ---- *@
+    <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="gateway">
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2">Gateway</MudText>
+            <span data-testid="status">
+                <StatusChip Color="@(this.NeedsAttention ? Color.Warning : Color.Success)"
+                            Icon="@(this.NeedsAttention ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.CheckCircleOutline)">@(this.NeedsAttention ? "Needs attention" : "Running")@(this.Downgraded ? " (downgraded)" : string.Empty)</StatusChip>
+            </span>
+        </div>
+
+        <div data-testid="strict-local">
+            <MudSwitch T="bool" @bind-Value="this.strictLocal" Color="Color.Primary" Label="Strict local" />
+        </div>
+        <MudText Typo="Typo.caption" data-testid="strict-local-helper">@RemoteAccessCopy.StrictLocalHelper</MudText>
+        @if (this.StrictRunning)
+        {
+            <MudText Typo="Typo.body2" Class="mt-1" data-testid="strict-local-hint">@RemoteAccessCopy.StrictLocalHint</MudText>
+            @if (this.ListenersStillOpen)
+            {
+                <MudText Typo="Typo.body2" Class="mt-1" data-testid="listeners-line">@RemoteAccessCopy.CloseListenersLine</MudText>
+            }
+        }
+
+        @if (this.Downgraded)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2" role="status" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</MudAlert>
+        }
+
+        @if (this.RuntimeView.ListenerReason is { } reason)
+        {
+            <MudText Typo="Typo.body2" data-testid="status-reason">@this.WithLinks(reason)</MudText>
+        }
+        @if (this.StatusNext is { } next)
+        {
+            <MudText Typo="Typo.body2" data-testid="status-next">@next</MudText>
+        }
+
+        <div class="d-flex align-center gap-2 mt-2 flex-wrap">
+            <MudText Typo="Typo.body2">Token</MudText>
+            <code data-testid="token">@(this.revealedToken ?? RemoteAccessCopy.TokenMask)</code>
+            @if (this.IsLoopbackSession)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.ToggleToken">@(this.revealedToken is null ? "Show" : "Hide")</MudButton>
+            }
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.RotateToken">Rotate</MudButton>
+        </div>
+
+        @if (this.RuntimeView.PublicUrl is { } url)
+        {
+            <div class="d-flex align-center gap-2 mt-1 flex-wrap">
+                <MudText Typo="Typo.body2">Address</MudText>
+                <code data-testid="public-url">@url</code>
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.CopyLink(url))">Copy link</MudButton>
+            </div>
+        }
+
+        @if (this.notice is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-1" role="status" data-testid="gateway-notice">@this.notice</MudText>
+        }
+
+        <div class="d-flex align-end gap-2 mt-3 flex-wrap">
+            <div data-testid="new-password">
+                <MudTextField T="string" @bind-Value="this.newPassword" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              autocomplete="new-password" />
+            </div>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@string.IsNullOrWhiteSpace(this.newPassword)" OnClick="this.SetPassword">Set password</MudButton>
+        </div>
+
+        <MudDivider Class="my-3" />
+
+        <div class="d-flex flex-wrap gap-3">
+            <div>
+                <div data-testid="stored-bind">
+                    <MudSelect T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (string choice in BindChoices)
+                        {
+                            <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
+                <MudText Typo="Typo.caption" data-testid="running-bind">Running: @this.settingsView.Running.Bind</MudText>
+            </div>
+            <MudSelect T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (string choice in AuthChoices)
+                {
+                    <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField T="int?" Label="Port" @bind-Value="this.port" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudTextField T="string" Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudSelect T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (string choice in TailscaleChoices)
+                {
+                    <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField T="int?" Label="Tailscale HTTPS port" @bind-Value="this.tailscaleHttpsPort" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </div>
+
+        <div data-testid="allow-tailscale">
+            <MudSwitch T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Label="Use Tailscale sign-in" />
+        </div>
+        <MudTextField T="string" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" Label="Public origin" @bind-Value="this.publicOrigin" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+        @if (this.settingsView.Pending.Count > 0)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2" data-testid="restart-line">@RemoteAccessCopy.RestartLine(this.settingsView.Pending)</MudText>
+        }
+        @if (this.saveResult is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-1" role="status" data-testid="save-result">@this.saveResult</MudText>
+        }
+
+        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="this.Save">Save</MudButton>
+    </MudPaper>
+
+    @* ---- G10e Waiting for approval ---- *@
+    @if (this.requests.Count > 0 && !this.StrictRunning)
+    {
+        <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="requests">
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-2">Waiting for approval (@this.requests.Count)</MudText>
+            @foreach (PairingRequest request in this.requests)
+            {
+                <div class="d-flex align-center gap-3 flex-wrap mb-2" data-testid="request-row" data-request-id="@request.RequestId" @key="request.RequestId">
+                    <strong data-part="name">@request.Name</strong>
+                    <span data-part="address">@request.Address</span>
+                    <span data-part="ingress">@RemoteAccessCopy.IngressLabel(request.Ingress, this.settingsView.Running.Bind, this.settingsView.Running.TailscaleMode)</span>
+                    <span data-part="scopes">@(request.IsAdminRequest ? "asks Admin" : "asks Limited")</span>
+                    @if (!string.IsNullOrEmpty(request.TailscaleLogin))
+                    {
+                        <span data-part="login">@request.TailscaleLogin</span>
+                        <span data-part="login-kind">@(this.IsOwner(request.TailscaleLogin) ? "You" : "Shared user")</span>
+                    }
+                    <span data-part="countdown">@RemoteAccessCopy.Countdown(request.ExpiresAt - this.Clock.GetUtcNow())</span>
+                    <MudMenu Label="Approve" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary">
+                        @foreach (GatewayAdminService.ScopeChoice choice in this.Admin.ScopeMenu(this.user, request))
+                        {
+                            <MudMenuItem OnClick="@(() => this.Approve(request.RequestId, choice.Scopes))">@choice.Label</MudMenuItem>
+                        }
+                    </MudMenu>
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Reject(request.RequestId))">Reject</MudButton>
+                </div>
+            }
+        </MudPaper>
+    }
+
+    @* ---- G10b Pair a device ---- *@
+    @if (!this.StrictRunning)
+    {
+        <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="pair">
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-2">Pair a device</MudText>
+            @if (this.offer is { Allowed: true } link)
+            {
+                <div data-testid="qr">
+                    <img src="@link.QrDataUri" alt="QR code that pairs a device with Huddle" width="160" height="160" />
+                </div>
+                <code class="d-block my-2" style="@RemoteAccessCopy.WrapStyle" data-testid="setup-link">@link.Url</code>
+                <MudText Typo="Typo.body2" data-testid="pair-note">@RemoteAccessCopy.PairNote</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" data-testid="pair-unavailable">@(this.offer?.Reason ?? RemoteAccessCopy.NoAddress)</MudText>
+            }
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-2" OnClick="this.NewLink">New link</MudButton>
+        </MudPaper>
+    }
+
+    @* ---- G10d Devices ---- *@
+    <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="devices">
+        <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-2">Devices (@this.devices.Count)</MudText>
+        @foreach (DeviceRecord device in this.devices)
+        {
+            <div class="d-flex align-center gap-3 flex-wrap mb-2" data-testid="device-row" data-device-id="@device.DeviceId" @key="device.DeviceId">
+                @if (this.renamingId == device.DeviceId)
+                {
+                    <div data-testid="rename-input">
+                        <MudTextField T="string" @bind-Value="this.renameText" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="Device name" />
+                    </div>
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="this.SaveRename">Save</MudButton>
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.CancelEdit">Cancel</MudButton>
+                }
+                else
+                {
+                    <strong data-part="name">@device.Name</strong>
+                    <span data-part="scopes">@(device.Scopes.Contains(GatewayScopes.Admin, StringComparer.Ordinal) ? "Admin" : "Limited")</span>
+                    <span data-part="paired-via">Paired via @device.PairedVia</span>
+                    <span data-part="last-address">@device.LastSeenFrom</span>
+                    <span data-part="last-seen">@RemoteAccessCopy.LastSeen(this.Clock.GetUtcNow() - device.LastSeenAt)</span>
+                    @if (string.Equals(device.DeviceId, this.thisDeviceId, StringComparison.Ordinal))
+                    {
+                        <span data-part="this-device">This device</span>
+                    }
+                    @if (!device.HasToken)
+                    {
+                        <span data-part="revoked">Revoked</span>
+                    }
+                    @if (this.confirmingId == device.DeviceId)
+                    {
+                        <InlineConfirm Prompt="@RemoteAccessCopy.RemovePrompt(device.Name)" ConfirmText="Remove" OnConfirm="@(() => this.Remove(device.DeviceId))" OnCancel="this.CancelEdit" />
+                    }
+                    else
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.BeginRename(device))">Rename</MudButton>
+                        @if (device.HasToken)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Rotate(device.DeviceId))">Rotate</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Revoke(device.DeviceId))">Revoke</MudButton>
+                        }
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => this.BeginRemove(device.DeviceId))">Remove</MudButton>
+                    }
+                }
+            </div>
+        }
+    </MudPaper>
+
+    @* ---- G10f Security check ---- *@
+    <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="security">
+        <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="mb-2">Security check</MudText>
+        @if (this.items.Count == 0)
+        {
+            <MudText Typo="Typo.body2">No problems found.</MudText>
+        }
+        @foreach (GatewaySecurityCheck.Item item in this.items)
+        {
+            <div class="d-flex gap-2 mb-2" data-testid="security-item" data-id="@item.Id" @key="item.Id">
+                <span role="img" aria-label="@item.Level.ToString()" data-part="severity">
+                    <MudIcon Icon="@SeverityIcon(item.Level)" Size="Size.Small" Color="@SeverityColor(item.Level)" />
+                </span>
+                <div>
+                    <code data-part="id">@item.Id</code>
+                    <div data-part="condition">@item.Condition</div>
+                    <div data-part="fix" class="mud-text-secondary">@item.Fix</div>
+                </div>
+            </div>
+        }
+    </MudPaper>
+}
+
+@code {
+    private static readonly string[] BindChoices = ["loopback", "lan", "tailnet", "auto", "custom"];
+    private static readonly string[] AuthChoices = ["none", "token", "password", "trusted-proxy"];
+    private static readonly string[] TailscaleChoices = ["off", "serve", "funnel"];
+    private static readonly char[] ListSeparators = ['\n', '\r', ','];
+    private static readonly GatewayAdminService.Values NoValues = new("loopback", "token", null, null, "off", null, true, [], [], null, true);
+
+    private ClaimsPrincipal user = new(new ClaimsIdentity());
+    private bool ready;
+    private string? error;
+    private string? notice;
+    private string? saveResult;
+    private string? revealedToken;
+    private string newPassword = string.Empty;
+    private string thisDeviceId = string.Empty;
+    private GatewayAdminService.SettingsView settingsView = new(NoValues, NoValues, []);
+    private IReadOnlyList<PairingRequest> requests = [];
+    private IReadOnlyList<DeviceRecord> devices = [];
+    private IReadOnlyList<GatewaySecurityCheck.Item> items = [];
+    private GatewayAdminService.SetupLinkOffer? offer;
+    private ITimer? timer;
+    private string? renamingId;
+    private string renameText = string.Empty;
+    private string? confirmingId;
+
+    private string bind = "loopback";
+    private string authMode = "token";
+    private int? port;
+    private string? customBindHost;
+    private string tailscaleMode = "off";
+    private int? tailscaleHttpsPort;
+    private bool allowTailscale = true;
+    private string trustedProxies = string.Empty;
+    private string allowedOrigins = string.Empty;
+    private string? publicOrigin;
+    private bool strictLocal = true;
+
+    private bool StrictRunning => this.settingsView.Running.StrictLocal;
+
+    private bool ListenersStillOpen => !string.Equals(this.settingsView.Running.Bind, "loopback", StringComparison.Ordinal)
+        || !string.Equals(this.settingsView.Running.TailscaleMode, "off", StringComparison.Ordinal);
+
+    private bool IsLoopbackSession => this.user.HasClaim(GatewayClaims.Ingress, IngressKindText.Of(IngressKind.Loopback));
+
+    private bool Downgraded => RemoteAccessCopy.IsDowngradedBind(this.settingsView.Running.Bind);
+
+    private bool TailscaleChosen => this.settingsView.Running.TailscaleMode is "serve" or "funnel";
+
+    private bool NeedsAttention => this.RuntimeView.ListenerReason is not null || (this.TailscaleChosen && this.RuntimeView.TailscaleState != TailscaleState.Running);
+
+    private string? StatusNext => !this.TailscaleChosen ? null : this.RuntimeView.TailscaleState switch
+    {
+        TailscaleState.NeedsLogin => RemoteAccessCopy.TailscaleSignedOut,
+        TailscaleState.Missing => RemoteAccessCopy.TailscaleMissing,
+        TailscaleState.Stopped or TailscaleState.NotRunning => RemoteAccessCopy.TailscaleNotRunning,
+        _ => null,
+    };
+
+    /// <inheritdoc/>
+    protected override async Task OnInitializedAsync()
+    {
+        // No ConfigureAwait(false): the continuation sets component state (rules.md).
+        AuthenticationState state = await this.AuthProvider.GetAuthenticationStateAsync();
+        this.user = state.User;
+        this.thisDeviceId = this.user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        if (!this.user.HasClaim(GatewayClaims.Scope, GatewayScopes.Admin))
+        {
+            return;
+        }
+
+        this.settingsView = this.Admin.GetSettings(this.user);
+        this.LoadDraft(this.settingsView.Stored);
+        this.Reload();
+        this.offer = this.Admin.MintSetupLink(this.user);
+        this.ready = true;
+        this.timer = this.Clock.CreateTimer(this.OnTick, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => this.timer?.Dispose();
+
+    private void OnTick(object? state)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.Reload();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void Reload()
+    {
+        this.settingsView = this.Admin.GetSettings(this.user);
+        this.requests = this.Admin.PendingRequests(this.user);
+        this.devices = this.Admin.Devices(this.user);
+        this.items = this.Admin.SecurityCheck(this.user);
+
+        // A setup link works once: when the shown one was redeemed (or lapsed) the card moves on to a fresh one.
+        if (this.offer is { Allowed: true, Url: { } shown } && this.Admin.IsSetupLinkSpent(this.user, shown))
+        {
+            this.offer = this.Admin.MintSetupLink(this.user);
+        }
+    }
+
+    private void LoadDraft(GatewayAdminService.Values values)
+    {
+        this.bind = values.Bind;
+        this.authMode = values.AuthMode;
+        this.port = values.Port;
+        this.customBindHost = values.CustomBindHost;
+        this.tailscaleMode = values.TailscaleMode;
+        this.tailscaleHttpsPort = values.TailscaleHttpsPort;
+        this.allowTailscale = values.AllowTailscale;
+        this.trustedProxies = string.Join('\n', values.TrustedProxies);
+        this.allowedOrigins = string.Join('\n', values.AllowedOrigins);
+        this.publicOrigin = values.PublicOrigin;
+        this.strictLocal = values.StrictLocal;
+    }
+
+    private GatewayAdminService.Values Draft() => new(
+        this.bind,
+        this.authMode,
+        this.port,
+        string.IsNullOrWhiteSpace(this.customBindHost) ? null : this.customBindHost.Trim(),
+        this.tailscaleMode,
+        this.tailscaleHttpsPort,
+        this.allowTailscale,
+        Lines(this.trustedProxies),
+        Lines(this.allowedOrigins),
+        string.IsNullOrWhiteSpace(this.publicOrigin) ? null : this.publicOrigin.Trim(),
+        this.strictLocal);
+
+    private static string[] Lines(string text) =>
+        [.. text.Split(ListSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+
+    /// <summary>Runs one admin action, shows a refusal or a bad value as an alert, and reloads the lists.</summary>
+    private void Run(Action action)
+    {
+        try
+        {
+            this.error = null;
+            action();
+            this.Reload();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.error = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            this.error = ex.Message;
+        }
+    }
+
+    private void Save() => this.Run(() =>
+    {
+        GatewayAdminService.SaveResult result = this.Admin.SaveSettings(this.user, this.Draft());
+        this.saveResult = RemoteAccessCopy.SaveResult(result);
+    });
+
+    private void RotateToken() => this.Run(() =>
+    {
+        this.Admin.RotateToken(this.user);
+        this.revealedToken = null;
+        this.notice = RemoteAccessCopy.TokenRotated;
+    });
+
+    private void ToggleToken() => this.Run(() => this.revealedToken = this.revealedToken is null ? this.Admin.ShowToken(this.user) : null);
+
+    private void SetPassword() => this.Run(() =>
+    {
+        this.Admin.SetPassword(this.user, this.newPassword);
+        this.newPassword = string.Empty;
+        this.notice = RemoteAccessCopy.PasswordSet;
+    });
+
+    private async Task CopyLink(string url)
+    {
+        // No ConfigureAwait(false): the continuation sets component state (rules.md).
+        try
+        {
+            _ = await this.Js.InvokeAsync<bool>("huddleClipboard.copy", url);
+            this.notice = RemoteAccessCopy.LinkCopied;
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing to tell.
+        }
+    }
+
+    private void Approve(string requestId, IReadOnlyList<string> scopes) => this.Run(() => this.Admin.Approve(this.user, requestId, scopes));
+
+    private void Reject(string requestId) => this.Run(() => this.Admin.Reject(this.user, requestId));
+
+    private void NewLink() => this.Run(() => this.offer = this.Admin.MintSetupLink(this.user));
+
+    private void BeginRename(DeviceRecord device)
+    {
+        this.confirmingId = null;
+        this.renamingId = device.DeviceId;
+        this.renameText = device.Name;
+    }
+
+    private void SaveRename() => this.Run(() =>
+    {
+        if (this.renamingId is { } id)
+        {
+            _ = this.Admin.Rename(this.user, id, this.renameText);
+        }
+
+        this.renamingId = null;
+    });
+
+    private void BeginRemove(string deviceId)
+    {
+        this.renamingId = null;
+        this.confirmingId = deviceId;
+    }
+
+    private void CancelEdit()
+    {
+        this.renamingId = null;
+        this.confirmingId = null;
+    }
+
+    private void Rotate(string deviceId) => this.Run(() => this.Admin.Rotate(this.user, deviceId));
+
+    private void Revoke(string deviceId) => this.Run(() => this.Admin.Revoke(this.user, deviceId));
+
+    private void Remove(string deviceId) => this.Run(() =>
+    {
+        _ = this.Admin.Remove(this.user, deviceId);
+        this.confirmingId = null;
+    });
+
+    private bool IsOwner(string login) =>
+        this.RuntimeView.TailscaleOwnerLogin is { } owner && string.Equals(owner, login, StringComparison.OrdinalIgnoreCase);
+
+    private static string SeverityIcon(GatewaySecurityCheck.Severity level) => level switch
+    {
+        GatewaySecurityCheck.Severity.Critical => Icons.Material.Outlined.ErrorOutline,
+        GatewaySecurityCheck.Severity.Warning => Icons.Material.Outlined.WarningAmber,
+        _ => Icons.Material.Outlined.Info,
+    };
+
+    private static Color SeverityColor(GatewaySecurityCheck.Severity level) => level switch
+    {
+        GatewaySecurityCheck.Severity.Critical => Color.Error,
+        GatewaySecurityCheck.Severity.Warning => Color.Warning,
+        _ => Color.Info,
+    };
+
+    /// <summary>The reason as text, with a web address in it drawn as a link.</summary>
+    private RenderFragment WithLinks(string text) => builder =>
+    {
+        int start = text.IndexOf("https://", StringComparison.Ordinal);
+        if (start < 0)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        int end = text.IndexOf(' ', start);
+        string address = (end < 0 ? text[start..] : text[start..end]).TrimEnd(',', '.');
+        builder.AddContent(0, text[..start]);
+        builder.OpenElement(1, "a");
+        builder.AddAttribute(2, "href", address);
+        builder.AddAttribute(3, "target", "_blank");
+        builder.AddAttribute(4, "rel", "noopener noreferrer");
+        builder.AddContent(5, address);
+        builder.CloseElement();
+        builder.AddContent(6, text[(start + address.Length)..]);
+    };
+}

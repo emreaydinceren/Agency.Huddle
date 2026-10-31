@@ -4,7 +4,7 @@
 `4864ef6`) · **Owner:** chat surface · **Decision records:**
 [ADR-0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) (its addendum
 records the Top Bar) and [ADR-0051](adr/0051-search-keeps-no-index-of-its-own.md) for *search keeps no index of its own*
-(written) · **Vocabulary:** [language.md](engineering/language.md) (**Team**, **Teammate**,
+(written) · **Vocabulary:** [language.md](engineering/language.md) (**Team**, **Agent**,
 **Persona**, **Title**, **Alias**, **Library**, **Library Root**, **Task**, **Closed**, **Room**,
 **Archived**, **Message**, **Transcript**, **Turn**) · **Builds on:**
 [Tabs](Huddle.Tabs-Specifications.md) (the Top Bar and its breadcrumb),
@@ -21,7 +21,7 @@ records the Top Bar) and [ADR-0051](adr/0051-search-keeps-no-index-of-its-own.md
 
 This is the design for **Global Search**: one search box in the Top Bar above everything, in the
 manner of VS Code's quick open. The Human types, and a dropdown under the box fills, group by group,
-with matching Teams, Teammates, Library entries, Tasks and Rooms. The product owner's brief was
+with matching Teams, Agents, Library entries, Tasks and Rooms. The product owner's brief was
 *"nothing fancy, no index, just grep style"*: every search reads what it needs again, from memory or
 from disk, and search keeps nothing between searches.
 
@@ -36,18 +36,18 @@ One point, OP-2, is **assumed** and awaits the owner's confirmation.
 1. Goal · 2. Non-goals · 3. Vocabulary · 4. What exists today · 5. The shell: the Top Bar ·
 6. The dropdown · 7. The search pipeline · 8. Providers · 9. Opening a hit, and the Room jump ·
 10. Configuration · 11. Accessibility · 12. Testing · 13. Decisions · 14. Version 2 ·
-15. Open points · 16. Blast radius · 17. Delivery plan
+15. Open points · 16. Blast radius · 17. Delivery plan · 18. The Agent search tool
 
 ---
 
 ## 1. Goal
 
-1. **One box finds anything.** Teams, Teammates, the Library, Tasks and Rooms, from a bar the
+1. **One box finds anything.** Teams, Agents, the Library, Tasks and Rooms, from a bar the
    window owns, not any page.
 2. **Grep style; search keeps no index of its own.** Exact phrase, ignoring case, re-read on every
    search (D-6, D-21).
 3. **Fast things first.** Each provider's results appear as soon as that provider finishes, so
-   Teams and Teammates show at once while the Library and the Rooms are still being read (D-17).
+   Teams and Agents show at once while the Library and the Rooms are still being read (D-17).
 4. **One failure is one group.** A locked folder or an unreadable Transcript empties one group with
    a message; the rest still render (D-20).
 5. **The keyboard is enough.** Open, filter, move, open a hit and close without the mouse (§6.5).
@@ -79,9 +79,9 @@ the following; the plan's D14 adds the first four to the glossary (OP-13).
 | --- | --- |
 | **Global Search** | The feature: the box in the Top Bar and its dropdown |
 | **Top Bar** | The fixed bar across the top of the window (`TopBar.razor`), above the left menu and every pane. It holds the breadcrumb trail and the search box. The window owns it, not a Tab. Built (PR #162) |
-| **Filter** | One of All, Teams, Teammates, Library, Tasks, Rooms. Drawn as a chip; the same thing as a prefix |
-| **Card** (search sense) | One result row in the dropdown, drawn by a component chosen by the kind of hit. Not a Board's card for a Task, nor the Teammate card |
-| **Prefix** | `team:`, `teammate:`, `lib:`, `task:` or `room:` typed at the start of the query. Picking a chip and typing its prefix are the same act |
+| **Filter** | One of All, Teams, Agents, Library, Tasks, Rooms. Drawn as a chip; the same thing as a prefix |
+| **Card** (search sense) | One result row in the dropdown, drawn by a component chosen by the kind of hit. Not a Board's card for a Task, nor the Agent card |
+| **Prefix** | `team:`, `agent:`, `lib:`, `task:` or `room:` typed at the start of the query. Picking a chip and typing its prefix are the same act |
 | **Group** | The results of one provider in the dropdown, under a heading |
 | **Hit** | One result as data: a `SearchHit` subtype (§7.1) |
 | **Provider** | The code that searches one category: an `ISearchProvider` (§7.3) |
@@ -89,8 +89,8 @@ the following; the plan's D14 adds the first four to the glossary (OP-13).
 | **Active / Archived scope** | The first and the second search of the same query. Archived means Archived Rooms and Closed Tasks (§7.5) |
 | **Tier** | The provider's coarse judgement of how well a hit matches (`MatchTier`, §7.4) |
 
-The filter labels follow the glossary (OP-1, decided): **Teammates**, not "Members" (a Member is a
-Teammate in a Room), and **Rooms**, not "Chats" (the glossary avoids "chat" for a Room).
+The filter labels follow the glossary (OP-1, decided): **Agents**, not "Members" (a Member is an
+Agent in a Room), and **Rooms**, not "Chats" (the glossary avoids "chat" for a Room).
 Interface copy says **Library**, never "documents" or "files" (D-5).
 
 ---
@@ -108,9 +108,9 @@ these.
 | **There is no content search anywhere.** Nothing reads a file's text to match a term. | — |
 | **Search keeps no index of its own.** The one index in the Library is `WikiLinkIndex`, an in-memory index of wikilinks per root, which refuses to build above `MaxIndexedFiles` (default `5000`); it holds links, not text, and search does not use it. In `FindAsync` the same key is only a per-walk visit budget. Global Search gets its own budget, `Search:MaxVisitedEntries` (§10, OP-2). | `src/Huddle.App/Library/LibraryOptions.cs:21`, `src/Huddle.App/Library/WikiLinkIndex.cs:14` |
 | Hidden folders: `.obsidian`, `.trash`, `.git`, `FileChanges:Ignore`, and under the Teams root any `_`-prefixed folder. So `_tasks/` and `_closed/` are never walked under the Teams root. | `src/Huddle.App/Library/LibraryHiddenFolders.cs:18` |
-| `LibraryPathResolver` classifies a path by its **full path** under the Teams and Teammates folders, whatever root reached it, so a Persona file is `LibraryNodeRole.TeammateDefinition` even through a pinned root, and a `_`-prefixed segment under the Teams folder is refused there too. | `src/Huddle.App/Library/LibraryPathResolver.cs:305-333` |
+| `LibraryPathResolver` classifies a path by its **full path** under the Teams and Agents folders, whatever root reached it, so a Persona file is `LibraryNodeRole.AgentDefinition` even through a pinned root, and a `_`-prefixed segment under the Teams folder is refused there too. | `src/Huddle.App/Library/LibraryPathResolver.cs:305-333` |
 | A Task file is recognised by `TaskLayout.TryMap`: `<Team>/[<Project>/]_tasks/[_closed/]<ID>.md` under `Team:Teams:Dir`. | `src/Huddle.App/Tasks/TaskLayout.cs:22` |
-| A Persona file is a Teammate folder's definition, `Teammates/<Name>/<Name>.md`, which the resolver marks `LibraryNodeRole.TeammateDefinition`. | `src/Huddle.App/Library/LibraryPathResolver.cs:393` |
+| A Persona file is an Agent folder's definition, `Agents/<Name>/<Name>.md`, which the resolver marks `LibraryNodeRole.AgentDefinition`. | `src/Huddle.App/Library/LibraryPathResolver.cs:393` |
 | Tasks are in memory: `TaskStore.All`, Active and Closed (`TaskItem.Location.Closed`). `TaskQuery.MatchesSearch` already matches id and title with `OrdinalIgnoreCase` for Views. | `src/Huddle.App/Tasks/TaskStore.cs:131`, `src/Huddle.App/Tasks/Views/TaskQuery.cs:149` |
 | Teams are in memory: `ITeamCatalog.Teams`, each a `TeamSummary(Name, Projects, Members, HasFolder)` with `TeamType` (a `VersionedRef`) from `_team.md`. A Team's identity is its Name, compared ignoring case. | `src/Huddle.App/Teams/ITeamCatalog.cs`, `src/Huddle.App/Teams/TeamSummary.cs` |
 | Personas are in memory: `PersonaEntry(Name, Title, Alias, Teams, Path, Text, Adapter, Skills, Builtin)`, assembled by `PersonaIndex.Build`. | `src/Huddle.App/Acp/PersonaEntry.cs:22`, `src/Huddle.App/Acp/PersonaIndex.cs` |
@@ -120,11 +120,11 @@ these.
 | **The only scroll code is "to the bottom".** `MessageList.OnAfterRenderAsync` calls `teamScroll.toBottom` whenever the rendered signature (Messages plus Draft growth) changes, unconditionally. Message rows carry no DOM id. There is no scroll-to-Message. | `src/Huddle.App/Components/Shared/MessageList.razor:290`, `src/Huddle.App/wwwroot/app.js:155` |
 | **The Top Bar is built** (PR #162). `TopBar.razor` is a fixed `MudAppBar` across the whole window, above the left menu (the drawer uses `ClipMode="DrawerClipMode.Always"`, so it starts below the bar) and every pane. It draws `PageBreadcrumbs` for `TabService.Active`, so the trail follows the focused pane; a crumb navigates that Tab in place. It has three cells, `.top-bar-start` (the trail), `.top-bar-center` and `.top-bar-end`, and two `RenderFragment?` parameters, **`Search`** (drawn in `.top-bar-center`) and **`Actions`** (`.top-bar-end`). `MainLayout` draws `<TopBar />` with both slots empty today. | `src/Huddle.App/Components/Layout/TopBar.razor`, `src/Huddle.App/Components/Layout/MainLayout.razor` |
 | **No pane draws a breadcrumb.** `TabPageHost` mounts only the page; `PageBreadcrumbs` has `Crumbs` and `OnNavigate` and no `Collapse` (a trail spanning the window is never collapsed). `TabTrail.Build` makes a page with no trail show its title alone, as `/settings` does. | `src/Huddle.App/Components/Layout/TabPageHost.razor`, `src/Huddle.App/Components/Shared/PageBreadcrumbs.razor`, `tests/Huddle.Tests/Ui/Layout/PageBreadcrumbsTests.cs` |
-| **The whole UI is drawn at 90%.** `html { zoom: 0.9; }`. Viewport units are not zoomed, so `.main-column` is `height: calc(100vh / 0.9)`. MudBlazor places a popover in viewport pixels, so `.mud-popover-provider` cancels the zoom (`zoom: calc(1 / 0.9)`) and `.mud-popover-provider .mud-popover > *` takes it back (`zoom: 0.9`). The scale is a literal `0.9` in each place, never a `var()`, because every `var()` in `app.css` must name a MudBlazor variable (`ThemeSourceTests`). Dialogs, snackbars and `MudSelect` under the zoom have not been checked. | `src/Huddle.App/wwwroot/app.css:19-41`, `:108-116` |
+| **The page is not zoomed.** The UI renders at 100% with plain `vh` and `px` sizes ([ADR-0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) removed the old 90% `zoom`): `.main-column` is `height: 100vh`, a popover needs no zoom rule, and no rule in `app.css` sets `zoom` (`AppCss_SetsNoZoomAnywhere`). Every `var()` in `app.css` must still name a MudBlazor variable (`ThemeSourceTests`). | `src/Huddle.App/wwwroot/app.css` (`.main-column`) |
 | Global keys: `window.huddleTabs.attach` adds one `document` `keydown` listener for Alt+W, Alt+PageDown and Alt+PageUp, attached from `TabHost.OnAfterRenderAsync`. Alt, because the browser keeps Ctrl+W and Ctrl+Tab. | `src/Huddle.App/wwwroot/app.js:164`, `src/Huddle.App/Components/Layout/TabHost.razor:36` |
 | `TabService` has `Open(url)`, `Navigate(id, url)` (in place; focuses another Tab with the same key instead), `Keep(id)` (makes permanent) and `Active`. | `src/Huddle.App/Tabs/TabService.cs` |
 | `TabPageRoutes` copies every query value onto the page's `[Parameter]` of the same name, so a page reads `?message=` without `SupplyParameterFromQuery`. | `src/Huddle.App/Tabs/TabPageRoutes.cs:88-97` |
-| The Teammates page has no per-Teammate URL. A tile opens the card with `IDialogService.ShowAsync<TeammateCard>(name, Teammates.BuildViewParameters(…), TeammateCard.Options)`; `BuildViewParameters` is an `internal static` pure function of the Persona's entry, its `Persona`, its status, its Room id and its file path. | `src/Huddle.App/Components/Pages/Teammates.razor:239`, `:270` |
+| The Agents page has no per-Agent URL. A tile opens the card with `IDialogService.ShowAsync<AgentProfileCard>(name, Agents.BuildViewParameters(…), AgentProfileCard.Options)`; `BuildViewParameters` is an `internal static` pure function of the Persona's entry, its `Persona`, its status, its Room id and its file path. | `src/Huddle.App/Components/Pages/Agents.razor:239`, `:270` |
 | The Library page takes `root` and `path` as plain parameters, filled from the Tab's URL by `TabPageRoutes`. | `src/Huddle.App/Components/Pages/Library.razor:51` |
 
 ---
@@ -140,7 +140,7 @@ its middle cell.
 ```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────┐
 │ .top-bar-start               .top-bar-center                              .top-bar-end    │
-│ Teams › Marketing › Launch Q4  [🔍 Search teams, teammates, library, tasks, rooms…  Ctrl K]  (Actions) │
+│ Teams › Marketing › Launch Q4  [🔍 Search teams, agents, library, tasks, rooms…  Ctrl K]  (Actions) │
 ├──────────────┬────────────────────────────────────────────────────────────────────────────┤
 │ left menu    │ [Tab] [Tab] [Tab]                     │ [Tab] [Tab]                        │
 │              │ page                                  │ page                               │
@@ -151,7 +151,7 @@ its middle cell.
   then the router). A page with no trail shows its title as the last crumb. No pane draws its own.
 - **Middle: the search box**, `.top-bar-center`, filled through `<TopBar Search="…" />` in
   `MainLayout.razor`. The cell is a grid column of at most `32rem` (`.top-bar-grid`). The box has the
-  placeholder `Search teams, teammates, library, tasks, rooms…` and a `Ctrl K` hint drawn inside it
+  placeholder `Search teams, agents, library, tasks, rooms…` and a `Ctrl K` hint drawn inside it
   at the right.
 - **Right: `Actions`**, `.top-bar-end`, empty in V1.
 - With no Tab open, the breadcrumb is empty and the search box still works.
@@ -189,13 +189,13 @@ The dropdown follows VS Code's model exactly (D-7):
 - Anchored under the search box, **wider than the box**: about 720 px of the UI, left-aligned under
   the box, shrinking to the window's width on a narrow window.
 - At most **80% of the browser window's height**; the list inside scrolls. §6.8 says how to compute
-  that under the 90% zoom.
+  that in plain viewport units.
 - **Typing stays in the bar.** The dropdown has no second input.
 
 ```text
  [🔍 task:login                                              Ctrl K]
  ┌──────────────────────────────────────────────────────────────────┐
- │ (All) (Teams) (Teammates) (Library) [Tasks] (Rooms)               │
+ │ (All) (Teams) (Agents) (Library) [Tasks] (Rooms)               │
  │ Search results for: 'login'                     (after a reopen)  │
  │ TASKS                                                             │
  │ SUP-0012 · Support SAML login               [In Progress] [   ]   │
@@ -212,14 +212,14 @@ The dropdown follows VS Code's model exactly (D-7):
 
 ### 6.2 Filter chips and prefixes
 
-The first row is the chips **All, Teams, Teammates, Library, Tasks, Rooms** (D-8, OP-1).
+The first row is the chips **All, Teams, Agents, Library, Tasks, Rooms** (D-8, OP-1).
 
 - **A chip is a prefix.** Picking Teams is the same as typing `team:`; typing `team:` lights the
   Teams chip. Picking a chip rewrites the prefix at the start of the box and keeps the rest of the
   text; picking All removes it.
-- Prefixes: `team:` Teams, `teammate:` Teammates, `lib:` Library, `task:` Tasks, `room:` Rooms.
+- Prefixes: `team:` Teams, `agent:` Agents, `lib:` Library, `task:` Tasks, `room:` Rooms.
   Compared ignoring case; only at the very start of the text; the text after the colon is the
-  query, trimmed. (`team:` is not a prefix of `teammate:`: the colon decides.)
+  query, trimmed. (`team:` is not a prefix of `agent:`: the colon decides.)
 - **Reserved:** `>` for V2 commands. It does not search in V1. `?` has no meaning in V1 (OP-14).
 - **No counts on chips.**
 
@@ -231,14 +231,14 @@ Every string below is **decided** (OP-15): tests assert them exactly
 were settled under OP-15. `<term>` is the Human's phrase as typed after any prefix, inside single
 quotes. `<Group>` is the group heading below.
 
-**Group headings**, in this fixed order (D-9): **Teams**, **Teammates**, **Library**, **Tasks**,
+**Group headings**, in this fixed order (D-9): **Teams**, **Agents**, **Library**, **Tasks**,
 **Closed Tasks**, **Rooms**, **Archived Rooms**. They are drawn upper case by CSS
 (`text-transform`), so a screen reader reads them in normal case.
 
 | State | The dropdown shows |
 | --- | --- |
 | Box empty, never searched in this circuit | The chips, and one quiet line: `Type 3 or more characters, or pick a filter.` No recents in V1 |
-| Box empty, filter **Teams** or **Teammates** | **Browse:** every Team, or every Teammate, in rank order (§7.4), up to 50 |
+| Box empty, filter **Teams** or **Agents** | **Browse:** every Team, or every Agent, in rank order (§7.4), up to 50 |
 | Fewer than 3 characters after any prefix (other filters), or a phrase starting `>` | The chips and the same quiet line. `task:fi` does not search; `task:fix` does |
 | Filter **All**, 3 or more characters | Groups in the fixed order. Up to **5** cards per group. **No "See all" row** |
 | One filter, 3 or more characters | Only that group and its archived side, up to **50** cards each (OP-5). This view *is* "see all" |
@@ -270,7 +270,7 @@ at all, §14).
 | Typing | Edits the query in the bar; each keystroke cancels the search in flight (§7.6) |
 | `Up`, `Down` | Move through the cards of every group, top to bottom, skipping headings |
 | `Ctrl+Left`, `Ctrl+Right` | Move to the previous or next chip (OP-7, decided: this takes word-jump away from the box while the dropdown is open) |
-| `Alt+1` … `Alt+6` | Jump to All, Teams, Teammates, Library, Tasks, Rooms |
+| `Alt+1` … `Alt+6` | Jump to All, Teams, Agents, Library, Tasks, Rooms |
 | `Enter` | Opens the highlighted hit in the current Tab (§9) |
 | `Ctrl+Enter` | Opens the highlighted hit in a new, permanent Tab, or focuses it when already open (§9) |
 | `Esc` | Closes and returns focus (§5.2) |
@@ -286,7 +286,7 @@ Each kind of hit has its own card, chosen by the hit's subtype with a pattern ma
 @switch (hit)
 {
     case TeamHit team: <TeamSearchCard Hit="@team" /> break;
-    case TeammateHit teammate: <TeammateSearchCard Hit="@teammate" /> break;
+    case AgentHit agent: <AgentSearchCard Hit="@agent" /> break;
     case LibraryHit library: <LibrarySearchCard Hit="@library" /> break;
     case TaskHit task: <TaskSearchCard Hit="@task" /> break;
     case RoomHit room: <RoomSearchCard Hit="@room" /> break;
@@ -299,15 +299,15 @@ there, such as closing an Ask.
 
 | Card | Shows | Matched on |
 | --- | --- | --- |
-| **Team** | Team icon, Name, team type, Teammate count (`Development Team · 4 teammates`, `1 teammate`; no type: `4 teammates`) | Name, team type |
-| **Teammate** | Avatar (`TeammateAvatar`), Name, Title, Teams (`Product Manager · Marketing, Platform`; no Team: `Product Manager · No team`, OP-8) | Name, Alias, Title |
+| **Team** | Team icon, Name, team type, Agent count (`Development Team · 4 agents`, `1 agent`; no type: `4 agents`) | Name, team type |
+| **Agent** | Avatar (`AgentAvatar`), Name, Title, Teams (`Product Manager · Marketing, Platform`; no Team: `Product Manager · No team`, OP-8) | Name, Alias, Title |
 | **Library** | File-type icon, name, folder path within its root (the root's name at the root); for a content hit, a one-line snippet with the match in **bold** | Name, then contents |
 | **Task** | Line 1: `SUP-0012 · Support SAML login` at the left and the status chip (the Board's status `Color`) at the right. Line 2: `Nova · Staff Engineer` at the left (the Persona's title is de-emphasised; no title: name only; unassigned: nothing at the left) and `Platform Team` at the right under the chip (" Team" is appended only when the name does not already end in "Team", ordinal ignoring case) | Title, id, assignee Name |
 | **Room** | Room name, then count, sender and time (`14 matches · Kai · 14:02`, `1 match · Kai · 14:02`; a name-only hit has no meta line), then the snippet with the match in bold; **one card per Room**, collapsing many matches | Message text, Room name |
 
 ```text
- Team      [▣]  Marketing                     Development Team · 4 teammates   [   ]
- Teammate  (NV) Nova                          Product Manager · Marketing      [   ]
+ Team      [▣]  Marketing                     Development Team · 4 agents   [   ]
+ Agent  (NV) Nova                          Product Manager · Marketing      [   ]
  Library   [📄] plan.md                        Marketing/Launch Q4              [   ]
                …the **login** flow moves to SSO in Q4…
  Task      SUP-0012 · Support SAML login            [In Progress]               [   ]
@@ -331,50 +331,41 @@ need*. Confirm each parameter against 9.10.0 before building
 | The Top Bar | `TopBar` (built: `MudAppBar` with a three-cell grid) | Filled through its `Search` slot, never reshaped |
 | The breadcrumb | `PageBreadcrumbs` (built, `MudBreadcrumbs`) | Untouched by search |
 | The search box | `MudTextField<string>` with a start adornment (search icon) and an end adornment (`Ctrl K` hint) | Not `MudAutocomplete`: that offers one flat list of one type, and this dropdown is grouped, mixed and chip-filtered |
-| The dropdown | `MudPopover` anchored to the box | Size rules in the `/* Global search */` block of `app.css`, `--mud-*` variables only, under the zoom rules of §6.8 |
+| The dropdown | `MudPopover` anchored to the box | Size rules in the `/* Global search */` block of `app.css`, `--mud-*` variables only, under the sizing rules of §6.8 |
 | Filter chips | `MudChipSet<SearchFilter>` with single selection | `SelectedValue` bound to the filter |
 | Group headings, card text | `MudText` | |
-| Avatars | `TeammateAvatar` | The house component |
+| Avatars | `AgentAvatar` | The house component |
 | Status chip on a Task card | `MudChip` with the Board's status-to-`Color` helper (`TaskColors.For`) | Reuse the one helper, do not add a second mapping |
 | Bold match | `MudHighlighter` | |
 | A group still searching | `MudProgressCircular Indeterminate="true" Size="Size.Small"` | |
 | A failed or truncated group | `MudText` with `Color.Warning` and an icon | Not a `MudAlert`: it is one line inside a list |
 
-### 6.8 Under the 90% zoom
+### 6.8 Size and placement of the dropdown
 
-The UI is drawn at 90% (`html { zoom: 0.9; }`, §4). The dropdown is a `MudPopover`, so it lives in
-the popover provider and must follow the provider's rule exactly. Read the zoom comment and the two
-provider rules at the top of `app.css` (`:19-41`) before writing any dropdown CSS, and copy that
-approach; do not invent another.
+The page is not zoomed ([ADR-0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)): sizes are plain `px` and viewport units. The dropdown is a
+`MudPopover`, so it lives in MudBlazor's popover provider, which places it in viewport pixels. That
+is now correct with no help from the stylesheet.
 
-1. **Placement cancels the zoom.** The `.mud-popover` element sits inside `.mud-popover-provider`,
-   whose `zoom: calc(1 / 0.9)` undoes the page's 0.9, so MudBlazor's viewport-pixel placement is
-   right. Do not set a `zoom` on the popover element itself, and do not move the dropdown out of
-   the provider.
-2. **Content re-applies 0.9.** The provider's `.mud-popover > *` rule gives the popover's content
-   `zoom: 0.9`, so the dropdown is drawn at the same size as the rest of the UI. The dropdown's
-   sizing and scrolling live on its **content wrapper** (`.search-dropdown`, the popover's direct
-   child), which is inside that 0.9.
-3. **Heights and widths in viewport units divide by the scale**, as `.main-column` does, because
-   viewport units are not zoomed: inside a 0.9 zoom, `80vh` would come out at 72% of the window.
-   So the wrapper is exactly:
+1. **Placement is MudBlazor's.** Do not set a `zoom` on the popover or any ancestor, and do not move
+   the dropdown out of the provider.
+2. **Sizing and scrolling live on the content wrapper** (`.search-dropdown`, the popover's direct
+   child), in plain viewport units. The wrapper is exactly:
 
    ```css
    .search-dropdown {
-       width: min(720px, calc(100vw / 0.9));
-       max-height: calc(80vh / 0.9);
+       width: min(720px, calc(100vw - 48px));
+       max-height: 80vh;
        overflow-y: auto;
    }
    ```
 
-   which is 80% of the window's height and never wider than the window. `720px` is in the UI's own
-   pixels, like every other px size in the app. The two `0.9` literals join the scale's other
-   places, and the comment above `html { zoom }` must be updated to name them, so a change of scale
-   changes all of them together.
-4. **Verify at 90%, by hand.** bUnit runs no layout. GS-M10 checks that the dropdown is anchored
-   flush under the box at its left edge, that its height reaches 80% of the window with a long
-   result list and no further, and that the list scrolls inside it. GS-M5 checks the Room jump's
-   centring and highlight at 90%.
+   which is 80% of the window's height and never wider than the window.
+3. **Pinned as source facts.** `AppCssSearchTests` holds `max-height: 80vh;` on `.search-dropdown`,
+   and that no rule in the Global search block (or anywhere in `app.css`) sets `zoom`.
+4. **Verify by hand.** bUnit runs no layout. GS-M10 checks that the dropdown is anchored flush under
+   the box at its left edge, that its height reaches 80% of the window with a long result list and
+   no further, and that the list scrolls inside it. GS-M5 checks the Room jump's centring and
+   highlight.
 
 ---
 
@@ -382,7 +373,7 @@ approach; do not invent another.
 
 ```text
  SearchBar.razor ──text──► SearchOrchestrator ──SearchQuery──► ISearchProvider × 5
-   ▲                        │  parse prefix                     (Teams, Teammates, Library, Tasks, Rooms)
+   ▲                        │  parse prefix                     (Teams, Agents, Library, Tasks, Rooms)
    │                        │  fan out: Active pass, then Archived pass
    │   GroupUpdated event   │  each provider's SearchResult ──► SearchResultRanker (pure)
    └────────────────────────┘  one CancellationToken for both passes
@@ -396,7 +387,7 @@ New code lives in `src/Huddle.App/Search/`, namespace `Agency.Huddle.App.Search`
 
 ```csharp
 /// <summary>Which category the dropdown shows: All, or one filter. A chip and a prefix both set it.</summary>
-public enum SearchFilter { All, Teams, Teammates, Library, Tasks, Rooms }
+public enum SearchFilter { All, Teams, Agents, Library, Tasks, Rooms }
 
 /// <summary>Which side of a category a call searches: the live items, or Archived Rooms and Closed Tasks.</summary>
 public enum SearchScope { Active, Archived }
@@ -418,8 +409,8 @@ public sealed record SearchResult(IReadOnlyList<SearchHit> Hits, bool Truncated)
 /// <summary>One result. The card is chosen by the subtype, never by a kind enum.</summary>
 public abstract record SearchHit(string Title, string? TeamName, bool IsArchived, MatchTier Tier);
 
-public sealed record TeamHit(...) : SearchHit(...);      // type label, Teammate count
-public sealed record TeammateHit(...) : SearchHit(...);  // Name, Title, Alias, Teams
+public sealed record TeamHit(...) : SearchHit(...);      // type label, Agent count
+public sealed record AgentHit(...) : SearchHit(...);  // Name, Title, Alias, Teams
 public sealed record LibraryHit(...) : SearchHit(...);   // root id and name, relative path, folder path, snippet
 public sealed record TaskHit(...) : SearchHit(...);      // TaskId, status, assignee
 public sealed record RoomHit(...) : SearchHit(...);      // Room id and name, match count, newest matching Message id, sender, snippet, time
@@ -433,7 +424,7 @@ public sealed record RoomHit(...) : SearchHit(...);      // Room id and name, ma
   never calls a service.
 - `TeamName` is the Team the hit belongs to, used only for "open Team first" (§7.4). A Room has none
   (OP-4); a Library hit has one only under the Teams root (its first path segment).
-- The plan gives the exact record signatures. `TeammateHit` names the Persona's Title
+- The plan gives the exact record signatures. `AgentHit` names the Persona's Title
   `PersonaTitle`, because the base record's `Title` is the card's main text (the Name).
 - Records, `IReadOnlyList<T>`, explicit types and target-typed `new()`, `CancellationToken` last,
   `TimeProvider` injected: [CSharpPrinciples.md](../agents/CSharpPrinciples.md) throughout.
@@ -447,7 +438,7 @@ phrase:
    is removed. Otherwise the chip's filter stands.
 2. The remainder is trimmed. That is the phrase.
 3. `IsSearchable` is true when the phrase has **3 or more characters** and does not start with `>`,
-   or when it is empty and the filter is Teams or Teammates (browse).
+   or when it is empty and the filter is Teams or Agents (browse).
 
 `3`, the per-group cap of `5`, the single-filter cap of `50` and the `200` ms debounce are
 **constants in V1** (`SearchLimits.MinChars`, `SearchLimits.GroupCap`,
@@ -477,7 +468,7 @@ internal interface ISearchProvider
    runs). Not searchable: cancels and raises nothing.
 2. **Cancels the previous search** and creates one `CancellationTokenSource` for this one.
 3. Starts the **Active** pass: every provider the filter selects, at once. Cheap providers (Teams,
-   Teammates, Tasks) start immediately; expensive ones (Library, Rooms) wait the 200 ms debounce on
+   Agents, Tasks) start immediately; expensive ones (Library, Rooms) wait the 200 ms debounce on
    the injected `TimeProvider` first, so a fast typist's every keystroke cancels them before they
    read a file.
 4. **As each provider completes**, hands its `SearchResult` to `SearchResultRanker` and raises
@@ -510,7 +501,7 @@ The provider knows how well each hit matched; it does not know what else is on s
 is a **pure static function with no I/O** (D-22) that orders one group's hits by:
 
 1. **The open Team first.** A hit whose `TeamName` equals `SearchQuery.OpenTeam` (ordinal, ignoring
-   case) comes before every other. A **Teammate ranks first when any of its Teams is the open
+   case) comes before every other. A **Agent ranks first when any of its Teams is the open
    Team**; a **Room never ranks by Team** (OP-4, decided). The open Team is the Team of the focused
    Tab: `/teams/{team}` and its Projects and sub-tabs; otherwise none.
 2. **Match tier**, best first: `ExactName`, `NamePrefix`, `NameContains`, `ContentMatch`.
@@ -527,7 +518,7 @@ fields, the **first field that matches** decides the tier:
 | Category | `ExactName` / `NamePrefix` / `NameContains` against | `ContentMatch` |
 | --- | --- | --- |
 | Teams | Name, else team type | — |
-| Teammates | Name, else Alias, else Title | — |
+| Agents | Name, else Alias, else Title | — |
 | Library | File or folder name (an exact match also counts against the name without its extension) | Contents |
 | Tasks | Title, else id | Assignee Name |
 | Rooms | Room name | Message text |
@@ -541,7 +532,7 @@ group below the active results **within each filter** (D-19).
 | --- | --- | --- |
 | Rooms | Archived Rooms (`Room.Archived`) | **Archived Rooms** |
 | Tasks | Closed Tasks (`TaskItem.Location.Closed`) | **Closed Tasks** |
-| Teams, Teammates, Library | None | Return an empty result for `Archived` at once |
+| Teams, Agents, Library | None | Return an empty result for `Archived` at once |
 
 The code says `SearchScope.Archived` for both, because the owner settled one word for the pass;
 the interface keeps each feature's own word (**Archived** for Rooms, **Closed** for Tasks), as
@@ -570,19 +561,19 @@ A provider whose feature is switched off (`Team:Library:Enabled` or `Team:Tasks:
 - **Matches:** Team Name, then team type (the type's display name, `TeamTypeCatalog.Find(id)`, or
   its id when the type is unknown).
 - **Browse:** an empty phrase under the Teams filter lists every Team.
-- **Hit:** Name, type label, `Members.Count` (shown as Teammates), `TeamName` = itself.
+- **Hit:** Name, type label, `Members.Count` (shown as Agents), `TeamName` = itself.
 - **Opens:** the Team page, `/teams/{team}`.
 
-### 8.2 Teammates
+### 8.2 Agents
 
 - **Source:** the Personas in `PersonaStore`'s current `PersonaIndex` (`Entries`). Cheap. **Every
-  Persona is a Teammate result**, showing *No team* when it has none; the Human is never listed
+  Persona is an Agent result**, showing *No team* when it has none; the Human is never listed
   (OP-8, decided). Rejected files are not listed.
 - **Matches:** Name, Alias, Title (§7.4 for the tiers).
-- **Browse:** an empty phrase under the Teammates filter lists every Teammate.
+- **Browse:** an empty phrase under the Agents filter lists every Agent.
 - **Hit:** Name, Title, Alias, Teams; the card resolves the avatar from `AvatarStore` by Name, as the
-  Teammates page does.
-- **Opens:** that Teammate's card **dialog, directly**, over the current page, with no URL and no
+  Agents page does.
+- **Opens:** that Agent's card **dialog, directly**, over the current page, with no URL and no
   Tab change (§9, OP-9).
 
 ### 8.3 Library
@@ -652,7 +643,7 @@ entry (D-11, OP-10 confirmed):
 | Excluded | Rule | Under the built-in roots |
 | --- | --- | --- |
 | **Task files** | `TaskLayout.TryMap` accepts the path relative to `Team:Teams:Dir` | Never reached: `_tasks/` is an `_`-prefixed folder, hidden under the Teams root |
-| **Persona files** | The path is a Teammate folder's definition, `Teammates/<Name>/<Name>.md` (`LibraryNodeRole.TeammateDefinition`) | Reached in the Teammates root; skipped |
+| **Persona files** | The path is an Agent folder's definition, `Agents/<Name>/<Name>.md` (`LibraryNodeRole.AgentDefinition`) | Reached in the Agents root; skipped |
 
 The rule is tested against the **full path**, not the root, because a pinned root may contain
 `DataDir` (Library spec §6.10) and reach both kinds through a root that hides nothing.
@@ -664,7 +655,7 @@ The rule is tested against the **full path**, not the root, because a pinned roo
 | Hit | `Enter` and `Ctrl+Enter` open |
 | --- | --- |
 | Team | `/teams/{team}` |
-| Teammate | The Teammate card dialog, directly (OP-9); `Enter` and `Ctrl+Enter` do the same, and no Tab changes |
+| Agent | The Agent card dialog, directly (OP-9); `Enter` and `Ctrl+Enter` do the same, and no Tab changes |
 | Library | `/library?root={rootId}&path={relativePath}` |
 | Task | `/tasks/item/{id}` |
 | Room | `/rooms/{roomId}?message={messageId}` (§9.1) |
@@ -675,12 +666,12 @@ with `TabService.Open(url)` and makes it permanent with `Keep`. Both follow the 
 is open at most once: if the target is already open in either group, that Tab is focused instead,
 so Ctrl+Enter on an open item only focuses it. A click on a card is Enter.
 
-**The Teammate card** opens the way the Teammates page opens it:
-`IDialogService.ShowAsync<TeammateCard>(name, Teammates.BuildViewParameters(entry, persona, status,
-roomId, filePath), TeammateCard.Options)`, the inputs gathered as `Teammates.razor` gathers them
+**The Agent card** opens the way the Agents page opens it:
+`IDialogService.ShowAsync<AgentProfileCard>(name, Agents.BuildViewParameters(entry, persona, status,
+roomId, filePath), AgentProfileCard.Options)`, the inputs gathered as `Agents.razor` gathers them
 (`PersonaStore.Entries` and `Get`, the status from `PersonaStatusResolver.Resolve`, the Room from
 `ITeamDirectory`, the path from `PersonaStore.PathFor`). One shared opener does this for both, so the
-two doors cannot drift. There is **no `?name=` parameter** on `/teammates`.
+two doors cannot drift. There is **no `?name=` parameter** on `/agents`.
 
 ### 9.1 The Room jump (new work)
 
@@ -700,7 +691,7 @@ Today none of this exists (§4). The work:
    the middle of the list, adds a `search-hit-flash` class, and removes it after the fade. The
    colour comes from `--mud-palette-*` in `app.css`; the fade is a CSS transition, and
    `prefers-reduced-motion` drops it to a plain outline that clears. `scrollIntoView` works in the
-   zoomed page's own coordinates; GS-M5 checks the centring and the highlight at 90% (§6.8).
+   page's own coordinates; GS-M5 checks the centring and the highlight (§6.8).
 4. **A rule stops the stick-to-bottom logic overriding the jump.** `MessageList.OnAfterRenderAsync`
    today scrolls to the bottom whenever the rendered signature changes, which a newly loaded Room
    always does. With a target set, the first render scrolls to the target instead, and the list
@@ -764,7 +755,7 @@ The pattern is the WAI-ARIA combobox with a listbox popup.
 - **The `Ctrl K` hint** is `aria-hidden`; the box's `aria-keyshortcuts="Control+K /"` says it
   instead.
 - **Focus:** `Esc` returns focus to the element that had it before the box opened (§5.2). Opening a
-  hit moves focus into the opened page, as a click in the left menu does; a Teammate hit moves it
+  hit moves focus into the opened page, as a click in the left menu does; an Agent hit moves it
   into the card dialog.
 - **The Room jump** moves focus to the target Message row (`tabindex="-1"`) so a screen reader
   reads it, and the highlight respects `prefers-reduced-motion`.
@@ -783,8 +774,8 @@ asserted **whole**; a test that passes on arrival is proved with a mutation; eve
 
 | Id | Class | Pins |
 | --- | --- | --- |
-| GS-T1 | `SearchQueryParserTests` | Each prefix sets its filter, ignoring case; only at the start; `team:` and `teammate:` kept apart; the chip stands when there is none; trimming; `task:fi` not searchable and `task:fix` searchable; empty Teams and Teammates browse, empty Tasks does not; `>` never searches |
-| GS-T2 | `SearchResultRankerTests` | Open Team first, including a Teammate in any open Team and never a Room; then each tier in order; active before archived; alphabetical tie-break, ignoring case; the cap and `Truncated` (cut by the ranker, or already set by the provider); an empty input; no open Team. One test per clause |
+| GS-T1 | `SearchQueryParserTests` | Each prefix sets its filter, ignoring case; only at the start; `team:` and `agent:` kept apart; the chip stands when there is none; trimming; `task:fi` not searchable and `task:fix` searchable; empty Teams and Agents browse, empty Tasks does not; `>` never searches |
+| GS-T2 | `SearchResultRankerTests` | Open Team first, including an Agent in any open Team and never a Room; then each tier in order; active before archived; alphabetical tie-break, ignoring case; the cap and `Truncated` (cut by the ranker, or already set by the provider); an empty input; no open Team. One test per clause |
 | GS-T3 | `SearchOptionsTests` | Defaults, `MaxVisitedEntries` among them; a configured `TextExtensions` replaces the default rather than appending; `LibraryParallelism` below 1 is raised |
 
 ### 12.2 Provider tests
@@ -797,7 +788,7 @@ Real stores over `TempDataDir` (`tests/Huddle.Tests/TempDataDir.cs`), no mocks, 
 | GS-T4 | `LibraryFileServiceSearchTests`, `LibrarySearchProviderTests` | Name hit; content hit with its snippet; a file over `MaxContentFileBytes` matched by name only, and `Truncated`; an extension outside `TextExtensions` never read; `MaxVisitedEntries` sets `Truncated`; hidden folders never walked; **a Task file and a Persona file excluded, through the built-in roots and through a pinned root that contains `DataDir`**; a locked file skipped; a UTF-16 file found; roots searched in parallel up to the setting (a gated root proves the limit); a hidden built-in root not searched |
 | GS-T5 | `TaskSearchProviderTests` | Title, id and assignee matches with their tiers; Active never returns a Closed Task and Archived only Closed ones; an exact id ranks `ExactName` and nothing else |
 | GS-T6 | `RoomSearchProviderTests` | One hit per Room with the count; the newest matching Message's id; Room-name match; Archived Rooms only in the Archived pass; an unreadable Transcript skips that Room |
-| GS-T7 | `TeamSearchProviderTests`, `TeammateSearchProviderTests` | Browse lists every item; name, type, Title and Alias matches; a Persona with no Team listed; `Archived` returns empty at once |
+| GS-T7 | `TeamSearchProviderTests`, `AgentSearchProviderTests` | Browse lists every item; name, type, Title and Alias matches; a Persona with no Team listed; `Archived` returns empty at once |
 
 ### 12.3 Orchestrator tests
 
@@ -830,8 +821,8 @@ providers under them are not faked in §12.2.
 | GS-T21 | `Chat.razor` with `Message` set calls `teamScroll.toMessage`, not `toBottom`, on its first render, and a later Message does not call `toBottom` until the Human returns to the bottom |
 | GS-T22 | `MessageList` rows carry `data-message-id` |
 | GS-T23 | The search box is drawn in the Top Bar's `.top-bar-center` cell through the `Search` slot, and `TopBar` itself is unchanged |
-| GS-T24 | `app.css` pins the dropdown's zoom rules as source facts: `.search-dropdown` has `max-height: calc(80vh / 0.9)` and `width: min(720px, calc(100vw / 0.9))`, and no rule sets `zoom` on a search popover |
-| GS-T25 | `Enter` on a Teammate hit opens the `TeammateCard` dialog for that Name and changes no Tab |
+| GS-T24 | `app.css` pins the dropdown's size as source facts: `.search-dropdown` has `max-height: 80vh;` in plain viewport units, and no rule sets `zoom` on a search popover or anywhere else (ADR-0056) |
+| GS-T25 | `Enter` on an Agent hit opens the `AgentProfileCard` dialog for that Name and changes no Tab |
 
 ### 12.5 Manual tests
 
@@ -845,12 +836,12 @@ feature is built. All free.
 | GS-M2 | **`Ctrl+K` in Edge** reaches the app and not the address bar; if not, record it and try `Ctrl+Shift+K` |
 | GS-M3 | Groups fill one by one on a large pinned root; typing fast never shows stale results; the time to search every Transcript on the largest real install is recorded (OP-18) |
 | GS-M4 | Content hits, the snippet's bold match, the 1 MB cut-off and the incomplete note |
-| GS-M5 | A Room hit jumps to the Message with a fading highlight, in a closed Room and in the open one, at the 90% zoom: the row is centred in the list and the highlight covers it; a new Message during the highlight does not yank the view |
+| GS-M5 | A Room hit jumps to the Message with a fading highlight, in a closed Room and in the open one: the row is centred in the list and the highlight covers it; a new Message during the highlight does not yank the view |
 | GS-M6 | Archived Rooms and Closed Tasks appear dimmed below, after the active groups |
 | GS-M7 | A locked folder in a pinned root shows `Couldn't search Library.` or skips, and the other groups still render |
 | GS-M8 | Keyboard only: chips, `Alt+1`…`6`, `Ctrl+Left`/`Right`, `Up`/`Down`, `Enter`, `Ctrl+Enter`; a screen reader announces the highlighted card and the result count |
 | GS-M9 | The search box sits in the Top Bar's middle cell beside the breadcrumb, in one pane and in a split, and the trail still follows focus |
-| GS-M10 | **Under the 90% zoom**, the dropdown is anchored flush under the box at its left edge; with a long list its height is 80% of the window (measured: `getBoundingClientRect().height` ≈ `0.8 × window.innerHeight`) and no more; the list scrolls inside it; on a narrow window it is no wider than the window. Checked in Chrome and Edge |
+| GS-M10 | **At the default 100% render**, the dropdown is anchored flush under the box at its left edge; with a long list its height is 80% of the window (measured: `getBoundingClientRect().height` ≈ `0.8 × window.innerHeight`) and no more; the list scrolls inside it; on a narrow window it is no wider than the window. Checked in Chrome and Edge |
 
 ---
 
@@ -868,10 +859,10 @@ same day; their record is §15.
 | D-5 | **The word is Library, never documents or files** | It is the product's name for that place |
 | D-6 | **Exact phrase, ordinal ignoring case; no word splitting, no quotes needed** | Grep style: predictable, and no query language to learn |
 | D-7 | **VS Code's dropdown: anchored, ~720 px, 80% height, typing stays in the bar** | A known model; no second input to lose focus to |
-| D-8 | **Chips All, Teams, Teammates, Library, Tasks, Rooms; a chip is a prefix** | Mouse and keyboard reach the same state |
+| D-8 | **Chips All, Teams, Agents, Library, Tasks, Rooms; a chip is a prefix** | Mouse and keyboard reach the same state |
 | D-9 | **All shows 5 per group, fixed order, no "See all"; a single filter is the see-all** | One fewer kind of row; the filter already is that view |
 | D-10 | **The filter sticks; on reopen the box is empty, the last term is shown and re-run** | Returning to a search is common; re-running keeps it fresh |
-| D-11 | **Persona and Task files are never Library hits** | They appear once, as Teammates and Tasks, with their own cards |
+| D-11 | **Persona and Task files are never Library hits** | They appear once, as Agents and Tasks, with their own cards |
 | D-12 | **One card component per kind, with an empty action slot in V1** | Each kind shows what matters about it; V2 adds actions without a layout change |
 | D-13 | **One Room card per Room, collapsing its matches** | A busy Room would otherwise fill the group |
 | D-14 | **An exact Task id gets no special jump** | One rule for every query |
@@ -885,7 +876,7 @@ same day; their record is §15.
 | D-22 | **`SearchResultRanker` is pure and separate from the providers** | What a provider cannot know (the open Team) is ranked in one tested place |
 | D-23 | **Library roots are searched in parallel, default 4, configurable** | Disk-bound walks overlap; the setting caps load on a slow drive |
 | D-24 | **The 3-character minimum, the caps of 5 and 50 and the 200 ms debounce are constants** | Nobody needs to tune them yet |
-| D-25 | **Teams and Teammates browse when empty; everything else needs 3 characters** | Both lists are small and in memory; the rest would match too much |
+| D-25 | **Teams and Agents browse when empty; everything else needs 3 characters** | Both lists are small and in memory; the rest would match too much |
 
 ---
 
@@ -922,18 +913,18 @@ record "as decided".
 
 | # | Point | Decision |
 | --- | --- | --- |
-| OP-1 | Two labels against the glossary | **Follow the glossary**: *Members* → **Teammates**, *Chats* → **Rooms**, in the placeholder, chips, prefixes (`teammate:`, `room:`), headings (*Archived Rooms*), cards, types (`TeammateHit`, `RoomHit`), providers and tests. **Library** stays |
+| OP-1 | Two labels against the glossary | **Follow the glossary**: *Members* → **Agents**, *Chats* → **Rooms**, in the placeholder, chips, prefixes (`agent:`, `room:`), headings (*Archived Rooms*), cards, types (`AgentHit`, `RoomHit`), providers and tests. **Library** stays |
 | OP-3 | How wide the Top Bar is | **The whole window**, over the left menu. Built (PR #162) |
-| OP-4 | Which Team a hit belongs to | **Accepted**: a Room never ranks by Team; a Teammate ranks first when any of its Teams is open; a Library hit has a Team only under the Teams root |
+| OP-4 | Which Team a hit belongs to | **Accepted**: a Room never ranks by Team; an Agent ranks first when any of its Teams is open; a Library hit has a Team only under the Teams root |
 | OP-5 | The cap for a single-filter view | **Accepted**: 50, a constant |
 | OP-6 | Tiers for secondary fields | **Accepted as §7.4 reads**; the first field that matches decides the tier |
 | OP-7 | `Ctrl+Left`/`Right` | **Accepted**: they move between chips while the dropdown is open |
-| OP-8 | Which Personas are Teammate results | **Every Persona**, showing *No team* when it has none; the Human is never listed |
-| OP-9 | Opening a Teammate card from search | **Open the card's dialog directly**; no `?name=` parameter on `/teammates` (§9) |
+| OP-8 | Which Personas are Agent results | **Every Persona**, showing *No team* when it has none; the Human is never listed |
+| OP-9 | Opening an Agent card from search | **Open the card's dialog directly**; no `?name=` parameter on `/agents` (§9) |
 | OP-10 | Excluding Persona files from the Library group | **Confirmed** |
 | OP-11 | Enter and Ctrl+Enter in Tab terms | **Confirmed** as §9: Enter navigates the focused Tab in place; Ctrl+Enter opens a permanent Tab, or only focuses it when already open |
 | OP-12 | ADRs | **Approved**: write ADR-0051 for *search keeps no index of its own*. The breadcrumb's move is already recorded in ADR-0046's addendum |
-| OP-13 | Glossary entries | **Approved**: *Global Search*, *Top Bar*, *Filter* and *Card* (search sense) go into [language.md](engineering/language.md), the Card entry noting that *card* already means a Board's drawing of a Task and the Teammate card |
+| OP-13 | Glossary entries | **Approved**: *Global Search*, *Top Bar*, *Filter* and *Card* (search sense) go into [language.md](engineering/language.md), the Card entry noting that *card* already means a Board's drawing of a Task and the Agent card |
 | OP-14 | `?` lists the prefixes | **Out of V1**; moved to §14. `>` stays reserved for V2 |
 | OP-15 | Interface strings | **Decided** in §6.3 and §6.6 by the spec's best judgement, as the owner asked, with the four owner strings kept verbatim; tests use them exactly |
 | OP-16 | Dropping `?message=` after the jump | **Confirmed** |
@@ -958,9 +949,9 @@ as they need to be (PR #162) and do not change.
 | `src/Huddle.App/Components/Layout/MainLayout.razor` | Fills `<TopBar Search="…" />` with the search bar |
 | `src/Huddle.App/Components/Pages/Chat.razor` | A `Message` target parameter; passes it to `MessageList` |
 | `src/Huddle.App/Components/Shared/MessageList.razor` | `data-message-id` on every row; the jump instead of `toBottom`, and the rule that holds stick-to-bottom off |
-| `src/Huddle.App/Components/Pages/Teammates.razor` | Its card opening moves into the shared opener the search bar also calls (§9); behaviour unchanged |
+| `src/Huddle.App/Components/Pages/Agents.razor` | Its card opening moves into the shared opener the search bar also calls (§9); behaviour unchanged |
 | `src/Huddle.App/wwwroot/app.js` | `window.huddleSearch` (keys, focus restore) and `teamScroll.toMessage` |
-| `src/Huddle.App/wwwroot/app.css` | A `/* Global search */` block: the dropdown size under the zoom (§6.8), the flash, the dimmed group; the zoom comment names the new `0.9` places. A protected shared root file: announce the change |
+| `src/Huddle.App/wwwroot/app.css` | A `/* Global search */` block: the dropdown size in viewport units (§6.8), the flash, the dimmed group. A protected shared root file: announce the change |
 | `src/Huddle.App/Library/LibraryFileService.cs` | The shared walk gains the content test (§8.3); `FindAsync` behaves as before |
 | `src/Huddle.App/TeamOptions.cs` | A `Search` property of the new `SearchOptions` |
 | `src/Huddle.App/ServiceCollectionExtensions.cs` | Registers the orchestrator (scoped) and the five providers |
@@ -975,9 +966,7 @@ as they need to be (PR #162) and do not change.
 
 ## 17. Delivery plan
 
-The plan that builds this design lives in its own page,
-[global-search-plan.md](engineering/global-search-plan.md), so this spec stays the design and the
-plan can be tracked with `Set-Tracker.ps1`. It cuts the work into deliverables `D0` to `D15` (no
+The plan that built this design has been retired, so this spec stays the design. It cut the work into deliverables `D0` to `D15` (no
 hyphen, unlike the decisions `D-1` to `D-25` above), each one concern that ends on a green build,
 and cites the section, decision and test ids of this spec in every task. D10, the Top Bar, is
 already delivered (PR #162).
@@ -986,8 +975,8 @@ already delivered (PR #162).
 | --- | --- | --- |
 | 0 | D1 contracts, options and text helpers | Haiku |
 | 0 | D0 ADR-0051 | Sonnet |
-| 1 | D2 parser, ranker, open Team and hit links; D3 Teams, Teammates and Tasks providers; D4 Rooms provider; D8 cards and the zoom-aware stylesheet; D9 dropdown view model | Haiku |
-| 1 | D5 Library walk with the content test; D13 the Room jump and the Teammate card opener | Sonnet |
+| 1 | D2 parser, ranker, open Team and hit links; D3 Teams, Agents and Tasks providers; D4 Rooms provider; D8 cards and the stylesheet; D9 dropdown view model | Haiku |
+| 1 | D5 Library walk with the content test; D13 the Room jump and the Agent card opener | Sonnet |
 | 2 | D6 Library provider | Haiku |
 | 2 | D7 orchestrator and DI | Sonnet |
 | 3 | D11 the search bar in the Top Bar's `Search` slot; D12 global keys and focus | Sonnet |
@@ -996,3 +985,33 @@ already delivered (PR #162).
 
 More than half of the remaining work is Haiku's: 8 of 15 deliverables, 16 of 30 size points and 33
 of 59 tasks. Only OP-2 is an assumption; every other open point is decided (§15).
+
+---
+
+## 18. The Agent search tool
+
+Global Search is also offered to Agents as the `search` App Tool (`src/Huddle.App/Acp/Tools/SearchTool.cs`).
+It is read-only, offered to every Persona, and not Skill-granted. The decision on what an Agent may read is
+[ADR-0066](adr/0066-an-agents-search-reads-its-own-rooms-unless-it-asks-for-all.md).
+
+| Argument | Meaning |
+| --- | --- |
+| `query` | Required. The exact phrase, ignoring case, at least 3 characters (the parser's rule). A `team:`, `lib:`, `task:` or `room:` prefix is read as a filter. Only an empty `teams` or `agents` search browses. |
+| `filter` | `all` (default), `teams`, `agents`, `library`, `tasks` or `rooms`. |
+| `scope` | `mine` (default) or `all`. Rooms only. |
+| `limit` | Hits per group: 5 under `all`, 20 under one filter, at most 50. |
+
+How it differs from the Human's box:
+
+- It calls the providers directly, both passes at once, with no debounce and none of the orchestrator's events,
+  and ranks each batch with `SearchResultRanker`. A provider that throws empties its own group and says
+  `Couldn't search <Group>.`
+- **Room scope.** `mine` is the Rooms the caller is a Member of plus every Room whose Team is one of the
+  caller's Teams. The tool computes that set first and passes it as `SearchQuery.RoomIds`, which the Rooms
+  provider applies before it opens any Transcript. `null` means every Room. `scope: "all"` sends `null` and is
+  logged with the caller and the phrase. The other four providers are not scoped.
+- **Output.** Plain text in the dropdown's group order, one line per hit, with ids and no UI link: Room id,
+  match count, newest Message id, sender and time; Library `rootId:path` and snippet; Task id, status,
+  assignee and Team. It is capped at 12,000 characters, then `... truncated`.
+- **Discovery.** The description is the prompt `tool.search.description`; `get_help` lists it with the other
+  tools. The system prompt names no search tool of its own.

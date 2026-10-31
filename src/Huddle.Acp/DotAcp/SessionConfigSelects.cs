@@ -46,6 +46,24 @@ internal static class SessionConfigSelects
     }
 
     /// <summary>
+    /// The <c>currentValue</c> of the select for <paramref name="category"/>: the value the agent
+    /// reports it is running with. Null when there is no such select at all. The value is returned
+    /// as the wire carried it; no id, the "default" sentinel included, is filtered here.
+    /// </summary>
+    /// <param name="configOptions">The response's <c>configOptions</c> array, or null.</param>
+    /// <param name="category">The category whose current value to read.</param>
+    /// <returns>The current value id, or null when the category is absent.</returns>
+    internal static string? CurrentValue(
+        dotacp.protocol.SessionConfigOption[]? configOptions,
+        dotacp.protocol.SessionConfigOptionCategory category)
+    {
+        dotacp.protocol.SessionConfigSelect? select = SessionConfigSelects.Find(configOptions, category);
+#pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
+        return select is null ? null : (string)select.CurrentValue;
+#pragma warning restore HAA0601
+    }
+
+    /// <summary>
     /// Flattens a select's options, in wire order, walking both union branches - a flat list OR
     /// named groups. Returns the RAW protocol option, not a projected record, so a caller that
     /// needs to match against <c>option.Value</c> (see <see cref="TryResolve"/>) needs only this

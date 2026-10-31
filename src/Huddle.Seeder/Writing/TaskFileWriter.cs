@@ -1,16 +1,10 @@
+using Agency.Huddle.Seeder.Model;
 using System.Globalization;
 using System.Text;
-using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Writing;
 
-/// <summary>One line of a Task's Change log.</summary>
-/// <param name="At">When it happened, in UTC, to the minute.</param>
-/// <param name="Actor">Who did it.</param>
-/// <param name="Summary">What happened, in the app's wording.</param>
-internal sealed record TaskLogLine(DateTimeOffset At, string Actor, string Summary);
-
-/// <summary>Turns a <see cref="SeedTask"/> into the Markdown the Tasks feature reads, and decides where it goes.</summary>
+/// <summary>Turns a <see cref="SeedTask"/> into the Markdown the Tasks feature reads, and decides where it goes. Seeder spec §5, step 7; SEED-INV-3 to -5.</summary>
 internal static class TaskFileWriter
 {
     private const string Empty = "—";
@@ -85,12 +79,24 @@ internal static class TaskFileWriter
         return log;
     }
 
+    private static void AppendRequest(StringBuilder text, SeedTaskRequest request)
+    {
+        text.Append("request: ").Append(request.Kind).Append('\n');
+        text.Append("from_team: ").Append(Scalar(request.FromTeam)).Append('\n');
+        text.Append("requester: ").Append(Scalar(request.Requester)).Append('\n');
+        text.Append("triage: ").Append(Scalar(request.Triage)).Append('\n');
+        text.Append("decline_reason: ").Append(Scalar(request.DeclineReason)).Append('\n');
+        text.Append("confirmed_by: ").Append(Scalar(request.ConfirmedBy)).Append('\n');
+    }
+
+
     /// <summary>Renders the whole Task file: front matter, description and Change log.</summary>
     /// <param name="task">The Task.</param>
     /// <param name="today">The run date the offsets are measured from.</param>
     /// <param name="originRoomId">The id of the Room named by <see cref="SeedTask.OriginRoom"/>, or <see langword="null"/>.</param>
+    /// <param name="dataDir">The data folder, which turns <see cref="SeedTask.Attachments"/> into absolute paths.</param>
     /// <returns>The file text, ending in a newline.</returns>
-    internal static string Render(SeedTask task, DateOnly today, string? originRoomId)
+    internal static string Render(SeedTask task, DateOnly today, string? originRoomId, string dataDir)
     {
         StringBuilder text = new();
         text.Append("---\n");
@@ -119,9 +125,20 @@ internal static class TaskFileWriter
 
         AppendIfPresent(text, "start_date", task.StartOffset is { } start ? Date(today, start) : null);
         AppendIfPresent(text, "due_date", task.DueOffset is { } due ? Date(today, due) : null);
+        AppendIfPresent(text, "sprint", task.Sprint);
+        if (task.HumanGate)
+        {
+            text.Append("human_gate: true\n");
+        }
+
+        if (task.Request is { } request)
+        {
+            AppendRequest(text, request);
+        }
+
         text.Append("---\n");
 
-        string body = task.Body.ReplaceLineEndings("\n").Trim();
+        string body = Description(task, dataDir);
         if (body.Length > 0)
         {
             text.Append(body).Append("\n\n");
@@ -145,7 +162,38 @@ internal static class TaskFileWriter
     internal static string Date(DateOnly today, int offset) =>
         today.AddDays(offset).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private static DateTimeOffset At(DateOnly day, int offset, string time)
+    /// <summary>
+    /// The description: the body, then each attachment as its own code-span line holding the absolute path. Mirrors
+    /// <c>TaskAttachmentText.AppendPathLine</c>: a blank line separates the run of paths from the prose, and the paths follow
+    /// one another directly.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="dataDir">The data folder the attachment paths are below.</param>
+    /// <returns>The description without trailing line breaks; empty when the Task has neither.</returns>
+    internal static string Description(SeedTask task, string dataDir)
+    {
+        StringBuilder body = new(task.Body.ReplaceLineEndings("\n").Trim());
+        bool afterPath = false;
+        foreach (string attachment in task.Attachments)
+        {
+            if (body.Length > 0)
+            {
+                body.Append(afterPath ? "\n" : "\n\n");
+            }
+
+            body.Append('`').Append(SeedIo.Resolve(dataDir, attachment)).Append('`');
+            afterPath = true;
+        }
+
+        return body.ToString();
+    }
+
+    /// <summary>A UTC instant on a run-date offset.</summary>
+    /// <param name="day">The run date.</param>
+    /// <param name="offset">Whole days from the run date.</param>
+    /// <param name="time">The UTC time of day, <c>HH:mm</c>.</param>
+    /// <returns>The instant.</returns>
+    internal static DateTimeOffset At(DateOnly day, int offset, string time)
     {
         TimeOnly timeOfDay = TimeOnly.ParseExact(time, "HH:mm", CultureInfo.InvariantCulture);
         return new DateTimeOffset(day.AddDays(offset).ToDateTime(timeOfDay), TimeSpan.Zero);
@@ -168,8 +216,9 @@ internal static class TaskFileWriter
         _ => [],
     };
 
-    private static string Scalar(string value) =>
-        value.IndexOfAny([':', '#', '\'', '"', '[', ']', '{', '}']) >= 0
-            ? "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'"
-            : value;
+    private static string Scalar(string value)
+    {
+        bool needsQuotes = value.Length == 0 || value.IndexOfAny([':', '#', '\'', '"', '[', ']', '{', '}']) >= 0;
+        return needsQuotes ? "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'" : value;
+    }
 }

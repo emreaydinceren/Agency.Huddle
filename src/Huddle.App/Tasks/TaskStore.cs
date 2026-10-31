@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
@@ -63,7 +64,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private bool forcedRebuildPending;
 
     /// <summary>
-    /// Validates the Teams/Teammates layout with <see cref="LayoutGuard.ValidateTeamsAndTeammates"/>
+    /// Validates the Teams/Agents layout with <see cref="LayoutGuard.ValidateTeamsAndAgents"/>
     /// (kept here, alongside the host's own <c>PostConfigure</c> call, for a host that constructs a
     /// <see cref="TaskStore"/> without going through <c>AddTeamServices</c>), creates the Tasks root
     /// under <see cref="TeamsOptions.Dir"/>, then scans it.
@@ -72,7 +73,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
     /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
-    public TaskStore(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger)
+    /// <param name="human">Names the Human in a startup-reconciliation entry; <see langword="null"/> uses <see cref="TeamOptions.HumanName"/>.</param>
+    public TaskStore(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger, IHumanIdentity? human = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personas);
@@ -82,7 +84,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.personas = personas;
         this.logger = logger;
 
-        LayoutGuard.ValidateTeamsAndTeammates(options.Value);
+        LayoutGuard.ValidateTeamsAndAgents(options.Value);
 
         string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
@@ -96,7 +98,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             this.RecordVersion(task);
         }
 
-        this.ReconcileOutsideEdits(clock, options.Value.HumanName);
+        this.ReconcileOutsideEdits(clock, human?.Name ?? options.Value.HumanName);
 
         this.personas.PersonasChanged += this.OnPersonasChanged;
 
@@ -145,6 +147,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <summary>Looks up a Task by id. Returns <see langword="null"/>, never throws, when no file carries that id.</summary>
     /// <param name="id">The Task's id.</param>
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
+
+    /// <summary>Every Task whose Blocked by names <paramref name="id"/>: the Tasks waiting on it, in the store's order. The wake of dependants and the Right sidebar's Blocks panel both read this.</summary>
+    /// <param name="id">The Task that blocks the others.</param>
+    public IReadOnlyList<TaskItem> BlockedOn(TaskId id) => [.. this.index.All.Where(task => task.BlockedBy.Contains(id))];
 
     /// <summary>
     /// Writes <paramref name="text"/> to a brand-new file for <paramref name="task"/>, refusing to
@@ -338,53 +344,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
-            string? targetDirectory = Path.GetDirectoryName(targetPath);
-            if (targetDirectory is not null)
-            {
-                Directory.CreateDirectory(targetDirectory);
-            }
-
-            bool sameLocation = string.Equals(task.Path, targetPath, StringComparison.Ordinal);
-
-            if (!sameLocation)
-            {
-                bool caseOnlyRename = FolderSnapshot.PathComparer.Equals(task.Path, targetPath);
-
-                if (caseOnlyRename)
-                {
-                    string tempPath = task.Path + ".tmp-move";
-                    File.Move(task.Path, tempPath, overwrite: false);
-                    File.Move(tempPath, targetPath, overwrite: false);
-                }
-                else
-                {
-                    if (File.Exists(targetPath))
-                    {
-                        throw new IOException(string.Create(
-                            CultureInfo.InvariantCulture,
-                            $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
-                    }
-
-                    File.Move(task.Path, targetPath, overwrite: false);
-                }
-            }
-
-            try
-            {
-                AtomicFile.WriteText(targetPath, text);
-            }
-            catch (IOException)
-            {
-                // Roll back the rename, so a failed write never leaves the Task missing from both
-                // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
-                // write, move it back"). Nothing to roll back when the target was the source all along.
-                if (!sameLocation)
-                {
-                    File.Move(targetPath, task.Path, overwrite: false);
-                }
-
-                throw;
-            }
+            MoveAndWrite(task.Path, targetPath, text);
 
             written = ReparseWritten(targetPath, canonicalTo, task.Id, "moved");
             this.lastSeenVersion.Remove(task.Path);
@@ -398,9 +358,68 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
+    /// Renames the Task file from <paramref name="sourcePath"/> to <paramref name="targetPath"/> (creating the target
+    /// folder, going through a temp name for a case-only change, and writing in place when they are the same path),
+    /// then writes <paramref name="text"/> there. A failed write moves the file back before the exception propagates.
+    /// </summary>
+    /// <param name="sourcePath">The Task file's current path.</param>
+    /// <param name="targetPath">The Task file's new path.</param>
+    /// <param name="text">The full file text to write at the target.</param>
+    private static void MoveAndWrite(string sourcePath, string targetPath, string text)
+    {
+        string? targetDirectory = Path.GetDirectoryName(targetPath);
+        if (targetDirectory is not null)
+        {
+            Directory.CreateDirectory(targetDirectory);
+        }
+
+        bool sameLocation = string.Equals(sourcePath, targetPath, StringComparison.Ordinal);
+
+        if (!sameLocation)
+        {
+            bool caseOnlyRename = FolderSnapshot.PathComparer.Equals(sourcePath, targetPath);
+
+            if (caseOnlyRename)
+            {
+                string tempPath = sourcePath + ".tmp-move";
+                File.Move(sourcePath, tempPath, overwrite: false);
+                File.Move(tempPath, targetPath, overwrite: false);
+            }
+            else
+            {
+                if (File.Exists(targetPath))
+                {
+                    throw new IOException(string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
+                }
+
+                File.Move(sourcePath, targetPath, overwrite: false);
+            }
+        }
+
+        try
+        {
+            AtomicFile.WriteText(targetPath, text);
+        }
+        catch (IOException)
+        {
+            // Roll back the rename, so a failed write never leaves the Task missing from both
+            // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
+            // write, move it back"). Nothing to roll back when the target was the source all along.
+            if (!sameLocation)
+            {
+                File.Move(targetPath, sourcePath, overwrite: false);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Writes several Tasks in one batch, under a single acquisition of <see cref="writeGate"/>, and
     /// raises <see cref="IndexChanged"/> at most once for the whole batch rather than once per item
-    /// (Settled corrections-B2 D5 item 7 - the Teammate-rename cascade, Task 6.6, writes many files
+    /// (Settled corrections-B2 D5 item 7 - the Agent-rename cascade, Task 6.6, writes many files
     /// for one rename and must not flood subscribers with one event per file).
     /// </summary>
     /// <param name="writes">Each Task to write, the version it was last seen at, and its new composed text.</param>
@@ -814,7 +833,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// not flood wake-ups at startup, Settled corrections-B2 D6 item 14).
     /// </summary>
     /// <param name="clock">Supplies the appended entry's timestamp, truncated to the second.</param>
-    /// <param name="humanName"><see cref="TeamOptions.HumanName"/>, attributed as the entry's actor - the directory isn't initialised yet when this runs (Spec §8.5).</param>
+    /// <param name="humanName">The Human's current Name, attributed as the entry's actor - the directory isn't initialised yet when this runs (Spec §8.5).</param>
     private void ReconcileOutsideEdits(TimeProvider clock, string humanName)
     {
         foreach (TaskItem task in this.index.All)
@@ -920,9 +939,42 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     {
         (List<TeamFolder> rawTeams, Dictionary<string, string> aliasToCanonical) = this.BuildTeams();
 
-        List<(TaskItem Task, string Path)> parsed = [];
         List<RejectedTaskFile> rejected = [];
+        List<(TaskItem Task, string Path)> parsed = this.ParseTaskFiles(aliasToCanonical, rejected);
 
+        List<TaskItem> all = [];
+        Dictionary<TaskId, TaskItem> byId = [];
+        foreach (IGrouping<TaskId, (TaskItem Task, string Path)> group in parsed.GroupBy(item => item.Task.Id))
+        {
+            List<(TaskItem Task, string Path)> items = group.ToList();
+            if (items.Count == 1)
+            {
+                all.Add(items[0].Task);
+                byId[items[0].Task.Id] = items[0].Task;
+                continue;
+            }
+
+            foreach ((TaskItem Task, string Path) item in items)
+            {
+                string othersJoined = string.Join(
+                    ", ",
+                    items.Where(other => !string.Equals(other.Path, item.Path, StringComparison.Ordinal)).Select(other => other.Path));
+                rejected.Add(new RejectedTaskFile(item.Path, $"duplicate id {item.Task.Id}, also in {othersJoined}"));
+            }
+        }
+
+        return new TaskSnapshot(all, byId.ToFrozenDictionary(), rejected, this.RecomputeOrphans(rawTeams));
+    }
+
+    /// <summary>
+    /// Reads and parses every candidate Task file under <see cref="RootDirectory"/>; a file in a duplicate-cased Team
+    /// folder, or that cannot be read or parsed, is added to <paramref name="rejected"/> instead.
+    /// </summary>
+    /// <param name="aliasToCanonical">Each Team folder name's canonical spelling.</param>
+    /// <param name="rejected">Receives every rejected file.</param>
+    private List<(TaskItem Task, string Path)> ParseTaskFiles(Dictionary<string, string> aliasToCanonical, List<RejectedTaskFile> rejected)
+    {
+        List<(TaskItem Task, string Path)> parsed = [];
         List<string> files = this.EnumerateTaskFiles();
 
         foreach (string path in files)
@@ -966,28 +1018,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             parsed.Add((task, path));
         }
 
-        List<TaskItem> all = [];
-        Dictionary<TaskId, TaskItem> byId = [];
-        foreach (IGrouping<TaskId, (TaskItem Task, string Path)> group in parsed.GroupBy(item => item.Task.Id))
-        {
-            List<(TaskItem Task, string Path)> items = group.ToList();
-            if (items.Count == 1)
-            {
-                all.Add(items[0].Task);
-                byId[items[0].Task.Id] = items[0].Task;
-                continue;
-            }
-
-            foreach ((TaskItem Task, string Path) item in items)
-            {
-                string othersJoined = string.Join(
-                    ", ",
-                    items.Where(other => !string.Equals(other.Path, item.Path, StringComparison.Ordinal)).Select(other => other.Path));
-                rejected.Add(new RejectedTaskFile(item.Path, $"duplicate id {item.Task.Id}, also in {othersJoined}"));
-            }
-        }
-
-        return new TaskSnapshot(all, byId.ToFrozenDictionary(), rejected, this.RecomputeOrphans(rawTeams));
+        return parsed;
     }
 
     /// <summary>

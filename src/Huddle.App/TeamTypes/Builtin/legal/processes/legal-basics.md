@@ -35,7 +35,12 @@ retro: { every: 14, unit: 'days' }
 ## Gates
 
 - `qa-evidence-before-done`: a Task cannot be Done until the Compliance Lead has posted an Evidence line.
-- No teammate says a document is safe to sign or compliant. The Human decides and signs, with a lawyer where it matters.
+- No agent says a document is safe to sign or compliant. The Human decides and signs, with a lawyer where it matters.
+
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Second read: document reviewed by verify
 
 ## Cadence
 
@@ -45,7 +50,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - A signing deadline, a notice period about to run out, or a clause that needs a judgement goes to the Human at once.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

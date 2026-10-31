@@ -2,7 +2,7 @@ using Agency.Huddle.Seeder.Model;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
-/// <summary>The Tasks for the <c>software-co</c> scenario.</summary>
+/// <summary>The Tasks for the <c>software-co</c> scenario. Seeder spec SEED-SC-4, SEED-INV-1 to -5; Appendix A.2 (Add a Task).</summary>
 internal static class SoftwareCoTasks
 {
     private const string Human = "You";
@@ -17,8 +17,41 @@ internal static class SoftwareCoTasks
     private const string HelpCenter = "Help Center";
     private const string IncidentTooling = "Incident Tooling";
 
-    /// <summary>All 41 Tasks. Room keys in <see cref="SeedTask.OriginRoom"/> refer to <see cref="SoftwareCoRooms"/>.</summary>
-    internal static IReadOnlyList<SeedTask> All { get; } =
+    /// <summary>The Sprints written to <c>sprints.md</c>: one finished, one current (the highest number is <c>@current</c>).</summary>
+    internal static IReadOnlyList<SeedSprint> Sprints { get; } =
+    [
+        new(1, "Foundations"),
+        new(2, "Launch prep"),
+    ];
+
+    /// <summary>
+    /// Which Sprint each Task belongs to: three finished Tasks in S1 and seven open ones in S2. Every other Task has none.
+    /// </summary>
+    private static readonly Dictionary<string, string> SprintByTask = new(StringComparer.Ordinal)
+    {
+        ["PLAT-0001"] = "S1",
+        ["GROW-0001"] = "S1",
+        ["SUPP-0006"] = "S1",
+        ["PLAT-0002"] = "S2",
+        ["PLAT-0004"] = "S2",
+        ["PLAT-0010"] = "S2",
+        ["GROW-0002"] = "S2",
+        ["GROW-0004"] = "S2",
+        ["SUPP-0005"] = "S2",
+        ["SUPP-0008"] = "S2",
+    };
+
+    /// <summary>
+    /// Tasks that were renamed after Messages first referenced them. A Message's reference keeps the old title, so its chip reads
+    /// "changed".
+    /// </summary>
+    private static readonly Dictionary<string, string> FormerTitleByTask = new(StringComparer.Ordinal)
+    {
+        ["PLAT-0004"] = "Rate limiting",
+    };
+
+    /// <summary>The original 41 Tasks, before Sprint membership and former titles are applied. Room keys in <see cref="SeedTask.OriginRoom"/> refer to <see cref="SoftwareCoRooms"/>.</summary>
+    private static IReadOnlyList<SeedTask> Core { get; } =
     [
         // ---- Platform / API v2 ----
         new()
@@ -189,7 +222,9 @@ internal static class SoftwareCoTasks
             Status = "In Progress", Priority = "High", Creator = "Owen", Assignee = "Sofia",
             Tags = ["design", "onboarding"], DueOffset = 4, StartOffset = -5, CreatedDaysAgo = 20, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.LaunchCrew,
+            ExtraLog = [new(Human, "description edited")],
             Body = "Five items, all completable in under ten minutes, with a visible progress bar.",
+            Attachments = ["Teams/Growth/Onboarding Revamp/Onboarding-Brief.md", SeedTaskUpload.PathFor("GROW-0002", "checklist-mockup.png")],
         },
         new()
         {
@@ -334,6 +369,7 @@ internal static class SoftwareCoTasks
             Status = "Done", Priority = "Medium", Creator = "Grace", Assignee = "Alan", Closed = true,
             Tags = ["incident", "process"], CreatedDaysAgo = 29, LastTouchedDaysAgo = 15,
             Body = "Template used by the incident-postmortem Skill. Alan works in Platform but owns this for Support.",
+            Attachments = [SeedTaskUpload.PathFor("SUPP-0006", "postmortem-template.txt")],
         },
         new()
         {
@@ -348,7 +384,10 @@ internal static class SoftwareCoTasks
             Status = "Review", Priority = "High", Creator = "Dana", Assignee = "Dana",
             Tags = ["incident", "postmortem"], DueOffset = 4, CreatedDaysAgo = 8, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.IncidentWarRoom,
-            Body = "Every action from the postmortem, with owners. Alan's draft is in the incident Room.",
+            HumanGate = true,
+            ExtraLog = [new(Human, "description edited"), new(SoftwareCoFeed.HelperActor, "human gate on (reason: Sends a follow-up to customers outside the Team)")],
+            Body = "Every action from the postmortem, with owners. Alan's draft and the action list are attached.",
+            Attachments = ["Agents/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor("SUPP-0008", "action-items.txt")],
         },
 
         // ---- Support team root ----
@@ -375,5 +414,16 @@ internal static class SoftwareCoTasks
             Tags = ["retention"], CreatedDaysAgo = 60, LastTouchedDaysAgo = 45,
             Body = "Tickets and macros from 2025 exported to cold storage and removed from the live system.",
         },
+    ];
+
+    /// <summary>All 46 Tasks: the original 41 with their Sprints and former titles, then the five Requests in <see cref="SoftwareCoRequests"/>. Declared after <see cref="Core"/> because static initialisers run in order.</summary>
+    internal static IReadOnlyList<SeedTask> All { get; } =
+    [
+        .. Core.Select(static task => task with
+        {
+            Sprint = SprintByTask.GetValueOrDefault(task.Id),
+            FormerTitle = FormerTitleByTask.GetValueOrDefault(task.Id),
+        }),
+        .. SoftwareCoRequests.All,
     ];
 }

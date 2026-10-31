@@ -1,0 +1,29 @@
+@*
+    The one chip for a status, a priority or any other state-in-a-word (design-system.md "Chips"): the status
+    colour at 14% over Surface, the text and icon in that colour mixed 50% toward TextPrimary, and a leading
+    icon so colour is never the only signal. A status colour is never a solid fill under text. The look lives
+    in app.css (.status-chip-*), which StatusChipContrast mirrors in C# so a test can hold it to 4.5:1.
+*@
+
+<MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@this.Icon" Class="@this.CssClass">@this.ChildContent</MudChip>
+
+@code {
+    /// <summary>The MudBlazor colour family the chip tints with (<c>TaskColors</c> maps a state or priority to one).</summary>
+    [Parameter]
+    public Color Color { get; set; } = Color.Default;
+
+    /// <summary>The leading icon; a status chip should always have one.</summary>
+    [Parameter]
+    public string? Icon { get; set; }
+
+    /// <summary>The chip's words.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Extra classes, so a caller can name its chip.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The chip's classes: <c>status-chip</c>, <c>status-chip-{colour}</c>, then the caller's.</summary>
+    private string CssClass => $"status-chip status-chip-{this.Color.ToString().ToLowerInvariant()} {this.Class}".TrimEnd();
+}

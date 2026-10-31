@@ -1,6 +1,6 @@
 # Testing Blazor components with bUnit
 
-How to test Razor components in `tests/Huddle.Tests/Ui` with bUnit 2.11.3 and MudBlazor 9.10, and
+How to test Razor components in `tests/Huddle.Tests.Components/Ui` with bUnit 2.11.3 and MudBlazor 9.11, and
 the Razor authoring traps those tests keep catching. Read it before writing a component or its
 tests. General test practice is in [Testing.md](Testing.md); per-component MudBlazor facts (which
 parameter exists, how a component renders) are in
@@ -8,6 +8,11 @@ parameter exists, how a component renders) are in
 there before guessing an API.
 
 Distilled from the Tasks delivery (September 2026), which added ~40 component test classes.
+
+Start from the shared bUnit helpers in `tests/Huddle.Tests.Common/Ui`: `UiTestHost.Create` and its `With*`
+extensions, `ServicePresets.CopyFrom`, `RenderWithPopovers<T>`, `RenderedComponentExtensions` and
+`DialogExtensions`. The catalogue, with the cases where a private copy stayed, is in
+[Testing.md](Testing.md) under *Shared helpers*.
 
 ## Setting up a test
 
@@ -83,9 +88,24 @@ in-progress state. A converted click that hangs until the test's timeout is one 
 re-rendering when nothing changed — look for spurious events in the product (this found three real
 store bugs), don't add a wait.
 
+**Read recorded JS calls on the dispatcher.** bUnit adds each JS call a component makes to a plain
+list, on the renderer's dispatcher. A test that reads `ctx.JSInterop.Invocations` (or calls
+`VerifyInvoke`) while the component may still be calling JS — inside `WaitForAssertion`, in a poll
+loop, after work the test did not await — can see a stale count or throw `Collection was modified`.
+Snapshot the calls there instead:
+
+```csharp
+await cut.WaitForAssertionAsync(async () =>
+    Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
+```
+
+A read straight after a synchronous `cut.Render(...)` with nothing in flight is safe as it is
+(`ResizableEndDrawerTests`). The `NameDialogTests` focus checks and the `LibraryExplorerTests` divider
+retries are the cases that raced.
+
 Never count a bare word in server-rendered HTML (`client.GetStringAsync(…)`): the Blazor prerender
 markers carry random base64, which contains a short name like `Amy` by chance about once in a
-hundred runs. Count the element — `class="teammates-item-name">Amy<` — instead.
+hundred runs. Count the element — `class="agents-item-name">Amy<` — instead.
 
 - A `MudSelect` opens on **`mousedown`**, not `click` (a click throws `MissingEventHandlerException`).
 - A `MudMenu` opens by clicking its activator **button**; read items as `div.mud-menu-item`

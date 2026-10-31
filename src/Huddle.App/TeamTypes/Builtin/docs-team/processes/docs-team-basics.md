@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Docs Lead's Evidence line, with the tester's result, is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Technical review: document reviewed by verify
+- Examples tried: evidence from verify
+
 ## Cadence
 
 - Work the open Tasks in the order the Docs Lead sets, most-read pages first.
@@ -43,7 +48,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - A page that documents behaviour the code does not have goes to the Human with both quoted.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

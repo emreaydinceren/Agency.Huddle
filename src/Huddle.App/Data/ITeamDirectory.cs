@@ -8,18 +8,40 @@ public interface ITeamDirectory
 
     Task<User> GetHumanAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// The Name the Human's row carries now, read before <see cref="InitializeAsync"/> so startup can
+    /// tell whether the Human was renamed while the app was stopped.
+    /// </summary>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The stored Name, or <see langword="null"/> when there is no database, table or Human row yet.</returns>
+    Task<string?> ReadHumanNameAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Renames the Human's row (id <see cref="KnownIds.Human"/>) in place, keeping its id, so every
+    /// Room and Transcript that references it follows the Human to the new Name.
+    /// </summary>
+    /// <param name="newName">The new Name; must be valid and not belong to another row, ignoring case.</param>
+    /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Synchronous for the same reason as <see cref="RenameUser"/>: its caller,
+    /// <see cref="Agency.Huddle.App.Profile.HumanRenameCascade"/>, reacts to a plain
+    /// <c>Action&lt;T&gt;</c> event. The only rename that may touch the Human's row - <see cref="RenameUser"/>
+    /// refuses it so no Persona can take the row over.
+    /// </remarks>
+    bool RenameHuman(string newName);
+
     Task<User?> UpsertAgentUserAsync(string name, string? description, CancellationToken ct = default);
 
     /// <summary>
     /// Renames the <see cref="User"/> row with id <paramref name="userId"/> to
     /// <paramref name="newName"/>, keeping its id unchanged so every Room, <c>room_members</c> row
-    /// and Transcript that already reference that id continue to reference the same Teammate under
+    /// and Transcript that already reference that id continue to reference the same Agent under
     /// its new Name.
     /// </summary>
     /// <param name="userId">The id of the row to rename.</param>
     /// <param name="newName">
     /// The new Name. Must satisfy <see cref="NameRules.IsValidAgentName(string?)"/>, and must not
-    /// already belong to a different Teammate — Names are <c>COLLATE NOCASE UNIQUE</c>, so this is
+    /// already belong to a different Agent — Names are <c>COLLATE NOCASE UNIQUE</c>, so this is
     /// checked case-insensitively.
     /// </param>
     /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>

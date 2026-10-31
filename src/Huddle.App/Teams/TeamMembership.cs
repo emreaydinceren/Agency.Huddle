@@ -19,11 +19,11 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
 {
     private const string TeamsKey = "teams";
 
-    private const string NotManagerRole = "Only a Teammate hired into a manager role can manage this Team.";
+    private const string NotManagerRole = "Only an Agent hired into a manager role can manage this Team.";
 
     private const string NoTeamFile = "This Team has no readable team file.";
 
-    private const string UnwritableLabel = "This Team's name can't be written to a Teammate's definition.";
+    private const string UnwritableLabel = "This Team's name can't be written to an Agent's definition.";
 
     // Serialises the whole read-modify-write: PersonaStore.Update's own gate only covers validate-and-write,
     // so two concurrent Adds would read the same text and the second write would drop the first label.

@@ -1,25 +1,10 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.FileChanges;
-
-/// <summary>
-/// The start scan of every Watched Folder for one Turn, carried from <see cref="FileChangeTracker.CollectAsync"/>
-/// to <see cref="FileChangeTracker.CommitAsync"/> so a Turn scans each folder once, not twice, per FC §6.7.
-/// </summary>
-/// <param name="Report">The File Changes block for this Turn, already capped.</param>
-/// <param name="Folders">
-/// Every resolved Watched Folder, in order: own Work Dir, then declared, then subscribed. A plan
-/// addition beyond FC §6.7's own listing: the commit needs each entry's full path.
-/// </param>
-/// <param name="Scans">Each folder's start scan, keyed by entry, compared <see cref="StringComparer.OrdinalIgnoreCase"/>.</param>
-internal sealed record CollectedChanges(
-    FileChangesReport Report,
-    IReadOnlyList<WatchedFolder> Folders,
-    IReadOnlyDictionary<string, ScanResult> Scans);
 
 /// <summary>
 /// Collects and commits one Agent's File Changes per Room, per FC §6.7. A singleton, like
@@ -32,7 +17,7 @@ internal sealed class FileChangeTracker(
     ITeamDirectory directory,
     WatchedFolderResolver resolver,
     IOptions<TeamOptions> options,
-    TeammatePaths teammatePaths,
+    AgentPaths agentPaths,
     ILogger<FileChangeTracker> logger)
 {
     /// <summary>
@@ -237,53 +222,70 @@ internal sealed class FileChangeTracker(
                 return FileState.Empty;
             }
 
-            string? matched = null;
-            foreach (string existing in state.Subscribed)
-            {
-                if (resolver.TryResolve(existing, personas.ListNames(), out WatchedFolder? existingFolder, out _)
-                    && string.Equals(existingFolder.FullPath, folder.FullPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    matched = existing;
-                    break;
-                }
-            }
-
+            string? matched = this.FindSubscribedEntry(state, folder);
             if (matched is null)
             {
                 return state;
             }
 
             result = $"Stopped watching '{matched}'.";
-            List<string> subscribed = [.. state.Subscribed.Where(item => !string.Equals(item, matched, StringComparison.Ordinal))];
-
-            Dictionary<string, RoomBaseline> rooms = new(StringComparer.Ordinal);
-            foreach ((string roomId, RoomBaseline roomBaseline) in state.Rooms)
-            {
-                Dictionary<string, FolderSnapshot> roomFolders = new(StringComparer.OrdinalIgnoreCase);
-                foreach ((string folderEntry, FolderSnapshot snapshot) in roomBaseline.Folders)
-                {
-                    if (!string.Equals(folderEntry, matched, StringComparison.OrdinalIgnoreCase))
-                    {
-                        roomFolders[folderEntry] = snapshot;
-                    }
-                }
-
-                rooms[roomId] = new RoomBaseline(roomFolders);
-            }
-
-            return state with { Subscribed = subscribed, Rooms = rooms };
+            return RemoveSubscription(state, matched);
         });
 
         return result;
+    }
+
+    /// <summary>Finds the first <c>subscribed</c> entry of <paramref name="state"/> that resolves to <paramref name="folder"/>.</summary>
+    /// <param name="state">The Agent's saved state.</param>
+    /// <param name="folder">The resolved folder to match.</param>
+    /// <returns>The matching entry as stored, or <see langword="null"/> when none matches.</returns>
+    private string? FindSubscribedEntry(FileState state, WatchedFolder folder)
+    {
+        foreach (string existing in state.Subscribed)
+        {
+            if (resolver.TryResolve(existing, personas.ListNames(), out WatchedFolder? existingFolder, out _)
+                && string.Equals(existingFolder.FullPath, folder.FullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return existing;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Returns <paramref name="state"/> without the <paramref name="matched"/> subscription and without its snapshot in every Room.</summary>
+    /// <param name="state">The Agent's saved state.</param>
+    /// <param name="matched">The subscribed entry to remove, as stored.</param>
+    /// <returns>The updated state.</returns>
+    private static FileState RemoveSubscription(FileState state, string matched)
+    {
+        List<string> subscribed = [.. state.Subscribed.Where(item => !string.Equals(item, matched, StringComparison.Ordinal))];
+
+        Dictionary<string, RoomBaseline> rooms = new(StringComparer.Ordinal);
+        foreach ((string roomId, RoomBaseline roomBaseline) in state.Rooms)
+        {
+            Dictionary<string, FolderSnapshot> roomFolders = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string folderEntry, FolderSnapshot snapshot) in roomBaseline.Folders)
+            {
+                if (!string.Equals(folderEntry, matched, StringComparison.OrdinalIgnoreCase))
+                {
+                    roomFolders[folderEntry] = snapshot;
+                }
+            }
+
+            rooms[roomId] = new RoomBaseline(roomFolders);
+        }
+
+        return state with { Subscribed = subscribed, Rooms = rooms };
     }
 
     /// <summary>
     /// Checks Persona <c>watches</c> entries at startup for <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/>'s
     /// Degraded report, per FC §6.10. The message is the same fixed text for every unresolvable
     /// entry, regardless of the resolver's own specific reason, and also fires for a bare word that
-    /// resolves cleanly but is almost certainly a mistyped Teammate Name - see
-    /// <see cref="IsLikelyMistypedTeammateName"/>. Either way the entry is still watched (E-2: its
-    /// folder, or the Teammate meant, may exist later); this only ever adds a warning.
+    /// resolves cleanly but is almost certainly a mistyped Agent Name - see
+    /// <see cref="IsLikelyMistypedAgentName"/>. Either way the entry is still watched (E-2: its
+    /// folder, or the Agent meant, may exist later); this only ever adds a warning.
     /// </summary>
     /// <param name="declared">The Persona's <c>watches</c> frontmatter entries.</param>
     /// <returns>One warning per entry that does not resolve, or looks like a typo.</returns>
@@ -293,14 +295,14 @@ internal sealed class FileChangeTracker(
 
         List<string> warnings = [];
         string dataDirName = Path.GetFileName(options.Value.DataDir);
-        IReadOnlyCollection<string> teammateNames = personas.ListNames();
+        IReadOnlyCollection<string> agentNames = personas.ListNames();
 
         foreach (string entry in declared)
         {
-            if (!resolver.TryResolve(entry, teammateNames, out WatchedFolder? folder, out _)
-                || IsLikelyMistypedTeammateName(entry, folder, teammateNames))
+            if (!resolver.TryResolve(entry, agentNames, out WatchedFolder? folder, out _)
+                || IsLikelyMistypedAgentName(entry, folder, agentNames))
             {
-                warnings.Add($"Watched folder '{entry}' is not a Teammate or a folder inside {dataDirName}.");
+                warnings.Add($"Watched folder '{entry}' is not an Agent or a folder inside {dataDirName}.");
             }
         }
 
@@ -310,15 +312,15 @@ internal sealed class FileChangeTracker(
     /// <summary>
     /// Whether <paramref name="entry"/> resolved cleanly only because FC §6.3's own fallback rule
     /// treats a bare word with no other meaning as relative to <c>DataDir</c> - so a mistyped
-    /// Teammate Name such as <c>Nope</c> resolves to <c>{DataDir}/Nope</c> and would otherwise never
+    /// Agent Name such as <c>Nope</c> resolves to <c>{DataDir}/Nope</c> and would otherwise never
     /// warn, even though FC §6.10's own example is exactly this case. Multi-segment entries
     /// (<c>Shared/missing</c>) and explicitly relative ones (<c>./missing</c>) are left alone: those
     /// name a real path someone intends to create, which is not what this checks for (E-2).
     /// </summary>
     /// <param name="entry">The entry as written in frontmatter.</param>
     /// <param name="folder">What <paramref name="entry"/> resolved to.</param>
-    /// <param name="teammateNames">Every Teammate's Name, so a genuine match is never flagged.</param>
-    private static bool IsLikelyMistypedTeammateName(string entry, WatchedFolder folder, IReadOnlyCollection<string> teammateNames)
+    /// <param name="agentNames">Every Agent's Name, so a genuine match is never flagged.</param>
+    private static bool IsLikelyMistypedAgentName(string entry, WatchedFolder folder, IReadOnlyCollection<string> agentNames)
     {
         if (entry.Contains('/', StringComparison.Ordinal) || entry.Contains('\\', StringComparison.Ordinal))
         {
@@ -335,7 +337,7 @@ internal sealed class FileChangeTracker(
             return false;
         }
 
-        if (teammateNames.Any(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase)))
+        if (agentNames.Any(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
@@ -396,7 +398,7 @@ internal sealed class FileChangeTracker(
     /// <summary>Whether <paramref name="fullPath"/> is <paramref name="agentName"/>'s own Work Dir.</summary>
     private bool IsOwnWorkDir(string agentName, string fullPath)
     {
-        string ownFullPath = teammatePaths.WorkDir(agentName);
+        string ownFullPath = agentPaths.WorkDir(agentName);
         return string.Equals(ownFullPath, fullPath, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -437,7 +439,7 @@ internal sealed class FileChangeTracker(
         List<WatchedFolder> folders = [];
         HashSet<string> seenFullPaths = new(StringComparer.OrdinalIgnoreCase);
 
-        WatchedFolder own = new(agentName, teammatePaths.WorkDir(agentName));
+        WatchedFolder own = new(agentName, agentPaths.WorkDir(agentName));
         folders.Add(own);
         seenFullPaths.Add(own.FullPath);
 
@@ -579,6 +581,57 @@ internal sealed class FileChangeTracker(
             && string.Equals(entrySegments[uploadsIndex], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Folds this turn's own writes under <paramref name="folder"/> into its new snapshot and writer map: a file
+    /// that still exists is recorded with its current size and time, a missing one is dropped.
+    /// </summary>
+    /// <param name="folder">The watched folder.</param>
+    /// <param name="roomId">The Room the turn ran in; recorded as the writer.</param>
+    /// <param name="touched">The full paths this Agent wrote or deleted.</param>
+    /// <param name="files">The folder's new snapshot files, updated in place.</param>
+    /// <param name="newWriters">The writer map per entry and relative path, updated in place.</param>
+    private static void ApplyTouchedPaths(
+        WatchedFolder folder,
+        string roomId,
+        IReadOnlyCollection<string> touched,
+        Dictionary<string, FileEntry> files,
+        Dictionary<string, Dictionary<string, FileWriter>> newWriters)
+    {
+        string prefix = folder.FullPath + Path.DirectorySeparatorChar;
+
+        foreach (string touchedPath in touched)
+        {
+            if (!touchedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string relativePath = Path.GetRelativePath(folder.FullPath, touchedPath);
+            if (File.Exists(touchedPath))
+            {
+                FileInfo info = new(touchedPath);
+                FileEntry entry = new(info.Length, new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
+                files[relativePath] = entry;
+
+                if (!newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
+                {
+                    byPath = new Dictionary<string, FileWriter>(FolderSnapshot.PathComparer);
+                    newWriters[folder.Entry] = byPath;
+                }
+
+                byPath[relativePath] = new FileWriter(roomId, entry);
+            }
+            else
+            {
+                files.Remove(relativePath);
+                if (newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
+                {
+                    byPath.Remove(relativePath);
+                }
+            }
+        }
+    }
+
     /// <summary>Builds this Agent's new saved state for <see cref="CommitAsync"/>, run inside <see cref="FileStateStore.Update"/>.</summary>
     private static FileState BuildNewState(
         FileState? state,
@@ -615,39 +668,7 @@ internal sealed class FileChangeTracker(
             }
 
             Dictionary<string, FileEntry> files = new(scan.Snapshot.Files, FolderSnapshot.PathComparer);
-            string prefix = folder.FullPath + Path.DirectorySeparatorChar;
-
-            foreach (string touchedPath in touched)
-            {
-                if (!touchedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                string relativePath = Path.GetRelativePath(folder.FullPath, touchedPath);
-                if (File.Exists(touchedPath))
-                {
-                    FileInfo info = new(touchedPath);
-                    FileEntry entry = new(info.Length, new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
-                    files[relativePath] = entry;
-
-                    if (!newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
-                    {
-                        byPath = new Dictionary<string, FileWriter>(FolderSnapshot.PathComparer);
-                        newWriters[folder.Entry] = byPath;
-                    }
-
-                    byPath[relativePath] = new FileWriter(roomId, entry);
-                }
-                else
-                {
-                    files.Remove(relativePath);
-                    if (newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
-                    {
-                        byPath.Remove(relativePath);
-                    }
-                }
-            }
+            ApplyTouchedPaths(folder, roomId, touched, files, newWriters);
 
             newFolders[folder.Entry] = new FolderSnapshot(files);
         }

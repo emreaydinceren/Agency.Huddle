@@ -14,7 +14,7 @@ retro: { every: 14, unit: 'days' }
 ## Stages
 
 1. **Ready**: the Task has a title, an acceptance line and an owner. Done when the Chief of Household assigns it.
-2. **In progress**: a teammate gathers the facts and drafts the itinerary, budget note, form or reply. Done when the draft is in the Task.
+2. **In progress**: an agent gathers the facts and drafts the itinerary, budget note, form or reply. Done when the draft is in the Task.
 3. **Verify**: the Chief of Household compares the draft with its source and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human books, pays or sends what is needed and marks the Task Done.
 
@@ -35,6 +35,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Chief of Household's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Details checked: evidence from verify
+- Form reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks nearest deadline first, and keep the number in progress small.
@@ -44,7 +49,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - Money, a booking, a health question or anything that commits the Human goes to the Human. A health question also goes to a clinician.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

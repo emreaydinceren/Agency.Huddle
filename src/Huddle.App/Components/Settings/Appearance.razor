@@ -1,33 +1,15 @@
 @*
-    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped, and set the Human's
-    own Avatar.
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped.
 
-    Two sections, not one control. The first is the Theme picker: a theme carries exactly one
-    palette and its own ThemeMode, so picking a theme picks light or dark with it - there is no
-    separate light/dark control any more, and so no way to ask for "Solarized Dark, in light mode"
-    and be shown a different theme's palette instead (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md).
+    A theme carries exactly one palette and its own ThemeMode, so picking a theme picks light or dark
+    with it - there is no separate light/dark control any more, and so no way to ask for "Nordic
+    Dark, in light mode" and be shown a different theme's palette instead
+    (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md). The Human's own Avatar used to be edited here;
+    it moved to the Profile tab (ProfilePanel), with the rest of who the Human is.
 
-    The second section edits the Human's Avatar. A Teammate's Avatar is edited on its own
-    TeammateCard, because a Teammate has a Persona file for that card to hold open; the Human has no
-    Persona file and therefore no Teammate card, so this tab - the one place a per-installation
-    display choice already lived - is where the Human's Avatar is edited instead. It reuses Phase
-    5.1's exact editor: the MudRadioGroup, the Immediate label field trimmed through
-    Avatar.TrimLabel, the MudFileUpload validated the same way (Size against AvatarImage.MaxBytes,
-    then AvatarImage.SniffExtension), and the MudColorPicker bound to Text and never Value - see that
-    control's own comment below for the trap. The one deliberate difference: this tab has no Save
-    button, so every change here writes to avatars.json immediately - the same way choosing a theme
-    above applies immediately - rather than buffering until a Save the way TeammateCard's editor does.
-    There is no Cancel to protect here, so there is no reason to hold an upload's bytes back either.
-
-    "Appearance" does not widen to cover this. appearance.json holds the selected Theme id and the
-    Human's own accent colour (AccentColorHex, for the two "Custom Accent" entries) and nothing
-    else; the Human's Avatar is edited on this tab but stored in avatars.json, a different file with
-    a different owner (AvatarStore, not AppearanceStore).
-
-    A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
-    render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
-    every theme at once, which is what a theme picker wants - the same shape VS Code's own picker has,
-    and the catalog these themes came from.
+    A MudList rather than a MudSelect: the list shows every theme of a mode at once with its swatch,
+    which is what a theme picker wants, and its options are all in the markup from the first render.
+    There are two lists, Light theme and Dark theme, and no group headings inside them.
 
     The grouping is ThemeCatalog.Grouped's, computed once there rather than here, because
     ThemeCatalog.BuiltIn's ORDER is load-bearing - three call sites read BuiltIn[0] as "the default
@@ -38,21 +20,19 @@
     rewrite, no JavaScript interop of this component's own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
-    PromptStore.PromptsChanged, and to AvatarStore.AvatarsChanged for the same reason: both stores are
-    singletons, so a hand-edit to appearance.json or avatars.json (or a save from another browser
+    PromptStore.PromptsChanged: the store is a singleton, so a hand-edit to appearance.json (or a save from another browser
     tab) must repaint this tab without a restart, and rules.md's "unsubscribe in Dispose" reasoning
     for RoomEvents applies here for the same reason - a leaked subscription to a singleton never
     dies.
 *@
 
 @using Agency.Huddle.App.Appearance
-@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Themes
-@using Microsoft.Extensions.Options
+@using MudBlazor.Utilities
+@using Microsoft.Extensions.Hosting
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
-@inject AvatarStore Avatars
-@inject IOptions<TeamOptions> Options
+@inject IWebHostEnvironment Environment
 
 <SettingsIntro>
     Pick one light theme and one dark theme. The button at the right of the top bar switches between
@@ -61,7 +41,7 @@
 
 <StoredAt Label="The selection is stored at" Path="@this.AppearanceStore.FilePath" />
 
-<MudText Typo="Typo.subtitle2">Light theme</MudText>
+<MudText Typo="Typo.subtitle2" HtmlTag="h2">Light theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -70,15 +50,19 @@
          aria-label="Light theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Light))
     {
-        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
         @foreach (var theme in grouping.Themes)
         {
-            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+            <MudListItem T="string" Value="@theme.Id">
+                <div class="theme-row">
+                    <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
+                    <span>@theme.Label</span>
+                </div>
+            </MudListItem>
         }
     }
 </MudList>
 
-<MudText Typo="Typo.subtitle2" Class="mt-4">Dark theme</MudText>
+<MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Dark theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -87,50 +71,56 @@
          aria-label="Dark theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Dark))
     {
-        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
         @foreach (var theme in grouping.Themes)
         {
-            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+            <MudListItem T="string" Value="@theme.Id">
+                <div class="theme-row">
+                    <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
+                    <span>@theme.Label</span>
+                </div>
+            </MudListItem>
         }
     }
 </MudList>
 
-@if (this.IsCustomAccentSelected)
+@* THE TRAP applies here exactly as it does to the avatar's MudColorPicker: bind Text, never Value - Value
+   is a non-null MudColor, so binding it would materialise a hard-coded hex colour the instant this tab first
+   renders a Theme with no accent chosen yet. Shows the colour exactly as picked; the Theme's customization is
+   what clamps it for contrast when it renders, so what MainLayout paints can differ slightly from what is
+   shown here - by design, see AccentPalette's own remarks. The control belongs to the Theme being shown and
+   writes customizations[its id].palette.primary. *@
+<MudColorPicker Label="@this.AccentLabel" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
+                Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
+                Class="mt-4 theme-picker-accent-colour" />
+@if (this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id) is not null)
 {
-    @* THE TRAP applies here exactly as it does to the avatar's MudColorPicker below: bind Text, never
-       Value - Value is a non-null MudColor, so binding it would materialise a hard-coded hex colour
-       the instant this tab first renders a Custom Accent selection with no colour chosen yet. Shows
-       the colour exactly as picked; AccentTheme.BuildTheme is what clamps it for contrast when it
-       renders, so what MainLayout paints can differ slightly from what is shown here - by design, see
-       AccentPalette's own remarks. *@
-    <MudColorPicker Label="Accent colour" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
-                     Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
-                     Class="mt-2 theme-picker-accent-colour" />
+    <MudLink OnClick="this.OnAccentReset" Class="theme-accent-reset" Typo="Typo.body2">Reset</MudLink>
 }
 
-<p class="settings-theme-credit">
-    Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable.
-    Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default
-    themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is
-    Wimer Hazenberg's.
+<p class="theme-credit mb-2">
+    The accent is adjusted if needed so it stays readable, and belongs to the Theme named above.
 </p>
 
+@* The Theme lab is a development tool (ADR-0058); outside Development the link is not rendered and the page redirects. *@
+@if (this.Environment.IsDevelopment())
+{
+    <MudLink Href="/settings/theme-lab" Class="theme-lab-link" Typo="Typo.body2">Open the Theme lab</MudLink>
+}
 
-@* The Human has no Persona file, so this is where their Avatar is edited instead of on a TeammateCard. Immediate
-   mode: every change is written to avatars.json under the Human's Name at once, because this tab has no Save button.
-   Value is re-read from the store on every render (OnAvatarsChanged repaints), so an outside edit reaches the editor. *@
-<MudPaper Outlined="true" Class="pa-3 mt-4">
-    <MudText Typo="Typo.overline">Your avatar</MudText>
-    <AvatarEditor Name="@this.HumanName" Value="this.Avatars.Get(this.HumanName)" SaveMode="AvatarSaveMode.Immediate" />
-</MudPaper>
+<details class="theme-licences mt-4">
+    <summary>Licences</summary>
+    <p class="theme-credit mt-2">
+        Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them
+        is taken from a third-party colour theme.
+    </p>
+</details>
 
 <p class="settings-prompts-file-path">
-    Your avatar is stored at <code>@this.Avatars.FilePath</code>, under your Name
-    (<code>@this.HumanName</code>) - a different file from the Theme selection above.
+    Your own avatar is set on the <a href="/settings/profile">Profile</a> tab.
 </p>
 
 @code {
-    /// <summary><see cref="ThemeCatalog.Grouped"/> narrowed to the themes of one <see cref="ThemeMode"/>, so each picker lists only themes that can fill its slot; "High contrast" appears under both.</summary>
+    /// <summary><see cref="ThemeCatalog.Grouped"/> narrowed to the themes of one <see cref="ThemeMode"/>, so each picker lists only themes that can fill its slot.</summary>
     /// <param name="mode">The mode the picker's slot holds.</param>
     private static IEnumerable<ThemeGrouping> GroupedFor(ThemeMode mode)
     {
@@ -139,33 +129,44 @@
             .Where(grouping => grouping.Themes.Count > 0);
     }
 
-    /// <summary>Whether the colour picker should show at all: only when one of the two <see cref="AccentTheme"/> entries is selected, since every other theme ignores <see cref="AppearanceSettings.AccentColorHex"/> entirely.</summary>
-    private bool IsCustomAccentSelected =>
-        string.Equals(this.AppearanceStore.Current.PreferredLightId, AccentTheme.LightDescriptor.Id, StringComparison.Ordinal) ||
-        string.Equals(this.AppearanceStore.Current.PreferredDarkId, AccentTheme.DarkDescriptor.Id, StringComparison.Ordinal);
-
-    /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
-    private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
-
     /// <summary>
-    /// The Human's configured Name (<see cref="TeamOptions.HumanName"/>) - the key this tab's Avatar
-    /// is saved under in <c>avatars.json</c>, and the same Name that later appears as
-    /// <see cref="Agency.Huddle.Contracts.ChatMessage.SenderName"/> on the Human's own messages.
+    /// The three roles that tell two Themes apart (audit B9b): Ground (<c>Surface</c>), Ink (<c>TextPrimary</c>)
+    /// and Accent (<c>Primary</c>), read from the palette the Theme fills. Derived here because
+    /// <see cref="ThemeDescriptor"/> does not expose them.
     /// </summary>
-    private string HumanName => this.Options.Value.HumanName;
+    /// <param name="theme">The Theme to draw.</param>
+    /// <returns>The Ground, Ink and Accent as hex colours.</returns>
+    internal static IReadOnlyList<string> SwatchFor(ThemeDescriptor theme)
+    {
+        Palette palette = theme.Mode == ThemeMode.Dark ? theme.Theme.PaletteDark : theme.Theme.PaletteLight;
+        return
+        [
+            palette.Surface.ToString(MudColorOutputFormats.Hex),
+            palette.TextPrimary.ToString(MudColorOutputFormats.Hex),
+            palette.Primary.ToString(MudColorOutputFormats.Hex),
+        ];
+    }
 
-    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
+    /// <summary>The Theme being shown, which the accent control belongs to: the stored selection, or the catalog's default.</summary>
+    private ThemeDescriptor ShownTheme => ThemeCatalog.Find(this.AppearanceStore.Current.ThemeId) ?? ThemeCatalog.BuiltIn[0];
+
+    /// <summary>The accent control's label, naming the Theme it will change.</summary>
+    private string AccentLabel => $"Accent for {this.ShownTheme.Label}";
+
+    /// <summary>The accent colour shown in the picker: the shown Theme's stored <c>palette.primary</c>, read straight through with no local buffer, or <see langword="null"/> when none is chosen.</summary>
+    private string? AccentColorText =>
+        this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id)?.Palette.GetValueOrDefault("primary");
+
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
-        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
     }
 
-    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     public void Dispose()
     {
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
-        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
     }
 
     /// <summary>
@@ -185,25 +186,21 @@
     }
 
     /// <summary>
-    /// Saves the newly picked accent colour, mirroring <see cref="OnThemeChangedAsync"/> one key over.
+    /// Saves the newly picked accent colour as the shown Theme's <c>palette.primary</c>.
     /// Blank input (the picker's Clear action, or a Human who deletes the hex text) maps to
     /// <see langword="null"/>, meaning "no accent colour chosen" - the same convention
-    /// <c>OnAvatarBackgroundTextChanged</c> uses for the avatar's own colour picker below.
+    /// <see cref="AvatarEditor"/> uses for the avatar's own colour picker.
     /// </summary>
     /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
     private void OnAccentColorTextChanged(string? value)
     {
-        this.AppearanceStore.SaveAccentColor(string.IsNullOrWhiteSpace(value) ? null : value);
+        this.AppearanceStore.SaveAccentColor(this.ShownTheme.Id, string.IsNullOrWhiteSpace(value) ? null : value);
     }
 
-    /// <summary>Repaints this tab whenever <see cref="AvatarStore.AvatarsChanged"/> fires, so <see cref="AvatarEditor"/> is handed the stored avatar again; the editor itself decides whether that is a genuine outside edit to re-seed from.</summary>
-    private void OnAvatarsChanged()
+    /// <summary>Removes everything the Human customised for the shown Theme, so it renders as authored.</summary>
+    private void OnAccentReset()
     {
-        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
-        {
-            this.StateHasChanged();
-            return Task.CompletedTask;
-        });
+        this.AppearanceStore.ResetCustomization(this.ShownTheme.Id);
     }
 
     private void OnAppearanceChanged()

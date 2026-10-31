@@ -224,7 +224,7 @@ moves, but every relative path inside it is unchanged. Rewriting the key `Nova` 
 keeps the snapshot valid, and nothing is reported as deleted and re-added.
 
 The Agent's own Work Dir uses the Agent's own Name as its entry. That is the same rule as any
-Teammate entry, so the resolver has one case rather than two.
+Agent entry, so the resolver has one case rather than two.
 
 **Baselines are per Room, but the files are not.** A Watched Folder belongs to the Agent: Nova's
 `memory\launch-date.md` is one file, whichever Room Nova is in. What differs by Room is what Nova was last
@@ -237,11 +237,11 @@ The same syntax is used in frontmatter and in `watch_folder`:
 
 | Entry | Resolves to |
 | --- | --- |
-| The Name of a Teammate with a Persona, compared case-insensitively | That Teammate's Work Dir, `{DataDir}/{Acp:WorkDir}/<Name>` |
+| The Name of an Agent with a Persona, compared case-insensitively | That Agent's Work Dir, `{DataDir}/{Acp:WorkDir}/<Name>` |
 | A full path | That folder |
 | Anything else | A folder relative to `{DataDir}`; `/` and `\` both work |
 
-A Teammate Name wins over a same-named folder. To mean the folder, write `./Nova`.
+An Agent Name wins over a same-named folder. To mean the folder, write `./Nova`.
 
 ```yaml
 ---
@@ -260,7 +260,7 @@ existing positional construction keeps compiling. `Format` writes it back as
 
 ### 6.3 `WatchedFolderResolver`
 
-`Resolve(string entry, IReadOnlyCollection<string> teammateNames) → WatchedFolder | string reason`.
+`Resolve(string entry, IReadOnlyCollection<string> agentNames) → WatchedFolder | string reason`.
 It is pure apart from `Path.GetFullPath`.
 
 Checks, in order. The first failure is the reason:
@@ -268,7 +268,7 @@ Checks, in order. The first failure is the reason:
 1. **Not blank.** "A Watched Folder entry is blank."
 2. **Resolves inside `DataDir`.** After `Path.GetFullPath`, the path must start with `DataDir`
    plus a separator. "'C:\Users\x' is outside App_Data. Only folders inside it can be watched."
-   Frontmatter can be written by an Agent through `propose_teammates`, so a Persona watching
+   Frontmatter can be written by an Agent through `propose_agents`, so a Persona watching
    `C:\Users\` would reveal file names from anywhere on the disk.
 3. **Is not `DataDir` itself, or one of Huddle's own folders:** `rooms`, `logs`, `file-state`,
    `avatars`. "'rooms' holds Huddle's own data, not working files." `file-state` especially:
@@ -372,8 +372,8 @@ internal sealed class FileChangeTracker(
 }
 ```
 
-`PersonaStore.ListNames()` supplies the Teammate Names. The resolver needs them to tell a
-Teammate entry from a folder.
+`PersonaStore.ListNames()` supplies the Agent Names. The resolver needs them to tell an
+Agent entry from a folder.
 
 **The Watched Folders for one Agent** are, in this order and without repeats:
 
@@ -412,7 +412,7 @@ not block its loop's continuation. The commit only reads the touched files' meta
 cheap.
 
 **Why not rescan at Turn end.** A fresh scan at Turn end would take in everything that changed
-during the Turn, not just this Agent's edits. A Teammate that wrote a shared file while this Agent
+during the Turn, not just this Agent's edits. An Agent that wrote a shared file while this Agent
 was mid-Turn would never be reported to it (F4a).
 
 `declared` is passed in rather than read by the tracker, because the runner's Persona is the one
@@ -446,7 +446,7 @@ any depth, that is a rooted path, normalised with `Path.GetFullPath`. It deliber
 Adapter's argument names: Claude's `Write` and `Edit` use `file_path`, and another Adapter will
 use something else. A rooted path that is not inside a Watched Folder is harmless, because the
 commit ignores it. `Execute` calls (`Bash`) are not read: a shell command is not a path, and
-guessing at one could mark a change another Teammate made as this Agent's own. Getting that wrong
+guessing at one could mark a change another Agent made as this Agent's own. Getting that wrong
 must only ever cost an extra line, never a missed change.
 
 > [!WARNING]
@@ -510,7 +510,7 @@ one first given.
 
 - When a Persona starts, each `watches` entry that does not resolve adds a warning to the same
   Degraded report that unresolved Skills and the Adapter warning already share: "Watched folder
-  'Nova' is not a Teammate or a folder inside App_Data." It resolves the profile first, as it
+  'Nova' is not an Agent or a folder inside App_Data." It resolves the profile first, as it
   already does, to decide `ReadsFiles`.
 - It passes the tracker singleton to `PersonaRunner`'s constructor when the profile
   `ReadsFiles`, and `null` otherwise.
@@ -562,10 +562,10 @@ The four `systemPrompt.memory*` keys are `NextSession`, like the other system-pr
 
 > Watches a folder, so that on each of your later Turns the files added, changed or deleted
 > there since your last Turn in that Room are listed, by full path, at the top of your prompt.
-> A change you make yourself is not listed in the Room you made it in. Name a Teammate to watch their working
+> A change you make yourself is not listed in the Room you made it in. Name an Agent to watch their working
 > folder, or give a folder inside App_Data. Your own working folder is always watched. Use it
 > for folders you depend on but do not own, such as a shared notes folder or another
-> Teammate's output. It lasts until you call unwatch_folder, even across a restart. Read a
+> Agent's output. It lasts until you call unwatch_folder, even across a restart. Read a
 > listed file only when it matters to what you are doing.
 
 "Read one only if it matters to what you are doing now" is the most important sentence in the
@@ -651,7 +651,7 @@ one. This Prompt tells it the true account.
 #### *By you, in Room 'X'*: telling copies of one Agent apart
 
 Every copy of an Agent has the same Name. Without a mark, Nova's Room with Kelly would see
-`changed memory\launch-date.md` and not know whether the Human, another Teammate or Nova itself
+`changed memory\launch-date.md` and not know whether the Human, another Agent or Nova itself
 changed it. Huddle already knows which Room's Turn touched the file (§6.8), so it says so:
 
 - `FileState` gains `Writers`: for each entry and relative path, the Room id and the `FileEntry`
@@ -682,7 +682,7 @@ FM-6 checks the outcome.
 - **Not a Transcript.** The Room's history stays in the Room.
 - **Not private to a Room.** Anything written there reaches every Room of that Agent. The Prompt
   steers Room-only material away from it. Nothing enforces that.
-- **Not shared between Teammates by default.** Another Teammate sees it only by watching this
+- **Not shared between Agents by default.** Another Agent sees it only by watching this
   Agent's Work Dir (`watches: [Nova]`), which is visible and deliberate. A team-wide memory is a
   shared folder several Personas watch.
 - **Not a tool.** A `remember` App Tool would duplicate what the Agent's own `Write` does, and would
@@ -712,8 +712,8 @@ rewritten whole every Turn, and never queried across Agents except by the rename
 
 | Case | Effect | Why accept it |
 | --- | --- | --- |
-| The Agent changes a file with `Bash`, or with any tool not reported as `Edit`, `Delete` or `Move` | Listed back in the same Room on its next Turn, as well as in its other Rooms | An extra line, never a missed change. Parsing shell commands for paths could wrongly claim another Teammate's change |
-| The Agent edits a file with `Edit` while another Teammate changes that same file during the same Turn | The other Teammate's change is taken in with this Agent's, and not listed in this Room | Needs two writers on one file within one Turn. The Agent has just had the file open in any case |
+| The Agent changes a file with `Bash`, or with any tool not reported as `Edit`, `Delete` or `Move` | Listed back in the same Room on its next Turn, as well as in its other Rooms | An extra line, never a missed change. Parsing shell commands for paths could wrongly claim another Agent's change |
+| The Agent edits a file with `Edit` while another Agent changes that same file during the same Turn | The other Agent's change is taken in with this Agent's, and not listed in this Room | Needs two writers on one file within one Turn. The Agent has just had the file open in any case |
 | A tool preserves a file's old size and modified time | Not listed | Editors and Agents do not do this |
 | Huddle shuts down mid-Turn | No commit, so this Room's next list repeats this Turn's list and includes the Agent's own edits | Harmless, and a shutdown write would slow teardown |
 | The commit fails on I/O | Same | A Turn must not fail on a bookkeeping write |
@@ -738,7 +738,7 @@ These go into [known-limits.md](engineering/known-limits.md) when this ships.
 | E-5 | `PromptAsync` throws | Not committed, so this Turn's list is listed again next Turn |
 | E-6 | The Human stops the Turn | Committed: the Agent may already have written files |
 | E-7 | The Turn fails after the prompt was sent | Committed, for the same reason |
-| E-8 | An entry naming a removed Teammate | Frontmatter: Degraded warning. Subscribed: removed by the cascade |
+| E-8 | An entry naming a removed Agent | Frontmatter: Degraded warning. Subscribed: removed by the cascade |
 | E-9 | The same folder declared twice, as a name and a path | Watched once, compared by full path |
 | E-10 | `watch_folder` on a frontmatter entry | "Already watching". Nothing saved twice |
 | E-11 | Two Agents watch one folder | Each compares with its own baselines, so each sees changes since its own last Turn in that Room |
@@ -766,7 +766,7 @@ with `File.SetLastWriteTimeUtc` rather than sleeping.
 - **`FolderScannerTests`**: ignore pruning, proven by an ignored directory full of files that
   still leaves the result under the cap; `TooLarge`; `Missing`; a reparse point skipped (skip
   the test where symbolic links cannot be created); case handling per platform.
-- **`WatchedFolderResolverTests`**: Teammate Name, full path and relative path; a Name winning
+- **`WatchedFolderResolverTests`**: Agent Name, full path and relative path; a Name winning
   over a folder; `./Nova`; outside `DataDir`; `..` escaping; `DataDir` itself; each reserved
   folder; blank.
 - **`FileStateStoreTests`**: round trip, with two Rooms; missing; corrupt; atomic write leaves no
@@ -821,8 +821,8 @@ Add these to [manual-tests/](engineering/manual-tests/):
 | FM-2 | Close Huddle; edit a file; start Huddle; ask | Same as FM-1 |
 | FM-3 | Ask a Keeper to write a note; then ask something else in the same Room | The second Turn's prompt has no line for the note |
 | FM-4 | Ask an Agent to `watch_folder` a shared folder; restart; change a file there; ask | The change is listed |
-| FM-5 | Rename a watched Teammate | The watcher's next Turn lists nothing spurious |
-| FM-6 | Tell Alpha "I prefer C# for any code" in one Room. Then restart Alpha from the Teammates page, and ask it for code in another Room | `…\work\Alpha\memory\` holds a C#-preference file. The new session's system prompt lists it (`TraceWire`), and the code is in C#. **Nothing new appears under the Human's `.claude\projects\` for Alpha's Work Dir**, which proves Claude Code's auto-memory is out of the way |
+| FM-5 | Rename a watched Agent | The watcher's next Turn lists nothing spurious |
+| FM-6 | Tell Alpha "I prefer C# for any code" in one Room. Then restart Alpha from the Agents page, and ask it for code in another Room | `…\work\Alpha\memory\` holds a C#-preference file. The new session's system prompt lists it (`TraceWire`), and the code is in C#. **Nothing new appears under the Human's `.claude\projects\` for Alpha's Work Dir**, which proves Claude Code's auto-memory is out of the way |
 | FM-7 | In one Room, tell Alpha "in this chat, answer only in French". Look in `memory\` | No file for it. Room-only instructions stay out of memory |
 | FM-8 | In a second Room, ask Alpha "what do you remember, and from where?" | It names its memory files, and does not claim it has no memory of other Rooms |
 
@@ -834,9 +834,9 @@ Add these to [manual-tests/](engineering/manual-tests/):
 | --- | --- | --- | --- |
 | D-1 | **The list rides on the next Turn; nothing wakes the Agent** | A notification Message in the Agent's Room with the Human (roadmap item 11) | That Message has no valid sender. The Human's would reset the Budget on every save, a new `system` kind needs a database rebuild, and `AgentGateway` never delivers a Message to its own sender. It would also spend a billed Turn per save |
 | D-2 | **Compare saved snapshots** | A `FileSystemWatcher` | Nothing to lose on restart or buffer overflow, no debounce, and net changes for free |
-| D-3 | **A Room's baseline is its start scan plus the paths this Agent's own edit tool calls touched** | Rescan at Turn end; guess ownership from timing | A rescan takes in any Teammate's concurrent write and never reports it. Tool calls say exactly what this Agent did |
+| D-3 | **A Room's baseline is its start scan plus the paths this Agent's own edit tool calls touched** | Rescan at Turn end; guess ownership from timing | A rescan takes in any Agent's concurrent write and never reports it. Tool calls say exactly what this Agent did |
 | D-3a | **Baselines per Room, not per Agent** | One baseline per Agent | Per Agent would hide the main use case: Nova's own edit in one Room is exactly what its other Rooms need to hear. Per Room also holds unchanged if sessions ever become per Room |
-| D-3b | **Attribute by any rooted path in the raw input, for `Edit`, `Delete` and `Move` only** | Per-Adapter argument names; also parse `Execute` commands | Adapter-agnostic. Parsing shell commands could claim another Teammate's change as this Agent's own, and a wrong attribution must only ever cost an extra line |
+| D-3b | **Attribute by any rooted path in the raw input, for `Edit`, `Delete` and `Move` only** | Per-Adapter argument names; also parse `Execute` commands | Adapter-agnostic. Parsing shell commands could claim another Agent's change as this Agent's own, and a wrong attribution must only ever cost an extra line |
 | D-4 | **One JSON file per Agent in `{DataDir}/file-state/`** | A `team.db` table; one shared file; inside the Work Dir | Rewritten whole each Turn, per Agent. One shared file would be rewritten by every Agent's Turn. Inside the Work Dir, the Agent would see it and it would appear in its own list |
 | D-5 | **Kind and full path only; three kinds** | Diffs; sizes and times; a `renamed` kind; relative paths | The Agent decides what to read. A full path is what `Read` takes and never needs resolving. A rename is a delete and an add |
 | D-6 | **The Agent reads with the Adapter's own tools** | A Huddle `read_file` App Tool | The Adapter's tools already handle encodings, large files, partial reads and permissions, and are what the model was trained on |
@@ -844,7 +844,7 @@ Add these to [manual-tests/](engineering/manual-tests/):
 | D-8 | **The Work Dir is always watched** | Opt-in | It is where the Human edits a Keeper's files, and the first use case |
 | D-9 | **Frontmatter and a tool, with one entry syntax** | Either one alone | The Human declares what a Persona depends on. The Agent discovers some of it while working |
 | D-10 | **Tool subscriptions survive a restart** | Forgotten on restart, like `follow_room` | Following is cheap to redo and costs Turns while on. A forgotten subscription would silently stop the list and leave a stale snapshot |
-| D-11 | **Only inside `DataDir`, and not Huddle's own folders** | Anywhere on disk | Frontmatter can be Agent-written through `propose_teammates` |
+| D-11 | **Only inside `DataDir`, and not Huddle's own folders** | Anywhere on disk | Frontmatter can be Agent-written through `propose_agents` |
 | D-12 | **Not for an Adapter that cannot read files** | Always | A list of paths it cannot open costs tokens and invites a failing tool call |
 | D-13 | **The first Turn in each Room lists nothing** | List everything as added | A Keeper with 200 notes would get 200 lines on its first Turn in every new Room |
 | D-14 | **No opt-in wake-up in V1** | A `wake: true` entry flag | Waking should cost a decision, not a save. It can be added later without changing anything here |

@@ -24,7 +24,7 @@ When adding or updating a dependency:
 
 ## What the build enforces
 
-Five analyzer layers run on every `dotnet build`, and anything at `warning` or above
+Six analyzer layers run on every `dotnet build`, and anything at `warning` or above
 fails it. Knowing which layer a diagnostic comes from tells you where its rule lives.
 
 | Prefix | Source | Where the severity is set |
@@ -33,6 +33,7 @@ fails it. Knowing which layer a diagnostic comes from tells you where its rule l
 | `IDE` | Code-style rules from `.editorconfig`, run in the build by `EnforceCodeStyleInBuild` | `.editorconfig` — only rules at `warning`/`error` fail the build; `suggestion` ones do not |
 | `CA` | .NET code-quality analyzers at `AnalysisLevel=latest-recommended` | The SDK's recommended set, plus overrides in `.editorconfig` and per-project `NoWarn` |
 | `S` | SonarAnalyzer.CSharp, a curated subset | Opted in by ID in `.editorconfig`; everything else denylisted in `Directory.Build.props` |
+| `MA` | Meziantou.Analyzer, product code under `src/` only (`tests/**` is switched off) | `.editorconfig`; see [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#meziantouanalyzer) |
 | `xUnit` | xunit.v3 analyzers, test projects only | Package defaults |
 
 Rules that used to be prose-only and are now enforced, so a violation is a failed build rather
@@ -46,6 +47,9 @@ than a review comment:
 | File-scoped namespaces | `IDE0161` |
 | Lock on `System.Threading.Lock` | `IDE0330` |
 | Private fields are `camelCase` with no `_` prefix | `IDE1006` (the `private_fields` naming rule in `.editorconfig`) |
+| `ConfigureAwait(false)` on every await in `src` | `CA2007`, `MA0004` |
+| One top-level type per file, and the file is named after it | `MA0048` |
+| A method is at most 60 lines and 40 statements: extract a private helper | `MA0051` |
 | No parameterless `new Random()` | `RS0030`, listed in `BannedSymbols.txt`. Add a line there to ban another API. |
 | Every test you add has a `///` summary | `agents/scripts/Check-TestDocs.ps1`, run by `Check-All.ps1`. Added lines only; older tests are not rechecked. |
 
@@ -227,7 +231,7 @@ index += consumed;
 - **Make illegal states unrepresentable.** `enum OrderStatus`, not `string status`. Wrap meaningful primitives — `record CustomerId(Guid Value)` beats raw `Guid` passed through twelve methods. The compiler catches the misuse you'd otherwise debug in production.
 - **Validate at the boundary, trust internally.** Parse incoming data into domain types once, at the edge. Internal code assumes invariants hold. Don't re-check `if (x == null)` ten layers deep.
 - **`Result<T>` (or similar) for expected failure; exceptions for the actually exceptional.** Business validation isn't exceptional. Control flow hidden inside exceptions is invisible to readers and to the compiler. `throw` is for "this should never happen."
-- **Async hygiene.** `async Task`, not `async void` (except event handlers). Never `.Result` or `.Wait()` — sync-over-async deadlocks are a rite of passage you should skip. `CancellationToken` on anything that can wait. `ConfigureAwait(false)` in library code (CA2007 is set to `none` in `.editorconfig` — no SynchronizationContext in our ASP.NET Core/generic-host targets — but it's still a reasonable defensive habit; revisit if hosting scenarios broaden pre-1.0).
+- **Async hygiene.** `async Task`, not `async void` (except event handlers). Never `.Result` or `.Wait()` — sync-over-async deadlocks are a rite of passage you should skip. `CancellationToken` on anything that can wait. Every `await` in `src` ends in `.ConfigureAwait(false)` (`CA2007`, `MA0004`). For `await using`, declare the variable normally and add `await using var xScope = x.ConfigureAwait(false);` on the next line. Code under `src/Huddle.App/Components/` is exempt, because its continuations touch the renderer: never add it to an await whose continuation touches a component; see [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#meziantouanalyzer).
 - **Don't catch `Exception`.** Catch what you actually handle; otherwise let it propagate. Swallowed exceptions are how production bugs go silent for months.
 - **Materialize LINQ at boundaries.** `IEnumerable<T>` is a recipe, not a result. Multiple enumeration and lazy side effects will bite. `.ToList()` / `.ToArray()` when crossing a layer.
 - **Tests are design feedback.** If something is hard to test, the design is wrong — fix the design, don't add test-only hooks. Hard-to-mock dependency wants to be an interface. Hard-to-reach branch is usually dead code or a missing abstraction.

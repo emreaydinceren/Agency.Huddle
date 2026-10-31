@@ -10,7 +10,7 @@ date: 2026-10-12
 > cited where they follow from it). The product owner's brief was *"type `@`, pick a Task, a Room, a
 > Team or a file, and have it just work"*. The rules it leans on are
 > [ADR-0003](0003-mention-gated-replies-and-membership-defined-direct-rooms.md) (only a Mention wakes
-> an Agent), [ADR-0011](0011-a-rename-moves-the-teammate-not-its-history.md) (a rename keeps the id)
+> an Agent), [ADR-0011](0011-a-rename-moves-the-agent-not-its-history.md) (a rename keeps the id)
 > and [ADR-0035](0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md) (a command is
 > a Message with a Mention). Search's no-index rule, [ADR-0051](0051-search-keeps-no-index-of-its-own.md),
 > is why the picker reads the things themselves.
@@ -49,8 +49,8 @@ compact, fresh header.**
 - **The snapshot only reports (D-13, D-14).** `ChatMessage` gains an optional `References` property,
   written only when non-empty, holding what the sender saw for Tasks, Rooms, Teams and Library files
   (title, state, label). The Room view compares it with today's value and draws a chip only for a
-  target that is gone or changed (D-15). It is never the source of a Mention, and it never holds a
-  Teammate: a Mention already has its own rule and its own record in `SenderId` (ADR-0003,
+  target that is gone or changed (D-15). It is never the source of a Mention, and it never holds an
+  Agent: a Mention already has its own rule and its own record in `SenderId` (ADR-0003,
   ADR-0011), and the Reply Gate is untouched.
 - **Agents get a fresh, compact header (D-16, D-17).** For the **trigger Message only**, `RoomSession`
   writes a *Referenced items* block with one line per Task, Room and Team, read **now**, not from the

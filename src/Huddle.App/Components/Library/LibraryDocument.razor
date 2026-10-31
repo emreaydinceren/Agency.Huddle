@@ -8,8 +8,12 @@
 @implements IAsyncDisposable
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.DocHistory
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
+@using Microsoft.AspNetCore.Components.Rendering
 @inject LibraryFileService FileService
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
@@ -19,11 +23,19 @@
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject DocHistoryStore HistoryStore
+@inject IServiceProvider Services
+@inject Agency.Huddle.App.Gateway.IRemoteAccessState RemoteAccess
 
-<div class="library-document">
+<div class="library-document" @ref="this.rootElement">
+    <PageSubjectSource Value="@this.Subject" />
+    <PageCommandHandler OnCommand="this.OnPageCommandAsync" />
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
-        @* Every host names the open file the same way: its full system path, on the toolbar's left. *@
+        @* Every host names the open file the same way: its path relative to its Library root (the breadcrumb's own
+           trail, forward slashes) on the toolbar's left, shortened past LibraryPathDisplay.MaxLength, with Copy full
+           path just before it. The absolute system path stays in the tooltip and is what the button copies. *@
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy full path" title="Copy full path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline" title="@this.Path.FullPath">@this.FullPathText()</MudText>
         <MudSpacer />
         @if (this.ShowModeToggle())
@@ -35,7 +47,6 @@
                 <MudToggleItem Value="LibraryMode.Split" Text="Split" />
             </HuddleSegmentedControl>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
         @if (this.OnClose.HasDelegate)
         {
@@ -53,6 +64,10 @@
     }
     else if (this.content is not null)
     {
+        @if (this.ShowsHistory() && !this.BylineInBody())
+        {
+            <DocumentByline Path="@this.Path" OnOpenHistory="@this.OpenHistoryPanel" />
+        }
         @if (this.freshnessNoticeVisible)
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
@@ -82,25 +97,25 @@
         }
         else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {
+            <MarkdownToolbar />
             <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
-                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync" />
+                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
+                           WikiLinkCompletions="@this.WikiLinkCompletionsAsync" />
         }
         else if (this.mode == LibraryMode.Split && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {
+            <MarkdownToolbar />
             <div class="library-document-split">
                 <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
                                DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
-                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" />
+                               WikiLinkCompletions="@this.WikiLinkCompletionsAsync"
+                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" LineNumbers="true" />
                 @this.RenderMarkdown(this.previewText ?? this.content.Text ?? string.Empty)
             </div>
         }
         else if (this.content.Kind == LibraryFileKind.Markdown)
         {
             @this.RenderMarkdown(this.content.Text ?? string.Empty)
-            @if (this.backlinksRows is not null)
-            {
-                <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
-            }
         }
         else if (this.content.Kind == LibraryFileKind.Image)
         {
@@ -119,7 +134,11 @@
             <div class="library-document-other">
                 <div class="library-document-other-name">@this.FileName()</div>
                 <div class="library-document-other-size">@ByteSize.Format(this.content.Length)</div>
-                <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                @* Starts a process on the host, so it is not drawn while remote access is configured (Spec 6.15). *@
+                @if (!this.RemoteAccess.IsConfigured)
+                {
+                    <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                }
             </div>
         }
     }
@@ -127,37 +146,70 @@
 
 @code {
     /// <summary>
-    /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading YAML frontmatter block
-    /// (a Teammate definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
-    /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a small metadata list, because left in the
-    /// body the closing <c>---</c> reads as a setext underline and folds the whole block into one heading.
+    /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading front matter block (YAML between
+    /// <c>---</c> lines, or a JSON object) is split off with <see cref="NoteFrontmatter.Locate(string)"/>, read by
+    /// <see cref="NoteProperties"/>, typed by <see cref="PropertyTyping"/> against the root's types file and shown as a
+    /// <see cref="LibraryProperties"/> block, because left in the body the closing <c>---</c> reads as a setext underline and
+    /// folds the whole block into one heading.
     /// </summary>
     /// <param name="text">The document's raw Markdown, frontmatter included.</param>
     private RenderFragment RenderMarkdown(string text) => builder =>
     {
-        (IReadOnlyList<PersonaFrontmatterField> fields, string body) = PersonaFrontmatter.Parse(text);
+        NoteFrontmatterBlock located = NoteFrontmatter.Locate(text);
+        IReadOnlyList<NoteProperty> properties = located.Text is null
+            ? []
+            : PropertyTyping.Apply(NoteProperties.Read(located), this.Services.GetService<PropertyTypes>()?.For(this.Path) ?? NoAssignedTypes);
+        string body = text[located.BodyStart..].TrimStart('\r', '\n');
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "library-rendered");
-        if (fields.Count > 0)
+        this.RenderTags(builder, text);
+        if (properties.Count > 0 && located.Text is not null)
         {
-            builder.OpenElement(2, "dl");
-            builder.AddAttribute(3, "class", "library-frontmatter mud-typography-caption mb-4");
-            foreach (PersonaFrontmatterField field in fields)
-            {
-                builder.OpenElement(4, "dt");
-                builder.AddContent(5, field.Key);
-                builder.CloseElement();
-                builder.OpenElement(6, "dd");
-                builder.AddContent(7, field.Value);
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
+            builder.OpenComponent<LibraryProperties>(2);
+            builder.AddComponentParameter(3, nameof(LibraryProperties.Properties), properties);
+            builder.AddComponentParameter(4, nameof(LibraryProperties.Path), this.Path);
+            builder.AddComponentParameter(5, nameof(LibraryProperties.Tags), NoteTagReader.Read(located.Text, located.Form).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+            builder.CloseComponent();
         }
 
-        builder.AddContent(8, (MarkupString)MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path));
+        // The byline sits under the note's first heading; a note that does not open with one gets it above the body.
+        string html = MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path);
+        int headingEnd = html.StartsWith("<h1", StringComparison.Ordinal) ? html.IndexOf("</h1>", StringComparison.Ordinal) : -1;
+        int splitAt = headingEnd < 0 ? 0 : headingEnd + "</h1>".Length;
+        builder.AddContent(8, (MarkupString)html[..splitAt]);
+        if (this.BylineInBody())
+        {
+            builder.OpenComponent<DocumentByline>(20);
+            builder.AddComponentParameter(21, nameof(DocumentByline.Path), this.Path);
+            builder.AddComponentParameter(22, nameof(DocumentByline.OnOpenHistory), EventCallback.Factory.Create(this, this.OpenHistoryPanel));
+            builder.CloseComponent();
+        }
+
+        builder.AddContent(9, (MarkupString)html[splitAt..]);
         builder.CloseElement();
     };
+
+    /// <summary>The note's tags (its frontmatter <c>tags</c> and its inline <c>#tag</c>s, Spec §6.17) as chips above its first heading; nothing for a note with none.</summary>
+    /// <param name="builder">The builder of the <c>.library-rendered</c> element.</param>
+    /// <param name="text">The document's raw Markdown, frontmatter included.</param>
+    private void RenderTags(RenderTreeBuilder builder, string text)
+    {
+        IReadOnlyList<string> tags = NoteTags.Of(text);
+        if (tags.Count == 0)
+        {
+            return;
+        }
+
+        builder.OpenComponent<LibraryDocumentTags>(30);
+        builder.AddComponentParameter(31, nameof(LibraryDocumentTags.Tags), tags);
+        builder.CloseComponent();
+    }
+
+    /// <summary>Whether the byline is drawn inside the rendered note, under its first heading, rather than above the editor. It is when the note is rendered here: in Read, in the Split preview, and in a mode that cannot edit.</summary>
+    private bool BylineInBody() =>
+        this.ShowsHistory()
+        && this.content is { ViewOnlyReason: null } shown
+        && !(this.mode == LibraryMode.Edit && shown.Editable);
 
     /// <summary>The document's path inside a Library Root.</summary>
     [Parameter, EditorRequired]
@@ -190,6 +242,9 @@
     private Task OpenInDefaultAppAsync() =>
         this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.OpenInDefaultApp, this.Path, null));
 
+    /// <summary>The types a root has when the host registers no <see cref="PropertyTypes"/>: none, so every property draws by its value.</summary>
+    private static readonly IReadOnlyDictionary<string, NotePropertyKind> NoAssignedTypes = new Dictionary<string, NotePropertyKind>(StringComparer.OrdinalIgnoreCase);
+
     private LibraryDocumentContent? content;
     private bool missing;
     private bool outsideScope;
@@ -201,10 +256,53 @@
     private string? saveError;
     private string? previewText;
     private LibraryEditor? editorRef;
-    private IReadOnlyList<LibraryBacklinkRow>? backlinksRows;
-    private bool backlinkIndexAvailable;
+    private ElementReference rootElement;
     private bool freshnessNoticeVisible;
     private DotNetObjectReference<LibraryDocument>? selfReference;
+
+    /// <summary>What this pane shows, for the Right sidebar: nothing while loading, missing or outside the scope.</summary>
+    private PageSubject? Subject => (this.content is null || this.missing || this.outsideScope)
+        ? null
+        : new DocumentSubject(this.Path, this.content.Kind, this.previewText ?? this.content.Text);
+
+    /// <summary>Answers a Page command from the sidebar (Spec D-6): <see cref="ScrollToHeading"/> reveals the line in the Edit-mode editor, and otherwise scrolls the rendered heading. Any other command is ignored.</summary>
+    /// <param name="command">The command sent to this page's Tab.</param>
+    private async Task OnPageCommandAsync(PageCommand command)
+    {
+        if (command is not ScrollToHeading scroll)
+        {
+            return;
+        }
+
+        if (this.mode == LibraryMode.Edit && this.editorRef is not null)
+        {
+            await this.editorRef.RevealLineAsync(scroll.Line);
+            return;
+        }
+
+        await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
+    }
+
+    /// <summary>Whether the byline and the History apply: History is on and this is a Markdown document.</summary>
+    private bool ShowsHistory() =>
+        this.HistoryStore.Enabled && this.content?.Kind == LibraryFileKind.Markdown;
+
+    /// <summary>Opens the Right sidebar on its Subject panels, where the History is, if it is not already there (DocHistory spec §6.8). The sidebar is optional: a host without one ignores the request.</summary>
+    private void OpenHistoryPanel()
+    {
+        RightSidebarService? sidebar = this.Services.GetService<RightSidebarService>();
+        if (sidebar is null || (sidebar.IsOpen && sidebar.Mode == RightSidebarMode.Subject))
+        {
+            return;
+        }
+
+        if (sidebar.IsOpen)
+        {
+            sidebar.Toggle();
+        }
+
+        sidebar.Toggle();
+    }
 
     /// <inheritdoc />
     protected override void OnInitialized() =>
@@ -260,41 +358,12 @@
 
         this.previewText = this.content.Text;
 
-        if (this.Path.Role == LibraryNodeRole.TeammateDefinition
+        if (this.Path.Role == LibraryNodeRole.AgentDefinition
             && this.content.Text is not null
             && PersonaFrontmatter.TryReadIdentity(this.content.Text, out PersonaIdentity? identity, out _))
         {
             this.definitionName = identity.Name;
         }
-
-        this.BuildBacklinks();
-    }
-
-    /// <summary>Builds the backlinks list from the WikiLinkIndex, resolving each back-link path through the resolver.</summary>
-    private void BuildBacklinks()
-    {
-        this.backlinksRows = null;
-        this.backlinkIndexAvailable = false;
-
-        if (this.content?.Kind != LibraryFileKind.Markdown)
-        {
-            return;
-        }
-
-        this.backlinkIndexAvailable = this.WikiLinks.IsAvailable(this.Path.Root.Id);
-
-        var backlinks = this.WikiLinks.Backlinks(this.Path);
-        var rows = new List<LibraryBacklinkRow>();
-
-        foreach (var backlink in backlinks)
-        {
-            if (this.PathResolver.TryResolve(this.Path.Root.Id, backlink.NotePath, out LibraryPath? resolvedPath, out _))
-            {
-                rows.Add(new LibraryBacklinkRow(resolvedPath, backlink.Line, backlink.LineText));
-            }
-        }
-
-        this.backlinksRows = rows;
     }
 
     /// <summary>Switches between Read, Edit and Split (Spec §6.7's mode toggle); no unsaved-edit guard - the toggle only changes how the SAME loaded text is shown.</summary>
@@ -303,6 +372,12 @@
         this.mode = newMode;
         return Task.CompletedTask;
     }
+
+    /// <summary>The note names to offer after <c>[[</c>: this note's own Library Root only (links are per root), nearest first, each in the shortest form that resolves from this note. Built off the circuit's thread.</summary>
+    /// <param name="query">The text typed after the brackets.</param>
+    /// <param name="ct">Cancelled when the human types on or the editor goes away.</param>
+    private Task<IReadOnlyList<string>> WikiLinkCompletionsAsync(string query, CancellationToken ct) =>
+        this.WikiLinks.SuggestTargetsAsync(this.Path, query, LibraryEditor.MaxWikiLinkSuggestions, ct);
 
     /// <summary>Forwards the editor's dirty flip (Spec §6.7's <c>●</c> and the <see cref="MudExitPrompt"/> guard).</summary>
     private Task OnDirtyChangedAsync(bool value)
@@ -323,7 +398,7 @@
     /// <summary>
     /// The save sequence (Spec §6.4, §6.12; corrections-B6 items 11, 15, 21; judgement 44):
     /// stat the file first and refuse without writing if it is gone; ask to overwrite if it
-    /// changed since it was loaded; ask the Teammate-definition confirm; write through
+    /// changed since it was loaded; ask the Agent-definition confirm; write through
     /// <see cref="LibraryFileService.WriteTextAsync"/> and show any refusal reason; on success,
     /// refresh the loaded stamp and clear the dirty marker.
     /// </summary>
@@ -386,6 +461,7 @@
             this.content = this.content with { Length = result.Value.Length, LastWriteUtc = result.Value.LastWriteUtc };
         }
 
+        this.previewText = editorText;
         this.dirty = false;
     }
 
@@ -484,7 +560,6 @@
         this.previewText = this.content.Text;
         this.dirty = false;
         this.freshnessNoticeVisible = false;
-        this.BuildBacklinks();
     }
 
     /// <summary>The freshness notice's Reload button: re-reads the file and clears the dirty marker,
@@ -509,8 +584,12 @@
     private bool ShowModeToggle() => !this.outsideScope && !this.missing
         && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
 
-    /// <summary>The document's absolute file system path (<c>C:\...\Teams\Platform\API v2\API-v2-Design.md</c>), shown on the toolbar as the document's title, with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
-    private string FullPathText() => this.dirty ? $"{this.Path.FullPath} ●" : this.Path.FullPath;
+    /// <summary>The document's path relative to its Library root, named by the root as the breadcrumb names it (<c>Teams/Platform/API v2/API-v2-Design.md</c>), shown on the toolbar as the document's title, with a trailing <c>●</c> while dirty (Spec §6.7). The absolute path is the tooltip.</summary>
+    private string FullPathText()
+    {
+        string shown = LibraryPathDisplay.Shorten($"{this.Path.Root.DisplayName}/{this.Path.RelativePath}");
+        return this.dirty ? $"{shown} ●" : shown;
+    }
 
     /// <summary>The document's file name, from its relative path.</summary>
     private string FileName() => System.IO.Path.GetFileName(this.Path.RelativePath);

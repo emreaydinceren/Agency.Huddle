@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -53,11 +54,8 @@ internal sealed class ReadRecordsTool(
     /// <inheritdoc />
     public string Name => "read_records";
 
-    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.readRecords.description", NoValues);
+    public string Description => prompts.Render("tool.readRecords.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()
@@ -78,30 +76,18 @@ internal sealed class ReadRecordsTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
         }
 
-        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamRefusal))
+        if (!TaskToolText.TryGetString(arguments, "team", out string? teamText, out string teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "since", out string? sinceText, out teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "room", out string? roomText, out teamRefusal)
+            || !TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out teamRefusal))
         {
             return teamRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "since", out string? sinceText, out string sinceRefusal))
-        {
-            return sinceRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "room", out string? roomText, out string roomRefusal))
-        {
-            return roomRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
-        {
-            return taskIdRefusal;
         }
 
         if (string.IsNullOrWhiteSpace(teamText))
@@ -128,9 +114,18 @@ internal sealed class ReadRecordsTool(
 
         if (!string.IsNullOrWhiteSpace(roomText))
         {
-            return await this.ReadRoomAsync(team, roomText, cancellationToken);
+            return await this.ReadRoomAsync(team, roomText, cancellationToken).ConfigureAwait(false);
         }
 
+        return this.ReadBundle(team, sinceText);
+    }
+
+    /// <summary>Renders the compact records bundle since the given date, or since the newest report when none is given.</summary>
+    /// <param name="team">The named Team.</param>
+    /// <param name="sinceText">The <c>since</c> argument, if any.</param>
+    /// <returns>The text, or a refusal.</returns>
+    private string ReadBundle(TeamSummary team, string? sinceText)
+    {
         DateTimeOffset since;
         if (string.IsNullOrWhiteSpace(sinceText))
         {
@@ -275,14 +270,18 @@ internal sealed class ReadRecordsTool(
         IReadOnlyList<ChatMessage> messages;
         try
         {
-            messages = await chat.ReadAllAsync(roomId, cancellationToken);
+            messages = await chat.ReadAllAsync(roomId, cancellationToken).ConfigureAwait(false);
         }
         catch (ArgumentException)
         {
             return $"Room '{roomId}' is not a valid Room id.";
         }
 
-        Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken);
+        // The Human's older Messages carry the Name they had then; show the current one (rules.md).
+        string human = (await directory.GetUserAsync(KnownIds.Human, cancellationToken).ConfigureAwait(false))?.Name ?? string.Empty;
+        messages = [.. messages.Select(message => SenderDisplay.WithCurrentName(message, human.Length == 0 ? null : human))];
+
+        Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (scoped?.Team is { } scopedTeam)
         {
             if (!string.Equals(scopedTeam, team.Name, StringComparison.OrdinalIgnoreCase))
@@ -298,9 +297,9 @@ internal sealed class ReadRecordsTool(
             return $"Room {roomId} has no messages from Team {team.Name}.";
         }
 
-        string human = (await directory.GetHumanAsync(cancellationToken)).Name;
         if (messages.Any(message => !team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)
-            && !string.Equals(message.SenderName, human, StringComparison.OrdinalIgnoreCase)))
+            && !string.Equals(message.SenderId, KnownIds.Human, StringComparison.Ordinal)
+            && !string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal)))
         {
             return $"Room {roomId} has participants outside Team {team.Name}.";
         }

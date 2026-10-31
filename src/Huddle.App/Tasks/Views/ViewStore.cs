@@ -1,16 +1,10 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Agency.Huddle.App.Tasks.Views;
-
-/// <summary>A parse failure in <c>views.json</c>, with a 1-based line and column.</summary>
-/// <param name="Message">A human-readable description of the failure.</param>
-/// <param name="Line">The 1-based line the failure was found on, or <see langword="null"/> when <see cref="JsonException"/> did not report one.</param>
-/// <param name="Column">The 1-based column the failure was found on, or <see langword="null"/> when <see cref="JsonException"/> did not report one.</param>
-public sealed record ViewLoadError(string Message, long? Line, long? Column);
 
 /// <summary>
 /// Joins the two built-in Views (<c>All Tasks</c>, <c>My Tasks</c>) with the Human-editable
@@ -104,7 +98,7 @@ internal sealed partial class ViewStore : IDisposable
 
     /// <summary>
     /// Raised after <see cref="Save(TaskView)"/>, <see cref="Delete(string)"/> or
-    /// <see cref="RenameTeammate(string, string)"/> has written the file and rebuilt the resolved
+    /// <see cref="RenameAgent(string, string)"/> has written the file and rebuilt the resolved
     /// snapshot, and after an external edit to <see cref="FilePath"/> is picked up by the
     /// filesystem watcher and its debounce settles. There is no own-write suppression - see the
     /// class remarks - so one call to <see cref="Save(TaskView)"/> raises this event twice: once
@@ -230,13 +224,13 @@ internal sealed partial class ViewStore : IDisposable
     /// <summary>
     /// Rewrites <paramref name="oldName"/> to <paramref name="newName"/> in every View's
     /// <see cref="TaskFilter.Assignees"/> (Spec §9.6) - never touching the <c>@me</c> or
-    /// <c>@unassigned</c> tokens, which name no Teammate. A no-op, with no write and no
+    /// <c>@unassigned</c> tokens, which name no Agent. A no-op, with no write and no
     /// <see cref="ViewsChanged"/>, while <see cref="LoadError"/> is set or when no View's filter
     /// names <paramref name="oldName"/>.
     /// </summary>
-    /// <param name="oldName">The Teammate's current Name, matched <see cref="StringComparison.OrdinalIgnoreCase"/>.</param>
-    /// <param name="newName">The Teammate's new Name.</param>
-    internal void RenameTeammate(string oldName, string newName)
+    /// <param name="oldName">The Agent's current Name, matched <see cref="StringComparison.OrdinalIgnoreCase"/>.</param>
+    /// <param name="newName">The Agent's new Name.</param>
+    internal void RenameAgent(string oldName, string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
         ArgumentException.ThrowIfNullOrWhiteSpace(newName);
@@ -389,6 +383,7 @@ internal sealed partial class ViewStore : IDisposable
                 continue;
             }
 
+            view = WithNeedsYouColumn(view);
             IReadOnlyList<string> problems = ViewValidator.Validate(view, fileViews);
             if (problems.Count > 0)
             {
@@ -396,7 +391,7 @@ internal sealed partial class ViewStore : IDisposable
                 continue;
             }
 
-            fileViews.Add(view);
+            fileViews.Add(WithNeedsYou(view));
         }
 
         List<TaskView> views = [BuiltInOrOverride(fileViews, AllTasksId, DefaultAllTasks), BuiltInOrOverride(fileViews, MyTasksId, DefaultMyTasks)];
@@ -409,6 +404,50 @@ internal sealed partial class ViewStore : IDisposable
         }
 
         return new Snapshot(views, invalidViews, null);
+    }
+
+    /// <summary>
+    /// A Board View with no Needs You column gains one, in memory only (Human gate Spec §6.2): right after the column
+    /// that holds Review, else right before the column that holds Done, else at the end. Run before validation, because
+    /// the validator requires a Board's columns to cover every state. Any other View is returned as it is.
+    /// </summary>
+    /// <param name="view">The View as read from the file.</param>
+    private static TaskView WithNeedsYouColumn(TaskView view)
+    {
+        if (view.Kind != ViewKind.Kanban || view.Columns.Any(column => column.States.Contains(TaskState.NeedsYou)))
+        {
+            return view;
+        }
+
+        int index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Review)) + 1;
+        if (index == 0)
+        {
+            index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Done));
+            if (index < 0)
+            {
+                index = view.Columns.Count;
+            }
+        }
+
+        List<BoardColumn> columns = [.. view.Columns];
+        columns.Insert(index, new BoardColumn("Needs You", [TaskState.NeedsYou]));
+        return view with { Columns = columns };
+    }
+
+    /// <summary>
+    /// A View whose state filter has Review and not Needs You gains Needs You, in memory only: nothing is written
+    /// back (Human gate Spec §6.2). Any other View is returned as it is.
+    /// </summary>
+    /// <param name="view">The View as read from the file.</param>
+    private static TaskView WithNeedsYou(TaskView view)
+    {
+        IReadOnlyList<TaskState> states = view.Filter.States;
+        if (!states.Contains(TaskState.Review) || states.Contains(TaskState.NeedsYou))
+        {
+            return view;
+        }
+
+        return view with { Filter = view.Filter with { States = [.. states, TaskState.NeedsYou] } };
     }
 
     /// <summary>The file's own entry for <paramref name="id"/>, marked <see cref="TaskView.BuiltIn"/>, or <paramref name="defaultFactory"/>'s result when the file carries none.</summary>
@@ -503,7 +542,9 @@ internal sealed partial class ViewStore : IDisposable
             ex,
             "Could not read '{Path}' after {Attempts} attempts; keeping the previously resolved Views.",
             this.path,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
             RetryingFileRead.Attempts);
+#pragma warning restore HAA0601
         return null;
     }
 

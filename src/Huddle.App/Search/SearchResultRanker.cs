@@ -34,7 +34,7 @@ internal static class SearchResultRanker
         return new SearchResult(kept, result.Truncated || cut);
     }
 
-    /// <summary>Whether a hit belongs to the open Team. A Teammate counts when any of its Teams is open; a Room never does (OP-4).</summary>
+    /// <summary>Whether a hit belongs to the open Team. An Agent counts when any of its Teams is open; a Room never does (OP-4).</summary>
     /// <param name="hit">The hit.</param>
     /// <param name="openTeam">The open Team, or null when no Team is open.</param>
     /// <returns>True when the hit ranks with the open Team.</returns>
@@ -48,7 +48,7 @@ internal static class SearchResultRanker
         return hit switch
         {
             RoomHit => false,
-            TeammateHit teammate => teammate.Teams.Any(team => string.Equals(team, openTeam, StringComparison.OrdinalIgnoreCase)),
+            AgentHit agent => agent.Teams.Any(team => string.Equals(team, openTeam, StringComparison.OrdinalIgnoreCase)),
             _ => string.Equals(hit.TeamName, openTeam, StringComparison.OrdinalIgnoreCase),
         };
     }

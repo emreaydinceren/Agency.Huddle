@@ -1,0 +1,90 @@
+@*
+    The Top bar's switch for the Right sidebar (S4). The icon is Material Symbols dock_to_left, a frame
+    with a pane docked on its right; it is coloured Primary and aria-pressed while the sidebar is open.
+
+    While the sidebar is closed, the button gives one faint aura pulse when a panel that was not available becomes available for the
+    active page (the page now has a Subject, or an existing Subject gained a panel such as a Task's Blocks): a quiet "there is something
+    here" that needs no attention and is never repeated for the same panel. Opening the sidebar clears it. The pulse is a CSS animation of
+    one iteration, restarted by giving the wrapping span a new key, and is off under prefers-reduced-motion.
+*@
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject RightSidebarService Sidebar
+@inject TabService Tabs
+@inject SidebarPanelCatalog Catalog
+
+<span class="@(this.pulsing ? "right-sidebar-toggle-aura is-pulsing" : "right-sidebar-toggle-aura")" @key="this.pulseKey">
+    <MudTooltip Text="@this.Label">
+        <MudIconButton Icon="@MaterialSymbols.DockToLeft"
+                       Size="Size.Small"
+                       Color="@(this.Sidebar.IsOpen ? Color.Primary : Color.Inherit)"
+                       Class="right-sidebar-toggle"
+                       aria-label="@this.Label"
+                       aria-pressed="@(this.Sidebar.IsOpen ? "true" : "false")"
+                       aria-controls="@RightSidebar.ElementId"
+                       OnClick="this.Toggle" />
+    </MudTooltip>
+</span>
+
+@code {
+    private HashSet<string> available = new(StringComparer.Ordinal);
+    private bool pulsing;
+    private int pulseKey;
+
+    private string Label => this.Sidebar.IsOpen ? "Hide right sidebar" : "Show right sidebar";
+
+    /// <summary>Repaints the button when the sidebar is opened or closed, or a page's panels change, from anywhere.</summary>
+    protected override void OnInitialized()
+    {
+        this.available = this.AvailablePanels();
+        this.Sidebar.Changed += this.OnChanged;
+        this.Tabs.Changed += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="RightSidebarService.Changed"/> and <see cref="TabService.Changed"/>.</summary>
+    public void Dispose()
+    {
+        this.Sidebar.Changed -= this.OnChanged;
+        this.Tabs.Changed -= this.OnChanged;
+    }
+
+    /// <summary>The ids of the panels the active Tab's Subject has now.</summary>
+    private HashSet<string> AvailablePanels() =>
+        [.. this.Catalog.For(this.Sidebar.SubjectFor(this.Tabs.Active?.Id)).Select(static panel => panel.Id)];
+
+    /// <summary>
+    /// Compares the panels available now with those the button last saw. A panel that was not there before, with the sidebar closed, starts one pulse;
+    /// an open sidebar already shows its panels, so it only clears the pulse and remembers them.
+    /// </summary>
+    private void Refresh()
+    {
+        HashSet<string> now = this.AvailablePanels();
+        bool gained = now.Any(id => !this.available.Contains(id));
+        this.available = now;
+        if (this.Sidebar.IsOpen)
+        {
+            this.pulsing = false;
+        }
+        else if (gained)
+        {
+            this.pulsing = true;
+            this.pulseKey++;
+        }
+    }
+
+    private void Toggle()
+    {
+        this.Sidebar.Toggle();
+    }
+
+    private void OnChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.Refresh();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}

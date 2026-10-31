@@ -7,7 +7,7 @@
     Team/Project, Parent, Origin, and Created/Updated/Closed. 14.3.i added the conflict UI (Spec §13.7).
     14.4.i (this dispatch) adds: Expand (guarded by ConfirmDiscardAsync's "Discard changes?" message
     box, corrections-B5 D14 item 7), Cancel, Make a copy, Close/Reopen (one Update then Close,
-    corrections-B5 D14 item 9), the Change log (reversed, Size.Small, local time via the injected
+    corrections-B5 D14 item 9), the History (reversed, Size.Small, local time via the injected
     TimeProvider, corrections-B5 D14 item 10), MudExitPrompt, create mode's Save via
     TaskService.Create with refusals shown (corrections-B7 "14.4" item 2), the Description Preview's
     Task-id links (item 3), and the Budget banner's role="status" (item 4). 15.2.i (this dispatch) adds
@@ -15,20 +15,26 @@
     toasts) and the Closed chip (Spec §13.13.3 step 3) - none shown in create mode.
 
     TaskDetailDialog (Components/Tasks/TaskDetailDialog.razor) passes only Id (or a Draft for
-    create/copy), because MudBlazor freezes a dialog's parameters once it opens (TeammateCard.razor:12-24)
+    create/copy), because MudBlazor freezes a dialog's parameters once it opens (AgentProfileCard.razor:12-24)
     - TaskDetail loads the Task itself and subscribes to TaskEvents (Spec §13.6). Create mode (Id null,
     Draft set) builds a throwaway TaskItem from the Draft so it can flow through the same
     Effective/pending machinery as an existing Task; Save calls TaskService.Create instead of Update,
     and a successful Create flips the component into ordinary edit mode on the newly created Task
-    (the TeammateCard.SaveAsync create/edit convention, J51 item 4).
+    (the AgentProfileCard.SaveAsync create/edit convention, J51 item 4).
 *@
 @using System.Globalization
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Components.Library
+@using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Teams
+@using Agency.Huddle.App.Uploads
+@using Agency.Huddle.App.Tasks.HumanGate
+@using Microsoft.AspNetCore.Components.Forms
 @inject TaskStore Store
 @inject IServiceProvider Provider
 @inject TaskEvents Events
@@ -43,11 +49,16 @@
 @inject TurnActivity Turns
 @inject AvatarStore Avatars
 @inject IOptions<TeamOptions> Options
+@inject IHumanIdentity Human
 @inject TimeProvider Clock
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject TaskUploadService Uploader
+@inject Agency.Huddle.App.Tabs.TabService Tabs
+@inject ILibraryReferenceResolver LibraryResolver
+@inject IProofSource ProofSource
 @implements IDisposable
 
 <div class="task-detail">
@@ -61,16 +72,14 @@
 else if (this.loaded is { } task)
 {
     TaskItem effective = this.Effective ?? task;
-    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Options.Value));
+    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Human));
     string? notice = TaskDetail.NoticeText(preview);
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
     int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
     string? sprintProblem = this.SprintProblem();
     string? sprintHelper = sprintProblem ?? (this.IsNewSprintName() ? "New sprint: it will be created when you save" : null);
-    bool saveDisabled = (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null) ||
-        sprintProblem is not null ||
-        (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
+    bool saveDisabled = this.IsSaveDisabled(effective);
 
     @if (this.saveError is not null || this.saveProblems.Count > 0)
     {
@@ -90,7 +99,10 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-gate-refusal">
             <span class="task-detail-gate-refusal-text">@refusal.Message</span>
-            <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+            @if (this.CanMoveAnyway(refusal))
+            {
+                <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+            }
         </MudAlert>
     }
 
@@ -108,46 +120,25 @@ else if (this.loaded is { } task)
             @TaskDetail.ConflictBannerText(activeConflict, conflictFieldList)
         </MudAlert>
 
-        @if (this.Mode == TaskDetailMode.Panel)
-        {
-            @* Manual test TASKS-07 finding F17: at Panel width (~300 px) the table's four columns
-               (Field, Theirs, Yours, radios) overflow horizontally and push the radios off-screen.
-               Each row stacks instead - field label, then Theirs/Yours, then the radios - so nothing
-               needs horizontal room. Expanded keeps the table (plenty of width there). *@
-            <div class="task-detail-conflict-stacked">
+        <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
+            <tbody>
                 @foreach (TaskField conflictField in activeConflict.Fields)
                 {
                     FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
-                    <ConflictRow Field="conflictField" Stacked="true" IsDescription="@(conflictField == TaskField.Description)"
+                    <ConflictRow Field="conflictField" IsDescription="@(conflictField == TaskField.Description)"
                                  TheirsText="@(conflictField == TaskField.Description ? activeConflict.Current.Description : change?.Old)"
                                  YoursText="@(conflictField == TaskField.Description ? effective.Description : change?.New)"
                                  Choice="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
                                  ChoiceChanged="@(choice => this.ResolveConflict(conflictField, choice))" />
                 }
-            </div>
-        }
-        else
-        {
-            <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
-                <tbody>
-                    @foreach (TaskField conflictField in activeConflict.Fields)
-                    {
-                        FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
-                        <ConflictRow Field="conflictField" Stacked="false" IsDescription="@(conflictField == TaskField.Description)"
-                                     TheirsText="@(conflictField == TaskField.Description ? activeConflict.Current.Description : change?.Old)"
-                                     YoursText="@(conflictField == TaskField.Description ? effective.Description : change?.New)"
-                                     Choice="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
-                                     ChoiceChanged="@(choice => this.ResolveConflict(conflictField, choice))" />
-                    }
-                </tbody>
-            </MudSimpleTable>
-        }
+            </tbody>
+        </MudSimpleTable>
     }
 
     @if (budgetExhausted)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-budget-banner">
-            <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Teammates.")</span>
+            <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Agents.")</span>
             <MudButton Size="Size.Medium" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
         </MudAlert>
     }
@@ -162,26 +153,15 @@ else if (this.loaded is { } task)
 
     IReadOnlyList<GateId> teamGates = this.Gates?.EnabledGates(effective.Location.Team) ?? [];
 
-    RenderFragment fieldsContent = @<text>
-            @if (teamGates.Count > 0)
-            {
-                <div class="task-detail-gates">@("Gates: " + string.Join(", ", teamGates.Select(ProcessDocument.ToId)))</div>
-            }
-            <div class="task-detail-title-row">
-                @if (this.titleEditing)
+    RenderFragment titleIcons = @<text>
+                @if (!this.titleEditing)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" aria-label="Title" />
-                }
-                else
-                {
-                    @* Expanded sits in a dialog already titled "Id · Title", so the id row is Panel-only. *@
-                    <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
                         @if (task.Location.Closed)
                         {
-                            <MudChip T="string" Size="Size.Small" Class="task-detail-closed-chip">Closed</MudChip>
+                            <StatusChip Icon="@Icons.Material.Filled.Lock" Class="task-detail-closed-chip">Closed</StatusChip>
                         }
                         <MudTooltip Text="Copy id">
                             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {effective.Id}")"
@@ -192,21 +172,63 @@ else if (this.loaded is { } task)
 
                 @if (!this.createMode)
                 {
-                    <TaskActionsMenu Id="effective.Id" OnCopyId="@(() => this.CopyIdAsync(effective.Id))" OnCopyLink="@(() => this.CopyLinkAsync(effective.Id))">
+                    <TaskActionsMenu @ref="this.actionsMenu" Id="effective.Id" OnCopyId="@(() => this.CopyIdAsync(effective.Id))" OnCopyLink="@(() => this.CopyLinkAsync(effective.Id))">
                         <ExtraItems>
-                            <MudMenuItem Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy</MudMenuItem>
-                            <MudMenuItem Class="task-detail-close" OnClick="this.CloseOrReopenAsync">@(task.Location.Closed ? "Reopen" : "Close task")</MudMenuItem>
+                            <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopy">Make a copy…</MudMenuItem>
+                            @* Close task… is the destructive one: last, after a divider, in Error ink, and it asks first (audit E10). Reopen undoes it, so it is an ordinary item. *@
+                            @if (task.Location.Closed)
+                            {
+                                <MudMenuItem Icon="@Icons.Material.Filled.LockOpen" Class="task-detail-close" OnClick="this.CloseOrReopenAsync">Reopen</MudMenuItem>
+                            }
+                            else
+                            {
+                                <MudDivider />
+                                <MudMenuItem Icon="@Icons.Material.Filled.Lock" Class="task-detail-close menu-item-destructive" OnClick="this.CloseOrReopenAsync">Close task…</MudMenuItem>
+                            }
                         </ExtraItems>
                     </TaskActionsMenu>
                 }
-            </div>
+        </text>;
+
+    @* Two columns put the title and the Description on the left and the grouped fields on the right; one column stacks them in this order. *@
+    RenderFragment titleEditor = @<text>
+            @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
+               title is edited, and a draft opens here with the field focused (design-system "Drawer anatomy"; audit B4j, B4p). *@
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
+                          Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
+        </text>;
+
+    RenderFragment titleContent = @<text>
+            @if (teamGates.Count > 0)
+            {
+                <div class="task-detail-gates">@("Gates: " + string.Join(", ", teamGates.Select(ProcessDocument.ToId)))</div>
+            }
+            @if (this.Header is null || this.createMode)
+            {
+                <div class="task-detail-title-row">
+                @if (this.titleEditing)
+                {
+                    @titleEditor
+                }
+                    else
+                    {
+                        @* The page header shows the saved title as its h1; this row shows the Task's name, with the pencil that edits it. *@
+                        <span class="task-detail-title-display">@effective.Title</span>
+                    }
+
+                    @if (this.Header is null)
+                    {
+                        @titleIcons
+                    }
+                </div>
+            }
             @if (!this.createMode && RequestFields.TryRead(task, out RequestFields? request) && request is not null)
             {
                 <div class="task-detail-request">
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</MudChip>
+                    <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.MoveToInbox" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</StatusChip>
                     @if (RequestTriageText(request.Triage, task.Status) is { } triageText)
                     {
-                        <MudChip T="string" Size="Size.Small" Class="task-detail-request-triage">@triageText</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip task-detail-request-triage">@triageText</MudChip>
                     }
                     @if (!string.IsNullOrEmpty(request.Requester))
                     {
@@ -222,210 +244,372 @@ else if (this.loaded is { } task)
                     }
                 </div>
             }
+        </text>;
 
-            <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                       Label="Status" Class="task-detail-status">
-                @foreach (TaskState state in TaskStates.All)
-                {
-                    <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
-                }
-            </MudSelect>
+    @* The strip under the header: Assigned to, Status and Priority side by side (Status's Duplicate of or Reason after it), and, on the edit page, the title's
+       own actions at the right end. *@
+    RenderFragment stripContent = @<text>
+            <div class="task-detail-strip">
 
-            @if (effective.Status == TaskState.Duplicate)
-            {
-                <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
-                            Label="Duplicate of" Class="task-detail-duplicate-of" />
-            }
-            else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
-            {
-                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
-                              Label="Reason (optional)" Class="task-detail-reason" />
-            }
-
-            <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
-                       Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
-            </MudSelect>
-
-            @if (notice is not null)
-            {
-                <div class="task-detail-wake-notice">@notice</div>
-            }
-
-            <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
-                              Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
-                              ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
-                <ItemTemplate Context="option">
-                    @* The Human has no presence dot; a Persona shows one only when its presence is known. *@
-                    <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
-                    @if (!option.IsHuman && !string.IsNullOrEmpty(option.Title))
-                    {
-                        <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
-                    }
-                </ItemTemplate>
-            </MudAutocomplete>
-            @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
-            {
-                <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
-            }
-
-            @* One Team/Project pair for both layouts (UX-R09); the Panel groups it under a caption and leaves the fields unlabelled. *@
-            <div class="@(this.Mode == TaskDetailMode.Panel ? "task-detail-team-project" : null)">
-                @if (this.Mode == TaskDetailMode.Panel)
-                {
-                    <span class="task-detail-team-project-label">Team / Project</span>
-                }
-                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
-                           Label="@(this.Mode == TaskDetailMode.Panel ? null : "Team")" aria-label="Team">
-                    @foreach (string teamName in this.TeamOptions())
-                    {
-                        <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
-                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="@(this.Mode == TaskDetailMode.Panel ? null : "Project")" aria-label="Project" />
+            <div class="task-detail-strip-item">
+                <MudTooltip Text="Assigned to"><span class="task-detail-strip-label"><MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" aria-label="Assigned to" /></span></MudTooltip>
+                <div class="task-detail-prop-value task-detail-assignee-value">
+                                <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
+                                                  Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
+                                                  ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee" Placeholder="Unassigned">
+                                    <ItemTemplate Context="option">
+                                        @* The Human has no presence dot; a Persona shows one only when its presence is known. *@
+                                        <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
+                                        @if (!option.IsHuman && !string.IsNullOrEmpty(option.Title))
+                                        {
+                                            <span class="chip-meta">@option.Title</span>
+                                        }
+                                    </ItemTemplate>
+                                </MudAutocomplete>
+                                @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
+                                {
+                                    <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
+                                }
+                </div>
             </div>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Status</span>
+                            <div class="task-detail-prop-value">
+                                @* The Board's second cue: the state dot beside the Status, the glyph in the Priority's adornment (audit B4r). *@
+                                <div class="task-detail-status-field">
+                                    <TaskStateDot State="effective.Status" />
+                                    <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                               Label="Status" Class="task-detail-status">
+                                        @foreach (TaskState state in TaskStates.All)
+                                        {
+                                            <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </div>
+                            </div>
+                        </div>
 
-            <div class="task-detail-sprint">
-                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
-                                  CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
-                                  Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
-                                  Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
-                @if (this.SprintIsMissing(task))
-                {
-                    <MudTooltip Text="Not in sprints.md">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
-                    </MudTooltip>
-                    <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
-                }
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Priority</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+                                           Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                        </div>
+
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Team</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
+                                           Label="Team" aria-label="Team">
+                                    @foreach (string teamName in this.TeamOptions())
+                                    {
+                                        <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </div>
+                        </div>
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Project</span>
+                            <div class="task-detail-prop-value">
+                                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" Placeholder="None" aria-label="Project" />
+                            </div>
+                        </div>
+
+                        <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Sprint</span>
+                            <div class="task-detail-prop-value">
+                                <div class="task-detail-sprint">
+                                    <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
+                                                      CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
+                                                      Label="Sprint" Placeholder="None" aria-label="Sprint" HelperText="@sprintHelper"
+                                                      Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
+                                    @if (this.SprintIsMissing(task))
+                                    {
+                                        <MudTooltip Text="Not in sprints.md">
+                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
+                                        </MudTooltip>
+                                        <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (effective.Status == TaskState.Duplicate)
+                        {
+                            <div class="task-detail-strip-item">
+                                <span class="task-detail-strip-label" aria-hidden="true">Duplicate of</span>
+                                <div class="task-detail-prop-value">
+                                    <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
+                                                Label="Duplicate of" Placeholder="None" Class="task-detail-duplicate-of" />
+                                </div>
+                            </div>
+                        }
+                        else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
+                        {
+                            <div class="task-detail-strip-item">
+                                <span class="task-detail-strip-label" aria-hidden="true">Reason</span>
+                                <div class="task-detail-prop-value">
+                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                                                  Label="Reason (optional)" Placeholder="Optional" Class="task-detail-reason" />
+                                </div>
+                            </div>
+                        }
+
+                        @if (notice is not null)
+                        {
+                            <div class="task-detail-strip-notice task-detail-wake-notice">@notice</div>
+                        }
             </div>
+        </text>;
 
-            <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Class="task-detail-parent" />
+    RenderFragment groupsContent = @<text>
+            @* The form is four headed groups (Status and priority, People, Planning, Dates); each property is a label
+               on the left and its value on the right once the drawer is 400px wide, stacked below that (a container
+               query in app.css). MudBlazor's own floating labels stay in the DOM as the accessible name. *@
+            <div class="task-detail-groups">
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-planning">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-planning">Planning</MudText>
+                    <div class="task-detail-props">
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Parent</span>
+                            <div class="task-detail-prop-value">
+                                <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Placeholder="None" Class="task-detail-parent" />
+                            </div>
+                        </div>
 
-            <MudChipSet T="TaskId" AllClosable="true" OnClose="this.OnRemoveBlocker" Class="task-detail-blocked-by-chips">
-                @foreach (TaskId blockerId in effective.BlockedBy)
-                {
-                    TaskItem? blockerTask = this.Store.Get(blockerId);
-                    <MudChip T="TaskId" Size="Size.Small" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
-                        @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
-                    </MudChip>
-                }
-            </MudChipSet>
-            <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Class="task-detail-blocked-by-add" />
-            @if (this.BlockedBySummary(effective) is { } blockedBySummary)
-            {
-                <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
-            }
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Blocked by</span>
+                            <div class="task-detail-prop-value">
+                                <MudChipSet T="TaskId" AllClosable="true" OnClose="this.OnRemoveBlocker" Class="task-detail-blocked-by-chips">
+                                    @foreach (TaskId blockerId in effective.BlockedBy)
+                                    {
+                                        TaskItem? blockerTask = this.Store.Get(blockerId);
+                                        <MudChip T="TaskId" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                                            @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
+                                        </MudChip>
+                                    }
+                                </MudChipSet>
+                                <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Placeholder="Add blocker…" Class="task-detail-blocked-by-add" />
+                                @if (this.BlockedBySummary(effective) is { } blockedBySummary)
+                                {
+                                    <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
+                                }
+                            </div>
+                        </div>
 
-            <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
-                @foreach (string tag in effective.Tags)
-                {
-                    <MudChip T="string" Size="Size.Small" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
-                }
-            </MudChipSet>
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
-                          OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Tags</span>
+                            <div class="task-detail-prop-value">
+                                <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
+                                    @foreach (string tag in effective.Tags)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+                                    }
+                                </MudChipSet>
+                                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
+                                              OnKeyDown="this.OnTagKeyDown" Label="Add tag" Placeholder="Add tag…" Class="task-detail-tags-add" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
-                           DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
-                           DateFormat="@TaskDates.Format" />
-            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
-                           DateChanged="this.OnDueDateChanged" Label="Due date"
-                           Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
-                           Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
-                           AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
-                           DateFormat="@TaskDates.Format" />
-
-            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
-            @if (task.ClosedAt is { } closedAt)
-            {
-                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
-            }
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-dates">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-dates">Dates</MudText>
+                    <div class="task-detail-props">
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Start date</span>
+                            <div class="task-detail-prop-value">
+                                <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                                               DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
+                                               DateFormat="@TaskDates.PickerFormat" Placeholder="None" />
+                            </div>
+                        </div>
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Due date</span>
+                            <div class="task-detail-prop-value">
+                                <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                                               DateChanged="this.OnDueDateChanged" Label="Due date"
+                                               Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
+                                               Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
+                                               AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
+                                               DateFormat="@TaskDates.PickerFormat" Placeholder="None" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </text>;
 
         RenderFragment sideContent = @<text>
             <div class="task-detail-description">
-                <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
-                                 Class="task-detail-description-toggle" ItemCount="2">
-                    <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
-                    <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
-                </HuddleSegmentedControl>
+                @* Description has a Group label like the groups above it; its Edit | Preview toggle sits on the label's line, so the field's own floating label
+                   (kept in the DOM, visually hidden) overlaps nothing (audit B4n). *@
+                <div class="task-detail-description-header">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-description">Description</MudText>
+                </div>
+
+                @if (this.uploading)
+                {
+                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="task-detail-upload-progress" aria-label="Uploading" />
+                }
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
-                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Class="task-detail-description" />
+                    @* The Library's Markdown toolbar (L3g) above the field, without the [[ ]] button: markdown-textarea.js wires it to the field's
+                       textarea once rendered (read view spec D-7). The wrapper is what the script searches inside. *@
+                    <div class="task-detail-description-editor task-detail-description-box" @ref="this.descriptionEditor">
+                        <div class="task-detail-description-bar">
+                            <MarkdownToolbar ShowWikilink="false" />
+                            @this.DescriptionToggle
+                        </div>
+                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
+                                      Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field markdown-field" />
+                    </div>
                 }
                 else
                 {
-                    <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store))</div>
+                    <div class="task-detail-description-box">
+                        <div class="task-detail-description-bar">@this.DescriptionToggle</div>
+                        <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                    </div>
                 }
             </div>
 
+            @* The Human gate sits under the Description and above the Library section: the switch, the proof it needs and the decision. *@
+        @if (!this.createMode)
+        {
+            <TaskHumanGate HumanGate="@effective.HumanGate" HumanGateChanged="this.OnHumanGateChanged"
+                           Action="@effective.Action"
+                           Assignee="@effective.Assignee" HumanName="@this.Human.Name" ChangeLog="@task.ChangeLog" />
+            @if (this.proof.Total > 0)
+            {
+                <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
+            }
+
+            @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
+            {
+                <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="@this.HasPending" OnReload="this.OnDecisionReload" />
+            }
+        }
+
+            @if (this.Options.Value.Library.Enabled)
+            {
+                @* The Library section: the files the Description links, as [[wiki-style]] links, and Link note, which opens the same picker as the
+                   link icon above. A link to a file that is gone stays in Quiet ink. *@
+                <div class="task-detail-library">
+                    <span class="task-detail-library-label">Library</span>
+                    <div class="task-detail-library-links">
+                        @foreach (LibraryRow row in this.LibraryRows(effective.Description))
+                        {
+                            @if (row.Exists)
+                            {
+                                <MudLink Href="@row.Href" Underline="Underline.None" Class="task-detail-library-link" title="@row.Folder"><span aria-hidden="true">[[</span>@row.Name<span aria-hidden="true">]]</span></MudLink>
+                            }
+                            else
+                            {
+                                <span class="task-detail-library-link task-detail-library-missing" title="Not found"><span aria-hidden="true">[[</span>@row.Name<span aria-hidden="true">]]</span></span>
+                            }
+                        }
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" Class="task-detail-library-add task-detail-link-file"
+                                   aria-label="Link a Library file" OnClick="this.LinkLibraryFileAsync">Link note</MudButton>
+                    </div>
+                </div>
+                @* Files: the same row style as Library, holding Add File, which uploads a file from this computer into the Task's folder. *@
+                <div class="task-detail-library task-detail-files">
+                    <span class="task-detail-library-label">Files</span>
+                    <div class="task-detail-library-links">
+                        <MudFileUpload @ref="this.attachPicker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="AttachPickLimit"
+                                       FilesChanged="this.OnFilesPickedAsync" Disabled="@(this.createMode || this.uploading)">
+                            <CustomContent Context="fileUpload">
+                                <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AttachFile" aria-label="Attach a file"
+                                               Class="task-detail-library-add task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
+                                               OnClick="@(() => fileUpload.OpenFilePickerAsync())">Add File</MudButton>
+                                </MudTooltip>
+                            </CustomContent>
+                        </MudFileUpload>
+                    </div>
+                </div>
+            }
+
             @if (effective.OriginRoomId is { } originRoomId)
             {
-                <span class="task-detail-origin">
-                    @if (this.originRoomName is not null)
-                    {
-                        <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
-                    }
-                    else
-                    {
-                        @:(Room no longer exists)
-                    }
-                </span>
+                @* The Room the Task came from, in the same labelled row style as Library and Files. *@
+                <div class="task-detail-library task-detail-room">
+                    <span class="task-detail-library-label">Room</span>
+                    <div class="task-detail-library-links">
+                        <span class="task-detail-origin">
+                            @if (this.originRoomName is not null)
+                            {
+                                <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
+                            }
+                            else
+                            {
+                                @:(Room no longer exists)
+                            }
+                        </span>
+                    </div>
+                </div>
             }
         </text>;
 
-    @if (this.Mode == TaskDetailMode.Expanded)
+    RenderFragment logContent = @<text>
+            @if (!this.createMode)
+            {
+                @* The History closes the left column, drawn by TaskHistory like a document's History panel. *@
+                <section class="task-detail-history">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
+                    <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
+                </section>
+            }
+        </text>;
+
+    @if (this.Header is not null)
     {
-        <MudGrid Class="task-detail-grid">
-            <MudItem xs="12" md="7" Class="task-detail-col-fields">@fieldsContent</MudItem>
-            <MudItem xs="12" md="5" Class="task-detail-col-side">@sideContent</MudItem>
-        </MudGrid>
-    }
-    else
-    {
-        @fieldsContent
-        @sideContent
+        @this.Header(new TaskDetailHeaderParts(this.titleEditing && !this.createMode ? titleEditor : null, titleIcons))
     }
 
-    @* Cancel, then the one filled primary action (Save, always here, never in the alert above); Expand is a quiet
-       sibling. The rare actions - Make a copy and Close/Reopen - live in the title row's Actions menu. *@
-    <div class="task-detail-actions">
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
-        @if (!this.createMode && this.Mode == TaskDetailMode.Panel)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
-        }
-    </div>
+    <MudGrid Class="task-detail-grid">
+        <MudItem xs="12" md="7" Class="task-detail-col-title">@titleContent</MudItem>
+        <MudItem xs="12" Class="task-detail-col-strip">@stripContent</MudItem>
+        <MudItem xs="12" md="5" Class="task-detail-col-fields">@groupsContent</MudItem>
+        <MudItem xs="12" md="7" Class="task-detail-col-side">@sideContent</MudItem>
+        <MudItem xs="12" md="7" Class="task-detail-col-log">@logContent</MudItem>
+    </MudGrid>
+
+    @* Cancel, then the one filled primary action (Save, always here, never in the alert above). In the Tasks drawer the host draws
+       them in the drawer's sticky footer instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
+       live in the title row's Actions menu, and Expand beside it. *@
+    @if (!this.ExternalFooter)
+    {
+        <div class="task-detail-actions">
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+        </div>
+    }
 
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this task will be lost." Disabled="@(!this.HasPending)" Class="task-detail-exit-prompt" />
 
     @if (!this.createMode)
     {
-        <MudExpansionPanels Class="task-detail-changelog">
-            <MudExpansionPanel Text="@($"Change log ({task.ChangeLog.Count})")">
-                <MudTimeline TimelinePosition="TimelinePosition.Start">
-                    @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
-                    {
-                        <MudTimelineItem Size="Size.Small">
-                            <ItemOpposite>
-                                <span class="task-detail-changelog-date">@TaskDetail.FormatChangeLogDate(entry.At, this.Clock)</span>
-                            </ItemOpposite>
-                            <ItemContent>
-                                <span class="task-detail-changelog-entry">@($"{entry.Actor}: {entry.Summary}")</span>
-                            </ItemContent>
-                        </MudTimelineItem>
-                    }
-                </MudTimeline>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+        @* The History now closes the left column, above the footer meta (see sideContent). *@
+
+        @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
+        <div class="task-detail-footer-meta">
+            <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
+            <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
+            @if (task.ClosedAt is { } closedAt)
+            {
+                <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
+            }
+        </div>
     }
 }
 </div>
@@ -449,33 +633,104 @@ else if (this.loaded is { } task)
     private string? baseVersion;
     private TaskResult.Conflict? conflict;
     private TaskResult.GateRefused? gateRefusal;
+    private Proof proof = Proof.Empty;
     private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
     private string? saveError;
     private IReadOnlyList<string> saveProblems = [];
     private bool titleEditing;
+
+    /// <summary>One Library file the Description links: its name without the extension, its folder, its Library page address and whether it still exists.</summary>
+    private sealed record LibraryRow(string Name, string Folder, string Href, bool Exists);
+
+    /// <summary>The Library files <paramref name="description"/> links, found the way the Description preview and the Linked documents panel find them, once each.</summary>
+    /// <param name="description">The Description as it stands, saved or pending.</param>
+    /// <returns>One row per distinct file, in the order the Description names them.</returns>
+    private List<LibraryRow> LibraryRows(string description)
+    {
+        List<LibraryRow> rows = [];
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        List<string> paths = [.. Agency.Huddle.App.Components.Sidebar.TaskDocumentsPanel.PathsIn(description)];
+        foreach (string path in paths)
+        {
+            // A path with a space in a folder name is also matched up to the space; the longer path is the file, so the stub is no row.
+            if (paths.Any(other => other.Length > path.Length && other.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (this.LibraryResolver.ResolvePath(path) is { } reference && seen.Add(reference.RootId + "/" + reference.RelativePath))
+            {
+                int slash = reference.RelativePath.LastIndexOf('/');
+                string file = slash >= 0 ? reference.RelativePath[(slash + 1)..] : reference.RelativePath;
+                string name = System.IO.Path.GetFileNameWithoutExtension(file);
+                string folder = slash >= 0 ? reference.RelativePath[..slash] : reference.RootId;
+                rows.Add(new LibraryRow(name.Length > 0 ? name : file, folder, LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath), reference.Exists));
+            }
+        }
+
+        return rows;
+    }
+
+    /// <summary>Edit | Preview, drawn at the right end of the Description card's toolbar row in both modes.</summary>
+    private RenderFragment DescriptionToggle => @<HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                                                                           Class="task-detail-description-toggle" ItemCount="2">
+        <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
+        <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
+    </HuddleSegmentedControl>;
+    private TaskActionsMenu? actionsMenu;
+    private (bool Visible, string Label, bool Disabled) notifiedFooter;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
     private string tagInput = string.Empty;
     private string? originRoomName;
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? attachPicker;
+    private ElementReference descriptionEditor;
+    private IJSObjectReference? textareaModule;
+    private IJSObjectReference? toolbarHandle;
+
+    private bool uploading;
+    private bool disposed;
+    private CancellationTokenSource uploadCts = new();
+
+    /// <summary>The most files one pick may hold; the per-edit cap is enforced by <see cref="OnFilesPickedAsync"/>, so a pick past it gets the spec's own text and not the file input's.</summary>
+    private const int AttachPickLimit = 50;
+
+    /// <summary>The files uploaded since the last Save; Revert deletes them (TaskAttachments spec 6.5), Save keeps them.</summary>
+    private readonly List<LibraryPath> unsavedUploads = [];
 
     /// <summary>The Task to show, or <see langword="null"/> when creating or copying (a later dispatch's job).</summary>
     [Parameter]
     public TaskId? Id { get; set; }
 
-    /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/> (Spec §13.6, corrections-B7 "14.4" item 2). <see cref="TaskDetailDialog"/> passes only one of <see cref="Id"/> or this, never both.</summary>
+    /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/> (Spec §13.6, corrections-B7 "14.4" item 2). The edit page passes only one of <see cref="Id"/> or this, never both.</summary>
     [Parameter]
     public TaskDraft? Draft { get; set; }
 
-    /// <summary>Whether this instance is the Panel or the Expanded dialog layout. The two share every field's logic; only the Team/Project combining (Spec §13.6) differs so far.</summary>
+    /// <summary>
+    /// True when the host draws Cancel and Save itself, in <see cref="ResizableEndDrawer"/>'s sticky footer (the Tasks page, audit B4k), so this component draws
+    /// no action row of its own. The host reads <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> and <see cref="FooterSaveDisabled"/>, calls
+    /// <see cref="SaveAsync"/> and <see cref="CancelAsync"/>, and re-renders on <see cref="FooterStateChanged"/>. False (the default) keeps the row inline.
+    /// </summary>
     [Parameter]
-    public TaskDetailMode Mode { get; set; }
+    public bool ExternalFooter { get; set; }
 
-    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand once its own dialog has opened (Spec §13.6, corrections-B7 "14.4" item 1). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
+    /// <summary>
+    /// The host's own header (the Task edit page's), drawn above the form with the title's pieces: the title field while a saved Task's title is edited, and the pencil,
+    /// Copy id and actions menu for the end of the title's line. When set, this component draws no title row for a saved Task; a new Task keeps its title field in the form, under the header's "New task". Null (the default) keeps the title row, as the Tasks drawer has it.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TaskDetailHeaderParts>? Header { get; set; }
+
+    /// <summary>Raised after a render in which <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> or <see cref="FooterSaveDisabled"/> changed, so a host that draws the footer re-renders it.</summary>
+    [Parameter]
+    public EventCallback FooterStateChanged { get; set; }
+
+    /// <summary>Raised with the new id when Save creates the Task from a draft (B10), so a host can show the saved Task another way: the Tasks drawer switches to the read view.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCreated { get; set; }
+
+    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand just before its own dialog opens (Spec §13.6, corrections-B7 "14.4" item 1, theming plan 7.6). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
-
-    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers.</summary>
-    [Parameter]
-    public EventCallback OnExpand { get; set; }
 
     /// <summary>
     /// Raised whenever <see cref="HasPending"/> flips between empty and non-empty - an edit, Revert,
@@ -487,6 +742,101 @@ else if (this.loaded is { } task)
     /// </summary>
     [Parameter]
     public EventCallback<bool> HasPendingChanged { get; set; }
+
+    /// <summary>Whether this is a new Task that has not been saved yet. It is a change from the start, so a host that draws Save enables it at once.</summary>
+    public bool IsCreate => this.createMode;
+
+    /// <summary>Whether a host that draws the footer shows it: while there are changes to save, and always for a draft, which is a change from the start.</summary>
+    public bool FooterVisible => !this.deleted && this.loaded is not null && (this.HasPending || this.createMode);
+
+    /// <summary>The footer's Save label ("Save", or "Save &amp; notify {name}" for an awake or asleep assignee), as the inline row would draw it.</summary>
+    public string FooterSaveLabel => this.loaded is { } task
+        ? TaskDetail.SaveLabel(this.Triggers.Preview(task, this.Effective ?? task, TaskActors.Human(this.Human)))
+        : "Save";
+
+    /// <summary>Whether the footer's Save is disabled: a Duplicate with no original, a Sprint name that is not valid, or a conflict field still unresolved.</summary>
+    public bool FooterSaveDisabled => this.IsSaveDisabled(this.Effective ?? this.loaded);
+
+    /// <summary>Whether Save is disabled for <paramref name="effective"/> (the Task with the pending edits applied).</summary>
+    /// <param name="effective">The Task with <see cref="pending"/> applied, or <see langword="null"/> before anything loaded.</param>
+    private bool IsSaveDisabled(TaskItem? effective) =>
+        effective is null
+        || (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null)
+        || this.SprintProblem() is not null
+        || (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
+
+    /// <summary>
+    /// Wires the Description's Markdown toolbar to its textarea while the field is in Edit, and takes the wiring away when it is not
+    /// (read view spec D-7). The script lives in <c>markdown-textarea.js</c>, so a command edits the text in the browser and raises the
+    /// field's own <c>change</c>, which this component reads like typing.
+    /// </summary>
+    /// <param name="firstRender">Unused: the wiring is checked after every render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _ = firstRender;
+        bool wanted = !this.disposed && this.loaded is not null && !this.deleted && this.descriptionMode == DescriptionViewMode.Edit && this.descriptionEditor.Context is not null;
+        if (wanted == (this.toolbarHandle is not null))
+        {
+            return;
+        }
+
+        if (!wanted)
+        {
+            await this.DetachToolbarAsync();
+            return;
+        }
+
+        try
+        {
+            this.textareaModule ??= await this.JS.InvokeAsync<IJSObjectReference>("import", "./markdown-textarea.js");
+            this.toolbarHandle = await this.textareaModule.InvokeAsync<IJSObjectReference>("attachIn", this.descriptionEditor);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is no field left to wire.
+        }
+        catch (JSException)
+        {
+            // The script could not attach (the field was replaced by a later render). The Description stays an ordinary field, and the next render asks again.
+        }
+    }
+
+    /// <summary>Detaches the Description toolbar's listeners, if attached; a circuit that is already gone has none to detach.</summary>
+    private async Task DetachToolbarAsync()
+    {
+        IJSObjectReference? handle = this.toolbarHandle;
+        this.toolbarHandle = null;
+        if (handle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await handle.InvokeVoidAsync("dispose");
+            await handle.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, and the listeners went with the page.
+        }
+        catch (JSException)
+        {
+            // The field was removed by the render that asked for this; its listeners went with it.
+        }
+    }
+
+    /// <summary>Tells a host that draws the footer when what it shows has changed since the last render.</summary>
+    /// <param name="firstRender">Unused: the footer is checked after every render.</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        (bool Visible, string Label, bool Disabled) current = (this.FooterVisible, this.FooterSaveLabel, this.FooterSaveDisabled);
+        if (this.ExternalFooter && current != this.notifiedFooter)
+        {
+            this.notifiedFooter = current;
+            _ = this.FooterStateChanged.InvokeAsync();
+        }
+    }
 
     /// <summary>Whether the Human has an unsaved edit pending. Public so the hosting page (corrections-B7 14.5.i item 2) can drive its own drawer's <c>OverlayAutoClose</c> from it - see <see cref="HasPendingChanged"/> for why a page must not simply read this on its own schedule.</summary>
     public bool HasPending => !this.pending.IsEmpty || this.sprintInput is not null;
@@ -610,7 +960,8 @@ else if (this.loaded is { } task)
         if (this.Id is null && this.Draft is { } draft)
         {
             this.createMode = true;
-            this.loaded = TaskDetail.BuildDraftItem(draft, TaskActors.Human(this.Options.Value));
+            this.titleEditing = true;
+            this.loaded = TaskDetail.BuildDraftItem(draft, TaskActors.Human(this.Human));
         }
         else
         {
@@ -667,7 +1018,8 @@ else if (this.loaded is { } task)
         item.Sprint);
 
     /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
-    private void Refresh()
+    /// <param name="withProof">Whether to recompute the Proof too (a change to this Task or to one of its children).</param>
+    private void Refresh(bool withProof = true)
     {
         if (this.Id is not { } id)
         {
@@ -688,6 +1040,41 @@ else if (this.loaded is { } task)
         {
             this.baseVersion = current.Version;
         }
+
+        if (withProof)
+        {
+            this.RefreshProof(current);
+        }
+    }
+
+    /// <summary>Recomputes <see cref="proof"/> for <paramref name="task"/>; a Proof that cannot be read from disk is shown as no Proof.</summary>
+    /// <param name="task">The Task to evaluate.</param>
+    private void RefreshProof(TaskItem task)
+    {
+        try
+        {
+            this.proof = this.ProofSource.For(task);
+        }
+        catch (IOException)
+        {
+            // A Document the Proof reads is locked or missing for a moment; no Proof is shown until the next change.
+            this.proof = Proof.Empty;
+        }
+    }
+
+    /// <summary>Whether Move anyway is offered for <paramref name="refusal"/>: the gate allows an override and the Task is not gated (a gated Task is decided on the card, Spec §6.8).</summary>
+    /// <param name="refusal">The refusal being shown.</param>
+    private bool CanMoveAnyway(TaskResult.GateRefused refusal) => refusal.CanOverride && this.loaded is not { IsGated: true };
+
+    /// <summary>Records the Human gate switch as a pending edit; nothing is saved.</summary>
+    /// <param name="value">The switch's new value.</param>
+    private void OnHumanGateChanged(bool value) => this.SetPending(this.pending with { HumanGate = Optional<bool>.Set(value) });
+
+    /// <summary>The decision card reported a version conflict: re-read the Task and its Proof (never the panel's own Conflict state, Spec corrections P10 item 9).</summary>
+    private void OnDecisionReload()
+    {
+        this.Refresh();
+        this.StateHasChanged();
     }
 
     /// <summary>Resolves <see cref="loaded"/>'s Origin Room name, or leaves it <see langword="null"/> when there is none or it no longer exists (Spec §13.6).</summary>
@@ -703,24 +1090,37 @@ else if (this.loaded is { } task)
         this.originRoomName = room?.Name;
     }
 
-    private void OnTaskChanged(TaskChange change) => this.DispatchRefresh();
+    private void OnTaskChanged(TaskChange change) => this.DispatchRefresh(change.After.Id == this.Id || change.After.Parent == this.Id);
 
-    private void OnTasksReloaded() => this.DispatchRefresh();
+    private void OnTasksReloaded() => this.DispatchRefresh(true);
 
-    private void OnActivityChanged() => this.DispatchRefresh();
+    private void OnActivityChanged() => this.DispatchRefresh(false);
 
     /// <summary>Marshals a requery back onto the render's synchronisation context (the <c>RoomList.razor</c> pattern), tolerating a disposed component.</summary>
-    private void DispatchRefresh()
+    /// <param name="withProof">Whether the change can alter this Task's Proof.</param>
+    private void DispatchRefresh(bool withProof)
     {
         _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
-            this.Refresh();
+            this.Refresh(withProof);
             await this.RefreshOriginRoomAsync();
             this.StateHasChanged();
         });
     }
 
-    private void BeginEditTitle() => this.titleEditing = true;
+    private void BeginEditTitle() => this.SetTitleEditing(true);
+
+    /// <summary>Opens or closes the inline title edit.</summary>
+    /// <param name="editing">Whether the title is being edited.</param>
+    private void SetTitleEditing(bool editing)
+    {
+        if (this.titleEditing == editing)
+        {
+            return;
+        }
+
+        this.titleEditing = editing;
+    }
 
     private void OnTitleChanged(string value)
     {
@@ -743,6 +1143,164 @@ else if (this.loaded is { } task)
     }
 
     private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
+
+    /// <summary>Appends the path line of <paramref name="absolutePath"/> to the pending description and shows the Edit view, so the Human sees it (TaskAttachments spec 6.4, 6.5).</summary>
+    /// <param name="absolutePath">The Library file's absolute path.</param>
+    private void AppendAttachment(string absolutePath)
+    {
+        string current = this.Effective?.Description ?? this.loaded?.Description ?? string.Empty;
+        this.SetPending(this.pending with { Description = TaskAttachmentText.AppendPathLine(current, absolutePath) });
+        this.descriptionMode = DescriptionViewMode.Edit;
+    }
+
+    /// <summary>Opens the Library file picker and, on a pick, appends the file's path line.</summary>
+    private async Task LinkLibraryFileAsync()
+    {
+        IDialogReference reference = await this.Dialogs.ShowAsync<LibraryFilePickerDialog>("Link a Library file", LibraryFilePickerDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: LibraryPath file })
+        {
+            this.AppendAttachment(file.FullPath);
+        }
+    }
+
+    /// <summary>
+    /// Saves each picked file into the Task's upload folder and appends its path line. A refusal is shown and the next file is
+    /// still tried; the per-edit cap stops the rest. Resetting the picker raises this callback again with no files.
+    /// </summary>
+    /// <param name="files">The files the Human picked, or none after a reset.</param>
+    private async Task OnFilesPickedAsync(IReadOnlyList<IBrowserFile>? files)
+    {
+        if (this.loaded is not { } task || this.createMode || files is null || files.Count == 0)
+        {
+            return;
+        }
+
+        LibraryOptions library = this.Options.Value.Library;
+        CancellationToken ct = this.uploadCts.Token;
+        this.uploading = true;
+        try
+        {
+            foreach (IBrowserFile file in files)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                if (this.unsavedUploads.Count >= library.MaxUploadsPerMessage)
+                {
+                    this.NotifyAttach($"A Task edit can attach up to {library.MaxUploadsPerMessage} files. Save, then attach more.", Severity.Warning);
+                    break;
+                }
+
+                if (file.Size > library.MaxUploadBytes)
+                {
+                    this.NotifyAttach(LibraryFileService.UploadTooLargeMessage(file.Name, library.MaxUploadBytes), Severity.Warning);
+                    continue;
+                }
+
+                if (!await this.TryAttachAsync(task.Id, file, library, ct))
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            this.uploading = false;
+            if (this.attachPicker is not null && !this.disposed)
+            {
+                await this.attachPicker.ClearAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Saves one picked file and appends its path line. A failure to read or write the file is shown and the caller goes on to the next
+    /// file; an upload that finishes after Revert, Cancel or the page closing is deleted at once, so no file is left without a line.
+    /// </summary>
+    /// <param name="id">The Task the file is attached to.</param>
+    /// <param name="file">The picked file.</param>
+    /// <param name="library">The Library options, for the size cap.</param>
+    /// <param name="ct">Cancelled by Revert, Cancel or Dispose.</param>
+    /// <returns><see langword="false"/> when the rest of the pick must be dropped because the edit was cancelled.</returns>
+    private async Task<bool> TryAttachAsync(TaskId id, IBrowserFile file, LibraryOptions library, CancellationToken ct)
+    {
+        try
+        {
+            await using Stream stream = file.OpenReadStream(library.MaxUploadBytes + 1);
+            LibraryResult<LibraryUpload> saved = await this.Uploader.SaveAsync(id.ToString(), file.Name, stream, ct);
+            if (saved.Value is not { } upload)
+            {
+                this.NotifyAttach(saved.Error ?? $"Couldn't attach {file.Name}.", Severity.Warning);
+                return true;
+            }
+
+            if (ct.IsCancellationRequested)
+            {
+                await this.DeleteUploadsAsync([upload.File]);
+                return false;
+            }
+
+            this.unsavedUploads.Add(upload.File);
+            this.AppendAttachment(upload.File.FullPath);
+            this.NotifyAttach($"Attached {System.IO.Path.GetFileName(upload.File.FullPath)}.", Severity.Success);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.NotifyAttach($"Couldn't attach {file.Name}.", Severity.Warning);
+            return true;
+        }
+    }
+
+    /// <summary>Stops uploads still running and gives the next pick a fresh token; called by Revert and Cancel so an upload cannot land after the Human discarded the edit.</summary>
+    private void CancelUploads()
+    {
+        this.uploadCts.Cancel();
+        this.uploadCts.Dispose();
+        this.uploadCts = new CancellationTokenSource();
+    }
+
+    /// <summary>Shows an attach message under the one key <c>task-attach</c>. A snackbar already showing under a key would swallow a new one, so the old one is removed first and a burst of uploads replaces rather than stacks (spec 7).</summary>
+    /// <param name="message">The text to show.</param>
+    /// <param name="severity">Success for an attached file, Warning for a refusal.</param>
+    private void NotifyAttach(string message, Severity severity)
+    {
+        this.Snackbar.RemoveByKey("task-attach");
+        this.Snackbar.Add(message, severity, key: "task-attach");
+    }
+
+    /// <summary>Deletes the files uploaded since the last Save, as an unsent chat upload is deleted. A file that cannot be deleted stays in the Library.</summary>
+    private void DeleteUnsavedUploads()
+    {
+        LibraryPath[] doomed = [.. this.unsavedUploads];
+        this.unsavedUploads.Clear();
+        if (doomed.Length > 0)
+        {
+            _ = this.DeleteUploadsAsync(doomed);
+        }
+    }
+
+    private async Task DeleteUploadsAsync(IReadOnlyList<LibraryPath> files)
+    {
+        foreach (LibraryPath file in files)
+        {
+            try
+            {
+                await this.Uploader.DeleteUnsentAsync(file, CancellationToken.None);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The file stays in the Task's folder; the Library lists it and the Human can delete it there.
+            }
+        }
+    }
 
     /// <summary>
     /// Sets the new Status; leaving Duplicate for any other state clears <see cref="TaskPatch.DuplicateOf"/>
@@ -814,7 +1372,7 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>
-    /// Searches candidates for the Assignee autocomplete: the Human (<see cref="TeamOptions.HumanName"/>,
+    /// Searches candidates for the Assignee autocomplete: the Human (<see cref="IHumanIdentity.Name"/>,
     /// hardcoded first so the Human can always assign a Task to themselves) followed by every known Persona
     /// by Name, resolving each one's presence (Spec §13.6). The Human's option carries no presence - the item
     /// template skips the badge for <see cref="AssigneeOption.IsHuman"/>, since Awake/Asleep/Offline describes
@@ -825,7 +1383,7 @@ else if (this.loaded is { } task)
     private Task<IEnumerable<AssigneeOption>> SearchAssignees(string? query, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        AssigneeOption human = new(this.Options.Value.HumanName, string.Empty, null, IsHuman: true);
+        AssigneeOption human = new(this.Human.Name, string.Empty, null, IsHuman: true);
         IEnumerable<AssigneeOption> personas = this.Personas.Entries
             .Select(entry => new AssigneeOption(entry.Name, entry.Title, TaskPresence.For(entry.Name, this.Directory, this.Gateway, this.Health, this.Turns)));
         IEnumerable<AssigneeOption> options = new[] { human }.Concat(personas)
@@ -998,7 +1556,14 @@ else if (this.loaded is { } task)
 
     private void Revert()
     {
+        this.CancelUploads();
+        this.DeleteUnsavedUploads();
         this.ClearPending();
+        if (!this.createMode)
+        {
+            this.SetTitleEditing(false);
+        }
+
         this.saveError = null;
         this.saveProblems = [];
         this.conflict = null;
@@ -1010,7 +1575,7 @@ else if (this.loaded is { } task)
     /// "Discard changes?" prompt - unlike Expand, corrections-B7 "14.4" item 1 - since clicking Cancel
     /// already says what the Human wants.
     /// </summary>
-    private async Task CancelAsync()
+    public async Task CancelAsync()
     {
         this.Revert();
         await this.OnClose.InvokeAsync();
@@ -1021,7 +1586,7 @@ else if (this.loaded is { } task)
     /// item 7): with nothing pending, returns <see langword="true"/> immediately with no prompt.
     /// Otherwise asks through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>
     /// and, only on confirmation, discards <see cref="pending"/> (the same effect as <see cref="Revert"/>)
-    /// and returns <see langword="true"/>. The page calls this before switching <c>Id</c>; <see cref="ExpandAsync"/>
+    /// and returns <see langword="true"/>. The page calls this before switching <c>Id</c>; Expand (now gone)
     /// calls it before opening the dialog.
     /// </summary>
     public async Task<bool> ConfirmDiscardAsync()
@@ -1045,38 +1610,16 @@ else if (this.loaded is { } task)
         return true;
     }
 
-    /// <summary>Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the dialog loads the Task itself (corrections-B5 D14 item 7) - and closes the Panel.</summary>
-    private async Task ExpandAsync()
-    {
-        if (!await this.ConfirmDiscardAsync())
-        {
-            return;
-        }
-
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, this.Id } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null, parameters, TaskDetailDialog.Options);
-        await this.OnClose.InvokeAsync();
-    }
-
     /// <summary>
-    /// Make a copy (Spec §13.6): opens a new <see cref="TaskDetailDialog"/> in create mode with a
-    /// <see cref="TaskDraft"/> built from <see cref="Effective"/> (the Panel's own pending-included
-    /// fields, not just <see cref="loaded"/>) - <c>Copy of</c> title, Backlog status, the assignee kept,
-    /// no Origin/Change log/DuplicateOf (a <see cref="TaskDraft"/> never carries those). Writes nothing:
-    /// the copy doesn't exist until its own Save.
+    /// Make a copy (Spec §13.6): opens a new Task that starts as a copy of this saved Task in the edit page's own Tab (<see cref="TaskTabs.OpenCopy"/>).
+    /// Writes nothing: the copy does not exist until its own Save. Pending edits here are not copied; the copy is of the Task as stored.
     /// </summary>
-    private async Task MakeACopyAsync()
+    private void MakeACopy()
     {
-        if (this.loaded is not { } current)
+        if (this.loaded is { } current && !this.createMode)
         {
-            return;
+            TaskTabs.OpenCopy(this.Tabs, this.Navigation, current.Id);
         }
-
-        TaskItem effective = this.Effective ?? current;
-        TaskDraft copy = TaskDetail.BuildDraft(effective) with { Title = $"Copy of {effective.Title}", Status = TaskState.Backlog };
-
-        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, copy } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(copy.Title, parameters, TaskDetailDialog.Options);
     }
 
     /// <summary>
@@ -1089,6 +1632,11 @@ else if (this.loaded is { } task)
     private async Task CloseOrReopenAsync()
     {
         if (this.loaded is not { } before)
+        {
+            return;
+        }
+
+        if (!before.Location.Closed && !await this.ConfirmCloseAsync(before))
         {
             return;
         }
@@ -1107,7 +1655,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        TaskActor actor = TaskActors.Human(this.Options.Value);
+        TaskActor actor = TaskActors.Human(this.Human);
         TaskResult result = before.Location.Closed
             ? this.Service.Reopen(current.Id, actor)
             : this.Service.Close(current.Id, actor);
@@ -1116,6 +1664,21 @@ else if (this.loaded is { } task)
             this.loaded = saved.Task;
             this.baseVersion = saved.Task.Version;
         }
+    }
+
+    /// <summary>
+    /// Asks before <paramref name="task"/> is closed (audit E10, design-system "Close task…"): closing ends the Task and notifies its assignee,
+    /// so it never happens from one stray click. The menu closes first (<see cref="MenuDialogs"/>), so no popover is left over the dialog's scrim.
+    /// </summary>
+    /// <param name="task">The Task about to be closed.</param>
+    private async Task<bool> ConfirmCloseAsync(TaskItem task)
+    {
+        string consequence = task.Assignee is { } assignee
+            ? $"{assignee} is notified. You can reopen it from this menu."
+            : "You can reopen it from this menu.";
+        return await MenuDialogs.AfterClosingAsync(
+            this.actionsMenu?.Menu,
+            () => this.Dialogs.ConfirmAsync($"Close {task.Id}?", $"This ends the task. {consequence}", "Close task"));
     }
 
     /// <summary>
@@ -1140,6 +1703,11 @@ else if (this.loaded is { } task)
         this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = resolvedChoice };
         if (resolvedChoice == ConflictChoice.Theirs)
         {
+            if (field == TaskField.Description)
+            {
+                this.DeleteUnsavedUploads();
+            }
+
             this.SetPending(TaskDetail.DropField(this.pending, field), field == TaskField.Sprint ? null : this.sprintInput);
         }
 
@@ -1161,6 +1729,8 @@ else if (this.loaded is { } task)
         TaskField.StartDate => patch with { StartDate = default },
         TaskField.DueDate => patch with { DueDate = default },
         TaskField.Description => patch with { Description = null },
+        TaskField.HumanGate => patch with { HumanGate = default },
+        TaskField.Action => patch with { Action = default },
         TaskField.Location => patch with { Team = null, Project = default },
         TaskField.Status => patch with { Status = null, Reason = null, DuplicateOf = default },
         _ => patch,
@@ -1201,7 +1771,7 @@ else if (this.loaded is { } task)
     /// <summary>
     /// In create mode (corrections-B7 "14.4" item 2), calls <see cref="TaskService.Create"/> with a
     /// <see cref="TaskDraft"/> built from <see cref="Effective"/> and, on success, flips into ordinary
-    /// edit mode on the newly created Task (the <c>TeammateCard.SaveAsync</c> create/edit convention).
+    /// edit mode on the newly created Task (the <c>AgentProfileCard.SaveAsync</c> create/edit convention).
     /// Otherwise saves <see cref="pending"/> through <see cref="TaskService.Update"/> with the panel's
     /// own <see cref="baseVersion"/> (corrections-B5 D14 item 6) - never <see langword="null"/> or the
     /// just-refreshed version, so a concurrent edit to the same field is reported as a conflict rather
@@ -1209,9 +1779,9 @@ else if (this.loaded is { } task)
     /// <see cref="TaskResult.Refused"/> leave <see cref="pending"/> untouched, so a caller (such as
     /// <see cref="CloseOrReopenAsync"/>) can tell a stopped save from a completed one by checking
     /// <see cref="HasPending"/> afterwards. An <see cref="IOException"/> from the store (Spec §13.6
-    /// "Save errors") is shown in <see cref="saveError"/>, following <c>TeammateCard.SaveAsync</c>.
+    /// "Save errors") is shown in <see cref="saveError"/>, following <c>AgentProfileCard.SaveAsync</c>.
     /// </summary>
-    private Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
+    public Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
 
     /// <summary>
     /// The Team's process gates, or <see langword="null"/> when none are registered (a host without Teams enforces
@@ -1225,14 +1795,14 @@ else if (this.loaded is { } task)
     /// </summary>
     private async Task MoveAnywayAsync()
     {
-        if (this.gateRefusal is not { } refusal)
+        if (this.gateRefusal is not { } refusal || !this.CanMoveAnyway(refusal))
         {
             return;
         }
 
         bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
             "Move anyway?",
-            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the Change log.",
+            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the History.",
             yesText: "Move anyway",
             cancelText: "Cancel");
         if (confirmed == true)
@@ -1258,7 +1828,7 @@ else if (this.loaded is { } task)
             return Task.CompletedTask;
         }
 
-        TaskActor actor = TaskActors.Human(this.Options.Value);
+        TaskActor actor = TaskActors.Human(this.Human);
         Sprint? createdSprint = null;
         TaskResult? outcome = null;
 
@@ -1290,19 +1860,29 @@ else if (this.loaded is { } task)
             switch (result)
             {
                 case TaskResult.Saved saved:
+                    bool wasCreate = this.createMode;
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
+                    this.unsavedUploads.Clear();
                     this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
                     this.createMode = false;
+                    this.SetTitleEditing(false);
+                    if (wasCreate)
+                    {
+                        _ = this.OnCreated.InvokeAsync(saved.Task.Id);
+                    }
+
                     break;
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
                     this.baseVersion = unchanged.Task.Version;
+                    this.unsavedUploads.Clear();
                     this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
+                    this.SetTitleEditing(false);
                     break;
                 case TaskResult.Conflict conflictResult:
                     this.loaded = conflictResult.Current;
@@ -1336,17 +1916,16 @@ else if (this.loaded is { } task)
         return Task.CompletedTask;
     }
 
-    /// <summary>A Change log entry's date, in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
+    /// <summary>A Change log entry's day and time ("Today 1:15 PM"), in the Human's local time through the injected <see cref="TimeProvider"/> (J51) - never <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a test can pin a fixed <see cref="TimeProvider.LocalTimeZone"/> and get a deterministic string.</summary>
     /// <param name="at">The entry's UTC instant.</param>
-    /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/>.</param>
-    private static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
-        TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+    /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/> and today.</param>
+    internal static string FormatHistoryDate(DateTimeOffset at, TimeProvider clock) => TaskDates.HumanMoment(at, clock);
 
-    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; Notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
     private static string SaveLabel(WakePreview preview) =>
         preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
-            ? $"Save & Notify {preview.AssigneeName}"
+            ? $"Save & notify {preview.AssigneeName}"
             : "Save";
 
     /// <summary>
@@ -1370,7 +1949,7 @@ else if (this.loaded is { } task)
     /// <summary>The triage chip text for a Request: <c>Needs triage</c> for an untriaged Backlog Request, else the state's name; <see langword="null"/> for no chip.</summary>
     /// <param name="triage">The Request's triage state.</param>
     /// <param name="status">The Task's Status.</param>
-    private static string? RequestTriageText(TriageState triage, TaskState status) => triage switch
+    internal static string? RequestTriageText(TriageState triage, TaskState status) => triage switch
     {
         TriageState.NeedsInfo => "Needs info",
         TriageState.Accepted => "Accepted",
@@ -1385,5 +1964,9 @@ else if (this.loaded is { } task)
         this.Events.TasksReloaded -= this.OnTasksReloaded;
         this.Activity.Changed -= this.OnActivityChanged;
         this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+        this.disposed = true;
+        _ = this.DetachToolbarAsync();
+        this.uploadCts.Cancel();
+        this.uploadCts.Dispose();
     }
 }

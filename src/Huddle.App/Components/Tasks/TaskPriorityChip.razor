@@ -1,12 +1,15 @@
 @*
-    A Task's priority as a Small chip: its icon, its word and its colour (TaskColors.For and
+    A Task's priority as a tinted StatusChip: its icon, its word and its colour (TaskColors.For and
     TaskColors.Icon), so colour is never the only signal (UX-045, UX-R07).
 *@
 
-<MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Priority)" Class="task-priority-chip" Icon="@TaskColors.Icon(this.Priority)">@this.Priority.ToWire()</MudChip>
+<StatusChip Color="@TaskColors.For(this.Priority)" Class="@this.CssClass" Icon="@TaskColors.Icon(this.Priority)">@this.Priority.ToWire()</StatusChip>
 
 @code {
     /// <summary>The priority to show.</summary>
     [Parameter, EditorRequired]
     public TaskPriority Priority { get; set; }
+
+    /// <summary>The chip's own classes, ending in one per level (<c>priority-high</c>), so a style pack can draw bars for it.</summary>
+    private string CssClass => $"task-priority-chip priority-{this.Priority.ToString().ToLowerInvariant()}";
 }

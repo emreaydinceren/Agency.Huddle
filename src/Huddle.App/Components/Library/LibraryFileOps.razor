@@ -9,6 +9,8 @@
 *@
 @using System.Globalization
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Gateway
 @using Agency.Huddle.App.Library
 
 @inject LibraryFileService FileService
@@ -17,6 +19,7 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject HostActions Host
 
 @if (this.failedNotes.Count > 0)
 {
@@ -82,10 +85,27 @@
                 await LibraryClipboard.CopyPathAsync(this.JS, this.Snackbar, action.Path.FullPath);
                 return;
             case LibraryTreeActionKind.OpenInDefaultApp:
-                throw new NotSupportedException("12.5b");
+                this.OpenInDefaultApp(action.Path);
+                return;
             default:
                 throw new NotSupportedException("12.5b");
         }
+    }
+
+    /// <summary>Opens the file with the host's registered application through <see cref="HostActions"/>, the one place that starts a process
+    /// for the Human; while remote access is configured it refuses, and the refusal or a failed launch shows as a snackbar.</summary>
+    private void OpenInDefaultApp(LibraryPath item)
+    {
+        HostActionResult result = this.Host.OpenFile(item.FullPath);
+        if (result.Done)
+        {
+            return;
+        }
+
+        string message = string.Equals(result.Error, HostActions.RefusedMessage, StringComparison.Ordinal)
+            ? HostActions.RefusedMessage
+            : $"Could not open '{Path.GetFileName(item.FullPath)}': {result.Error}";
+        this.Snackbar.Add(message, Severity.Error, configure: null, key: "library-error");
     }
 
     /// <summary>Asks <see cref="BeforeChangeAsync"/>, then the settled Delete confirm text through
@@ -101,7 +121,7 @@
 
         string fileName = Path.GetFileName(item.FullPath);
         bool confirmed = await this.Dialogs.ConfirmAsync(
-            string.Create(CultureInfo.InvariantCulture, $"Delete '{fileName}'?"), "It goes to the Recycle Bin.", "Delete", danger: true);
+            ConfirmCopy.DeleteTitle(fileName), "It goes to the Recycle Bin.", "Delete", danger: true);
         if (!confirmed)
         {
             return;
@@ -171,6 +191,17 @@
         return await this.PromptForCreateAsync(LibraryTreeActionKind.NewNote, folder);
     }
 
+    /// <summary>Opens the settled New folder prompt in <paramref name="folder"/> and creates the folder on confirm.
+    /// Raises no <see cref="OnChanged"/>, like <see cref="NewNoteAsync"/>: the caller refreshes its own tree.</summary>
+    /// <param name="folder">The already-resolved folder to create the folder in.</param>
+    /// <returns>The created folder's path, or <see langword="null"/> when the prompt was cancelled.</returns>
+    public async Task<LibraryPath?> NewFolderAsync(LibraryPath folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+
+        return await this.PromptForCreateAsync(LibraryTreeActionKind.NewFolder, folder);
+    }
+
     /// <summary>Shows the name prompt for a create <paramref name="kind"/> and returns what it created, or
     /// <see langword="null"/> when it was cancelled.</summary>
     private async Task<LibraryPath?> PromptForCreateAsync(LibraryTreeActionKind kind, LibraryPath folder)
@@ -212,6 +243,7 @@
         DialogParameters<NameDialog> parameters = new()
         {
             { dialog => dialog.Label, "Name" },
+            { dialog => dialog.Location, LocationName(folder) },
             { dialog => dialog.ConfirmText, "Create" },
             { dialog => dialog.Validate, LibraryNames.Validate },
             { dialog => dialog.SubmitAsync, SubmitAsync },
@@ -368,10 +400,33 @@
         {
             if (entry.IsFolder)
             {
-                await this.CollectFoldersAsync(entry.Path, LastSegment(entry.Path.RelativePath), folders, ct);
+                string name = LastSegment(entry.Path.RelativePath);
+                string childName = entry.Path.Role == LibraryNodeRole.AgentFolder ? this.AgentDisplayName(name) : name;
+                await this.CollectFoldersAsync(entry.Path, childName, folders, ct);
             }
         }
     }
+
+    /// <summary>What the Move dialog calls an Agent's folder: the Agent's Name and Title ("Alan · Chief of Staff"),
+    /// not the folder's own name; the folder name stays in the row's tooltip. A folder no Agent owns keeps its name.</summary>
+    /// <param name="folderName">The folder's name on disk.</param>
+    internal string AgentDisplayName(string folderName)
+    {
+        PersonaEntry? persona = (this.Services.GetService(typeof(PersonaStore)) as PersonaStore)?.ResolveByNameOrAlias(folderName);
+        if (persona is null)
+        {
+            return folderName;
+        }
+
+        return string.IsNullOrWhiteSpace(persona.Title) || string.Equals(persona.Title, persona.Name, StringComparison.OrdinalIgnoreCase)
+            ? persona.Name
+            : $"{persona.Name} · {persona.Title}";
+    }
+
+    /// <summary>The name of the place a new item goes, for the dialog's title ("New note in Platform"): a folder's own
+    /// name, or the root's display name for the root itself.</summary>
+    private static string LocationName(LibraryPath folder) =>
+        folder.RelativePath.Length == 0 ? folder.Root.DisplayName : LastSegment(folder.RelativePath);
 
     private static string LastSegment(string relativePath)
     {

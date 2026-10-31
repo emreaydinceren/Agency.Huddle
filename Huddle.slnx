@@ -10,10 +10,17 @@
     <Project Path="src/Huddle.Acp/Huddle.Acp.csproj" />
     <Project Path="src/Huddle.Contracts/Huddle.Contracts.csproj" />
     <Project Path="src/Huddle.MockAdapter/Huddle.MockAdapter.csproj" />
+    <Project Path="src/Huddle.Packs/Huddle.Packs.csproj" />
     <Project Path="src/Huddle.Seeder/Huddle.Seeder.csproj" />
+    <Project Path="src/Huddle.SkillPacks/Huddle.SkillPacks.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />
-    <Project Path="tests/Huddle.Tests/Huddle.Tests.csproj" />
+    <Project Path="tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj" />
+    <Project Path="tests/Huddle.Tests.Common/Huddle.Tests.Common.csproj" />
+    <Project Path="tests/Huddle.Tests.Components/Huddle.Tests.Components.csproj" />
+    <Project Path="tests/Huddle.Tests.SkillPacks/Huddle.Tests.SkillPacks.csproj" />
+    <Project Path="tests/Huddle.Tests.Hosted/Huddle.Tests.Hosted.csproj" />
+    <Project Path="tests/Huddle.Tests.Domain/Huddle.Tests.Domain.csproj" />
   </Folder>
 </Solution>

@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.Library;
 /// <see cref="LibraryPath"/> proven to lie inside a <see cref="LibraryRoot"/>, following steps 1-7
 /// in order, per corrections-B3 4.2.i. The role a resolved path receives follows the RESOLVED
 /// location, not the root id the caller named (item 25): a pinned root that happens to reach into
-/// the Teams or Teammates tree still gets that tree's role and reserved-folder rules.
+/// the Teams or Agents tree still gets that tree's role and reserved-folder rules.
 /// </summary>
 /// <param name="roots">Every configured Library Root, including the two built-ins.</param>
 /// <param name="options">The bound <see cref="TeamOptions"/>, for <see cref="TeamOptions.DataDir"/>.</param>
@@ -36,7 +36,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
     /// <see cref="LibrarySegments.Refusal(string)"/>; step 4 follows every reparse point along the
     /// way, re-checking containment against the resolved target; steps 5-7 classify the FINAL
     /// resolved location, which may differ from the root the caller named when a link or an
-    /// overlapping pinned root reaches into the Teams or Teammates tree (item 25).
+    /// overlapping pinned root reaches into the Teams or Agents tree (item 25).
     /// </summary>
     /// <param name="rootId">The Library Root id (<see cref="LibraryRoot.Id"/>), compared ordinally.</param>
     /// <param name="relativePath">The path to resolve, relative to the root, either separator.</param>
@@ -61,7 +61,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         string normalized = relativePath.Replace('\\', '/');
         if (normalized.Length == 0)
         {
-            path = new LibraryPath(root, string.Empty, root.FullPath, LibraryNodeRole.Root);
+            path = new LibraryPath(root, string.Empty, root.FullPath, LibraryNodeRole.Root, this.IsReadOnly(root, root.FullPath));
             return true;
         }
 
@@ -86,7 +86,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             return false;
         }
 
-        path = new LibraryPath(root, normalized, current, role);
+        path = new LibraryPath(root, normalized, current, role, this.IsReadOnly(root, current));
         return true;
     }
 
@@ -119,7 +119,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         string current = Path.Combine(parent.FullPath, name);
         string? rootResolvedTarget = LinkPaths.ResolveIfLink(parent.Root.FullPath);
 
-        if (child.Attributes.HasFlag(FileAttributes.ReparsePoint) && LinkPaths.ResolveLinkTarget(child) is string target)
+        if ((child.Attributes & FileAttributes.ReparsePoint) != 0 && LinkPaths.ResolveLinkTarget(child) is string target)
         {
             if (!IsWithinRoot(target, parent.Root.FullPath, rootResolvedTarget))
             {
@@ -136,7 +136,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         }
 
         string relativePath = parent.RelativePath.Length == 0 ? name : $"{parent.RelativePath}/{name}";
-        path = new LibraryPath(parent.Root, relativePath, current, role);
+        path = new LibraryPath(parent.Root, relativePath, current, role, parent.ReadOnly || this.IsReadOnly(parent.Root, current));
         return true;
     }
 
@@ -222,7 +222,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             return false;
         }
 
-        // Role alone is not enough: a Teammate definition (Ben/Ben.md) is a file with a non-File role.
+        // Role alone is not enough: an Agent definition (Ben/Ben.md) is a file with a non-File role.
         if (resolved.Role == LibraryNodeRole.File || File.Exists(resolved.FullPath))
         {
             if (this.logger.IsEnabled(LogLevel.Debug))
@@ -238,6 +238,30 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         folder = resolved;
         error = null;
         return true;
+    }
+
+    /// <summary>
+    /// Whether a resolved location is read only (Skill Packs spec §6.11.1): its root is, or the location equals or lies
+    /// under any read-only root, so a pinned root or a link that reaches into the Skill Sources folder is read only too.
+    /// </summary>
+    internal bool IsReadOnly(LibraryRoot root, string resolvedFullPath)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ArgumentNullException.ThrowIfNull(resolvedFullPath);
+        if (root.ReadOnly)
+        {
+            return true;
+        }
+
+        foreach (LibraryRoot candidate in this.roots.Roots)
+        {
+            if (candidate.ReadOnly && (PathEquals(resolvedFullPath, candidate.FullPath) || HasPrefix(resolvedFullPath, candidate.FullPath + Path.DirectorySeparatorChar)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Finds a root by id (<see cref="LibraryRoot.Id"/>), compared with <see cref="StringComparer.Ordinal"/> (Spec §6.1 step 1).</summary>
@@ -295,7 +319,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
 
     /// <summary>
     /// Classifies the resolved location <paramref name="current"/> against <see cref="TeamOptions.DataDir"/>
-    /// and the canonical Teams and Teammates roots (steps 5-7), regardless of which root the caller
+    /// and the canonical Teams and Agents roots (steps 5-7), regardless of which root the caller
     /// named to reach it (item 25).
     /// </summary>
     private bool TryClassify(string current, out LibraryNodeRole role, [NotNullWhen(false)] out string? error)
@@ -321,10 +345,10 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             return TryClassifyUnderTeams(current, teamsRoot.FullPath, out role, out error);
         }
 
-        LibraryRoot? teammatesRoot = FindRoot(this.roots.Roots, "teammates");
-        if (teammatesRoot is not null && HasPrefix(current, teammatesRoot.FullPath + Path.DirectorySeparatorChar))
+        LibraryRoot? agentsRoot = FindRoot(this.roots.Roots, "agents");
+        if (agentsRoot is not null && HasPrefix(current, agentsRoot.FullPath + Path.DirectorySeparatorChar))
         {
-            role = ClassifyUnderTeammates(current, teammatesRoot.FullPath);
+            role = ClassifyUnderAgents(current, agentsRoot.FullPath);
             return true;
         }
 
@@ -365,10 +389,10 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         return true;
     }
 
-    /// <summary>Step 7: the Teammate folder, its <c>&lt;Name&gt;.md</c> definition, and its Work Dir.</summary>
-    private static LibraryNodeRole ClassifyUnderTeammates(string current, string teammatesRoot)
+    /// <summary>Step 7: the Agent folder, its <c>&lt;Name&gt;.md</c> definition, and its Work Dir.</summary>
+    private static LibraryNodeRole ClassifyUnderAgents(string current, string agentsRoot)
     {
-        string[] relativeSegments = current[(teammatesRoot.Length + 1)..].Split(Path.DirectorySeparatorChar);
+        string[] relativeSegments = current[(agentsRoot.Length + 1)..].Split(Path.DirectorySeparatorChar);
         bool isFile = File.Exists(current);
 
         if (relativeSegments.Length == 1)
@@ -378,19 +402,19 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
                 return LibraryNodeRole.File;
             }
 
-            return TaskLayout.IsReservedFolderName(relativeSegments[0]) ? LibraryNodeRole.Folder : LibraryNodeRole.TeammateFolder;
+            return TaskLayout.IsReservedFolderName(relativeSegments[0]) ? LibraryNodeRole.Folder : LibraryNodeRole.AgentFolder;
         }
 
         if (relativeSegments.Length == 2)
         {
-            string teammateName = relativeSegments[0];
+            string agentName = relativeSegments[0];
             string leaf = relativeSegments[1];
 
             if (isFile
                 && string.Equals(Path.GetExtension(leaf), ".md", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(Path.GetFileNameWithoutExtension(leaf), teammateName, StringComparison.OrdinalIgnoreCase))
+                && string.Equals(Path.GetFileNameWithoutExtension(leaf), agentName, StringComparison.OrdinalIgnoreCase))
             {
-                return LibraryNodeRole.TeammateDefinition;
+                return LibraryNodeRole.AgentDefinition;
             }
 
             if (!isFile && FolderSnapshot.PathComparer.Equals(leaf, "work"))

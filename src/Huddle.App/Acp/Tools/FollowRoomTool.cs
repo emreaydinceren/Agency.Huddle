@@ -14,41 +14,26 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "follow_room";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.followRoom.description", NoValues);
+    public string Description => prompts.Render("tool.followRoom.description");
 
     /// <inheritdoc />
-    public JsonObject InputSchema => new JsonObject
-    {
-        ["type"] = "object",
-        ["properties"] = new JsonObject
-        {
-            ["roomId"] = new JsonObject { ["type"] = "string" },
-        },
-        ["required"] = new JsonArray { "roomId" },
-    };
+    public JsonObject InputSchema => TaskToolText.SingleStringSchema("roomId");
 
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        if (!TaskToolText.TryGetRequiredString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
         {
             return roomIdRefusal;
         }
 
-        if (string.IsNullOrWhiteSpace(roomId))
-        {
-            return "'roomId' is a required argument.";
-        }
-
-        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken);
+        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
             return $"Unknown room '{roomId}'.";
@@ -58,7 +43,7 @@ internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory tea
         // following a Room the caller is not in would report success here and then silently deliver
         // nothing. Refusing up front, and saying why, is cheaper than a caller discovering that on
         // the first Message that never arrives.
-        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken);
+        var members = await teamDirectory.GetRoomMembersAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
         {
             return $"You are not a member of room '{room.Name}' (id {room.Id}), so following it would be a silent no-op: delivery only ever reaches Members. Ask a member to invite you with invite_agent, or start your own Room with create_room instead.";

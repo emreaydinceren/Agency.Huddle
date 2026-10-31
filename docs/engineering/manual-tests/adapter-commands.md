@@ -1,6 +1,6 @@
 # Adapter commands
 
-Prove, in a real browser against a real Adapter, that `@Scratch /compact` compacts a Teammate's conversation and says so in the Room, that the Teammate still remembers the conversation afterwards, that a command the profile does not allow is an ordinary Message, that an Agent cannot run a command, that a compaction is not charged to the token Budget, that a Teammate's card lists what it offers, and that Stop leaves a Teammate usable. The automated suite proves the parts; this page proves they hold together on a screen, against an Adapter that really compacts. **Written 2026-09-30, repaired 2026-10-09, not run**: six of the seven tests spend money, because nothing compacts without a Turn.
+Prove, in a real browser against a real Adapter, that `@Scratch /compact` compacts an Agent's conversation and says so in the Room, that the Agent still remembers the conversation afterwards, that a command the profile does not allow is an ordinary Message, that an Agent cannot run a command, that a compaction is not charged to the token Budget, that an Agent's card lists what it offers, and that Stop leaves an Agent usable. The automated suite proves the parts; this page proves they hold together on a screen, against an Adapter that really compacts. **Written 2026-09-30, repaired 2026-10-09, not run**: six of the seven tests spend money, because nothing compacts without a Turn.
 
 **7 tests** · 1 free, 6 paid 💰 · about 1.8 hours.
 
@@ -15,15 +15,15 @@ C1, C5 to C7, C10, C13 and C15.
 Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 [Common procedures](common.md). This area adds:
 
-1. Use a **scratch** Teammate on the stock Claude Adapter, never one that matters, made with
+1. Use a **scratch** Agent on the stock Claude Adapter, never one that matters, made with
    [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Scratch`, Alias `scratch`, **Model** Haiku,
-   **Effort** `low`. A compaction deliberately throws away most of what the Teammate remembers of a
+   **Effort** `low`. A compaction deliberately throws away most of what the Agent remembers of a
    conversation.
 2. The stock profile allows `compact` only. Do not add a `Commands` entry for this page. A configured
    profile with no `Commands` offers nothing (`AdapterCatalog.cs:74,94`), which COMMANDS-04 step 6 uses.
-3. Keep the scratch Teammate's Model and Effort at Haiku / low, as the script says, in every test.
+3. Keep the scratch Agent's Model and Effort at Haiku / low, as the script says, in every test.
 4. "A warm conversation" below means three or four ordinary exchanges in a direct Room with the
-   scratch Teammate, including one fact to recall later: tell it `My lucky number is 7342.` Most of a
+   scratch Agent, including one fact to recall later: tell it `My lucky number is 7342.` Most of a
    fresh session's context is fixed overhead, so the compaction shrinks it by far more than the
    conversation (the spec observed 50,624 to 2,964 tokens); the figure in the reply is the Adapter's
    own. If the Adapter reports a rise, the Message reads `Ran /compact: {n} → {m} tokens.` instead
@@ -32,7 +32,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 6. This area has no oracle for the prompt text or the raw tool output: the app never logs a prompt, and
    `TraceWire` is forbidden. Where a test needs to know whether a Message reached the Adapter as a
    command, it reads the Room (what was posted) and `O-LOG`, and the free test reads the mock
-   Teammate's echo.
+   Agent's echo.
 
 ## Tests
 
@@ -40,7 +40,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Paid** 💰 · about 25 min
 
-*Proves the whole path: the Mention parses as a command, the Adapter's `/compact` runs (not text), the outcome Message is posted as the Teammate from the Adapter's own figures, and the Teammate still knows the conversation afterwards.*
+*Proves the whole path: the Mention parses as a command, the Adapter's `/compact` runs (not text), the outcome Message is posted as the Agent from the Adapter's own figures, and the Agent still knows the conversation afterwards.*
 
 **Before you start**
 
@@ -49,32 +49,32 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Steps**
 
-1. Open `Scratch`'s card from `/teammates`. The command line sits under the status and, once the conversation is warm, under the Spend line. Read it, then close the card.
+1. Open `Scratch`'s card from `/agents`. The command line sits under the status and, once the conversation is warm, under the Spend line. Read it, then close the card.
 2. In the direct Room, type `@Scratch /compact` and send it.
-3. Watch the Room until the Teammate posts. Copy the Message text exactly.
+3. Watch the Room until the Agent posts. Copy the Message text exactly.
 4. Type `What is my lucky number?` and send it. Read the reply.
 5. Send one more ordinary Message and read the reply.
 
 **Pass if — all of these**
 
 - Step 1 shows `/compact — Free up context by summarizing the conversation so far`.
-- Step 3 posts exactly one Message from the Teammate, of the form `Compacted my conversation: {n} → {m} tokens in {s} s.` with `m` smaller than `n`, thousands separators as commas, and `s` a whole number of at least 1. If the Message instead reads `Ran /compact: {n} → {m} tokens.`, write down both figures: the Adapter reported no fall.
+- Step 3 posts exactly one Message from the Agent, of the form `Compacted my conversation: {n} → {m} tokens in {s} s.` with `m` smaller than `n`, thousands separators as commas, and `s` a whole number of at least 1. If the Message instead reads `Ran /compact: {n} → {m} tokens.`, write down both figures: the Adapter reported no fall.
 - Your own Message is shown as you typed it, with its Mention; nothing was posted in your name.
 - Step 4 is answered from memory, in words, not as a blank or a refusal. Write down whether it says `7342`: a summary may keep it or drop it, and either is an Adapter fact, not a failure.
 - Step 5 is answered normally.
 
 **Fail if — any of these**
 
-- The Teammate answers step 2 in prose about what `/compact` is -> the text was read as an ordinary Message although the card lists the command; check that the card line was present before you sent, and that you wrote the Teammate's Name or Alias first.
+- The Agent answers step 2 in prose about what `/compact` is -> the text was read as an ordinary Message although the card lists the command; check that the card line was present before you sent, and that you wrote the Agent's Name or Alias first.
 - Nothing is posted after step 2 and `O-LOG` shows no error -> the outcome line was not built; check `O-LOG` for a Turn that ended without a post.
 - The Message says `Ran /compact.` with no figures -> the Adapter's output did not carry the figures in the expected shape; copy the Message and record the Adapter version.
-- The Teammate posts twice -> the command Turn posted its own text and the fixed line both.
+- The Agent posts twice -> the command Turn posted its own text and the fixed line both.
 
 ### COMMANDS-02 — A bare slash is still Huddle's own command
 
 **Free** · about 10 min
 
-*Proves the two syntaxes do not collide: a leading slash is Huddle's own (`/invite` is the only one it knows), and the Mention form never starts with one. Also proves a Mention-shaped command to a Teammate whose Adapter advertises no commands is just a Message.*
+*Proves the two syntaxes do not collide: a leading slash is Huddle's own (`/invite` is the only one it knows), and the Mention form never starts with one. Also proves a Mention-shaped command to an Agent whose Adapter advertises no commands is just a Message.*
 
 **Before you start**
 
@@ -126,19 +126,19 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Fail if — any of these**
 
-- Either Message changes the Teammate's behaviour as a setting would (for example a different Model is reported) -> a disallowed command reached the Adapter bare; stop, copy both Messages and the reply, and report it.
+- Either Message changes the Agent's behaviour as a setting would (for example a different Model is reported) -> a disallowed command reached the Adapter bare; stop, copy both Messages and the reply, and report it.
 - Nothing is logged for either Message -> the not-offered path is not reporting.
 
-### COMMANDS-04 — The card lists what the Teammate offers, and only while it is running
+### COMMANDS-04 — The card lists what the Agent offers, and only while it is running
 
 **Paid** 💰 · about 15 min
 
-*Proves the card line follows the Adapter's list: it is present once the Adapter has advertised, is plain text, returns by itself after a restart of the session, and a Teammate whose profile allows nothing shows none.*
+*Proves the card line follows the Adapter's list: it is present once the Adapter has advertised, is plain text, returns by itself after a restart of the session, and an Agent whose profile allows nothing shows none.*
 
 **Before you start**
 
-- Paid lane. The supervisor starts every Teammate at launch and the runner opens the session at once, so the list arrives within a second or two and `Scratch` is already Online with the line. This test therefore watches the line leave and return rather than appear for the first time.
-- Another browser tab on `/teammates` is not needed; keep one.
+- Paid lane. The supervisor starts every Agent at launch and the runner opens the session at once, so the list arrives within a second or two and `Scratch` is already Online with the line. This test therefore watches the line leave and return rather than appear for the first time.
+- Another browser tab on `/agents` is not needed; keep one.
 
 **Steps**
 
@@ -146,13 +146,13 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 2. Hover the `/compact` line and read its tooltip (a browser `title` tooltip, not a MudBlazor one).
 3. Press **Restart** on the card. Watch the status and the lines, without closing or reopening the card, until the status is Online again.
 4. Count the `/…` lines.
-5. Relaunch with two Adapter profiles as in [adapters](adapters.md) Setup 1 (`mock` first, `claude` second), then on `Scratch`'s card choose the `mock` Adapter, which restarts it. Open the card of the `claude`-profile Teammate if you have one.
+5. Relaunch with two Adapter profiles as in [adapters](adapters.md) Setup 1 (`mock` first, `claude` second), then on `Scratch`'s card choose the `mock` Adapter, which restarts it. Open the card of the `claude`-profile Agent if you have one.
 6. Read the card of `Scratch` on the `mock` Adapter.
 
 **Pass if — all of these**
 
 - Step 1 shows exactly one line, `/compact — Free up context by summarizing the conversation so far`, and no empty heading.
-- Step 2's tooltip reads `Write @Scratch /compact in a Room to run it` (the Teammate's Name).
+- Step 2's tooltip reads `Write @Scratch /compact in a Room to run it` (the Agent's Name).
 - Step 3 shows the line gone while the status is Starting, then back, without reopening the card.
 - Step 4 counts exactly one line.
 - Step 6 shows no command line and no empty heading: the mock advertises none, and a configured profile with no `Commands` allows none.
@@ -163,7 +163,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 - The line stays while the status is Starting or Offline -> `PersonaCommands` is not forgetting a stopped runner.
 - The line does not return after Online -> the list is not re-read after a restart; the Human's retry of a command would be refused as unoffered.
 
-### COMMANDS-05 — Stop during a compaction leaves the Teammate usable
+### COMMANDS-05 — Stop during a compaction leaves the Agent usable
 
 **Paid** 💰 · about 15 min
 
@@ -189,7 +189,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Fail if — any of these**
 
-- Step 4 never answers, or the Teammate reads Degraded -> a cancelled compaction left the session unusable.
+- Step 4 never answers, or the Agent reads Degraded -> a cancelled compaction left the session unusable.
 - Step 3 shows a `/compact did not finish.` Message for a Stop -> a Stop is being read as a failure.
 
 Record the observed behaviour of step 3 in the spec's Appendix C (row V-4, which names COMMANDS-04 in error; this is COMMANDS-05) and in [Known limits](../known-limits.md): it is the one fact this page exists to settle.
@@ -202,7 +202,7 @@ Record the observed behaviour of step 3 in the spec's Appendix C (row V-4, which
 
 **Before you start**
 
-- Paid lane. `Scratch` and a second Teammate `Kai` (Name `Kai`, **Model** Haiku, **Effort** `low`, made with [`P-NEW-PERSONA`](common.md#p-new-persona)) are both Online, and both cards show the `/compact` line.
+- Paid lane. `Scratch` and a second Agent `Kai` (Name `Kai`, **Model** Haiku, **Effort** `low`, made with [`P-NEW-PERSONA`](common.md#p-new-persona)) are both Online, and both cards show the `/compact` line.
 - A Room with you, `Scratch` and `Kai` is open (New chat with both). With three Members only a Mention wakes anyone.
 - `T-A` shows the app log (`O-LOG`).
 

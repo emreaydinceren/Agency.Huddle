@@ -79,12 +79,12 @@ read on demand for tools. Nineteen decisions shaped it
 turned down:
 
 - **An Agent proposes and the Human's Approve creates** (D-1). Rejected: a
-  `create_teammate` tool guarded only by prompt text, since a prompt is not a guard, and a
-  Teammate created in a pending state, which moves the decision away from the
+  `create_agent` tool guarded only by prompt text, since a prompt is not a guard, and an
+  Agent created in a pending state, which moves the decision away from the
   conversation. The outcome is posted as a Message from the Human that Mentions the
   proposer, so the ordinary Reply Gate wakes it with no new Envelope.
-- **`MaxTeammates` is 8 and counts every loaded Persona** (D-2). Rejected: 4, which any real
-  library reaches at once, and counting only proposed Teammates, which misses the actual
+- **`MaxAgents` is 8 and counts every loaded Persona** (D-2). Rejected: 4, which any real
+  library reaches at once, and counting only proposed Agents, which misses the actual
   cost: processes.
 - **The Chief of Staff is permanent, recognised by `_builtin: chief-of-staff`, and checked
   only at startup** (D-3, D-4). Rejected: recognition by Name, which duplicates it on
@@ -95,7 +95,7 @@ turned down:
 - **One Proposal per Room; the same proposer replaces it** (D-6). Rejected: a queue, which
   asks the Human several questions at once.
 - **Partial success with an honest report, no rollback** (D-7). Rejected: all-or-nothing,
-  whose rollback deletes Teammates that are already starting.
+  whose rollback deletes Agents that are already starting.
 - **A read-only Settings › Skills tab and a card picker** (D-8). Rejected for V1: a full
   editor like Prompts; the Human writes Markdown in their own editor.
 - **Which tools a Skill can grant is a code-defined set** (D-9). Rejected: "any tool a Skill
@@ -109,11 +109,11 @@ turned down:
 - **Outcome texts are interface copy, not Prompts** (D-13). Rejected: putting them in
   `PromptCatalog`, which would let a Prompt edit change what the Human appears to have said.
 - **`PersonaStore` serialises its own writes** (D-14). Rejected: a lock only in
-  `ProposalService`, which leaves the Teammate card racing. Building it showed the plan's
+  `ProposalService`, which leaves the Agent card racing. Building it showed the plan's
   lock was not enough on its own: the lock must also publish the new index before it is
   released, or a second writer validates against a stale snapshot.
 - **`skills` never goes on the `Persona` record** (D-15). Rejected: adding it for
-  convenience, since a list member breaks record equality and would restart every Teammate
+  convenience, since a list member breaks record equality and would restart every Agent
   on every refresh. A test now fails if anyone tries.
 - **The app greets a new Human unprompted, at first start** (D-16, D-17). Rejected: waiting
   for the Human to type first, and greeting on their first *view* of the Room, which needs
@@ -123,8 +123,8 @@ turned down:
 - **Onboarding is a fourth file of the Skill** (D-19). Rejected: folding it into
   `SKILL.md`, which every read would then pay for.
 
-**Old-to-new mapping**: ADR-0021's `create_teammate` is `propose_teammates`; a proposed
-Teammate is a **Candidate**, never a *draft*; the Chief of Staff's unprompted first Message
+**Old-to-new mapping**: ADR-0021's `create_agent` is `propose_agents`; a proposed
+Agent is a **Candidate**, never a *draft*; the Chief of Staff's unprompted first Message
 is a **Greeting**, never a *welcome*.
 
 **2026-09-22 — A Hook is renamed to a Prompt.**
@@ -151,13 +151,13 @@ about the design changed — see [ADR-0020](../adr/0020-a-hook-is-a-prompt.md).
 → `PromptFieldState`/`PromptFieldGroup`, `hooks.json` → `prompts.json`,
 `hooks.default.json` → `prompts.default.json`.
 
-**2026-09-22 — A Teammate chooses its own Avatar, and it is not part of the Persona.**
+**2026-09-22 — An Agent chooses its own Avatar, and it is not part of the Persona.**
 
 An avatar was the initials of a Name on the Theme's `Primary` colour, in two places, with
 nothing about it choosable — and `app.css` admitted the gap in a comment: *"The monogram
 stands in for Slack's avatar photo."* It is now three optional fields — a label of up to
-three characters, an uploaded image, and a background colour — rendered everywhere a
-Teammate appears, the transcript included. The Human has one too. See
+six characters, an uploaded image, and a background colour — rendered everywhere an
+Agent appears, the transcript included. The Human has one too. See
 [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
 
 **Rejected: `avatar:` in Persona frontmatter.** The obvious home, beside `adapter:`, and the
@@ -176,11 +176,11 @@ opens the new controls has no file at all.
 
 **Rejected: base64 `data:` URIs instead of an endpoint.** Tempting, because it needs no
 middleware, no provider, no cache story and no rename cascade. 512 KB of image is ~683 KB of
-base64, and on Blazor Server that crosses the SignalR circuit — ten Teammates on `/teammates`
+base64, and on Blazor Server that crosses the SignalR circuit — ten Agents on `/agents`
 is roughly 6.8 MB on a page that currently paints in one small diff, and nothing is ever
 cached.
 
-**Rejected: naming an uploaded image after its Teammate.** It reads better in the folder and
+**Rejected: naming an uploaded image after its Agent.** It reads better in the folder and
 makes a removal obvious. It also needs percent-encoding for a Name with spaces, and
 [Known limits](known-limits.md) records that `CON`, `NUL` and `COM1` pass `NameRules` — `CON.png`
 is a file Windows will not create. An opaque id means a rename touches no file at all, and
@@ -189,7 +189,7 @@ replacing an image yields a new URL, so cache-busting costs nothing.
 **2026-09-21 — A Room can be archived or deleted, and archived state is a sibling table.**
 
 A Room was permanent, and that was a stated position rather than an oversight: a Room and
-its Transcript are chat facts that outlive the Teammate which created them. But *"removing
+its Transcript are chat facts that outlive the Agent which created them. But *"removing
 a Persona must not destroy a Room"* and *"a Human may never put a Room away"* are two
 different claims, and only the first follows from that argument. The sidebar is the app's
 primary navigation and it only ever grew — `manual-tests/common.md` had to tell testers to
@@ -217,7 +217,7 @@ option; making delete reversible too leaves the pair with no distinction and not
 reclaims disk.
 
 **Rejected (against the recommendation): reusing an archived 1:1 Room.** Starting a chat
-with a Teammate whose Room is archived now creates a fresh Room rather than unarchiving the
+with an Agent whose Room is archived now creates a fresh Room rather than unarchiving the
 old one. Reuse would have preserved
 [ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
 one-two-Member-Room-per-Agent invariant exactly, and was the recommendation. The repo
@@ -226,7 +226,9 @@ unarchiving afterwards yields two identically-named Rooms with the same two Memb
 `FindRoomWithExactMembersAsync` gained an `ORDER BY` it never had so the winner is at least
 deterministic.
 **2026-09-16 — VS Code's bundled Themes are converted once, by hand, and the mapping is
-a claim you test with contrast.**
+a claim you test with contrast.** *(Superseded 2026-10-17: the seventeen ports and the High
+contrast group were removed because a palette cannot carry a skin; the catalog is now twelve
+authored Themes. This entry is kept as history.)*
 
 The catalog had one Theme, so nothing proved its extension point worked. It now has
 eighteen: `huddle` plus seventeen of the colour Themes Visual Studio Code bundles,
@@ -504,7 +506,7 @@ generated file cannot rot.
 **Editing a Hook never restarts a session.** Rejected: restarting so every edit
 lands immediately, which would throw away an Agent's conversation memory each time
 someone reworded a sentence. The accepted cost is that a `NextSession` Hook is
-silently inert on a running Teammate, paid for with a badge on exactly those
+silently inert on a running Agent, paid for with a badge on exactly those
 fields — a system prompt is fixed at `session/new` and no design choice changes
 that.
 
@@ -570,7 +572,7 @@ delivered, plus the Teams concept item 10 did not cover.
 purely so a human can file things, and the code reads no meaning into them at
 all — a Persona in `Teams/Household/` whose frontmatter says `teams: Business`
 is on the Business team, and moving that file changes nothing. The alternative,
-folder-as-team, was rejected on two counts: a Teammate could then only belong to
+folder-as-team, was rejected on two counts: an Agent could then only belong to
 one Team, and renaming a folder would silently re-home everyone inside it.
 
 **The SQLite keying went the opposite way from item 10's own recommendation,
@@ -584,7 +586,7 @@ promises. Keying on the frontmatter `name` instead makes the move free and needs
 no schema change, since `PRIMARY KEY(persona_name) COLLATE NOCASE` was already
 the right comparison for a display Name. The accepted cost is the one item 10
 was trying to avoid: editing `name:` is a rename, and `Update` has to move both
-rows by hand or the Teammate silently loses its Model.
+rows by hand or the Agent silently loses its Model.
 
 **Both sides of a collision are rejected, not one winner.** Two Personas sharing
 a Name or an Alias, or one Alias equalling another's Name, takes out every file
@@ -597,8 +599,8 @@ beats tidy. Comparison is case-insensitive to match `COLLATE NOCASE` and
 **Required fields replaced "no schema, ever".** `PersonaStore`'s docstring used
 to promise a plain-prose file with no frontmatter would work. That promise is
 gone: identity has to come from somewhere, and a file that cannot supply it is
-now a rejected file, listed on `/teammates` with its path and reason. Silently
-ignoring it was rejected — a Teammate that does not appear, for no visible
+now a rejected file, listed on `/agents` with its path and reason. Silently
+ignoring it was rejected — an Agent that does not appear, for no visible
 reason, is the worst version of this.
 
 **`alias` being required was challenged during the build and confirmed.** The
@@ -657,7 +659,7 @@ rule, verbs not stages, no engine — is what has to carry the differentiation.
 prefix is model-facing prompt text in 12 code files and every persona, a test pins
 it, and a model never reads it as a brand. The `Team:` configuration root is a
 breaking change for any running install. Neither has a brand benefit that pays for
-its cost. Glossary terms are untouched: *Teammate* and *Team Directory* are
+its cost. Glossary terms are untouched: *Agent* and *Team Directory* are
 domain words.
 
 **Namespaces were the separate decision, and it was taken on 2026-09-12.** The
@@ -683,7 +685,7 @@ self-contained change if the library is ever extracted.
 **2026-09-11 — a Persona's frontmatter becomes its job description.**
 
 `mcp__team__list_agents` told a caller *who* exists and nothing about what
-each teammate does — `Chief of Staff.md` even told its own reader to work
+each agent does — `Chief of Staff.md` even told its own reader to work
 around that by reading frontmatter off disk by hand, since the tool couldn't.
 Every Persona file already carried a YAML frontmatter block (`role`,
 `summary`, `consult_when`, ...); nothing in the code read it.
@@ -746,7 +748,7 @@ limits](known-limits.md).
 
 **And an Invitation stopped being the Human's alone.** `InviteAsync` had existed
 since the `/invite` command and had exactly one caller. It now has three:
-the command, **Add teammate** on the Room header (`InviteTeammate.razor`), and
+the command, **Add agent** on the Room header (`InviteAgent.razor`), and
 `mcp__team__invite_agent`. Nothing about the Invitation itself moved — the point
 is that no door reimplements it.
 
@@ -816,7 +818,7 @@ ACP, and the chat surface never learns what is behind an Agent.
 
 Two changes with one cause. `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$` forced
 `chief-of-staff` on something a person would write as `Chief of Staff`, which
-made a Teammate read as a record rather than as somebody. Slack's own directory
+made an Agent read as a record rather than as somebody. Slack's own directory
 was the reference: people there have names with spaces, and clicking one opens a
 profile.
 
@@ -837,16 +839,16 @@ every writer instead of resolving it once.
 
 The filename half stayed strict. Leading, trailing and doubled spaces are
 refused, because Windows silently strips a trailing space and `coo ` would
-otherwise be one file presenting as two Teammates. Chasing that turned up an
+otherwise be one file presenting as two Agents. Chasing that turned up an
 older hole: `$` in .NET matches before a trailing newline, so the previous rule
 had accepted `"coo\n"`. Both guards now anchor with `\A` and `\z`.
 
-With Names reading as people, the `/teammates` page no longer could. A flat list
+With Names reading as people, the `/agents` page no longer could. A flat list
 with an inline `<textarea>` and an add form pinned to the bottom is file
-management, so it became a grid of tiles opening one card — `TeammateCard`, with
+management, so it became a grid of tiles opening one card — `AgentProfileCard`, with
 viewing, editing and creating as three modes of a single layout rather than three
 layouts that would drift. The parent holds the draft text so that switching
-Teammates cannot show you the previous one's.
+Agents cannot show you the previous one's.
 
 Renaming was deliberately left out; see [Known limits](known-limits.md).
 
@@ -861,7 +863,7 @@ send is still valid, `tools/echo-bot.ps1` never validated one locally, and the
 | Mentions found by regex | Mentions resolved against the Room's Members, longest Name first |
 | `/invite` captured a Name by shape | `/invite` captures the rest of the line |
 | `^` and `$` in `NameRules` | `\A` and `\z` |
-| A list, an inline edit form, a bottom-of-page add form | A tile grid and one `TeammateCard` in three modes |
+| A list, an inline edit form, a bottom-of-page add form | A tile grid and one `AgentProfileCard` in three modes |
 
 **2026-09-11 — one vocabulary across UX and code.**
 
@@ -873,7 +875,7 @@ obeyed; it gets routed around. Alongside that, the `/agents` page managed Person
 files, `Sandbox` named a directory that had to be documented as "not a jail", and
 the UI still said "Direct Room" at a newcomer.
 
-The resolution makes **Teammate** the umbrella, which frees **Agent** to carry
+The resolution makes **Agent** the umbrella, which frees **Agent** to carry
 the single meaning the tool contract already gave it. `list_agents`,
 `create_room` and the `agents[]` parameter were therefore correct as they stood
 and were not renamed — no system-prompt edit, and no re-derivation of the
@@ -882,7 +884,7 @@ and were not renamed — no system-prompt edit, and no re-derivation of the
 | Old | New |
 | --- | --- |
 | Bot | Agent |
-| — | Teammate (new umbrella: the Human plus Agents) |
+| — | Agent (new umbrella: the Human plus Agents) |
 | Agent Host, Persona Bot | Agent, or `PersonaRunner` for the runtime |
 | Agent Session | session |
 | Direct Room, Group Room | Room (behaviour follows from member count) |
@@ -890,7 +892,7 @@ and were not renamed — no system-prompt edit, and no re-derivation of the
 | Sandbox, `Acp:SandboxDir` | Work Dir, `Acp:WorkDir` |
 | `IDirectory`, `SqliteDirectory` | `ITeamDirectory`, `SqliteTeamDirectory` |
 | `Team:DemoBot:*` | `Team:DemoAgent:*` |
-| `/agents` page | `/teammates` page |
+| `/agents` page | `/agents` page |
 
 The wire and the database changed with the code: `welcome.botId` is now
 `welcome.agentId`, the `kind` value `"bot"` is now `"agent"`, and

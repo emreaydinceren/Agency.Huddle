@@ -50,12 +50,12 @@
 
 .PARAMETER Clean
     Delete the previous run's SQLite database (Team:DataDir/team.db, plus its -wal/-shm
-    sidecar files) and every Teammate definition file
-    (Team:DataDir/Teammates/<Folder>/<Folder>.md, matched case-insensitively) before
+    sidecar files) and every Agent definition file
+    (Team:DataDir/Agents/<Folder>/<Folder>.md, matched case-insensitively) before
     building and starting the app. Opt-in and irreversible - there is no prompt, so only
     pass it when you mean to start from an empty roster. Every work/ directory and all of
     Teams/ (Team folders and Library notes) are left alone, as is
-    Teammates/_unsorted and the Teammates/.layout-migrated marker. Other App_Data
+    Agents/_unsorted and the Agents/.layout-migrated marker. Other App_Data
     content (prompts, appearance, avatars, rooms, logs) is left alone too.
 
 .PARAMETER CleanOnly
@@ -113,29 +113,29 @@ $url = "http://localhost:$Port"
 # TeamOptions.DataDir defaults to "App_Data" (resolved relative to src/Huddle.App - see
 # launchSettings.json, which sets no workingDirectory), honouring the Team__DataDir
 # environment variable and, here, an explicit -DataDir override (which wins over the
-# environment variable). AcpOptions.TeammatesDir's default ("Teammates") and
+# environment variable). AcpOptions.AgentsDir's default ("Agents") and
 # SqliteTeamDirectory's hardcoded "team.db" are not read from configuration: this script
 # has no config binder, and every appsettings*.json in the repo leaves both defaults
 # unchanged, so hardcoding them here is exactly as safe as the rest of this script's
 # assumptions about a stock dev setup.
 $dataDirInput = if ($DataDir) { $DataDir } elseif ($env:Team__DataDir) { $env:Team__DataDir } else { 'App_Data' }
 $dataDir = if ([System.IO.Path]::IsPathRooted($dataDirInput)) { $dataDirInput } else { Join-Path $appProject $dataDirInput }
-$teammatesDir = Join-Path $dataDir 'Teammates'
+$agentsDir = Join-Path $dataDir 'Agents'
 $dbPath = Join-Path $dataDir 'team.db'
 
-# The definition file inside a Teammate folder is the one whose base name matches the
+# The definition file inside an Agent folder is the one whose base name matches the
 # folder name, case-insensitively (FolderSnapshot.PathComparer's own rule). _unsorted is
-# migration overflow, never a Teammate, and is skipped; work/ subdirectories and the
+# migration overflow, never an Agent, and is skipped; work/ subdirectories and the
 # .layout-migrated marker are never touched.
 function Get-DefinitionFilesToClean {
-    param([string]$TeammatesDir)
+    param([string]$AgentsDir)
 
     $result = [System.Collections.Generic.List[string]]::new()
-    if (-not (Test-Path -LiteralPath $TeammatesDir)) {
+    if (-not (Test-Path -LiteralPath $AgentsDir)) {
         return $result
     }
 
-    Get-ChildItem -LiteralPath $TeammatesDir -Directory | Where-Object {
+    Get-ChildItem -LiteralPath $AgentsDir -Directory | Where-Object {
         -not $_.Name.Equals('_unsorted', [System.StringComparison]::OrdinalIgnoreCase)
     } | ForEach-Object {
         $folder = $_
@@ -191,7 +191,7 @@ if ($Seed) {
 
 if ($CleanOnly) {
     $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
-    $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+    $definitionFiles = Get-DefinitionFilesToClean -AgentsDir $agentsDir
     $toDelete = @($dbFiles) + @($definitionFiles)
 
     if ($DryRun) {
@@ -210,7 +210,7 @@ if ($CleanOnly) {
     }
 
     Write-Host ''
-    Write-Host 'Cleaning previous database and Teammate definitions...' -ForegroundColor Cyan
+    Write-Host 'Cleaning previous database and Agent definitions...' -ForegroundColor Cyan
     if ($toDelete.Count -eq 0) {
         Write-Host '   Nothing to delete.' -ForegroundColor Gray
     } else {
@@ -269,7 +269,7 @@ if ($DryRun) {
     }
     if ($Clean) {
         $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
-        $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+        $definitionFiles = Get-DefinitionFilesToClean -AgentsDir $agentsDir
         $toDelete = @($dbFiles) + @($definitionFiles)
 
         Write-Host '   Clean : delete the following files' -ForegroundColor Gray
@@ -343,7 +343,7 @@ if ($needsAcpSetup) {
 
 if ($Clean) {
     Write-Host ''
-    Write-Host 'Cleaning previous database and Teammate definitions...' -ForegroundColor Cyan
+    Write-Host 'Cleaning previous database and Agent definitions...' -ForegroundColor Cyan
 
     $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
     foreach ($dbFile in $dbFiles) {
@@ -351,7 +351,7 @@ if ($Clean) {
         Write-Host "   Deleted $dbFile" -ForegroundColor Gray
     }
 
-    $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+    $definitionFiles = Get-DefinitionFilesToClean -AgentsDir $agentsDir
     foreach ($definitionFile in $definitionFiles) {
         Remove-Item -LiteralPath $definitionFile -Force
         Write-Host "   Deleted $definitionFile" -ForegroundColor Gray

@@ -1,34 +1,10 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.WebUtilities;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace Agency.Huddle.App.Tabs;
-
-/// <summary>The page a Tab's URL names: its component type and the parameters the URL supplies.</summary>
-/// <param name="Component">The routable component.</param>
-/// <param name="Parameters">Route values and query values, converted to the types of the component's matching <c>[Parameter]</c> properties.</param>
-internal sealed record TabPage(Type Component, IDictionary<string, object> Parameters);
-
-/// <summary>
-/// What a page needs to know about the Tab that shows it. The browser URL names only the focused
-/// group's Tab, so a page in another group must not read <c>NavigationManager.Uri</c> to learn where it
-/// is; the group's page host cascades this instead.
-/// </summary>
-/// <param name="Url">The site-relative address the Tab shows, including its query.</param>
-public sealed record TabPageContext(string Url)
-{
-    /// <summary>The path of <see cref="Url"/>, without the query.</summary>
-    public string Path
-    {
-        get
-        {
-            int query = this.Url.IndexOf('?', StringComparison.Ordinal);
-            return query >= 0 ? this.Url[..query] : this.Url;
-        }
-    }
-}
 
 /// <summary>
 /// Resolves a Tab's URL to a page without the <c>Router</c>. Two groups show two pages at once and the

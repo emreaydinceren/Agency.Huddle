@@ -33,6 +33,7 @@
 @inject ISprintCatalog Sprints
 @inject IJSRuntime JS
 @inject Agency.Huddle.App.Acp.PersonaStore Personas
+@inject Agency.Huddle.App.Avatars.AvatarStore AvatarStore
 @implements IDisposable
 
 <MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
@@ -67,7 +68,7 @@
                     </TemplateColumn>
                     break;
                 case "priority":
-                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("priority")" InitialDirection="@this.DirectionFor("priority")" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("priority")" InitialDirection="@this.DirectionFor("priority")" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" CellClass="task-list-priority-cell" HeaderClass="task-list-priority-cell" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Priority)">
                         <CellTemplate>
                             <TaskPriorityChip Priority="context.Item.Priority" />
@@ -80,7 +81,7 @@
                                      Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
                         <CellTemplate>
-                            <TaskAssignee Name="@context.Item.Assignee" ShowProfile="@this.IsTeammate(context.Item.Assignee)" />
+                            <TaskAssignee Name="@context.Item.Assignee" ShowProfile="@this.IsAgent(context.Item.Assignee)" />
                         </CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Assignee)</GroupTemplate>
                     </TemplateColumn>
@@ -99,7 +100,7 @@
                             @this.GroupHeading(context, TaskGroupField.Team)
                             @if (this.OrphanTeamOf(context) is { } orphan)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                                <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" Class="task-orphan-team-chip">No agent is in @orphan</StatusChip>
                             }
                         </GroupTemplate>
                     </TemplateColumn>
@@ -153,7 +154,7 @@
                 case "start_date":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("start_date")" InitialDirection="@this.DirectionFor("start_date")" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
                                      SortBy="@(t => (object?)t.StartDate)">
-                        <CellTemplate>@TaskDates.Display(context.Item.StartDate)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.StartDate)">@TaskDates.HumanColumn(context.Item.StartDate, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "due_date":
@@ -163,11 +164,11 @@
                             @if (this.IsOverdue(context.Item))
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
-                                <span class="task-due-overdue">@TaskDates.Display(context.Item.DueDate)</span>
+                                <span class="task-due-overdue" title="@TaskDates.Tooltip(context.Item.DueDate)">@TaskDates.HumanColumn(context.Item.DueDate, this.Clock)</span>
                             }
                             else
                             {
-                                @TaskDates.Display(context.Item.DueDate)
+                                <span title="@TaskDates.Tooltip(context.Item.DueDate)">@TaskDates.HumanColumn(context.Item.DueDate, this.Clock)</span>
                             }
                         </CellTemplate>
                     </TemplateColumn>
@@ -175,19 +176,19 @@
                 case "created":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("created")" InitialDirection="@this.DirectionFor("created")" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
                                      SortBy="@(t => (object?)t.Created)">
-                        <CellTemplate>@TaskDates.Display(context.Item.Created)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.Created, this.Clock)">@TaskDates.HumanColumn(context.Item.Created, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "updated":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("updated")" InitialDirection="@this.DirectionFor("updated")" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" CellClass="task-col-low-2" HeaderClass="task-col-low-2" Sortable="true"
                                      SortBy="@(t => (object?)t.Updated)">
-                        <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.Updated, this.Clock)">@TaskDates.HumanColumn(context.Item.Updated, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "closed":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("closed")" InitialDirection="@this.DirectionFor("closed")" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
                                      SortBy="@(t => (object?)t.ClosedAt)">
-                        <CellTemplate>@TaskDates.Display(context.Item.ClosedAt)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.ClosedAt, this.Clock)">@TaskDates.HumanColumn(context.Item.ClosedAt, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "origin":
@@ -202,7 +203,7 @@
         <TemplateColumn @key="@("actions")" T="TaskItem" Title="" Sortable="false" Filterable="false">
             <CellTemplate>
                 <span @onclick:stopPropagation="true">
-                    <TaskActionsMenu Id="context.Item.Id" ShowMoveTo="false"
+                    <TaskActionsMenu Id="context.Item.Id" ShowMoveTo="false" Reveal="true"
                                      OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Item.Id))"
                                      OnCopyLink="@(() => this.OnCopyLink.InvokeAsync(context.Item.Id))" />
                 </span>
@@ -434,9 +435,9 @@
     /// <summary>Whether Team is also one of the View's grouping fields, which changes how a Project group is labelled.</summary>
     private bool TeamAlsoGrouped => this.View.Grouping.Contains(TaskGroupField.Team);
 
-    /// <summary>Whether <paramref name="assignee"/> is a Teammate, so its avatar opens a profile; the Human and an unknown name keep a plain avatar.</summary>
+    /// <summary>Whether <paramref name="assignee"/> is an Agent, so its avatar opens a profile; the Human and an unknown name keep a plain avatar.</summary>
     /// <param name="assignee">The Task's assignee, or <see langword="null"/> when unassigned.</param>
-    private bool IsTeammate(string? assignee) => assignee is not null && this.Personas.ResolveByNameOrAlias(assignee) is not null;
+    private bool IsAgent(string? assignee) => assignee is not null && this.Personas.ResolveByNameOrAlias(assignee) is not null;
 
     /// <summary>
     /// The grid's own grouping key for <paramref name="task"/> under <paramref name="field"/>: a rank-prefixed
@@ -488,7 +489,6 @@
         return ordered is null ? this.Tasks : [.. ordered];
     }
 
-    /// <summary>The group header text shown by GroupTemplate: the real label (never the raw sort key) and the group's count.</summary>
     /// <summary>The Team of a Team group whose folder no Persona is in (Spec §13.12 orphan chip, corrections-B7 12.4 item 3), or <see langword="null"/>.</summary>
     /// <param name="group">A Team group.</param>
     private string? OrphanTeamOf(GroupDefinition<TaskItem> group)
@@ -497,17 +497,30 @@
         return this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.Ordinal)) ? team : null;
     }
 
-    private string GroupHeading(GroupDefinition<TaskItem> group, TaskGroupField field)
+    /// <summary>The group row shown by GroupTemplate (design-system "Tasks"): the assignee's avatar for an assignee group, the real label (never the raw sort key) at 13px/600, and the group's count at 12px in Quiet ink.</summary>
+    /// <param name="group">The group.</param>
+    /// <param name="field">The field the group is on.</param>
+    private RenderFragment GroupHeading(GroupDefinition<TaskItem> group, TaskGroupField field)
     {
         TaskItem sample = group.Grouping.First();
         string label = TaskQuery.GroupLabel(sample, field, this.TeamAlsoGrouped, this.SprintName);
-        return string.Create(CultureInfo.InvariantCulture, $"{label} ({group.Grouping.Count()})");
+        string count = group.Grouping.Count().ToString(CultureInfo.InvariantCulture);
+        string? assignee = field == TaskGroupField.Assignee ? sample.Assignee : null;
+        return @<span class="task-group-heading">
+            @if (assignee is not null)
+            {
+                @* An assignee group leads with the assignee's 24px avatar (design-system "Tasks"). *@
+                <AgentAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" Class="task-group-avatar" />
+            }
+            <span class="task-group-label">@label</span>
+            <span class="task-group-count">@count</span>
+        </span>;
     }
 
     /// <summary>Whether <paramref name="task"/> is overdue: it has a due date in the past and isn't in a terminal state.</summary>
     private bool IsOverdue(TaskItem task) => TaskDates.IsOverdue(task, this.Clock);
 
-    /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
+    /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, <c>task-needs</c> in Needs You, <c>task-blocked</c> when blocked by another Task. The row index is unused; the shape is fixed by RowClassFunc.</summary>
     private string RowClass(TaskItem task, int _)
     {
         List<string> classes = [];
@@ -519,6 +532,16 @@
         if (this.IsSelected(task))
         {
             classes.Add("task-row-selected");
+        }
+
+        if (task.Status == TaskState.NeedsYou)
+        {
+            classes.Add("task-needs");
+        }
+
+        if (task.BlockedBy.Count > 0)
+        {
+            classes.Add("task-blocked");
         }
 
         return string.Join(' ', classes);

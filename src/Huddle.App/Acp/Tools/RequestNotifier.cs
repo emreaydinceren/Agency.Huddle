@@ -1,5 +1,5 @@
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
@@ -23,7 +23,9 @@ internal sealed partial class RequestNotifier(TaskTriggerService trigger, ITeamC
         ArgumentException.ThrowIfNullOrWhiteSpace(actor);
 
         TaskActor wakeActor = new(TaskActorKind.Agent, actor, null);
+#pragma warning disable HAA0102 // Enum.ToString returns the runtime's cached name, so a lookup table would save nothing.
         string summary = string.Concat("Request event: ", requestEvent.ToString());
+#pragma warning restore HAA0102
         TaskId requestId = request.Id;
         HashSet<string> woken = new(StringComparer.OrdinalIgnoreCase);
         foreach (WakeTarget target in targets)
@@ -37,7 +39,7 @@ internal sealed partial class RequestNotifier(TaskTriggerService trigger, ITeamC
 
             if (woken.Add(name))
             {
-                _ = await trigger.WakeForRequestAsync(request, name, wakeActor, summary, cancellationToken);
+                _ = await trigger.WakeForRequestAsync(request, name, wakeActor, summary, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -71,7 +73,7 @@ internal sealed partial class RequestNotifier(TaskTriggerService trigger, ITeamC
                 return teams.Find(request.Location.Team)?.Manager;
             case WakeTarget.ChiefOfStaff:
                 return personas.Entries
-                    .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name;
+                    .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name;
             default:
                 return null;
         }

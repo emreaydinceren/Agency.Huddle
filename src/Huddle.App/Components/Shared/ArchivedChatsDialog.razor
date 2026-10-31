@@ -1,25 +1,26 @@
 @*
-    Lists archived Rooms, most recently archived first, with an Unarchive button and the same
+    Lists archived Rooms, most recently archived first, with an Unarchive text button, a row menu holding Delete, and the same
     inline-confirm Delete swap RoomList.razor's own rows use - never a nested MudDialog and never a
-    JS confirm(), for the same reason TeammateCard.razor's Remove button gives: a confirmation dialog
+    JS confirm(), for the same reason AgentProfileCard.razor's Remove button gives: a confirmation dialog
     stacked on top of this one would need a second backdrop and a second focus trap for what is only
     ever a yes/no choice.
 
-    Follows TeammateCard.razor as this codebase's one real MudDialog template: an IMudDialogInstance
+    Follows AgentProfileCard.razor as this codebase's one real MudDialog template: an IMudDialogInstance
     cascading parameter, a shared static Options, and its own RoomEvents.RoomsChanged subscription
     (unsubscribed in Dispose, per rules.md) so unarchiving - from this dialog or from the sidebar's own
     row menu - repaints the list live rather than going stale the moment it opened.
 
-    Room exposes only Archived as a bool, not the instant a Room was archived - adding one would mean
-    touching Data/**, which is out of scope here - so "most recently archived first" is approximated
-    by ordering on Created descending instead.
+    Rows show "Archived Oct 3" from Room.ArchivedAt and order by it, newest first. A Room archived
+    before the instant was recorded has none, so it falls back to "Created Oct 3" and orders by Created.
 *@
 
 @implements IDisposable
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Tasks
 @inject ITeamDirectory TeamDirectory
 @inject ChatService ChatService
 @inject RoomEvents Events
+@inject TimeProvider Clock
 
 <MudDialog>
     <TitleContent>
@@ -34,7 +35,7 @@
 
         @if (this.rooms.Count == 0)
         {
-            <EmptyState Text="No archived chats." />
+            <EmptyState Title="No archived chats" Text="Chats you archive are kept here, so you can restore them." />
         }
         else
         {
@@ -48,12 +49,15 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1" Class="flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</MudText>
-                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
-                        <MudTooltip Text="Delete">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                           aria-label="@($"Delete {room.Name}")" OnClick="@(() => this.BeginDelete(room.Id))" />
-                        </MudTooltip>
+                        @* Icon, name and date, then the one primary action as a text button; Delete lives in the row's menu. *@
+                        <span class="archived-chats-icon"><MudIcon Icon="@Icons.Material.Filled.Chat" /></span>
+                        <span class="archived-chats-name flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</span>
+                        <span class="archived-chats-date">@this.DateLabel(room)</span>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
+                        <MudMenu Dense="true" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                 AriaLabel="@MenuDialogs.ActivatorLabel(room.Name)">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
+                        </MudMenu>
                     }
                 </div>
             }
@@ -62,8 +66,22 @@
 </MudDialog>
 
 @code {
-    /// <summary>The <see cref="DialogOptions"/> this dialog opens with: the shared picker options, with the close button (UX-022).</summary>
-    public static readonly DialogOptions Options = HuddleDialogOptions.Picker;
+    /// <summary>The <see cref="DialogOptions"/> this dialog opens with: a one-column list, so the 600px short picker with the close button (UX-022, audit B10g).</summary>
+    public static readonly DialogOptions Options = HuddleDialogOptions.ShortPicker;
+
+    /// <summary>The row's date: "Archived Oct 3", or "Created Oct 3" for a Room archived before the instant was recorded.</summary>
+    /// <param name="room">The archived Room.</param>
+    private string DateLabel(Room room)
+    {
+        DateTimeOffset now = this.Clock.GetLocalNow();
+        DateOnly today = DateOnly.FromDateTime(now.Date);
+        if (room.ArchivedAt is DateTimeOffset archivedAt)
+        {
+            return $"Archived {HumanDate.Format(DateOnly.FromDateTime(archivedAt.ToOffset(now.Offset).Date), today)}";
+        }
+
+        return $"Created {HumanDate.Format(DateOnly.FromDateTime(room.Created.ToOffset(now.Offset).Date), today)}";
+    }
 
     private IReadOnlyList<Room> rooms = [];
     private string? confirmingDeleteRoomId;
@@ -92,11 +110,11 @@
         });
     }
 
-    /// <summary>Reads every Room, keeps only the archived ones, and orders them by Created descending - see the file-level comment for why Created stands in for an archive instant.</summary>
+    /// <summary>Reads every Room, keeps only the archived ones, and orders them by archive instant (Created when none was recorded), newest first.</summary>
     private async Task LoadAsync()
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
-        this.rooms = [.. all.Where(room => room.Archived).OrderByDescending(room => room.Created)];
+        this.rooms = [.. all.Where(room => room.Archived).OrderByDescending(room => room.ArchivedAt ?? room.Created)];
     }
 
     private async Task UnarchiveAsync(string roomId)

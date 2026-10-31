@@ -1,22 +1,17 @@
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.SkillSources;
+using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Library;
 
-/// <summary>A parse failure in <c>library-roots.json</c>, with a 1-based line and column when known.</summary>
-/// <param name="Message">A human-readable description of the failure.</param>
-/// <param name="Line">The 1-based line the failure was found on, or <see langword="null"/> when unknown.</param>
-/// <param name="Column">The 1-based column the failure was found on, or <see langword="null"/> when unknown.</param>
-public sealed record LibraryRootLoadError(string Message, long? Line, long? Column);
-
 /// <summary>
-/// Joins the two built-in Library Roots (Teams, Teammates) with the Human-editable
+/// Joins the two built-in Library Roots (Teams, Agents) with the Human-editable
 /// <c>{DataDir}/library-roots.json</c> (pinned roots and hidden built-ins), per Spec §6.1 and
 /// corrections-B3 4.1.i.
 /// </summary>
@@ -36,11 +31,14 @@ public sealed record LibraryRootLoadError(string Message, long? Line, long? Colu
 /// store, so no external-edit reload path exists yet.
 /// </para>
 /// </remarks>
-internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePaths paths, ILogger<LibraryRootStore> logger)
+internal sealed class LibraryRootStore
 {
+    /// <summary>The Skill Sources root's id.</summary>
+    public const string SkillSourcesRootId = "skill-sources";
+
     private const string FileName = "library-roots.json";
     private const string TeamsRootId = "teams";
-    private const string TeammatesRootId = "teammates";
+    private const string AgentsRootId = "agents";
     private const string UploadsRootId = "uploads";
     private const int MaxSlugLength = 64;
 
@@ -53,16 +51,31 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private readonly IOptions<TeamOptions> options = options;
-    private readonly TeammatePaths paths = paths;
-    private readonly ILogger<LibraryRootStore> logger = logger;
+    private readonly IOptions<TeamOptions> options;
+    private readonly AgentPaths paths;
+    private readonly ILogger<LibraryRootStore> logger;
+    private readonly SkillSourcesSettings? skillSources;
     private readonly Lock writeGate = new();
-    private volatile Snapshot current = LoadInitial(options, paths, logger);
+    private volatile Snapshot current;
+
+    /// <summary>Loads the roots; with <paramref name="skillSources"/> the Skill Sources root follows its folder setting.</summary>
+    public LibraryRootStore(IOptions<TeamOptions> options, AgentPaths paths, ILogger<LibraryRootStore> logger, SkillSourcesSettings? skillSources = null)
+    {
+        this.options = options;
+        this.paths = paths;
+        this.logger = logger;
+        this.skillSources = skillSources;
+        this.current = LoadInitial(options, paths, logger, SkillSourcesDirOf(options, skillSources));
+        if (skillSources is not null)
+        {
+            skillSources.Changed += this.RefreshSkillSources;
+        }
+    }
 
     /// <summary>Raised once per <see cref="Save"/> or <see cref="SetHidden"/> that changes the on-disk file, outside the write lock.</summary>
     public event Action? RootsChanged;
 
-    /// <summary>Every Library Root: the two built-ins first (Teams, then Teammates), then any pinned roots, in file or configuration order.</summary>
+    /// <summary>Every Library Root: the two built-ins first (Teams, then Agents), then any pinned roots, in file or configuration order.</summary>
     public IReadOnlyList<LibraryRoot> Roots => this.current.Roots;
 
     /// <summary><see cref="Roots"/> minus any built-in hidden via <see cref="SetHidden"/>.</summary>
@@ -124,7 +137,20 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
         return null;
     }
 
-    /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"teammates"</c> or <c>"uploads"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
+    /// <summary>Rebuilds the snapshot with the Skill Sources folder's new directory, keeping pinned roots, the hidden set and
+    /// any load error, and raises <see cref="RootsChanged"/> outside the lock.</summary>
+    public void RefreshSkillSources()
+    {
+        lock (this.writeGate)
+        {
+            Snapshot snapshot = this.current;
+            this.current = this.BuildSnapshot(snapshot.PinnedFromFile, snapshot.Hidden, snapshot.LoadError);
+        }
+
+        this.RootsChanged?.Invoke();
+    }
+
+    /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"agents"</c>, <c>"uploads"</c> or <c>"skill-sources"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
     /// <param name="builtInId">The built-in root's id.</param>
     /// <param name="hidden">Whether the root should be hidden.</param>
     /// <exception cref="ArgumentException"><paramref name="builtInId"/> does not name a built-in root.</exception>
@@ -133,10 +159,11 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(builtInId);
         if (!string.Equals(builtInId, TeamsRootId, StringComparison.Ordinal)
-            && !string.Equals(builtInId, TeammatesRootId, StringComparison.Ordinal)
-            && !string.Equals(builtInId, UploadsRootId, StringComparison.Ordinal))
+            && !string.Equals(builtInId, AgentsRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, UploadsRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, SkillSourcesRootId, StringComparison.Ordinal))
         {
-            throw new ArgumentException("Only a built-in Library root ('teams', 'teammates' or 'uploads') can be hidden.", nameof(builtInId));
+            throw new ArgumentException("Only a built-in Library root ('teams', 'agents', 'uploads' or 'skill-sources') can be hidden.", nameof(builtInId));
         }
 
         lock (this.writeGate)
@@ -185,7 +212,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     /// Slugs <paramref name="name"/> into a lowercase, hyphenated id: Unicode FormD-normalised with
     /// non-spacing marks dropped, non-ASCII-alphanumerics collapsed to a single hyphen, trimmed,
     /// capped at 64 characters, and <c>"root"</c> when nothing is left. <c>"teams"</c> and
-    /// <c>"teammates"</c> are always treated as taken, and a collision appends <c>-2</c>, <c>-3</c>, ...
+    /// <c>"agents"</c> are always treated as taken, and a collision appends <c>-2</c>, <c>-3</c>, ...
     /// </summary>
     /// <param name="name">The pinned root's display name.</param>
     /// <param name="taken">Slugs already assigned to earlier roots in this build.</param>
@@ -215,7 +242,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
 
         string baseSlug = collapsed.Length == 0 ? "root" : collapsed;
 
-        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, TeammatesRootId, UploadsRootId };
+        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, AgentsRootId, UploadsRootId, SkillSourcesRootId };
         if (!takenSlugs.Contains(baseSlug))
         {
             return baseSlug;
@@ -259,12 +286,12 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     }
 
     /// <summary>Builds the initial <see cref="Snapshot"/> for the primary constructor, never throwing on bad configuration or a malformed file.</summary>
-    private static Snapshot LoadInitial(IOptions<TeamOptions> options, TeammatePaths paths, ILogger<LibraryRootStore> logger)
+    private static Snapshot LoadInitial(IOptions<TeamOptions> options, AgentPaths paths, ILogger<LibraryRootStore> logger, string skillSourcesDir)
     {
         string filePath = Path.Combine(options.Value.DataDir, FileName);
         var (pinnedFromFile, hidden, loadError) = ReadFile(filePath, logger);
         IReadOnlyList<(string Name, string Path)> source = ToSource(options, pinnedFromFile);
-        var roots = BuildRoots(options, paths, source, logger);
+        var roots = BuildRoots(options, paths, source, logger, skillSourcesDir);
         return new Snapshot(roots, hidden, pinnedFromFile, loadError);
     }
 
@@ -304,6 +331,14 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
             return (null, [], null);
         }
 
+        return (ReadPinned(obj), ReadHidden(obj), null);
+    }
+
+    /// <summary>Reads the <c>pinned</c> array of the roots file, skipping entries without a string name and path.</summary>
+    /// <param name="obj">The parsed roots file.</param>
+    /// <returns>The pinned entries, or <see langword="null"/> when the file has no <c>pinned</c> array.</returns>
+    private static List<PinnedRootEntry>? ReadPinned(JsonObject obj)
+    {
         List<PinnedRootEntry>? pinnedFromFile = null;
         if (obj.TryGetPropertyValue("pinned", out var pinnedNode) && pinnedNode is JsonArray pinnedArray)
         {
@@ -319,6 +354,14 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
             }
         }
 
+        return pinnedFromFile;
+    }
+
+    /// <summary>Reads the <c>hidden</c> array of the roots file, skipping entries that are not strings.</summary>
+    /// <param name="obj">The parsed roots file.</param>
+    /// <returns>The hidden root ids; empty when the file has no <c>hidden</c> array.</returns>
+    private static HashSet<string> ReadHidden(JsonObject obj)
+    {
         HashSet<string> hidden = new(StringComparer.Ordinal);
         if (obj.TryGetPropertyValue("hidden", out var hiddenNode) && hiddenNode is JsonArray hiddenArray)
         {
@@ -331,7 +374,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
             }
         }
 
-        return (pinnedFromFile, hidden, null);
+        return hidden;
     }
 
     /// <summary>The pinned-root source for <see cref="BuildRoots"/>: the file's list when one was saved, else the configured list.</summary>
@@ -341,18 +384,31 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
             : [.. (options.Value.Library.Roots ?? []).Select(p => (p.Name, p.Path))];
 
     /// <summary>Builds the built-ins plus every pinned root that resolves, skipping (with a warning) any blank or invalid path.</summary>
-    private static List<LibraryRoot> BuildRoots(IOptions<TeamOptions> options, TeammatePaths paths, IReadOnlyList<(string Name, string Path)> pinnedSource, ILogger logger)
+    /// <summary>The Skill Sources folder: the settings' answer, else <c>Team:SkillSourcesDir</c>, else <c>{DataDir}/SkillSources</c>.</summary>
+    private static string SkillSourcesDirOf(IOptions<TeamOptions> options, SkillSourcesSettings? settings)
+    {
+        if (settings is not null)
+        {
+            return settings.Dir;
+        }
+
+        string dataDir = Path.GetFullPath(options.Value.DataDir);
+        return string.IsNullOrWhiteSpace(options.Value.SkillSourcesDir) ? Path.Combine(dataDir, "SkillSources") : Path.GetFullPath(options.Value.SkillSourcesDir, dataDir);
+    }
+
+    private static List<LibraryRoot> BuildRoots(IOptions<TeamOptions> options, AgentPaths paths, IReadOnlyList<(string Name, string Path)> pinnedSource, ILogger logger, string skillSourcesDir)
     {
         string dataDir = options.Value.DataDir;
         string teamsRoot = TrimTrailingSeparator(Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir)));
-        string teammatesRoot = TrimTrailingSeparator(Path.GetFullPath(paths.DefinitionsRoot));
+        string agentsRoot = TrimTrailingSeparator(Path.GetFullPath(paths.DefinitionsRoot));
         string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
 
         List<LibraryRoot> roots =
         [
             new LibraryRoot(TeamsRootId, "Teams", teamsRoot, LibraryRootKind.Teams),
-            new LibraryRoot(TeammatesRootId, "Teammates", teammatesRoot, LibraryRootKind.Teammates),
+            new LibraryRoot(AgentsRootId, "Agents", agentsRoot, LibraryRootKind.Agents),
             new LibraryRoot(UploadsRootId, "Uploads", uploadsRoot, LibraryRootKind.Uploads),
+            new LibraryRoot(SkillSourcesRootId, "Skill Sources", TrimTrailingSeparator(Path.GetFullPath(skillSourcesDir)), LibraryRootKind.SkillSources, ReadOnly: true),
         ];
 
         List<string> takenSlugs = [];
@@ -431,7 +487,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     private Snapshot BuildSnapshot(IReadOnlyList<PinnedRootEntry>? pinnedFromFile, IReadOnlySet<string> hidden, LibraryRootLoadError? loadError)
     {
         var source = ToSource(this.options, pinnedFromFile);
-        var roots = BuildRoots(this.options, this.paths, source, this.logger);
+        var roots = BuildRoots(this.options, this.paths, source, this.logger, SkillSourcesDirOf(this.options, this.skillSources));
         return new Snapshot(roots, hidden, pinnedFromFile, loadError);
     }
 

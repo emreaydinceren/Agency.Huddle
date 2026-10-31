@@ -38,6 +38,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate, because the check command differs per project. The Reviewer's approval and the Maintainer's Evidence line are the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Change verified: evidence from verify
+- Change reviewed: document reviewed by verify
+
 ## Cadence
 
 - Triage new issues at least weekly. Work accepted Tasks by label priority.

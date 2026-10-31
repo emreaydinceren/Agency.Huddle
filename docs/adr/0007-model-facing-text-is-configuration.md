@@ -46,7 +46,7 @@ So a Hook carries a `HookTiming`:
 | Timing | Hooks | When an edit lands |
 | --- | --- | --- |
 | `Live` | Turn framing, the Room label, catch-up, every `get_help` section | The next turn. `get_help` re-renders on every call. |
-| `NextSession` | The four system-prompt blocks, the five tool descriptions | Teammates started afterwards. Running ones keep what they were given. |
+| `NextSession` | The four system-prompt blocks, the five tool descriptions | Agents started afterwards. Running ones keep what they were given. |
 
 **Editing a Hook never restarts a session.** The alternative was considered and
 rejected: restarting would make every edit take effect immediately, at the cost
@@ -54,7 +54,7 @@ of throwing away that Agent's conversation memory every time someone reworded a
 sentence. `PersonaSupervisor.NeedsRestart` compares the `Persona` record, and a
 Hook is deliberately not part of it.
 
-The cost is that a `NextSession` edit is silently inert on a running Teammate.
+The cost is that a `NextSession` edit is silently inert on a running Agent.
 The settings page carries a badge on exactly those fields, because that is the
 one thing a reader cannot infer from the text itself.
 

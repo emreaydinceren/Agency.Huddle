@@ -10,7 +10,7 @@ When you move from the plan to code, switch to
 Huddle rules MudBlazor examples lead you to break, and the facts already checked against the
 pinned package.
 
-Applies to **MudBlazor 9.10.0**, the version pinned in
+Applies to **MudBlazor 9.11.0**, the version pinned in
 [`Directory.Packages.props`](../Directory.Packages.props). Built and link-checked on 2026-09-24.
 
 ## Choosing components for a design
@@ -28,7 +28,7 @@ Applies to **MudBlazor 9.10.0**, the version pinned in
    three different wordings for the same thing.
 5. **Confirm any parameter the design depends on against the package, not the website.**
    mudblazor.com documents the latest release; see
-   [Checking an API against 9.10.0](MudBlazorImplementation.md#checking-an-api-against-9100).
+   [Checking an API against the pinned package](MudBlazorImplementation.md#checking-an-api-against-the-pinned-package).
 
 Write your own component only when no row fits, or when composing two or three MudBlazor
 components is the component. A new Razor component that wraps one MudBlazor component to
@@ -42,7 +42,7 @@ restyle it is almost always a Theme change or a parameter you missed.
 | Lay out a responsive multi-column page | [Grid](https://mudblazor.com/components/grid), [Container](https://mudblazor.com/components/container) |
 | Show or hide something by screen size | [Hidden](https://mudblazor.com/components/hidden), [Breakpoint Provider](https://mudblazor.com/components/breakpointprovider) |
 | Put content on a raised or outlined surface | [Paper](https://mudblazor.com/components/paper), [Card](https://mudblazor.com/components/card) |
-| Show a list of records with sort, filter or paging | [Data Grid](https://mudblazor.com/components/datagrid). In 9.10 it is read-only, and sorts on several columns, by default. It groups on several levels through each column's `GroupByOrder` |
+| Show a list of records with sort, filter or paging | [Data Grid](https://mudblazor.com/components/datagrid). In 9.11 it is read-only, and sorts on several columns, by default. It groups on several levels through each column's `GroupByOrder` |
 | Show a list the user can group, sort and choose columns for | [Data Grid](https://mudblazor.com/components/datagrid#grouping), with `Hidden` bound per column. Turn off `ShowColumnOptions` and `Filterable` when a saved view, not the grid, owns those choices |
 | Show a small fixed table I write by hand | [Simple Table](https://mudblazor.com/components/simpletable) |
 | Show a hierarchy (folders, org chart) | [Tree View](https://mudblazor.com/components/treeview) |
@@ -56,12 +56,12 @@ restyle it is almost always a Theme change or a parameter you missed.
 | Show a persistent warning or error on the page | [Alert](https://mudblazor.com/components/alert) |
 | Show that something is loading | [Progress](https://mudblazor.com/components/progress), [Skeleton](https://mudblazor.com/components/skeleton), [Overlay](https://mudblazor.com/components/overlay#childcontent-as-a-loader) |
 | Show a count or a dot on an icon | [Badge](https://mudblazor.com/components/badge) |
-| Show someone's status on their avatar | [Badge](https://mudblazor.com/components/badge) with `Dot="true" Overlap="true"` around `TeammateAvatar`, plus a [Tooltip](https://mudblazor.com/components/tooltip) that says the status in words |
+| Show someone's status on their avatar | [Badge](https://mudblazor.com/components/badge) with `Dot="true" Overlap="true"` around `AgentAvatar`, plus a [Tooltip](https://mudblazor.com/components/tooltip) that says the status in words |
 | Show that work is in progress inline, in a chip or button | [Progress](https://mudblazor.com/components/progress#circular-progress) — `MudProgressCircular Indeterminate="true" Size="Size.Small"`, not a CSS animation |
 | Show a person or agent | [Avatar](https://mudblazor.com/components/avatar) |
 | Show tags, labels or removable filters | [Chips](https://mudblazor.com/components/chips), [Chip Set](https://mudblazor.com/components/chipset) |
-| Pick one of many from a long list, by typing | [Autocomplete](https://mudblazor.com/components/autocomplete) (one value only in 9.10) |
-| Pick **several** from a long list, by typing | [Chip Set](https://mudblazor.com/components/chipset#adding-and-removing-chips) of closable chips, plus an [Autocomplete](https://mudblazor.com/components/autocomplete) that adds one and clears itself. 9.10's `MudAutocomplete` has no `MultiSelection` |
+| Pick one of many from a long list, by typing | [Autocomplete](https://mudblazor.com/components/autocomplete) (one value only in 9.11) |
+| Pick **several** from a long list, by typing | [Chip Set](https://mudblazor.com/components/chipset#adding-and-removing-chips) of closable chips, plus an [Autocomplete](https://mudblazor.com/components/autocomplete) that adds one and clears itself. 9.11's `MudAutocomplete` has no `MultiSelection` |
 | Pick one or several from a known list | [Select](https://mudblazor.com/components/select#multiselect) |
 | Pick one of a few, all visible | [Radio](https://mudblazor.com/components/radio), [Toggle Group](https://mudblazor.com/components/togglegroup) |
 | Validate a form | [Form](https://mudblazor.com/components/form) |
@@ -82,7 +82,7 @@ restyle it is almost always a Theme change or a parameter you missed.
 
 ## The catalogue
 
-Every component with a page in the MudBlazor 9.10.0 docs, grouped by what it is
+Every component with a page in the MudBlazor 9.11.0 docs, grouped by what it is
 for. Each component name links to its page; each entry in the last column links
 to one example section on that page. For the full parameter list, open the
 **API** tab on the component page, or go to `https://mudblazor.com/api/<TypeName>`,
@@ -245,7 +245,7 @@ Not components, but the next place to look before writing code.
 
 The catalogue was generated from MudBlazor's own docs source at the tag that
 matches our package,
-[`v9.10.0/src/MudBlazor.Docs`](https://github.com/MudBlazor/MudBlazor/tree/v9.10.0/src/MudBlazor.Docs):
+[`v9.11.0/src/MudBlazor.Docs`](https://github.com/MudBlazor/MudBlazor/tree/v9.11.0/src/MudBlazor.Docs):
 component routes from each `Pages/Components/*/*Page.razor`, section anchors from
 their `SectionHeader Title` values. The docs build an anchor as the title
 lower-cased with spaces turned into hyphens, prefixed by the parent section's
@@ -253,7 +253,7 @@ title for nested sections. All 558 section links were checked against the live
 site on 2026-09-24.
 
 > [!NOTE]
-> mudblazor.com documents the **latest** release, not 9.10.0. When they
+> mudblazor.com documents the **latest** release, not 9.11.0. When they
 > disagree, the tagged source above is the truth for this repo. When you bump
 > MudBlazor in `Directory.Packages.props`, re-check this page: new components
 > appear in the docs' `Services/Menu/MenuService.cs`.

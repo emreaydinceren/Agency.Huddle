@@ -1,0 +1,474 @@
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.Acp.Hosting;
+using Agency.Huddle.Acp.Tests.Fakes;
+using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.Tests.Pipes;
+
+namespace Agency.Huddle.Tests.Conformance;
+
+/// <summary>
+/// D19 (RS §6.3): drives the real <see cref="IAgentHostFactory"/> (<see cref="DotAcpAgentHostFactory"/>)
+/// against a scripted <see cref="FakeAcpAgent"/>, the same Tier 3 harness <see cref="MockAdapterFixture"/>
+/// uses for a whole <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> — except these tests call
+/// <see cref="IAgentHostFactory.StartAsync"/> and the returned <see cref="IPersonaHost"/> directly,
+/// with no pipe and no runner, to pin the factory split itself: one Adapter process and one App Tool
+/// server per Persona, with the system prompt and Memory index rebuilt on every
+/// <see cref="IPersonaHost.OpenAsync"/> call.
+/// </summary>
+public sealed class PersonaHostTests
+{
+    /// <summary>The configuration key that switches elicitation advertising, named from the option so a rename cannot leave these tests asserting on a switch that no longer exists.</summary>
+    private static readonly string AdvertiseKey = "Team:Acp:" + nameof(AcpOptions.AdvertiseElicitation);
+
+    /// <summary>The only <c>clientCapabilities</c> keys Huddle ever advertises, sorted: file system and terminal (both turned off) and elicitation (form mode only, when switched on).</summary>
+    private static readonly string[] AllowedCapabilityKeys = ["elicitation", "fs", "terminal"];
+
+    /// <summary><see cref="IAgentHostFactory.StartAsync"/> starts the host but sends no <c>session/new</c> at all.</summary>
+    [Fact]
+    public async Task Start_OpensNoSession()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
+        Assert.DoesNotContain(fixture.Agent.Received, message => (string?)message["method"] == "session/new");
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1 (follow-up decision §6.8a): with <c>Acp:AdvertiseElicitation</c> on, the
+    /// <c>initialize</c> request the real factory's host sends carries <c>clientCapabilities.elicitation</c>
+    /// equal to exactly <c>{"form":{}}</c>. Never a <c>url</c> entry: <c>claude-agent-acp</c> would start its
+    /// MCP OAuth path for one, which Huddle has no way to complete. File system and terminal stay off.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithAdvertiseElicitationOn_AdvertisesFormObjectOnly()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal("""{"form":{}}""", capabilities["elicitation"]?.ToJsonString());
+        Assert.False(capabilities["elicitation"]?.AsObject().ContainsKey("url"));
+        AssertFsAndTerminalOff(capabilities);
+    }
+
+    /// <summary>
+    /// With <c>Acp:AdvertiseElicitation</c> left alone, the real factory's host advertises the form object
+    /// too: the shipped configuration is the one that bridges Claude's questions to the Human.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithTheShippedDefault_AdvertisesFormObjectOnly()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal("""{"form":{}}""", capabilities["elicitation"]?.ToJsonString());
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1: whatever the switch, the only <c>clientCapabilities</c> keys <c>initialize</c>
+    /// carries are <c>fs</c>, <c>terminal</c> and <c>elicitation</c>. A capability added beside them is a new
+    /// decision the way elicitation was, so it has to change this test rather than slip in unnoticed.
+    /// </summary>
+    [Fact]
+    public async Task Start_CapabilityKeys_AreFsTerminalElicitation_Only()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal(AllowedCapabilityKeys, capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1 and D-13, as before the option existed: with <c>Acp:AdvertiseElicitation</c> off,
+    /// <c>initialize</c> advertises no <c>elicitation</c> capability and no file-system or terminal capability
+    /// either. <c>claude-agent-acp</c> keeps Claude's built-in <c>AskUserQuestion</c> off, and with it the
+    /// refusal-fallback dialog and MCP-initiated forms, only while <c>elicitation.form</c> is absent, so off
+    /// restores that behaviour exactly.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithAdvertiseElicitationOff_AdvertisesNoElicitation()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: false);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.False(capabilities.ContainsKey("elicitation"), "initialize must not advertise clientCapabilities.elicitation while Acp:AdvertiseElicitation is off.");
+        Assert.Equal(["fs", "terminal"], capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
+        AssertFsAndTerminalOff(capabilities);
+    }
+
+    /// <summary>
+    /// Manager's review of 3.4.i: nothing in 3.4.t proves <see cref="DotAcpAgentHostFactory"/> itself
+    /// waits on a pending Agent-folder move (corrections-B2 item 20) - only that
+    /// <see cref="AgentFolderMoves.WhenSettledAsync"/> behaves correctly in isolation. A pending
+    /// <see cref="AgentFolderMoves.Begin"/> for the Persona's Name holds
+    /// <see cref="IAgentHostFactory.StartAsync"/> from creating its Work Dir until
+    /// <see cref="AgentFolderMoves.Complete"/> releases it - gate-driven via the pending Task, no
+    /// sleeps.
+    /// </summary>
+    [Fact]
+    public async Task Start_FolderMovePending_WaitsBeforeCreatingWorkDir()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        TaskCompletionSource handle = fixture.Moves.Begin(fixture.Persona.Name);
+        string workDir = Path.Combine(fixture.DataDir, "Agents", fixture.Persona.Name, "work");
+
+        Task<IPersonaHost> starting = fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        Assert.False(starting.IsCompleted);
+        Assert.False(Directory.Exists(workDir));
+
+        fixture.Moves.Complete(handle);
+        await using IPersonaHost host = await starting;
+
+        Assert.True(Directory.Exists(workDir));
+    }
+
+    /// <summary>Two <see cref="IPersonaHost.OpenAsync"/> calls mint two distinct session ids, over the one Adapter process <see cref="IAgentHostFactory.StartAsync"/> launched.</summary>
+    [Fact]
+    public async Task Open_Twice_TwoDistinctSessionIds_OneAdapterProcess()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        IAgentSession first = await host.OpenAsync(ct);
+        IAgentSession second = await host.OpenAsync(ct);
+
+        Assert.NotEqual(first.SessionId, second.SessionId);
+
+        // "One Adapter process": fixture.Launcher (and so fixture.Agent) is a single instance for
+        // the whole test, constructed once in Fixture.StartAsync and never replaced - StartAsync
+        // above is called exactly once, so both opens necessarily travelled over that one process,
+        // confirmed by LastOptions being set at all (Launch ran) and both session ids coming from
+        // the one FakeAcpAgent's own counter.
+        Assert.NotNull(fixture.Launcher.LastOptions);
+    }
+
+    /// <summary>A memory file written between two opens shows up in the second open's composed system prompt, but not the first's (FC §6.15: the index is current at open, not stale from host start).</summary>
+    [Fact]
+    public async Task Open_ComposesSystemPromptPerOpen_MemoryIndexCurrent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        string firstPrompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
+        Assert.DoesNotContain("Porto trip notes", firstPrompt, StringComparison.Ordinal);
+
+        string memoryDir = Path.Combine(fixture.DataDir, "Agents", fixture.Persona.Name, "work", "memory");
+        await File.WriteAllTextAsync(Path.Combine(memoryDir, "porto.md"), "# Porto trip notes\n", ct);
+
+        _ = await host.OpenAsync(ct);
+        string secondPrompt = await fixture.AppendedSystemPromptAsync(occurrence: 2, ct);
+        Assert.Contains("Porto trip notes", secondPrompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Questions spec D-11, as measured live on 2026-10-01: the Claude Adapter defers every MCP tool, so a
+    /// model sees only <c>ask_human</c>'s name and never its description. The composed system prompt the real
+    /// factory hands <c>session/new</c> therefore carries its own paragraph on when to ask, naming the tool
+    /// with the Adapter's prefix, and carries it once.
+    /// </summary>
+    [Fact]
+    public async Task Open_SystemPromptCarriesTheAskHumanParagraph_NamingTheToolOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
+
+        const string Sentence = "call mcp__team__ask_human instead: it shows them as options the Human taps.";
+        Assert.Equal(1, prompt.Split(Sentence).Length - 1);
+        Assert.True(prompt.IndexOf(Sentence, StringComparison.Ordinal) > prompt.IndexOf("These tools run inside the application process:", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Elicitation bridge E-8: the composed system prompt the real factory hands <c>session/new</c> steers a
+    /// Persona to <c>ask_human</c>, named with the Adapter's prefix, rather than Claude's built-in
+    /// <c>AskUserQuestion</c>, which holds the Turn open until the Human answers; the passage appears once.
+    /// </summary>
+    [Fact]
+    public async Task Open_SystemPromptPrefersAskHumanOverTheBuiltInQuestionTool()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
+
+        const string Passage = "The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer mcp__team__ask_human: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.";
+        Assert.Equal(1, prompt.Split(Passage).Length - 1);
+    }
+
+    /// <summary>Every session this host opens is told about the same MCP endpoint URL and the same bearer token (RS §6.3: "the token is minted per host").</summary>
+    [Fact]
+    public async Task Open_Twice_SameToolServerEndpointAndToken()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        (string firstUrl, string firstAuth) = await fixture.McpServerAsync(occurrence: 1, ct);
+
+        _ = await host.OpenAsync(ct);
+        (string secondUrl, string secondAuth) = await fixture.McpServerAsync(occurrence: 2, ct);
+
+        Assert.Equal(firstUrl, secondUrl);
+        Assert.Equal(firstAuth, secondAuth);
+    }
+
+    /// <summary><see cref="IPersonaHost.ResumeAsync"/> on an id the Adapter minted returns a session for it.</summary>
+    [Fact]
+    public async Task Resume_Known_ReturnsSession()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        IAgentSession opened = await host.OpenAsync(ct);
+
+        IAgentSession? resumed = await host.ResumeAsync(opened.SessionId, ct);
+
+        Assert.NotNull(resumed);
+        Assert.Equal(opened.SessionId, resumed.SessionId);
+    }
+
+    /// <summary><see cref="IPersonaHost.ResumeAsync"/> on an id the Adapter never minted returns <see langword="null"/>, never throws.</summary>
+    [Fact]
+    public async Task Resume_Unknown_ReturnsNull()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        IAgentSession? resumed = await host.ResumeAsync("sess-never-minted", ct);
+
+        Assert.Null(resumed);
+    }
+
+    /// <summary><see cref="IPersonaHost.CanResume"/> reports exactly what the Adapter advertised at <c>initialize</c>.</summary>
+    [Fact]
+    public async Task CanResume_MatchesAdvertisedCapability()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        // FakeAcpAgent's DefaultInitialize advertises sessionCapabilities.resume, so a freshly
+        // started host, with no override, reports true.
+        Assert.True(host.CanResume);
+    }
+
+    /// <summary><see cref="IPersonaHost.Profile"/> is the Adapter Profile the resolver picked for this Persona (finding P-8).</summary>
+    [Fact]
+    public async Task Profile_IsTheResolvedProfile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        Assert.Equal("claude", host.Profile.Id);
+    }
+
+    /// <summary>Disposing the host also tears down the App Tool server it started (the same responsibility the old <c>ToolServerOwningAgentHost</c> held).</summary>
+    [Fact]
+    public async Task Dispose_DisposesToolServer()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+        _ = await host.OpenAsync(ct);
+        Uri toolServerUri = new(((JsonObject)(await fixture.SessionNewParamsAsync(occurrence: 1, ct))["mcpServers"]![0]!)["url"]!.GetValue<string>());
+
+        await host.DisposeAsync();
+
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        using HttpClient client = new();
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(toolServerUri, timeout.Token));
+    }
+
+    /// <summary>The <c>clientCapabilities</c> object of the one <c>initialize</c> request <paramref name="fixture"/>'s scripted agent received.</summary>
+    /// <param name="fixture">The started harness.</param>
+    private static JsonObject InitializeCapabilities(Fixture fixture)
+    {
+        JsonObject initialize = Assert.Single(fixture.Agent.Received, message => (string?)message["method"] == "initialize");
+        JsonObject? capabilities = initialize["params"]?["clientCapabilities"]?.AsObject();
+        Assert.NotNull(capabilities);
+        return capabilities;
+    }
+
+    /// <summary>Asserts that file-system access and terminal access are both advertised as off, in every configuration.</summary>
+    /// <param name="capabilities">The advertised <c>clientCapabilities</c>.</param>
+    private static void AssertFsAndTerminalOff(JsonObject capabilities)
+    {
+        Assert.False((bool?)capabilities["terminal"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["readTextFile"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["writeTextFile"] ?? false);
+    }
+
+    /// <summary>
+    /// A minimal, pipe-free harness: a real Huddle host with <c>Team:Acp:Enabled</c> true and its
+    /// process launcher substituted for <see cref="FakeAgentProcessLauncher"/>, exposing the real
+    /// <see cref="IAgentHostFactory"/> directly rather than through a <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> -
+    /// this test only needs the factory split RS §6.3 describes, not Registration or the read loop.
+    /// </summary>
+    private sealed class Fixture : IAsyncDisposable
+    {
+        private readonly IHost host;
+        private readonly TempDataDir dataDir;
+        private bool disposed;
+
+        private Fixture(IHost host, TempDataDir dataDir, FakeAgentProcessLauncher launcher, Persona persona)
+        {
+            this.host = host;
+            this.dataDir = dataDir;
+            this.Launcher = launcher;
+            this.Persona = persona;
+        }
+
+        internal FakeAgentProcessLauncher Launcher { get; }
+
+        internal FakeAcpAgent Agent => this.Launcher.Agent;
+
+        internal Persona Persona { get; }
+
+        internal string DataDir => this.dataDir.Path;
+
+        internal IAgentHostFactory Factory => this.host.Services.GetRequiredService<IAgentHostFactory>();
+
+        /// <summary>The same <see cref="AgentFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
+        internal AgentFolderMoves Moves => this.host.Services.GetRequiredService<AgentFolderMoves>();
+
+        /// <summary>Starts the harness, optionally pinning <c>Acp:AdvertiseElicitation</c>.</summary>
+        /// <param name="cancellationToken">Cancels startup.</param>
+        /// <param name="advertiseElicitation">The value to pin, or <see langword="null"/> to leave the shipped default alone.</param>
+        internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken, bool? advertiseElicitation = null)
+        {
+            TempDataDir dataDir = new();
+            string pipeName = "persona-host-test-" + Guid.NewGuid().ToString("N");
+
+            Dictionary<string, string?> config = new(StringComparer.Ordinal)
+            {
+                ["Team:PipeName"] = pipeName,
+                ["Team:DataDir"] = dataDir.Path,
+                ["Team:HumanName"] = "You",
+                ["Team:DemoAgent:Enabled"] = "false",
+                ["Team:Acp:Enabled"] = "true",
+                ["Team:Acp:Args:0"] = "--persona-host-fixture",
+            };
+
+            if (advertiseElicitation is { } advertise)
+            {
+                config[AdvertiseKey] = advertise ? "true" : "false";
+            }
+
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+            builder.Configuration.AddInMemoryCollection(config);
+            builder.Services.AddTeamServices(builder.Configuration);
+            PipeHostFixture.RemovePersonaSupervisorHostedService(builder.Services);
+
+            builder.Services.RemoveAll<IAgentProcessLauncher>();
+            FakeAgentProcessLauncher launcher = new();
+            builder.Services.AddSingleton<IAgentProcessLauncher>(launcher);
+
+            IHost host = builder.Build();
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+
+            Persona persona = new("nova", "You are Nova.");
+
+            return new Fixture(host, dataDir, launcher, persona);
+        }
+
+        /// <summary>Waits for the <paramref name="occurrence"/>-th <c>session/new</c> (1-based, in arrival order) and returns its <c>_meta.systemPrompt.append</c> text.</summary>
+        internal async Task<string> AppendedSystemPromptAsync(int occurrence, CancellationToken cancellationToken)
+        {
+            JsonObject parameters = await this.SessionNewParamsAsync(occurrence, cancellationToken).ConfigureAwait(false);
+            JsonObject? meta = parameters["_meta"] as JsonObject;
+            JsonObject? systemPrompt = meta?["systemPrompt"] as JsonObject;
+            string? appended = (string?)systemPrompt?["append"];
+            Assert.NotNull(appended);
+            return appended;
+        }
+
+        /// <summary>Waits for the <paramref name="occurrence"/>-th <c>session/new</c> and returns its sole <c>mcpServers</c> entry's URL and <c>Authorization</c> header value.</summary>
+        internal async Task<(string Url, string Authorization)> McpServerAsync(int occurrence, CancellationToken cancellationToken)
+        {
+            JsonObject parameters = await this.SessionNewParamsAsync(occurrence, cancellationToken).ConfigureAwait(false);
+            JsonArray mcpServers = Assert.IsType<JsonArray>(parameters["mcpServers"]);
+            JsonObject entry = Assert.IsType<JsonObject>(Assert.Single(mcpServers));
+            string url = (string?)entry["url"] ?? string.Empty;
+            JsonArray headers = Assert.IsType<JsonArray>(entry["headers"]);
+            JsonObject headerEntry = Assert.IsType<JsonObject>(Assert.Single(headers));
+            Assert.Equal("Authorization", (string?)headerEntry["name"]);
+            string authorization = (string?)headerEntry["value"] ?? string.Empty;
+            return (url, authorization);
+        }
+
+        /// <summary>
+        /// The <paramref name="occurrence"/>-th <c>session/new</c> request's <c>params</c> object
+        /// (1-based, in arrival order). <see cref="FakeAcpAgent.WaitForAsync"/> always returns the
+        /// FIRST matching message ever received, never the latest, so a second or later open is
+        /// read directly off <see cref="FakeAcpAgent.Received"/> instead, polled until it has
+        /// enough <c>session/new</c> entries.
+        /// </summary>
+        internal async Task<JsonObject> SessionNewParamsAsync(int occurrence, CancellationToken cancellationToken)
+        {
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+
+            List<JsonObject> sessionNews;
+            while (true)
+            {
+                sessionNews = [.. this.Agent.Received.Where(message => (string?)message["method"] == "session/new")];
+                if (sessionNews.Count >= occurrence)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(20), timeout.Token).ConfigureAwait(false);
+            }
+
+            return (JsonObject)sessionNews[occurrence - 1]["params"]!;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            await this.host.StopAsync().ConfigureAwait(false);
+            this.host.Dispose();
+            this.dataDir.Dispose();
+        }
+    }
+}

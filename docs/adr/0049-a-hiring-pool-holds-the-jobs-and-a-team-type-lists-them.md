@@ -41,7 +41,7 @@ chip clouds, **team types** (any) and **tags plus skill names** (all), as the av
 | # | Decision | The alternative it beat |
 | --- | --- | --- |
 | D-1 | **A type's role is a reference to a job**, composed into today's `RoleSpec` when the catalog loads. | Changing every consumer (about twenty) to look up a job. Composing keeps `type.Roles.First(r => r.Id == …)` working and the stored `_role: type/role@version` valid. |
-| D-2 | **The role id stays the id the role always had**, and equals the job id unless the manifest says otherwise. | Re-keying hires by job id, which would orphan every saved Teammate. |
+| D-2 | **The role id stays the id the role always had**, and equals the job id unless the manifest says otherwise. | Re-keying hires by job id, which would orphan every saved Agent. |
 | D-3 | **Every pool job the type does not list is offered as an optional, pooled role** (not manager, not required, limit one, covers nothing). | Hiring only the type's own jobs. It would make the pool a menu of one, and Custom role the only way out. |
 | D-4 | **The persona is a Markdown file per job**, in the candidate shape. | Prose inside the JSON, which ADR-0038 already rejected. |
 | D-5 | **No presets.** Two clouds find a job; a preset hid the list behind a name. | Keeping Small and Full for the two original types only. Two ways to hire is worse than one. |

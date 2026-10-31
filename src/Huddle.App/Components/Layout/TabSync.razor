@@ -9,13 +9,15 @@
 
     Passes are serialised: a pass that finds more work asks for one more rather than overlapping.
 *@
+@using Agency.Huddle.App.Circuits
 @using Agency.Huddle.App.Tabs
 @implements IDisposable
 @inject TabService Tabs
 @inject ITeamDirectory TeamDirectory
 @inject ITeamCatalog Catalog
+@inject ViewStore Views
 @inject RoomEvents Events
-@inject NavigationManager Navigation
+@inject ServerNavigator Navigator
 
 @code {
     private bool running;
@@ -27,6 +29,7 @@
         this.Events.RoomsChanged += this.OnChanged;
         this.Tabs.Changed += this.OnChanged;
         this.Catalog.Changed += this.OnCatalogChanged;
+        this.Views.ViewsChanged += this.OnChanged;
         await this.ReconcileAsync();
     }
 
@@ -36,6 +39,7 @@
         this.Events.RoomsChanged -= this.OnChanged;
         this.Tabs.Changed -= this.OnChanged;
         this.Catalog.Changed -= this.OnCatalogChanged;
+        this.Views.ViewsChanged -= this.OnChanged;
     }
 
     private void OnCatalogChanged()
@@ -53,7 +57,7 @@
         TabReconciler.ReconcileTeams(this.Tabs, this.Catalog);
         if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
         {
-            this.Navigation.NavigateTo(now.Url);
+            this.Navigator.NavigateTo(now.Url);
         }
     }
 
@@ -79,9 +83,10 @@
                 IReadOnlyList<Room> rooms = await this.TeamDirectory.GetRoomsAsync();
                 string? activeBefore = this.Tabs.Active?.Id;
                 TabReconciler.ReconcileRooms(this.Tabs, rooms);
+                TabReconciler.ReconcileViews(this.Tabs, this.Views.Views);
                 if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
                 {
-                    this.Navigation.NavigateTo(now.Url);
+                    this.Navigator.NavigateTo(now.Url);
                 }
             }
             while (this.pending);

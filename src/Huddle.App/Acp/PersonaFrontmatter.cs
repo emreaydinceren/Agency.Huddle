@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.SkillPacks.Folders;
 
 /// <summary>
 /// Splits a Persona file's optional leading YAML frontmatter block into an ordered list of
@@ -46,13 +47,13 @@ internal static class PersonaFrontmatter
     /// under that bullet is noise. <c>Title</c>, <c>Alias</c> and <c>Teams</c> stay: they are useful
     /// to a reading agent, and <c>Alias</c> in particular tells one that <c>@jar</c> is a working
     /// handle. <c>Adapter</c> is excluded too (Spec §7.2, §12 E-6): <c>mcp__team__list_agents</c>
-    /// describes a Teammate to other Agents, and which Adapter runs it is not something any Agent
-    /// can act on — without this exclusion, every Teammate's job description would gain a line
+    /// describes an Agent to other Agents, and which Adapter runs it is not something any Agent
+    /// can act on — without this exclusion, every Agent's job description would gain a line
     /// reading "Adapter: agency", model-facing text about Huddle's own plumbing. <c>Skills</c> is
-    /// excluded for the same reason (Spec §6.3, §7.2): which Skill files a Teammate loads is
+    /// excluded for the same reason (Spec §6.3, §7.2): which Skill files an Agent loads is
     /// plumbing about how it reads its own know-how, not something another Agent reading
     /// <c>list_agents</c> can act on. <c>Watches</c> is excluded for the same reason again
-    /// (FC §6.2): which folders a Teammate subscribes to is plumbing about its own File Changes
+    /// (FC §6.2): which folders an Agent subscribes to is plumbing about its own File Changes
     /// list, not something another Agent reading <c>list_agents</c> can act on. <c>_builtin</c>
     /// needs no entry here at all — it is already caught by the generic <c>_</c>-prefix rule
     /// above, since every reserved programmatic field starts with an underscore.
@@ -215,7 +216,7 @@ internal static class PersonaFrontmatter
         if (identity.Watches is { Count: > 0 })
         {
             // Unlike Teams and Skills, FC §6.2's sample shows watches: [Nova, Shared/pricing]
-            // unquoted: an entry is a folder path or Teammate Name, never free text that could
+            // unquoted: an entry is a folder path or Agent Name, never free text that could
             // need YAML escaping, so this is written raw rather than through QuoteScalar.
             lines.Add($"watches: [{string.Join(", ", identity.Watches)}]");
         }
@@ -269,7 +270,7 @@ internal static class PersonaFrontmatter
     /// Not built on <see cref="Compose"/> or <see cref="Parse"/>. <see cref="Compose"/> emits only
     /// the four identity keys, so recomposing a real Persona file through it would drop every
     /// other frontmatter field - exactly the fields <see cref="ComposeJobDescription"/> reads for
-    /// a Teammate's job description. <see cref="Parse"/> is not round-trip safe either, since it
+    /// an Agent's job description. <see cref="Parse"/> is not round-trip safe either, since it
     /// collapses a block scalar's line breaks to spaces and joins a list's items with <c>"; "</c>.
     /// A multi-line value cannot be replaced by a one-line edit, so this method leaves a block
     /// scalar or block list untouched and returns the input unchanged instead of flattening it -
@@ -283,49 +284,16 @@ internal static class PersonaFrontmatter
 
         var lines = SplitKeepingLineEndings(personaText);
 
-        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
-        {
-            return personaText;
-        }
-
-        var closeIndex = -1;
-        for (var i = 1; i < lines.Count; i++)
-        {
-            if (lines[i].Text.Trim() == FrontmatterDelimiter)
-            {
-                closeIndex = i;
-                break;
-            }
-        }
-
+        var closeIndex = FindClosingDelimiterIndex(lines);
         if (closeIndex < 0)
         {
             return personaText;
         }
 
-        for (var i = 1; i < closeIndex; i++)
+        var matchIndex = FindTopLevelKeyLine(lines, closeIndex, key, out var colonIndex);
+        if (matchIndex >= 0)
         {
-            var rawLine = lines[i].Text;
-
-            // A top-level key is always at column 0; an indented line is block-scalar or
-            // block-list content belonging to whichever key preceded it, never a new key.
-            if (rawLine.Length == 0 || rawLine[0] is ' ' or '\t')
-            {
-                continue;
-            }
-
-            var colonIndex = rawLine.IndexOf(':', StringComparison.Ordinal);
-            if (colonIndex < 0)
-            {
-                continue;
-            }
-
-            var lineKey = rawLine[..colonIndex].Trim();
-            if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
+            var rawLine = lines[matchIndex].Text;
             var existingValue = rawLine[(colonIndex + 1)..].Trim();
 
             if (IsBlockScalarIndicator(existingValue, out _))
@@ -333,12 +301,12 @@ internal static class PersonaFrontmatter
                 return personaText;
             }
 
-            if (existingValue.Length == 0 && IsFollowedByBlockListItems(lines, i + 1, closeIndex))
+            if (existingValue.Length == 0 && IsFollowedByBlockListItems(lines, matchIndex + 1, closeIndex))
             {
                 return personaText;
             }
 
-            lines[i] = ($"{rawLine[..colonIndex]}: {QuoteScalar(value)}", lines[i].Terminator);
+            lines[matchIndex] = ($"{rawLine[..colonIndex]}: {QuoteScalar(value)}", lines[matchIndex].Terminator);
             return Join(lines);
         }
 
@@ -386,71 +354,16 @@ internal static class PersonaFrontmatter
 
         var lines = SplitKeepingLineEndings(personaText);
 
-        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
-        {
-            return personaText;
-        }
-
-        var closeIndex = -1;
-        for (var i = 1; i < lines.Count; i++)
-        {
-            if (lines[i].Text.Trim() == FrontmatterDelimiter)
-            {
-                closeIndex = i;
-                break;
-            }
-        }
-
+        var closeIndex = FindClosingDelimiterIndex(lines);
         if (closeIndex < 0)
         {
             return personaText;
         }
 
-        for (var i = 1; i < closeIndex; i++)
+        var matchIndex = FindTopLevelKeyLine(lines, closeIndex, key, out var colonIndex);
+        if (matchIndex >= 0)
         {
-            var rawLine = lines[i].Text;
-
-            // A top-level key is always at column 0; an indented line belongs to whichever key
-            // preceded it (a block-list item here), never a new key.
-            if (rawLine.Length == 0 || rawLine[0] is ' ' or '\t')
-            {
-                continue;
-            }
-
-            var colonIndex = rawLine.IndexOf(':', StringComparison.Ordinal);
-            if (colonIndex < 0)
-            {
-                continue;
-            }
-
-            var lineKey = rawLine[..colonIndex].Trim();
-            if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var existingValue = rawLine[(colonIndex + 1)..].Trim();
-            var terminator = lines[i].Terminator;
-
-            // A blank value after the colon may be a block-list header: consume its item lines too,
-            // so replacing or removing the field never leaves a stray "- item" line behind.
-            var removeEnd = i + 1;
-            if (existingValue.Length == 0)
-            {
-                while (removeEnd < closeIndex
-                    && lines[removeEnd].Text.TrimStart().StartsWith("- ", StringComparison.Ordinal))
-                {
-                    removeEnd++;
-                }
-            }
-
-            lines.RemoveRange(i, removeEnd - i);
-
-            if (values.Count > 0)
-            {
-                lines.Insert(i, ($"{rawLine[..colonIndex]}: [{string.Join(", ", values.Select(QuoteScalar))}]", terminator));
-            }
-
+            ReplaceListFieldLines(lines, matchIndex, closeIndex, colonIndex, values);
             return Join(lines);
         }
 
@@ -463,6 +376,111 @@ internal static class PersonaFrontmatter
         var insertedTerminator = closeIndex > 1 ? lines[closeIndex - 1].Terminator : lines[0].Terminator;
         lines.Insert(closeIndex, ($"{key}: [{string.Join(", ", values.Select(QuoteScalar))}]", insertedTerminator));
         return Join(lines);
+    }
+
+    /// <summary>
+    /// Finds the closing frontmatter delimiter of a Persona file's leading block.
+    /// </summary>
+    /// <param name="lines">The file's lines with their terminators.</param>
+    /// <returns>The index of the closing delimiter line, or -1 when there is no opening delimiter or it is never closed.</returns>
+    private static int FindClosingDelimiterIndex(List<(string Text, string Terminator)> lines)
+    {
+        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
+        {
+            return -1;
+        }
+
+        for (var i = 1; i < lines.Count; i++)
+        {
+            if (lines[i].Text.Trim() == FrontmatterDelimiter)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Finds the first top-level frontmatter line whose key matches <paramref name="key"/>
+    /// case-insensitively.
+    /// </summary>
+    /// <param name="lines">The file's lines with their terminators.</param>
+    /// <param name="closeIndex">The index of the closing delimiter line; the search stops before it.</param>
+    /// <param name="key">The key to find.</param>
+    /// <param name="colonIndex">The index of the key's colon within the matched line, or -1 when nothing matched.</param>
+    /// <returns>The index of the matched line, or -1 when the key is absent.</returns>
+    private static int FindTopLevelKeyLine(List<(string Text, string Terminator)> lines, int closeIndex, string key, out int colonIndex)
+    {
+        for (var i = 1; i < closeIndex; i++)
+        {
+            var rawLine = lines[i].Text;
+
+            // A top-level key is always at column 0; an indented line is block-scalar or
+            // block-list content belonging to whichever key preceded it, never a new key.
+            if (rawLine.Length == 0 || rawLine[0] is ' ' or '\t')
+            {
+                continue;
+            }
+
+            var candidateColon = rawLine.IndexOf(':', StringComparison.Ordinal);
+            if (candidateColon < 0)
+            {
+                continue;
+            }
+
+            var lineKey = rawLine[..candidateColon].Trim();
+            if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            colonIndex = candidateColon;
+            return i;
+        }
+
+        colonIndex = -1;
+        return -1;
+    }
+
+    /// <summary>
+    /// Replaces a matched list field's line - and the block-list item lines under it - with one
+    /// flow-list line, or removes them all when <paramref name="values"/> is empty.
+    /// </summary>
+    /// <param name="lines">The file's lines with their terminators; edited in place.</param>
+    /// <param name="matchIndex">The index of the matched key line.</param>
+    /// <param name="closeIndex">The index of the closing delimiter line.</param>
+    /// <param name="colonIndex">The index of the key's colon within the matched line.</param>
+    /// <param name="values">The field's new values.</param>
+    private static void ReplaceListFieldLines(
+        List<(string Text, string Terminator)> lines,
+        int matchIndex,
+        int closeIndex,
+        int colonIndex,
+        IReadOnlyList<string> values)
+    {
+        var rawLine = lines[matchIndex].Text;
+        var existingValue = rawLine[(colonIndex + 1)..].Trim();
+        var terminator = lines[matchIndex].Terminator;
+
+        // A blank value after the colon may be a block-list header: consume its item lines too,
+        // so replacing or removing the field never leaves a stray "- item" line behind.
+        var removeEnd = matchIndex + 1;
+        if (existingValue.Length == 0)
+        {
+            while (removeEnd < closeIndex
+                && lines[removeEnd].Text.TrimStart().StartsWith("- ", StringComparison.Ordinal))
+            {
+                removeEnd++;
+            }
+        }
+
+        lines.RemoveRange(matchIndex, removeEnd - matchIndex);
+
+        if (values.Count > 0)
+        {
+            lines.Insert(matchIndex, ($"{rawLine[..colonIndex]}: [{string.Join(", ", values.Select(QuoteScalar))}]", terminator));
+        }
     }
 
     /// <summary>
@@ -538,7 +556,7 @@ internal static class PersonaFrontmatter
         return builder.ToString();
     }
 
-    /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="StripYamlQuotes"/>'s single-quote branch.</summary>
+    /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="YamlScalars.StripQuotes"/>'s single-quote branch.</summary>
     private static string QuoteScalar(string value) => $"'{value.Replace("'", "''")}'";
 
     /// <summary>
@@ -646,7 +664,7 @@ internal static class PersonaFrontmatter
     /// <param name="personaText">The Persona's raw file text.</param>
     internal static (IReadOnlyList<PersonaFrontmatterField> Fields, string Body) Parse(string personaText)
     {
-        var normalized = personaText.Replace("\r\n", "\n").Replace("\r", "\n");
+        var normalized = personaText.Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n');
 
         if (lines.Length < 2 || lines[0].Trim() != FrontmatterDelimiter)
@@ -678,86 +696,108 @@ internal static class PersonaFrontmatter
     /// <summary>Walks the frontmatter's lines with a small state machine, tracking at most one open block scalar or block list at a time.</summary>
     private static List<PersonaFrontmatterField> ParseFields(string[] yamlLines)
     {
-        var fields = new List<PersonaFrontmatterField>();
-
-        string? currentListKey = null;
-        var currentListValues = new List<string>();
-
-        string? currentScalarKey = null;
-        var currentScalarFolded = false;
-        int? currentScalarIndent = null;
-        var currentScalarLines = new List<string>();
-
-        void FlushList()
-        {
-            if (currentListKey is not null && currentListValues.Count > 0)
-            {
-                fields.Add(new PersonaFrontmatterField(currentListKey, string.Join("; ", currentListValues)));
-            }
-
-            currentListKey = null;
-            currentListValues.Clear();
-        }
-
-        void FlushScalar()
-        {
-            if (currentScalarKey is not null)
-            {
-                var value = JoinBlockScalar(currentScalarLines, currentScalarFolded);
-                fields.Add(new PersonaFrontmatterField(currentScalarKey, value.Replace('\n', ' ')));
-            }
-
-            currentScalarKey = null;
-            currentScalarIndent = null;
-            currentScalarLines.Clear();
-        }
-
+        FieldParser parser = new();
         foreach (var rawLine in yamlLines)
         {
-            var line = rawLine.TrimEnd();
+            parser.Feed(rawLine.TrimEnd());
+        }
 
-            // Inside a block scalar (">" folded or "|" literal) — consume indented lines until dedent.
-            if (currentScalarKey is not null)
+        return parser.Finish();
+    }
+
+    /// <summary>The state machine behind <see cref="ParseFields"/>: at most one open block scalar or block list at a time.</summary>
+    private sealed class FieldParser
+    {
+        private readonly List<PersonaFrontmatterField> fields = [];
+        private readonly List<string> currentListValues = [];
+        private readonly List<string> currentScalarLines = [];
+        private string? currentListKey;
+        private string? currentScalarKey;
+        private bool currentScalarFolded;
+        private int? currentScalarIndent;
+
+        /// <summary>Consumes one right-trimmed frontmatter line.</summary>
+        /// <param name="line">The line, trailing whitespace removed.</param>
+        public void Feed(string line)
+        {
+            if (this.TryConsumeScalarLine(line) || this.TryConsumeListItem(line))
             {
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    currentScalarLines.Add(string.Empty);
-                    continue;
-                }
-
-                // A frontmatter key is always at column 0, so real block-scalar content must be
-                // indented by at least one space; a line with none can't be content even on the
-                // block's first line, and must not be mistaken for one when establishing its indent
-                // — otherwise an empty scalar immediately followed by the next field swallows it.
-                var leadingSpaces = line.Length - line.TrimStart(' ').Length;
-                if (leadingSpaces > 0 && leadingSpaces >= (currentScalarIndent ??= leadingSpaces))
-                {
-                    currentScalarLines.Add(line[currentScalarIndent.Value..]);
-                    continue;
-                }
-
-                FlushScalar();
-            }
-
-            // YAML block list item ("  - value").
-            if (line.TrimStart().StartsWith("- ", StringComparison.Ordinal) && currentListKey is not null)
-            {
-                currentListValues.Add(StripYamlQuotes(line.TrimStart()[2..].Trim()));
-                continue;
+                return;
             }
 
             // Any non-list-item line closes the current block list.
-            FlushList();
+            this.FlushList();
+            this.StartField(line);
+        }
+
+        /// <summary>Closes any open block list and block scalar and returns the parsed fields.</summary>
+        /// <returns>The parsed fields, in order.</returns>
+        public List<PersonaFrontmatterField> Finish()
+        {
+            this.FlushList();
+            this.FlushScalar();
+
+            return this.fields;
+        }
+
+        /// <summary>Inside a block scalar (">" folded or "|" literal) — consumes indented lines until dedent.</summary>
+        /// <param name="line">The line, trailing whitespace removed.</param>
+        /// <returns><see langword="true"/> when the line belonged to the open block scalar; otherwise the scalar is flushed and <see langword="false"/>.</returns>
+        private bool TryConsumeScalarLine(string line)
+        {
+            if (this.currentScalarKey is null)
+            {
+                return false;
+            }
 
             if (string.IsNullOrWhiteSpace(line))
             {
-                continue;
+                this.currentScalarLines.Add(string.Empty);
+                return true;
+            }
+
+            // A frontmatter key is always at column 0, so real block-scalar content must be
+            // indented by at least one space; a line with none can't be content even on the
+            // block's first line, and must not be mistaken for one when establishing its indent
+            // — otherwise an empty scalar immediately followed by the next field swallows it.
+            var leadingSpaces = line.Length - line.TrimStart(' ').Length;
+            if (leadingSpaces > 0 && leadingSpaces >= (this.currentScalarIndent ??= leadingSpaces))
+            {
+                this.currentScalarLines.Add(line[this.currentScalarIndent.Value..]);
+                return true;
+            }
+
+            this.FlushScalar();
+            return false;
+        }
+
+        /// <summary>YAML block list item ("  - value").</summary>
+        /// <param name="line">The line, trailing whitespace removed.</param>
+        /// <returns><see langword="true"/> when the line was an item of the open block list.</returns>
+        private bool TryConsumeListItem(string line)
+        {
+            if (line.TrimStart().StartsWith("- ", StringComparison.Ordinal) && this.currentListKey is not null)
+            {
+                this.currentListValues.Add(YamlScalars.StripQuotes(line.TrimStart()[2..].Trim()));
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Starts a field from a <c>key: value</c> line, ignoring blank and colon-less lines.</summary>
+        /// <param name="line">The line, trailing whitespace removed.</param>
+        private void StartField(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return;
             }
 
             var colonIndex = line.IndexOf(':', StringComparison.Ordinal);
             if (colonIndex < 0)
             {
-                continue;
+                return;
             }
 
             var key = line[..colonIndex].Trim();
@@ -765,30 +805,49 @@ internal static class PersonaFrontmatter
 
             if (IsBlockScalarIndicator(value, out var folded))
             {
-                currentScalarKey = key;
-                currentScalarFolded = folded;
+                this.currentScalarKey = key;
+                this.currentScalarFolded = folded;
             }
             else if (string.IsNullOrEmpty(value))
             {
-                currentListKey = key;
+                this.currentListKey = key;
             }
-            else if (TryParseFlowList(value, out var flowItems))
+            else if (YamlScalars.TryParseFlowList(value, out IReadOnlyList<string> flowItems))
             {
                 if (flowItems.Count > 0)
                 {
-                    fields.Add(new PersonaFrontmatterField(key, string.Join("; ", flowItems)));
+                    this.fields.Add(new PersonaFrontmatterField(key, string.Join("; ", flowItems)) { Items = [.. flowItems] });
                 }
             }
             else
             {
-                fields.Add(new PersonaFrontmatterField(key, StripYamlQuotes(value)));
+                this.fields.Add(new PersonaFrontmatterField(key, YamlScalars.StripQuotes(value)));
             }
         }
 
-        FlushList();
-        FlushScalar();
+        private void FlushList()
+        {
+            if (this.currentListKey is not null && this.currentListValues.Count > 0)
+            {
+                this.fields.Add(new PersonaFrontmatterField(this.currentListKey, string.Join("; ", this.currentListValues)) { Items = [.. this.currentListValues] });
+            }
 
-        return fields;
+            this.currentListKey = null;
+            this.currentListValues.Clear();
+        }
+
+        private void FlushScalar()
+        {
+            if (this.currentScalarKey is not null)
+            {
+                var value = JoinBlockScalar(this.currentScalarLines, this.currentScalarFolded);
+                this.fields.Add(new PersonaFrontmatterField(this.currentScalarKey, value.Replace('\n', ' ')));
+            }
+
+            this.currentScalarKey = null;
+            this.currentScalarIndent = null;
+            this.currentScalarLines.Clear();
+        }
     }
 
     /// <summary>
@@ -860,95 +919,6 @@ internal static class PersonaFrontmatter
         }
 
         return string.Join('\n', paragraphs);
-    }
-
-    /// <summary>
-    /// Strips a single layer of matching <c>'...'</c> or <c>"..."</c> quoting from a plain scalar
-    /// or list-item value. For a single-quoted value, YAML's own escape for an embedded
-    /// apostrophe (<c>''</c>) is unescaped to <c>'</c>. Values that are not quoted, or whose
-    /// quotes do not match, are returned unchanged.
-    /// </summary>
-    private static string StripYamlQuotes(string raw)
-    {
-        if (raw.Length >= 2)
-        {
-            var first = raw[0];
-            var last = raw[^1];
-
-            if (first == last && (first == '\'' || first == '"'))
-            {
-                var inner = raw[1..^1];
-                return first == '\'' ? inner.Replace("''", "'") : inner;
-            }
-        }
-
-        return raw;
-    }
-
-    /// <summary>
-    /// Recognises a YAML bracketed flow list, for example <c>['Finances', 'Email']</c>, and splits
-    /// it into quote-stripped, trimmed items — dropping empty ones, so <c>[]</c> yields no items.
-    /// A value that is not wrapped in matching <c>[...]</c> is not a flow list.
-    /// </summary>
-    private static bool TryParseFlowList(string value, out List<string> items)
-    {
-        if (value.Length < 2 || value[0] != '[' || value[^1] != ']')
-        {
-            items = [];
-            return false;
-        }
-
-        items = SplitFlowListItems(value[1..^1])
-            .Select(item => StripYamlQuotes(item.Trim()))
-            .Where(item => item.Length > 0)
-            .ToList();
-        return true;
-    }
-
-    /// <summary>
-    /// Splits a flow list's inner text on top-level commas, tracking whether a <c>'</c> or <c>"</c>
-    /// is currently open so a comma inside a quoted item (for example <c>'Router, triage'</c>) does
-    /// not split it — the same real-data concern that keeps plain scalars from being guessed as
-    /// lists by their comma content.
-    /// </summary>
-    private static List<string> SplitFlowListItems(string inner)
-    {
-        var items = new List<string>();
-        StringBuilder current = new();
-        char? openQuote = null;
-
-        foreach (var ch in inner)
-        {
-            if (openQuote is not null)
-            {
-                current.Append(ch);
-                if (ch == openQuote.Value)
-                {
-                    openQuote = null;
-                }
-
-                continue;
-            }
-
-            if (ch is '\'' or '"')
-            {
-                openQuote = ch;
-                current.Append(ch);
-                continue;
-            }
-
-            if (ch == ',')
-            {
-                items.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(ch);
-        }
-
-        items.Add(current.ToString());
-        return items;
     }
 
     /// <summary>Splits a frontmatter key on <c>_</c>/<c>-</c> and capitalizes each word.</summary>

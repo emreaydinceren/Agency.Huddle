@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**19 tests** · 14 free, 5 paid 💰 · about 3.6 hours.
+**20 tests** · 15 free, 5 paid 💰 · about 3.7 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -58,7 +58,7 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 **Before you start**
 
 - `E-FREE` app running, `Team:Tasks:Enabled` at its default `true`.
-- A Team named `Platform` exists. On fresh data the only Teams are those the built-in Teammate
+- A Team named `Platform` exists. On fresh data the only Teams are those the built-in Agent
   labels, and the Task **Team** field is a pick list, not free text (`TaskDetail.razor:334`), so
   create it first: make the folder `<data>\Teams\Platform` and reload the page.
 - No Task named `PLAT-` exists yet, or you accept whatever id the allocator gives next.
@@ -236,28 +236,30 @@ to the View as they are made, and the Rename and Fields dialogs round-trip.*
 6. Open the ⋮ menu and click **Fields…**. Use **+ Add field**, add a field, toggle one existing
    field's switch off (leaving its row in place) and remove another field's row entirely. Click
    **Save**.
-7. Reopen **Fields…** and confirm the list matches what you set. Reorder two rows, click **Cancel**,
-   and reopen to confirm nothing changed.
+7. Reopen **Fields…** and confirm it lists the fields that were on, in the order you set; the field you
+   switched off is no longer a row and is offered again by **+ Add field**. Reorder two rows, click
+   **Cancel**, and reopen to confirm nothing changed.
 
 **Pass if — all of these**
 
 - `/tasks/new` creates a View named **New view** (or **New view 2** and so on) and opens it; there is no
   editor panel and no **Save View**, **Save to View** or Description field anywhere.
 - **Rename** refuses a name over 60 characters and a duplicate (ignoring case), and accepts a fresh
-  name, which shows in the breadcrumb and the sidebar.
+  name, which shows in the last crumb of the Tasks trail (the display name, never a slug) and in the sidebar.
 - After the reload in step 4 the Status filter, layout and grouping are all still set, with no Save
   click.
 - The widened column keeps its width after the reload (`TaskView.ColumnWidths`).
-- A field switched off (not removed) stays in the Fields dialog but is left out of the View's saved
-  `Fields`; a removed field's row disappears and can be re-added via **+ Add field**.
+- A field switched off (not removed) stays in the Fields dialog until you Save, so you can switch it back on
+  where it was, but it is left out of the View's saved `Fields`; once saved, it and a removed field both
+  come back through **+ Add field** (the View stores only the fields that are on).
 - **Cancel** writes nothing.
 
 **Fail if — any of these**
 
 - A change is lost on reload -> the toolbar is saving to the page's effective View only, not to the
   stored View.
-- A switched-off field is dropped from the Fields dialog entirely (indistinguishable from Remove)
-  -> the switch-vs-remove distinction (J34) has been lost.
+- A switched-off field is dropped from the dialog before you Save, or is still in the saved `Fields` ->
+  the switch-vs-remove distinction (J34) has been lost.
 - A column width is not kept -> `ColumnWidths` is not being written.
 
 **Inconclusive if**
@@ -360,12 +362,17 @@ and editing the same field from two sources shows both versions and blocks Save 
 **Before you start**
 
 - A Task exists and its `.md` file is directly editable.
-- The Task's panel is open in the browser (Edit mode), with the file's current content read on
+- The Task is open on its edit page ("Edit {id}" Tab), with the file's current content read on
   disk first.
+
+> [!NOTE]
+> A saved Task is read in the Right sidebar and edited on its own page: choose **Edit** in the sidebar's Task panel and the Task
+> opens in an "Edit {id}" Tab with **Cancel** and **Save** in the page header. Where this test says "the panel", use that page.
+> **+ New task** opens the same edit page, on a new Task.
 
 **Steps**
 
-1. With the panel open and unsaved, in a text editor change a field the panel does **not** also
+1. With the page open and unsaved, in a text editor change a field the panel does **not** also
    have pending (for example, add a Tag if you have only touched the Title in the panel) and save
    the file.
 2. Wait for the panel's own outside-edit detection, then type a change to the Title in the panel
@@ -406,7 +413,7 @@ couple of seconds after the file save before clicking Save in the panel and retr
 
 **Free** · about 10 min
 
-*Proves `RenameTeammate`'s Tasks-side cascade: every Task assigned to the renamed Persona, and
+*Proves `RenameAgent`'s Tasks-side cascade: every Task assigned to the renamed Persona, and
 every View filtering on its old name, follows the rename — and that a rename itself never wakes
 anyone (D-25).*
 
@@ -419,7 +426,7 @@ anyone (D-25).*
 **Steps**
 
 1. Note the assigned Task's file path and the filtering View's saved filter before the rename.
-2. Rename the Persona on its Teammate card (Edit → change **Name** → Save).
+2. Rename the Persona on its Agent card (Edit → change **Name** → Save).
 3. In `T-B`, read the Task's `.md` file and confirm the `assignee:` field.
 4. Reopen the View and read its Assignee filter.
 5. Open the Task's Change log and read its newest entries.
@@ -462,17 +469,19 @@ drive a real drag and this is the only place that path is exercised at all.*
 3. Arrow down to a different state and press Enter.
 4. Confirm (via Tab/Enter, no mouse) that the card moved, the same way the drag path would have.
 5. Tab to the View's ⋮ menu, open **Fields…**, and using only the keyboard, change one Field's switch and Save.
-6. Tab to a Task's title/row to open its panel, edit the Title with the keyboard, and Tab to
-   **Save**.
-7. Tab to **Cancel** on an edited-but-unsaved panel and confirm the **Discard changes?** prompt
-   appears and can be answered from the keyboard.
+6. Tab to a Task's row to open it, Tab to **Edit** and press Enter, edit the Title on the edit page
+   with the keyboard, and Tab to **Save** in the page header.
+7. Click **+ New task** with the keyboard (it opens a "New task" Tab), edit a field, Tab to the Tab's
+   close button and press Enter: the **Discard changes?** prompt appears and can be answered from the
+   keyboard. Then, on an edit page with an unsaved change, Tab to **Cancel**: the Tab closes at once and
+   the edit is discarded, with no prompt.
 
 **Pass if — all of these**
 - Every one of steps 1-7 is reachable with no mouse click at any point, including opening menus,
   choosing a state, saving a View, and editing/saving/cancelling a Task.
 - The **Move to** menu's items are keyboard-navigable and Enter commits the same way a drop does
   (including the Duplicate picker / reason prompt when a terminal Won't-do state is chosen).
-- **Discard changes?** (the `MudExitPrompt`) is answerable via keyboard — Tab to a button, Enter.
+- **Discard changes?** (closing a Tab with unsaved edits) is answerable via keyboard — Tab to a button, Enter.
 - Focus is visibly on the control you tabbed to at every step (a visible focus ring).
 
 **Fail if — any of these**
@@ -552,7 +561,7 @@ otherwise sustain, and that the Human's Allow N more resumes it.*
   indefinitely, and the Room did not hit its own Budget first (the banner below is what stopped
   it).
 - The TaskDetail banner reads exactly `Wake-ups for this task are paused after 10 changes by
-  Teammates.` with a button reading `Allow 10 more`.
+  Agents.` with a button reading `Allow 10 more`.
 - Clicking **Allow 10 more** resumes wake-ups (visible as further Change log entries / Turns), and
   a second exhaustion pauses again at the same message.
 - No non-Task Room's Budget is affected by this loop.
@@ -621,10 +630,10 @@ link.*
 
 **Steps**
 
-1. On `localhost:5100`, open the Task and click the copy icon in its header.
+1. On `localhost:5100`, open the Task and click the copy icon in the icons row just under the Task's title in the Right sidebar.
 2. Paste the clipboard contents somewhere visible (a Message composer, a text editor) and confirm
    it is exactly the Task's plain id, nothing more.
-3. In the Task panel header, open the **More actions** (⋮) menu — not a card's menu —
+3. In the Task panel's icons row (just under the header), open the **More actions** (⋮) menu — not a card's menu —
    (`TaskDetail.razor:219-227`), click **Copy link** and paste that; confirm it is a full URL ending in
    `/tasks/item/<id>`.
 4. From the same machine's IP address (not `localhost`), open `http://<ip>:5100` in a second
@@ -636,7 +645,7 @@ link.*
 
 **Pass if — all of these**
 
-- The header copy icon copies exactly the plain id (for example `PLAT-0042`), with a success
+- The copy icon in the icons row copies exactly the plain id (for example `PLAT-0042`), with a success
   Snackbar.
 - **Copy link** copies a full `http://…/tasks/item/<id>` URL.
 - Over plain `http://<ip>:5100` (not `localhost`, so no secure context), the copy button still
@@ -776,7 +785,7 @@ paid TASKS-15; TASKS-19 is the paid one.
 
 **Steps**
 
-1. Open Task A. In the **Sprint** field (after Team / Project), type `Auth hardening`, and look at
+1. Open Task A. In the **Sprint** field (after the Team and Project fields), type `Auth hardening`, and look at
    the helper text under the field. Do not save yet.
 2. Open `sprints.md` in an editor. Then click **Revert**, and look at the file and the field again.
 3. Type `Auth hardening` again and click **Save**. Read `sprints.md` and Task A's file.
@@ -913,7 +922,7 @@ any other field (D-S8).*
 2. Wait for `Rae`'s Turn. Open Task A and read its **Sprint** and Change log.
 3. Send: `Now move <Task A's id> to the Auth hardning sprint.` (misspelled on purpose).
 4. Read `Rae`'s reply and `sprints.md`.
-5. From the panel, move Task A to `Sprint 1`; **Save & Notify Rae**. Watch for a wake-up Message.
+5. From the panel, move Task A to `Sprint 1`; **Save & notify Rae**. Watch for a wake-up Message.
 
 **Pass if — all of these**
 
@@ -929,6 +938,40 @@ any other field (D-S8).*
   the tool result.
 - `Rae` never calls `update_task` -> record as a model-behaviour finding per
   [§0.6](../manual-tests.md#06-not-a-defect), unless the tool was unavailable.
+
+### TASKS-20 — The Task opens in the Right sidebar, Edit opens the edit page in its own Tab, and a new Task opens at the top
+
+**Free** · about 5 min
+
+*Proves that opening a Task opens the Right sidebar on it, that Edit opens the edit page in its own Tab (with
+the unsaved-changes prompt on its close), and that the sidebar does not carry a previous Task's scroll
+position into the next one.*
+
+**Before you start**
+
+- `E-FREE` app running, at least one Task with a long description (enough to scroll the sidebar).
+
+**Steps**
+
+1. Open a Task from `/tasks`: the Right sidebar opens on it. Close the sidebar with its top-bar button and click the
+   same Task again: it opens again. Then click **Edit**, change the Priority, and close its Tab with the **×**.
+2. Open `/tasks/item/<id>` for a Task directly: the Right sidebar opens on it. Click **Edit**.
+3. Open the long Task, scroll the sidebar to the bottom, then click another Task in the List.
+
+**Pass if — all of these**
+
+- Step 1: the sidebar opens on the Task each time you click it, and no second panel covers the page; closing
+  the edit Tab with an unsaved change asks **Discard changes?** and the Tab stays open until you answer.
+- Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; clicking **Edit** again on that Task
+  goes back to the same Tab.
+- Step 3: the next Task's read view starts at its top.
+
+**Fail if — any of these**
+- Clicking the Task with the sidebar closed leaves it closed -> `Tasks.OnOpenTaskAsync` is not calling
+  `RightSidebarService.ShowSubject`. Closing the edit Tab discards the edit without asking -> the page's close guard is not wired.
+- **Edit** opens a preview Tab, a second Tab, or none -> `TaskReadView.EditAsync` or the Tab key
+  `task-edit:{id}` has regressed.
+- The next Task's read view is scrolled down -> `TaskDetailPanel` is not keyed by the Task's id.
 
 ---
 

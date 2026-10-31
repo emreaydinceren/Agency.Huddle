@@ -1,23 +1,10 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.Seeder.Model;
-using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
 
 namespace Agency.Huddle.Seeder;
 
-/// <summary>What the caller asked the seeder to build.</summary>
-/// <param name="Scenario">The scenario to build.</param>
-/// <param name="Root">The seed root; wiped first.</param>
-/// <param name="Today">The run date every offset is measured from.</param>
-internal sealed record SeedRequest(IScenario Scenario, string Root, DateOnly Today);
-
-/// <summary>What was built.</summary>
-/// <param name="Root">The seed root.</param>
-/// <param name="DataDir">The data folder Huddle should be pointed at.</param>
-/// <param name="Plan">The plan that was written.</param>
-/// <param name="Ids">The ids the database assigned.</param>
-internal sealed record SeedSummary(string Root, string DataDir, SeedPlan Plan, DatabaseResult Ids);
-
-/// <summary>Wipes the seed root and builds a scenario into it. Huddle is never started; everything goes through files and Huddle's own public data API.</summary>
+/// <summary>Wipes the seed root and builds a scenario into it. Huddle is never started; everything goes through files and Huddle's own public data API. Seeder spec §5, the write order; Appendix A.2 (Seed a new kind of thing).</summary>
 internal static class SeedRunner
 {
     private const string LayoutMarker = ".layout-migrated";
@@ -39,17 +26,21 @@ internal static class SeedRunner
 
         SeedPlan plan = request.Scenario.Build(request.Today);
 
-        // Without this marker Huddle's one-time layout migration moves every non-Task note under Teams/ into Teammates/_unsorted/.
-        SeedIo.WriteText(SeedIo.Resolve(dataDir, "Teammates/" + LayoutMarker), string.Empty);
+        // Without this marker Huddle's one-time layout migration moves every non-Task note under Teams/ into Agents/_unsorted/.
+        SeedIo.WriteText(SeedIo.Resolve(dataDir, "Agents/" + LayoutMarker), string.Empty);
 
-        DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct);
+        DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
+        FeedSeeder.Write(plan, dataDir, ids, TimeProvider.System);
 
         WriteFolders(plan, dataDir);
-        WriteTeammates(plan, dataDir);
+        WriteAgents(plan, dataDir);
         WriteTasks(plan, dataDir, ids);
         WriteFiles(plan, dataDir);
+        WriteBinaryFiles(plan, dataDir, ids);
+        WriteSprints(plan, dataDir);
+        DocHistoryWriter.Write(plan, dataDir);
         SeedIo.WriteText(Path.Combine(dataDir, "views.json"), plan.ViewsJson);
-        SeedIo.WriteText(Path.Combine(dataDir, "avatars.json"), plan.AvatarsJson);
+        await AvatarWriter.WriteAsync(plan, dataDir, AvatarLibraryLocator.BundledDir, ct).ConfigureAwait(false);
         SeedIo.WriteText(Path.Combine(root, "manifest.md"), ManifestWriter.Render(plan, ids, root));
 
         return new SeedSummary(root, dataDir, plan, ids);
@@ -57,9 +48,9 @@ internal static class SeedRunner
 
     private static void WriteFolders(SeedPlan plan, string dataDir)
     {
+        TeamFileWriter.Write(plan, dataDir);
         foreach (SeedTeam team in plan.Teams)
         {
-            Directory.CreateDirectory(SeedIo.Resolve(dataDir, $"Teams/{team.Name}"));
             foreach (string project in team.Projects)
             {
                 Directory.CreateDirectory(SeedIo.Resolve(dataDir, $"Teams/{team.Name}/{project}"));
@@ -67,16 +58,16 @@ internal static class SeedRunner
         }
     }
 
-    private static void WriteTeammates(SeedPlan plan, string dataDir)
+    private static void WriteAgents(SeedPlan plan, string dataDir)
     {
-        foreach (SeedTeammate teammate in plan.Teammates)
+        foreach (SeedAgent agent in plan.Agents)
         {
-            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Teammates/{teammate.Name}/{teammate.Name}.md"), TeammateFileWriter.RenderTeammate(teammate));
+            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Agents/{agent.Name}/{agent.Name}.md"), AgentFileWriter.RenderAgent(agent));
         }
 
         foreach (SeedSkill skill in plan.Skills)
         {
-            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Skills/{skill.Name}/SKILL.md"), TeammateFileWriter.RenderSkill(skill));
+            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"Skills/{skill.Name}/SKILL.md"), AgentFileWriter.RenderSkill(skill));
         }
     }
 
@@ -86,12 +77,44 @@ internal static class SeedRunner
         {
             string? origin = task.OriginRoom is null ? null : ids.RoomIds[task.OriginRoom];
             string path = SeedIo.Resolve(dataDir, TaskFileWriter.RelativePath(task));
-            SeedIo.WriteText(path, TaskFileWriter.Render(task, plan.Today, origin));
+            SeedIo.WriteText(path, TaskFileWriter.Render(task, plan.Today, origin, dataDir));
 
             // Huddle compares the file's modified time with the last Change log entry at start-up; a newer file is
             // recorded as "edited outside Huddle" and loses the backdated Updated date.
             File.SetLastWriteTimeUtc(path, TaskFileWriter.BuildLog(task, plan.Today)[^1].At.UtcDateTime);
         }
+    }
+
+    private static void WriteBinaryFiles(SeedPlan plan, string dataDir, DatabaseResult ids)
+    {
+        foreach (SeedBinaryFile file in plan.BinaryFiles)
+        {
+            SeedIo.WriteBytes(SeedIo.Resolve(dataDir, file.RelativePath), file.Content);
+        }
+
+        // Where the app's upload flow would have saved each file: the folder depends on the Room's Scope and its id.
+        foreach (SeedUpload upload in plan.Uploads)
+        {
+            SeedRoom room = plan.Rooms.First(r => string.Equals(r.Key, upload.RoomKey, StringComparison.Ordinal));
+            SeedIo.WriteBytes(Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName), upload.Content);
+        }
+
+        // A Task's uploads live in a folder keyed by its id, so closing or re-filing the Task never moves them.
+        foreach (SeedTaskUpload upload in plan.TaskUploads)
+        {
+            SeedIo.WriteBytes(SeedIo.Resolve(dataDir, upload.RelativePath), upload.Content);
+        }
+    }
+
+    private static void WriteSprints(SeedPlan plan, string dataDir)
+    {
+        if (plan.Sprints.Count == 0)
+        {
+            return;
+        }
+
+        string text = "# Sprints\n\n" + string.Join('\n', plan.Sprints.Select(s => $"- {s.Id} | {s.Name}"));
+        SeedIo.WriteText(Path.Combine(dataDir, "sprints.md"), text);
     }
 
     private static void WriteFiles(SeedPlan plan, string dataDir)

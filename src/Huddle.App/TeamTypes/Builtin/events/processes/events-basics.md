@@ -14,7 +14,7 @@ retro: { every: 14, unit: 'days' }
 ## Stages
 
 1. **Ready**: the Task has a title, an acceptance line and an owner. Done when the Event Lead assigns it.
-2. **In progress**: a teammate drafts the comparison, the vendor reply or the timeline. Done when the draft is in the Task.
+2. **In progress**: an agent drafts the comparison, the vendor reply or the timeline. Done when the draft is in the Task.
 3. **Verify**: the Event Lead checks the draft against the plan, the budget and the source emails and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human confirms, books or sends what is needed and marks the Task Done.
 
@@ -34,6 +34,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Event Lead's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Bookings confirmed: evidence from verify
+- Run sheet reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work the open Tasks nearest deadline first.
@@ -43,7 +48,7 @@ retro: { every: 14, unit: 'days' }
 ## Escalation
 
 - A deposit, a contract, a date change or a cost over budget goes to the Human.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

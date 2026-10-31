@@ -3,42 +3,6 @@ using System.Globalization;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The four hard gates a process document can declare (PR-7, Spec §Process).</summary>
-internal enum GateId
-{
-    /// <summary>A Task cannot move to Done until a verifying member has added an Evidence line.</summary>
-    QaEvidenceBeforeDone,
-
-    /// <summary>A release merge or push waits for an Evidence line with exit code 0 for the check command.</summary>
-    ChecksBeforeMerge,
-
-    /// <summary>A Task cannot move to In Progress until its parent spec Task is approved.</summary>
-    SpecApprovedBeforeBuild,
-
-    /// <summary>A bug Task cannot move to Review until an Evidence line shows a failing test before the fix.</summary>
-    FailingTestBeforeFix,
-}
-
-/// <summary>The unit a cadence counts in.</summary>
-internal enum CadenceUnit
-{
-    /// <summary>Tasks that reached Done, written <c>done-tasks</c>.</summary>
-    DoneTasks,
-
-    /// <summary>Calendar days, written <c>days</c>.</summary>
-    Days,
-}
-
-/// <summary>How often a retrospective runs.</summary>
-/// <param name="Every">The count of <paramref name="Unit"/> between retrospectives; always positive.</param>
-/// <param name="Unit">What <paramref name="Every"/> counts.</param>
-internal sealed record RetroCadence(int Every, CadenceUnit Unit);
-
-/// <summary>How often a digest is written.</summary>
-/// <param name="Every">The count of <paramref name="Unit"/> between digests; always positive.</param>
-/// <param name="Unit">What <paramref name="Every"/> counts.</param>
-internal sealed record DigestCadence(int Every, CadenceUnit Unit);
-
 /// <summary>
 /// The parsed <c>Process.md</c> (PR-6, PR-7, Spec §Process): the frontmatter keys Huddle acts on and the
 /// outline headings the body is expected to carry. Unreadable optional values read as absent rather than
@@ -53,6 +17,7 @@ internal sealed record DigestCadence(int Every, CadenceUnit Unit);
 /// <param name="CheckCommand">The command whose exit code the checks gate looks for, or <see langword="null"/>.</param>
 /// <param name="UnknownGates">Gate ids in the frontmatter that Huddle does not know, in file order.</param>
 /// <param name="MissingSections">PR-6 outline headings absent from the body, in outline order.</param>
+/// <param name="DefinitionOfDone">The items of the optional <c>## Definition of Done</c> section, in file order.</param>
 /// <param name="Text">The whole document text, verbatim.</param>
 internal sealed record ProcessDocument(
     string Title,
@@ -64,6 +29,7 @@ internal sealed record ProcessDocument(
     string? CheckCommand,
     IReadOnlyList<string> UnknownGates,
     IReadOnlyList<string> MissingSections,
+    IReadOnlyList<DoneItem> DefinitionOfDone,
     string Text)
 {
     private const string Delimiter = "---";
@@ -103,31 +69,10 @@ internal sealed record ProcessDocument(
             return false;
         }
 
-        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
-        for (int index = 1; index < closing; index++)
-        {
-            string line = lines[index].TrimEnd();
-            int colon = line.IndexOf(':', StringComparison.Ordinal);
-            if (colon > 0 && !char.IsWhiteSpace(line[0]))
-            {
-                values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
-            }
-        }
+        Dictionary<string, string> values = ReadFrontmatter(lines, closing);
 
         string[] body = lines[(closing + 1)..];
-        List<GateId> gates = [];
-        List<string> unknownGates = [];
-        foreach (string id in values.TryGetValue("gates", out string? gateText) ? SplitList(gateText) : [])
-        {
-            if (!TryParseGate(id, out GateId gate))
-            {
-                unknownGates.Add(id);
-            }
-            else if (!gates.Contains(gate))
-            {
-                gates.Add(gate);
-            }
-        }
+        (List<GateId> gates, List<string> unknownGates) = ReadGates(values);
 
         VersionedRef? template = null;
         if (values.TryGetValue("template", out string? templateText))
@@ -141,11 +86,7 @@ internal sealed record ProcessDocument(
             title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
         }
 
-        int? wip = null;
-        if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
-        {
-            wip = wipValue;
-        }
+        int? wip = ReadWip(values);
 
         string? checkCommand = values.TryGetValue("checkCommand", out string? commandText) ? Unquote(commandText) : null;
         HashSet<string> headings = body
@@ -163,8 +104,137 @@ internal sealed record ProcessDocument(
             string.IsNullOrWhiteSpace(checkCommand) ? null : checkCommand,
             unknownGates,
             OutlineHeadings.Where(heading => !headings.Contains(heading)).ToList(),
+            ReadDefinitionOfDone(body),
             text);
         return true;
+    }
+
+    private static List<DoneItem> ReadDefinitionOfDone(string[] body)
+    {
+        List<DoneItem> items = [];
+        bool inSection = false;
+        foreach (string raw in body)
+        {
+            string line = raw.Trim();
+            if (line.StartsWith('#'))
+            {
+                if (inSection)
+                {
+                    break;
+                }
+
+                inSection = string.Equals(line.TrimStart('#').Trim(), "Definition of Done", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (inSection && line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                items.Add(ParseDoneBullet(line[2..].Trim()));
+            }
+        }
+
+        return items;
+    }
+
+    private static DoneItem ParseDoneBullet(string text)
+    {
+        int colon = text.IndexOf(':', StringComparison.Ordinal);
+        if (colon < 0)
+        {
+            return new DoneItem(text, new DoneRule.Unreadable(text), ProofItemSource.Process);
+        }
+
+        string label = text[..colon].Trim();
+        string rule = text[(colon + 1)..].Trim();
+        return new DoneItem(label, ParseDoneRule(rule, text), ProofItemSource.Process);
+    }
+
+    private static DoneRule ParseDoneRule(string rule, string text)
+    {
+        const string evidence = "evidence from ";
+        const string tagged = "task tagged ";
+        const string reviewed = "document reviewed by ";
+        const string commandPrefix = "command `";
+        const string commandSuffix = "` exits 0";
+
+        if (rule.StartsWith(evidence, StringComparison.Ordinal) && rule[evidence.Length..].Trim() is { Length: > 0 } step)
+        {
+            return new DoneRule.EvidenceFrom(step);
+        }
+
+        if (rule.StartsWith(tagged, StringComparison.Ordinal) && rule[tagged.Length..].Trim() is { Length: > 0 } tag)
+        {
+            return new DoneRule.TaskTagged(tag);
+        }
+
+        if (rule.StartsWith(reviewed, StringComparison.Ordinal) && rule[reviewed.Length..].Trim() is { Length: > 0 } reviewStep)
+        {
+            return new DoneRule.DocumentReviewedBy(reviewStep);
+        }
+
+        if (rule.StartsWith(commandPrefix, StringComparison.Ordinal)
+            && rule.EndsWith(commandSuffix, StringComparison.Ordinal)
+            && rule.Length > commandPrefix.Length + commandSuffix.Length)
+        {
+            return new DoneRule.CommandExits(rule[commandPrefix.Length..^commandSuffix.Length]);
+        }
+
+        return new DoneRule.Unreadable(text);
+    }
+
+    /// <summary>Reads the <c>key: value</c> lines between the frontmatter delimiters.</summary>
+    /// <param name="lines">The document lines.</param>
+    /// <param name="closing">The index of the closing delimiter line.</param>
+    /// <returns>The values by key, compared without case.</returns>
+    private static Dictionary<string, string> ReadFrontmatter(string[] lines, int closing)
+    {
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        for (int index = 1; index < closing; index++)
+        {
+            string line = lines[index].TrimEnd();
+            int colon = line.IndexOf(':', StringComparison.Ordinal);
+            if (colon > 0 && !char.IsWhiteSpace(line[0]))
+            {
+                values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>Reads the <c>gates</c> value into the known gates, without duplicates, and the ids it could not read.</summary>
+    /// <param name="values">The frontmatter values.</param>
+    /// <returns>The known gates and the unknown ids, each in the order written.</returns>
+    private static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
+    {
+        List<GateId> gates = [];
+        List<string> unknownGates = [];
+        foreach (string id in values.TryGetValue("gates", out string? gateText) ? SplitList(gateText) : [])
+        {
+            if (!TryParseGate(id, out GateId gate))
+            {
+                unknownGates.Add(id);
+            }
+            else if (!gates.Contains(gate))
+            {
+                gates.Add(gate);
+            }
+        }
+
+        return (gates, unknownGates);
+    }
+
+    /// <summary>Reads the <c>wip</c> value.</summary>
+    /// <param name="values">The frontmatter values.</param>
+    /// <returns>The limit when it is a positive whole number, else <see langword="null"/>.</returns>
+    private static int? ReadWip(Dictionary<string, string> values)
+    {
+        if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
+        {
+            return wipValue;
+        }
+
+        return null;
     }
 
     /// <summary>Rewrites the <c>gates</c> line of the frontmatter, keeping every other line as it is.</summary>
@@ -235,6 +305,15 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
+    /// <summary>The four gates a Process.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    private static readonly GateId[] ProcessGates =
+    [
+        GateId.QaEvidenceBeforeDone,
+        GateId.ChecksBeforeMerge,
+        GateId.SpecApprovedBeforeBuild,
+        GateId.FailingTestBeforeFix,
+    ];
+
     private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
@@ -246,7 +325,11 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "checks-before-merge",
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
+        GateId.HumanGate => "human-gate",
+        GateId.ProofIncomplete => "proof-incomplete",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Returns the name a person reads for a gate, in the Process tab and the override prompt.</summary>
@@ -258,7 +341,11 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "Checks before merge",
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
+        GateId.HumanGate => "Human gate",
+        GateId.ProofIncomplete => "Proof incomplete",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
     /// <summary>Parses a frontmatter gate id.</summary>
     /// <param name="id">The id, compared ordinally.</param>
@@ -266,7 +353,7 @@ internal sealed record ProcessDocument(
     /// <returns><see langword="true"/> when <paramref name="id"/> names one of the four gates.</returns>
     public static bool TryParseGate(string id, out GateId gate)
     {
-        foreach (GateId candidate in Enum.GetValues<GateId>())
+        foreach (GateId candidate in ProcessGates)
         {
             if (string.Equals(ToId(candidate), id, StringComparison.Ordinal))
             {

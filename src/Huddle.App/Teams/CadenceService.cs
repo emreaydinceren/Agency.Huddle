@@ -21,7 +21,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="tasks">Counts Done Tasks.</param>
 /// <param name="state">Remembers what fired when.</param>
 /// <param name="prompts">Supplies the digest and retro texts.</param>
-/// <param name="poster">Delivers a text to a Teammate's Room, which wakes it.</param>
+/// <param name="poster">Delivers a text to an Agent's Room, which wakes it.</param>
 /// <param name="logger">Reports a Team that could not be checked.</param>
 /// <param name="timeProvider">The clock, and the timer's clock; defaults to the system clock.</param>
 internal sealed class CadenceService(

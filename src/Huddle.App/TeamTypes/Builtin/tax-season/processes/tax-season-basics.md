@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Return reviewed: document reviewed by verify
+
 ## Cadence
 
 - Gather documents first, then build the ledger, then the worksheet. Hand it to the accountant two weeks before their deadline.

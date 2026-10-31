@@ -1,24 +1,11 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Agency.Huddle.App.HiringPool;
-
-/// <summary>A role the Human wrote themselves for the Build a team page, kept beside the hiring pool's own jobs.</summary>
-/// <param name="Id">The role id, <c>custom-</c> followed by a slug of the title; stable once created.</param>
-/// <param name="Title">The title shown on the card.</param>
-/// <param name="Description">One sentence on the role; may be empty.</param>
-/// <param name="Instructions">What a Teammate hired into this role is told to do; may be empty.</param>
-/// <param name="Tier">The model strength the role asks for.</param>
-/// <param name="Skills">The names of the Skills a Teammate in this role carries, or <see langword="null"/> when omitted.</param>
-internal sealed record CustomRole(string Id, string Title, string Description, string Instructions, ModelTier Tier, IReadOnlyList<string>? Skills = null)
-{
-    /// <summary>The names of the Skills a Teammate in this role carries; empty when omitted.</summary>
-    public IReadOnlyList<string> Skills { get; init; } = Skills ?? [];
-}
 
 /// <summary>
 /// The Human's own roles, stored in <c>custom-roles.json</c> under the data folder. Adding, editing and deleting
@@ -70,7 +57,7 @@ internal sealed class CustomRoleStore
     /// <param name="description">The description.</param>
     /// <param name="instructions">The instructions.</param>
     /// <param name="tier">The model strength.</param>
-    /// <param name="skills">The names of the Skills a Teammate in the role carries, or <see langword="null"/> for none.</param>
+    /// <param name="skills">The names of the Skills an Agent in the role carries, or <see langword="null"/> for none.</param>
     /// <returns>The role as stored.</returns>
     /// <exception cref="InvalidOperationException">The file is unreadable, or the title is blank.</exception>
     public CustomRole Add(string title, string description, string instructions, ModelTier tier, IReadOnlyList<string>? skills = null)

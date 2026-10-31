@@ -1,82 +1,17 @@
-using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.References;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Uploads;
 using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.Services;
-
-public sealed record ComposerResult(ChatMessage? Posted, string? Info);
-
-/// <summary>
-/// One Room's Budget: how many agent-authored Messages it has taken since the Human last spoke there,
-/// and how many it currently allows. <paramref name="Granted"/> is not the configured default — the
-/// Human can extend it a Budget at a time — which is why both halves travel together everywhere they
-/// go, including onto the wire.
-/// </summary>
-/// <param name="Used">Agent-authored Messages taken since the Human last spoke in this Room.</param>
-/// <param name="Granted">How many this Room currently allows. Zero or less means uncapped.</param>
-public sealed record RoomBudget(int Used, int Granted)
-{
-    /// <summary>Whether the Room has spent its Budget and will take no more until a Human speaks.</summary>
-    public bool Exhausted => this.Granted > 0 && this.Used >= this.Granted;
-}
-
-/// <summary>
-/// What <see cref="ChatService.ExtendBudgetAsync"/> actually did. A caller that only reads the old
-/// <see langword="bool"/> return cannot tell "nothing to redeliver" from "not paused" from "granted" -
-/// all three rendered as the same silence in the Room view, which is issue #40. Naming the three
-/// outcomes lets a later phase explain the one the Human is looking at instead of guessing.
-/// </summary>
-public enum ExtendResult
-{
-    /// <summary>The Room was paused, is now extended, and its last Message went out again.</summary>
-    Granted,
-
-    /// <summary>The Room was not paused, so there was nothing for an extension to grant.</summary>
-    NotPaused,
-
-    /// <summary>The Room holds no Message at all, so there is nothing an extension could redeliver.</summary>
-    NothingToRedeliver,
-}
-
-/// <summary>
-/// The three facts the Reply Gate needs about a re-delivered Message, deliberately not the
-/// <see cref="MessagePostedEvent"/> itself. <see cref="RoomEvents.MessageRedelivered"/>'s own doc
-/// records that no Blazor component may subscribe to it - a component that handled the envelope could
-/// render the Message a second time. Handing the caller the envelope would put that same mistake one
-/// careless <c>messages.Add(...)</c> away; handing it only these three facts removes the temptation
-/// rather than policing it with a comment and a guard test.
-/// </summary>
-/// <param name="Members">The Room's Members at the moment of re-delivery.</param>
-/// <param name="Mentions">Who the re-delivered Message names, re-parsed fresh so it matches exactly who it woke the first time.</param>
-/// <param name="SenderId">The re-delivered Message's original sender.</param>
-public sealed record RedeliveryFacts(
-    IReadOnlyList<User> Members,
-    IReadOnlyList<User> Mentions,
-    string SenderId);
-
-/// <summary>
-/// The outcome of <see cref="ChatService.ExtendBudgetAsync"/>: what happened, the Room's Budget
-/// afterward, and - only when something was actually redelivered - the facts of that delivery.
-/// <see cref="Redelivered"/> is non-null exactly when <see cref="Result"/> is <see cref="ExtendResult.Granted"/>.
-/// The caller applies the Reply Gate itself; <see cref="ChatService"/> must never decide whether anyone
-/// will reply - ADR-0003, ADR-0004 and ADR-0005 each reject a server-computed <c>shouldReply</c>, because
-/// the server labels, it never decides.
-/// </summary>
-/// <param name="Result">Which of the three outcomes occurred.</param>
-/// <param name="Budget">The Room's Budget after the call, whichever outcome occurred.</param>
-/// <param name="Redelivered">The facts of the re-delivered Message, or <see langword="null"/> when nothing was redelivered.</param>
-public sealed record BudgetExtension(
-    ExtendResult Result,
-    RoomBudget Budget,
-    RedeliveryFacts? Redelivered);
 
 public sealed partial class ChatService
 {
@@ -132,6 +67,13 @@ public sealed partial class ChatService
     /// </summary>
     internal IRoomUploadFolders? UploadFolders { get; set; }
 
+    /// <summary>
+    /// Told when a Room is created, joined or archived (Feed spec §6.5.3). An optional settable property for the
+    /// same reason as <see cref="TeamCatalog"/>: <see cref="IFeedPublisher"/> is internal and the constructor is public.
+    /// <see langword="null"/> posts nothing.
+    /// </summary>
+    internal IFeedPublisher? FeedPublisher { get; set; }
+
     /// <summary>The number of uploaded files a delete of <paramref name="room"/> would send to the Recycle Bin.</summary>
     /// <param name="room">The Room about to be deleted.</param>
     /// <returns>The file count of both upload folders; 0 when none exist.</returns>
@@ -146,12 +88,12 @@ public sealed partial class ChatService
     /// <param name="events">The hub a posted Message or a Room change is published on.</param>
     /// <param name="aliasSource">
     /// Every Persona's Alias, library-wide - folded into <see cref="MentionParser"/>'s candidate list
-    /// at <see cref="PostAsync"/>, and consulted by <see cref="InviteAsync"/> when a typed handle does
+    /// at <see cref="PostAsync"/>, and consulted by <see cref="InviteAsync(string, string, CancellationToken)"/> when a typed handle does
     /// not match any Name directly.
     /// </param>
     /// <param name="options">Supplies the per-Room Budget, <see cref="TeamOptions.AgentMessageBudget"/>.</param>
     /// <param name="proposals">
-    /// Holds each Room's pending Proposal (Spec §6.9). Dropped from <see cref="SetRoomArchivedAsync"/>
+    /// Holds each Room's pending Proposal (Spec §6.9). Dropped from <see cref="SetRoomArchivedAsync(string, bool, CancellationToken)"/>
     /// (archiving only, never unarchiving) and <see cref="DeleteRoomAsync"/>, after either succeeds -
     /// Spec §12 F-16: a Room the sidebar no longer offers must not go on showing a Proposal card.
     /// </param>
@@ -221,7 +163,31 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, ct);
+        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Posts a Message Huddle wrote itself (ADR-0065), such as the wake-up after a Helper changed a Task. The sender is
+    /// <see cref="KnownIds.Huddle"/>, which is not a Member of any Room, so the membership check is skipped for this sender only;
+    /// every other sender still has to be a Member. It is not the Human and not an Agent: it answers no Mention, spends no Budget,
+    /// resets no Budget and drops no waiting Question or form. The Room's post lock, the reference snapshot, the Transcript and the
+    /// events are the same as for any post.
+    /// </summary>
+    /// <param name="roomId">The Room to post into.</param>
+    /// <param name="text">The Message text, which may Mention a Member.</param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <returns>The Message that was appended.</returns>
+    /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
+    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.TrimEnd().Length == 0)
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "empty message");
+        }
+
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -255,7 +221,7 @@ public sealed partial class ChatService
             return null;
         }
 
-        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, ct);
+        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -263,33 +229,39 @@ public sealed partial class ChatService
     /// same per-Room lock and neither can drift from the other's Budget, Question-drop or publish rules.
     /// </summary>
     /// <param name="roomId">The Room to post into.</param>
-    /// <param name="senderId">The sender, as a Member of that Room.</param>
+    /// <param name="senderId">The sender, as a Member of that Room, or <see cref="KnownIds.Huddle"/> when <paramref name="asHuddle"/> is set.</param>
     /// <param name="text">The non-blank Message text.</param>
     /// <param name="messageId">The Message's id, or <see langword="null"/> to generate one.</param>
     /// <param name="withheldFromAgentId">
     /// The Agent the Message is withheld from, or <see langword="null"/> for an ordinary post. Non-null
     /// marks a Human answer, which also mentions nobody.
     /// </param>
+    /// <param name="asHuddle">
+    /// Whether the Message is Huddle's own (ADR-0065). It needs no Membership and, being neither the Human nor an Agent, neither
+    /// spends nor resets the Budget and drops no waiting card.
+    /// </param>
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
     private async Task<ChatMessage> PostCoreAsync(
-        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, CancellationToken ct)
+        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, CancellationToken ct)
     {
-        var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
-        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
-        var sender = members.FirstOrDefault(m => m.Id == senderId)
-            ?? throw new ChatException(ErrorCodes.NotMember, $"'{senderId}' is not a member of room '{roomId}'.");
+        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+        User? sender = asHuddle
+            ? null
+            : members.FirstOrDefault(m => m.Id == senderId)
+                ?? throw new ChatException(ErrorCodes.NotMember, $"'{senderId}' is not a member of room '{roomId}'.");
 
         // The reference lookups need no ordering against other posts, so they run before the Room's post lock
         // is taken (spec §8.2): holding it across them would slow every other writer to the Room. A snapshotter
         // that fails returns null, so the post goes ahead without references.
         IReadOnlyList<MessageReference>? snapshot = this.references is null
             ? null
-            : await this.references.SnapshotAsync(text, ct);
+            : await this.references.SnapshotAsync(text, ct).ConfigureAwait(false);
 
         var semaphore = this.postLocks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             // Everything about the Budget happens in here, and that is load-bearing. Deciding whether
@@ -298,10 +270,10 @@ public sealed partial class ChatService
             // it granted. This semaphore is what makes read-decide-write atomic - the dictionary is
             // not. It is also what already keeps transcript order equal to event order, so counting
             // anywhere else would let the count describe no prefix of the Transcript.
-            var isAgent = sender.Kind == UserKind.Agent;
+            var isAgent = sender is { Kind: UserKind.Agent };
             var budget = this.CurrentBudget(roomId);
 
-            if (isAgent && budget.Exhausted)
+            if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
             {
                 ChatService.LogBudgetExhausted(this.logger, sender.Name, roomId, budget.Granted);
                 throw new ChatException(ErrorCodes.BudgetExhausted, ChatService.BudgetRefusal(budget.Granted));
@@ -311,30 +283,14 @@ public sealed partial class ChatService
             IReadOnlyList<User> mentions = withheldFromAgentId is null
                 ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
-            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender.Id, sender.Name, text) { References = snapshot };
-            await this.store.AppendAsync(roomId, message, ct);
+            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
+            await this.store.AppendAsync(roomId, message, ct).ConfigureAwait(false);
 
-            // Only a Message that reached the Transcript spends Budget, so a failed append above
-            // leaves the count where it was. A Human Message resets both halves: any extension the
-            // Human granted expires with the run it was granted for.
-            budget = isAgent
-                ? budget with { Used = budget.Used + 1 }
-                : new RoomBudget(0, this.agentMessageBudget);
-            this.budgets[roomId] = budget;
-
-            // A typed Human Message is the answer the asker will act on, so a card still waiting would
-            // invite a second, contradicting one (Questions spec §6.5, D-4). An Agent's Message must not
-            // drop it: the asker's own framing Message lands after the card appears.
-            if (!isAgent)
+            // Huddle is neither the Human nor an Agent: its Message spends no Budget, resets none and drops no waiting card (ADR-0065).
+            if (!asHuddle)
             {
-                _ = this.questions.Drop(roomId);
-
-                // A typed Message cancels every form still waiting in the Room. The Human's own answer to
-                // a form (withheldFromAgentId set) is not that: it must leave the Room's other forms waiting.
-                if (withheldFromAgentId is null)
-                {
-                    _ = this.elicitations?.Drop(roomId);
-                }
+                budget = this.SpendBudget(roomId, budget, isAgent);
+                this.DropWaitingCards(roomId, isAgent, withheldFromAgentId);
             }
 
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
@@ -343,6 +299,49 @@ public sealed partial class ChatService
         finally
         {
             semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Records a Message that reached the Transcript against the Room's Budget and stores the result.
+    /// </summary>
+    /// <param name="roomId">The Room the Message was posted into.</param>
+    /// <param name="budget">The Room's Budget before this Message.</param>
+    /// <param name="isAgent">Whether the sender is an Agent.</param>
+    /// <returns>The Room's Budget after this Message.</returns>
+    private RoomBudget SpendBudget(string roomId, RoomBudget budget, bool isAgent)
+    {
+        // Only a Message that reached the Transcript spends Budget, so a failed append above
+        // leaves the count where it was. A Human Message resets both halves: any extension the
+        // Human granted expires with the run it was granted for.
+        budget = isAgent
+            ? budget with { Used = budget.Used + 1 }
+            : new RoomBudget(0, this.agentMessageBudget);
+        this.budgets[roomId] = budget;
+        return budget;
+    }
+
+    /// <summary>
+    /// Drops the Questions and forms still waiting in a Room when a typed Human Message arrives.
+    /// </summary>
+    /// <param name="roomId">The Room the Message was posted into.</param>
+    /// <param name="isAgent">Whether the sender is an Agent.</param>
+    /// <param name="withheldFromAgentId">The Agent the Message is withheld from, or <see langword="null"/> for an ordinary post.</param>
+    private void DropWaitingCards(string roomId, bool isAgent, string? withheldFromAgentId)
+    {
+        // A typed Human Message is the answer the asker will act on, so a card still waiting would
+        // invite a second, contradicting one (Questions spec §6.5, D-4). An Agent's Message must not
+        // drop it: the asker's own framing Message lands after the card appears.
+        if (!isAgent)
+        {
+            _ = this.questions.Drop(roomId);
+
+            // A typed Message cancels every form still waiting in the Room. The Human's own answer to
+            // a form (withheldFromAgentId set) is not that: it must leave the Room's other forms waiting.
+            if (withheldFromAgentId is null)
+            {
+                _ = this.elicitations?.Drop(roomId);
+            }
         }
     }
 
@@ -381,11 +380,11 @@ public sealed partial class ChatService
     /// </returns>
     public async Task<BudgetExtension> ExtendBudgetAsync(string roomId, CancellationToken ct = default)
     {
-        var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
-        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
-        var history = await this.store.ReadAllAsync(roomId, ct);
+        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+        var history = await this.store.ReadAllAsync(roomId, ct).ConfigureAwait(false);
         if (history.Count == 0)
         {
             // Outside the per-Room semaphore, and deliberately so - there is no Budget decision to make
@@ -397,7 +396,7 @@ public sealed partial class ChatService
         var last = history[^1];
 
         var semaphore = this.postLocks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync(ct);
+        await semaphore.WaitAsync(ct).ConfigureAwait(false);
         RoomBudget extended;
         try
         {
@@ -462,11 +461,11 @@ public sealed partial class ChatService
             }
 
             var agentName = match.Groups[1].Value;
-            var room = await this.InviteAsync(roomId, agentName, ct);
+            var room = await this.InviteAsync(roomId, agentName, ct).ConfigureAwait(false);
             return new ComposerResult(null, $"Invited {agentName}. Room is now \"{room.Name}\".");
         }
 
-        var message = await this.PostAsync(roomId, humanId, t, ct: ct);
+        var message = await this.PostAsync(roomId, humanId, t, ct: ct).ConfigureAwait(false);
         return new ComposerResult(message, null);
     }
 
@@ -475,19 +474,37 @@ public sealed partial class ChatService
     /// none. Called on every registration, so an Agent that reconnects re-attaches to the Room it
     /// already had rather than gaining a second one.
     /// </summary>
-    public async Task<Room> EnsureRoomForAsync(User agent, CancellationToken ct = default)
+    public Task<Room> EnsureRoomForAsync(User agent, CancellationToken ct = default) =>
+        this.EnsureRoomCoreAsync(agent, null, ct);
+
+    /// <summary>As <see cref="EnsureRoomForAsync(User, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    internal Task<Room> EnsureRoomForAsync(User agent, FeedActor actor, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.EnsureRoomCoreAsync(agent, actor, ct);
+    }
+
+    /// <summary>The body of <see cref="EnsureRoomForAsync(User, CancellationToken)"/>.</summary>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    private async Task<Room> EnsureRoomCoreAsync(User agent, FeedActor? actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(agent);
 
-        var existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, ct);
+        var existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
-        var room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], ct);
+        var room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], ct).ConfigureAwait(false);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
+        await this.PostRoomCreatedAsync(room, [agent.Name], actor, ct).ConfigureAwait(false);
         return room;
     }
 
@@ -507,7 +524,26 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookups and the write.</param>
     /// <returns>The Room.</returns>
     /// <exception cref="ChatException">The Team is unknown, no Agent is named, or an id is not an Agent.</exception>
-    public async Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, CancellationToken ct = default)
+    public Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, CancellationToken ct = default) =>
+        this.CreateRoomCoreAsync(agentIds, team, null, ct);
+
+    /// <summary>As <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="agentIds">The Agents to invite.</param>
+    /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    internal Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, FeedActor actor, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.CreateRoomCoreAsync(agentIds, team, actor, ct);
+    }
+
+    /// <summary>The body of <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, CancellationToken)"/>.</summary>
+    /// <param name="agentIds">The Agents to invite.</param>
+    /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    private async Task<Room> CreateRoomCoreAsync(IReadOnlyList<string> agentIds, string? team, FeedActor? actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(agentIds);
 
@@ -521,7 +557,7 @@ public sealed partial class ChatService
         var agents = new List<User>(agentIds.Count);
         foreach (var agentId in agentIds)
         {
-            var user = await this.teamDirectory.GetUserAsync(agentId, ct);
+            var user = await this.teamDirectory.GetUserAsync(agentId, ct).ConfigureAwait(false);
             if (user is null || user.Kind != UserKind.Agent)
             {
                 throw new ChatException(ErrorCodes.BadMessage, $"Unknown agent '{agentId}'.");
@@ -533,16 +569,17 @@ public sealed partial class ChatService
         if (agents.Count == 1)
         {
             return scope is null
-                ? await this.EnsureRoomForAsync(agents[0], ct)
-                : await this.EnsureTeamOneToOneAsync(scope, agents[0], ct);
+                ? await this.EnsureRoomCoreAsync(agents[0], actor, ct).ConfigureAwait(false)
+                : await this.EnsureTeamOneToOneCoreAsync(scope, agents[0], actor, ct).ConfigureAwait(false);
         }
 
         var name = RoomNaming.Derive(agents);
         var memberIds = new List<string>(agents.Count + 1) { KnownIds.Human };
         memberIds.AddRange(agents.Select(a => a.Id));
-        Room room = await this.teamDirectory.CreateRoomAsync(name, memberIds, scope, false, ct);
+        Room room = await this.teamDirectory.CreateRoomAsync(name, memberIds, scope, false, ct).ConfigureAwait(false);
         ChatService.LogCreatedRoom(this.logger, room.Id, room.Name, memberIds.Count);
         this.events.PublishRoomsChanged();
+        await this.PostRoomCreatedAsync(room, [.. agents.Select(a => a.Name)], actor, ct).ConfigureAwait(false);
         return room;
     }
 
@@ -556,22 +593,42 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookup and the write.</param>
     /// <returns>The Team-scoped one-to-one.</returns>
     /// <exception cref="ChatException">The Team is unknown.</exception>
-    public async Task<Room> EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct = default)
+    public Task<Room> EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct = default) =>
+        this.EnsureTeamOneToOneCoreAsync(team, agent, null, ct);
+
+    /// <summary>As <see cref="EnsureTeamOneToOneAsync(string, User, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    internal Task<Room> EnsureTeamOneToOneAsync(string team, User agent, FeedActor actor, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.EnsureTeamOneToOneCoreAsync(team, agent, actor, ct);
+    }
+
+    /// <summary>The body of <see cref="EnsureTeamOneToOneAsync(string, User, CancellationToken)"/>.</summary>
+    /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    private async Task<Room> EnsureTeamOneToOneCoreAsync(string team, User agent, FeedActor? actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(agent);
 
         string scope = this.ResolveTeam(team) ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown team '{team}'.");
 
-        Room? existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, scope, ct);
+        Room? existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, scope, ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
-        Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, ct);
+        Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, ct).ConfigureAwait(false);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
+        await this.PostRoomCreatedAsync(room, [agent.Name], actor, ct).ConfigureAwait(false);
         return room;
     }
 
@@ -592,7 +649,7 @@ public sealed partial class ChatService
 
     /// <summary>
     /// Adds an Agent to a Room that already exists. All three doors into an Invitation - <c>/invite</c>
-    /// in the composer, the <b>Add teammate</b> control on the Room header, and an Agent's own
+    /// in the composer, the <b>Add agent</b> control on the Room header, and an Agent's own
     /// <c>mcp__team__invite_agent</c> call - end here, so all three inherit this method's behaviour,
     /// including the naming rule below.
     /// </summary>
@@ -610,12 +667,31 @@ public sealed partial class ChatService
     /// <param name="agentName">The Agent's Name or Alias.</param>
     /// <param name="ct">Cancels the lookups and the write.</param>
     /// <returns>The Room after the Invitation.</returns>
-    public async Task<Room> InviteAsync(string roomId, string agentName, CancellationToken ct = default)
+    public Task<Room> InviteAsync(string roomId, string agentName, CancellationToken ct = default) =>
+        this.InviteCoreAsync(roomId, agentName, null, ct);
+
+    /// <summary>As <see cref="InviteAsync(string, string, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="roomId">The Room to invite the Agent into.</param>
+    /// <param name="agentName">The Agent's Name or Alias.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    internal Task<Room> InviteAsync(string roomId, string agentName, FeedActor actor, CancellationToken ct = default)
     {
-        var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.InviteCoreAsync(roomId, agentName, actor, ct);
+    }
+
+    /// <summary>The body of <see cref="InviteAsync(string, string, CancellationToken)"/>.</summary>
+    /// <param name="roomId">The Room to invite the Agent into.</param>
+    /// <param name="agentName">The Agent's Name or Alias.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    private async Task<Room> InviteCoreAsync(string roomId, string agentName, FeedActor? actor, CancellationToken ct)
+    {
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
-        var user = await this.teamDirectory.FindUserByNameAsync(agentName, ct);
+        var user = await this.teamDirectory.FindUserByNameAsync(agentName, ct).ConfigureAwait(false);
         if (user is null || user.Kind != UserKind.Agent)
         {
             // agentName may be a Persona's Alias rather than its Name - docs/engineering/traps.md is
@@ -627,7 +703,7 @@ public sealed partial class ChatService
             var alias = this.aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, agentName, StringComparison.OrdinalIgnoreCase));
             if (alias is not null)
             {
-                user = await this.teamDirectory.FindUserByNameAsync(alias.Name, ct);
+                user = await this.teamDirectory.FindUserByNameAsync(alias.Name, ct).ConfigureAwait(false);
             }
         }
 
@@ -636,28 +712,35 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, $"Unknown agent @{agentName}");
         }
 
-        var before = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
+        var before = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         var wasAutoNamed = !room.IsTeamRoom && string.Equals(room.Name, RoomNaming.Derive(before), StringComparison.Ordinal);
 
-        await this.teamDirectory.AddMemberAsync(roomId, user.Id, ct);
+        await this.teamDirectory.AddMemberAsync(roomId, user.Id, ct).ConfigureAwait(false);
 
         if (wasAutoNamed)
         {
-            var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
-            await this.teamDirectory.RenameRoomAsync(roomId, RoomNaming.Derive(members), ct);
+            var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+            await this.teamDirectory.RenameRoomAsync(roomId, RoomNaming.Derive(members), ct).ConfigureAwait(false);
         }
 
         ChatService.LogInvitedAgent(this.logger, user.Name, user.Id, roomId);
         this.events.PublishRoomsChanged();
 
-        return await this.teamDirectory.GetRoomAsync(roomId, ct)
+        Room after = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+        await this.PostFeedAsync(
+            FeedSourceType.RoomJoined,
+            after,
+            actor,
+            new RoomJoinedPayload(after.Id, after.Name, after.Team, user.Name),
+            ct).ConfigureAwait(false);
+        return after;
     }
 
     /// <summary>
     /// Gives a Room a Human-chosen name, which stays in place across later Invitations - see the
-    /// remarks on <see cref="InviteAsync"/> for why that matters. A Room name is free display text: it
-    /// is never resolved against, so unlike a Teammate Name it is not run through <see cref="NameRules"/>.
+    /// remarks on <see cref="InviteAsync(string, string, CancellationToken)"/> for why that matters. A Room name is free display text: it
+    /// is never resolved against, so unlike an Agent Name it is not run through <see cref="NameRules"/>.
     /// </summary>
     /// <param name="roomId">The Room to rename.</param>
     /// <param name="name">
@@ -677,7 +760,7 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "A room name cannot be blank.");
         }
 
-        Room existing = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        Room existing = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         if (existing.IsTeamRoom)
@@ -685,10 +768,10 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "A Team Room is named after its Team and can't be renamed.");
         }
 
-        await this.teamDirectory.RenameRoomAsync(roomId, trimmed, ct);
+        await this.teamDirectory.RenameRoomAsync(roomId, trimmed, ct).ConfigureAwait(false);
         this.events.PublishRoomsChanged();
 
-        return await this.teamDirectory.GetRoomAsync(roomId, ct)
+        return await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
     }
 
@@ -702,12 +785,31 @@ public sealed partial class ChatService
     /// </param>
     /// <param name="ct">Cancels the lookup and the write.</param>
     /// <returns>The Room after the change, so the caller sees the new <see cref="Room.Archived"/>.</returns>
-    public async Task<Room> SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default)
+    public Task<Room> SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default) =>
+        this.SetRoomArchivedCoreAsync(roomId, archived, null, ct);
+
+    /// <summary>As <see cref="SetRoomArchivedAsync(string, bool, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="roomId">The Room to archive or unarchive.</param>
+    /// <param name="archived"><see langword="true"/> to archive the Room; <see langword="false"/> to unarchive it.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    internal Task<Room> SetRoomArchivedAsync(string roomId, bool archived, FeedActor actor, CancellationToken ct = default)
     {
-        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.SetRoomArchivedCoreAsync(roomId, archived, actor, ct);
+    }
+
+    /// <summary>The body of <see cref="SetRoomArchivedAsync(string, bool, CancellationToken)"/>.</summary>
+    /// <param name="roomId">The Room to archive or unarchive.</param>
+    /// <param name="archived"><see langword="true"/> to archive the Room; <see langword="false"/> to unarchive it.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    private async Task<Room> SetRoomArchivedCoreAsync(string roomId, bool archived, FeedActor? actor, CancellationToken ct)
+    {
+        Room before = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
-        await this.teamDirectory.SetRoomArchivedAsync(roomId, archived, ct);
+        await this.teamDirectory.SetRoomArchivedAsync(roomId, archived, ct).ConfigureAwait(false);
 
         // Never for unarchiving: an unarchived Room is exactly as live as it was, so a Proposal still
         // pending in it is still answerable. Spec §12 F-16 only drops on archiving true and on delete.
@@ -721,8 +823,75 @@ public sealed partial class ChatService
         ChatService.LogRoomArchived(this.logger, roomId, archived);
         this.events.PublishRoomsChanged();
 
-        return await this.teamDirectory.GetRoomAsync(roomId, ct)
+        if (archived)
+        {
+            await this.PostFeedAsync(FeedSourceType.RoomArchived, before, actor, new RoomArchivedPayload(before.Id, before.Name, before.Team), ct).ConfigureAwait(false);
+        }
+
+        return await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+    }
+
+    /// <summary>Tells the Feed a Room was created, with the Human and <paramref name="agentNames"/> as its Members.</summary>
+    /// <param name="room">The Room that was just created.</param>
+    /// <param name="agentNames">The Names of the Agents in it.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the Human lookup.</param>
+    private async Task PostRoomCreatedAsync(Room room, IReadOnlyList<string> agentNames, FeedActor? actor, CancellationToken ct)
+    {
+        if (this.FeedPublisher is null)
+        {
+            return;
+        }
+
+        try
+        {
+            string humanName = await this.HumanNameAsync(ct).ConfigureAwait(false);
+            await this.PostFeedAsync(
+                FeedSourceType.RoomCreated,
+                room,
+                actor,
+                new RoomCreatedPayload(room.Id, room.Name, room.Team, [humanName, .. agentNames]),
+                ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Same rule as PostFeedAsync: the Room is already created, and the Feed can never fail the work that caused it.
+            ChatService.LogFeedFailed(this.logger, ex, room.Id);
+        }
+    }
+
+    /// <summary>Hands one Room item to the Feed. The Feed can never hurt the work, so a failure is logged and dropped.</summary>
+    /// <param name="type">The source type.</param>
+    /// <param name="room">The Room the item is about.</param>
+    /// <param name="actor">Who did it, or <see langword="null"/> for the Human.</param>
+    /// <param name="payload">The payload, whose type matches <paramref name="type"/>.</param>
+    /// <param name="ct">Cancels the Human lookup.</param>
+    private async Task PostFeedAsync(FeedSourceType type, Room room, FeedActor? actor, FeedPayload payload, CancellationToken ct)
+    {
+        if (this.FeedPublisher is null)
+        {
+            return;
+        }
+
+        try
+        {
+            FeedActor who = actor ?? new FeedActor(FeedActorKind.Human, await this.HumanNameAsync(ct).ConfigureAwait(false));
+            this.FeedPublisher.Post(new FeedMessage(type, room.Id, who, false, payload));
+        }
+        catch (Exception ex)
+        {
+            // The Feed records and never decides (Feed spec policy 4): a failing lookup must not fail the Room change that caused it.
+            ChatService.LogFeedFailed(this.logger, ex, room.Id);
+        }
+    }
+
+    /// <summary>The Human's display Name, or "You" when the directory has none.</summary>
+    /// <param name="ct">Cancels the lookup.</param>
+    private async Task<string> HumanNameAsync(CancellationToken ct)
+    {
+        User? human = await this.teamDirectory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false);
+        return human?.Name ?? "You";
     }
 
     /// <summary>
@@ -734,17 +903,17 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookup and the deletes.</param>
     public async Task DeleteRoomAsync(string roomId, CancellationToken ct = default)
     {
-        Room room = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        Room room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
-        await this.teamDirectory.DeleteRoomAsync(roomId, ct);
-        await this.store.DeleteAsync(roomId, ct);
+        await this.teamDirectory.DeleteRoomAsync(roomId, ct).ConfigureAwait(false);
+        await this.store.DeleteAsync(roomId, ct).ConfigureAwait(false);
 
         // ChatUploads spec 6.9: the Room's uploaded files go to the Recycle Bin once the delete has
         // succeeded. Best effort - a refusal is logged and never fails the delete.
         if (this.UploadFolders is not null)
         {
-            IReadOnlyList<string> failures = await this.UploadFolders.RecycleAsync(room, ct);
+            IReadOnlyList<string> failures = await this.UploadFolders.RecycleAsync(room, ct).ConfigureAwait(false);
             foreach (string failure in failures)
             {
                 this.logger.LogWarning("Room '{RoomId}' was deleted but its uploads were not recycled: {Reason}", roomId, failure);
@@ -806,6 +975,13 @@ public sealed partial class ChatService
     /// <param name="granted">The Room's new allowance.</param>
     [LoggerMessage(Level = LogLevel.Information, Message = "Room '{RoomId}' was extended to {Granted} agent messages.")]
     private static partial void LogBudgetExtended(ILogger logger, string roomId, int granted);
+
+    /// <summary>Logs that the Feed could not record a Room change.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="exception">What went wrong.</param>
+    /// <param name="roomId">The id of the Room.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The Feed could not record the change to Room '{RoomId}'.")]
+    private static partial void LogFeedFailed(ILogger logger, Exception exception, string roomId);
 
     /// <summary>Logs that a Room's archived state changed.</summary>
     /// <param name="logger">The logger to write to.</param>

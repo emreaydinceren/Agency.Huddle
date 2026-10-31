@@ -1,7 +1,7 @@
 @namespace Agency.Huddle.App.Components.Shared
 
 @*
-    Avatar editing for the Teammate card, in its own dialog. The card's avatar is a button; pressing it, in View,
+    Avatar editing for the Agent card, in its own dialog. The card's avatar is a button; pressing it, in View,
     Edit and Create alike, opens this. The dialog is a thin wrapper: the editing itself is AvatarEditor in Buffered
     mode, which writes nothing and reports every change. The dialog keeps the latest avatar and pending image and
     hands back an AvatarEditorResult only when the Human presses the commit button. Cancelling, Escape and the close
@@ -12,8 +12,12 @@
     discard it), and in View, which has no Save of its own, the card writes it at once. Deferred tells this dialog
     which of the two it is serving, so the button and the hint say the truth.
 
-    An open dialog's parameters are frozen (see the header of TeammateCard.razor), so every parameter below is a
+    An open dialog's parameters are frozen (see the header of AgentProfileCard.razor), so every parameter below is a
     snapshot: it seeds the editor once and the editor's own reports are held in local fields.
+
+    The title is the item's name ("Alan's avatar"). "Choose from library" does not open a third dialog: the editor swaps
+    the library into this dialog's content with a Back button (audit B8k), reports it through LibraryOpenChanged, and this
+    dialog then reads "Choose an avatar" and hides its Cancel and Apply, which belong to the editor.
 *@
 
 @using Agency.Huddle.App.Avatars
@@ -21,20 +25,24 @@
 
 <MudDialog Class="avatar-editor-dialog">
     <TitleContent>
-        <MudText Typo="Typo.h6">Avatar</MudText>
+        <MudText Typo="Typo.h6">@this.DialogTitle</MudText>
     </TitleContent>
     <DialogContent>
         @if (this.Deferred)
         {
-            <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary">Written when you save the teammate.</MudText>
+            <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary">Written when you save the agent.</MudText>
         }
         <AvatarEditor Name="@this.Name" Value="this.Current" ValueChanged="this.OnValueChanged" SaveMode="AvatarSaveMode.Buffered"
                       PendingImage="this.PendingImage" PendingImageExtension="@this.PendingImageExtension"
-                      PendingImageChanged="this.OnPendingImageChanged" />
+                      PendingImageChanged="this.OnPendingImageChanged" LibraryOpenChanged="this.OnLibraryOpenChanged"
+                      AllowLibrary="this.AllowLibrary" Shape="this.Shape" />
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        @if (!this.libraryOpen)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -45,7 +53,7 @@
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
 
-    /// <summary>The Teammate's Name, the source of the initials the preview falls back to. Empty on a Create card whose Name is not typed yet, which reads as a question mark.</summary>
+    /// <summary>The Agent's Name, the source of the initials the preview falls back to. Empty on a Create card whose Name is not typed yet, which reads as a question mark.</summary>
     [Parameter]
     public string Name { get; set; } = string.Empty;
 
@@ -68,10 +76,41 @@
     [Parameter]
     public bool Deferred { get; set; }
 
+    /// <summary>Whether the editor offers the image library; passed through to <see cref="AvatarEditor"/>. A Team's avatar editor turns it off.</summary>
+    [Parameter]
+    public bool AllowLibrary { get; set; } = true;
+
+    /// <summary>The outline of the editor's previews; passed through to <see cref="AvatarEditor"/>. A Team's is <see cref="AvatarShape.RoundedSquare"/>.</summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
     private Avatar? edited;
     private byte[]? pendingBytes;
     private string? pendingExtension;
     private bool pendingTouched;
+    private bool libraryOpen;
+
+    /// <summary>The title: the Agent's avatar by name, or "Choose an avatar" while the library replaces the editor's content. A Create card with no Name typed yet has just "Avatar".</summary>
+    private string DialogTitle
+    {
+        get
+        {
+            if (this.libraryOpen)
+            {
+                return "Choose an avatar";
+            }
+
+            return string.IsNullOrWhiteSpace(this.Name) ? "Avatar" : $"{this.Name}'s avatar";
+        }
+    }
+
+    /// <summary>Follows the editor into and out of the in-place library: retitles the dialog and shows or hides its buttons. The dialog owns its title bar, so it is asked to repaint.</summary>
+    /// <param name="open">Whether the library is now showing.</param>
+    private void OnLibraryOpenChanged(bool open)
+    {
+        this.libraryOpen = open;
+        this.Dialog?.StateHasChanged();
+    }
 
     /// <summary>Keeps the editor's latest avatar.</summary>
     /// <param name="value">The avatar after the change.</param>

@@ -11,7 +11,6 @@
     exactly one click after the ⋮ (corrections-B5 D12-2).
 *@
 
-@using System.Globalization
 @inject TimeProvider Clock
 @inject ISprintCatalog Sprints
 @implements IDisposable
@@ -21,11 +20,33 @@
         <div class="task-card-header">
             <span class="task-card-id">@this.Task.Id.ToString()</span>
             <TaskPriorityChip Priority="this.Task.Priority" />
+            @if (this.Task.IsGated)
+            {
+                @* Never computes Proof per card render (RK5): only a Needs You card reads its acceptance. *@
+                @if (this.Task.Status == TaskState.NeedsYou)
+                {
+                    bool accepted = Acceptance.Of(this.Task).State == AcceptanceState.Valid;
+                    <StatusChip Color="@(accepted ? Color.Success : Color.Warning)" Class="task-card-gate-chip" Icon="@Icons.Material.Filled.Lock">@(accepted ? HumanGateCopy.BoardChipAccepted : HumanGateCopy.BoardChipNeedsYou)</StatusChip>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="task-card-gate-lock" aria-label="@HumanGateCopy.LockAriaLabel" />
+                }
+            }
         </div>
 
         <div class="task-card-title">
             <MudHighlighter Text="@this.Task.Title" HighlightedText="@this.Search" />
         </div>
+
+        @if (this.Task.BlockedBy.Count > 0 && !this.Fields.Contains("blocked_by", StringComparer.Ordinal))
+        {
+            @* A blocked Task says so and names its blockers, in every Theme; a tint or an edge alone left the reader guessing why. *@
+            <span class="task-card-blocked-by">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" aria-hidden="true" />
+                Blocked by @string.Join(", ", this.Task.BlockedBy)
+            </span>
+        }
 
         @if (this.Task.Tags.Count > 0)
         {
@@ -41,9 +62,13 @@
             </div>
         }
 
-        @if (this.IsOverdue)
+        @if (this.IsOverdue && this.Task.DueDate is { } overdueDate && !this.Fields.Contains("due_date", StringComparer.Ordinal))
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
+            @* An overdue Task shows its date even when the View does not list the field: the one overdue cue is the icon before the date. *@
+            <span class="@this.FieldClass("due_date")" title="@TaskDates.Tooltip(overdueDate)">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
+                @TaskDates.Human(overdueDate, this.Clock)
+            </span>
         }
 
         @foreach (string field in this.Fields)
@@ -51,10 +76,14 @@
             @* "tags" is already drawn as row 3, so FieldText has no value for it. *@
             @if (this.FieldText(field) is { } text)
             {
-                <span class="@this.FieldClass(field)">
+                <span class="@this.FieldClass(field)" title="@this.FieldTitle(field)">
                     @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
                     {
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                    }
+                    @if (string.Equals(field, "due_date", StringComparison.Ordinal) && this.IsOverdue)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
                     }
                     @text
                 </span>
@@ -64,11 +93,11 @@
 
     @if (this.Busy && this.LastWake is { } lastWake)
     {
-        <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="task-card-awake-chip">Awake</MudChip>
+        <StatusChip Color="Color.Success" Class="task-card-awake-chip" Icon="@Icons.Material.Filled.FiberManualRecord">Awake</StatusChip>
         <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">Woken in Room @lastWake.RoomName</MudLink>
     }
 
-    <TaskActionsMenu Id="this.Task.Id" ShowMoveTo="true" OnMoveTo="this.OnMoveTo" OnCopyId="this.OnCopyId" OnCopyLink="this.OnCopyLink" />
+    <TaskActionsMenu Id="this.Task.Id" ShowMoveTo="true" Reveal="true" OnMoveTo="this.OnMoveTo" OnCopyId="this.OnCopyId" OnCopyLink="this.OnCopyLink" />
 </div>
 
 @code {
@@ -138,13 +167,17 @@
         });
     }
 
-    /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-col-edge-{colour}</c> (Spec §13.10) and <c>task-overdue</c> when it applies.</summary>
+    /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-overdue</c> when it applies. The column names the state, so the card has no state-coloured edge.</summary>
     private string RootClass
     {
         get
         {
-            string edge = string.Create(CultureInfo.InvariantCulture, $"task-col-edge-{TaskColors.For(this.Task.Status).ToString().ToLowerInvariant()}");
-            string root = this.IsOverdue ? $"task-card {edge} task-overdue" : $"task-card {edge}";
+            string root = this.IsOverdue ? "task-card task-overdue" : "task-card";
+            if (this.Task.BlockedBy.Count > 0)
+            {
+                root += " task-card-blocked";
+            }
+
             return this.Selected ? string.Join(' ', root, "task-card-selected") : root;
         }
     }
@@ -174,13 +207,25 @@
         "project" => this.Task.Location.Project ?? TaskFieldView.EmptyText("project"),
         "parent" => this.Task.Parent?.ToString(),
         "blocked_by" => this.Task.BlockedBy.Count > 0 ? string.Join(", ", this.Task.BlockedBy) : null,
-        "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Display(startDate) : null,
-        "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Display(dueDate) : null,
+        "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Human(startDate, this.Clock) : null,
+        "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Human(dueDate, this.Clock) : null,
         "sprint" => this.Task.Sprint is { } sprint ? SprintLabels.Text(this.Sprints, sprint) : null,
-        "created" => this.Task.Created is { } created ? TaskDates.Display(created) : null,
-        "updated" => this.Task.Updated is { } updated ? TaskDates.Display(updated) : null,
-        "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Display(closed) : null,
+        "created" => this.Task.Created is { } created ? TaskDates.Human(created, this.Clock) : null,
+        "updated" => this.Task.Updated is { } updated ? TaskDates.Human(updated, this.Clock) : null,
+        "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Human(closed, this.Clock) : null,
         "origin" => TaskFieldView.OriginText(this.Task.OriginRoomId, this.RoomNames),
+        _ => null,
+    };
+
+    /// <summary>The tooltip of one field's span: the full date for a date field, otherwise <see langword="null"/> so no <c>title</c> renders.</summary>
+    /// <param name="field">A §12.2 field key.</param>
+    private string? FieldTitle(string field) => field switch
+    {
+        "start_date" => TaskDates.Tooltip(this.Task.StartDate),
+        "due_date" => TaskDates.Tooltip(this.Task.DueDate),
+        "created" => TaskDates.Tooltip(this.Task.Created, this.Clock),
+        "updated" => TaskDates.Tooltip(this.Task.Updated, this.Clock),
+        "closed" => TaskDates.Tooltip(this.Task.ClosedAt, this.Clock),
         _ => null,
     };
 }

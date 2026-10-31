@@ -29,7 +29,7 @@ namespace Agency.Huddle.App.Components.Settings;
 /// </param>
 /// <param name="DefaultValue">The prompt's built-in text from <see cref="PromptCatalog"/>.</param>
 /// <param name="Placeholders">Every <c>{{name}}</c> token this prompt's text may contain.</param>
-/// <param name="Timing">When an edit to this prompt's text reaches a running teammate.</param>
+/// <param name="Timing">When an edit to this prompt's text reaches a running agent.</param>
 /// <param name="IsModified">Whether <see cref="Value"/> differs from <see cref="DefaultValue"/>. Drives the Reset button's enabled state and the "Modified" badge.</param>
 /// <param name="HasUnsavedChange">Whether <see cref="Value"/> differs from the prompt's currently stored value. Drives the Save button and the "Unsaved" badge.</param>
 /// <param name="Issues">Validation findings for <see cref="Value"/>, from <c>PromptValidator.Validate</c>. Never blocks a save — see <c>PromptValidator</c>'s remarks.</param>
@@ -44,11 +44,3 @@ public sealed record PromptFieldState(
     bool IsModified,
     bool HasUnsavedChange,
     IReadOnlyList<PromptIssue> Issues);
-
-/// <summary>
-/// One heading's worth of <see cref="PromptFieldState"/> rows on the Settings page, grouped by the
-/// prompt key's prefix (e.g. every <c>systemPrompt.*</c> prompt under "System prompt").
-/// </summary>
-/// <param name="Label">The heading shown above this group's fields.</param>
-/// <param name="Fields">Every field in this group, in <see cref="PromptCatalog.All"/>'s order.</param>
-public sealed record PromptFieldGroup(string Label, IReadOnlyList<PromptFieldState> Fields);

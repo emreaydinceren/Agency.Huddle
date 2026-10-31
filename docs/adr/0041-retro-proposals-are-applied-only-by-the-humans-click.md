@@ -8,12 +8,13 @@ date: 2026-10-08
 After a retrospective, the Team's manager or Retro agent may propose up to three edits to the
 Team's own files. An Agent can propose, but never edit: the proposal is held as data, the Human
 sees it as a card with a diff, and Huddle makes the edit when the Human clicks **Accept**. The
-full design is in the [Teams specification](../engineering/teams-spec.md), under *Retrospectives*.
+Human's view is in the [User Guide](../Huddle.UserGuide.md) (*Retrospectives*); the original Teams
+specification has been retired.
 
 ## The problem
 
 A retro exists to change how the Team works, and the files that say how are plain Markdown and
-JSON: `Process.md`, `_team.md` and the Teammate files. An Agent that could edit them directly
+JSON: `Process.md`, `_team.md` and the Agent files. An Agent that could edit them directly
 could rewrite its own gates, its own role or its own prompt, and the next retro would be graded
 by the process it just loosened. The Human wants the retro to suggest, and to stay the one who
 changes the rules.
@@ -42,7 +43,7 @@ or the member whose role is the type's `retroRole`. A specialist that holds the 
 - for `_team.md`, parses the edited text with `TeamFile.TryParse`, refuses when it would be
   unreadable, and writes through `UpdateTeamFile` rather than the raw text;
 - for `Process.md`, writes through a temporary file and a move over the original;
-- for a Teammate file, refuses an edit whose `name:` no longer matches the Teammate, so a retro
+- for an Agent file, refuses an edit whose `name:` no longer matches the Agent, so a retro
   cannot rename anyone.
 
 **The register row is Huddle's, not the agent's.** On a successful edit, Huddle appends a row to
@@ -71,7 +72,7 @@ a `logs/...#L12` line or a `_retros/` file. A row is therefore never verified on
   and nothing is applied.
 - **A stale proposal is refused, not forced.** If the file moved on, the card says so and the
   proposer can propose again.
-- **`_team.md` and the Teammate files cannot be left half-written or unreadable by a retro.**
+- **`_team.md` and the Agent files cannot be left half-written or unreadable by a retro.**
   The first is validated and written through the Team file path; the others are replaced whole.
 - **The next retro starts from a list.** The Done and Partial rows are the questions it has to
   answer with evidence before it opens new ones.

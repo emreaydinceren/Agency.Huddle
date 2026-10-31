@@ -5,6 +5,12 @@ date: 2026-10-12
 
 # Needs You is worked out from Room events and held in memory
 
+> [!NOTE]
+> **Amended by [ADR-0061](0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md)
+> (proposed 2026-10-19).** Needs You also lists Tasks waiting for the Human's acceptance. Those
+> entries are read from the Task files, not held in this tracker, so they survive a restart and
+> have no ✕. Everything below still holds for Rooms.
+
 **Needs You** is a card in the sidebar listing every Room that waits on the Human. A Room
 joins it when an Agent Mentions the Human, asks a Question, opens a Form, or spends the
 Room's Budget. It leaves when the Human posts there or dismisses it. The full design is

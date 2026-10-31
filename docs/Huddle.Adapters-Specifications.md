@@ -40,7 +40,7 @@ subtrees and shared root docs, so it is announced rather than merged silently.
 
 ### 1.1 Primary goal
 
-Make **Adapter** a per-Persona choice. A Teammate may run on Anthropic's `claude-agent-acp`
+Make **Adapter** a per-Persona choice. An Agent may run on Anthropic's `claude-agent-acp`
 (cloud, billed per Turn) or on Agency.NET's `agency-acp` (a local model on this machine, free),
 selected from a dropdown when the Persona is created or edited, and everything downstream —
 the pipe, the Reply Gate, the Budget, the Rooms, every App Tool — must not learn which.
@@ -73,7 +73,7 @@ One step in eight. So the design is **one factory that resolves a profile**, not
 
 | # | Objective | Measure |
 | --- | --- | --- |
-| O-1 | A Persona names its Adapter, and the Teammate card offers the choice | `adapter:` round-trips through Create and Edit; the select renders the configured profiles |
+| O-1 | A Persona names its Adapter, and the Agent card offers the choice | `adapter:` round-trips through Create and Edit; the select renders the configured profiles |
 | O-2 | Changing the Adapter restarts the session | `PersonaSupervisor.NeedsRestart` returns true on an Adapter-only change |
 | O-3 | Model and Effort catalogs come from the **selected** Adapter | a Persona on `agency` is never offered Claude's models |
 | O-4 | `PersonaRunner` never learns which Adapter answered | no Adapter-specific branch, name or type anywhere in `PersonaRunner.cs` — *measure amended 2026-09-18, see below* |
@@ -108,7 +108,7 @@ code) stays on **Adapter: Claude**. Both sit in `#product`. A Message Mentioning
 Turns; one bills the Claude subscription, one costs nothing. Neither Room, Budget nor Reply Gate
 distinguishes them.
 
-**U-2 — A human switches a Teammate to local to stop spending.**
+**U-2 — A human switches an Agent to local to stop spending.**
 Edit `Ana`, change Adapter from Claude to Agency. Model and Effort reset to their defaults with
 an inline note. Saving restarts the session; `Ana` loses its conversation memory, exactly as a
 Model change already does.
@@ -116,7 +116,7 @@ Model change already does.
 **U-3 — The local endpoint is down.**
 `agency-acp` starts, `session/new` cannot reach the inference server, and the catalogue comes
 back empty. The session still starts (`models: []` means *unknown*). The first Turn fails; the
-Teammate goes `Degraded` with the adapter's message. No other Persona is affected — a different
+Agent goes `Degraded` with the adapter's message. No other Persona is affected — a different
 process.
 
 **U-4 — Only one Adapter is configured.**
@@ -161,7 +161,7 @@ cached separately.
 ## 4. Design principles
 
 **P1 — The Adapter is a property of the Persona, not of the installation.**
-One Huddle can run Teammates on different Adapters at once. Anything that reads a global
+One Huddle can run Agents on different Adapters at once. Anything that reads a global
 "which backend" setting is wrong by construction.
 
 **P2 — Add a field, not a store.**
@@ -205,7 +205,7 @@ model's judgement, and it never grows Huddle behaviour of its own.
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │  Blazor circuit                                                                │
 │                                                                                │
-│   TeammateCard                                                                 │
+│   AgentProfileCard                                                                 │
 │     Adapter ▾ ──┐   Model ▾ ──┐   Effort ▾                                      │
 │                 │             │                                                │
 │                 │ (cascade: Adapter resets Model+Effort; Model resets Effort)   │
@@ -284,7 +284,7 @@ model's judgement, and it never grows Huddle behaviour of its own.
 | `AcpOptions.Adapters` | **new config** — `Team:Acp:Adapters[]` |
 | `DotAcpAgentHostFactory`, `AgentProcessOptionsFactory`, `ModelCatalogProbe` | **modified** — profile-aware |
 | `Persona`, `PersonaStore`, `PersonaFrontmatter`, `PersonaIndex` | **modified** — one new field |
-| `TeammateCard.razor` | **modified** — a third cascading select |
+| `AgentProfileCard.razor` | **modified** — a third cascading select |
 | `DotAcpAgentSession`, `AppToolServer` | **modified** — `session/close`, `WWW-Authenticate` |
 | `PersonaRunner`, `ReplyGate`, `ChatService`, every App Tool, `AgentGateway`, the pipe | **untouched** |
 | `Huddle.Contracts` | **untouched — no protocol bump** |
@@ -369,7 +369,7 @@ internal sealed class AdapterProfileResolver(AdapterCatalog catalog)
 | no match | **default profile** | `"The Adapter 'x' is not configured; running on 'claude'."` |
 
 **Implementation notes.** Returning a tuple rather than throwing is P4, and it mirrors
-`PersonaRunner`'s existing treatment of an unadvertised Model: the session starts, the Teammate
+`PersonaRunner`'s existing treatment of an unadvertised Model: the session starts, the Agent
 reports `Degraded`, and the human sees why. The warning is surfaced through the same
 `RaiseStatusChanged(PersonaState.Degraded, …)` path.
 
@@ -528,7 +528,7 @@ enabled and is explicitly **not in force** yet.
 
 ---
 
-### 6.6 `TeammateCard` — three cascading selects
+### 6.6 `AgentProfileCard` — three cascading selects
 
 **Purpose.** Let a human choose Adapter, then Model, then Effort, each constrained by the one
 above.
@@ -577,8 +577,8 @@ OnModelChangedAsync(value)            ← unchanged
 | State | Text |
 | --- | --- |
 | one profile configured | *(select not rendered)* |
-| default | "Which agent runs this teammate. Changing it restarts the teammate, which clears what it remembers." |
-| stored id not configured | "The adapter 'x' is not configured. This teammate will run on 'claude'." |
+| default | "Which agent runs this agent. Changing it restarts the agent, which clears what it remembers." |
+| stored id not configured | "The adapter 'x' is not configured. This agent will run on 'claude'." |
 
 **Constraints.** `[Parameter]` may not be of an `internal` type — Razor generates component
 classes as `public`. `AdapterProfile` is therefore **public**, like `AgentModelOption`, while
@@ -847,7 +847,7 @@ control changes the argument. The `_` prefix stays reserved for keys that never 
 `private const` key names; it gains a fifth. Three follow-ons, all mandatory:
 
 1. **`ComposeJobDescription` must exclude it.** Today `JobDescriptionExcludedKeys` contains only
-   `Name`. Without adding `Adapter`, every Teammate's job description in
+   `Name`. Without adding `Adapter`, every Agent's job description in
    `mcp__team__list_agents` gains a line reading `Adapter: agency` — model-facing text about
    Huddle's plumbing, which no Agent can act on.
 2. **`Compose` must emit it.** The write path emits *only* the identity keys, so a key written
@@ -1179,7 +1179,7 @@ involved. Enforcement lives on the inference port, outside both products.
 ## 13. End-to-end flow
 
 ```text
- 1  Human opens New Teammate
+ 1  Human opens New Agent
       └─ card: Adapter ▾ (2 profiles)  Model ▾ (disabled)  Effort ▾ (disabled)
  2  Human picks Adapter = Agency
       ├─ model := null, effort := null
@@ -1578,7 +1578,7 @@ if it happens a fourth time.
 Three meet all three bars — hard to reverse, surprising without context, a real trade-off:
 
 - **ADR: An Adapter is a property of the Persona.** Establishes that one installation runs
-  Teammates on different Adapters simultaneously, and that the choice lives in frontmatter
+  Agents on different Adapters simultaneously, and that the choice lives in frontmatter
   rather than a store. Supersedes roadmap item 12's plan.
 - **ADR: The tool-name prefix belongs to the Adapter.** `mcp__team__` stops being a constant and
   becomes a profile property. Reversing it would require re-pinning every golden.

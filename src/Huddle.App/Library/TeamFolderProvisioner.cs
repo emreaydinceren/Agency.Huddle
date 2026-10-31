@@ -90,20 +90,10 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         ArgumentNullException.ThrowIfNull(teamFolder);
         ArgumentNullException.ThrowIfNull(project);
 
-        string? projectNameError = LibraryNames.Validate(project);
+        string? projectNameError = ValidateProjectName(project);
         if (projectNameError is not null)
         {
             return new LibraryResult<LibraryPath>(null, projectNameError);
-        }
-
-        if (string.Equals(project, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            return new LibraryResult<LibraryPath>(null, TeamNames.MemoryReservedProblem);
-        }
-
-        if (string.Equals(project, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            return new LibraryResult<LibraryPath>(null, TeamNames.UploadsReservedProblem);
         }
 
         if (!this.resolver.TryResolve(teamFolder.Root.Id, teamFolder.RelativePath, out LibraryPath? freshTeamFolder, out string? teamResolveError) ||
@@ -147,6 +137,30 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         }
 
         return new LibraryResult<LibraryPath>(created, null);
+    }
+
+    /// <summary>Validates a new Project folder name: a valid folder name that is not the reserved Memory or Uploads folder.</summary>
+    /// <param name="project">The proposed Project folder name.</param>
+    /// <returns>The refusal reason, or <see langword="null"/> when the name is acceptable.</returns>
+    private static string? ValidateProjectName(string project)
+    {
+        string? projectNameError = LibraryNames.Validate(project);
+        if (projectNameError is not null)
+        {
+            return projectNameError;
+        }
+
+        if (string.Equals(project, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return TeamNames.MemoryReservedProblem;
+        }
+
+        if (string.Equals(project, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return TeamNames.UploadsReservedProblem;
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>
@@ -524,19 +538,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return;
         }
 
-        string[] existing;
-        try
+        string[]? existing = this.TryListTeamFolders(teamsRoot.FullPath);
+        if (existing is null)
         {
-            existing = Directory.Exists(teamsRoot.FullPath) ? Directory.GetDirectories(teamsRoot.FullPath) : [];
-        }
-        catch (IOException ex)
-        {
-            this.LogSyncFailed(ex);
-            return;
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            this.LogSyncFailed(ex);
             return;
         }
 
@@ -578,6 +582,27 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             {
                 this.LogCreateFailed(label, ex);
             }
+        }
+    }
+
+    /// <summary>Lists the directories directly under the Teams root, logging (not throwing) a failure.</summary>
+    /// <param name="teamsRootPath">The Teams root's full path.</param>
+    /// <returns>The directory paths (empty when the root doesn't exist yet), or <see langword="null"/> when listing failed.</returns>
+    private string[]? TryListTeamFolders(string teamsRootPath)
+    {
+        try
+        {
+            return Directory.Exists(teamsRootPath) ? Directory.GetDirectories(teamsRootPath) : [];
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
+            return null;
         }
     }
 

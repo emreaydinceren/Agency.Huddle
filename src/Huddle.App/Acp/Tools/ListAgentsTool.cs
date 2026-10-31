@@ -15,11 +15,9 @@ using Agency.Huddle.Contracts;
 /// </summary>
 internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway agentGateway, PersonaStore personaStore, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "list_agents";
 
-    public string Description => prompts.Render("tool.listAgents.description", NoValues);
+    public string Description => prompts.Render("tool.listAgents.description");
 
     public JsonObject InputSchema => new JsonObject
     {
@@ -32,7 +30,7 @@ internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var users = await teamDirectory.GetUsersAsync(cancellationToken);
+        var users = await teamDirectory.GetUsersAsync(cancellationToken).ConfigureAwait(false);
         var agents = users.Where(u => u.Kind == UserKind.Agent).ToList();
         var personaNames = personaStore.ListNames();
 

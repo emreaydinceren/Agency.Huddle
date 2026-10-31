@@ -1,6 +1,9 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Search;
@@ -41,7 +44,13 @@ public sealed class TeamOptions
     /// <summary>Configuration for the Library feature, per Spec §7: file explorer, document viewer, wikilinks, pinned roots.</summary>
     public LibraryOptions Library { get; set; } = new();
 
-    /// <summary>Configuration for team and teammate folder names, per Spec §7. Shared with the Tasks feature.</summary>
+    /// <summary>Configuration for a Library document's History, bound from <c>Team:DocHistory</c> per DocHistory spec §6.9.</summary>
+    public DocHistoryOptions DocHistory { get; set; } = new();
+
+    /// <summary>Configuration for the Feed, bound from <c>Team:Feed</c> per Feed spec §6.11.</summary>
+    public FeedOptions Feed { get; set; } = new();
+
+    /// <summary>Configuration for team and agent folder names, per Spec §7. Shared with the Tasks feature.</summary>
     public TeamsOptions Teams { get; set; } = new();
 
     /// <summary>Configuration for the Tasks feature.</summary>
@@ -55,15 +64,25 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Referenced items header of an Agent's Turn, bound from <c>Team:References</c> per spec §10.</summary>
     public ReferencesOptions References { get; set; } = new();
-}
 
-public sealed class DemoAgentOptions
-{
-    public bool Enabled { get; set; }
+    /// <summary>Per-Helper defaults, keyed by Helper id (<c>Team:Helpers:NeedsHuman</c>); see Helpers Spec §6.6.</summary>
+    public Dictionary<string, HelperOptions> Helpers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    // Left null by default rather than pre-populated with ["echo", "alpha"]: the configuration binder
-    // appends bound array elements to an already-populated list/array property instead of replacing it,
-    // which would silently double up the built-in agents. DemoAgentHost falls back to the documented
-    // default (Team-Specifications.md §6.7) when this is null or empty.
-    public IReadOnlyList<string>? Names { get; set; }
+    /// <summary>How many Helper runs may happen at once, across all Helpers. Defaults to 2. It sits outside <c>Team:Helpers</c> because the configuration binder cannot mix a dictionary's entries with ordinary properties on one section.</summary>
+    public int HelperConcurrency { get; set; } = 2;
+
+    /// <summary>The Skill Sources folder (Skill Packs spec §8.7); empty means <c>{DataDir}/SkillSources</c>. A folder set on
+    /// Settings › Skills › Sources (<c>skill-sources.json</c>) wins over this key.</summary>
+    public string SkillSourcesDir { get; set; } = string.Empty;
+
+    /// <summary>The name per-computer paths are matched against; empty means <see cref="Environment.MachineName"/>.</summary>
+    public string ComputerName { get; set; } = string.Empty;
+
+    /// <summary>Where this computer's copy of the skills repository is. Read once, by the move; empty means the move adds
+    /// no rows for the two Packs Huddle used to ship.</summary>
+    public string SkillsRepositoryDir { get; set; } = string.Empty;
+
+    /// <summary>The <c>huddle-packs</c> program <c>InstallSkillPack.md</c> gives for validating; empty means
+    /// <c>huddle-packs.exe</c> beside the app, else <c>dotnet huddle-packs.dll</c>.</summary>
+    public string HuddlePacksPath { get; set; } = string.Empty;
 }

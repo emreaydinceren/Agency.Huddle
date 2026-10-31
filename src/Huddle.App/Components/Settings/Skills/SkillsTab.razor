@@ -1,0 +1,419 @@
+@*
+    The Skills tab of Settings › Skills (Skill Packs spec §6.9.3, G4e): every Skill Huddle knows about, from SkillStore (built in,
+    Yours, copies) joined by name with the registry (fetched, or listed in a catalog but not on this computer yet). It draws
+    what SkillRegistry resolved and never recomputes a state: the chips show SkillRegistry.DisplayState. The host passes
+    Revision, a copy of SkillRegistry.Current.Version, so a new snapshot redraws this part; the markup reads the registry
+    itself because its types are internal and cannot be parameters.
+
+    Past VirtualizeAbove rows the grid is virtualised, so a Huddle with thousands of catalog Skills renders only the rows in
+    view. Below it (the usual few hundred) every row renders, which keeps the prerendered page and a reader's find-in-page
+    complete: Virtualize draws no row until the browser has measured the viewport.
+
+    Leaving the tab marks the Skill keys it listed as seen (SkillsPanel calls MarkSeenAsync with ListedKeys), so New stays on
+    a row that arrives while the tab is open until the Human leaves.
+*@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using CheckSeverity = Agency.Huddle.SkillPacks.Checking.Severity
+@using Finding = Agency.Huddle.SkillPacks.Checking.Finding
+@using Agency.Huddle.SkillPacks.Reading
+@using Agency.Huddle.SkillPacks.Resolving
+
+@inject SkillRegistry Registry
+@inject SkillStore Store
+@inject SkillSourcesRemover Remover
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+<SettingsIntro>@SkillGuide.SkillsIntro <SkillsLearnMore View="skills" /></SettingsIntro>
+
+<StoredAt Label="Copies stored at" Path="@this.Store.SkillsDirectory" />
+
+<div class="skills-tab-actions d-flex flex-wrap gap-2 mb-2">
+    <MudTooltip Text="@SkillGuide.For("Import skill")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button" OnClick="this.ImportSkillAsync">Import skill</MudButton>
+    </MudTooltip>
+    <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@this.reloading" OnClick="this.ReloadAsync">
+            @if (this.reloading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Reload
+        </MudButton>
+    </MudTooltip>
+</div>
+
+<div class="skills-tab-filters d-flex flex-wrap align-center gap-2 mb-2">
+    <SearchField Compact="true" Value="@this.search" ValueChanged="this.OnSearchChanged" Placeholder="Search Skills" AriaLabel="Search Skills" Class="skills-tab-search" />
+    <TaskFilterChip Label="State" Value="@this.FilterText" IsSet="@(this.filter is not null)" OnClear="@(() => this.SetFilter(null))" Class="skills-tab-state-filter">
+        <MudMenuItem OnClick="@(() => this.SetFilter(null))">All</MudMenuItem>
+        @foreach (ItemState option in FilterOptions)
+        {
+            <MudMenuItem OnClick="@(() => this.SetFilter(option))">@FilterLabel(option)</MudMenuItem>
+        }
+    </TaskFilterChip>
+    <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
+        <MudSwitch T="bool" Value="@this.showHidden" ValueChanged="@((bool value) => this.showHidden = value)" Color="Color.Primary" Size="Size.Small"
+                   Label="Show hidden" Class="skills-tab-show-hidden" />
+    </MudTooltip>
+</div>
+
+@{
+    IReadOnlyList<SkillRow> rows = this.Rows;
+    bool virtualize = rows.Count > VirtualizeAbove;
+}
+<MudDataGrid T="SkillRow" Items="@rows" ReadOnly="true" Dense="true" Hover="true" Virtualize="@virtualize" FixedHeader="@virtualize" Height="@(virtualize ? "60vh" : null)"
+             ColumnResizeMode="ResizeMode.None" ShowColumnOptions="false" Class="skills-grid" RowClass="skills-grid-row">
+    <Columns>
+        <TemplateColumn T="SkillRow" Title="Name" Sortable="false">
+            <CellTemplate>
+                <div class="skills-name" data-skill="@context.Item.Name">@SkillNames.Display(context.Item.Name)</div>
+                <MudText Typo="Typo.caption" Class="skills-description mud-text-secondary">@context.Item.Description</MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="SkillRow" Title="Source" Sortable="false">
+            <CellTemplate>
+                @if (context.Item.Copy is { Provenance: not null } copy)
+                {
+                    <SkillProvenanceLine Skill="@copy" SourceRemoved="@this.SourceRemoved(copy)" />
+                }
+                else
+                {
+                    <span class="skills-origin">@OriginText(context.Item)</span>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="SkillRow" Title="State" Sortable="false">
+            <CellTemplate>
+                <SkillStateChips State="@context.Item.State" UsedBy="@context.Item.Holders.Count" HolderNames="@string.Join(", ", context.Item.Holders)"
+                                 Reason="@this.ReasonOf(context.Item)" Hidden="@context.Item.Hidden" ModifiedLocally="@(context.Item.Copy?.ModifiedLocally == true)" />
+                @if (context.Item.Origin == SkillRowOrigin.BuiltIn)
+                {
+                    <StatusChip Color="Color.Default" Icon="@Icons.Material.Filled.Inventory2" Class="mr-1 skills-builtin-chip">Built in</StatusChip>
+                }
+                else if (context.Item.Origin == SkillRowOrigin.Yours)
+                {
+                    <StatusChip Color="Color.Default" Icon="@Icons.Material.Filled.Person" Class="mr-1 skills-yours-chip">Yours</StatusChip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="SkillRow" Title="Used by" Sortable="false">
+            <CellTemplate>
+                @if (context.Item.Holders.Count > 0)
+                {
+                    <MudTooltip Text="@string.Join(", ", context.Item.Holders)">
+                        <span class="skills-used-by truncate">@string.Join(", ", context.Item.Holders)</span>
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="SkillRow" Title="" Sortable="false" CellClass="skills-menu-cell">
+            <CellTemplate>
+                @if (this.MenuItemsFor(context.Item).Count > 0)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button skills-row-menu"
+                             AriaLabel="@MenuDialogs.ActivatorLabel(SkillNames.Display(context.Item.Name))">
+                        @foreach (string item in this.MenuItemsFor(context.Item))
+                        {
+                            SkillRow row = context.Item;
+                            <MudMenuItem Class="@($"skills-menu-{item.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(row, item))">@item</MudMenuItem>
+                        }
+                    </MudMenu>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+<ProblemList Count="this.Problems.Count">
+    @foreach (string problem in this.Problems)
+    {
+        <MudText Typo="Typo.body2" Class="skills-problem mb-1">@problem</MudText>
+    }
+</ProblemList>
+
+@code {
+    /// <summary>The row count past which the grid is virtualised.</summary>
+    internal const int VirtualizeAbove = 500;
+
+    private const string CopyPromptItem = "Copy prompt";
+    private const string ReviewUpdateItem = "Review update";
+    private const string HideItem = "Hide";
+    private const string UnhideItem = "Unhide";
+    private const string ShowCatalogItem = "Show catalog in Library";
+    private const string RestoreDefaultItem = "Restore default";
+
+    /// <summary>The State filter's choices after All, in the spec's order.</summary>
+    private static readonly ItemState[] FilterOptions =
+        [ItemState.Available, ItemState.InUse, ItemState.UpdateAvailable, ItemState.NotDownloaded, ItemState.Deprecated, ItemState.Withdrawn, ItemState.Broken];
+
+    private string? search;
+    private ItemState? filter;
+    private bool showHidden;
+    private bool reloading;
+
+    /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
+    [Parameter]
+    public long Revision { get; set; }
+
+    /// <summary>The <c>skill:&lt;name&gt;</c> keys of the registry rows this tab lists now, for <c>MarkSeenAsync</c> on leaving.</summary>
+    public IReadOnlyList<string> ListedKeys => [.. this.AllRows.Where(static row => row.Entry is not null).Select(static row => row.SeenKey)];
+
+    /// <summary>Every row, before the filters.</summary>
+    private IReadOnlyList<SkillRow> AllRows
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            return SkillRow.Join(
+                this.Store.All,
+                snapshot.Resolved.Skills,
+                this.Registry.DisplayState,
+                name => snapshot.SkillHolders.TryGetValue(name, out IReadOnlyList<string>? holders) ? holders : [],
+                snapshot.HiddenSkills);
+        }
+    }
+
+    /// <summary>The rows the grid shows: hidden ones only with Show hidden, then the State filter and the search.</summary>
+    private IReadOnlyList<SkillRow> Rows =>
+        [.. this.AllRows.Where(this.Passes)];
+
+    /// <summary>The filter chip's value.</summary>
+    private string FilterText => this.filter is { } state ? FilterLabel(state) : "All";
+
+    /// <summary>The SkillStore issues no row shows, then the composed errors of Broken registry Skills.</summary>
+    private IReadOnlyList<string> Problems
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            List<string> problems = [.. this.Store.Issues
+                .Where(issue => this.Store.Get(issue.Skill) is null)
+                .Select(static issue => $"{issue.Skill}: {issue.Message}")];
+            foreach (SkillEntry entry in snapshot.Resolved.Skills.Where(entry => this.Registry.DisplayState(entry) == ItemState.Broken))
+            {
+                Finding? first = snapshot.Checked.Findings.FirstOrDefault(finding => finding.Severity == CheckSeverity.Error
+                    && entry.FolderPath is not null && finding.File.StartsWith(entry.FolderPath, StringComparison.OrdinalIgnoreCase));
+                string cause = first is null ? SkillStateText.For(ItemState.Broken).Sentence : SkillProblemText.Compose(first);
+                problems.Add($"{entry.Name}: {cause}");
+            }
+
+            return problems;
+        }
+    }
+
+    /// <summary>The filter's word for a state.</summary>
+    private static string FilterLabel(ItemState state) => state == ItemState.InUse ? "In use" : SkillStateText.For(state).Text;
+
+    /// <summary>The Source column for a row without a provenance line.</summary>
+    private static string OriginText(SkillRow row)
+    {
+        if (row.Origin == SkillRowOrigin.BuiltIn)
+        {
+            return "Built in";
+        }
+
+        if (row.Origin == SkillRowOrigin.Yours || row.Entry is null)
+        {
+            return "Yours";
+        }
+
+        return SkillOriginText.Line(row.Entry.Publisher, row.Entry.Origin, row.Entry.License);
+    }
+
+    /// <summary>Whether a row passes Show hidden, the State filter and the search.</summary>
+    private bool Passes(SkillRow row)
+    {
+        if (row.Hidden && !this.showHidden)
+        {
+            return false;
+        }
+
+        if (this.filter is { } state && !(row.State == state || (state == ItemState.InUse && row.Holders.Count > 0)))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(this.search)
+            || row.Name.Contains(this.search.Trim(), StringComparison.OrdinalIgnoreCase)
+            || row.Description.Contains(this.search.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Whether the copy names a Source the registry no longer has (§6.12.5).</summary>
+    private bool SourceRemoved(Skill copy)
+    {
+        return copy.Provenance?.EffectiveSource is { Length: > 0 } source && this.Registry.Current.Resolved.FindSource(source) is null;
+    }
+
+    /// <summary>The Source's reason, for a Deprecated or Withdrawn row.</summary>
+    private string? ReasonOf(SkillRow row)
+    {
+        return row.Entry?.Source is { } source ? this.Registry.Current.Resolved.FindSource(source)?.File?.StatusReason : null;
+    }
+
+    /// <summary>The row's menu, in the spec's order.</summary>
+    private IReadOnlyList<string> MenuItemsFor(SkillRow row)
+    {
+        List<string> items = [];
+        if (row.State == ItemState.NotDownloaded && row.Entry is not null)
+        {
+            items.Add(CopyPromptItem);
+        }
+
+        if (row.State == ItemState.UpdateAvailable && row.Entry is not null)
+        {
+            items.Add(ReviewUpdateItem);
+        }
+
+        if (row.Origin == SkillRowOrigin.Registry && row.Entry is not null)
+        {
+            items.Add(row.Hidden ? UnhideItem : HideItem);
+        }
+
+        if (this.CatalogOf(row) is not null)
+        {
+            items.Add(ShowCatalogItem);
+        }
+
+        if (row.Copy?.Source == SkillSource.Overridden)
+        {
+            items.Add(RestoreDefaultItem);
+        }
+
+        return items;
+    }
+
+    /// <summary>The first catalog that lists the row's Skill, or null.</summary>
+    private ResolvedCatalog? CatalogOf(SkillRow row)
+    {
+        if (row.Entry is null)
+        {
+            return null;
+        }
+
+        string? id = row.Entry.Claims.Select(static claim => claim.ViaCatalog ?? (claim.Kind == RowKind.Catalog ? claim.Provider["catalog:".Length..] : null))
+            .FirstOrDefault(static candidate => candidate is not null);
+        return id is null ? null : this.Registry.Current.Resolved.FindCatalog(id);
+    }
+
+    /// <summary>Runs a menu item.</summary>
+    private async Task OnMenuAsync(SkillRow row, string item)
+    {
+        switch (item)
+        {
+            case CopyPromptItem:
+                await this.CopyPromptAsync(row);
+                break;
+            case ReviewUpdateItem:
+                _ = await SkillDialogs.OpenUpdateAsync(this.DialogService, row.Name, null, row.Name);
+                break;
+            case HideItem:
+            case UnhideItem:
+                await this.SetHiddenAsync(row, item == HideItem);
+                break;
+            case ShowCatalogItem:
+                this.ShowCatalog(row);
+                break;
+            case RestoreDefaultItem when row.Copy is { } copy:
+                await this.RestoreDefaultAsync(copy);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>Copies the prompt that asks the AI tool to fetch this one Skill.</summary>
+    private async Task CopyPromptAsync(SkillRow row)
+    {
+        ResolvedCatalog? catalog = this.CatalogOf(row);
+        string prompt = this.Prompts.FetchSkill(row.Name, catalog?.Id ?? string.Empty, catalog?.FilePath, row.Entry?.Origin, this.PathChoice.Format);
+        _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
+    }
+
+    /// <summary>Hides or unhides the Skill, with Undo.</summary>
+    private Task SetHiddenAsync(SkillRow row, bool hide) =>
+        HideFlow.SetAsync(this.Remover, this.Registry, this.Snackbar, HiddenKind.Skill, row.Name, row.Name, row.Entry?.Source, hide);
+
+    /// <summary>Opens the catalog file, read only, in the Library.</summary>
+    private void ShowCatalog(SkillRow row)
+    {
+        if (this.CatalogOf(row)?.FilePath is not { } file)
+        {
+            return;
+        }
+
+        string relative = Path.GetRelativePath(this.Registry.SkillSourcesDir, file).Replace('\\', '/');
+        this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
+    }
+
+    /// <summary>Re-reads everything now, ignoring the two-second grace, and says what it found.</summary>
+    private async Task ReloadAsync()
+    {
+        this.reloading = true;
+        try
+        {
+            await this.Registry.ReloadAsync(CancellationToken.None);
+        }
+        finally
+        {
+            this.reloading = false;
+        }
+
+        int problems = SkillProblemCount.Of(this.Registry, this.Store);
+        this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
+    }
+
+    /// <summary>Opens the prompt dialog on Add from a link or folder (it replaced the old import dialog, §6.9.3).</summary>
+    private async Task ImportSkillAsync()
+    {
+        _ = await SkillDialogs.OpenAddWithAiAsync(this.DialogService, "add");
+    }
+
+    /// <summary>Sets the search text.</summary>
+    private void OnSearchChanged(string? value)
+    {
+        this.search = value;
+    }
+
+    /// <summary>Sets the State filter; null is All.</summary>
+    private void SetFilter(ItemState? state)
+    {
+        this.filter = state;
+    }
+
+    /// <summary>Confirms, then deletes the edited copy of a built-in Skill so the shipped one is used again.</summary>
+    private async Task RestoreDefaultAsync(Skill skill)
+    {
+        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Restore default?",
+            $"This restores {ConfirmCopy.Quote(SkillNames.Display(skill.Name))} to its shipped default. This deletes {skill.FolderPath} and everything in it.",
+            yesText: "Restore default",
+            cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            this.Store.RestoreDefault(skill.Name);
+        }
+        catch (IOException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "skill-restore");
+        }
+        catch (InvalidOperationException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "skill-restore");
+        }
+    }
+}

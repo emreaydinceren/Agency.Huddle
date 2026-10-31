@@ -5,8 +5,8 @@ Status: version 1 **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab
 ## 1. The idea
 
 Everything the Human opens from the left menu opens in a **Tab**, as in VS Code. A click opens a
-**preview Tab** (its title in italics); it is replaced by the next preview. A double-click, or
-working in the Tab, makes it **permanent** (upright title). The Library is one page and so one Tab.
+**preview Tab** (its title in `TextSecondary` and italic, never lighter in weight); it is replaced by the next preview. A double-click, or
+working in the Tab, makes it **permanent** (its title takes the body colour). The Library is one page and so one Tab.
 
 Version 2 adds a split: two Tabs side by side, a Tab menu, and pinned Tabs (section 9). Stacked groups
 and more than two groups are still to come; the model and the persisted format already allow them.
@@ -16,7 +16,7 @@ and more than two groups are still to come; the model and the persisted format a
 | Term | Meaning |
 | --- | --- |
 | Tab | One open page: a key, a URL, a title, an icon and a preview flag. |
-| Preview Tab | A Tab not yet made permanent. At most one exists per group. Shown in italics. |
+| Preview Tab | A Tab not yet made permanent. At most one exists per group. Its title is marked by `TextSecondary` colour and an italic title, not by weight; titles are 13px at weight 400 and the active one 500. |
 | Permanent Tab | A Tab the Human kept. Never replaced by opening something else. |
 | Tab key | What makes two URLs the same Tab (section 3). Opening an item whose key is open activates it. |
 | Group | An ordered row of Tabs with one active, drawn as one pane. Version 1 has exactly one; version 2 allows up to `TabService.MaxGroups` (2). Exactly one group has focus. |
@@ -33,7 +33,7 @@ and more than two groups are still to come; the model and the persisted format a
 | The page navigates itself to the same key | The Tab's URL and title update. No new Tab. |
 | The URL changes to a different key (browser Back, a link in a message, a typed URL) | Treated like a menu click: preview Tab, or activate. |
 | A Room is renamed | Its Tab title follows. |
-| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
+| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. When closing a Tab moves the active Tab, the router follows it, unless the browser is already gone (a closed or reloaded page whose circuit is still retained): the Tab still closes, and no navigation is issued (`ServerNavigator`). |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
 | Any page opens in a Tab | The Top Bar shows its breadcrumb trail (below). One trail for the window, following the focused pane; no page draws its own. |
 | Click an ancestor crumb | Navigates that Tab in place (`TabService.Navigate`): same slot and group, key, title and icon re-derived, a preview becomes permanent. If another Tab already has the target's key, that Tab is focused instead. |
@@ -45,23 +45,26 @@ and more than two groups are still to come; the model and the persisted format a
 and moves when focus moves. It is laid out as three cells: the trail, then reserved room for a search
 box (`Search`) and for toolbar buttons (`Actions`), which later features fill.
 `TabTrail.Build(url, tabTitle)` derives it from the URL, following the same table as the keys. The
-last crumb is the Tab's own title (so a renamed Room follows), is plain text, and carries
-`aria-current="page"`. An ancestor with a page of its own is a link; an area with none (*Teams*) is
-plain text.
+trail holds ancestors only when the page names itself with an h1 (a Room, a Team, a Project, Build a
+team): then the page's name is not said twice. A page with no h1 (a Tasks View, a Settings tab) ends in
+the Tab's own title, is plain text and carries `aria-current="page"`; a page with no ancestor keeps a
+one-crumb trail. An ancestor with a page of its own is a link; an area with none (*Teams*) is plain
+text. The document title is the bare page name ("Platform", "Grace", "My Tasks"), with no suffix.
 
 | URL | Trail |
 | --- | --- |
-| `/`, `/tasks`, `/teammates`, `/library`, `/settings` | the title alone |
-| `/rooms/{id}` | Chats (link to `/`), the Room's name |
-| `/teams/build` | Teams, Build a team |
-| `/teams/{team}` | Teams, the Team |
-| `/teams/{team}/projects/{project}` | Teams, the Team (link), the Project |
-| `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title |
+| `/`, `/tasks`, `/agents`, `/library`, `/settings` | the title alone |
+| `/rooms/{id}` | Rooms (link to `/`); the Room's name is the page's h1 |
+| `/teams/build` | Teams |
+| `/teams/{team}` | Teams; the Team's name is the page's h1 |
+| `/teams/{team}/projects/{project}` | Teams, the Team (link); the Project's name is the page's h1 |
+| `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title (the View's display name, never its slug) |
 | `/settings/{tab}` | Settings (link), the tab's name |
 
 The bar is fixed, so it stays in view while a long page scrolls, and it spans the window, so a trail is
-never collapsed. Pages drop a title that only repeats the last crumb; Tasks and Chat keep theirs, because
-the Task view's Tab title is its id and the Room's title row carries rename and members.
+never collapsed. Tasks has no h1 (its last crumb is the View's display name; `TabReconciler.ReconcileViews`
+retitles the `tasks:{id}` Tab, also on rename). A Room, Team or Project draws its name as its h1 and the
+trail holds only the ancestors.
 
 ### Tab keys
 
@@ -73,9 +76,9 @@ the Task view's Tab title is its id and the Room's title row carries rename and 
 | `/teams/build` | `team-build` | The query (`?type=`) is the page's own state, not part of the key. |
 | `/tasks/{view}` | `tasks:{view}` | |
 | `/tasks/item/{id}`, `/tasks/new` | `task:{id}`, `task-new` | |
-| `/teammates` | `teammates` | |
+| `/agents` | `agents` | |
 | `/settings` and its sub-tabs | `settings` | |
-| `/library` with any query | `library` | One page, one Tab. A root row re-scopes it. |
+| `/library` with any query | `library` | One page, one Tab. The sidebar's one Library link opens it; there are no root rows. |
 | anything else | the path | |
 
 Keys compare ordinally and case-sensitively, except Team and Project names, which are lowered.
@@ -168,14 +171,14 @@ so the work in it is not lost; its active Tab's top accent is dimmed. A key is o
 across both: opening a page already open in the other group focuses it there instead of duplicating it
 (this is what keeps one open Room per Room).
 
-**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a chevron that opens the Tab menu, then Move Left and Move Right, each drawn only when that move is possible for the Tab. Tabs are at least 14rem wide, so most of the title is visible before the toolbar appears.
+**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a More actions button (⋮, `MoreVert`) that opens the Tab menu, then Move left and Move right, each drawn only when that move is possible for the Tab. Tabs are at least 14rem wide, so most of the title is visible before the toolbar appears.
 
-**The Tab menu** (right-click a Tab, or the chevron):
+**The Tab menu** (right-click a Tab, or its More actions button):
 
 | Item | Does |
 | --- | --- |
-| Pin Tab / Unpin Tab | Pins: permanent, moves to the end of the group's pinned Tabs, drawn as its icon alone (the title stays for screen readers and as a tooltip). Unpin keeps it permanent and puts it just after the pinned Tabs. Pinned Tabs always stay at the front of their group; a new preview opens after them. |
-| Move Left / Move Right | Moves the Tab into the neighbouring group on that side, where it becomes the active Tab and the group takes focus. From the outermost group it opens a new group on that side, if fewer than `MaxGroups` exist and the Tab has company. A lone Tab, or one at the outer edge at the limit, has the item disabled. A moved Tab becomes permanent. Emptying a group closes it. |
+| Pin tab / Unpin tab | Pins: permanent, moves to the end of the group's pinned Tabs, drawn as its icon alone (the title stays for screen readers and as a tooltip). Unpin keeps it permanent and puts it just after the pinned Tabs. Pinned Tabs always stay at the front of their group; a new preview opens after them. |
+| Move left / Move right | Moves the Tab into the neighbouring group on that side, where it becomes the active Tab and the group takes focus. From the outermost group it opens a new group on that side, if fewer than `MaxGroups` exist and the Tab has company. A lone Tab, or one at the outer edge at the limit, has the item disabled. A moved Tab becomes permanent. Emptying a group closes it. |
 | Close | Closes the Tab. |
 
 Moving is between groups only; reordering within a strip (drag) is still to come.

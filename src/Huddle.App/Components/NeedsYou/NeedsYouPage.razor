@@ -1,0 +1,91 @@
+@page "/needs-you"
+@*
+    Everything waiting on the Human: the gated Tasks first, each as a decision card wrapped in its Task id (the Needs You
+    card links to /needs-you#<id>), then the Rooms in NeedsYouList (Human gate Spec 6.7). The Task entries are a
+    snapshot taken when NeedsYouTaskSource.Changed fires, never read in markup, because reading them evaluates every Proof.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.NeedsYou
+@using Agency.Huddle.App.Tasks
+@inject NeedsYouTaskSource TaskSource
+@inject TaskStore Store
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
+    <PageHeader Title="@HumanGateCopy.NeedsYouTitle" />
+
+    @foreach (var card in this.cards)
+    {
+        <div id="@card.Task.Id.ToString()" class="needs-you-page-task" @key="card.Task.Id">
+            <TaskDecisionCard Task="card.Task" Proof="card.Proof" OnReload="this.Reload" />
+        </div>
+    }
+
+    <NeedsYouList CountChanged="this.OnRoomCountChanged" />
+
+    @if (this.cards.Count == 0 && this.roomCount == 0)
+    {
+        <EmptyState Title="@HumanGateCopy.NeedsYouEmptyTitle" Text="@HumanGateCopy.NeedsYouEmptyText" />
+    }
+</MudContainer>
+
+@code {
+    private IReadOnlyList<Card> cards = [];
+    private int roomCount;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.cards = this.Snapshot();
+        this.TaskSource.Changed += this.OnTasksChanged;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.TaskSource.Changed -= this.OnTasksChanged;
+    }
+
+    /// <summary>Joins the source's entries to their current Task, dropping an entry whose Task is gone.</summary>
+    private IReadOnlyList<Card> Snapshot()
+    {
+        List<Card> list = [];
+        foreach (var entry in this.TaskSource.Entries)
+        {
+            if (this.Store.Get(entry.TaskId) is { } task)
+            {
+                list.Add(new Card(task, entry.Proof));
+            }
+        }
+
+        return list;
+    }
+
+    private void OnRoomCountChanged(int value)
+    {
+        this.roomCount = value;
+        this.StateHasChanged();
+    }
+
+    private void OnTasksChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.Refresh();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void Reload()
+    {
+        this.Refresh();
+    }
+
+    private void Refresh()
+    {
+        this.cards = this.Snapshot();
+        this.StateHasChanged();
+    }
+
+    private sealed record Card(TaskItem Task, Agency.Huddle.App.Tasks.HumanGate.Proof Proof);
+}

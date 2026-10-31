@@ -1,0 +1,248 @@
+@* <summary>
+     The Adapter, Model and Effort selects as one control, with the cascade rules of ADR-0015 and rules.md in one place:
+     changing the Adapter clears Model and Effort and says so in a role="status" note; changing the Model clears Effort the
+     same way; a select whose catalog is being probed is Disabled (not ReadOnly) with a progress bar under it; and
+     StateHasChanged() runs between the two probes so the Model list repaints before the Effort list arrives (issue #39).
+     Each catalog is read by IModelCatalog, which spawns an adapter process only on a miss and never sends a prompt.
+   </summary> *@
+@using Agency.Huddle.Acp.Abstractions
+@using Agency.Huddle.App.Acp
+@inject IModelCatalog ModelCatalog
+@inject AdapterCatalog Adapters
+
+@* Configuration, not a probe: AdapterCatalog is read synchronously. Shown only when there is a choice to make, so a stock
+   installation with one Adapter looks like it always did (Spec §12, E-2). *@
+@if (this.AdapterChoices.Count > 1)
+{
+    <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
+               Disabled="@this.Disabled" Variant="Variant.Outlined" Margin="Margin.Dense"
+               HelperText="@this.AdapterHelperText" Class="mb-3">
+        <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
+        @foreach (AdapterProfile choice in this.AdapterChoices)
+        {
+            <MudSelectItem T="string" Value="@choice.Id">@choice.DisplayName</MudSelectItem>
+        }
+    </MudSelect>
+}
+
+@if (this.adapterReset)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+        Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
+    </MudAlert>
+}
+
+<div class="agent-profile-card-row mb-1">
+    <div class="agent-profile-card-cell">
+        <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
+                   Disabled="@(this.Disabled || this.modelsLoading)" aria-busy="@(this.modelsLoading ? "true" : null)"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
+            <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+            @foreach (AgentModelOption choice in this.ModelChoices)
+            {
+                <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+            }
+        </MudSelect>
+        @if (this.modelsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this adapter offers" />
+        }
+    </div>
+
+    <div class="agent-profile-card-cell">
+        <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
+                   Disabled="@(this.Disabled || this.effortsLoading)" aria-busy="@(this.effortsLoading ? "true" : null)"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
+            <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+            @foreach (AgentEffortOption choice in this.EffortChoices)
+            {
+                <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+            }
+        </MudSelect>
+        @if (this.effortsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />
+        }
+    </div>
+</div>
+
+@if (this.effortReset)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+        Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
+    </MudAlert>
+}
+
+@code {
+    /// <summary>The blank option of the Model and Effort selects.</summary>
+    private const string DefaultOptionText = "Adapter default";
+
+    private IReadOnlyList<AgentModelOption> availableModels = [];
+    private IReadOnlyList<AgentEffortOption> availableEfforts = [];
+    private bool modelsLoading;
+    private bool effortsLoading;
+    private int modelProbeGeneration;
+    private int effortProbeGeneration;
+    private bool adapterReset;
+    private bool effortReset;
+    private bool loadedOnce;
+    private string? adapter;
+    private string? model;
+    private string? effort;
+
+    /// <summary>The Adapter id, or <see langword="null"/> for the default Adapter. A change made from outside (a Reset to defaults) is adopted and re-probed.</summary>
+    [Parameter]
+    public string? Adapter { get; set; }
+
+    /// <summary>The Model id, or <see langword="null"/> for the Adapter's own default.</summary>
+    [Parameter]
+    public string? Model { get; set; }
+
+    /// <summary>The Effort, or <see langword="null"/> for the Model's default.</summary>
+    [Parameter]
+    public string? Effort { get; set; }
+
+    /// <summary>Whether every select is disabled, as for a card whose Helper cannot run.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Raised after each choice, with the three values as they now stand (a cascade clears the ones after it).</summary>
+    [Parameter]
+    public EventCallback<(string? Adapter, string? Model, string? Effort)> SelectionChanged { get; set; }
+
+    /// <inheritdoc/>
+    protected override async Task OnParametersSetAsync()
+    {
+        bool outside = !string.Equals(this.adapter, this.Adapter, StringComparison.Ordinal)
+            || !string.Equals(this.model, this.Model, StringComparison.Ordinal)
+            || !string.Equals(this.effort, this.Effort, StringComparison.Ordinal);
+        if (this.loadedOnce && !outside)
+        {
+            return;
+        }
+
+        this.loadedOnce = true;
+        this.adapter = this.Adapter;
+        this.model = this.Model;
+        this.effort = this.Effort;
+        this.adapterReset = false;
+        this.effortReset = false;
+        await this.LoadModelsAsync();
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
+        await efforts;
+    }
+
+    /// <summary>The configured Adapters, plus the stored id when it names one that is no longer configured, so the select shows what the file says rather than silently resetting it.</summary>
+    private IReadOnlyList<AdapterProfile> AdapterChoices
+    {
+        get
+        {
+            IReadOnlyList<AdapterProfile> profiles = this.Adapters.Profiles;
+            if (this.adapter is null || this.Adapters.Find(this.adapter) is not null)
+            {
+                return profiles;
+            }
+
+            return [new AdapterProfile(this.adapter, this.adapter, null, string.Empty, null, null, UsesToolNamePrefix: false), .. profiles];
+        }
+    }
+
+    private string AdapterHelperText =>
+        this.adapter is not null && this.Adapters.Find(this.adapter) is null
+            ? $"The adapter '{this.adapter}' is not configured. It will run on '{this.Adapters.Default.Id}'."
+            : "Which agent runs this. Changing it clears Model and Effort.";
+
+    /// <summary>The probed Models, plus the stored one when the probe failed or no longer lists it.</summary>
+    private IReadOnlyList<AgentModelOption> ModelChoices =>
+        this.model is null || this.availableModels.Any(m => string.Equals(m.Id, this.model, StringComparison.Ordinal))
+            ? this.availableModels
+            : [new AgentModelOption(this.model, this.model, null), .. this.availableModels];
+
+    /// <summary>The probed Efforts, plus the stored one when the probe failed or no longer lists it.</summary>
+    private IReadOnlyList<AgentEffortOption> EffortChoices =>
+        this.effort is null || this.availableEfforts.Any(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal))
+            ? this.availableEfforts
+            : [new AgentEffortOption(this.effort, this.effort, null), .. this.availableEfforts];
+
+    private async Task OnAdapterChangedAsync(string value)
+    {
+        this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.adapterReset = this.model is not null || this.effort is not null;
+        this.model = null;
+        this.effort = null;
+        this.effortReset = false;
+        await this.RaiseAsync();
+        await this.LoadModelsAsync();
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
+        await efforts;
+    }
+
+    private async Task OnModelChangedAsync(string value)
+    {
+        this.model = string.IsNullOrWhiteSpace(value) ? null : value;
+
+        // The effort ladder belongs to the model; the adapter silently clamps a level the new model lacks. Plain assignment, never
+        // |=: a second change with no Effort chosen must clear a note left over from the first.
+        this.effortReset = this.effort is not null;
+        this.effort = null;
+        await this.RaiseAsync();
+        await this.LoadEffortsAsync();
+    }
+
+    private async Task OnEffortChangedAsync(string value)
+    {
+        this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.effortReset = false;
+        this.adapterReset = false;
+        await this.RaiseAsync();
+    }
+
+    private Task RaiseAsync() => this.SelectionChanged.InvokeAsync((this.adapter, this.model, this.effort));
+
+    // Guards a superseded probe: changing the Adapter twice quickly starts two, and the slower answer for the abandoned Adapter must not
+    // overwrite the faster one for the Adapter actually selected (Spec §12, E-4).
+    private async Task LoadModelsAsync()
+    {
+        int generation = ++this.modelProbeGeneration;
+        this.modelsLoading = true;
+        try
+        {
+            IReadOnlyList<AgentModelOption> models = await this.ModelCatalog.GetAsync(this.adapter, CancellationToken.None);
+            if (generation == this.modelProbeGeneration)
+            {
+                this.availableModels = models;
+            }
+        }
+        finally
+        {
+            if (generation == this.modelProbeGeneration)
+            {
+                this.modelsLoading = false;
+            }
+        }
+    }
+
+    // The effort catalog is per model, so it is read on every Model change as well as on open.
+    private async Task LoadEffortsAsync()
+    {
+        int generation = ++this.effortProbeGeneration;
+        this.effortsLoading = true;
+        try
+        {
+            IReadOnlyList<AgentEffortOption> efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
+            if (generation == this.effortProbeGeneration)
+            {
+                this.availableEfforts = efforts;
+            }
+        }
+        finally
+        {
+            if (generation == this.effortProbeGeneration)
+            {
+                this.effortsLoading = false;
+            }
+        }
+    }
+}

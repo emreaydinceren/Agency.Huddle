@@ -469,38 +469,8 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// (a legitimate delete, reverting every key to its catalog default); or <see langword="null"/> if
     /// every parse attempt failed, meaning the caller should keep its current snapshot.
     /// </returns>
-    private Dictionary<string, string>? ReadOverridesForWatcherRebuild()
-    {
-        if (!File.Exists(this.path))
-        {
-            return new Dictionary<string, string>(StringComparer.Ordinal);
-        }
-
-        return RetryingFileRead.Run(() => ParseOverridesFile(this.path), this.OnReadGaveUp);
-    }
-
-    /// <summary>Logs why <see cref="ReadOverridesForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
-    /// <param name="ex">The last failure.</param>
-    private Dictionary<string, string>? OnReadGaveUp(Exception ex)
-    {
-        if (ex is JsonException)
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not parse prompt overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved prompt text rather than reverting every prompt to its catalog default over what may be a mid-write race.",
-                this.path);
-        }
-        else
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not read prompt overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved prompt text.",
-                this.path,
-                RetryingFileRead.Attempts);
-        }
-
-        return null;
-    }
+    private Dictionary<string, string>? ReadOverridesForWatcherRebuild() =>
+        RetryingFileRead.RereadKeepingPrevious(this.path, static () => new Dictionary<string, string>(StringComparer.Ordinal), () => ParseOverridesFile(this.path), this.logger, "prompt overrides file", "prompt text");
 
     /// <summary>
     /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the

@@ -41,21 +41,23 @@
 @inject TaskTriggerService Triggers
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
-@inject IOptions<TeamOptions> TeamOptions
+@inject IHumanIdentity Human
 @inject ViewStore ViewStore
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
+@inject IProofSource ProofSource
 
 <div class="task-board">
     @if (this.model.HiddenTaskCount > 0)
     {
-        <MudChip T="string" Size="Size.Small" Class="task-board-hidden-count">@HiddenCountText(this.model.HiddenTaskCount)</MudChip>
+        <span class="task-board-hidden-count chip-meta">@HiddenCountText(this.model.HiddenTaskCount)</span>
     }
 
-    <div class="task-board-columns">
+    <div class="task-board-columns" style="@this.GridStyle">
         @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
         {
-            <div class="task-board-column-header">
+            <div class="@((this.IsRail(i) ? "task-board-column-header task-board-column-header-rail" : "task-board-column-header") + NeedsYouClass(column))">
+                <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
@@ -63,7 +65,8 @@
                 }
                 else
                 {
-                    <span class="task-board-column-label">@column.Label</span>
+                    @* A rail draws the name vertically in the lane below; this copy stays for assistive technology. *@
+                    <span class="@(this.IsRail(i) ? "task-board-column-label visually-hidden" : "task-board-column-label")">@column.Label</span>
                 }
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
                 <MudMenu Class="task-board-column-menu">
@@ -86,7 +89,7 @@
 
     <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
                       ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop" ItemDropped="@this.OnDroppedAsync"
-                      ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                      ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                       ItemDraggingClass="task-card-dragging">
         <ChildContent>
             @foreach (BoardLane lane in this.model.Lanes)
@@ -94,18 +97,32 @@
                 <div class="task-board-lane">
                     @if (this.View.Grouping.Count > 0)
                     {
-                        <div class="task-board-lane-label">@lane.Label</div>
+                        @* The page section heading (16px/600) with its count, under a Chrome line (design-system "Tasks"). *@
+                        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="group-heading task-board-lane-heading">
+                            <span class="task-board-lane-label">@lane.Label</span>
+                            <span class="task-board-lane-count">@lane.Cells.Sum(static cell => cell.Items.Count).ToString(CultureInfo.InvariantCulture)</span>
+                        </MudText>
                         @if (this.OrphanTeamOf(lane) is { } orphan)
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                            <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" Class="task-orphan-team-chip">No agent is in @orphan</StatusChip>
                         }
                     }
 
-                    <div class="task-board-lane-columns">
+                    <div class="task-board-lane-columns" style="@this.GridStyle">
                         @for (int i = 0; i < lane.Cells.Count; i++)
                         {
                             BoardCell cell = lane.Cells[i];
-                            <div class="task-board-column">
+                            <div class="@((this.IsRail(i) ? "task-board-column task-board-column-rail" : "task-board-column") + NeedsYouClass(cell.Column))">
+                                @if (this.IsRail(i))
+                                {
+                                    @* An empty terminal column: its name, running down the 40px rail. The header above holds the count. *@
+                                    <span class="task-board-rail-label" aria-hidden="true">@cell.Column.Label</span>
+                                }
+                                else if (cell.Items.Count == 0 && !this.dragging && this.ShowsEmptyLine(lane, i))
+                                {
+                                    @* Drawn over the empty zone and ignoring the pointer, so the zone stays a drop target. Only a column that is empty in every lane says so (audit B4c). *@
+                                    <span class="task-board-column-empty">@EmptyText(cell.Column)</span>
+                                }
                                 @if (cell.Column.States.Count == 1)
                                 {
                                     <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
@@ -293,7 +310,7 @@
     private async Task ChangeColumnAsync(int visibleIndex, Func<BoardColumn, BoardColumn> change)
     {
         int index = this.FullIndexOf(visibleIndex);
-        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Board } saved && index < saved.Columns.Count)
+        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Kanban } saved && index < saved.Columns.Count)
         {
             List<BoardColumn> columns = [.. saved.Columns];
             columns[index] = change(columns[index]);
@@ -367,6 +384,62 @@
         TaskState.Rejected => Icons.Material.Outlined.DoNotDisturbOn,
         _ => Icons.Material.Outlined.Label,
     };
+
+    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot), plus a dashed hollow modifier for Backlog so it differs from To Do now that both are Default.</summary>
+    /// <param name="column">The column.</param>
+    /// <summary>The extra class of the Needs You column: the one whose first state is Needs You, which the Themes draw as a gate.</summary>
+    private static string NeedsYouClass(BoardColumn column) =>
+        column.States.Count > 0 && column.States[0] == TaskState.NeedsYou ? " needs-you" : string.Empty;
+
+    private static string StateDotClass(BoardColumn column) =>
+        column.States.Count > 0 ? TaskStateDot.ClassFor(column.States[0]) : "task-state-dot task-state-dot-default";
+
+    /// <summary>The narrowest and widest a column grows (design-system "Tasks": a column is 260-300px).</summary>
+    private const string ColumnTrack = "minmax(260px, 300px)";
+
+    /// <summary>The width of a collapsed column: a rail holding the state dot, the count and the name.</summary>
+    private const string RailTrack = "40px";
+
+    /// <summary>
+    /// Whether the visible column at <paramref name="columnIndex"/> collapses to a 40px rail (audit B4a): every state in it is
+    /// terminal (Done, or the Won't do family) and it holds no Task in any lane. It opens while a drag is in progress, so
+    /// its ghost buckets can take a drop, and while it is being renamed.
+    /// </summary>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private bool IsRail(int columnIndex) =>
+        !this.dragging
+        && this.renamingColumn != columnIndex
+        && this.model.VisibleColumns[columnIndex].States is { Count: > 0 } states
+        && states.All(static state => state.IsTerminal())
+        && this.ColumnCount(columnIndex) == 0;
+
+    /// <summary>The <c>grid-template-columns</c> the header row and every lane share, so a header cell stays above the cards it describes: a rail is 40px and any other column 260-300px.</summary>
+    private string GridStyle =>
+        "grid-template-columns: "
+        + string.Join(' ', Enumerable.Range(0, this.model.VisibleColumns.Count).Select(index => this.IsRail(index) ? RailTrack : ColumnTrack))
+        + ";";
+
+    /// <summary>Whether the empty line shows in <paramref name="lane"/>'s cell of the column at <paramref name="columnIndex"/>: only when the column is empty in every lane, and then once, in the first lane (audit B4c).</summary>
+    /// <param name="lane">The lane being drawn.</param>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private bool ShowsEmptyLine(BoardLane lane, int columnIndex) =>
+        this.ColumnCount(columnIndex) == 0 && ReferenceEquals(lane, this.model.Lanes[0]);
+
+    /// <summary>The line an empty column shows, worded for the column's state: "Nothing done yet." for Done.</summary>
+    /// <param name="column">The column.</param>
+    private static string EmptyText(BoardColumn column) =>
+        column.States.Count == 1
+            ? column.States[0] switch
+            {
+                TaskState.Backlog => "Backlog is empty.",
+                TaskState.ToDo => "Nothing to do yet.",
+                TaskState.InProgress => "Nothing in progress.",
+                TaskState.Review => "Nothing in review.",
+                TaskState.NeedsYou => "Nothing needs you.",
+                TaskState.Done => "Nothing done yet.",
+                _ => string.Create(CultureInfo.InvariantCulture, $"Nothing {column.States[0].ToWire().ToLowerInvariant()} yet."),
+            }
+            : "Nothing here yet.";
 
     /// <summary>How many Tasks the visible column at <paramref name="columnIndex"/> holds across every lane.</summary>
     /// <param name="columnIndex">The column's index among the visible columns.</param>
@@ -450,7 +523,7 @@
     /// <param name="item">The dragged Task.</param>
     private string? CaptionFor(TaskItem item)
     {
-        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.TeamOptions.Value));
+        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.Human));
         return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
     }
 
@@ -489,6 +562,91 @@
     }
 
     /// <summary>
+    /// A drop into Done is a shortcut to the decision, never the decision (Spec §6.9): re-reads the Task,
+    /// computes its Proof once and refuses, explains or opens the decision dialog. It never calls
+    /// <c>Update</c> with Done. Every branch ends with the card back where it was.
+    /// </summary>
+    /// <param name="item">The card's Task.</param>
+    /// <returns><see langword="true"/> when the move was handled here; <see langword="false"/> when the Task is gone or no longer gated, so the ordinary path reports or moves it.</returns>
+    private async Task<bool> HandleGatedDoneAsync(TaskItem item)
+    {
+        if (this.Store.Get(item.Id) is not { IsGated: true, Status: not TaskState.Done } current)
+        {
+            return false;
+        }
+
+        Proof proof = this.ProofSource.For(current);
+        string assignee = string.IsNullOrWhiteSpace(current.Assignee) ? HumanGateCopy.UnassignedAssignee : current.Assignee;
+        if (current.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress or TaskState.Review)
+        {
+            this.Snackbar.Add(HumanGateCopy.GoesToNeedsYouFirst(current.Id.ToString(), proof.MetCount, proof.Total), Severity.Error, configure: null, key: "board-gate-first");
+        }
+        else if (current.Status != TaskState.NeedsYou)
+        {
+            // A closed Task (Cancelled, Duplicate, Rejected) cannot go to Needs You first: H-4 explains the way in.
+            GateRefusal? refusal = HumanGateRules.Check(current, current with { Status = TaskState.Done }, TaskActors.Human(this.Human), proof, this.Human.Name);
+            this.Snackbar.Add(refusal?.Message ?? HumanGateCopy.GoesToNeedsYouFirst(current.Id.ToString(), proof.MetCount, proof.Total), Severity.Error, configure: null, key: "board-gate-closed");
+        }
+        else if (Acceptance.Of(current).State == AcceptanceState.Valid)
+        {
+            this.Snackbar.Add(HumanGateCopy.AlreadyAccepted(current.Id.ToString(), assignee), Severity.Error, configure: null, key: "board-gate-accepted");
+        }
+        else if (!proof.IsComplete)
+        {
+            this.ShowLockedNotice(current, proof);
+        }
+        else
+        {
+            IDialogReference dialog = await this.Dialogs.ShowAsync<TaskDecisionDialog>(
+                HumanGateCopy.DecisionDialogTitle(current.Id.ToString()),
+                new DialogParameters<TaskDecisionDialog> { { d => d.TaskId, current.Id } },
+                HuddleDialogOptions.Picker);
+            _ = await dialog.Result;
+        }
+
+        this.container?.Refresh();
+        return true;
+    }
+
+    /// <summary>Shows the locked notice for the first open Proof item with its Ask button (rows 17 and 11).</summary>
+    /// <param name="current">The gated Task.</param>
+    /// <param name="proof">Its incomplete Proof.</param>
+    private void ShowLockedNotice(TaskItem current, Proof proof)
+    {
+        ProofItem open = proof.Items.First(static candidate => !candidate.Met);
+        string notice = HumanGateCopy.LockedNotice(proof.MetCount, proof.Total, open.Label, open.Owner, open.Detail);
+        bool canAsk = !string.IsNullOrWhiteSpace(open.Owner) && !string.Equals(open.Owner, this.Human.Name, StringComparison.OrdinalIgnoreCase);
+        RenderFragment content = @<div class="board-gate-locked">
+            <span>@notice</span>
+            @if (canAsk)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" aria-label="@HumanGateCopy.AskAccessibleName(open.Owner, open.Label)"
+                           OnClick="@(() => this.AskAsync(current, open))">@HumanGateCopy.AskButton(open.Owner)</MudButton>
+            }
+        </div>;
+        this.Snackbar.Add(content, Severity.Warning, configure: null, key: $"board-gate-locked:{current.Id}");
+    }
+
+    /// <summary>Posts the Ask for an open Proof item and reports the outcome in a Snackbar.</summary>
+    /// <param name="current">The gated Task.</param>
+    /// <param name="open">The open item.</param>
+    private async Task AskAsync(TaskItem current, ProofItem open)
+    {
+        string owner = open.Owner ?? string.Empty;
+        string text = HumanGateCopy.AskMessage(owner, current.Id.ToString(), open.Label);
+        AskOutcome outcome = await this.Triggers.AskAsync(current, owner, text, CancellationToken.None);
+        string key = $"proof-ask:{current.Id}:{open.Label}";
+        if (outcome.Succeeded)
+        {
+            this.Snackbar.Add(HumanGateCopy.AskedSnackbar(owner, outcome.RoomName ?? string.Empty), Severity.Success, configure: null, key: key);
+        }
+        else
+        {
+            this.Snackbar.Add(HumanGateCopy.AskFailedSnackbar(owner), Severity.Warning, configure: null, key: key);
+        }
+    }
+
+    /// <summary>
     /// Moves <paramref name="item"/> to <paramref name="target"/> - the one path for a drop and for the
     /// card's Move to menu (Spec §13.4 Keyboard).
     /// </summary>
@@ -497,6 +655,11 @@
     private async Task MoveAsync(TaskItem item, TaskState target)
     {
         if (target == item.Status)
+        {
+            return;
+        }
+
+        if (target == TaskState.Done && await this.HandleGatedDoneAsync(item))
         {
             return;
         }
@@ -528,7 +691,7 @@
         }
 
         TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
-        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.TeamOptions.Value));
+        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.Human));
         string? error = result switch
         {
             TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",

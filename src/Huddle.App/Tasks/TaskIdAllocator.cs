@@ -117,7 +117,9 @@ internal sealed class TaskIdAllocator
                 WHERE team = $t
                 RETURNING next - 1;
                 """;
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
             update.Parameters.AddWithValue("$h", highestNumberSeen);
+#pragma warning restore HAA0601
             update.Parameters.AddWithValue("$t", key);
 
             object? result = update.ExecuteScalar();

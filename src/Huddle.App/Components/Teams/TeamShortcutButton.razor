@@ -1,0 +1,41 @@
+@*
+    The Team page header's "Add shortcut" button: shown only while the Team has no shortcut at the top of the Activity
+    bar (the Human removed it, or turned Team shortcuts off), and gone as soon as it has one again. Nothing is offered
+    until TeamShortcutStore has read the stored choice, so the button never flashes on a Team that has its shortcut.
+*@
+@implements IDisposable
+@inject ITeamCatalog Catalog
+@inject TeamShortcutStore Shortcuts
+
+@if (!this.Shortcuts.Has(this.Team))
+{
+    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AddToPhotos"
+               Class="team-page-actions team-shortcut-add" OnClick="this.AddAsync">Add shortcut</MudButton>
+}
+
+@code {
+    /// <summary>The Team the page shows, in the catalog's own spelling.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>Follows the shortcut choice, so the button goes when the shortcut is added from anywhere.</summary>
+    protected override void OnInitialized() => this.Shortcuts.Changed += this.OnChanged;
+
+    /// <summary>Reads the remembered shortcut choice once the browser can be reached, if the Activity bar has not already.</summary>
+    /// <param name="firstRender">Whether this is the component's first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.Shortcuts.LoadAsync();
+        }
+    }
+
+    /// <summary>Unsubscribes from the shortcut store.</summary>
+    public void Dispose() => this.Shortcuts.Changed -= this.OnChanged;
+
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private Task AddAsync() => this.Shortcuts.AddAsync(this.Team, this.Catalog.Teams);
+}

@@ -30,11 +30,9 @@ internal sealed class AskHumanTool(
 
     private const string MentionReason = "must not contain '@'. The answer is posted as the Human, so a Mention in it would speak for them.";
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "ask_human";
 
-    public string Description => prompts.Render("tool.askHuman.description", NoValues);
+    public string Description => prompts.Render("tool.askHuman.description");
 
     public JsonObject InputSchema => new JsonObject
     {
@@ -91,28 +89,10 @@ internal sealed class AskHumanTool(
             return "Both 'roomId' and 'questions' are required arguments.";
         }
 
-        Room? room = await directory.GetRoomAsync(roomId, cancellationToken);
+        (Room? room, string roomRefusal) = await this.ResolveAskableRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
-            return $"Unknown room '{roomId}'.";
-        }
-
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, cancellationToken);
-        if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
-        {
-            return "You are not a Member of that Room.";
-        }
-
-        if (room.Archived)
-        {
-            return "That Room is Archived.";
-        }
-
-        // Advisory, not check-then-act critical: a Room that pauses after this check still cannot be
-        // answered without a Human tap, and a tap is the Human speaking.
-        if (chat.GetBudget(roomId).Exhausted)
-        {
-            return "That Room is paused: its Budget is spent. Do not retry; nothing can be asked there until the Human speaks.";
+            return roomRefusal;
         }
 
         if (questionsArray.Count is 0 or > MaxQuestions)
@@ -121,22 +101,13 @@ internal sealed class AskHumanTool(
         }
 
         List<string> problems = [];
-        List<Question> parsed = [];
-        for (int index = 0; index < questionsArray.Count; index++)
-        {
-            Question? question = ParseQuestion(questionsArray[index], index + 1, problems);
-            if (question is not null)
-            {
-                parsed.Add(question);
-            }
-        }
-
+        List<Question> parsed = ParseQuestions(questionsArray, problems);
         if (problems.Count > 0)
         {
             return string.Join('\n', problems);
         }
 
-        User? caller = await directory.GetUserAsync(callerAgentId, cancellationToken);
+        User? caller = await directory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
         PendingQuestions pending = new(
             Guid.NewGuid().ToString("N"),
             roomId,
@@ -159,6 +130,59 @@ internal sealed class AskHumanTool(
             "question. If they write their own reply instead, that reply is the answer.";
 
         return put.Result == QuestionPutResult.Replaced ? $"Replaced your waiting questions. {asked}" : asked;
+    }
+
+    /// <summary>
+    /// Looks the Room up and checks that the caller may ask in it: it exists, the caller is a Member, it is not
+    /// Archived and its Budget is not spent. Returns the Room, or a null Room with the refusal text.
+    /// </summary>
+    /// <param name="roomId">The Room the model named.</param>
+    /// <param name="cancellationToken">Cancels the directory lookups.</param>
+    private async Task<(Room? Room, string Refusal)> ResolveAskableRoomAsync(string roomId, CancellationToken cancellationToken)
+    {
+        Room? room = await directory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
+        if (room is null)
+        {
+            return (null, $"Unknown room '{roomId}'.");
+        }
+
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, cancellationToken).ConfigureAwait(false);
+        if (!members.Any(member => string.Equals(member.Id, callerAgentId, StringComparison.Ordinal)))
+        {
+            return (null, "You are not a Member of that Room.");
+        }
+
+        if (room.Archived)
+        {
+            return (null, "That Room is Archived.");
+        }
+
+        // Advisory, not check-then-act critical: a Room that pauses after this check still cannot be
+        // answered without a Human tap, and a tap is the Human speaking.
+        if (chat.GetBudget(roomId).Exhausted)
+        {
+            return (null, "That Room is paused: its Budget is spent. Do not retry; nothing can be asked there until the Human speaks.");
+        }
+
+        return (room, string.Empty);
+    }
+
+    /// <summary>Parses every question in the array, collecting the well-formed ones and appending each problem to <paramref name="problems"/>.</summary>
+    /// <param name="questionsArray">The <c>questions</c> array the model sent.</param>
+    /// <param name="problems">Collects every problem found, across all questions.</param>
+    private static List<Question> ParseQuestions(JsonArray questionsArray, List<string> problems)
+    {
+        List<Question> parsed = [];
+        for (int index = 0; index < questionsArray.Count; index++)
+        {
+            Question? question = ParseQuestion(questionsArray[index], index + 1, problems);
+            if (question is not null)
+            {
+                parsed.Add(question);
+            }
+        }
+
+        return parsed;
     }
 
     /// <summary>

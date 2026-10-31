@@ -37,6 +37,11 @@ retro: { every: 14, unit: 'days' }
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Funder fit reviewed: document reviewed by verify
+
 ## Cadence
 
 - Work back from the funder's deadline, and leave the last three days for checking.

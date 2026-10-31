@@ -1,15 +1,22 @@
 ---
-status: accepted
+status: partly superseded
 date: 2026-10-08
+superseded-by: 0059
+superseded-on: 2026-10-18
 ---
 
 # Imported skills are pinned by commit and hash
 
+> **Partly superseded by [ADR-0059](0059-skills-and-packs-are-fetched-by-the-humans-ai-tool.md):** pinning,
+> hashing and the review checks stay; the download goes. The Human's AI tool fetches, and Huddle follows local
+> pointers. Built on 2026-10-18: the importer, the downloader and the built-in Packs are gone from the code.
+
 A Skill can be imported from a public GitHub repository, from the built-in catalog or from a
 URL the Human pastes. The import is pinned to one **commit**, the files are recorded by a
 **SHA-256 hash** in a `.source.json` beside them, and the Human sees what the Skill contains
-before it is installed. The full design is in the
-[Teams specification](../engineering/teams-spec.md), under *Skill import*.
+before it is installed. The original Teams
+specification, which held the full design, has been retired; Skill Packs now carry it in the
+[Skill Packs specification](../Huddle.SkillPacks-Specifications.md).
 
 ## The problem
 

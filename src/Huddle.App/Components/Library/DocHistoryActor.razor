@@ -1,0 +1,30 @@
+@*
+    One author in a document's byline, History or History panel (DocHistory spec §6.7): the avatar from
+    AvatarStore, then the Name. An Agent gets ProfileAvatar, so a click opens the profile popover; the Human gets
+    AgentAvatar, which has no profile to open.
+*@
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.DocHistory
+@inject AvatarStore Avatars
+
+<span class="doc-history-actor">
+    @if (this.Kind == DocActorKind.Agent)
+    {
+        <ProfileAvatar Name="@this.Name" Avatar="this.Avatars.Get(this.Name)" Size="Size.Small" />
+    }
+    else
+    {
+        <AgentAvatar Name="@this.Name" Avatar="this.Avatars.Get(this.Name)" Size="Size.Small" />
+    }
+    <span class="doc-history-actor-name">@this.Name</span>
+</span>
+
+@code {
+    /// <summary>The author's Name.</summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Whether the author is an Agent or the Human.</summary>
+    [Parameter]
+    public DocActorKind Kind { get; set; } = DocActorKind.Agent;
+}

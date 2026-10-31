@@ -1,0 +1,254 @@
+@*
+    The Settings page's Profile tab: who the Human is. A live ProfileCard shows the Human the way
+    Agents and the avatar popover see them, and the fields under it edit the Name, Alias, Title
+    and Description stored in profile.json (HumanProfileStore).
+
+    The avatar on the card is a "Change avatar" button that opens AvatarEditorDialog, the same editor
+    an Agent card opens. The dialog is not deferred: its Save writes avatars.json at once under the
+    Human's current Name, because an avatar has nothing to validate. The fields, by contrast, wait for
+    this tab's Save, which validates them first (HumanProfileValidator) - a Name or Alias that an
+    Agent already uses is refused, because a Mention must never resolve to two Members.
+
+    Saving a new Name raises HumanRenamed, and HumanRenameCascade moves the Avatar entry, Task
+    assignees, View filters and the directory row before ProfileChanged repaints anything. Messages
+    are not rewritten; they show the current Name because they are matched by sender id.
+
+    While no profile.json exists the tab opens with a welcome line, and MainLayout sends the Human
+    here on first run. Save is enabled then even with no edits, so accepting the default Name still
+    counts as setting up a profile.
+*@
+
+@using Agency.Huddle.App.Avatars
+@implements IDisposable
+
+@inject HumanProfileStore Profiles
+@inject HumanProfileValidator Validator
+@inject AvatarStore Avatars
+@inject IDialogService DialogService
+
+@if (!this.Profiles.IsSaved)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="mb-3 profile-welcome">
+        Welcome. Start by telling your Agents who you are: your Name, an optional Alias they can
+        @@mention you by, and your title. Click the avatar to give yourself a face.
+    </MudAlert>
+}
+
+<SettingsIntro>
+    This is you, the Human. Your Name and avatar appear in every Room, on Tasks assigned to you and in
+    your profile popover; your Alias works anywhere your Name does, including <code>@@alias</code>
+    Mentions. Changing your Name moves your Tasks and avatar with you.
+</SettingsIntro>
+
+<StoredAt Path="@this.Profiles.FilePath" />
+
+<div class="profile-panel">
+    <ProfileCard Profile="this.Preview" OnAvatarClick="this.EditAvatarAsync" Class="profile-panel-card" />
+
+    <form class="profile-panel-form" @onsubmit="this.Save">
+        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="this.OnNameChanged" Immediate="true"
+                      Required="true" HelperText="How every Room and Task names you." Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" Label="Alias" Value="@this.alias" ValueChanged="this.OnAliasChanged" Immediate="true"
+                      HelperText="Optional. A second name that @@mentions you." Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" Label="Title" Value="@this.title" ValueChanged="this.OnTitleChanged" Immediate="true"
+                      HelperText="Optional. Shown under your Name, for example Site Reliability Engineer." Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="this.OnDescriptionChanged" Immediate="true"
+                      Lines="3" HelperText="Optional. A sentence about you." Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+        @if (this.problems.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="mt-2 profile-problems">
+                @foreach (var problem in this.problems)
+                {
+                    <div class="profile-problem">@problem</div>
+                }
+            </MudAlert>
+        }
+
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-3">
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" ButtonType="ButtonType.Submit"
+                       Class="profile-save" Disabled="@(!this.CanSave)">Save</MudButton>
+            @if (this.HasUnsavedChanges)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Revert">Discard changes</MudButton>
+            }
+        </MudStack>
+    </form>
+</div>
+
+@code {
+    private string name = string.Empty;
+    private string? alias;
+    private string? title;
+    private string? description;
+    private IReadOnlyList<string> problems = [];
+
+    /// <summary>The card as it will look once saved: the fields as typed, with the stored avatar.</summary>
+    private AgentProfile Preview
+    {
+        get
+        {
+            var shownName = string.IsNullOrWhiteSpace(this.name) ? this.Profiles.Name : this.name.Trim();
+            return new AgentProfile(shownName, this.title?.Trim() ?? string.Empty, this.description?.Trim() ?? string.Empty, this.Avatars.Get(this.Profiles.Name));
+        }
+    }
+
+    /// <summary>Whether any field differs from the stored profile, ignoring surrounding spaces and treating blank as absent.</summary>
+    private bool HasUnsavedChanges
+    {
+        get
+        {
+            var stored = this.Profiles.Current;
+            return !string.Equals(this.name.Trim(), stored.Name, StringComparison.Ordinal)
+                || !string.Equals(Normalise(this.alias), stored.Alias, StringComparison.Ordinal)
+                || !string.Equals(Normalise(this.title), stored.Title, StringComparison.Ordinal)
+                || !string.Equals(Normalise(this.description), stored.Description, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Save is offered for any edit, and on first run even with none, so the default Name can be accepted.</summary>
+    private bool CanSave => this.HasUnsavedChanges || !this.Profiles.IsSaved;
+
+    /// <summary>Loads the fields from the store and subscribes to its changes and to avatar changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.LoadFields();
+        this.Profiles.ProfileChanged += this.OnProfileChanged;
+        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
+    }
+
+    /// <summary>Unsubscribes from both stores, which outlive this component.</summary>
+    public void Dispose()
+    {
+        this.Profiles.ProfileChanged -= this.OnProfileChanged;
+        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
+    }
+
+    /// <summary>The trimmed text, or <see langword="null"/> when blank - how the store keeps an optional field.</summary>
+    /// <param name="text">The field as typed.</param>
+    private static string? Normalise(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    /// <summary>Copies the stored profile into the fields.</summary>
+    private void LoadFields()
+    {
+        var stored = this.Profiles.Current;
+        this.name = stored.Name;
+        this.alias = stored.Alias;
+        this.title = stored.Title;
+        this.description = stored.Description;
+    }
+
+    /// <summary>Takes the typed Name and clears any problems shown for the last Save.</summary>
+    /// <param name="value">The Name as typed.</param>
+    private void OnNameChanged(string? value)
+    {
+        this.name = value ?? string.Empty;
+        this.problems = [];
+    }
+
+    /// <summary>Takes the typed Alias.</summary>
+    /// <param name="value">The Alias as typed.</param>
+    private void OnAliasChanged(string? value)
+    {
+        this.alias = value;
+        this.problems = [];
+    }
+
+    /// <summary>Takes the typed Title.</summary>
+    /// <param name="value">The Title as typed.</param>
+    private void OnTitleChanged(string? value) => this.title = value;
+
+    /// <summary>Takes the typed Description.</summary>
+    /// <param name="value">The Description as typed.</param>
+    private void OnDescriptionChanged(string? value) => this.description = value;
+
+    /// <summary>Puts the fields back to the stored profile.</summary>
+    private void Revert()
+    {
+        this.LoadFields();
+        this.problems = [];
+    }
+
+    /// <summary>Validates the fields and, when nothing is wrong, writes them through <see cref="HumanProfileStore.Save"/>.</summary>
+    private void Save()
+    {
+        HumanProfile proposed = new(this.name.Trim(), Normalise(this.alias), Normalise(this.title), Normalise(this.description));
+        this.problems = this.Validator.Validate(proposed);
+        if (this.problems.Count > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            this.Profiles.Save(proposed);
+        }
+        catch (IOException ex)
+        {
+            this.problems = [$"Could not save: {ex.Message}"];
+            return;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.problems = [$"Could not save: {ex.Message}"];
+            return;
+        }
+
+        this.LoadFields();
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> for the Human's stored Name and writes what it returns at once,
+    /// the way an Agent card in View mode does: an image first, then the avatar itself.
+    /// </summary>
+    private async Task EditAvatarAsync()
+    {
+        var key = this.Profiles.Name;
+        DialogParameters<AvatarEditorDialog> parameters = new()
+        {
+            { dialog => dialog.Name, key },
+            { dialog => dialog.Current, this.Avatars.Get(key) },
+            { dialog => dialog.Deferred, false },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
+        {
+            return;
+        }
+
+        Avatar toSave = edited.Avatar;
+        if (edited.PendingImage is not null && edited.PendingImageExtension is not null)
+        {
+            toSave = toSave with { Image = this.Avatars.WriteImage(edited.PendingImage, edited.PendingImageExtension) };
+        }
+
+        this.Avatars.Save(key, toSave);
+    }
+
+    /// <summary>Reloads the fields after an outside change, unless the Human has edits of their own in progress.</summary>
+    private void OnProfileChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (!this.HasUnsavedChanges)
+            {
+                this.LoadFields();
+            }
+
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Repaints the card when the avatar changes.</summary>
+    private void OnAvatarsChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}

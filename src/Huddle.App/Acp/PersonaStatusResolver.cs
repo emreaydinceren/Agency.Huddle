@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// Combines pipe liveness and Persona health into the single <see cref="PersonaStatus"/> the Teammate
+/// Combines pipe liveness and Persona health into the single <see cref="PersonaStatus"/> the Agent
 /// tile, the Room header, a Room banner and a tooltip all render — four surfaces that must never
 /// disagree about what one badge means. <c>AgentGateway.IsOnline(agentId)</c> answers only "a pipe
 /// connection exists"; a <see cref="PersonaRunner"/> whose read loop or consumer loop has died leaves

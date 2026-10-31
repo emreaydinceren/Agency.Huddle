@@ -41,6 +41,11 @@ checkCommand: 'dotnet test'
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 - `failing-test-before-fix`: Huddle refuses to move a bug Task to Review until an Evidence line shows a failing test written before the fix.
 
+## Definition of Done
+
+- QA evidence: evidence from verify
+- Tests pass: command `dotnet test` exits 0
+
 ## Cadence
 
 - Keep at most two bug Tasks in progress at a time (`wip: 2`), so fixes do not pile up.

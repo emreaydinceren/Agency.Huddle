@@ -7,7 +7,7 @@ date: 2026-09-28
 
 A Team folder and each of its Project folders may hold a **`memory/`** folder:
 `Teams/<Team>/memory/` for facts about the whole Team, and `Teams/<Team>/<Project>/memory/` for
-facts about one Project. It uses the same convention as a Teammate's own Memory: one Markdown file
+facts about one Project. It uses the same convention as an Agent's own Memory: one Markdown file
 per fact, with the fact on the first line. Every member of the Team gets an index of it in its
 system prompt at session start, and later edits through File Changes. `memory` becomes a reserved
 name at the Project level. The full design is
@@ -17,7 +17,7 @@ name at the Project level. The full design is
 
 A Project scopes documents, notes and memory for one effort by the Team. Documents and notes
 already have a home: the Project folder, which every member watches (ADR-0030). Memory does not.
-Memory is per Teammate (`Teammates/<Name>/work/memory/`,
+Memory is per Agent (`Agents/<Name>/work/memory/`,
 [ADR-0023](0023-an-agent-learns-of-file-changes-on-its-next-turn.md)). So a decision Nova reaches
 with the Human is in Nova's starting context and nobody else's. Ada learns it only if she happens
 to be in a Room where it is mentioned.
@@ -25,7 +25,7 @@ to be in a Room where it is mentioned.
 ## The decision
 
 - **Two levels:** Team-wide `Teams/<Team>/memory/` and per-Project
-  `Teams/<Team>/<Project>/memory/`. There is no per-Teammate-per-Project variant.
+  `Teams/<Team>/<Project>/memory/`. There is no per-Agent-per-Project variant.
 - **The same format as personal Memory,** parsed by the same `MemoryIndex`. The Agent writes it
   with its own file tools, and the Human can edit it in the Library.
 - **Every member is told at session start.** A *Team Memory* block follows the personal Memory
@@ -41,10 +41,10 @@ to be in a Room where it is mentioned.
 
 | Alternative | Why not |
 | --- | --- |
-| `_memory/`, reserved by its prefix | `_` folders under Teams are hidden in the Library and pruned from File Changes. It would need two exceptions to the rule `_tasks/` relies on. The Human also wanted the name Teammates already use |
+| `_memory/`, reserved by its prefix | `_` folders under Teams are hidden in the Library and pruned from File Changes. It would need two exceptions to the rule `_tasks/` relies on. The Human also wanted the name Agents already use |
 | No prompt listing: Project notes are memory enough | A note is found only if the Agent goes looking. The index is what makes Memory reach a new session without a lookup |
-| A per-Teammate, per-Project folder inside each Work Dir | One fact would be stored once per member and drift. The Human asked for memory the Team shares |
-| Reuse `FileChanges:MaxMemoryEntries` for the cap | A busy Team would crowd a Teammate's own Memory out of its prompt |
+| A per-Agent, per-Project folder inside each Work Dir | One fact would be stored once per member and drift. The Human asked for memory the Team shares |
+| Reuse `FileChanges:MaxMemoryEntries` for the cap | A busy Team would crowd an Agent's own Memory out of its prompt |
 
 ## Consequences
 
@@ -53,6 +53,6 @@ to be in a Room where it is mentioned.
   files at start-up, and Huddle never moves them itself.
 - **A Team label reaches the system prompt.** A Team is still never a permission, but it now
   changes what a member is told at session start. That is one more reason a membership change
-  restarts the Teammate.
+  restarts the Agent.
 - **Memory has two owners now.** [language.md](../engineering/language.md) keeps **Memory** for the
   Agent's own, and adds **Team Memory** for this.

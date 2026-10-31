@@ -1,0 +1,271 @@
+@* <summary>
+     The one place an Agent's or the Human's <see cref="Avatar"/> becomes pixels: an uploaded image,
+     a short text label, or - failing both - a monogram built from the Name, in that order, stopping at
+     the first one present. Before this component existed, the monogram alone was already being reached
+     across from <c>Agents.razor</c> into <c>AgentProfileCard.razor</c>'s own static helper
+     (<c>AgentProfileCard.Monogram</c>) - the same "one place should own a domain-value-to-rendering
+     mapping" smell <c>StatusDot</c> was extracted to fix for <c>PersonaState</c>. This component is
+     that fix for <see cref="Avatar"/>, now that a second call site needs the same three-way choice
+     plus a background colour neither call site used to have.
+
+     The <c>MudAvatar</c> below is this component's single root element, deliberately: a Razor
+     component adds no wrapper node of its own, but only for as long as it renders exactly one root -
+     and three existing test suites locate ".mud-avatar" at a fixed position in the DOM relative to its
+     siblings. Wrapping it in a <c>&lt;div&gt;</c> or a <c>&lt;span&gt;</c> would silently break all
+     three.
+   </summary> *@
+@using Agency.Huddle.App.Avatars
+@using System.Globalization
+@using Agency.Huddle.App.Themes
+@using System.Text
+
+<MudAvatar Color="Color.Primary" Size="this.Size" Class="@this.RootClass" Style="@this.InlineStyle">
+    @if (this.ImageSource is not null)
+    {
+        <img src="@this.ImageSource" alt="" />
+    }
+    else if (this.DisplayLabel is not null)
+    {
+        @this.DisplayLabel
+    }
+    else
+    {
+        @AgentAvatar.Monogram(this.Name)
+    }
+</MudAvatar>
+
+@code {
+    /// <summary>The path every uploaded avatar image is served from, joined with <see cref="Avatars.Avatar.Image"/>'s stored file name.</summary>
+    private const string ImageBasePath = "/agent-avatars/";
+
+    /// <summary>
+    /// The Agent's or the Human's Name - the source of the monogram fallback, and always rendered
+    /// as its own text beside this avatar at every call site, which is why <see cref="ImageSource"/>'s
+    /// <c>&lt;img&gt;</c> below carries an empty <c>alt</c> rather than repeating it.
+    /// </summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The avatar to render, or <see langword="null"/> - treated exactly like
+    /// <see cref="Avatars.Avatar.None"/> - for an Agent or the Human who has not customised one.
+    /// </summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>
+    /// The rendered <c>MudAvatar</c>'s size. Defaults to <see cref="MudBlazor.Size.Medium"/>,
+    /// <c>MudAvatar</c>'s own default, so a caller that does not set this renders exactly as it did
+    /// before this component existed.
+    /// </summary>
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+
+    /// <summary>Extra CSS classes for the root <c>MudAvatar</c>.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// The outline: <see cref="AvatarShape.Circle"/> (the default) for an Agent or the Human, <see cref="AvatarShape.RoundedSquare"/>
+    /// for a Team, which adds <c>avatar-square</c>. Callers draw a Team through <c>TeamAvatar</c> and never set this by hand.
+    /// </summary>
+    [Parameter]
+    public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
+    /// <summary>
+    /// <see cref="Avatar"/>, or <see cref="Avatars.Avatar.None"/> when it is <see langword="null"/> -
+    /// the one place that substitution happens, so every other member below can assume a real value.
+    /// Fully qualified rather than a bare <c>Avatar.None</c>: this component's own <see cref="Avatar"/>
+    /// parameter shadows the type name <c>Avatar</c> for simple-name lookup everywhere in this class,
+    /// so only a qualified reference still reaches the type's static members.
+    /// </summary>
+    private Avatar Resolved => this.Avatar ?? Agency.Huddle.App.Avatars.Avatar.None;
+
+    /// <summary>
+    /// <see cref="Resolved"/>'s <see cref="Avatars.Avatar.Label"/>, re-trimmed through
+    /// <see cref="Avatars.Avatar.TrimLabel(string?)"/> at render time rather than assumed
+    /// already-trimmed - so a hand-edited <c>avatars.json</c> cannot put four hundred characters into
+    /// a tile laid out for six.
+    /// </summary>
+    private string? TrimmedLabel => Agency.Huddle.App.Avatars.Avatar.TrimLabel(this.Resolved.Label);
+
+    /// <summary>
+    /// The label as drawn: <see cref="TrimmedLabel"/>, cut again to its first
+    /// <see cref="Avatars.Avatar.SmallLabelTextElements"/> text elements when <see cref="DrawsMonogramOnly"/>, because a
+    /// 24px circle cannot hold more at the 10px font floor. <see langword="null"/> when there is no label.
+    /// </summary>
+    private string? DisplayLabel
+    {
+        get
+        {
+            string? label = this.TrimmedLabel;
+            return label is not null && this.DrawsMonogramOnly
+                ? Agency.Huddle.App.Avatars.Avatar.FirstTextElements(label, Agency.Huddle.App.Avatars.Avatar.SmallLabelTextElements)
+                : label;
+        }
+    }
+
+    /// <summary>
+    /// <c>avatar-label-len-N</c> when a label of 1, 4, 5 or 6 text elements is drawn: <c>app.css</c> sizes a long label
+    /// down so it fits the circle and a single element (an emoji, one letter) up so it fills it; <see langword="null"/>
+    /// for a picture, for no label and for 2-3 elements (today's size). The 24px avatar draws at most three elements, so
+    /// it only ever gets <c>len-1</c>.
+    /// </summary>
+    private string? LabelLengthClass
+    {
+        get
+        {
+            if (this.ImageSource is not null || this.DisplayLabel is not { } label)
+            {
+                return null;
+            }
+
+            int length = new StringInfo(label).LengthInTextElements;
+            return length is 1 or (>= 4 and <= Agency.Huddle.App.Avatars.Avatar.MaxLabelTextElements)
+                ? string.Concat("avatar-label-len-", length.ToString(CultureInfo.InvariantCulture))
+                : null;
+        }
+    }
+
+    /// <summary>
+    /// The bytes of an image the Human has chosen but not saved yet, shown inline in place of
+    /// <see cref="Avatars.Avatar.Image"/> so the avatar editor and the Agent card can preview a choice
+    /// that is still only in memory. Ignored unless <see cref="PendingImageExtension"/> is also set.
+    /// </summary>
+    [Parameter]
+    public byte[]? PendingImage { get; set; }
+
+    /// <summary>The extension, with its dot, that <see cref="Avatars.AvatarImage.SniffExtension(ReadOnlySpan{byte})"/> found for <see cref="PendingImage"/>: <c>.png</c>, <c>.jpg</c> or <c>.webp</c>.</summary>
+    [Parameter]
+    public string? PendingImageExtension { get; set; }
+
+    /// <summary>
+    /// <see langword="true"/> at <see cref="MudBlazor.Size.Small"/> (24px), where a picture reads as a blur beside the
+    /// monograms, so no image is drawn - stored or pending. Images show from 32px up, and the Transcript's
+    /// <c>avatar-transcript</c> class makes a <see cref="MudBlazor.Size.Small"/> avatar 32px in <c>app.css</c>, so it
+    /// is exempt.
+    /// </summary>
+    private bool DrawsMonogramOnly =>
+        this.Size == Size.Small
+        && !(this.Class ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("avatar-transcript", StringComparer.Ordinal);
+
+    /// <summary>
+    /// The image's <c>src</c>: the pending image as a data URL when one is set, else the stored image's route,
+    /// or <see langword="null"/> when there is neither. A pending image can never be served by route because
+    /// nothing is written to <c>{DataDir}/avatars</c> until a save.
+    /// </summary>
+    private string? ImageSource
+    {
+        get
+        {
+            if (this.DrawsMonogramOnly)
+            {
+                return null;
+            }
+
+            if (this.PendingImage is not null
+                && this.PendingImageExtension is not null
+                && MediaTypeOf(this.PendingImageExtension) is { } mediaType)
+            {
+                return string.Concat("data:", mediaType, ";base64,", Convert.ToBase64String(this.PendingImage));
+            }
+
+            return this.Resolved.Image is null ? null : ImageBasePath + this.Resolved.Image;
+        }
+    }
+
+    /// <summary>
+    /// The media type of an image <paramref name="extension"/> that <see cref="Avatars.AvatarImage.SniffExtension(ReadOnlySpan{byte})"/>
+    /// can return, or <see langword="null"/> for any other, so an extension nobody produces is not previewed rather than sent to the
+    /// browser under a guessed type.
+    /// </summary>
+    /// <param name="extension">The extension, with its dot.</param>
+    private static string? MediaTypeOf(string extension) => extension switch
+    {
+        ".png" => "image/png",
+        ".jpg" => "image/jpeg",
+        ".webp" => "image/webp",
+        _ => null,
+    };
+
+    /// <summary>
+    /// The root's classes: the caller's <see cref="Class"/>, plus <c>avatar-image</c> for a picture (the same circle
+    /// with a 1px inner hairline) or <c>avatar-monogram</c> for letters (the Agent's colour at 40% over Surface,
+    /// letters mixed 75% toward TextPrimary; a Dark Theme mixes them toward white, both in <c>app.css</c>), plus
+    /// <see cref="LabelLengthClass"/> for a long label.
+    /// </summary>
+    private string RootClass
+    {
+        get
+        {
+            string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
+            if (this.Shape == AvatarShape.RoundedSquare)
+            {
+                kind = string.Concat(kind, " avatar-square");
+            }
+
+            if (this.LabelLengthClass is { } lengthClass)
+            {
+                kind = string.Concat(kind, " ", lengthClass);
+            }
+
+            return string.IsNullOrEmpty(this.Class) ? kind : string.Concat(this.Class, " ", kind);
+        }
+    }
+
+    /// <summary>
+    /// The inline <c>style</c> for <see cref="Avatars.Avatar.Background"/>, or <see langword="null"/> when
+    /// <see cref="Resolved"/> has none - so the Theme's own accent applies through <c>.avatar-monogram</c> in
+    /// <c>app.css</c>. A monogram hands the Agent's colour to <c>app.css</c> as this avatar's own primary
+    /// (<see cref="AvatarColours.MonogramStyle(string)"/>), which makes the fill and letters for the Theme in force;
+    /// there is no per-colour black or white choice); a picture, which may be transparent, sits on the colour itself.
+    /// Built entirely from this C# string, never a literal typed into the markup above: a later task fails the build
+    /// on a colour literal found inside any literal inline style attribute under <c>Components/</c>.
+    /// </summary>
+    private string? InlineStyle
+    {
+        get
+        {
+            if (this.Resolved.Background is null)
+            {
+                return null;
+            }
+
+            return this.ImageSource is not null
+                ? $"background: {this.Resolved.Background};"
+                : AvatarColours.MonogramStyle(this.Resolved.Background);
+        }
+    }
+
+    /// <summary>
+    /// Two letters, always. A name of several words reads as its first and last word's initials ("Emily Lee" is EL,
+    /// "Chief of Staff" is CS), so a middle word like "of" does not get a letter it does not deserve; a one-word name
+    /// reads as its first two letters ("Helen" is HE), and a one-letter name as that letter alone.
+    /// </summary>
+    /// <param name="name">The Agent's Name.</param>
+    internal static string Monogram(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length switch
+        {
+            0 => "?",
+            1 => LeadingLetters(words[0], 2),
+            _ => string.Concat(LeadingLetters(words[0], 1), LeadingLetters(words[^1], 1)),
+        };
+    }
+
+    /// <summary>The first <paramref name="count"/> text elements of <paramref name="word"/>, upper-cased.</summary>
+    private static string LeadingLetters(string word, int count)
+    {
+        TextElementEnumerator elements = StringInfo.GetTextElementEnumerator(word);
+        StringBuilder letters = new();
+        while (count > 0 && elements.MoveNext())
+        {
+            letters.Append(elements.GetTextElement());
+            count--;
+        }
+
+        return letters.ToString().ToUpperInvariant();
+    }
+}

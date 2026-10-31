@@ -36,6 +36,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The business manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
 
+## Definition of Done
+
+- Numbers checked: evidence from verify
+- Plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Customer replies first, then the books, then marketing.
@@ -46,7 +51,7 @@ retro: { every: 14, unit: 'days' }
 
 - Money, prices, refunds, a promise to a customer, or anything filed with an authority goes to the Human.
 - A tax question goes to the Human for their accountant.
-- A disagreement between teammates goes to the Human with both views written on the Task.
+- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

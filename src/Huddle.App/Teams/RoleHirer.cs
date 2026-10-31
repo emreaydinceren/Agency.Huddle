@@ -1,34 +1,18 @@
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.TeamTypes;
-using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>What <see cref="CardResolver"/> needs to know about the machine: which adapters answered and which connectors are connected.</summary>
-internal interface IHireContext
-{
-    /// <summary>Gets the adapters that answered their model probe.</summary>
-    IReadOnlyList<AdapterAvailability> Answered { get; }
-
-    /// <summary>Gets the configured model ids by adapter id, then tier.</summary>
-    IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> TierMap { get; }
-
-    /// <summary>Gets the adapter ids to avoid when another adapter answered.</summary>
-    IReadOnlyCollection<string> AvoidAdapters { get; }
-
-    /// <summary>Gets the connector status.</summary>
-    IConnectorStatus Connectors { get; }
-}
-
 /// <summary>
 /// Hires a Candidate that carries a role (HR-13): the card is resolved from the role through
-/// <see cref="CardResolver"/> and written by <see cref="HireService"/>, so the Teammate gets the
+/// <see cref="CardResolver"/> and written by <see cref="HireService"/>, so the Agent gets the
 /// role's skills, packs and model tier instead of the Candidate's own text.
 /// </summary>
-/// <param name="hires">Writes the Teammate.</param>
+/// <param name="hires">Writes the Agent.</param>
 /// <param name="types">The team types, for the role.</param>
-/// <param name="packs">The skill packs a card draws skills from.</param>
+/// <param name="skills">The registry a card draws its Packs and Skills from.</param>
 /// <param name="context">The adapters and connectors the card resolves against.</param>
-internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, SkillPackStore packs, IHireContext context)
+internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, ISkillAvailability skills, IHireContext context)
 {
     /// <summary>Hires <paramref name="candidate"/> into its first Team as its role.</summary>
     /// <param name="candidate">A Candidate with a <see cref="Candidate.Role"/> and at least one Team.</param>
@@ -45,7 +29,7 @@ internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, SkillP
             return new HireResult(false, $"{candidate.Name} does not name a known role and Team.", null);
         }
 
-        CardState card = CardResolver.Resolve(role, [], context.Answered, context.TierMap, context.AvoidAdapters, packs.All, context.Connectors, candidate.Name);
+        CardState card = CardResolver.Resolve(role, [], context.Answered, context.TierMap, context.AvoidAdapters, skills, context.Connectors, candidate.Name);
         return hires.Hire(new HireRequest(candidate.Teams[0], type.Id, role.Id, card));
     }
 }

@@ -1,31 +1,21 @@
-using System.Text;
-using System.Text.RegularExpressions;
-using Agency.Huddle.App.Acp;
+using Agency.Huddle.SkillPacks.Folders;
 
 namespace Agency.Huddle.App.Skills;
 
 /// <summary>
-/// Validates one candidate Skill's files against Spec §8.1, reading <c>SKILL.md</c>'s frontmatter
-/// with the existing <see cref="PersonaFrontmatter.Parse"/> rather than a second YAML parser.
+/// Validates one candidate Skill's files against Spec §8.1. The rules live in the library's
+/// <see cref="SkillFolderValidator"/>, which <c>huddle-packs</c> shares; this passes the app's
+/// <see cref="SkillGrants.Grantable"/> and maps the result to the app's <see cref="SkillValidation"/>.
 /// </summary>
-internal static partial class SkillValidator
+internal static class SkillValidator
 {
-    /// <summary>The maximum size, in UTF-8 bytes, a Skill file may be before it is dropped with a Warning (Spec §8.1 rule 7).</summary>
-    private const int MaxFileSizeBytes = 65_536;
+    private const string SkillFileName = "SKILL.md";
 
-    /// <summary>The maximum length, in characters, a <c>description</c> may be before it is an Error (Spec §7.2).</summary>
-    private const int MaxDescriptionLength = 500;
-
-    /// <summary>The length, in characters, above which a <c>description</c> is a Warning (Spec §7.2).</summary>
-    private const int DescriptionWarningLength = 300;
-
-    /// <summary>The most files an imported Skill's folder may hold before it is an Error.</summary>
-    private const int MaxImportedFiles = 200;
-
-    private const string SkillMdFileName = "SKILL.md";
-    private const string NameKey = "name";
-    private const string DescriptionKey = "description";
-    private const string ToolsKey = "tools";
+    private static readonly (string Legacy, string Current)[] LegacyToolNames =
+    [
+        ("validate_teammate", "validate_agent"),
+        ("propose_teammates", "propose_agents"),
+    ];
 
     /// <summary>Validates one candidate Skill's files against Spec §8.1 rules 1–7.</summary>
     /// <param name="folderName">The Skill's folder name; a valid <c>name</c> field must equal this, ordinally.</param>
@@ -34,148 +24,57 @@ internal static partial class SkillValidator
     /// <returns>What parsed, what survived, and every problem found.</returns>
     internal static SkillValidation Validate(string folderName, IReadOnlyDictionary<string, string> files, bool allowSupportingFiles = false)
     {
-        List<SkillIssue> issues = [];
+        SkillFolderValidation result = SkillFolderValidator.Validate(folderName, UpgradeLegacyToolNames(files), SkillGrants.Grantable, allowSupportingFiles);
+        return new SkillValidation(
+            result.Name,
+            result.Description,
+            result.Tools,
+            result.Files,
+            [.. result.Issues.Select(static issue => new SkillIssue(issue.Skill, issue.Message, ToSeverity(issue.Severity)))]);
+    }
 
-        SkillIssue Info(string message)
+    /// <summary>
+    /// Rewrites the tool names the product used before the Teammate-to-Agent rename on the
+    /// <c>tools:</c> line of <c>SKILL.md</c>, so a Skill written earlier still grants them.
+    /// Only that line is touched, and only in a file that names an old tool.
+    /// </summary>
+    /// <param name="files">The candidate Skill's files, keyed by file name.</param>
+    /// <returns><paramref name="files"/> itself when nothing needs rewriting, otherwise a copy with the <c>tools:</c> line updated.</returns>
+    private static IReadOnlyDictionary<string, string> UpgradeLegacyToolNames(IReadOnlyDictionary<string, string> files)
+    {
+        if (!files.TryGetValue(SkillFileName, out string? text))
         {
-            return new SkillIssue(folderName, message, SkillIssueSeverity.Info);
-        }
-
-        SkillIssue Warning(string message)
-        {
-            return new SkillIssue(folderName, message, SkillIssueSeverity.Warning);
-        }
-
-        SkillIssue Error(string message)
-        {
-            return new SkillIssue(folderName, message, SkillIssueSeverity.Error);
-        }
-
-        // Rule 1: SKILL.md present?
-        if (!files.TryGetValue(SkillMdFileName, out string? skillMdText))
-        {
-            issues.Add(Error($"'{folderName}' has no SKILL.md."));
-            return new SkillValidation(null, null, [], [], issues);
-        }
-
-        // Rule 2 ("frontmatter parses?") has no distinct outcome to check here: PersonaFrontmatter.Parse
-        // never throws and never reports a parse failure — a SKILL.md with no (or unclosed) frontmatter
-        // block simply comes back with an empty Fields list, which rule 3 below already turns into a
-        // missing-'name' Error. There is no separate signal this method could observe for "did not parse"
-        // that isn't already "has no fields", so rule 2 is not given its own Error here.
-        (IReadOnlyList<PersonaFrontmatterField> fields, _) = PersonaFrontmatter.Parse(skillMdText);
-
-        // Rule 3: name present, matches the regex, equals the folder name?
-        string? name = GetFieldValue(fields, NameKey);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            issues.Add(Error("SKILL.md is missing required field 'name'."));
-            name = null;
-        }
-        else if (!NameRule().IsMatch(name))
-        {
-            issues.Add(Error($"'{name}' is not a valid Skill name: lowercase letters, digits and single hyphens only."));
-        }
-        else if (!string.Equals(name, folderName, StringComparison.Ordinal))
-        {
-            issues.Add(Error($"SKILL.md's name '{name}' does not match its folder name '{folderName}'."));
+            return files;
         }
 
-        // Rule 4: description present, single line, <= 500 chars (Warning above 300)? A block-scalar
-        // description's embedded line breaks are already collapsed to spaces by PersonaFrontmatter.Parse,
-        // so every value this method ever sees is already one line — there is no separate "not single
-        // line" case for this method to detect.
-        string? description = GetFieldValue(fields, DescriptionKey);
-        if (string.IsNullOrWhiteSpace(description))
+        string[] lines = text.Split('\n');
+        bool changed = false;
+        for (int i = 0; i < lines.Length; i++)
         {
-            issues.Add(Error("SKILL.md is missing required field 'description'."));
-            description = null;
-        }
-        else if (description.Length > MaxDescriptionLength)
-        {
-            issues.Add(Error($"SKILL.md's description is {description.Length} characters; the limit is {MaxDescriptionLength}."));
-        }
-        else if (description.Length > DescriptionWarningLength)
-        {
-            issues.Add(Warning($"SKILL.md's description is {description.Length} characters; over {DescriptionWarningLength} is unusually long."));
-        }
-
-        // Rule 5: each tools entry in Grantable?
-        List<string> tools = [];
-        string? rawTools = GetFieldValue(fields, ToolsKey);
-        if (!string.IsNullOrWhiteSpace(rawTools))
-        {
-            foreach (var tool in rawTools.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (!lines[i].StartsWith("tools:", StringComparison.Ordinal))
             {
-                if (SkillGrants.Grantable.Contains(tool))
-                {
-                    tools.Add(tool);
-                }
-                else
-                {
-                    issues.Add(Warning($"'{tool}' is not a tool a Skill can grant; it is offered to everyone already."));
-                }
-            }
-        }
-
-        // Rule 6: unknown keys are an Info.
-        HashSet<string> knownKeys = new(StringComparer.OrdinalIgnoreCase) { NameKey, DescriptionKey, ToolsKey };
-        foreach (var field in fields)
-        {
-            if (!knownKeys.Contains(field.Key))
-            {
-                issues.Add(Info($"SKILL.md has an unknown key '{field.Key}'; it is ignored."));
-            }
-        }
-
-        if (allowSupportingFiles && files.Count > MaxImportedFiles)
-        {
-            issues.Add(Error($"'{folderName}' has {files.Count} files; an imported Skill may have no more than {MaxImportedFiles} files."));
-        }
-
-        // Rule 7: files are flat *.md <= 65,536 UTF-8 bytes. SKILL.md first, then ordinal order.
-        List<string> orderedFileNames =
-        [
-            SkillMdFileName,
-            .. files.Keys
-                .Where(key => !string.Equals(key, SkillMdFileName, StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal),
-        ];
-
-        List<string> keptFiles = [];
-        foreach (var fileName in orderedFileNames)
-        {
-            string text = files[fileName];
-            int byteCount = Encoding.UTF8.GetByteCount(text);
-            if (byteCount > MaxFileSizeBytes)
-            {
-                issues.Add(Warning($"'{fileName}' is {byteCount} bytes; the limit is {MaxFileSizeBytes} (skipped)."));
                 continue;
             }
 
-            keptFiles.Add(fileName);
-        }
-
-        return new SkillValidation(name, description, tools, keptFiles, issues);
-    }
-
-    /// <summary>Looks up the first frontmatter field matching <paramref name="key"/>, case-insensitively.</summary>
-    /// <param name="fields">The parsed frontmatter fields, in file order.</param>
-    /// <param name="key">The field key to find.</param>
-    /// <returns>The matching field's value, or <see langword="null"/> when no field has this key.</returns>
-    private static string? GetFieldValue(IReadOnlyList<PersonaFrontmatterField> fields, string key)
-    {
-        foreach (var field in fields)
-        {
-            if (string.Equals(field.Key, key, StringComparison.OrdinalIgnoreCase))
+            foreach ((string legacy, string current) in LegacyToolNames)
             {
-                return field.Value;
+                string updated = lines[i].Replace(legacy, current, StringComparison.Ordinal);
+                changed |= !string.Equals(updated, lines[i], StringComparison.Ordinal);
+                lines[i] = updated;
             }
         }
 
-        return null;
+        return changed ? new Dictionary<string, string>(files, StringComparer.Ordinal) { [SkillFileName] = string.Join('\n', lines) } : files;
     }
 
-    [GeneratedRegex(@"\A[a-z0-9]+(?:-[a-z0-9]+)*\z", RegexOptions.CultureInvariant)]
-    private static partial Regex NameRule();
+    /// <summary>The app's severity for a library severity.</summary>
+    private static SkillIssueSeverity ToSeverity(FolderIssueSeverity severity)
+    {
+        return severity switch
+        {
+            FolderIssueSeverity.Info => SkillIssueSeverity.Info,
+            FolderIssueSeverity.Warning => SkillIssueSeverity.Warning,
+            _ => SkillIssueSeverity.Error,
+        };
+    }
 }

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 
 /// <summary>
 /// Reads one Task's full text (Spec §11.3): the §11.1 line, a <c>key: value</c> line for every
@@ -14,15 +15,13 @@ using Agency.Huddle.App.Tasks;
 /// because reading a Task changes nothing, so there is no actor to resolve and no notify clause to
 /// build.
 /// </summary>
-internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IPromptSource prompts) : IAppTool
+internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IPromptSource prompts, IProofSource? proofs = null) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "get_task";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.getTask.description", NoValues);
+    public string Description => prompts.Render("tool.getTask.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -48,14 +47,9 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
         ArgumentNullException.ThrowIfNull(arguments);
         _ = cancellationToken;
 
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdTypeRefusal))
+        if (!TaskToolText.TryGetRequiredString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
         {
-            return Task.FromResult(taskIdTypeRefusal);
-        }
-
-        if (string.IsNullOrWhiteSpace(taskIdText))
-        {
-            return Task.FromResult("'taskId' is a required argument.");
+            return Task.FromResult(taskIdRefusal);
         }
 
         if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? task, out string idRefusal))
@@ -120,6 +114,7 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"sprint: {sprint} ({sprintName})"));
         }
 
+        AddHumanGateLines(lines, task, proofs);
         string header = string.Join('\n', lines);
         string body = string.Create(CultureInfo.InvariantCulture, $"{header}\n\n{task.Description}");
 
@@ -134,6 +129,50 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
         string entriesText = string.Join('\n', lastFifty.Select(FormatEntry));
 
         return string.Create(CultureInfo.InvariantCulture, $"{body}\n\nChange log:\n{entriesText}");
+    }
+
+    /// <summary>
+    /// Adds the Human gate lines (Human gate Spec §6.10): <c>human_gate: true</c>, the <c>action</c>, the Proof as
+    /// <c>proof: met/total</c> with one <c>- label (owner)</c> line per open item, and the acceptance. Each is
+    /// omitted when it does not apply.
+    /// </summary>
+    /// <param name="lines">The header lines built so far.</param>
+    /// <param name="task">The Task being rendered.</param>
+    /// <param name="proofSource">The Proof source, or <see langword="null"/> when none is wired.</param>
+    private static void AddHumanGateLines(List<string> lines, TaskItem task, IProofSource? proofSource)
+    {
+        if (!task.HumanGate)
+        {
+            return;
+        }
+
+        lines.Add("human_gate: true");
+        if (!string.IsNullOrEmpty(task.Action))
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"action: {task.Action}"));
+        }
+
+        Proof? proof = proofSource?.For(task);
+        if (proof is not null && proof.Total > 0)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"proof: {proof.MetCount}/{proof.Total}"));
+            foreach (ProofItem item in proof.Items.Where(static candidate => !candidate.Met))
+            {
+                lines.Add(item.Owner is null
+                    ? string.Create(CultureInfo.InvariantCulture, $"- {item.Label}")
+                    : string.Create(CultureInfo.InvariantCulture, $"- {item.Label} ({item.Owner})"));
+            }
+        }
+
+        AcceptanceInfo acceptance = Acceptance.Of(task);
+        if (acceptance.State == AcceptanceState.Valid && acceptance.At is { } at)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"accepted: {at.UtcDateTime:yyyy-MM-dd'T'HH:mm:ss'Z'} by {acceptance.By}"));
+        }
+        else if (acceptance.State == AcceptanceState.Stale)
+        {
+            lines.Add("acceptance: stale");
+        }
     }
 
     /// <summary>Renders a Task reference with its current status (Spec §11.3), or just the id when the reference no longer resolves.</summary>

@@ -1,20 +1,24 @@
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.References
 @using Agency.Huddle.App.Library
 @using Microsoft.Extensions.Options
+@implements IDisposable
 @inject IJSRuntime JS
 @inject AvatarStore Avatars
 @inject ITaskReferenceResolver Tasks
 @inject IOptions<TeamOptions> Options
 @inject TimeProvider Clock
 @inject ILibraryReferenceResolver LibraryResolver
+@inject ContextFill ContextFill
+@inject PersonaStore Personas
 
 <div class="message-list" @ref="this.container">
     @for (var messageIndex = 0; messageIndex < this.Messages.Count; messageIndex++)
     {
         var message = this.Messages[messageIndex];
         ChatMessage? previousMessage = messageIndex > 0 ? this.Messages[messageIndex - 1] : null;
-        var time = MessageDisplay.TimeLabel(message.Timestamp, this.Clock.GetLocalNow());
+        var time = MessageDisplay.ClockTime(message.Timestamp, this.Clock.GetLocalNow());
         @if (MessageDisplay.StartsNewDay(previousMessage?.Timestamp, message.Timestamp))
         {
             <div class="day-separator" role="separator">
@@ -23,10 +27,11 @@
         }
         var continues = previousMessage is not null
             && MessageDisplay.ContinuesGroup(previousMessage.SenderId, previousMessage.Timestamp, message.SenderId, message.Timestamp);
-        @if (this.HumanIds.Contains(message.SenderId))
+        bool fromHuddle = string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal);
+        @if (this.HumanIds.Contains(message.SenderId) || fromHuddle)
         {
-            @* A Task wake-up is posted as the Human but is not something they typed, so it is a slim,
-               muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
+            @* A Task wake-up is posted by the Human's edit, or by Huddle after a Helper's, but is not something the Human typed,
+               so it is a slim, muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
             @if (MessageDisplay.TryParseTaskWake(message.Text, out var wake))
             {
                 <details class="system-row" data-message-id="@message.Id" tabindex="-1">
@@ -49,33 +54,63 @@
                 continue;
             }
 
-            @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
-               transcript says that, as in any chat app. Consecutive ones are tighter, and the time
-               stays in the tooltip. *@
-            <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
-                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
-                <MessageReferences Message="@message" />
-            </div>
-            continue;
+            @if (!fromHuddle)
+            {
+                @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
+                   transcript says that, as in any chat app. Consecutive ones are tighter, and the time
+                   stays in the tooltip. The avatar, gutter and meta line are rendered but hidden in app.css;
+                   a style pack that sets the Human's Message as an ordinary row (Nordic, ADR-0057) shows them. *@
+                var humanName = SenderDisplay.NameOf(message, this.HumanName);
+                <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
+                    @if (continues)
+                    {
+                        <span class="message-gutter"></span>
+                    }
+                    else
+                    {
+                        <ProfileAvatar Name="@humanName" Avatar="this.Avatars.Get(humanName)" Size="Size.Small" Class="avatar-transcript" />
+                        <div class="message-meta">
+                            <span class="message-sender">@humanName</span>
+                            <span class="message-time">@time</span>
+                        </div>
+                    }
+                    <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
+                    <MessageReferences Message="@message" />
+                </div>
+                continue;
+            }
         }
         <div class="@(continues ? "message-row grouped" : "message-row")" data-message-id="@message.Id" tabindex="-1">
             @if (continues)
             {
                 <span class="message-gutter" title="@time"></span>
             }
+            else if (fromHuddle)
+            {
+                @* A Message Huddle wrote itself (ADR-0065) has no Agent to draw: it wears Huddle's mark, as it does in the Feed. *@
+                <span class="huddle-mark" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.ToggleOn" Size="Size.Small" /></span>
+            }
             else
             {
-                <ProfileAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" Team="@this.Team" />
+                <ProfileAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" Class="avatar-transcript" Team="@this.Team" />
             }
             <div class="message-content">
                 @if (!continues)
                 {
                     <div class="message-meta">
                         <span class="message-sender">@message.SenderName</span>
+                        @if (this.TitleOf(message.SenderName) is { } title)
+                        {
+                            <span class="message-title">@title</span>
+                        }
                         <span class="message-time">@time</span>
+                        @if (this.ContextReadingAt(messageIndex, message) is { } reading)
+                        {
+                            <span class="message-context" title="@ContextFillText.Tooltip(reading, message.SenderName)">@ContextFillText.Label(reading)</span>
+                        }
                     </div>
                 }
-                <div class="message-body message-card">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
                 <MessageReferences Message="@message" />
             </div>
         </div>
@@ -84,14 +119,18 @@
     {
         var draft = this.Drafts[draftIndex];
         <div class="message-row streaming">
-            @* A Draft is the same Teammate mid-sentence, so it gets an avatar too - a gutter that only
+            @* A Draft is the same Agent mid-sentence, so it gets an avatar too - a gutter that only
                appeared once the Turn landed would make every streaming reply jump sideways as it
                completed. Resolved through the same AvatarStore.Get(SenderName) lookup a settled
                Message uses, since Draft.SenderName is keyed the same way. *@
-            <ProfileAvatar Name="@draft.SenderName" Avatar="this.Avatars.Get(draft.SenderName)" Size="Size.Small" Team="@this.Team" />
+            <ProfileAvatar Name="@draft.SenderName" Avatar="this.Avatars.Get(draft.SenderName)" Size="Size.Small" Class="avatar-transcript" Team="@this.Team" />
             <div class="message-content">
                 <div class="message-meta">
                     <span class="message-sender">@draft.SenderName</span>
+                    @if (this.TitleOf(draft.SenderName) is { } draftTitle)
+                    {
+                        <span class="message-title">@draftTitle</span>
+                    }
                     <MudTooltip Text="Stop">
                         <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Size="Size.Small"
                                        Class="draft-stop" aria-label="Stop"
@@ -109,7 +148,7 @@
                    markdown path more often than necessary is the wrong direction from that rule, not a
                    harmless extra step. The text settles into rendered Markdown the moment the real Message
                    arrives and this row is replaced. *@
-                <div class="message-body message-card streaming">@draft.Text<span class="draft-caret"></span></div>
+                <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
                 @* The Turn detail: one row per tool call, oldest first, under the text. A real <ul> with a
                    name and deliberately no aria-live - a Turn fires several updates a second and a live
                    region would read every one out. Every mark has a text label: state never rests on
@@ -186,6 +225,14 @@
     [Parameter]
     public IReadOnlyCollection<string> HumanIds { get; set; } = [];
 
+    /// <summary>The Human's current Name, shown on their own Message's meta line through <see cref="SenderDisplay"/>; <see langword="null"/> keeps the stored name.</summary>
+    [Parameter]
+    public string? HumanName { get; set; }
+
+    /// <summary>The Room's mentionable handles, drawn as Mention pills in Message text; <see langword="null"/> draws none.</summary>
+    [Parameter]
+    public MentionMarks? Mentions { get; set; }
+
     /// <summary>Every Draft currently open in this Room, rendered after every Message.</summary>
     [Parameter]
     public IReadOnlyList<Draft> Drafts { get; set; } = [];
@@ -210,7 +257,7 @@
     [Parameter]
     public string? TargetMessageId { get; set; }
 
-    /// <summary>The Team the Room belongs to, or <see langword="null"/> for a root Room; a Teammate's avatar opens their profile with the Team's own one-to-one.</summary>
+    /// <summary>The Team the Room belongs to, or <see langword="null"/> for a root Room; an Agent's avatar opens their profile with the Team's own one-to-one.</summary>
     [Parameter]
     public string? Team { get; set; }
 
@@ -218,7 +265,14 @@
     [Parameter]
     public EventCallback OnJumped { get; set; }
 
+    /// <summary>The Room this list shows, which keys each Agent's context reading; <see langword="null"/> shows no context fill.</summary>
+    [Parameter]
+    public string? RoomId { get; set; }
+
     private ElementReference container;
+
+    /// <summary>The index of the row that heads each Agent's newest group, the one meta line that carries its context fill.</summary>
+    private IReadOnlySet<int> contextHeaders = new HashSet<int>();
     private int lastRenderedSignature;
 
     /// <summary>The target already jumped to, so a re-render with the same <see cref="TargetMessageId"/> does not jump again.</summary>
@@ -253,8 +307,67 @@
         }
     }
 
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.ContextFill.Changed += this.OnContextFillChanged;
+
+    /// <summary>Stops listening to the context store, a singleton that outlives this list.</summary>
+    public void Dispose() => this.ContextFill.Changed -= this.OnContextFillChanged;
+
+    /// <summary>
+    /// The index of the row that heads each Agent's newest group of Messages. Only a group's first row
+    /// draws the meta line, so the newest Message's context fill sits on its group's header. A Human's
+    /// and Huddle's own Messages are skipped: they have no context window.
+    /// </summary>
+    /// <param name="messages">The Messages in Transcript order.</param>
+    /// <param name="humanIds">The ids of the Room's Human Members.</param>
+    /// <returns>One row index per Agent that has posted.</returns>
+    internal static IReadOnlySet<int> LatestAgentHeaders(IReadOnlyList<ChatMessage> messages, IReadOnlyCollection<string> humanIds)
+    {
+        Dictionary<string, int> headerBySender = new(StringComparer.Ordinal);
+        for (var index = 0; index < messages.Count; index++)
+        {
+            ChatMessage message = messages[index];
+            if (humanIds.Contains(message.SenderId) || string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            ChatMessage? previous = index > 0 ? messages[index - 1] : null;
+            bool continues = previous is not null
+                && MessageDisplay.ContinuesGroup(previous.SenderId, previous.Timestamp, message.SenderId, message.Timestamp);
+            if (!continues)
+            {
+                headerBySender[message.SenderId] = index;
+            }
+        }
+
+        return headerBySender.Values.ToHashSet();
+    }
+
+    /// <summary>The context reading to show on row <paramref name="index"/>'s meta line, or <see langword="null"/> when that row shows none.</summary>
+    /// <param name="index">The row's index in <see cref="Messages"/>.</param>
+    /// <param name="message">The row's Message.</param>
+    private ContextFillReading? ContextReadingAt(int index, ChatMessage message) =>
+        this.RoomId is { } roomId && this.contextHeaders.Contains(index)
+            && this.ContextFill.Get(message.SenderId, roomId) is { Percent: not null } reading
+            ? reading
+            : null;
+
+    /// <summary>The Agent's title to show beside <paramref name="senderName"/>, or <see langword="null"/> for a sender with no Persona, such as Huddle.</summary>
+    /// <param name="senderName">The Message's sender Name.</param>
+    private string? TitleOf(string senderName) =>
+        this.Personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, senderName, StringComparison.OrdinalIgnoreCase))?.Title;
+
+    private void OnContextFillChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
     protected override void OnParametersSet()
     {
+        this.contextHeaders = MessageList.LatestAgentHeaders(this.Messages, this.HumanIds);
+
         if (this.TargetMessageId is null)
         {
             this.handledTarget = null;

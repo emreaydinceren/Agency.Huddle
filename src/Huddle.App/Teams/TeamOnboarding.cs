@@ -3,29 +3,6 @@ using Agency.Huddle.App.Prompts;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>Delivers a message as the Human to a manager's direct Room, so it becomes the manager's next Turn.</summary>
-internal interface IOnboardingPoster
-{
-    /// <summary>Posts <paramref name="text"/> to the manager's Room.</summary>
-    /// <param name="managerName">The manager Teammate's Name.</param>
-    /// <param name="text">The message.</param>
-    /// <param name="ct">Cancels the post.</param>
-    /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the manager or its Room could not be reached.</returns>
-    Task<bool> PostAsync(string managerName, string text, CancellationToken ct);
-
-    /// <summary>
-    /// Posts <paramref name="text"/> for <paramref name="recipientName"/> in <paramref name="team"/>'s Team Room, prefixed by a
-    /// Mention of the recipient, when that Room exists, is not Archived and has the recipient as a Member; otherwise in the
-    /// recipient's root one-to-one, exactly as <see cref="PostAsync"/> does.
-    /// </summary>
-    /// <param name="team">The Team the post is for.</param>
-    /// <param name="recipientName">The recipient Teammate's Name.</param>
-    /// <param name="text">The message.</param>
-    /// <param name="ct">Cancels the post.</param>
-    /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the recipient or a Room could not be reached.</returns>
-    Task<bool> PostToTeamAsync(string team, string recipientName, string text, CancellationToken ct);
-}
-
 /// <summary>
 /// Seeds a manager's first Turn with the onboarding steps of its Team's <c>Process.md</c> (PR-5, Spec §Hiring).
 /// The <c>onboarded: true</c> line in <c>_team.md</c> makes the post happen once: a restart or a second start finds
@@ -38,7 +15,7 @@ internal sealed class TeamOnboarding(ITeamFolders folders, IPromptSource prompts
 {
     /// <summary>Posts the onboarding prompt to the manager unless the Team was already onboarded.</summary>
     /// <param name="team">The Team's name.</param>
-    /// <param name="managerName">The manager Teammate's Name.</param>
+    /// <param name="managerName">The manager Agent's Name.</param>
     /// <param name="ct">Cancels the post.</param>
     /// <returns><see langword="true"/> when the prompt was posted and the marker written.</returns>
     public async Task<bool> PostIfDueAsync(string team, string managerName, CancellationToken ct)

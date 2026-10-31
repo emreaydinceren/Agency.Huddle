@@ -5,19 +5,31 @@
 #
 # Git already normalises on commit (core.autocrlf=true in Git for Windows' system
 # config, and every index blob is LF), so this is working-copy hygiene: no mixed
-# endings, no "LF will be replaced by CRLF" warnings. Uses grep and perl rather
-# than jq or python (jq is not installed; python3 rewrites line endings itself).
+# endings, no "LF will be replaced by CRLF" warnings.
+#
+# One process at most: under Git Bash each external process costs seconds under load,
+# so the payload is parsed with bash builtins and a single perl both checks and
+# rewrites. $(</dev/stdin) reads the payload in blocks without a fork; `read -d ''`
+# would read a large Write payload one byte at a time.
 set -uo pipefail
 
-payload=$(cat)
+payload=$(</dev/stdin)
 
 # The payload is JSON: Windows paths arrive with escaped backslashes (E:\\Repos\\...).
-path=$(printf '%s' "$payload" \
-    | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' \
-    | head -n 1 \
-    | sed -E 's/^"file_path"[[:space:]]*:[[:space:]]*"//; s/"$//; s/\\\\/\\/g')
+# The first "file_path" is the tool's target; a later one could sit inside the content.
+[[ $payload =~ \"file_path\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]] || exit 0
+path=${BASH_REMATCH[1]}
+path=${path//\\\\/\\}
 
-[ -n "$path" ] && [ -f "$path" ] || exit 0
+[[ -n $path ]] || exit 0
+
+# The Write tool has been seen to report success and leave no file behind; a later script
+# then overwrote the missing spec with an empty one. Say so while the agent can still act.
+if [[ ! -f $path ]]; then
+    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"Write reported success but %s does not exist on disk. Write it again (or use PowerShell Set-Content) and confirm with ls before relying on it."}}\n' \
+        "${path##*[\\/]}"
+    exit 0
+fi
 
 case "${path,,}" in
     *.sh) exit 0 ;;  # bash rejects CRLF scripts; they stay LF
@@ -25,11 +37,18 @@ case "${path,,}" in
     *) exit 0 ;;
 esac
 
-# Nothing to do when there is no bare LF (already CRLF, or no newlines at all).
-perl -ne 'exit 1 if /(?<!\r)\n/' "$path" && exit 0
-
+# Exits 1 when there is no bare LF (already CRLF, or no newlines at all) and nothing changed.
 # Idempotent; keeps a BOM; never adds a final newline the file did not have.
-perl -pi -e 's/\r?\n/\r\n/' "$path" || exit 0
+perl -e '
+    my $p = shift;
+    open(my $in, "<:raw", $p) or exit 1;
+    local $/; my $s = <$in>; close $in;
+    exit 1 unless $s =~ /(?<!\r)\n/;
+    $s =~ s/\r?\n/\r\n/g;
+    open(my $out, ">:raw", $p) or exit 1;
+    print $out $s; close $out or exit 1;
+' "$path" || exit 0
 
+name=${path##*[\\/]}
 printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"The CRLF hook converted %s to CRLF on disk after this Write. Re-Read it before your next Edit of it."}}\n' \
-    "$(basename "$path")"
+    "$name"

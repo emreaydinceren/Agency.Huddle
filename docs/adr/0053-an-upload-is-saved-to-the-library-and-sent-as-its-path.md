@@ -12,7 +12,7 @@ pipeline that already exists. The full design is
 [Huddle.ChatUploads-Specifications.md](../Huddle.ChatUploads-Specifications.md).
 
 This amends [ADR-0027](0027-the-library-sees-only-configured-roots.md), which names three kinds
-of Library Root: **Uploads** is a fourth, built in like Teams and Teammates.
+of Library Root: **Uploads** is a fourth, built in like Teams and Agents.
 
 ## The problem
 

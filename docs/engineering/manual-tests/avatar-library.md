@@ -1,6 +1,6 @@
 # Avatar library: choosing a face from the library
 
-Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the Teammate card and from **Settings → Appearance**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
+Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the **Avatar** window of an Agent card and of the Human's own profile card on **Settings → Profile**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
 **28 tests** · all free · about 3.3 hours.
 
@@ -23,8 +23,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
    The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\tmp\avatar-library"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because a library of your own is not under `<data>`. Those tests call the copy "the library folder". To go back to the bundled library, clear the variable (`Remove-Item Env:Team__AvatarLibrary__Dir`) and restart.
 4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
-5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
-6. Create one scratch Teammate for the card tests with **New teammate**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
+5. Open `http://localhost:5100/agents`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
+6. Create one scratch Agent for the card tests with **New agent**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
 
 ## Tests
 
@@ -40,10 +40,10 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open `/teammates` and choose **New teammate**.
+1. Open `/agents` and choose **New agent**.
 2. Click the avatar at the top of the card to open the **Avatar** window, then select **An image**.
 3. Read the buttons beside the upload control.
-4. Close the **Avatar** window and the card. Open **Settings → Appearance** and find the **Your avatar** section.
+4. Close the **Avatar** window and the card. Open **Settings → Profile** and click the avatar on the profile card (**Change avatar**) to open the **Avatar** window.
 5. Select **An image** there and read its buttons.
 
 **Pass if — all of these**
@@ -68,7 +68,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with `Team:AvatarLibrary:Dir` set to your copy of the library (Setup step 3).
-2. Open **New teammate**, click the avatar to open the **Avatar** window, select **An image**, and read the buttons.
+2. Open **New agent**, click the avatar to open the **Avatar** window, select **An image**, and read the buttons.
 3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json.bak`.
 4. Stop the app. Rename `master.json.bak` back to `master.json`.
 5. Start the app again. Repeat step 2 and the first URL of step 3. Also open `http://localhost:5100/avatar-library/master.json`.
@@ -95,11 +95,11 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The app runs with the real library configured (Setup step 3). The scratch Teammate `Library Test` exists.
+- The app runs with the real library configured (Setup step 3). The scratch Agent `Library Test` exists.
 
 **Steps**
 
-1. Open `/teammates` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
+1. Open `/agents` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
 2. Select **Initials of the name**. Read the **Avatar** window.
 3. Select **A short label**. Read the **Avatar** window.
 4. Select **An image**. Read the **Avatar** window.
@@ -515,36 +515,40 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 - The **Avatar** window shows the picture in its preview and the text `New image selected (not yet saved)`, as after an upload. After **Apply** the card's own avatar shows the picture, still before any save.
 - After step 3, `<data>\avatars` has the same number of files as before: nothing is written yet.
 - After Cancel (step 4) and reopening (step 5), the image is unchanged and no file was added.
-- After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Teammate's Name), and the library folder is unchanged.
+- After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Agent's Name), and the library folder is unchanged.
 
 **Fail if — any of these**
 
 - A file appears in `<data>\avatars` before **Save** -> the copy happens at the pick, not at Save.
 
-### AVATARLIB-19 — Settings → Appearance writes at once (L11)
+### AVATARLIB-19 — Settings → Profile: the Avatar window's Save writes at once (L11)
 
 **Free** · about 5 min
 
-*Proves that the Human's own picker on the Appearance page writes immediately, as its upload does.*
+*Proves that the Human's own avatar, edited in the **Avatar** window opened from the profile card on **Settings → Profile**, writes nothing at the pick and is written the moment that window's **Save** is pressed, with no other Save needed. The old inline editor on the Appearance tab, which wrote on the pick itself with no Save, is gone.*
 
 **Before you start**
 
-- Note the Human's current avatar in **Settings → Appearance**, and the count of files in `<data>\avatars`.
+- Note the Human's current avatar on the profile card in **Settings → Profile**, the count of files in `<data>\avatars`, and the Human's entry in `<data>\avatars.json` (under the Human's Name, `You` by default).
 
 **Steps**
 
-1. Open **Settings → Appearance**. In the **Your avatar** section, select **An image**.
+1. Open **Settings → Profile**. Click the avatar on the profile card (**Change avatar**; a pencil shows on hover) to open the **Avatar** window, and select **An image**.
 2. Choose **Choose from library**. Click any picture.
-3. Look at the **Your avatar** section and at `<data>\avatars`, without pressing anything else.
+3. Look at the profile card, at `<data>\avatars` and at `<data>\avatars.json`, without pressing anything else.
+4. Read the commit button at the bottom of the **Avatar** window, then press it.
+5. Look at the profile card, at `<data>\avatars` and at `<data>\avatars.json` again. Do not press the tab's own **Save** under the fields.
 
 **Pass if — all of these**
 
-- The avatar now shows the picked picture.
-- One new file appears in `<data>\avatars`, with no **Save** pressed.
+- After step 3 the **Avatar** window's preview shows the picked picture, while the profile card still shows the old avatar, no file has been added to `<data>\avatars`, and `avatars.json` is unchanged.
+- The commit button reads **Save**, not **Apply**.
+- After step 5 the **Avatar** window has closed, the profile card shows the picked picture, one new file is in `<data>\avatars`, and `avatars.json` holds an `image` entry under the Human's Name, with no other button pressed.
 
 **Fail if — any of these**
 
-- The picture does not change until a second button is pressed -> the page is not writing on pick as its upload does.
+- A file appears in `<data>\avatars`, or `avatars.json` changes, before the window's **Save** -> the pick is writing on its own, as the removed Appearance editor did.
+- The button reads **Apply**, or nothing is written after **Save** until the tab's own **Save** under the fields is pressed -> the Profile tab opened the editor in deferred mode.
 
 ### AVATARLIB-20 — A malformed `master.json` shows the unreadable message and one warning (L14, M5)
 
@@ -560,7 +564,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with the library configured.
-2. Open **New teammate**, click the avatar, select **An image**, and press **Choose from library**.
+2. Open **New agent**, click the avatar, select **An image**, and press **Choose from library**.
 3. Read the dialog. Read the app console for the warning.
 4. Stop the app, restore `master.json` from `master.json.good`, and start again.
 
@@ -596,7 +600,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open the picker from **New teammate**: click the avatar, select **An image**, and press **Choose from library**.
+1. Open the picker from **New agent**: click the avatar, select **An image**, and press **Choose from library**.
 2. Read the count line, then read the console once the dialog has opened.
 3. Note how many warnings were logged for the read.
 4. Stop the app, restore `master.json` from `master.json.good`, delete `fake.svg`, and restart.
@@ -669,7 +673,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - The picker appears in front, the **Avatar** window and the card are dimmed behind it, and Tab cycles only within the picker.
 - The first Escape closes only the picker, and the **Avatar** window remains open with its state.
 - The X button and the backdrop click each close only the picker, leaving the **Avatar** window open and unchanged.
-- The second Escape closes only the **Avatar** window, and the third closes the card at once. Neither has an unsaved-changes prompt (`TeammateCard.Options` and `AvatarEditorDialog.Options` set only `CloseOnEscapeKey`).
+- The second Escape closes only the **Avatar** window, and the third closes the card at once. Neither has an unsaved-changes prompt (`AgentProfileCard.Options` and `AvatarEditorDialog.Options` set only `CloseOnEscapeKey`).
 
 **Record, not a pass criterion**
 
@@ -718,46 +722,46 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 - A broken picture appears for a file that exists in the folder -> the mount, the file name or the `master.json` entry for it is wrong. Record the file name.
 
-### AVATARLIB-25 — On Settings → Appearance, a half-made choice is not undone by the avatar store's own file-watcher echo
+### AVATARLIB-25 — On Settings → Profile, a half-made choice in the Avatar window stays chosen, and an outside edit still reaches the card
 
 **Free** · about 5 min
 
-*Proves that choosing **An image** or **A short label** on the Appearance page, before any image or text exists, stays chosen. The avatar store watches `avatars.json` and raises a second change event a moment after the page's own save; the page used to treat that echo as an outside edit and snap the choice back to **Initials of the name**, which hid the library button.*
+*Proves that choosing **An image** or **A short label** in the **Avatar** window opened from the Human's profile card, before any image or text exists, stays chosen while the window is open; that the window's **Save** is what writes the pick; and that a hand edit of `avatars.json` still repaints the card. The old inline editor on the Appearance tab saved on every choice and once snapped back to **Initials of the name** on the avatar store's file-watcher echo of its own save, which hid the library button; the window writes nothing until **Save**, so there is no echo to snap it back.*
 
 **Before you start**
 
-- The Human has no avatar of their own: in `<data>`, `avatars.json` has no entry under the Human's Name (`You` by default), or does not exist. If it has one, choose **Initials of the name** first so the entry is removed.
-- The app is running with the library configured, and **Settings → Appearance** is open.
+- The Human has no avatar of their own: in `<data>`, `avatars.json` has no entry under the Human's Name (`You` by default), or does not exist. If it has one, open the **Avatar** window from the profile card, choose **Initials of the name** and press **Save** first so the entry is removed.
+- The app is running with the library configured, and **Settings → Profile** is open.
 
 **Steps**
 
-1. In the **Your avatar** section, select **An image**. Do not press anything else.
-2. Wait a full 5 seconds, watching the radio buttons and the buttons below them. The echo arrives well inside that time.
+1. Click the avatar on the profile card (**Change avatar**) to open the **Avatar** window. Select **An image**. Do not press anything else.
+2. Wait a full 5 seconds, watching the radio buttons and the buttons below them, and look at `<data>\avatars.json`.
 3. Select **A short label**. Again wait 5 seconds without typing.
-4. Select **An image** once more, then choose **Choose from library** and click any picture.
-5. Reload the page and look at the **Your avatar** section.
-6. With the page open, edit `<data>\avatars.json` by hand: replace the whole `You` entry with `"You": { "label": "AB" }` (so it no longer has an `image`), and save the file. Wait a few seconds.
-7. Undo the hand edit (restore the entry you replaced, or choose **Initials of the name** on the page).
+4. Select **An image** once more, then choose **Choose from library**, click any picture, and press **Save** in the **Avatar** window.
+5. Reload the page and read the profile card. Click its avatar, read which choice the **Avatar** window has selected, and press **Cancel**.
+6. With the page open, edit `<data>\avatars.json` by hand: replace the whole `You` entry with `"You": { "label": "AB" }` (so it no longer has an `image`), and save the file. Wait a few seconds and read the profile card. Click its avatar, read the **Avatar** window, and press **Cancel**.
+7. Undo the hand edit (restore the entry you replaced, or choose **Initials of the name** in the **Avatar** window and press **Save**).
 
 **Pass if — all of these**
 
-- After step 1 and the wait, **An image** is still selected, and both **Choose an image** and **Choose from library** are still shown.
+- After step 1 and the wait, **An image** is still selected, both **Choose an image** and **Choose from library** are still shown, and `avatars.json` has not changed.
 - After step 3 and the wait, **A short label** is still selected and its text box is still shown.
-- After step 4 the picked picture is the Human's avatar.
-- After the reload the picked picture is still shown, and **An image** is the selected choice.
-- After step 6 the page switches to **A short label** with `AB` in the box, so a genuine outside edit is still honoured. (An entry that keeps its `image` would stay on **An image**: the page seeds Image first, `Appearance.razor:275`.)
+- After step 4 the **Avatar** window closes and the picked picture is the Human's avatar on the profile card.
+- After the reload the card still shows the picked picture, and the **Avatar** window opens with **An image** selected.
+- After step 6 the profile card shows `AB` without a reload, and the **Avatar** window opens on **A short label** with `AB` in the box, so a genuine outside edit is still honoured.
 
 **Fail if — any of these**
 
-- The radio returns to **Initials of the name** within a second or two of selecting **An image** or **A short label** -> the page is re-seeding from the store's echo of its own save. Note which option and how long it took.
-- The library button is never visible on this page unless an image already exists -> the same defect, seen from the outside.
-- The page stays on **An image** after step 6 -> the guard has swallowed a genuine outside edit.
+- The radio returns to **Initials of the name** within a second or two of selecting **An image** or **A short label** -> the window is re-seeding from the avatar store while it is open. Note which option and how long it took.
+- `avatars.json` changes before **Save** in step 4 -> the window is writing on each choice, as the removed Appearance editor did.
+- The card keeps the old avatar after step 6 until a reload, or the window opens on **An image** -> the Profile tab is not following the avatar store's changes.
 
 ### AVATARLIB-26 — A library file that vanishes before the pick: "That image could not be read."
 
 **Free** · about 8 min
 
-*Proves that when the chosen file cannot be read at the pick, the card and the Appearance page show a red error and set nothing (specification §6.7.3 and §6.8, last row).*
+*Proves that when the chosen file cannot be read at the pick, the **Avatar** window, opened from an Agent card or from the Human's own profile card, shows a red error and sets nothing (specification §6.7.3 and §6.8, last row).*
 
 **Before you start**
 
@@ -769,15 +773,15 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 2. In File Explorer, rename `cook_brown_f_01.png`, `cook_tan_f_01.png` and `cook_tan_m_01.png` in the library folder to the same names with `.bak` added. Leave the dialog open. The thumbnails stay visible because the browser has already loaded them.
 3. Click any of the three pictures.
 4. Read the **Avatar** window, and look at `<data>\avatars`.
-5. Cancel the **Avatar** window and the card. Open **Settings → Appearance**, select **An image** in **Your avatar**, choose **Choose from library**, filter to **Tan** and **Cook**, and click any picture.
-6. Read the section, and look at `<data>\avatars`.
+5. Cancel the **Avatar** window and the card. Open **Settings → Profile**, click the avatar on the profile card (**Change avatar**), select **An image** in the **Avatar** window, choose **Choose from library**, filter to **Tan** and **Cook**, and click any picture.
+6. Read the **Avatar** window and the profile card, and look at `<data>\avatars`. Then press **Cancel** in the **Avatar** window.
 7. Rename the three files back.
 
 **Pass if — all of these**
 
 - After step 3 the dialog closes, and a red alert in the **Avatar** window reads `That image could not be read.`
 - The **Avatar** window does not show `New image selected (not yet saved)`, and `<data>\avatars` has the same number of files as before.
-- After step 5 the **Your avatar** section shows the same red alert, the avatar does not change, and no file is added to `<data>\avatars`.
+- After step 5 the **Avatar** window opened from the profile card shows the same red alert, the profile card's avatar does not change, and no file is added to `<data>\avatars`.
 
 **Fail if — any of these**
 
@@ -803,15 +807,15 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 5. Press **Edit**, then click the avatar. Read the last button and the line under the preview. Select **A short label**, type `CD`, and press **Apply**. Read the card's avatar and `<data>\avatars.json`.
 6. Press **Cancel** on the card. Reopen `Library Test` and read its avatar.
 7. Press **Edit**, click the avatar, press **Cancel** in the window and read the card's avatar. Click the avatar again and press Esc. Click it again and click the dimmed area outside the window.
-8. Close the card. Choose **New teammate** and read the card's avatar before touching anything. Close the card and choose **New teammate** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
+8. Close the card. Choose **New agent** and read the card's avatar before touching anything. Close the card and choose **New agent** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
 9. Put `Library Test` back: open it, click the avatar, select **Initials of the name** and press **Save**.
 
 **Pass if — all of these**
 
-- The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`.
+- The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`. A text button `Edit avatar…` under it opens the same window.
 - The window is titled `Avatar` and offers `Initials of the name`, `A short label` and `An image`. The **Background** palette of swatches (no text field, no dropdown, and no **Use the theme colour** button) shows under Initials and under Label, and not under **An image**. The preview follows what you type and the swatch you press.
 - In View the last button reads **Save**, and `avatars.json` holds `AB` for `Library Test` as soon as you press it, with no Save on the card.
-- In Edit the last button reads **Apply**, with `Written when you save the teammate.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.
+- In Edit the last button reads **Apply**, with `Written when you save the agent.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.
 - **Cancel** and Esc leave the card's avatar unchanged. A click on the dimmed area outside the **Avatar** window does nothing.
 - In Create, the avatar opens already showing initials on a coloured background, and the three openings do not all show the same colour. Open the **Avatar** window on one of them and the matching swatch is highlighted. After Apply the card's avatar shows the picked picture, scaled to fill the circle, and after Cancel on the card `<data>\avatars` holds the same number of files as before.
 
@@ -834,7 +838,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Steps**
 
-1. Open **New teammate**, click the avatar to open the **Avatar** window, and select **An image**.
+1. Open **New agent**, click the avatar to open the **Avatar** window, and select **An image**.
 2. Read the buttons, then press **Choose from library** and read the count line.
 3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json`.
 4. Close the windows and the card without saving.
@@ -850,8 +854,8 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - No library button appears with `Dir` unset -> the bundled library is not found beside the app (`AvatarLibraryLocator.BundledDir`), or the build did not copy it (`Huddle.App.csproj`, the `AvatarLibrary` content item).
 ## Cleanup
 
-1. Delete `Library Test` from `/teammates`.
-2. Delete any file this area added to `<data>\avatars` that no Teammate or the Human uses.
+1. Delete `Library Test` from `/agents`.
+2. Delete any file this area added to `<data>\avatars` that no Agent or the Human uses.
 3. In your copy of the library, restore `master.json` if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`. Then delete the copy (`E:\tmp\avatar-library`). Confirm `git status` shows nothing changed under `src\Huddle.App\AvatarLibrary`.
 4. Clear `Team__AvatarLibrary__Dir` in the shell you used, so the next run uses the bundled library.
 5. Stop the app and restore the [§0.4](../manual-tests.md#04-rollback) backup if the area ran in a state you want to keep.

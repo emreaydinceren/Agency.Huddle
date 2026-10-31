@@ -1,0 +1,217 @@
+@implements IDisposable
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Pipes
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject ChatService Chat
+@inject RoomEvents Events
+@inject PersonaStore Personas
+@inject AvatarStore Avatars
+
+<div class="invite-agent">
+    <MudTooltip Text="Invite agent" Placement="Placement.Start">
+        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Invite agent" OnClick="this.TogglePanel" />
+    </MudTooltip>
+    <MudCollapse Expanded="@this.isOpen">
+        <MudStack Class="invite-panel pa-2" Spacing="2">
+            <MudText Typo="Typo.subtitle2" Class="invite-title">@this.PanelTitle</MudText>
+            @if (this.errorText is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.errorText</MudAlert>
+            }
+            else if (this.infoText is not null)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" role="status">@this.infoText</MudAlert>
+            }
+
+            @if (this.candidates.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="empty-state">Every agent is already in this room.</MudText>
+            }
+            else
+            {
+                @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
+                   has no Teams at all, so it only ever shows up under "All teams" - narrowing this
+                   filter to a real Team simply never matches it, with no special case needed. *@
+                <MudSelect T="string" Variant="Variant.Outlined" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Margin="Margin.Dense" Class="mb-4">
+                    <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+                    @foreach (var team in this.Personas.Teams)
+                    {
+                        <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <SearchField Compact="true" Value="@this.search" ValueChanged="this.OnSearchChanged" Placeholder="Search agents" AriaLabel="Search agents" />
+
+                var filtered = this.FilteredCandidates();
+
+                if (filtered.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="empty-state">@(this.NoMatchText)</MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="1" Class="invite-agents">
+                        @foreach (var agent in filtered)
+                        {
+                            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
+                            var name = agent.Name;
+                            <MudButton Size="Size.Small" Variant="Variant.Text" FullWidth="true" Class="invite-agent-option" OnClick="@(() => this.InviteAsync(name))">
+                                <AgentLabel Name="@name" State="status.State" Avatar="this.Avatars.Get(name)" />
+                            </MudButton>
+                        }
+                    </MudStack>
+                }
+            }
+        </MudStack>
+    </MudCollapse>
+</div>
+
+@code {
+    /// <summary>The Room an Agent is invited into.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    /// <summary>The Room's name, which the panel's title repeats ("Invite to Platform"); empty draws a bare "Invite".</summary>
+    [Parameter]
+    public string? RoomName { get; set; }
+
+    /// <summary>The panel's title: "Invite to {Room}", so the panel says where the agent is going (audit C3a).</summary>
+    private string PanelTitle => string.IsNullOrWhiteSpace(this.RoomName) ? "Invite" : $"Invite to {this.RoomName}";
+
+    /// <summary>What the list says when the Team filter or the search leaves no agent.</summary>
+    private string NoMatchText => string.IsNullOrWhiteSpace(this.search) ? "No agents in this team." : "No agent matches that search.";
+
+    private IReadOnlyList<User> candidates = [];
+    private string? loadedRoomId;
+    private bool isOpen;
+    private string? errorText;
+    private string? infoText;
+    private string selectedTeam = string.Empty;
+    private string search = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        // Switching Rooms must not carry the previous Room's panel state across, the same reason
+        // Agents.razor holds the card's draft text in the parent.
+        this.loadedRoomId = this.RoomId;
+        this.isOpen = false;
+        this.search = string.Empty;
+        this.errorText = null;
+        this.infoText = null;
+        await this.LoadCandidatesAsync();
+    }
+
+    public void Dispose()
+    {
+        // The hub is a singleton: a component that does not unsubscribe here never dies.
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private void TogglePanel()
+    {
+        this.isOpen = !this.isOpen;
+        if (!this.isOpen)
+        {
+            this.errorText = null;
+            this.infoText = null;
+        }
+    }
+
+    private async Task InviteAsync(string agentName)
+    {
+        this.errorText = null;
+        this.infoText = null;
+
+        try
+        {
+            // The same call the /invite command and mcp__team__invite_agent make, so a Room is
+            // renamed after its Agents however the Invitation was issued.
+            var room = await this.Chat.InviteAsync(this.RoomId, agentName);
+            this.infoText = $"Invited {agentName}. Room is now \"{room.Name}\".";
+        }
+        catch (ChatException ex)
+        {
+            this.errorText = ex.Message;
+        }
+
+        await this.LoadCandidatesAsync();
+    }
+
+    /// <summary>Loads the Agents that are not already Members of this Room.</summary>
+    private async Task LoadCandidatesAsync()
+    {
+        if (string.IsNullOrEmpty(this.RoomId))
+        {
+            this.candidates = [];
+            return;
+        }
+
+        var users = await this.TeamDirectory.GetUsersAsync();
+        var members = await this.TeamDirectory.GetRoomMembersAsync(this.RoomId);
+        var memberIds = members.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+
+        this.candidates = [.. users.Where(u => u.Kind == UserKind.Agent && !memberIds.Contains(u.Id))];
+    }
+
+    // Never touches PersonaStore's write path or ModelCatalog - selecting a team is pure display
+    // narrowing over candidates already loaded.
+    private void OnSearchChanged(string? value)
+    {
+        this.search = value ?? string.Empty;
+    }
+
+    private void OnTeamFilterChanged(string value)
+    {
+        this.selectedTeam = value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Narrows <see cref="candidates"/> to the selected Team, matched against whichever Persona (if
+    /// any) shares that Agent's Name - an Agent with no matching Persona has no Teams, so it can
+    /// only ever appear here when <see cref="selectedTeam"/> is blank ("All teams").
+    /// </summary>
+    private IReadOnlyList<User> FilteredCandidates()
+    {
+        IEnumerable<User> matches = this.candidates;
+        if (!string.IsNullOrEmpty(this.selectedTeam))
+        {
+            matches = matches.Where(agent => this.TeamsFor(agent).Contains(this.selectedTeam, StringComparer.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(this.search))
+        {
+            matches = matches.Where(agent => agent.Name.Contains(this.search.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        return [.. matches];
+    }
+
+    /// <summary>The Teams of whichever Persona shares <paramref name="agent"/>'s Name, or empty when no Persona does.</summary>
+    private IReadOnlyList<string> TeamsFor(User agent)
+    {
+        var entry = this.Personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, agent.Name, StringComparison.Ordinal));
+        return entry?.Teams ?? [];
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            await this.LoadCandidatesAsync();
+            this.StateHasChanged();
+        });
+    }
+}

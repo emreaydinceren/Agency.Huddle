@@ -1,11 +1,14 @@
 /* The indicator and the wrapper are this component's own markup, so they stay scoped. The rules that reach
    MudBlazor's toggle group are in app.css, section "Segmented control". */
+/* The track is a tint of the theme's own text on its surface, like the tab strip, rather than BackgroundGray: that
+   palette slot is a warm grey in Huddle Light that matches nothing else on the surface, and several VS Code themes set
+   it to their page colour, where the track vanished. */
 .huddle-segmented-control {
     position: relative;
     display: inline-flex;
-    background-color: var(--mud-palette-background-gray);
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
     border-radius: var(--mud-default-borderradius);
-    padding: 0.25rem;
+    padding: 4px;
 }
 
 .huddle-segmented-indicator {
@@ -14,7 +17,7 @@
     bottom: 0.1875rem;
     left: 0.1875rem;
     background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
+    border: 1px solid var(--hu-line-control);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
     box-shadow: var(--mud-elevation-1);
     transition: transform 120ms ease;

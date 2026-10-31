@@ -49,7 +49,7 @@ kept per Room. An edit is listed in every Room except the one it was made in.
 
 **An Agent's own edits are recognised from its own tool calls.** At Turn end, that Room's
 baseline becomes the **start** scan, plus the current state of only the paths this Agent's
-`Edit`, `Delete` and `Move` tool calls touched during the Turn. A Teammate's write during the same
+`Edit`, `Delete` and `Move` tool calls touched during the Turn. An Agent's write during the same
 Turn is not taken in, and is listed next time. A change made through `Bash` isn't attributed, and
 comes back as one extra line: never a missed change.
 
@@ -73,7 +73,7 @@ half-remember. If sessions ever become one per (Persona, Room), the list becomes
 instance learns what another wrote. Nothing in this design changes.
 
 **A Watched Folder is** the Agent's own Work Dir, always; each entry in the Persona's `watches`
-frontmatter; and each folder the Agent passed to `watch_folder`. An entry is a Teammate's Name,
+frontmatter; and each folder the Agent passed to `watch_folder`. An entry is an Agent's Name,
 meaning their Work Dir, or a folder inside `DataDir`.
 
 **Each line is a kind and a full path:** `added`, `changed` or `deleted`. No contents, no diff and
@@ -100,7 +100,7 @@ folders and a file cap keep small.
 | Diffs or file contents in the prompt | Tokens on every Turn for files the Agent may not need |
 | Forgetting `watch_folder` on restart, like `follow_room` | The list would silently stop, and its snapshot would go stale |
 | One baseline per Agent, and never list its own edits | Hides the main use case: Nova's edit in one Room is exactly what its other Rooms need to hear |
-| Rescan at Turn end to take in the Agent's own edits | Also takes in any Teammate's write made during the Turn, which would then never be listed |
+| Rescan at Turn end to take in the Agent's own edits | Also takes in any Agent's write made during the Turn, which would then never be listed |
 | A `remember` App Tool, or Claude Code's auto-memory, as the memory | The tool duplicates the Agent's own `Write` and hides memory from the Human. Auto-memory sits in the Human's profile, outside `DataDir`, where Huddle cannot see or move it |
 | One `memory.md` per Agent | Every copy of the Agent would rewrite one file; one fact per file never collides |
 

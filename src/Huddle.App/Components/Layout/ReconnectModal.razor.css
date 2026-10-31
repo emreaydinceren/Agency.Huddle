@@ -26,8 +26,8 @@
     background-color: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     width: 20rem;
-    margin: calc(20vh / 0.9) auto;
-    padding: 2rem;
+    margin: 20vh auto;
+    padding: 32px;
     border: 0;
     border-radius: var(--mud-default-borderradius);
     box-shadow: var(--mud-elevation-8);
@@ -81,7 +81,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 16px;
 }
 
 #components-reconnect-modal p {
@@ -93,7 +93,7 @@
     border: 0;
     background-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary-text);
-    padding: 0.25rem 1.5rem;
+    padding: 4px 24px;
     border-radius: var(--mud-default-borderradius);
 }
 

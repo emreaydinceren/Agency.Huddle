@@ -1,13 +1,32 @@
 # Known limits
 
 What is absent on purpose. Read it before "fixing" something that looks missing
-and before filing a bug: most entries below are decisions, four are known flakes,
+and before filing a bug: most entries below are decisions, five are known flakes,
 and one is a known bug left in place deliberately. Do not treat any of them as
 oversights or quietly add them.
 
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **A pipe client can receive a Message whose sender is not in the delivery's `members` list.** A Message Huddle wrote itself
+  (the wake-up after a Helper's change, [ADR-0065](../adr/0065-huddle-posts-as-itself.md)) carries the sender id `huddle`,
+  which is never a Room Member. The protocol version is unchanged, and a client that looks the sender up in `members` must
+  handle a miss, as it already must for a sender who has left the Room.
+- **`DebouncedFileWatcherTests.Burst_OfWrites_ProducesOneSettledCallbackAfterTheBurstEnds` can fail once under the full parallel
+  suite** (it saw a second callback on 2026-10-20 and passed three runs alone). It is timing-sensitive on a loaded machine and
+  already skips when it sees a stall of a whole debounce window; a failure there with no change in `Watching/` is this, not a regression.
+- **A document's History is what its editors reported.** An Agent adds to it by calling `log_change`, and nothing checks
+  that the document changed or that every change was logged: only the tool's description asks an Agent to call it.
+  Edits made outside Huddle are not recorded, and an Agent renamed later keeps its old Name on earlier entries
+  ([ADR-0060](../adr/0060-a-documents-history-is-what-its-editors-report.md)). How often real Agents call the tool is
+  measured by the paid probe (`TEAM_E2E_DOCHISTORY=1`, `tests/Huddle.Tests.Agents/Live/DocHistory/`), on Haiku at low Effort,
+  5 runs per scenario. With the tool description alone, 0 of 35 runs logged. With the description, a system prompt
+  paragraph and a Stop hook that sends the Agent back once after it touched a Markdown file, the 2026-10-19 rates were
+  5 of 5 on every scenario: create, edit two files, review, object, no invented actor, asked outright, and (correctly) no
+  call for a summary or a non-Markdown file. Haiku at low Effort is the hardest case the spec allows, but a Sonnet or
+  Opus Agent, or an Adapter that does not run Claude Code hooks, is unmeasured, and a Turn that changes a document with
+  `Bash` rather than `Write` or `Edit` is not seen by the hook. The links Huddle rewrites in other notes when a note is renamed or moved are
+  not recorded in those notes' Histories, on purpose: the Human did not edit them.
 - **A bare address-bar URL is not a reference.** Pasting `http://localhost:5100/rooms/<id>` opens the Room, but it is not recognised as a reference: no reference chip, no snapshot, no Referenced items line. Recognising it needs the app's own origin, and is planned for a later version ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) §6.1).
 - **A renamed or moved Library file shows as unavailable.** A reference is stored by path, so a Library file renamed or moved in the Library shows the unavailable chip in chat. It is not followed to its new place ([ADR-0055](../adr/0055-a-reference-is-text-with-a-stable-key.md), [the references design](../Huddle.AtTagging-Specifications.md) D-8). A Task's status change is not flagged, and a Team is linked by its Name: a Team folder renamed by hand makes its Team links unavailable.
 - **A label typed by hand still mentions.** A reference's label is text. A hand-edited `[@Nova](/rooms/…)` puts a real `@Nova` in the Message, and Nova is Mentioned exactly as if `@Nova` were typed. Picker labels never contain a live `@`, so only a typed one does ([the references design](../Huddle.AtTagging-Specifications.md) §6.1).
@@ -30,13 +49,13 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     measured 2026-10-01, an image cost about 1,000 tokens however many megabytes it was.
   - **Limits fall back to the path line, with an Information log line and nothing on screen.** An image
     over 3 MiB, 8,000 px on a side, four per Turn or 8 MiB per Turn is sent as its path only. The Human
-    is not told in the Room; the Teammate's reply may say it could not see it.
+    is not told in the Room; the Agent's reply may say it could not see it.
   - **`TraceWire` logs the base64.** With `Team:Acp:TraceWire` on, an image is written into the log in
     full. Leave it off unless debugging a wire problem.
   - **A corrupt image does not fail the Turn.** The Adapter removes it from the conversation and the
     model says so (V-4); the image is not retried and cannot reappear, because only that Message sends it.
 - **Adapter commands are built, and here is what they do not cover.** The Human can run
-  `@Nova /compact` on a Teammate, and the Teammate says what it did —
+  `@Nova /compact` on an Agent, and the Agent says what it did —
   [ADR-0035](../adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md),
   [the design](../Huddle.Commands-Specifications.md). Five gaps are deliberate:
   - **One command, one Adapter.** Only `compact` is allowed, and only on the synthesised Claude
@@ -52,14 +71,14 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     move, and the token Budget sees the context fall and then takes the next update as its baseline.
     The price is a small **undercount**: the first ordinary Turn's own new tokens after a compaction
     are absorbed into that baseline. The alternative was a 40,000-token overcount per compaction.
-  - **The list is empty until the Adapter's first update.** Straight after a restart, or before a
-    Teammate has connected, `@Nova /compact` is an ordinary Message, sent as text the Adapter does not
+  - **The list is empty until the Adapter's first update.** Straight after a restart, or before an
+    Agent has connected, `@Nova /compact` is an ordinary Message, sent as text the Adapter does not
     read as a command. The update normally arrives within a second or two of the first Room Session.
   - **Two live checks have not run.** Whether Stop interrupts a compaction in flight (V-4), and the
     whole path in the real app (V-2), are deferred to user acceptance — see
     [manual-tests/adapter-commands.md](manual-tests/adapter-commands.md).
 - **Turn detail and Spend are built, and here is what they do not cover.** A Draft
-  shows its recent tool calls, an edit opens to an Edit preview, and a Teammate's card
+  shows its recent tool calls, an edit opens to an Edit preview, and an Agent's card
   shows what its Adapter has reported spending — [ADR-0034](../adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md),
   [Roadmap](roadmap.md) item 21, [the design](../Huddle.TurnDetail-Specifications.md).
   Four gaps are deliberate:
@@ -92,10 +111,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - ~~**The token Budget is silent.**~~ **Closed 2026-09-13.** It is per Persona,
     so it still has no per-Room surface and no Continue prompt, but it no longer
     only writes to the log: a Persona that has spent it reads as Degraded on the
-    Teammate tile, with the reason — exactly where this entry predicted the honest
+    Agent tile, with the reason — exactly where this entry predicted the honest
     home was. See [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md).
   - **A Room now says why it stayed quiet, and here is what that still does not
-  cover.** A Message naming no Teammate, and a **Continue** that wakes nobody, are
+  cover.** A Message naming no Agent, and a **Continue** that wakes nobody, are
   both explained in the Room view now — [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md).
   Three gaps are deliberate:
   - **The note does not survive a reload.** It describes what one delivery meant, not
@@ -103,9 +122,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     *now* and would re-explain old Messages under rules that were not in force when
     they were sent. The next Message re-evaluates, and `PersonaRunner` now writes the
     context-only line to the log, which it did not before.
-  - **A Room whose Teammates are all Offline or Degraded still explains nothing.** An
+  - **A Room whose Agents are all Offline or Degraded still explains nothing.** An
     unreachable Agent is not a recipient, so such a Room resolves to `NoRecipients` and
-    renders no note — which keeps the note from telling the Human to name a Teammate
+    renders no note — which keeps the note from telling the Human to name an Agent
     that cannot answer, but leaves that silence unexplained. Deliberate: shipping a
     wrong instruction was not an acceptable way to avoid it.
   - **The note reports a label, not an outcome.** The Reply Gate is client-side and is
@@ -135,7 +154,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     Budget is what bounds that, which is why ADR-0005 made item 2 a hard prerequisite
     rather than a companion improvement.
   - **The Human cannot see who is following what.** There is no surface for it anywhere —
-    not the Room view, not the Teammate card. A Room that is quietly spending its Budget
+    not the Room view, not the Agent card. A Room that is quietly spending its Budget
     on a follower reads exactly like one that is not.
   - **A coordinator that forgets to call `follow_room` stalls silently**, which is the
     residual risk ADR-0005 names and accepts. No test can catch it: the suite answers
@@ -201,8 +220,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     `Move`, is not attributed to the Agent.** It comes back as an ordinary listed line on the
     Agent's own next Turn, in every Room including the one it was made in. An extra line, never
     a missed change — parsing shell commands for paths risks wrongly claiming another
-    Teammate's change instead.
-  - **Two Teammates editing the same file in the same Turn:** the other Teammate's change is
+    Agent's change instead.
+  - **Two Agents editing the same file in the same Turn:** the other Agent's change is
     taken in with this Agent's own commit and is not listed in this Room. Needs two writers on
     one file within one Turn, and the Agent has just had the file open regardless.
   - **A tool that preserves a file's old size and modified time is not listed.** Editors and
@@ -255,12 +274,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Its own limits are below.
 - **Authentication and authorisation.** None, by design, at this stage.
 - **More than one Human.** The data model allows it; the seeding and UI do not.
-  When it arrives, `/teammates` is already named correctly for it — add a filter
+  When it arrives, `/agents` is already named correctly for it — add a filter
   toggle rather than a second page.
-- **Renaming a Teammate now carries the whole Teammate with it**, and what
+- **Renaming an Agent now carries the whole Agent with it**, and what
   remains absent is narrower than it was. [Roadmap](roadmap.md) item 10 made a
   rename an edit to one frontmatter field; item 1's cascade landed 2026-09-15
-  ([ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md)). The
+  ([ADR-0011](../adr/0011-a-rename-moves-the-agent-not-its-history.md)). The
   Agent's row is renamed **in place, keeping its id**, so the Rooms, the
   memberships and the Transcripts follow; the Model and Effort rows move; the
   Work Dir moves; and Rooms still carrying an auto-derived name are re-derived
@@ -280,7 +299,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     a warning rather than failing the rename.
 - **Removing a Persona still does not cascade**, and that is unchanged and
   deliberate — see the entry below on `PersonaStore`. A removal means the
-  Teammate is gone, so its Rooms and Transcripts are chat facts that outlive it;
+  Agent is gone, so its Rooms and Transcripts are chat facts that outlive it;
   a rename means it is still here under another Name, which is why the same
   no-cascade rule read as correct for one and as a bug for the other.
 - **A Room keeps auto-naming itself until somebody renames it, and that is
@@ -293,12 +312,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   accepted cost is one invisible edge: rename a Room to precisely the name
   auto-naming would have chosen and it stays auto-named, so the next Invitation
   re-derives over it. Nothing observable distinguishes the two states.
-- **Two live 1:1 Rooms with the same Teammate are reachable, since 2026-09-21.**
+- **Two live 1:1 Rooms with the same Agent are reachable, since 2026-09-21.**
   Archiving a Room excludes it from `FindRoomWithExactMembersAsync`, so starting a
-  chat with that Teammate creates a fresh Room rather than resurrecting the
+  chat with that Agent creates a fresh Room rather than resurrecting the
   archived one — a deliberate choice, recorded in
   [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md). Unarchive the first
-  one afterwards and two non-archived Rooms now hold exactly `{Human, Teammate}`,
+  one afterwards and two non-archived Rooms now hold exactly `{Human, Agent}`,
   both named by `RoomNaming.Derive` and therefore identical in the sidebar.
   [ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
   one-two-Member-Room-per-Agent invariant no longer holds in that case. Nothing
@@ -321,7 +340,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   on a running session.
 - **No live mid-session Effort switching.** Restart-on-change is the only
   mechanism, exactly like the Model and the system prompt it already applies to.
-- **The Teammate card shows the stored Effort, not the session's live
+- **The Agent card shows the stored Effort, not the session's live
   `currentValue`.** If the adapter clamps a requested level back to
   `"default"`, the card will not say so — it only ever reads back what
   `PersonaEffortStore` has on file.
@@ -331,7 +350,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   A deliberate deviation from `acp-session-config.md`'s "caching across spawns is
   not fine", which protects selection rather than presentation.
 - **That probe runs even with `Team:Acp:Enabled` false.** Opening a New/Edit
-  teammate card, and changing its Model select, spawns a throwaway Adapter
+  agent card, and changing its Model select, spawns a throwaway Adapter
   regardless of the money flag — see [Rules](rules.md). It spends nothing,
   because it never starts a Turn; the flag exists for the thing that does.
   Gating the probe on `Acp:Enabled` would leave the picker empty in the default
@@ -385,7 +404,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   deleting the Room, and any typed Human Message in it, drop the card on purpose.
   Deliberate for V1: persisting it would mean a table and a recovery path for a card
   the Human can answer by typing. Since 2026-10-01 `ask_human` is no longer the only way a Claude
-  Teammate asks: Huddle advertises `elicitation.form` (`Acp:AdvertiseElicitation`), so the Adapter's
+  Agent asks: Huddle advertises `elicitation.form` (`Acp:AdvertiseElicitation`), so the Adapter's
   built-in `AskUserQuestion` works too, as the next entry describes
   ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8, §6.8a).
 - **A waiting form holds its Turn, and its Persona's slot, until it ends.** ACP `elicitation/create`
@@ -401,7 +420,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   list, more than 20 fields or 50 options) is answered `decline` at once and no card appears. The wire trace
   shows the request as `_elicitation/create`, because the host renames it so `dotacp` routes it
   ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8a).
-- **A Claude Teammate does not ask with `ask_human` on its own.** The Claude Adapter defers every
+- **A Claude Agent does not ask with `ask_human` on its own.** The Claude Adapter defers every
   MCP tool: the model sees the name `mcp__team__ask_human` and nothing else until it calls
   ToolSearch, so the description that says when to ask is never read. Measured 2026-10-01 on Haiku:
   given *"Help me plan a workout routine"* it wrote its questions as a list, twice; told to call
@@ -429,8 +448,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Degraded rather than Offline, because the session and the pipe may both be fine
   while the provider refuses.
 - **A Degraded Agent is never restarted automatically.** The Human clicks Restart
-  on the Teammate card. Automatic recovery would need a policy nobody has asked
-  for, and a restart clears what that Teammate remembers.
+  on the Agent card. Automatic recovery would need a policy nobody has asked
+  for, and a restart clears what that Agent remembers.
 - **What a Theme cannot do.** Roadmap item 6's four limits were retired on 2026-09-14
   when theming moved to MudBlazor — see
   [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) — and the list was rewritten
@@ -442,16 +461,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Several of the twenty-one Themes already have a real counterpart in the other mode, so
+    "Sync with OS" work. Every one of the eight Themes has a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
-    preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
-    showed Huddle's palette under Solarized Dark's name.
-  - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
-    (`theme`) and the accent colour (`accentColor`), and nothing else. The Library pane side
+    preference could contradict the Theme, and selecting a dark Theme with `Light`
+    showed Huddle's palette under that Theme's name.
+  - **A Human can customize only the accent.** `appearance.json` holds the Theme ids and
+    `customizations` per Theme (a palette and token override), but the Appearance tab writes
+    only `palette.primary` (**Accent for <Theme>**, with Reset); other keys are for hand edits
+    and the Theme lab, which exports JSON and saves nothing. The Library pane side
     setting was retired 2026-10-10 with the docked pane; a leftover `libraryPaneSide` key in an
     existing file is ignored without a warning and left untouched. The override map, its allowlist and the inline `<style>` are gone.
-    Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
-    item 7's Theme import.
+    Changing another colour permanently means editing a skin file under `Themes/Skins/`
+    and rebuilding, or waiting for item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
     id, leaves the file untouched and falls back to the default Theme — but the
     Appearance tab no longer reports it, because the section that did belonged to the
@@ -461,28 +482,13 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
     window and a phone on the same install all see the same Theme. One Human per
     installation is the assumption it rests on.
-- **What an imported Theme cannot do.** The catalog gained seventeen of Visual Studio
-  Code's bundled Themes on 2026-09-16 — see
-  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
-  Three things about them are worth knowing before reporting a bug:
-  - **A single-mode Theme has no counterpart in the picker.** A VS Code Theme is authored
-    for light *or* dark, so it appears once, under one heading. There is no light Monokai
-    to select: there is no such thing upstream, and deriving one would invent colours
-    nobody designed. Until 2026-09-21 asking for one showed Huddle's light palette instead,
-    which was worse than not offering it
-    ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
-  - **The High Contrast pair is not high contrast.** VS Code draws HC borders throughout
-    from `contrastBorder`, which MudBlazor's palette has no equivalent for. `Dark High
-    Contrast` and `Light High Contrast` land here as strong-contrast ordinary Themes. They
-    are also the most derived of the set: `hc_light.json` carries five colour keys, so
-    eighteen of its twenty slots come from VS Code's own registry defaults. Both sit under
-    the picker's own **High contrast** heading (`ThemeGroup`), not under Light or Dark.
-  - **Three Themes miss the contrast floor, on purpose.** Themes are imported unmodified,
-    so `light-plus` and `quiet-light` (4.40:1) and `solarized-light` (3.98:1) fall just
-    under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
-    measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
-    be deleted rather than leaving a stale excuse behind.
-- **A Teammate chooses its own Avatar, and here is what that does not cover.**
+- **There is no high-contrast Theme.** The seventeen Visual Studio Code ports, including the
+  two High Contrast ones, were removed on 2026-10-17
+  ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
+  superseded; [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) removed the Huddle and
+  Custom Accent pairs). The picker offers the eight Lumen, Fluent, Nordic and Cobalt Soft Themes, and none of them is designed as a high-contrast mode. A Human who
+  stored a removed id in `appearance.json` gets the default Theme and a log warning, not an error.
+- **An Agent chooses its own Avatar, and here is what that does not cover.**
   Initials, a short label or an uploaded image, over a background colour —
   [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md). Six
   gaps are deliberate:
@@ -505,11 +511,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     ignore what cannot be resolved. A deletion made while the app *is* running is
     caught by the watcher and does cascade.
   - **`RoomList` shows no avatar.** A Room is named after *all* its Agent Members and
-    `Room` carries no member list, so no single Teammate is recoverable from a sidebar
+    `Room` carries no member list, so no single Agent is recoverable from a sidebar
     row without a per-row membership query. A wrong face on a Room is worse than none.
   - **After a rename, Messages already posted keep the old Name** — history is never
     rewritten, and `ChatMessage.SenderName` is denormalised — so their avatars fall back
-    to the old monogram while the Teammate's current Name carries the chosen one. The
+    to the old monogram while the Agent's current Name carries the chosen one. The
     Transcript records what was said at the time, faces included.
 - **The avatar library has three limits of its own**
   ([ADR-0044](../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md)).
@@ -520,7 +526,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     button follows `master.json` and appears at once, but its thumbnails stay broken
     until then.
   - **Library images are served unauthenticated, as other avatars are.** The mount is
-    same-origin with no sign-in, the same as `/teammate-avatars`. The library holds
+    same-origin with no sign-in, the same as `/agent-avatars`. The library holds
     illustrations, and nothing in it is personal, but a file placed in the folder is
     visible to anyone who can reach the app.
   - **The app does not resize library images.** Each file must be prepared beforehand
@@ -621,7 +627,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   failing under 40-process load before, 0/200 after.
 - **A fifth flake, seen during the Room Sessions build — DIAGNOSED and fixed 2026-09-24.**
   Three tests failed intermittently under full-suite load. Two were tests asserting before
-  async work landed: `TeammateCardModelEffortTests.ViewMode_ShowsTheChosenModel` (a find-then-click racing
+  async work landed: `AgentProfileCardModelEffortTests.ViewMode_ShowsTheChosenModel` (a find-then-click racing
   the page's SQLite-backed completion render) and `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`
   (reading the Turn-failure report straight after the far-side cancel, which precedes it).
   The third, `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap`, was **a real defect**,
@@ -648,7 +654,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - `PersonaRenameCascadeTests.PersonaRenameCascade_RenamesTaskAssignee` — **fixed**: it seeded its
     Task with a raw file write, an outside edit that `TaskService.OnOutsideEdit` answers with a
     Change log append; when the store's own watcher found it, that append could land between
-    `RenameTeammateCore`'s read and write, fail the version check and skip the rename. It now seeds
+    `RenameAgentCore`'s read and write, fail the version check and skip the rename. It now seeds
     through `TaskStore.Create`.
   - `TeamPagesEndToEndTests.CatalogFlags_FolderWithoutMembers_AndLabelWithoutFolder` — **fixed**
     (11/16 loaded runs failing): `TeamFolderProvisioner` creates a folder for every valid Team label,
@@ -713,16 +719,16 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - **Four paid manual tests have not yet been run:** TASKS-10, TASKS-11, TASKS-12 and TASKS-15 —
     see [manual-tests/tasks.md](manual-tests/tasks.md). Deferred to the Human's own user
     acceptance testing, the same way File Changes' and Room Sessions' paid checks are.
-  - **Tests seen flaky under full-suite load during this delivery.** `TeammateCardTests.EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly`
-    and `TeammateCardModelEffortTests.ViewMode_ShowsTheChosenModel` (both then in `TeammateCardTests`) are the fifth flake above, fixed
+  - **Tests seen flaky under full-suite load during this delivery.** `AgentProfileCardTests.EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly`
+    and `AgentProfileCardModelEffortTests.ViewMode_ShowsTheChosenModel` (both then in `AgentProfileCardTests`) are the fifth flake above, fixed
     2026-09-24. `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
     `RoomSessionResumeTests.TurnStoppedAfterActivity_StillStoresEntry` are the same fix, watched
     rather than re-diagnosed. `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine`
-    is the fourth flake above, fixed 2026-09-29. `TeammatesPageTests.TeammatesPage_ATeammateInTwoTeams_AppearsUnderBothHeadings`
+    is the fourth flake above, fixed 2026-09-29. `AgentsPageTests.AgentsPage_AAgentInTwoTeams_AppearsUnderBothHeadings`
     failed twice under full-suite load and was 5/5 green alone each time — **fixed 2026-09-29**, and
-    it was not load at all: it counted the bare substring `Amy` in the raw `/teammates` HTML, and the
+    it was not load at all: it counted the bare substring `Amy` in the raw `/agents` HTML, and the
     Blazor prerender marker's random base64 contains `Amy` about once in a hundred runs. It now
-    counts the name element (`class="teammates-item-name">Amy<`); 3/288 failing before, 0/288 after.
+    counts the name element (`class="agents-item-name">Amy<`); 3/288 failing before, 0/288 after.
 - **Sprints is built, and here is what it does not cover.** A Sprint groups Tasks in time, with a name and no dates, state or screen — see
   [the Sprints spec](../Huddle.Sprints-Specifications.md) and
   [ADR-0037](../adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md). Four gaps are deliberate:
@@ -763,13 +769,48 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **Tabs is built, and here is what it does not cover.** Open Tabs are remembered per browser (two browser tabs on the app share one list, and the last to change wins); the strip scrolls sideways (a Tab is 14rem wide, the same as the widest) and does not scroll the active Tab into view; removing the very last Team leaves its Tab open (an empty Team catalog is read as "not loaded yet"); and editing a Task or saving a setting does not make a preview Tab permanent. See [the Tabs spec](../Huddle.Tabs-Specifications.md) section 8. Version 2 adds one more limit: there are at most two groups (`TabService.MaxGroups`), there is no drag to reorder or to move between groups, and a page that navigates itself while it sits in the unfocused pane (a Room redirecting after it is archived) moves the focused pane, because the router has one location (section 9, ADR-0046).
 
 - **Needs You is in memory, and here is what that costs.** The tracker is a singleton keyed by Room id ([ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md), [the design](../Huddle.NeedsYou-Specifications.md)). After a restart it is rebuilt only from Transcripts, so a Question or Form that was waiting is gone (the stores are in memory too), and **a dismissal is forgotten**: a Room you dismissed comes back if its last unanswered Mention is still within the last 50 Messages. An unanswered Mention older than 50 Messages is not rebuilt. Only an `@` Mention of the Human, a Question, a Form or a spent Budget counts: an Agent's plain reply in a one-to-one Room does not.
-- **Leaving a Team does not leave its Team Room.** No code removes a Room Member today (`ITeamDirectory` has no such call), so a Teammate who leaves a Team stays a Member of that Team's Team Room, and keeps receiving its Messages. Nothing is posted when this happens ([ADR-0052](../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md), [the design](../Huddle.TeamChats-Specifications.md) T4).
+- **Leaving a Team does not leave its Team Room.** No code removes a Room Member today (`ITeamDirectory` has no such call), so an Agent who leaves a Team stays a Member of that Team's Team Room, and keeps receiving its Messages. Nothing is posted when this happens ([ADR-0052](../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md), [the design](../Huddle.TeamChats-Specifications.md) T4).
 - **An existing Project folder named `Uploads` stops being a Project.** `Uploads` is reserved in a Team's folder for files shared in its chats, so `TeamsNav`, `TaskStore` and `TeamCatalog` no longer list a Project of that name. Its files and Tasks stay on disk, and a Project named *Uploads* cannot be created again.
-- **Teams are keyed by name, so renaming a Team folder in Explorer archives its Rooms.** A Team's Rooms are found by its name ignoring case. Renaming the folder makes the old name disappear from the catalog only when no Teammate still carries that name in its `teams:` line; then every Room scoped to it is archived, with its history. The new name gets a new Team Room, and the old Rooms stay under the old name; unarchiving one shows it with *(old name)* after it.
+- **Teams are keyed by name, so renaming a Team folder in Explorer archives its Rooms.** A Team's Rooms are found by its name ignoring case. Renaming the folder makes the old name disappear from the catalog only when no Agent still carries that name in its `teams:` line; then every Room scoped to it is archived, with its history. The new name gets a new Team Room, and the old Rooms stay under the old name; unarchiving one shows it with *(old name)* after it.
 - **Team Memory in a Team chat covers every Team the Persona is in.** A Persona in a Team's chat still gets the Team Memory of every Team it belongs to (`DotAcpPersonaHost.BuildOptions`), not only the Room's Team. Narrowing it to the Room's Team is a later decision.
-- **A Teammate who has never connected joins its Team Room only after it first connects.** Huddle creates a Teammate's User row on its first connection, so a Teammate that was hired but never started is not yet in the Team Room. It is added on the reconciler's next run after that.
+- **An Agent who has never connected joins its Team Room only after it first connects.** Huddle creates an Agent's User row on its first connection, so an Agent that was hired but never started is not yet in the Team Room. It is added on the reconciler's next run after that.
 - **Deleting a Team Room brings it back.** The delete publishes a Room change, and the reconciler recreates an empty Team Room for any Team that still has a member. To stop it, archive the Team Room instead: an Archived Team Room is left alone ([the design](../Huddle.TeamChats-Specifications.md) D-8, D-10).
 - **A reload leaves uploaded files behind with no Message (U13).** Removing a chip deletes its saved file, but a reload with chips pending loses the chips and keeps the files in the Room's folder. Nothing sweeps them; the Human removes them from the Library, and a Room's delete recycles them with its folder. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2 and [ADR-0053](../adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md).
-- **An Adapter without file tools cannot open an attachment (U19).** The Teammate gets the path line of a file the Human attached, such as `brief.pdf`, and cannot read it: the same limit as any Library path the Adapter cannot open. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2.
-- **Later edits to an uploaded file are not announced.** Team Uploads folders are pruned from File Changes scans and the Watched Folder resolver refuses to watch an Uploads folder, so an edit or delete of an uploaded file, by an Agent or the Human, reaches no Teammate. The chat Message is the only notice. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §6.8.
+- **An Adapter without file tools cannot open an attachment (U19).** The Agent gets the path line of a file the Human attached, such as `brief.pdf`, and cannot read it: the same limit as any Library path the Adapter cannot open. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2.
+- **Later edits to an uploaded file are not announced.** Team Uploads folders are pruned from File Changes scans and the Watched Folder resolver refuses to watch an Uploads folder, so an edit or delete of an uploaded file, by an Agent or the Human, reaches no Agent. The chat Message is the only notice. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §6.8.
 - **Unarchiving a Room of a vanished Team lasts until the next restart.** The reconciler archives a vanished Team's Rooms once, and remembers only in memory which ones it archived. A Room the Human unarchives stays in Chats, but a restart archives it again; a Team that returns after a restart does not get its Team Room unarchived.
+- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic skin ([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md), which replaced ADR-0057's style pack) keeps these on purpose:
+  - the TextPrimary focus ring, not the mockup's blue ring;
+  - the type scale, so 17px titles are 16px and 11.5, 12.5 and 13.5px text snaps to 12 and 13px;
+  - the 760px Transcript column;
+  - the 48, 240 and 280px shell widths, not 52, 268 and 304px;
+  - 32px sidebar rows, not 30px;
+  - 28px small buttons, not 26px;
+  - spacing snapped to the 4px scale;
+  - times, counts and row meta in ink-3 rather than the mockup's ink-4, which is TextDisabled at 3.74:1 on the dark ground;
+  - the avatar colour recipe;
+  - a 2px Primary edge on the active Tab;
+  - a visible Divider on rules that carry meaning.
+
+  Nordic's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.
+- **Only the first Huddle to start moves its old Skills into a shared Skill Sources folder.** The move from the old `SkillPacks/` runs only while `SKILLS.md` does not exist. A second Huddle pointed at a folder another one already filled skips it: its Agents keep their copies in `Skills/`, but those Skills' catalog entries show **Not downloaded** on that computer and never **Update available**, until an AI tool adds a path for it (the row's **Copy fix prompt**). Accepted because the copy in `Skills/` is what an Agent uses ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §6.13).
+- **A computer whose name is one letter cannot have a computer line in `SKILLS.md`.** `E: C:\x` reads as a plain entry that is not a path (`R003`), because a computer name is 2 to 15 characters and a drive path such as `E:\x` must never look like one. The JSON object form `{ "E": "C:\\x" }` works, and the move writes a plain path with a warning when `Team:ComputerName` is one letter ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §8.2).
+- **A file linked into a Task is not tracked.** The Task keeps only the path line in its description. If the file is renamed or moved in the Library, the Preview dims the link, and nothing updates the Task. Deleting a path line leaves the uploaded file in `Uploads/Tasks/<ID>/`. See [TaskAttachments](../Huddle.TaskAttachments-Specifications.md).
+- **A bind beyond loopback is plain HTTP.** `tailnet`, `lan`, `auto` in a container and `custom` serve `http`, which Huddle
+  labels downgraded: nothing is encrypted and the page can be altered in transit. Tailscale Serve is the encrypted route.
+- **Strict local means no secret on this computer.** It is on by default. Any program or other user account on the
+  computer can use Huddle without signing in, which is the trust Huddle had before remote access existed. OpenClaw keeps
+  a token on loopback; Huddle chose not to. Host filtering and the Origin check still stop DNS rebinding. Turn Strict
+  local off in Settings › Remote access to require the token again. While it is on, Settings can show a pending Bind or
+  Tailscale change, because the running options are forced to loopback and off.
+- **There is no read-only device.** A device is Limited (`operator.read` and `operator.write`) or Admin. Read-only is
+  backlog H-2 ([backlog.md](backlog.md#hardening-remote-access)).
+- **Bind and Tailscale changes need a restart.** Settings › Remote access shows "Restart Huddle to apply" until then.
+- **A proxy that does not forward headers looks like loopback.** Without `X-Forwarded-For` a local reverse proxy
+  reaches Huddle from `127.0.0.1`, so the classifier sees loopback. List the proxy in `Team:Gateway:TrustedProxies` and use
+  `Auth:Mode = trusted-proxy`.
+- **Funnel and the real-phone Tailscale flows are tested by hand only.** They need a second device and a tailnet, so
+  no automated test covers them ([manual tests](manual-tests/remote-access.md)). The live host-list refresh, the
+  tailnet address lookup and the Job object that stops an orphaned `tailscale serve` child are manual too.
+- **The `allowed_origins_required` Security item cannot fire yet.** It depends on `GatewayRuntimeView.BareNameHostInUse`,
+  which always returns `false` today, so a bare machine name that needs `AllowedOrigins` is not detected.

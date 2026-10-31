@@ -12,38 +12,23 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class UnwatchFolderTool(FileChangeTracker tracker, string agentName, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "unwatch_folder";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.unwatchFolder.description", NoValues);
+    public string Description => prompts.Render("tool.unwatchFolder.description");
 
     /// <inheritdoc />
-    public JsonObject InputSchema => new JsonObject
-    {
-        ["type"] = "object",
-        ["properties"] = new JsonObject
-        {
-            ["folder"] = new JsonObject { ["type"] = "string" },
-        },
-        ["required"] = new JsonArray { "folder" },
-    };
+    public JsonObject InputSchema => TaskToolText.SingleStringSchema("folder");
 
     /// <inheritdoc />
     public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!TaskToolText.TryGetString(arguments, "folder", out string? folder, out string folderRefusal))
+        if (!TaskToolText.TryGetRequiredString(arguments, "folder", out string? folder, out string folderRefusal))
         {
             return Task.FromResult(folderRefusal);
-        }
-
-        if (string.IsNullOrWhiteSpace(folder))
-        {
-            return Task.FromResult("'folder' is a required argument.");
         }
 
         return Task.FromResult(tracker.Unsubscribe(agentName, folder));

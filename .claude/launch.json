@@ -8,6 +8,13 @@
       "port": 1111
     },
     {
+      "name": "huddle-seed-noacp",
+      "runtimeExecutable": "pwsh",
+      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-NoAcp", "-Port", "1115"],
+      "port": 1115,
+      "autoPort": false
+    },
+    {
       "name": "huddle-app",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": [

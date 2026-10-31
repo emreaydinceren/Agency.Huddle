@@ -1,0 +1,146 @@
+@*
+    The read-only preview of a Task inside an expanded Feed card (Feed spec 6.13): the id and title, a property grid, the Proof items as
+    TaskProofList draws them but without the Ask buttons, and the Human gate's sentence. It reads the Task it is given and the Proof
+    from IProofSource when it is drawn, and writes nothing.
+*@
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.Helpers
+@using Agency.Huddle.App.Tasks.HumanGate
+@inject HelperRegistry Helpers
+@inject TimeProvider Clock
+@inject IProofSource Proofs
+@inject ITeamDirectory Directory
+
+<div class="feed-preview">
+    <div class="feed-preview-head">
+        <span class="feed-preview-tile" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.TaskAlt" Size="Size.Small" /></span>
+        <span class="feed-preview-id">@this.Item.Id</span>
+        <span class="feed-preview-title">@this.Item.Title</span>
+    </div>
+    <dl class="feed-preview-grid">
+        <dt>Status</dt>
+        <dd><TaskStatusChip Status="this.Item.Status" /></dd>
+        @if (this.Item.Assignee is { Length: > 0 } assignee)
+        {
+            <dt>Assignee</dt>
+            <dd class="feed-preview-person"><AgentAvatar Name="@assignee" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
+        }
+        @if (this.AssignedBy is { } assignedBy)
+        {
+            <dt>Assigned by</dt>
+            <dd class="feed-preview-assigned-by">@assignedBy</dd>
+        }
+        @if (this.Item.DueDate is { } due)
+        {
+            <dt>Due</dt>
+            <dd>
+                <span class="@(this.Overdue ? "feed-due feed-due-overdue" : "feed-due")" title="@TaskDates.Tooltip(due)">
+                    @if (this.Overdue)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" aria-label="Overdue" />
+                    }
+                    @TaskDates.Human(due, this.Clock)
+                </span>
+            </dd>
+        }
+        @if (this.proof.Total > 0)
+        {
+            <dt>Proof</dt>
+            <dd>
+                <span class="feed-proof-chip">Proof @this.proof.MetCount/@this.proof.Total</span>
+                <span class="feed-proof-bar" aria-hidden="true">
+                    @for (int segment = 0; segment < 3; segment++)
+                    {
+                        <span class="@(segment < this.FilledSegments ? "feed-proof-segment feed-proof-segment-on" : "feed-proof-segment")"></span>
+                    }
+                </span>
+            </dd>
+        }
+        @if (this.originRoom is { } room)
+        {
+            <dt>Room</dt>
+            <dd>
+                <span @onclick:stopPropagation="true">
+                    <NavTabLink Href="@("/rooms/" + room.Id)" TabTitle="@room.Name" Match="NavLinkMatch.All" Class="feed-preview-room">
+                        <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> @room.Name
+                    </NavTabLink>
+                </span>
+            </dd>
+        }
+        <dt>File</dt>
+        <dd class="feed-preview-file">@this.Item.Path</dd>
+    </dl>
+    @if (this.proof.Total > 0)
+    {
+        <div class="feed-proof-heading">@(this.Item.IsGated ? HumanGateCopy.ProofHeadingGated : HumanGateCopy.ProofHeadingUngated)</div>
+        @foreach (ProofItem item in this.proof.Items)
+        {
+            <div class="feed-proof-row">
+                @if (item.Met)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="feed-proof-mark" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.RadioButtonUnchecked" Size="Size.Small" Class="feed-proof-mark" />
+                }
+                <div>
+                    <div class="feed-proof-label">@item.Label</div>
+                    <div class="@(item.Met ? "feed-proof-who feed-proof-met" : "feed-proof-who feed-proof-open")">@WhoText(item)</div>
+                </div>
+            </div>
+        }
+    }
+    @if (this.Item.IsGated)
+    {
+        <div class="feed-preview-footer">
+            <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+            <span>@this.GateSentence</span>
+        </div>
+        @if (this.HelperLine is { } helperLine)
+        {
+            <div class="feed-preview-footer feed-preview-helper-line">
+                <MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" />
+                <span>@helperLine</span>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private Proof proof = Proof.Empty;
+    private Agency.Huddle.App.Data.Room? originRoom;
+
+    /// <summary>The Task to preview. A Task that no longer exists is not previewed: the card says it was deleted.</summary>
+    [Parameter, EditorRequired]
+    public required TaskItem Item { get; set; }
+
+    private bool Overdue => TaskDates.IsOverdue(this.Item, this.Clock);
+
+    private int FilledSegments => this.proof.Total == 0 ? 0 : (int)Math.Round(3.0 * this.proof.MetCount / this.proof.Total, MidpointRounding.AwayFromZero);
+
+    /// <summary>Who last set the assignee, from the Change log.</summary>
+    private string? AssignedBy => this.Item.ChangeLog.LastOrDefault(static entry => entry.Summary.StartsWith("assignee:", StringComparison.Ordinal))?.Actor;
+
+    /// <summary>What the Needs Human Helper said when it turned the gate on, while its latest "human gate on" entry is a Helper's.</summary>
+    private string? HelperLine => HelperGateNote.For(this.Item.ChangeLog, this.Item.IsGated, this.Helpers.All);
+
+    private string GateSentence
+    {
+        get
+        {
+            string progress = this.proof.IsComplete ? HumanGateCopy.AllProofIn : HumanGateCopy.ProofProgress(this.proof.MetCount, this.proof.Total);
+            return progress + " " + HumanGateCopy.AcceptSentence(this.Item.Assignee ?? HumanGateCopy.UnassignedAssignee, this.Item.Action);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        this.proof = this.Proofs.For(this.Item);
+        this.originRoom = this.Item.OriginRoomId is { Length: > 0 } roomId ? await this.Directory.GetRoomAsync(roomId) : null;
+    }
+
+    private static string WhoText(ProofItem item) =>
+        item.Met ? string.Join(" · ", new[] { item.Owner, item.Detail }.Where(static part => !string.IsNullOrWhiteSpace(part))) : "pending";
+}

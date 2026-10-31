@@ -3,10 +3,11 @@
 // bundled by esbuild into wwwroot/lib/codemirror/codemirror.bundle.js; nothing else in
 // tools/codemirror is shipped.
 
-export { EditorState, Compartment } from "@codemirror/state";
+export { EditorState, EditorSelection, Compartment } from "@codemirror/state";
+export { autocompletion, startCompletion } from "@codemirror/autocomplete";
 export { EditorView, keymap, lineNumbers } from "@codemirror/view";
 export { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-export { LanguageSupport, StreamLanguage } from "@codemirror/language";
+export { LanguageSupport, StreamLanguage, syntaxTree, ensureSyntaxTree } from "@codemirror/language";
 
 export { markdown } from "@codemirror/lang-markdown";
 export { json } from "@codemirror/lang-json";

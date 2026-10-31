@@ -47,18 +47,24 @@ internal static class TabKeys
 
         return segments switch
         {
-            [] => new("chat", "Chats", "chat"),
+            [] => new("chat", "Rooms", "chat"),
             ["rooms", var roomId, ..] => new($"room:{roomId}", "Chat", "chat"),
             ["teams", "build"] => new("team-build", "Build a team", "team"),
             ["teams", var team, "projects", var project, ..] => new($"project:{Lower(team)}/{Lower(project)}", project, "project"),
+            ["teams", var team, "tasks", var view] => new($"team-tasks:{Lower(team)}/{view}", view, "tasks"),
             ["teams", var team, ..] => new($"team:{Lower(team)}", team, "team"),
             ["tasks"] => new("tasks", "Tasks", "tasks"),
             ["tasks", "new"] => new("task-new", "New task", "tasks"),
+            ["tasks", "item", "new", "edit"] => new("task-new-edit", "New task", "tasks"),
+            ["tasks", "item", var taskId, "copy"] => new($"task-copy:{taskId}", string.Create(CultureInfo.InvariantCulture, $"Copy of {taskId}"), "tasks"),
+            ["tasks", "item", var taskId, "edit"] => new($"task-edit:{taskId}", string.Create(CultureInfo.InvariantCulture, $"Edit {taskId}"), "tasks"),
             ["tasks", "item", var taskId, ..] => new($"task:{taskId}", string.Create(CultureInfo.InvariantCulture, $"Task {taskId}"), "tasks"),
             ["tasks", var view, ..] => new($"tasks:{view}", view, "tasks"),
-            ["teammates", ..] => new("teammates", "Teammates", "teammates"),
+            ["agents", ..] => new("agents", "Agents", "agents"),
             ["settings", ..] => new("settings", "Settings", "settings"),
             ["library", ..] => new("library", "Library", "library"),
+            ["needs-you"] => new("needs-you", "Needs you", "needs-you"),
+            ["feed"] => new("feed", "Feed", "feed"),
             _ => new(path, segments[^1], "page"),
         };
     }

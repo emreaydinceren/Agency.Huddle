@@ -1,3 +1,4 @@
+using Agency.Huddle.SkillPacks.Folders;
 using System.Collections.Frozen;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Watching;
@@ -266,36 +267,11 @@ internal sealed class SkillStore : IDisposable
             onDisk.TryGetValue(name, out Dictionary<string, string>? diskFiles);
 
             Dictionary<string, string> merged = MergeFiles(defaultFiles, diskFiles);
-            SkillSource source = (defaultFiles is not null, diskFiles is not null) switch
-            {
-                (true, true) => SkillSource.Overridden,
-                (true, false) => SkillSource.Default,
-                _ => SkillSource.Yours,
-            };
+            SkillSource source = ResolveSource(defaultFiles is not null, diskFiles is not null);
             string? folderPath = diskFiles is not null ? Path.Combine(this.skillsDir, name) : null;
 
             bool isImported = imported.TryGetValue(name, out (SkillProvenance Provenance, bool Modified) importedInfo);
-            SkillValidation validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
-
-            if (validation.HasErrors && defaultFiles is not null)
-            {
-                foreach (SkillIssue original in validation.Issues)
-                {
-                    if (original.Severity == SkillIssueSeverity.Error)
-                    {
-                        issues.Add(new SkillIssue(
-                            name,
-                            $"Your SKILL.md for '{name}' was not used: {original.Message}",
-                            SkillIssueSeverity.Warning));
-                    }
-                }
-
-                merged = new Dictionary<string, string>(merged, StringComparer.Ordinal)
-                {
-                    ["SKILL.md"] = defaultFiles["SKILL.md"],
-                };
-                validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
-            }
+            (merged, SkillValidation validation) = ValidateOrFallBack(name, defaultFiles, merged, isImported, issues);
 
             issues.AddRange(validation.Issues);
 
@@ -313,7 +289,7 @@ internal sealed class SkillStore : IDisposable
             all.Add(new Skill(
                 name,
                 description,
-                validation.Tools,
+                HasProvenanceFile(folderPath) ? [] : validation.Tools,
                 validation.Files,
                 source,
                 folderPath,
@@ -327,6 +303,73 @@ internal sealed class SkillStore : IDisposable
         this.LogIssues(issues);
 
         return new SkillSnapshot(all, byName, resolvedFiles.ToFrozenDictionary(StringComparer.Ordinal), issues);
+    }
+
+    /// <summary>Where a Skill comes from, given whether a shipped default and a disk folder exist for it.</summary>
+    /// <param name="hasDefault">Whether a shipped default exists.</param>
+    /// <param name="hasDiskFolder">Whether a folder exists on disk.</param>
+    /// <returns>The Skill's <see cref="SkillSource"/>.</returns>
+    private static SkillSource ResolveSource(bool hasDefault, bool hasDiskFolder)
+    {
+        return (hasDefault, hasDiskFolder) switch
+        {
+            (true, true) => SkillSource.Overridden,
+            (true, false) => SkillSource.Default,
+            _ => SkillSource.Yours,
+        };
+    }
+
+    /// <summary>
+    /// Validates a Skill's merged files and, when an Overridden Skill's <c>SKILL.md</c> is invalid, falls
+    /// back to the default <c>SKILL.md</c> and records each Error the override caused as a Warning.
+    /// </summary>
+    /// <param name="name">The Skill's name.</param>
+    /// <param name="defaultFiles">The shipped default files, or <see langword="null"/> for a Yours Skill.</param>
+    /// <param name="merged">The default files overlaid by the disk files.</param>
+    /// <param name="isImported">Whether the Skill was imported, which allows supporting files.</param>
+    /// <param name="issues">Receives a Warning for each Error the invalid override caused.</param>
+    /// <returns>The files actually used and their validation.</returns>
+    private static (Dictionary<string, string> Merged, SkillValidation Validation) ValidateOrFallBack(
+        string name,
+        IReadOnlyDictionary<string, string>? defaultFiles,
+        Dictionary<string, string> merged,
+        bool isImported,
+        List<SkillIssue> issues)
+    {
+        SkillValidation validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
+
+        if (validation.HasErrors && defaultFiles is not null)
+        {
+            foreach (SkillIssue original in validation.Issues)
+            {
+                if (original.Severity == SkillIssueSeverity.Error)
+                {
+                    issues.Add(new SkillIssue(
+                        name,
+                        $"Your SKILL.md for '{name}' was not used: {original.Message}",
+                        SkillIssueSeverity.Warning));
+                }
+            }
+
+            merged = new Dictionary<string, string>(merged, StringComparer.Ordinal)
+            {
+                ["SKILL.md"] = defaultFiles["SKILL.md"],
+            };
+            validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
+        }
+
+        return (merged, validation);
+    }
+
+    /// <summary>
+    /// Whether a Skill's folder holds a <c>.source.json</c>: a copy from a pointer, whose <c>tools:</c> line is ignored so a
+    /// hand-edited copy cannot grant an App Tool that check S011 forbids (Skill Packs spec §6.3). Built-in Skills have none.
+    /// </summary>
+    /// <param name="folderPath">The Skill's folder, or <see langword="null"/> for a shipped default with no folder.</param>
+    /// <returns><see langword="true"/> when the file exists.</returns>
+    private static bool HasProvenanceFile(string? folderPath)
+    {
+        return folderPath is not null && File.Exists(Path.Combine(folderPath, SkillProvenance.FileName));
     }
 
     /// <summary>Logs every Issue found while resolving Skills, at a level matching its severity.</summary>
@@ -424,6 +467,12 @@ internal sealed class SkillStore : IDisposable
         foreach (string folder in Directory.EnumerateDirectories(this.skillsDir))
         {
             string skillName = Path.GetFileName(folder);
+            if (skillName.StartsWith('.'))
+            {
+                // Skills/.staging and Skills/.trash belong to SkillCopier, and the Skill name rule never accepts a leading dot.
+                continue;
+            }
+
             Dictionary<string, string> files = new(StringComparer.Ordinal);
 
             if (SkillProvenance.TryRead(folder, out SkillProvenance? provenance) && provenance is not null)
@@ -533,7 +582,9 @@ internal sealed class SkillStore : IDisposable
                     ex,
                     "Failed to rebuild Skills from '{SkillsDir}' after {Attempts} attempts; keeping the previously resolved Skills.",
                     this.skillsDir,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                     RebuildRetryAttempts);
+#pragma warning restore HAA0601
                 return null;
             }
         }

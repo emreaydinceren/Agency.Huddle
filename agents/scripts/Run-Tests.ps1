@@ -41,8 +41,16 @@
     Passes --no-build to dotnet test.
 
 .PARAMETER Solution
-    Path to the .slnx/.sln to test. Defaults to Huddle.slnx at the current git worktree's root (found
-    via `git rev-parse --show-toplevel`), so this script works unmodified from any worktree.
+    Path to the .slnx/.sln (or csproj) to test. Defaults to Huddle.slnx at the current git worktree's
+    root (found via `git rev-parse --show-toplevel`), so this script works unmodified from any worktree.
+    A filtered run (-FilterClass/-FilterMethod) without -Solution asks Find-TestProject.ps1 which test
+    projects hold each pattern. One project: that csproj is tested. Several: Huddle.slnx is tested with
+    `--ignore-exit-code 8` after `--` (the projects without a match report "Zero tests ran"), and the
+    script itself exits 8 if the parsed run total is 0. None: throws "No test project contains <pattern>".
+
+.PARAMETER MaxParallelModules
+    Passes `--max-parallel-test-modules <n>` to `dotnet test` (before the `--`), capping how many test
+    projects run at once. Omitted (or 0), nothing is passed.
 
 .PARAMETER MainRepoRoot
     Override for the main checkout's root (where Conversation\logs and Conversation\red live). Defaults
@@ -133,7 +141,8 @@ param(
     [switch]$Force,
     [string]$ExpectFail,
     [string]$NewNames,
-    [string]$AllowCodes
+    [string]$AllowCodes,
+    [int]$MaxParallelModules
 )
 
 $ErrorActionPreference = 'Stop'
@@ -157,7 +166,10 @@ if ($RedTask) {
     # A red recorded on top of stashed work is misleading at review time - the diff the red file's
     # header shows would not be the whole story. Refuse before doing anything else.
     $callerToplevel = (git rev-parse --show-toplevel).Trim()
-    $stashList = @(& git -C $callerToplevel stash list 2>&1)
+    # The stash is shared by every worktree; only an entry made on the caller's own branch can hide
+    # that worktree's work, so entries from other branches (another session's) are ignored.
+    $callerBranch = (git -C $callerToplevel rev-parse --abbrev-ref HEAD).Trim()
+    $stashList = @(& git -C $callerToplevel stash list 2>&1 | Where-Object { $_ -match "^stash@\{\d+\}: (WIP on|On) $([regex]::Escape($callerBranch)):" })
     if (($stashList | Where-Object { $_ -ne '' }).Count -gt 0) {
         Write-Host "RED REFUSED: git stash list is non-empty in $callerToplevel - pop or drop the stash before recording a red baseline."
         foreach ($s in $stashList) {
@@ -494,12 +506,38 @@ if ($ParseOnly) {
 
 if (-not $Solution) {
     $worktreeRoot = (git rev-parse --show-toplevel).Trim()
-    # A filtered run targets Huddle.Tests only: across the whole solution the ACP test assembly
-    # matches nothing, reports "Zero tests ran" and turns the exit code non-zero (8).
-    $Solution = if ($FilterClass -or $FilterMethod) {
-        Join-Path $worktreeRoot 'tests/Huddle.Tests/Huddle.Tests.csproj'
+    # A filtered run targets the test project(s) that hold the pattern (Find-TestProject.ps1). Across
+    # the whole solution a project without a match reports "Zero tests ran" and turns the exit code
+    # non-zero (8), so a multi-project filtered run ignores exit code 8 and checks the total itself.
+    if ($FilterClass -or $FilterMethod) {
+        $finder = Join-Path $PSScriptRoot 'Find-TestProject.ps1'
+        $routed = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($pattern in @($FilterClass | Where-Object { $_ })) {
+            foreach ($part in ($pattern -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })) {
+                $hits = @(& $finder -Class $part -Root $worktreeRoot)
+                if ($hits.Count -eq 0) {
+                    throw "No test project contains $part"
+                }
+                foreach ($hit in $hits) { [void]$routed.Add($hit) }
+            }
+        }
+        foreach ($pattern in @($FilterMethod | Where-Object { $_ })) {
+            foreach ($part in ($pattern -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })) {
+                $hits = @(& $finder -Method $part -Root $worktreeRoot)
+                if ($hits.Count -eq 0) {
+                    throw "No test project contains $part"
+                }
+                foreach ($hit in $hits) { [void]$routed.Add($hit) }
+            }
+        }
+        if ($routed.Count -eq 1) {
+            $Solution = @($routed)[0]
+        } else {
+            $Solution = Join-Path $worktreeRoot 'Huddle.slnx'
+            $ignoreZeroTests = $true
+        }
     } else {
-        Join-Path $worktreeRoot 'Huddle.slnx'
+        $Solution = Join-Path $worktreeRoot 'Huddle.slnx'
     }
 }
 
@@ -521,6 +559,9 @@ $baseTestArgs = @($Solution)
 if ($NoBuild) {
     $baseTestArgs += '--no-build'
 }
+if ($MaxParallelModules -gt 0) {
+    $baseTestArgs += @('--max-parallel-test-modules', "$MaxParallelModules")
+}
 $baseTestArgs += '--'
 # A value containing commas (e.g. "*A,*B") means "run both classes/methods", not a single literal
 # filter with a comma in it - split before passing to dotnet test, or "*A,*B" matches nothing.
@@ -533,6 +574,9 @@ foreach ($m in $FilterMethod) {
     foreach ($part in ($m -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })) {
         $baseTestArgs += @('--filter-method', $part)
     }
+}
+if ($ignoreZeroTests) {
+    $baseTestArgs += @('--ignore-exit-code', '8')
 }
 
 <#
@@ -616,6 +660,12 @@ try {
         $lines = Get-Content -LiteralPath $logPath
         $summary = Get-TestRunSummary -Lines $lines
         Write-TestRunSummary -Summary $summary -LogPath $logPath
+
+        # With exit code 8 ignored, a filtered solution run that matched nothing anywhere would be green.
+        if ($ignoreZeroTests -and $exitCode -eq 0 -and ((-not $summary.Totals['total']) -or [int]$summary.Totals['total'] -eq 0)) {
+            Write-Host 'ZERO TESTS RAN across the solution - exiting 8'
+            $exitCode = 8
+        }
 
         if ($attempt -lt $maxAttempts -and (Test-IsRunnerError -ExitCode $exitCode -Summary $summary)) {
             Write-Host 'RUNNER ERROR (0 failed tests) - rerunning once'

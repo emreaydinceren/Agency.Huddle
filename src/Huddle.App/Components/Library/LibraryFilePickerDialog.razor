@@ -1,0 +1,197 @@
+@*
+    Picks one file from the Library (TaskAttachments spec 6.3). A search box lists files whose name matches, across every
+    visible Library Root; with the box empty the Human browses: the Roots first, then a folder's files and folders with an
+    Up row. Browsing goes through LibraryFileService.ListAsync and searching through SearchTextAsync (names only), so a hidden folder stays hidden
+    in both. Clicking a file closes the dialog with its LibraryPath; a folder only opens. The dialog is a ShortPicker, 600px.
+*@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
+@using Microsoft.Extensions.Options
+
+@implements IDisposable
+
+@inject LibraryRootStore Roots
+@inject LibraryPathResolver Resolver
+@inject LibraryFileService FileService
+@inject IOptions<TeamOptions> TeamConfig
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" DebounceInterval="250"
+                      Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Label="Search by file name"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" AutoFocus="true" Clearable="true" />
+        <MudList T="string" Dense="true" aria-label="Library files">
+            @foreach (PickerRow row in this.rows)
+            {
+                <MudListItem T="string" Value="@row.Key" Icon="@row.Icon" Class="picker-row" title="@row.Detail"
+                             OnClick="@(() => this.ChooseAsync(row))">
+                    <div>@row.Name</div>
+                    @if (row.Detail is not null)
+                    {
+                        <MudText Typo="Typo.caption" Class="picker-row-path mud-text-secondary">@row.Detail</MudText>
+                    }
+                </MudListItem>
+            }
+        </MudList>
+        @if (this.rows.Count == 0 && !this.loading)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">@(this.searchText.Trim().Length == 0 ? "This folder is empty." : "No Library file matches that name.")</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const int MaxHits = 20;
+
+    /// <summary>One line of the list: a file to pick, a folder to open, or the Up row.</summary>
+    private sealed record PickerRow(string Key, string Name, string? Detail, string Icon, LibraryPath? Path, bool GoesUp);
+
+    private readonly CancellationTokenSource disposed = new();
+    private IReadOnlyList<PickerRow> rows = [];
+    private LibraryPath? folder;
+    private string searchText = string.Empty;
+    private int version;
+    private bool loading = true;
+
+    /// <summary>How the caller shows this dialog: the short picker (600px, a pick-one list).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.ShortPicker;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>Lists the visible Library Roots.</summary>
+    protected override Task OnInitializedAsync() => this.RefreshAsync();
+
+    /// <summary>Cancels a search still walking when the dialog closes.</summary>
+    public void Dispose()
+    {
+        this.disposed.Cancel();
+        this.disposed.Dispose();
+    }
+
+    private Task OnSearchChangedAsync(string? text)
+    {
+        this.searchText = text ?? string.Empty;
+        return this.RefreshAsync();
+    }
+
+    /// <summary>Rebuilds the list for the current search text, or for the folder being browsed when the text is empty.</summary>
+    private async Task RefreshAsync()
+    {
+        int mine = ++this.version;
+        this.loading = true;
+        string term = this.searchText.Trim();
+        IReadOnlyList<PickerRow> built;
+        try
+        {
+            built = term.Length == 0 ? await this.BrowseRowsAsync() : await this.SearchRowsAsync(term);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (mine == this.version)
+        {
+            this.rows = built;
+            this.loading = false;
+        }
+    }
+
+    private async Task<IReadOnlyList<PickerRow>> SearchRowsAsync(string term)
+    {
+        List<PickerRow> found = [];
+        foreach (LibraryRoot root in this.Roots.VisibleRoots)
+        {
+            if (found.Count >= MaxHits)
+            {
+                break;
+            }
+
+            if (!this.Resolver.TryResolve(root.Id, string.Empty, out LibraryPath? scope, out _))
+            {
+                continue;
+            }
+
+            // A folder or an unpickable file is excluded during the walk, so it never uses up the hit budget before a file can.
+            LibraryTextSearchResult result = await this.FileService.SearchTextAsync(
+                scope, term, MaxHits - found.Count, this.TeamConfig.Value.Search, static entry => !LibraryFilePickerDialog.IsPickable(entry), readContent: false, this.disposed.Token);
+            found.AddRange(result.Hits.Select(hit => FileRow(hit.Entry.Path, $"{root.DisplayName}/{hit.Entry.Path.RelativePath}")));
+        }
+
+        return found;
+    }
+
+    private async Task<IReadOnlyList<PickerRow>> BrowseRowsAsync()
+    {
+        List<PickerRow> built = [];
+        if (this.folder is null)
+        {
+            foreach (LibraryRoot root in this.Roots.VisibleRoots)
+            {
+                if (this.Resolver.TryResolve(root.Id, string.Empty, out LibraryPath? rootFolder, out _))
+                {
+                    built.Add(FolderRow(rootFolder, root.DisplayName));
+                }
+            }
+
+            return built;
+        }
+
+        built.Add(new PickerRow("..", "Up", null, Icons.Material.Outlined.ArrowUpward, null, GoesUp: true));
+        IReadOnlyList<LibraryEntry> entries = await this.FileService.ListAsync(this.folder, this.disposed.Token);
+        foreach (LibraryEntry entry in entries.Where(static entry => entry.IsFolder || LibraryFilePickerDialog.IsPickable(entry)))
+        {
+            built.Add(entry.IsFolder ? FolderRow(entry.Path, System.IO.Path.GetFileName(entry.Path.FullPath)) : FileRow(entry.Path, null));
+        }
+
+        return built;
+    }
+
+    /// <summary>A file the Human may link: not a folder, not an Agent's definition, and with no backtick in its path (it would break the code span).</summary>
+    private static bool IsPickable(LibraryEntry entry) =>
+        !entry.IsFolder && entry.Path.Role != LibraryNodeRole.AgentDefinition && !entry.Path.FullPath.Contains('`');
+
+    private static PickerRow FileRow(LibraryPath path, string? detail) =>
+        new(path.FullPath, System.IO.Path.GetFileName(path.FullPath), detail, Icons.Material.Outlined.InsertDriveFile, path, GoesUp: false);
+
+    private static PickerRow FolderRow(LibraryPath path, string name) =>
+        new(path.Root.Id + "/" + path.RelativePath, name, path.RelativePath, Icons.Material.Outlined.Folder, path, GoesUp: false);
+
+    /// <summary>A file closes the dialog with its path; a folder opens; Up goes to the parent folder, or to the Roots from a Root.</summary>
+    private async Task ChooseAsync(PickerRow row)
+    {
+        if (row.GoesUp)
+        {
+            this.folder = this.ParentOf(this.folder);
+        }
+        else if (row.Path is { IsFile: true } file)
+        {
+            this.Dialog?.Close(DialogResult.Ok(file));
+            return;
+        }
+        else
+        {
+            this.folder = row.Path;
+        }
+
+        await this.RefreshAsync();
+    }
+
+    private LibraryPath? ParentOf(LibraryPath? current)
+    {
+        if (current is null || current.RelativePath.Length == 0)
+        {
+            return null;
+        }
+
+        int cut = current.RelativePath.LastIndexOf('/');
+        string parent = cut < 0 ? string.Empty : current.RelativePath[..cut];
+        return this.Resolver.TryResolve(current.Root.Id, parent, out LibraryPath? resolved, out _) ? resolved : null;
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

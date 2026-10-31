@@ -3,6 +3,7 @@
 @page "/teams/{Team}/projects/{Project}"
 @page "/teams/{Team}/projects/{Project}/{Tab}"
 @implements IDisposable
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Tabs
 @using Microsoft.Extensions.Options
@@ -11,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject IServiceProvider Services
+@inject ISnackbar Snackbar
 
 @*
     Spec §6.6: the Team page and the Project page, one component. The route drives everything:
@@ -27,38 +29,24 @@
     TeamSummary? summary = this.Catalog.Find(this.Team);
     bool isProject = !string.IsNullOrWhiteSpace(this.Project);
     string? project = summary is not null && isProject ? this.FindProject(summary) : null;
-    string title;
-    if (summary is null || (isProject && project is null))
-    {
-        title = "Huddle";
-    }
-    else if (project is null)
-    {
-        title = $"{summary.Name} — Huddle";
-    }
-    else
-    {
-        title = $"{project} · {summary.Name} — Huddle";
-    }
-
     // Every tab uses the whole page, so the container drops the width cap whenever the Team (and Project) exist;
     // the not-found and "turned off" notices keep the capped container. Both keep the page's 16px padding.
     bool wideActive = summary is not null && (!isProject || project is not null)
         && TeamPageTabs.Available(isProject, this.Features()).Count > 0;
 }
 
-<PageTitle>@title</PageTitle>
-
-<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "pa-4")">
+<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "page-reading pa-4")">
     @if (summary is null)
     {
+        <FocusedPageTitle Title="Huddle" />
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
-            <MudLink Href="/teammates" Class="team-page-notice-link">Teammates</MudLink>
+            <MudLink Href="/agents" Class="team-page-notice-link">Agents</MudLink>
         </MudAlert>
     }
     else if (isProject && project is null)
     {
+        <FocusedPageTitle Title="Huddle" />
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
@@ -69,15 +57,45 @@
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
         int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
 
-        @* The shell breadcrumb (S1a) names the Team or Project, so the page has no title row or h1 of its own
-           (the document title is set above). A Team page keeps Duplicate in a slim row at the right. *@
+        @* Every page names itself as its h1 (design-system "A page") and the shell breadcrumb holds only the
+           ancestors. PageHeader also sets the document title to the bare name. A Team page keeps Duplicate on
+           the right of the header. *@
         @if (!isProject)
         {
             string sourceTeam = summary.Name;
-            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4 team-page-actions">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
-                           OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
-            </MudStack>
+            <PageHeader Title="@summary.Name">
+                <TitleLeading>
+                    @* The avatar is the way into the Team's avatar editor: a real button, as on the Agent card. avatar-transcript
+                       makes the Small avatar 32px, the height of the header row, and lets a picture show. A Team with no
+                       _team.md (TeamType is null) has nowhere to keep an avatar, so it gets the plain avatar and no button. *@
+                    @if (summary.TeamType is not null)
+                    {
+                        <button type="button" class="agent-profile-card-avatar team-page-avatar" aria-label="Change avatar" title="Change avatar"
+                                @onclick="@(() => this.EditAvatarAsync(sourceTeam))">
+                            <TeamAvatar Team="@summary.Name" Avatar="summary.Avatar" Size="Size.Small" Class="avatar-transcript" />
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+                        </button>
+                    }
+                    else
+                    {
+                        <TeamAvatar Team="@summary.Name" Avatar="summary.Avatar" Size="Size.Small" Class="avatar-transcript" />
+                    }
+                </TitleLeading>
+                <Actions>
+                    <TeamShortcutButton Team="@sourceTeam" />
+                    @* Says plainly what the avatar's pencil does; quieter than Duplicate (text, no border). Same condition as the avatar button. *@
+                    @if (summary.TeamType is not null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                               Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                </Actions>
+            </PageHeader>
+        }
+        else
+        {
+            <PageHeader Title="@project" />
         }
         <TeamSpend Members="@summary.Members" />
 
@@ -91,7 +109,7 @@
         {
             @* Keyed by Team and Project: a Project page and its Team page both have index 0 active, so MudTabs
                sees no index change and would keep showing the previous page's panel against the new route. *@
-            <MudTabs @key="@($"{summary.Name}/{project}")" Class="team-page-tabs" KeepPanelsAlive="false" MinimumTabWidth="96px"
+            <MudTabs @key="@($"{summary.Name}/{project}")" Class="team-page-tabs" KeepPanelsAlive="false" MinimumTabWidth="96px" AlwaysShowScrollButtons="false"
                      ActivePanelIndex="@activeIndex"
                      ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
                 @foreach (TeamPageTab tab in available)
@@ -166,7 +184,7 @@
     /// <summary>A tab's icon: the entity icons of TabIcons for Members, Files and Tasks; Process has no entity of its own.</summary>
     private static string TabIcon(TeamPageTab tab) => tab switch
     {
-        TeamPageTab.Members => TabIcons.For("teammates"),
+        TeamPageTab.Members => TabIcons.For("agents"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
         TeamPageTab.Details => Icons.Material.Outlined.Info,
@@ -177,7 +195,74 @@
     private async Task DuplicateAsync(string team)
     {
         DialogParameters<DuplicateTeamDialog> parameters = new() { { dialog => dialog.SourceTeam, team } };
-        _ = await this.DialogService.ShowAsync<DuplicateTeamDialog>("Duplicate Team", parameters, DuplicateTeamDialog.Options);
+        _ = await this.DialogService.ShowAsync<DuplicateTeamDialog>($"Duplicate {team}", parameters, DuplicateTeamDialog.Options);
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> for <paramref name="team"/>'s avatar and, when the Human saves, writes it to the Team's
+    /// <c>_team.md</c>. The dialog offers no library and previews a rounded square; "Save" (not "Apply") because nothing else on this
+    /// page holds the result until later.
+    /// </summary>
+    private async Task EditAvatarAsync(string team)
+    {
+        TeamSummary? summary = this.Catalog.Find(team);
+        if (summary is null)
+        {
+            return;
+        }
+
+        DialogParameters<AvatarEditorDialog> parameters = new()
+        {
+            { dialog => dialog.Name, summary.Name },
+            { dialog => dialog.Current, summary.Avatar },
+            { dialog => dialog.Deferred, false },
+            { dialog => dialog.AllowLibrary, false },
+            { dialog => dialog.Shape, AvatarShape.RoundedSquare },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
+        {
+            return;
+        }
+
+        this.SaveAvatar(summary.Name, edited);
+    }
+
+    /// <summary>
+    /// Writes a pending image, then the avatar into the Team's <c>_team.md</c>, then deletes the image it replaced. The order matters:
+    /// the old file goes only once the file that names the new one is saved. A Team with no readable <c>_team.md</c> cannot keep an
+    /// avatar, so the new image is removed again and the Human is told.
+    /// </summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="edited">What the dialog handed back.</param>
+    private void SaveAvatar(string team, AvatarEditorResult edited)
+    {
+        AvatarStore store = this.Services.GetRequiredService<AvatarStore>();
+        Avatar toSave = store.CommitPendingImage(edited.Avatar, edited.PendingImage, edited.PendingImageExtension);
+        string? replaced = null;
+        bool saved = this.Services.GetService<ITeamFolders>()?.UpdateTeamFile(team, current =>
+        {
+            replaced = current.Avatar.Image;
+            return current with { Avatar = toSave };
+        }) ?? false;
+
+        if (!saved)
+        {
+            if (!string.Equals(toSave.Image, edited.Avatar.Image, StringComparison.Ordinal))
+            {
+                store.DeleteImage(toSave.Image);
+            }
+
+            _ = this.Snackbar.Add($"{team} has no team file, so its avatar could not be saved.", Severity.Warning, configure: null, key: "team-avatar-error");
+            return;
+        }
+
+        if (!string.Equals(replaced, toSave.Image, StringComparison.Ordinal))
+        {
+            store.DeleteImage(replaced);
+        }
     }
 
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";

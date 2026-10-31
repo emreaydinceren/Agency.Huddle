@@ -1,0 +1,230 @@
+@*
+    Spec §6.5 and §6.6 (Avatar Library picker): the content of a picker, hosted by AvatarLibraryDialog or, when the
+    avatar editor is itself in a dialog, by the editor in place of its own content (audit B8k: at most two dialogs
+    deep). It loads the catalogue once on open through IAvatarLibraryLoader, keeps it in the single `catalog` field and nulls that field (and the cached
+    result list) in Dispose, so closing the dialog frees the whole library (R-1). Nothing else keeps it: no static
+    field, no event subscription. Filter state is a skin, a text and two ordered selection lists; AvatarCatalog.Search
+    does the filtering. The chip clouds are static (D-5): only AvatarChipCloud.Arrange reorders them, so pressing a
+    chip moves that chip and no other. Thumbnails are text-free buttons whose accessible name is the aria-label only.
+    A filter change swaps the grid element (@key) so the browser starts a fresh scroll position at the top without JS.
+    The search box sits in a wrapper that stops keydown bubbling, so Escape clears the text first and only a second
+    Escape (with the text already empty) cancels the dialog. Blazor's stopPropagation only stops Blazor's own event
+    dispatch: MudBlazor closes the dialog on Escape through a DOM key interceptor on the dialog element, so the
+    wrapper is also handed to huddleAvatarLibrary.guardSearchEscape (app.js), which stops the DOM event itself.
+*@
+
+@implements IDisposable
+@using Agency.Huddle.App.Avatars
+@using Microsoft.AspNetCore.Components.Web
+@inject IAvatarLibraryLoader Loader
+@inject IJSRuntime JS
+
+@if (this.unreadable)
+{
+    <div class="avatar-library-message">
+        <p class="avatar-library-error" role="alert">The avatar library could not be read.</p>
+        <p class="avatar-library-error-hint">Check Team:AvatarLibrary:Dir and master.json.</p>
+    </div>
+}
+else if (this.catalog is not null && this.results is not null)
+{
+    <div class="avatar-library-body">
+        <div class="avatar-library-filters">
+            <div class="avatar-library-skins" role="group" aria-label="Skin tone">
+                @foreach ((string label, SkinGroup? group) in SkinChoices)
+                {
+                    <button type="button" class="avatar-library-skin" aria-pressed="@(this.skin == group ? "true" : "false")" @onclick="() => this.SetSkin(group)">@label</button>
+                }
+            </div>
+            <div class="avatar-library-search-wrap" @ref="this.searchWrap" @onkeydown:stopPropagation="true">
+                <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a profession or a tag"
+                              Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
+                              OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </div>
+            <ChipCloud Title="Professions" Pool="this.catalog.Professions" Selected="this.selectedProfessions" Cap="ProfessionCap"
+                       OnToggle="this.ToggleProfession" />
+            <ChipCloud Title="Tags" Pool="this.TagPool()" Selected="this.selectedTags" Cap="TagCap"
+                       OnToggle="this.ToggleTag" />
+            <div class="avatar-library-status">
+                <span class="avatar-library-count" aria-live="polite">@this.results.Count of @this.catalog.Count</span>
+                <button type="button" class="avatar-library-clear" @onclick="this.ClearAll">Clear all</button>
+            </div>
+        </div>
+        <div class="avatar-library-grid" @key="this.gridVersion">
+            @if (this.results.Count == 0)
+            {
+                <div class="avatar-library-message">
+                    <p class="avatar-library-empty">No avatars match.</p>
+                    <p class="avatar-library-empty-hint">Remove a chip or press Clear all.</p>
+                </div>
+            }
+            else
+            {
+                <div class="avatar-library-thumbs">
+                    @foreach (LibraryAvatar avatar in this.results.Take(this.shown))
+                    {
+                        <button type="button" class="avatar-library-thumb" aria-label="@avatar.AccessibleName" @onclick="() => this.Pick(avatar.File)">
+                            <img src="@("/avatar-library/" + Uri.EscapeDataString(avatar.File))" alt="" loading="lazy" />
+                        </button>
+                    }
+                </div>
+                @if (this.results.Count > this.shown)
+                {
+                    <button type="button" class="avatar-library-more" @onclick="this.ShowMore">Show more</button>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private const int PageSize = 48;
+
+    /// <summary>How many professions show before "Show all": a row or two, so the filters leave the pictures most of the dialog (audit B8j).</summary>
+    private const int ProfessionCap = 12;
+
+    /// <summary>How many tags show before "Show all", for the same reason.</summary>
+    private const int TagCap = 12;
+
+    private static readonly (string Label, SkinGroup? Group)[] SkinChoices =
+    [
+        ("All", null),
+        ("Light", SkinGroup.Light),
+        ("Tan", SkinGroup.Tan),
+        ("Dark", SkinGroup.Dark),
+    ];
+
+    /// <summary>Raised with the file name of the thumbnail the Human pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnPicked { get; set; }
+
+    /// <summary>Raised when the Human cancels from inside the picker: a second Escape in the empty search box.</summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private AvatarCatalog? catalog;
+    private IReadOnlyList<LibraryAvatar>? results;
+    private bool unreadable;
+    private SkinGroup? skin;
+    private string text = string.Empty;
+    private readonly List<string> selectedProfessions = [];
+    private readonly List<string> selectedTags = [];
+    private int shown = PageSize;
+    private int gridVersion;
+    private ElementReference searchWrap;
+    private bool searchGuarded;
+
+    /// <summary>Once the search box exists, attaches the DOM-level Escape guard to its wrapper (once per dialog).</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.searchGuarded || this.catalog is null)
+        {
+            return;
+        }
+
+        this.searchGuarded = true;
+        await this.JS.InvokeVoidAsync("huddleAvatarLibrary.guardSearchEscape", this.searchWrap);
+    }
+
+    /// <summary>Loads the catalogue once; an unreadable library shows the message instead of the filters.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        AvatarLibraryLoadResult loaded = await this.Loader.LoadAsync(CancellationToken.None);
+        if (loaded.Unreadable || loaded.Catalog is null)
+        {
+            this.unreadable = true;
+            return;
+        }
+
+        this.catalog = loaded.Catalog;
+        this.Refilter();
+    }
+
+    /// <summary>Drops the catalogue and its result list so the library does not outlive the dialog (R-1).</summary>
+    public void Dispose()
+    {
+        this.catalog = null;
+        this.results = null;
+    }
+
+    private IReadOnlyList<string> TagPool() => this.catalog is null ? [] : [.. this.catalog.Tags.Select(static t => t.Tag)];
+
+    private void Refilter()
+    {
+        if (this.catalog is null)
+        {
+            return;
+        }
+
+        AvatarLibraryQuery query = new(
+            this.skin,
+            this.text,
+            new HashSet<string>(this.selectedProfessions, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(this.selectedTags, StringComparer.OrdinalIgnoreCase));
+        this.results = this.catalog.Search(query);
+        this.shown = PageSize;
+        this.gridVersion++;
+    }
+
+    private void SetSkin(SkinGroup? group)
+    {
+        this.skin = group;
+        this.Refilter();
+    }
+
+    private void SetText(string? value)
+    {
+        this.text = value ?? string.Empty;
+        this.Refilter();
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (!string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (this.text.Length > 0)
+        {
+            this.SetText(string.Empty);
+        }
+        else
+        {
+            _ = this.OnCancel.InvokeAsync();
+        }
+    }
+
+    private void ToggleProfession(string name)
+    {
+        Toggle(this.selectedProfessions, name);
+        this.Refilter();
+    }
+
+    private void ToggleTag(string name)
+    {
+        Toggle(this.selectedTags, name);
+        this.Refilter();
+    }
+
+    private static void Toggle(List<string> list, string value)
+    {
+        if (!list.Remove(value))
+        {
+            list.Add(value);
+        }
+    }
+
+    private void ClearAll()
+    {
+        this.skin = null;
+        this.text = string.Empty;
+        this.selectedProfessions.Clear();
+        this.selectedTags.Clear();
+        this.Refilter();
+    }
+
+    private void ShowMore() => this.shown += PageSize;
+
+    private Task Pick(string fileName) => this.OnPicked.InvokeAsync(fileName);
+}

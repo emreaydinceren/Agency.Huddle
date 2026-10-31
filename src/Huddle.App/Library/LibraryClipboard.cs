@@ -25,7 +25,7 @@ internal static class LibraryClipboard
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
 
-        bool copied = await js.InvokeAsync<bool>("huddleClipboard.copy", fullPath);
+        bool copied = await js.InvokeAsync<bool>("huddleClipboard.copy", fullPath).ConfigureAwait(false);
         snackbar.Add(
             copied ? "Path copied" : "Couldn't copy the path.",
             copied ? Severity.Success : Severity.Warning,

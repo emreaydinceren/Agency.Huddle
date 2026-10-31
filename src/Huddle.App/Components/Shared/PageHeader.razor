@@ -1,26 +1,53 @@
 @*
-    The header every routable page opens with (design-system "A page"; UX-001, UX-004): the title as the
-    page's only h1 at Typo.h5 on the left, the page's actions on the right, and the same text as the
-    document title through PageTitle.
+    The header every routable page opens with (design-system "A page"; UX-001, UX-004, audit B1): the title as the
+    page's only h1 at Typo.h5 on the left, the page's actions on the right, and the same text as the document
+    title through PageTitle. Every page shows its h1, in one 32px row, 16px below the tab strip, so switching Tabs
+    never moves the title. The pieces:
+
+      Title / Subtitle  the h1 and the intro under it (body1, Quiet ink, 75ch)
+      TitleEditor       replaces the h1 while non-null: the Room's inline rename
+      TitleLeading      a small control before the title, such as the Team page's avatar
+      TitleTrailing     small controls on the title's line, such as rename and copy link
+      Aside             content at the right before the actions, such as the Room's members and Invite
+      CreateText ...    the create action: a Small button at the right, filled when it is the page's one
+                        primary action (CreatePrimary), otherwise outlined
+      Actions           any further actions, drawn after the create button
+      Chrome            a Chrome line under the header, as the Room draws
 *@
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    @if (this.Subtitle is null)
+<div class="@this.RootClass">
+    <div class="page-header-row">
+        <div class="page-header-title">
+            @this.TitleLeading
+            @if (this.TitleEditor is not null)
+            {
+                @this.TitleEditor
+            }
+            else
+            {
+                <MudText Typo="Typo.h5" HtmlTag="h1" Class="page-header-h1">@this.Title</MudText>
+            }
+            @this.TitleTrailing
+        </div>
+        <div class="page-header-actions">
+            @this.Aside
+            @if (!string.IsNullOrEmpty(this.CreateText))
+            {
+                <MudButton Size="Size.Small" Variant="@(this.CreatePrimary ? Variant.Filled : Variant.Outlined)"
+                           Color="@(this.CreatePrimary ? Color.Primary : Color.Default)" StartIcon="@this.CreateIcon"
+                           Disabled="this.CreateDisabled" OnClick="this.OnCreate" Class="page-header-create">@this.CreateText</MudButton>
+            }
+            @this.Actions
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(this.Subtitle))
     {
-        <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+        <MudText Typo="Typo.body1" Class="page-header-subtitle">@this.Subtitle</MudText>
     }
-    else
-    {
-        <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2">
-            <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
-            <MudText Typo="Typo.body2" Class="page-header-subtitle">@this.Subtitle</MudText>
-        </MudStack>
-    }
-    @this.Actions
-</MudStack>
+</div>
 @if (this.SetPageTitle)
 {
-    <PageTitle>@this.Title</PageTitle>
+    <FocusedPageTitle Title="@this.Title" />
 }
 
 @code {
@@ -29,15 +56,57 @@
     [EditorRequired]
     public string Title { get; set; } = string.Empty;
 
-    /// <summary>An optional line beside the title, in secondary text, such as "with Margot, your Chief of Staff"; it is not part of the document title.</summary>
+    /// <summary>An optional intro under the title in <c>body1</c>, Quiet ink, at most 75 characters wide; it is not part of the document title.</summary>
     [Parameter]
     public string? Subtitle { get; set; }
 
-    /// <summary>The page's actions, rendered on the right of the header.</summary>
+    /// <summary>Content drawn instead of the h1 while it is set, for an inline rename. The caller keeps the title's size and weight (<c>title-inline-edit</c>); the document title is unchanged.</summary>
+    [Parameter]
+    public RenderFragment? TitleEditor { get; set; }
+
+    /// <summary>A small control on the title's own line, before the h1 or the <see cref="TitleEditor"/>, such as the Team page's avatar.</summary>
+    [Parameter]
+    public RenderFragment? TitleLeading { get; set; }
+
+    /// <summary>Small controls on the title's own line, after the h1 or the <see cref="TitleEditor"/>.</summary>
+    [Parameter]
+    public RenderFragment? TitleTrailing { get; set; }
+
+    /// <summary>Content at the right of the header, before the create button and the <see cref="Actions"/>.</summary>
+    [Parameter]
+    public RenderFragment? Aside { get; set; }
+
+    /// <summary>The label of the create action, such as "New agent"; no button is drawn when it is empty.</summary>
+    [Parameter]
+    public string? CreateText { get; set; }
+
+    /// <summary>The icon at the start of the create button, or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? CreateIcon { get; set; }
+
+    /// <summary>True (the default) to fill the create button, because it is the page's one primary action; false to outline it.</summary>
+    [Parameter]
+    public bool CreatePrimary { get; set; } = true;
+
+    /// <summary>Whether the create button is disabled.</summary>
+    [Parameter]
+    public bool CreateDisabled { get; set; }
+
+    /// <summary>Raised when the create button is pressed.</summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnCreate { get; set; }
+
+    /// <summary>Further actions at the right, drawn after the create button; each a <c>Size.Small</c> button at its natural width.</summary>
     [Parameter]
     public RenderFragment? Actions { get; set; }
 
-    /// <summary>Whether the header also sets the document title to <see cref="Title"/>; a page whose document title differs from its heading (the Team page) turns it off and sets its own.</summary>
+    /// <summary>True to close the header with a Chrome line, as the Room does between its header and its transcript.</summary>
+    [Parameter]
+    public bool Chrome { get; set; }
+
+    /// <summary>Whether the header also sets the document title to <see cref="Title"/>; the document title is always the bare page name, so a page turns this off only when it sets the title itself.</summary>
     [Parameter]
     public bool SetPageTitle { get; set; } = true;
+
+    private string RootClass => this.Chrome ? "page-header has-chrome" : "page-header";
 }

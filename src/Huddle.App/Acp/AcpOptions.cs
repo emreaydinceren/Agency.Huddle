@@ -28,11 +28,11 @@ public sealed class AcpOptions
     public IReadOnlyList<AdapterProfileOptions>? Adapters { get; set; }
 
     /// <summary>
-    /// The Teammate folders directory, relative to <see cref="TeamOptions.DataDir"/>, that
-    /// <see cref="PersonaStore"/> scans one level deep for Teammate definition files (Spec §6.15,
+    /// The Agent folders directory, relative to <see cref="TeamOptions.DataDir"/>, that
+    /// <see cref="PersonaStore"/> scans one level deep for Agent definition files (Spec §6.15,
     /// §7). Replaces the retired old key, which now throws at start-up naming this one.
     /// </summary>
-    public string TeammatesDir { get; set; } = "Teammates";
+    public string AgentsDir { get; set; } = "Agents";
 
     /// <summary>
     /// The Skill Library directory, relative to <see cref="TeamOptions.DataDir"/>, that
@@ -122,21 +122,21 @@ public sealed class AcpOptions
     public bool AdvertiseElicitation { get; set; } = true;
 
     /// <summary>
-    /// The install-wide Teammate cap of the single-Team era. Bound so an existing configuration still
-    /// loads, but it is no longer enforced anywhere: <see cref="MaxTeammatesPerTeam"/> and
+    /// The install-wide Agent cap of the single-Team era. Bound so an existing configuration still
+    /// loads, but it is no longer enforced anywhere: <see cref="MaxAgentsPerTeam"/> and
     /// <see cref="MaxLiveProcesses"/> (HR-10, decision D1) limit each Team and the live processes
     /// separately.
     /// </summary>
-    public int MaxTeammates { get; set; } = 8;
+    public int MaxAgents { get; set; } = 8;
 
     /// <summary>
-    /// The most Teammates one Team may hold (HR-10, decision D1). A hire that would take the Team past
+    /// The most Agents one Team may hold (HR-10, decision D1). A hire that would take the Team past
     /// this is refused. Zero or less disables the limit entirely.
     /// </summary>
-    public int MaxTeammatesPerTeam { get; set; } = 8;
+    public int MaxAgentsPerTeam { get; set; } = 8;
 
     /// <summary>
-    /// The most live Teammate processes this installation runs at once across every Team (HR-10,
+    /// The most live Agent processes this installation runs at once across every Team (HR-10,
     /// decision D1). A hire that would take the live count past this is refused. Zero or less disables
     /// the limit entirely.
     /// </summary>
@@ -173,7 +173,7 @@ public sealed class AcpOptions
     public int TranscriptCatchUpMessages { get; set; } = 20;
 
     /// <summary>
-    /// The Work Mode ids (ADR-0033) that are never offered in the Teammate card and never sent to an
+    /// The Work Mode ids (ADR-0033) that are never offered in the Agent card and never sent to an
     /// Adapter, bound from <c>Team:Acp:HiddenModes</c>. Null, the key being absent, means the default
     /// that <see cref="WorkModePolicy"/> holds; a list means exactly that list. To hide nothing, give a
     /// list holding one empty string: configuration cannot express an empty list, since the binder

@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Components.Settings;
 /// <summary>
 /// Builds the <see cref="PromptFieldState"/> rows the Settings page's Prompts tab renders, grouped and
 /// ordered for display. Pulled out of the page as a pure static function, the same way
-/// <c>Components/Pages/TeammateGrouping.cs</c> is pulled out of <c>Teammates.razor</c>: the read-only
+/// <c>Components/Pages/AgentGrouping.cs</c> is pulled out of <c>Agents.razor</c>: the read-only
 /// component tests this suite has can only assert on rendered HTML — <c>HtmlRenderer</c> cannot
 /// dispatch a click or change a <c>&lt;select&gt;</c> — so any behaviour worth a unit test (which
 /// prompts appear, what order, whether a value counts as modified) has to live where a plain test can
@@ -19,6 +19,9 @@ internal static class PromptFieldFactory
     private const string ToolPrefix = "tool.";
     private const string TaskPrefix = "task.";
     private const string PromptPrefix = "prompt.";
+    private const string InstallSkillPackPrefix = "installSkillPack.";
+    private const string SkillPromptPrefix = "skillPrompt.";
+    private const string HelperPrefix = "helper.";
 
     // RowsFor's clamp: 2 so a one-line prompt still reads as a text box rather than a slot, 14 so the
     // longest defaults (getHelp.rooms, systemPrompt.tools) cannot make their own field dominate the
@@ -37,6 +40,9 @@ internal static class PromptFieldFactory
         (ToolPrefix, "Tool descriptions"),
         (TaskPrefix, "Tasks"),
         (PromptPrefix, "Cadence"),
+        (InstallSkillPackPrefix, "Skill Packs: install file"),
+        (SkillPromptPrefix, "Skill Packs: prompts you paste"),
+        (HelperPrefix, "Helpers"),
     ];
 
     /// <summary>

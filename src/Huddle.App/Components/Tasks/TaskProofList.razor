@@ -1,0 +1,89 @@
+@*
+    Spec §6.8: the Proof checklist of the Task panel. One row per item with a tick or an open circle,
+    the label, the owner and the detail. On an open item owned by someone other than the Human, Ask
+    posts a Message from the Human to the owner through TaskTriggerService.AskAsync.
+*@
+@inject TaskTriggerService Triggers
+@inject ISnackbar Snackbar
+
+@if (this.Proof.Total > 0)
+{
+    <div class="task-proof-list">
+        <div class="task-proof-heading">@this.HeadingText</div>
+        @foreach (ProofItem item in this.Proof.Items)
+        {
+            <div class="task-proof-row" data-met="@(item.Met ? "true" : "false")">
+                @if (item.Met)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="task-proof-mark task-proof-mark-met" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.RadioButtonUnchecked" Size="Size.Small" Class="task-proof-mark task-proof-mark-open" />
+                }
+                <span class="task-proof-label">@item.Label</span>
+                @if (!string.IsNullOrWhiteSpace(item.Owner))
+                {
+                    <span class="task-proof-owner">@item.Owner</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(item.Detail))
+                {
+                    <span class="task-proof-detail">@item.Detail</span>
+                }
+                @if (this.CanAsk(item))
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-proof-ask"
+                               aria-label="@HumanGateCopy.AskAccessibleName(item.Owner, item.Label)"
+                               OnClick="@(() => this.AskAsync(item))">@HumanGateCopy.AskButton(item.Owner)</MudButton>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The Task whose Proof is listed; it names the Room the Ask is posted in and whether the heading is the gated one.</summary>
+    [Parameter]
+    public TaskItem? Task { get; set; }
+
+    /// <summary>The Proof to list.</summary>
+    [Parameter]
+    public Proof Proof { get; set; } = Proof.Empty;
+
+    /// <summary>The Human's display name; an item owned by the Human has no Ask.</summary>
+    [Parameter]
+    public string HumanName { get; set; } = string.Empty;
+
+    /// <summary>The heading for the Task: Proof when it is gated, the for-information line when it is not.</summary>
+    private string HeadingText => this.Task is { IsGated: true } ? HumanGateCopy.ProofHeadingGated : HumanGateCopy.ProofHeadingUngated;
+
+    /// <summary>Whether <paramref name="item"/> gets an Ask button: open, with an owner who is not the Human.</summary>
+    /// <param name="item">The Proof item.</param>
+    private bool CanAsk(ProofItem item) =>
+        !item.Met
+        && !string.IsNullOrWhiteSpace(item.Owner)
+        && !string.Equals(item.Owner, this.HumanName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Posts the Ask for <paramref name="item"/> and reports the outcome in a Snackbar.</summary>
+    /// <param name="item">The open item to ask about.</param>
+    private async System.Threading.Tasks.Task AskAsync(ProofItem item)
+    {
+        if (this.Task is null)
+        {
+            return;
+        }
+
+        string owner = item.Owner ?? string.Empty;
+        string key = $"proof-ask:{this.Task.Id}:{item.Label}";
+        string text = HumanGateCopy.AskMessage(owner, this.Task.Id.ToString(), item.Label);
+        AskOutcome outcome = await this.Triggers.AskAsync(this.Task, owner, text, CancellationToken.None);
+        if (outcome.Succeeded)
+        {
+            this.Snackbar.Add(HumanGateCopy.AskedSnackbar(owner, outcome.RoomName ?? string.Empty), Severity.Success, configure: null, key: key);
+        }
+        else
+        {
+            this.Snackbar.Add(HumanGateCopy.AskFailedSnackbar(owner), Severity.Warning, configure: null, key: key);
+        }
+    }
+}

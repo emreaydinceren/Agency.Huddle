@@ -1,0 +1,40 @@
+@*
+    The Right sidebar's History panel (DocHistory spec §6.8): the open Markdown document's whole History, drawn by the
+    same DocumentHistory component the document once carried under its text - one timeline, newest first, fifty at a time.
+*@
+@namespace Agency.Huddle.App.Components.Sidebar
+@using Agency.Huddle.App.Components.Library
+@using Agency.Huddle.App.DocHistory
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@inherits DocHistoryComponentBase
+@inject DocHistoryStore Store
+
+@if (this.Subject is DocumentSubject document)
+{
+    <DocumentHistory Path="@document.Path" Embedded="true" />
+}
+
+@code {
+    /// <summary>What the page shows; only a document has a history.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab this panel belongs to.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, for the header count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    private protected override DocHistoryStore HistoryStore => this.Store;
+
+    /// <inheritdoc />
+    protected override LibraryPath? HistoryPath => (this.Subject as DocumentSubject)?.Path;
+
+    /// <inheritdoc />
+    protected override void OnEntriesLoaded() =>
+        this.Panel?.SetCount(this.Entries.Count > 0 ? this.Entries.Count : null);
+}

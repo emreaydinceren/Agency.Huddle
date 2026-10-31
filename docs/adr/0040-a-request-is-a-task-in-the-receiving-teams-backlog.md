@@ -8,8 +8,9 @@ date: 2026-10-08
 When one Team needs something from another, such as a bug, a feature, feedback or a question,
 that need is a **Request**. A Request is an ordinary Task file in the receiving Team's
 `_tasks/` folder, with six extra frontmatter keys. Its lifecycle is a small state machine in
-code, and only the managers and the QA of the right Team can move it. The full design is in
-the [Teams specification](../engineering/teams-spec.md), under *Request (a Task with extra fields)* and *Request lifecycle*.
+code, and only the managers and the QA of the right Team can move it. The Human's view is in
+the [User Guide](../Huddle.UserGuide.md) (*Requests between Teams*); the original Teams specification has
+been retired.
 
 ## The problem
 

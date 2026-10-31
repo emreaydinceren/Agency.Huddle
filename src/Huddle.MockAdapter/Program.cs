@@ -40,7 +40,8 @@ internal static class Program
             Stream input = Console.OpenStandardInput();
             Stream output = Console.OpenStandardOutput(); // stdout is protocol-only — Spec §12 (E-16): every diagnostic below goes to Console.Error instead.
             DuplexStream duplex = new(input, output);
-            await using FakeAcpAgent agent = new(duplex);
+            FakeAcpAgent agent = new(duplex);
+            await using var agentScope = agent.ConfigureAwait(false);
             agent.OnPrompt = MockBehaviour.ChunkedEchoAsync;
 
             await agent.RunAsync(cancellationSource.Token).ConfigureAwait(false);

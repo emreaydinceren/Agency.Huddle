@@ -5,12 +5,13 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Components.Teams
 @using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Gateway
 @using Agency.Huddle.App.HiringPool
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
 @using Agency.Huddle.App.Skills
-@using Agency.Huddle.App.Teammates
+@using Agency.Huddle.App.Agents
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
 @using Microsoft.AspNetCore.WebUtilities
@@ -27,14 +28,16 @@
 @inject ITeamFolders Folders
 @inject HireService Hiring
 @inject IHireContext HireContext
-@inject SkillPackStore Packs
-@inject SkillsCatalogIndex SkillCatalog
-@inject SkillStore InstalledSkills
+@inject ISkillAvailability Availability
+@inject IServiceProvider Services
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @inject ITeamMembership Membership
 @inject AvatarStore Avatars
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
 @inject PersonaHealth Health
+@inject IRemoteAccessState RemoteAccess
 @implements IDisposable
 
 @*
@@ -56,7 +59,7 @@
 
 @if (this.EditMode && this.missingTeam)
 {
-    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
+    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team page-reading pa-4">
         <MudAlert Severity="Severity.Warning" role="alert" Class="build-team-missing">There is no Team named "@this.Team".</MudAlert>
     </MudContainer>
     return;
@@ -114,10 +117,10 @@
                                   Value="this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
-                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose long-text-field" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
                                   Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
-                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
+                                  Adornment="@(this.RemoteAccess.IsConfigured ? Adornment.None : Adornment.End)" AdornmentIcon="@Icons.Material.Outlined.Folder"
                                   AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
 
@@ -137,37 +140,59 @@
                     <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
                 </div>
             }
-            <div>
-                <MudText Typo="Typo.subtitle1">Roles</MudText>
-                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-subtitle">Available roles</MudText>
+            <div class="build-team-subhead">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3">Roles</MudText>
+                <span class="chip-meta build-team-roles-subtitle">@Plural.Of(this.Pool.Jobs.Count + this.CustomRoles.Roles.Count, "role", "roles") available</span>
             </div>
+            @if (this.MembersOnly)
+            {
+                @* Members tab only: narrow the roles below to the ones a team type defines. A cloud of the types; the chosen one
+                   floats to its left as the Tasks toolbar's filter chip without the caret, with a clear button, and pressing
+                   another type in the cloud changes the choice. *@
+                <div class="build-team-role-type-filter">
+                    <ChipCloud Title="Team types" Pool="@this.TypeChipNames" Cap="12" OnToggle="this.OnTypeChipToggled">
+                        <Leading>
+                            @if (this.RoleTypeFilter is { } filterType)
+                            {
+                                <TaskFilterChip Label="Team type" Value="@filterType.DisplayName" IsSet="true" NoMenu="true" OnClear="this.ClearRoleTypeFilter" Class="build-team-role-type-chip" />
+                            }
+                        </Leading>
+                    </ChipCloud>
+                </div>
+            }
             @if (this.CustomRoles.LoadError is not null)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
             }
-            <div class="team-type-grid" role="group" aria-label="Roles">
+            <div class="role-grid" role="group" aria-label="Roles">
                 <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
                     <span class="role-add-label">Add a role</span>
                 </button>
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
                 {
                     <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
-                @foreach (CustomRole role in this.CustomRoles.Roles)
+                @foreach (CustomRole role in this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)))
                 {
                     <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true" Taken="@this.OnRoster(role.Id)"
                               OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
                 {
                     <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
             </div>
+            @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
+            {
+                <MudText Typo="Typo.body2" Class="build-team-intro build-team-role-type-empty" role="status">@emptyType.DisplayName has no roles to hire from here.</MudText>
+            }
 
             <div class="build-team-roster">
-                <MudText Typo="Typo.subtitle1">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
-                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roster-summary">@this.RosterSummary</MudText>
+                <div class="build-team-subhead">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
+                    <span class="chip-meta build-team-roster-summary">@this.RosterSummary</span>
+                </div>
                 @if (this.drafts.Count > 0)
                 {
                     <div class="roster-grid" role="list" aria-label="@(this.EditMode ? "Roster" : "Draft roster")">
@@ -194,13 +219,31 @@
                                             <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
                                                        aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
                                         }
-                                        <MudMenu Label="Remove" Variant="Variant.Text" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" AriaLabel="@($"Remove {draft.Name}")" Class="roster-remove">
-                                            <MudMenuItem OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from Team</MudMenuItem>
-                                            <MudMenuItem OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete Teammate</MudMenuItem>
+                                        @* A destructive action is never a top-level button with a caret (design-system "Menus"):
+                                           Edit and Message lead, and the removals sit under the more-actions button. The activator
+                                           names its target and carries no hover tooltip; neither item opens a dialog. *@
+                                        <MudMenu Class="roster-more" Dense="true">
+                                            <ActivatorContent Context="menuContext">
+                                                <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
+                                                               aria-label="@MenuDialogs.ActivatorLabel(draft.Name)" OnClick="menuContext.ToggleAsync" />
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <MudMenuItem Icon="@ActionIcons.RemoveMember" OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="menu-item-destructive">Delete agent</MudMenuItem>
+                                            </ChildContent>
                                         </MudMenu>
                                     }
                                     else
                                     {
+                                        @if (draft.SkillSetup.Any(static item => item.Problem != SkillAvailability.Withdrawn))
+                                        {
+                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</MudButton>
+                                        }
+                                        @if (draft.SkillSetup.Any(static item => item.Problem == SkillAvailability.Withdrawn))
+                                        {
+                                            <MudText Typo="Typo.caption" Class="roster-withdrawn mud-text-secondary">Edit the draft to drop it.</MudText>
+                                        }
                                         <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
                                                    aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
                                         <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
@@ -215,7 +258,7 @@
                 }
                 else
                 {
-                    <div class="roster-empty">Draft Teammates appear here, each with a name and an avatar.</div>
+                    <div class="roster-empty">Draft Agents appear here, each with a name and an avatar.</div>
                 }
             </div>
 
@@ -232,9 +275,9 @@
         </section>
     }
 
-    @if (this.selected is not null)
+    @if (this.selected is not null && (!this.EditMode || this.HasChanges))
     {
-        <section class="build-team-section build-team-approve" aria-labelledby="@(this.EditMode ? null : "build-team-approve-heading")" aria-label="@(this.EditMode ? "Save" : null)">
+        <section class="@(this.EditMode ? "build-team-section build-team-approve build-team-savebar" : "build-team-section build-team-approve")" aria-labelledby="@(this.EditMode ? null : "build-team-approve-heading")" aria-label="@(this.EditMode ? "Save" : null)">
             @if (!this.EditMode)
             {
                 <div class="build-team-section-head">
@@ -248,7 +291,7 @@
                     @this.approveError
                     @if (this.skillsBlocked)
                     {
-                        <MudLink Href="/settings/skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
+                        <MudLink Href="/settings/skills?view=skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
                     }
                 </MudAlert>
             }
@@ -279,7 +322,7 @@
             string part;
             if (!this.EditMode)
             {
-                part = "pa-4";
+                part = "page-reading pa-4";
             }
             else
             {
@@ -317,7 +360,7 @@
     private bool missingTeam;
     private readonly HashSet<string> removed = new(StringComparer.Ordinal);
 
-    /// <summary>The members marked to leave the Team on save: their Team label is removed and they stay Teammates.</summary>
+    /// <summary>The members marked to leave the Team on save: their Team label is removed and they stay Agents.</summary>
     private readonly HashSet<string> leaving = new(StringComparer.Ordinal);
 
     /// <summary>Whether the member or draft is marked to be deleted or to leave the Team.</summary>
@@ -374,12 +417,12 @@
         {
             if (this.drafts.Count == 0)
             {
-                return "No Teammates yet. Add a role above.";
+                return "No Agents yet. Add a role above.";
             }
 
             if (!this.EditMode)
             {
-                string drafted = Plural.Of(this.drafts.Count, "draft Teammate", "draft Teammates");
+                string drafted = Plural.Of(this.drafts.Count, "draft Agent", "draft Agents");
                 return $"{drafted} · dashed ring = not hired yet";
             }
 
@@ -434,9 +477,9 @@
         return draft.Existing ? ProfileMembership.Member : ProfileMembership.New;
     }
 
-    /// <summary>The line a roster card shows while its Teammate is going: deleted, leaving the Team, or null when staying.</summary>
-    /// <param name="deleting">Whether the Teammate will be deleted on save.</param>
-    /// <param name="departing">Whether the Teammate will leave the Team on save.</param>
+    /// <summary>The line a roster card shows while its Agent is going: deleted, leaving the Team, or null when staying.</summary>
+    /// <param name="deleting">Whether the Agent will be deleted on save.</param>
+    /// <param name="departing">Whether the Agent will leave the Team on save.</param>
     private static string? RemovingTextOf(bool deleting, bool departing)
     {
         if (deleting)
@@ -449,7 +492,7 @@
 
     /// <summary>Maps a roster draft to the data its <see cref="ProfileCard"/> draws: the status dot only for a saved member, the tier only once a role is chosen.</summary>
     /// <param name="draft">The roster card's draft.</param>
-    private TeammateProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
+    private AgentProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
     {
         State = draft.Existing && this.MemberState is { } stateOf ? stateOf(draft.Name) : null,
         Tier = draft.RoleId.Length > 0 ? draft.Tier : null,
@@ -460,10 +503,10 @@
     };
 
     private string ChiefName => this.Personas.Entries
-        .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name
+        .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name
         is { } chief && !string.Equals(chief, "Chief of Staff", StringComparison.Ordinal) ? chief : "your Chief of Staff";
 
-    private bool HasChief => this.Personas.Entries.Any(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal));
+    private bool HasChief => this.Personas.Entries.Any(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal));
 
     /// <summary>"with Margot, your Chief of Staff" once renamed; "with your Chief of Staff" while it still has the default name; nothing without one.</summary>
     private string? Subtitle
@@ -488,6 +531,10 @@
     private readonly List<DraftMember> drafts = [];
     private string? approveError;
     private bool skillsBlocked;
+
+    /// <summary>Cancelled when the page goes, so leaving it stops a copy (§6.10.6).</summary>
+    private readonly CancellationTokenSource pageCancellation = new();
+    private Agency.Huddle.App.SkillSources.SkillRegistry? subscribedRegistry;
     private bool approving;
     private string? continueTeam;
     private bool nameEdited;
@@ -538,7 +585,7 @@
         }
     }
 
-    /// <summary>Whether Approve &amp; hire (or, when editing, Save changes) may be pressed: step 2 is complete and the roster keeps at least one Teammate; when editing, something changed and the Team keeps a manager.</summary>
+    /// <summary>Whether Approve &amp; hire (or, when editing, Save changes) may be pressed: step 2 is complete and the roster keeps at least one Agent; when editing, something changed and the Team keeps a manager.</summary>
     private bool CanApprove => this.selected is not null && !this.approving && this.ApproveHint is null;
 
     /// <summary>Says what is still missing while the button is off; nothing once it is on.</summary>
@@ -556,6 +603,11 @@
                 return this.HasDetailChanges ? null : "Nothing has changed yet.";
             }
 
+            if (this.drafts.Any(static draft => !draft.Existing && draft.SkillSetup.Count > 0))
+            {
+                return "Some Agents need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves.";
+            }
+
             if (!this.MembersOnly && !this.DetailsReady)
             {
                 return "Finish the team details first.";
@@ -563,7 +615,7 @@
 
             if (this.KeptCount == 0)
             {
-                return this.removed.Count + this.leaving.Count > 0 ? "Keep at least one Teammate on the roster." : "Add at least one Teammate to the roster.";
+                return this.removed.Count + this.leaving.Count > 0 ? "Keep at least one Agent on the roster." : "Add at least one Agent to the roster.";
             }
 
             if (this.EditMode && this.ManagerBlocked)
@@ -613,7 +665,7 @@
     [
         new("Team type", this.selected?.DisplayName ?? "Choose one"),
         new("Team details", this.DetailsReady ? this.TrimmedName : "name and what it’s for"),
-        new("Hire", this.drafts.Count > 0 ? Plural.Of(this.drafts.Count, "Teammate", "Teammates") + " drafted" : "add the roles"),
+        new("Hire", this.drafts.Count > 0 ? Plural.Of(this.drafts.Count, "Agent", "Agents") + " drafted" : "add the roles"),
         new("Approve", "only you"),
     ];
 
@@ -639,6 +691,11 @@
         this.Pool.Changed += this.OnCatalogChanged;
         this.CustomRoles.Changed += this.OnCatalogChanged;
         this.Personas.PersonasChanged += this.OnPersonasChanged;
+        this.subscribedRegistry = this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
+        if (this.subscribedRegistry is not null)
+        {
+            this.subscribedRegistry.Changed += this.OnRegistryChanged;
+        }
     }
 
     /// <inheritdoc />
@@ -693,7 +750,7 @@
         this.managerKey = this.originalManagerKey;
     }
 
-    /// <summary>Rebuilds the members on the roster from the Teammates as they are now, keeping the new drafts after them and the members marked for deletion still marked; a member hired by this page's own save is not shown twice.</summary>
+    /// <summary>Rebuilds the members on the roster from the Agents as they are now, keeping the new drafts after them and the members marked for deletion still marked; a member hired by this page's own save is not shown twice.</summary>
     /// <param name="summary">The Team as the catalog reports it.</param>
     private void RefreshMembers(TeamSummary summary)
     {
@@ -721,7 +778,7 @@
 
     /// <summary>An existing member as a roster card: their title, Skills, adapter, model, effort and stored avatar, and the role they were hired into, so the role's card shows as taken and a manager role makes them a manager choice.</summary>
     /// <param name="member">The member's Name.</param>
-    /// <returns>The card, or <see langword="null"/> when no Teammate has that Name.</returns>
+    /// <returns>The card, or <see langword="null"/> when no Agent has that Name.</returns>
     private DraftMember? MemberDraft(string member)
     {
         if (this.Personas.ResolveByNameOrAlias(member) is not { } entry || this.Personas.Get(entry.Name) is not { } persona)
@@ -762,6 +819,11 @@
     /// <summary>Opens the folder picker at the folder typed so far and, when one is chosen, puts it in the field.</summary>
     private async Task BrowseAsync()
     {
+        if (this.RemoteAccess.IsConfigured)
+        {
+            return;
+        }
+
         DialogParameters<FolderPickerDialog> parameters = new() { { x => x.Start, this.workspace } };
         IDialogReference reference = await this.Dialogs.ShowAsync<FolderPickerDialog>("Choose a folder", parameters, FolderPickerDialog.Options);
         DialogResult? result = await reference.Result;
@@ -771,36 +833,77 @@
         }
     }
 
-    /// <summary>Whether the chosen type's template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <summary>Whether the chosen type's template defines this pool job as a role; see <see cref="DefinesRole"/>.</summary>
     /// <param name="jobId">The pool job's id.</param>
-    private bool IsSuggested(string jobId) => this.selected?.Roles.Any(role =>
+    private bool IsSuggested(string jobId) => DefinesRole(this.selected, jobId);
+
+    /// <summary>Whether <paramref name="type"/>'s template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <param name="type">The team type, or <see langword="null"/> for none.</param>
+    /// <param name="jobId">The pool job's id.</param>
+    private static bool DefinesRole(TeamTypeManifest? type, string jobId) => type?.Roles.Any(role =>
         !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
 
-    /// <summary>One Teammate on the draft roster: a role with a Name, not hired until the Human approves.</summary>
+    /// <summary>The id of the team type the roles are filtered by in the Members tab, or <see langword="null"/> while they are not.</summary>
+    private string? roleTypeFilterId;
+
+    /// <summary>The team type the roles are filtered by; <see langword="null"/> while they are not, and always outside the Members tab, which alone offers the filter.</summary>
+    private TeamTypeManifest? RoleTypeFilter => this.MembersOnly && this.roleTypeFilterId is { } id ? this.Types.Find(id) : null;
+
+    /// <summary>The names the type cloud offers, in catalog order, without the one chosen, which is drawn first as the filter chip. The Blank Team is left out: it defines no roles, so filtering by it would show none.</summary>
+    private IReadOnlyList<string> TypeChipNames => [.. this.Types.Types
+        .Where(type => !string.Equals(type.Id, this.roleTypeFilterId, StringComparison.Ordinal))
+        .Select(static type => type.DisplayName)];
+
+    /// <summary>Whether a role card shows: always while the roles are not filtered, otherwise only when the filter's team type defines the role.</summary>
+    /// <param name="roleId">The pool job's or the Human's own role's id.</param>
+    private bool ShowsRole(string roleId) => this.RoleTypeFilter is not { } type || DefinesRole(type, roleId);
+
+    /// <summary>Whether any role card shows under the current filter, so a type that defines nothing hireable here can say so.</summary>
+    private bool AnyRoleShown => this.Pool.Jobs.Any(job => this.ShowsRole(job.Id)) || this.CustomRoles.Roles.Any(role => this.ShowsRole(role.Id));
+
+    /// <summary>Filters the roles by the type whose chip was pressed in the cloud, in place of any type chosen before.</summary>
+    /// <param name="displayName">The pressed chip's text, a type's display name.</param>
+    private void OnTypeChipToggled(string displayName)
+    {
+        if (this.Types.Types.FirstOrDefault(type => string.Equals(type.DisplayName, displayName, StringComparison.Ordinal)) is { } type)
+        {
+            this.roleTypeFilterId = type.Id;
+        }
+    }
+
+    /// <summary>Shows every role again: the chosen type goes back among the cloud's chips.</summary>
+    private void ClearRoleTypeFilter() => this.roleTypeFilterId = null;
+
+    /// <summary>One Agent on the draft roster: a role with a Name, not hired until the Human approves.</summary>
     /// <param name="Key">Tells this draft from the others; stable while it is edited or re-rolled.</param>
     /// <param name="RoleId">The id of the role it was added from.</param>
     /// <param name="Title">The role's title.</param>
     /// <param name="Description">One sentence on the role.</param>
     /// <param name="Tier">The model strength the role asks for.</param>
     /// <param name="Manager">Whether the team type's template makes this role its manager.</param>
-    /// <param name="Name">The Teammate's Name.</param>
-    /// <param name="Text">The persona text the Teammate is hired with.</param>
+    /// <param name="Name">The Agent's Name.</param>
+    /// <param name="Text">The persona text the Agent is hired with.</param>
     /// <param name="NameChoices">The names the role suggests, tried before the shared pool when re-rolling.</param>
     /// <param name="Avatar">The colour avatar drawn with the Name; it shows its initials until, or unless, a library image is drawn.</param>
     /// <param name="AvatarChoices">The avatar library files that suit the role, best first; empty to draw from the whole library.</param>
     /// <param name="AvatarFile">The library file drawn, or <see langword="null"/> when the library gave none.</param>
     /// <param name="Image">The bytes of the drawn library image, or <see langword="null"/>.</param>
     /// <param name="ImageExtension">The extension, with its dot, of <paramref name="Image"/>.</param>
-    /// <param name="Skills">The Skills the Teammate carries: the role's own plus its packs'.</param>
+    /// <param name="Skills">The Skills the Agent carries: the role's own plus its packs'.</param>
     /// <param name="Packs">The skill packs the role draws from.</param>
     /// <param name="Adapter">The adapter the role's model strength resolved to, or <see langword="null"/> when none qualified.</param>
     /// <param name="Model">The model on that adapter, or <see langword="null"/> for the adapter's default.</param>
-    /// <param name="Effort">The effort chosen in the Teammate card, or <see langword="null"/> for the default.</param>
+    /// <param name="Effort">The effort chosen in the Agent card, or <see langword="null"/> for the default.</param>
     /// <param name="Reasons">Why the draft needs setup before it runs well, such as no adapter for its strength; empty when nothing is missing.</param>
     /// <param name="Existing">Whether this is a member of the Team being edited rather than a new draft; a member is never hired again.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false);
+    /// <param name="Setup">The Packs and Skills that are not ready, from the card resolver and again after each edit or registry change.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null)
+    {
+        /// <summary>What the draft needs before it can be hired (Skill Packs spec §6.10.6); empty when ready.</summary>
+        public IReadOnlyList<SkillSetupItem> SkillSetup => this.Setup ?? [];
+    }
 
-    /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Teammate gets an image.</summary>
+    /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Agent gets an image.</summary>
     private static Avatar RandomAvatar() => Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
 
     private IReadOnlyList<string>? libraryFiles;
@@ -834,7 +937,7 @@
         return image is null ? (null, null, null) : (chosen, image.Bytes, image.Extension);
     }
 
-    /// <summary>Whether the draft roster has a Teammate added from the role.</summary>
+    /// <summary>Whether the draft roster has an Agent added from the role.</summary>
     /// <param name="roleId">The role's id.</param>
     private bool OnRoster(string roleId) => this.drafts.Exists(draft => string.Equals(draft.RoleId, roleId, StringComparison.Ordinal));
 
@@ -843,7 +946,7 @@
     private bool IsManagerRole(string jobId) => this.selected?.Roles.Any(role =>
         role.Manager && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
 
-    /// <summary>A Name no Teammate and no other draft has: one of the role's own suggestions when one is free, otherwise from the shared pool.</summary>
+    /// <summary>A Name no Agent and no other draft has: one of the role's own suggestions when one is free, otherwise from the shared pool.</summary>
     /// <param name="choices">The role's suggested names.</param>
     /// <param name="current">The Name now showing, which is not drawn again, or <see langword="null"/>.</param>
     private string FreeName(IReadOnlyList<string> choices, string? current)
@@ -851,10 +954,10 @@
         List<string> taken = [.. this.Personas.Entries.Select(static entry => entry.Name), .. this.drafts.Select(static draft => draft.Name)];
         string[] free = [.. choices.Where(choice => !taken.Contains(choice, StringComparer.OrdinalIgnoreCase)
             && !string.Equals(choice, current, StringComparison.OrdinalIgnoreCase))];
-        return free.Length > 0 ? free[Random.Shared.Next(free.Length)] : TeammateNamePool.Pick(Random.Shared, taken, current);
+        return free.Length > 0 ? free[Random.Shared.Next(free.Length)] : AgentNamePool.Pick(Random.Shared, taken, current);
     }
 
-    /// <summary>Adds a Teammate for the role to the draft roster, with a free Name.</summary>
+    /// <summary>Adds an Agent for the role to the draft roster, with a free Name.</summary>
     /// <param name="roleId">The pressed card's role id: a pool job's, or a custom role's.</param>
     private async Task AddDraftAsync(string roleId)
     {
@@ -885,39 +988,54 @@
         }
     }
 
-    /// <summary>The Skills Edit draft offers besides the installed ones: the role's own that are not installed, then the rest of the catalog, so the list is never narrowed to what is already installed.</summary>
-    /// <param name="draft">The draft being edited.</param>
-    private IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)> DraftSkillChoices(DraftMember draft)
+    /// <summary>A Skill by name: Skills resolve through the registry, so a ref's source and path are not used (§6.10.2).</summary>
+    /// <param name="name">The Skill's name.</param>
+    private SkillRef SkillRefFor(string name) => new(name, CardResolver.RegistrySource, null);
+
+    /// <summary>The draft with its setup items worked out again from its Skills and Packs, and its reasons with the old Skill
+    /// lines replaced by the new ones; the name, adapter and connector reasons stay (§6.10.6).</summary>
+    private DraftMember Rechecked(DraftMember draft)
     {
-        List<(string Name, string Description, bool FromRole, string Origin)> choices = [];
-        foreach (SkillRef skill in draft.Skills.Where(skill => this.InstalledSkills.Get(skill.Name) is null))
-        {
-            SkillsCatalogEntry? known = this.SkillCatalog.FindByName(skill.Name);
-            string origin = known is null ? SkillOrigin.Describe(null, skill.Source, skill.Path) : SkillOrigin.Describe(known.Publisher, known.Repo, known.Path);
-            choices.Add((skill.Name, known?.Description ?? string.Empty, true, origin));
-        }
-
-        foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            if (this.InstalledSkills.Get(entry.Name) is null && !choices.Exists(choice => string.Equals(choice.Name, entry.Name, StringComparison.Ordinal)))
-            {
-                choices.Add((entry.Name, entry.Description, false, SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)));
-            }
-        }
-
-        return choices;
+        IReadOnlyList<SkillSetupItem> setup = SkillSetupCheck.For([.. draft.Skills.Select(static skill => skill.Name)], draft.Packs, this.Availability);
+        HashSet<string> oldLines = new(draft.SkillSetup.Select(SkillSetupText.Reason), StringComparer.Ordinal);
+        IReadOnlyList<string> reasons = [.. draft.Reasons.Where(reason => !oldLines.Contains(reason)), .. setup.Select(SkillSetupText.Reason)];
+        return draft with { Setup = setup, Reasons = reasons };
     }
 
-    /// <summary>The Skill to ask the installer for: one already installed stays as it is; otherwise the catalog entry it came from, so approving imports it.</summary>
-    /// <param name="name">The Skill's name.</param>
-    private SkillRef SkillRefFor(string name)
+    /// <summary>Re-checks every new draft when the registry publishes, so a card turns Ready by itself once the AI tool has
+    /// fetched what it needs.</summary>
+    private void OnRegistryChanged(Agency.Huddle.App.SkillSources.RegistryChange change)
     {
-        if (this.InstalledSkills.Get(name) is null && this.SkillCatalog.FindByName(name) is { } entry)
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            return new SkillRef(entry.Name, entry.Repo, entry.Path);
+            for (int index = 0; index < this.drafts.Count; index++)
+            {
+                if (!this.drafts[index].Existing)
+                {
+                    this.drafts[index] = this.Rechecked(this.drafts[index]);
+                }
+            }
+
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Copies the Needs setup prompt for a draft, every item grouped by Pack.</summary>
+    private async Task CopySetupPromptAsync(DraftMember draft)
+    {
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is not { } registry
+            || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts)
+        {
+            return;
         }
 
-        return new SkillRef(name, "local", null);
+        HashSet<string> inPacks = new(draft.Packs.Select(pack => registry.FindPack(pack.Id)).OfType<Agency.Huddle.SkillPacks.Resolving.PackEntry>().SelectMany(static pack => pack.SkillNames), StringComparer.Ordinal);
+        IReadOnlyList<Agency.Huddle.App.SkillSources.MissingItem> missing = registry.CheckReady(
+            [.. draft.Packs.Select(static pack => pack.Id)],
+            [.. draft.Skills.Select(static skill => skill.Name).Where(name => !inPacks.Contains(name))]).Missing;
+        Agency.Huddle.App.SkillSources.PathFormat format = this.Services.GetService<Agency.Huddle.App.SkillSources.PathFormatChoice>()?.Format ?? Agency.Huddle.App.SkillSources.PathFormat.Windows;
+        _ = await Agency.Huddle.App.Skills.Ui.PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompts.NeedsSetup(draft.RoleId, draft.Title, missing, format), this.pageCancellation.Token);
     }
 
     /// <summary>A draft for a role, its Skills, packs, adapter, model and setup reasons resolved the way a hire card was (the card resolver).</summary>
@@ -933,9 +1051,9 @@
     /// <param name="spec">The role as the card resolver reads it.</param>
     private DraftMember NewDraft(string roleId, string title, string description, ModelTier tier, bool manager, string name, string text, IReadOnlyList<string> nameChoices, IReadOnlyList<string> avatarChoices, RoleSpec spec)
     {
-        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Packs.All, this.HireContext.Connectors, name);
+        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Availability, this.HireContext.Connectors, name);
         return new DraftMember(Guid.NewGuid().ToString("N"), roleId, title, description, tier, manager, name, text, nameChoices, RandomAvatar(), avatarChoices, null, null, null,
-            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons);
+            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons, Setup: card.SkillSetup);
     }
 
     /// <summary>The draft with a library avatar drawn for it.</summary>
@@ -965,7 +1083,7 @@
         }
     }
 
-    /// <summary>Takes a new draft off the roster; a member of the Team being edited is only marked, and the Teammate is deleted when the changes are saved.</summary>
+    /// <summary>Takes a new draft off the roster; a member of the Team being edited is only marked, and the Agent is deleted when the changes are saved.</summary>
     /// <param name="key">The draft's key.</param>
     private void RemoveDraft(string key)
     {
@@ -991,7 +1109,7 @@
         _ = this.leaving.Remove(key);
     }
 
-    /// <summary>Marks a member to leave the Team on save: its Team label goes, and it stays a Teammate.</summary>
+    /// <summary>Marks a member to leave the Team on save: its Team label goes, and it stays an Agent.</summary>
     /// <param name="key">The member's key.</param>
     private void LeaveTeam(string key)
     {
@@ -1001,15 +1119,15 @@
 
     private void OnManagerChanged(string? key) => this.managerKey = key;
 
-    /// <summary>Opens a member's own Teammate card, the one the Team's Members tab opens; its changes are saved at once, and the roster follows them.</summary>
+    /// <summary>Opens a member's own Agent card, the one the Team's Members tab opens; its changes are saved at once, and the roster follows them.</summary>
     /// <param name="member">The member's Name.</param>
     private async Task EditMemberAsync(string member)
     {
-        TeammateCardOpener opener = new(this.Personas, this.TeamDirectory, this.Gateway, this.Health, this.Dialogs);
+        AgentProfileCardOpener opener = new(this.Personas, this.TeamDirectory, this.Gateway, this.Health, this.Dialogs);
         _ = await opener.OpenAsync(member, CancellationToken.None);
     }
 
-    /// <summary>When editing, a Teammate changed or deleted elsewhere (or from its card) is shown as it is now; nothing while a save is running.</summary>
+    /// <summary>When editing, an Agent changed or deleted elsewhere (or from its card) is shown as it is now; nothing while a save is running.</summary>
     private void OnPersonasChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         if (this.EditMode && !this.approving && this.Team is { } team && this.Catalog.Find(team) is { } summary)
@@ -1021,7 +1139,7 @@
         return Task.CompletedTask;
     });
 
-    /// <summary>Opens the Teammate card on the draft; Save puts the edited Name, title and text back on the roster, and nothing is written to the Teammates.</summary>
+    /// <summary>Opens the Agent card on the draft; Save puts the edited Name, title and text back on the roster, and nothing is written to the Agents.</summary>
     /// <param name="key">The draft's key.</param>
     private async Task EditDraftAsync(string key)
     {
@@ -1033,34 +1151,33 @@
 
         DialogParameters parameters = new()
         {
-            [nameof(TeammateCard.Mode)] = TeammateCardMode.Create,
-            [nameof(TeammateCard.Name)] = draft.Name,
-            [nameof(TeammateCard.Title)] = draft.Title,
-            [nameof(TeammateCard.Text)] = draft.Text,
-            [nameof(TeammateCard.DraftAvatar)] = draft.Avatar,
-            [nameof(TeammateCard.DraftImage)] = draft.Image,
-            [nameof(TeammateCard.DraftImageExtension)] = draft.ImageExtension,
-            [nameof(TeammateCard.DraftSkillChoices)] = this.DraftSkillChoices(draft),
-            [nameof(TeammateCard.DraftSkills)] = (IReadOnlyList<string>)[.. draft.Skills.Select(static skill => skill.Name)],
-            [nameof(TeammateCard.Adapter)] = draft.Adapter,
-            [nameof(TeammateCard.Model)] = draft.Model,
-            [nameof(TeammateCard.Effort)] = draft.Effort,
-            [nameof(TeammateCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Where(other => !string.Equals(other.Key, key, StringComparison.Ordinal)).Select(static other => other.Name)],
-            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)>(this, saved =>
+            [nameof(AgentProfileCard.Mode)] = AgentProfileCardMode.Create,
+            [nameof(AgentProfileCard.Name)] = draft.Name,
+            [nameof(AgentProfileCard.Title)] = draft.Title,
+            [nameof(AgentProfileCard.Text)] = draft.Text,
+            [nameof(AgentProfileCard.DraftAvatar)] = draft.Avatar,
+            [nameof(AgentProfileCard.DraftImage)] = draft.Image,
+            [nameof(AgentProfileCard.DraftImageExtension)] = draft.ImageExtension,
+            [nameof(AgentProfileCard.DraftSkills)] = (IReadOnlyList<string>)[.. draft.Skills.Select(static skill => skill.Name)],
+            [nameof(AgentProfileCard.Adapter)] = draft.Adapter,
+            [nameof(AgentProfileCard.Model)] = draft.Model,
+            [nameof(AgentProfileCard.Effort)] = draft.Effort,
+            [nameof(AgentProfileCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Where(other => !string.Equals(other.Key, key, StringComparison.Ordinal)).Select(static other => other.Name)],
+            [nameof(AgentProfileCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)>(this, saved =>
             {
                 int index = this.drafts.FindIndex(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
                 if (index >= 0)
                 {
                     DraftMember current = this.drafts[index];
                     IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(name => current.Skills.FirstOrDefault(known => string.Equals(known.Name, name, StringComparison.Ordinal)) ?? this.SkillRefFor(name))];
-                    this.drafts[index] = current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort };
+                    this.drafts[index] = this.Rechecked(current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort });
                 }
             }),
         };
-        _ = await this.Dialogs.ShowAsync<TeammateCard>("Edit draft", parameters, TeammateCard.Options);
+        _ = await this.Dialogs.ShowAsync<AgentProfileCard>("Edit draft", parameters, AgentProfileCard.Options);
     }
 
-    /// <summary>The new drafts as Teammates to write: a draft that fills one of the type's roles carries that role, up to the role's limit per Team, counting the members who keep it.</summary>
+    /// <summary>The new drafts as Agents to write: a draft that fills one of the type's roles carries that role, up to the role's limit per Team, counting the members who keep it.</summary>
     /// <param name="type">The chosen team type.</param>
     private List<DraftHire> BuildHires(TeamTypeManifest type)
     {
@@ -1113,12 +1230,11 @@
         }
 
         IReadOnlyList<SkillRef> needed = [.. this.drafts.Where(static draft => !draft.Existing).SelectMany(static draft => draft.Skills).DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
-        IReadOnlyList<SkillRef> missing = await this.Hiring.InstallSkillsAsync(needed, CancellationToken.None);
-        if (missing.Count > 0)
+        IReadOnlyList<SkillSetupItem> notReady = await this.Hiring.EnsureSkillsAsync(needed, this.pageCancellation.Token);
+        if (notReady.Count > 0)
         {
             this.skillsBlocked = true;
-            string names = string.Join(", ", missing.Select(static skill => skill.Name));
-            return $"Skills not installed: {names}. Import them yourself, then try again.";
+            return $"Skills not ready: {string.Join(", ", notReady.Select(static item => item.Name))}. Copy a prompt for your AI tool from the cards that need setup, then try again.";
         }
 
         return null;
@@ -1135,7 +1251,7 @@
         if (this.EditMode && this.removed.Count > 0)
         {
             string names = JoinNames([.. this.drafts.Where(draft => this.removed.Contains(draft.Key)).Select(static draft => draft.Name)]);
-            string heading = $"Delete {Plural.Of(this.removed.Count, "Teammate", "Teammates")}?";
+            string heading = $"Delete {Plural.Of(this.removed.Count, "Agent", "Agents")}?";
             if (!await this.Dialogs.ConfirmAsync(heading, $"{names} will be deleted, not just taken off the Team. This can't be undone.", "Delete", danger: true))
             {
                 return;
@@ -1193,7 +1309,7 @@
 
         if (result.Error is not null)
         {
-            this.approveError = $"The Team was created, but not every Teammate was hired. {result.Error}";
+            this.approveError = $"The Team was created, but not every Agent was hired. {result.Error}";
             this.continueTeam = team;
             return;
         }
@@ -1204,7 +1320,7 @@
     /// <summary>
     /// Saves the edits to an existing Team, stopping at the first failure: the new drafts' names and Skills are
     /// checked first, then the details are written, the drafts hired, the manager replaced, and only then the
-    /// marked members deleted, so a Team never names a deleted Teammate as its manager.
+    /// marked members deleted, so a Team never names a deleted Agent as its manager.
     /// </summary>
     /// <param name="type">The Team's type.</param>
     /// <param name="team">The Team.</param>
@@ -1235,7 +1351,7 @@
             DraftHireResult result = this.Hiring.HireDrafts(team, hires);
             if (result.Error is not null)
             {
-                this.approveError = $"Not every Teammate was hired. {result.Error}";
+                this.approveError = $"Not every Agent was hired. {result.Error}";
                 return;
             }
 
@@ -1260,7 +1376,7 @@
         List<string> stayed = [];
         foreach (DraftMember member in this.drafts.Where(draft => draft.Existing && this.leaving.Contains(draft.Key)).ToList())
         {
-            // The Teammate restarts when its label changes, so the write runs off the circuit thread.
+            // The Agent restarts when its label changes, so the write runs off the circuit thread.
             MembershipResult left = await Task.Run(() => this.Membership.Remove(team, member.Name));
             if (left.Outcome is not (MembershipOutcome.Removed or MembershipOutcome.NotMember))
             {
@@ -1340,7 +1456,7 @@
             return;
         }
 
-        if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Teammates.", "Delete", danger: true))
+        if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Agents.", "Delete", danger: true))
         {
             _ = this.CustomRoles.Delete(roleId);
         }
@@ -1376,6 +1492,16 @@
         this.Pool.Changed -= this.OnCatalogChanged;
         this.CustomRoles.Changed -= this.OnCatalogChanged;
         this.Personas.PersonasChanged -= this.OnPersonasChanged;
+
+        // The registry subscribed to is remembered, not looked up again: during a prerender the request scope is already being
+        // disposed when this runs, so Services.GetService throws ObjectDisposedException and the handler would stay on the singleton.
+        if (this.subscribedRegistry is not null)
+        {
+            this.subscribedRegistry.Changed -= this.OnRegistryChanged;
+        }
+
+        this.pageCancellation.Cancel();
+        this.pageCancellation.Dispose();
     }
 
     private static int RoleCount(TeamTypeManifest type) => type.Roles.Count(static role => !role.Manager && !role.Pooled);

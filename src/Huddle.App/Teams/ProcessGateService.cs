@@ -4,32 +4,6 @@ using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>A proposed Task status change, with everything a gate needs to judge it (PR-7).</summary>
-/// <param name="Team">The Team the Task belongs to.</param>
-/// <param name="TaskId">The Task being changed.</param>
-/// <param name="FromStatus">The wire name of the current status.</param>
-/// <param name="ToStatus">The wire name of the proposed status.</param>
-/// <param name="IsBug">Whether the Task is a bug.</param>
-/// <param name="ParentSpecApproved">Whether the parent spec Task is approved; <see langword="true"/> when the Task has no parent spec.</param>
-/// <param name="Evidence">The Task's Evidence lines.</param>
-/// <param name="AuthorRoleCovers">Each Evidence author's role coverage, comma-joined.</param>
-/// <param name="Actor">Who makes the change; the Human bypasses nothing here, the override lives in the caller.</param>
-internal sealed record GateContext(
-    string Team,
-    TaskId TaskId,
-    string FromStatus,
-    string ToStatus,
-    bool IsBug,
-    bool ParentSpecApproved,
-    IReadOnlyList<EvidenceLine> Evidence,
-    IReadOnlyDictionary<string, string> AuthorRoleCovers,
-    string? Actor);
-
-/// <summary>A gate's refusal of a change.</summary>
-/// <param name="Gate">The gate that refused.</param>
-/// <param name="Message">The text returned to the caller, naming the gate.</param>
-internal sealed record GateRefusal(GateId Gate, string Message);
-
 /// <summary>Decides whether the gates enabled in a Team's <c>Process.md</c> refuse a Task change or a merge (PR-7, Spec §Gates).</summary>
 /// <param name="teams">Finds the Team.</param>
 /// <param name="folders">Locates the Team's folder and its <c>_team.md</c>.</param>
@@ -47,7 +21,11 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.ChecksBeforeMerge => "Code can then be merged or pushed without a passing check run on record.",
         GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
         GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
+        GateId.HumanGate => "A Task can then reach Done without the Human's acceptance.",
+        GateId.ProofIncomplete => "A Task can then reach Needs You with its Proof incomplete.",
+#pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+#pragma warning restore HAA0601
     };
 
     /// <summary>Checks a proposed status change against the Team's enabled Task gates.</summary>
@@ -130,12 +108,20 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             && context.AuthorRoleCovers.TryGetValue(line.Author, out string? covers)
             && covers.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase));
 
-    private static bool HasFailureBeforePass(IReadOnlyList<EvidenceLine> evidence)
+    /// <summary>Whether a run with a non-zero exit code is followed by a later run with exit code 0.</summary>
+    /// <param name="evidence">The Task's Evidence lines.</param>
+    /// <returns><see langword="true"/> when a failing run came before a passing one.</returns>
+    internal static bool HasFailureBeforePass(IReadOnlyList<EvidenceLine> evidence)
     {
         List<EvidenceLine> runs = [.. evidence.Where(static line => line.ExitCode is not null).OrderBy(static line => line.Time)];
         EvidenceLine? failure = runs.FirstOrDefault(static line => line.ExitCode != 0);
         return failure is not null && runs.Any(line => line.ExitCode == 0 && line.Time > failure.Time);
     }
+
+    /// <summary>The Team's parsed Process, for the Proof builder.</summary>
+    /// <param name="team">The Team name.</param>
+    /// <returns>The Process document, or <see langword="null"/> when the Team or its Process is unknown.</returns>
+    internal ProcessDocument? ProcessOf(string team) => this.Load(team);
 
     private ProcessDocument? Load(string team)
     {

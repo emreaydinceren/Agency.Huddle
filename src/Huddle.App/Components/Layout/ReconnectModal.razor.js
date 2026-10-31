@@ -11,12 +11,31 @@ resumeButton.addEventListener("click", resume);
 function handleReconnectStateChanged(event) {
     if (event.detail.state === "show") {
         reconnectModal.showModal();
+        leaveWhenSessionEnded();
+    } else if (event.detail.state === "retrying") {
+        // Blazor treats the 401 from a revoked session's negotiate as "server unavailable" and keeps retrying
+        // with backoff, so ask /auth/status on every automatic attempt, not only after the final failure.
+        leaveWhenSessionEnded();
     } else if (event.detail.state === "hide") {
         reconnectModal.close();
     } else if (event.detail.state === "failed") {
         document.addEventListener("visibilitychange", retryWhenDocumentBecomesVisible);
+        leaveWhenSessionEnded();
     } else if (event.detail.state === "rejected") {
         location.reload();
+    }
+}
+
+// A dead gateway session (revoked, rotated or expired) must not leave the tab on the reconnect modal (C-7):
+// ask /auth/status and, when the session is gone, go to the connect page and come back to this page after.
+async function leaveWhenSessionEnded() {
+    try {
+        const response = await fetch("/auth/status", { cache: "no-store" });
+        if (response.ok && !(await response.json()).authenticated) {
+            location.href = "/auth?return=" + encodeURIComponent(location.pathname + location.search);
+        }
+    } catch {
+        // The server is unreachable, so the session state is unknown: stay on the modal.
     }
 }
 
@@ -42,6 +61,7 @@ async function retry() {
     } catch (err) {
         // We got an exception, server is currently unavailable
         document.addEventListener("visibilitychange", retryWhenDocumentBecomesVisible);
+        leaveWhenSessionEnded();
     }
 }
 
@@ -53,6 +73,7 @@ async function resume() {
         }
     } catch {
         reconnectModal.classList.replace("components-reconnect-paused", "components-reconnect-resume-failed");
+        leaveWhenSessionEnded();
     }
 }
 

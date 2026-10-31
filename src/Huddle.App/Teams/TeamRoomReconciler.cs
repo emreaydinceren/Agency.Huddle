@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -17,7 +18,8 @@ internal sealed partial class TeamRoomReconciler(
     ChatService chat,
     ITeamCatalog catalog,
     RoomEvents events,
-    ILogger<TeamRoomReconciler> logger) : IHostedService, IDisposable
+    ILogger<TeamRoomReconciler> logger,
+    IFeedPublisher? feed = null) : IHostedService, IDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly CancellationTokenSource stopping = new();
@@ -71,8 +73,8 @@ internal sealed partial class TeamRoomReconciler(
 
         catalog.Changed -= this.OnSignal;
         events.RoomsChanged -= this.OnSignal;
-        await this.stopping.CancelAsync();
-        await loop;
+        await this.stopping.CancelAsync().ConfigureAwait(false);
+        await loop.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -114,7 +116,7 @@ internal sealed partial class TeamRoomReconciler(
     /// <returns>A task that completes when the run has finished.</returns>
     internal async Task ReconcileAsync(CancellationToken ct = default)
     {
-        await this.gate.WaitAsync(ct);
+        await this.gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             IReadOnlyList<TeamSummary> teams = catalog.Teams;
@@ -125,7 +127,7 @@ internal sealed partial class TeamRoomReconciler(
 
             if (!this.seeded)
             {
-                foreach (Room room in await directory.GetRoomsAsync(ct))
+                foreach (Room room in await directory.GetRoomsAsync(ct).ConfigureAwait(false))
                 {
                     if (room.Team is not null)
                     {
@@ -137,14 +139,14 @@ internal sealed partial class TeamRoomReconciler(
             }
 
             HashSet<string> catalogNow = new(teams.Select(static t => t.Name), StringComparer.OrdinalIgnoreCase);
-            await this.UnarchiveReappearedTeamsAsync(catalogNow, ct);
+            await this.UnarchiveReappearedTeamsAsync(catalogNow, ct).ConfigureAwait(false);
 
             foreach (TeamSummary team in teams)
             {
-                await this.EnsureTeamRoomAsync(team, ct);
+                await this.EnsureTeamRoomAsync(team, ct).ConfigureAwait(false);
             }
 
-            await this.ArchiveVanishedTeamsAsync(catalogNow, ct);
+            await this.ArchiveVanishedTeamsAsync(catalogNow, ct).ConfigureAwait(false);
             this.lastSeenTeams.Clear();
             this.lastSeenTeams.UnionWith(catalogNow);
         }
@@ -160,7 +162,7 @@ internal sealed partial class TeamRoomReconciler(
         List<User> members = [];
         foreach (string name in team.Members)
         {
-            if (await directory.FindUserByNameAsync(name, ct) is { Kind: UserKind.Agent } user)
+            if (await directory.FindUserByNameAsync(name, ct).ConfigureAwait(false) is { Kind: UserKind.Agent } user)
             {
                 members.Add(user);
             }
@@ -171,10 +173,10 @@ internal sealed partial class TeamRoomReconciler(
             return;
         }
 
-        Room? room = await directory.FindTeamRoomAsync(team.Name, ct);
+        Room? room = await directory.FindTeamRoomAsync(team.Name, ct).ConfigureAwait(false);
         if (room is null)
         {
-            room = await this.TryCreateAsync(team, members, ct);
+            room = await this.TryCreateAsync(team, members, ct).ConfigureAwait(false);
             if (room is null)
             {
                 return;
@@ -186,12 +188,12 @@ internal sealed partial class TeamRoomReconciler(
             return;
         }
 
-        IReadOnlyList<User> present = await directory.GetRoomMembersAsync(room.Id, ct);
+        IReadOnlyList<User> present = await directory.GetRoomMembersAsync(room.Id, ct).ConfigureAwait(false);
         foreach (User member in members)
         {
             if (!present.Any(p => string.Equals(p.Id, member.Id, StringComparison.Ordinal)))
             {
-                await chat.InviteAsync(room.Id, member.Name, ct);
+                await chat.InviteAsync(room.Id, member.Name, FeedActor.Huddle, ct).ConfigureAwait(false);
             }
         }
     }
@@ -205,13 +207,37 @@ internal sealed partial class TeamRoomReconciler(
         string[] ids = [KnownIds.Human, .. members.Select(static m => m.Id)];
         try
         {
-            Room created = await directory.CreateRoomAsync(team.Name, ids, team.Name, true, ct);
+            Room created = await directory.CreateRoomAsync(team.Name, ids, team.Name, true, ct).ConfigureAwait(false);
             events.PublishRoomsChanged();
+            await this.PostCreatedAsync(created, members, ct).ConfigureAwait(false);
             return created;
         }
         catch (SqliteException)
         {
-            return await directory.FindTeamRoomAsync(team.Name, ct);
+            return await directory.FindTeamRoomAsync(team.Name, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Tells the Feed Huddle opened a Team Room. The Feed never decides, and a failed lookup is dropped.</summary>
+    /// <param name="room">The Team Room that was just created.</param>
+    /// <param name="members">The Agents it holds besides the Human.</param>
+    /// <param name="ct">Cancels the Human lookup.</param>
+    private async Task PostCreatedAsync(Room room, List<User> members, CancellationToken ct)
+    {
+        if (feed is null)
+        {
+            return;
+        }
+
+        try
+        {
+            User? human = await directory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false);
+            List<string> names = [human?.Name ?? "You", .. members.Select(static m => m.Name)];
+            feed.Post(new FeedMessage(FeedSourceType.RoomCreated, room.Id, FeedActor.Huddle, false, new RoomCreatedPayload(room.Id, room.Name, room.Team, names)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "The Feed could not record the Team Room {RoomId}.", room.Id);
         }
     }
 
@@ -229,11 +255,11 @@ internal sealed partial class TeamRoomReconciler(
             return;
         }
 
-        foreach (Room room in await directory.GetRoomsAsync(ct))
+        foreach (Room room in await directory.GetRoomsAsync(ct).ConfigureAwait(false))
         {
             if (room.Team is not null && !room.Archived && vanished.Contains(room.Team))
             {
-                await chat.SetRoomArchivedAsync(room.Id, true, ct);
+                await chat.SetRoomArchivedAsync(room.Id, true, FeedActor.Huddle, ct).ConfigureAwait(false);
                 this.archivedByReconciler[room.Id] = room.Team;
             }
         }
@@ -252,10 +278,10 @@ internal sealed partial class TeamRoomReconciler(
                 continue;
             }
 
-            Room? room = await directory.GetRoomAsync(roomId, ct);
+            Room? room = await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
             if (room is { Archived: true })
             {
-                await chat.SetRoomArchivedAsync(roomId, false, ct);
+                await chat.SetRoomArchivedAsync(roomId, false, FeedActor.Huddle, ct).ConfigureAwait(false);
             }
 
             _ = this.archivedByReconciler.Remove(roomId);
@@ -310,7 +336,7 @@ internal sealed partial class TeamRoomReconciler(
                 this.dirty = false;
             }
 
-            await this.RunSafelyAsync(ct);
+            await this.RunSafelyAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -319,7 +345,7 @@ internal sealed partial class TeamRoomReconciler(
     {
         try
         {
-            await this.ReconcileAsync(ct);
+            await this.ReconcileAsync(ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

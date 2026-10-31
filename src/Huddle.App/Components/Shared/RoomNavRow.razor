@@ -1,12 +1,12 @@
 @*
     One Room's row in a sidebar list: a NavTabLink to /rooms/{id} plus an Archive/Delete MudMenu,
-    shared by RoomList ("Chats") and TeamsNav (a Team's Rooms). The menu is reachable two ways: a
+    shared by RoomList ("Rooms") and TeamsNav (a Team's Rooms). The menu is reachable two ways: a
     keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on
     the row itself, which opens the SAME MudMenu instance programmatically through an @ref -
     right-click alone would not be reachable by keyboard, which is why the button is not optional.
 
     Delete's confirmation is an inline row swap, never a nested MudDialog and never a JS confirm() -
-    the same reasoning TeammateCard.razor's Remove button and ResetAllControl.razor both give: a
+    the same reasoning AgentProfileCard.razor's Remove button and ResetAllControl.razor both give: a
     confirmation dialog stacked on top of another dialog would need its own backdrop and focus trap for
     what is only ever a yes/no choice, and here there is no dialog to stack on at all - just a row.
 
@@ -15,6 +15,7 @@
 *@
 
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ChatService ChatService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -26,41 +27,48 @@
      @oncontextmenu:preventDefault="true">
     @if (this.confirmingDelete)
     {
-        <InlineConfirm Class="room-list-confirm" Prompt="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)" Busy="this.busy"
-                       OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+        @* The sidebar form: "Delete?" on one line, Cancel then Delete, in the row's indent. The full sentence (with the
+           Recycle Bin note) is the row's title, and the Archived chats dialog keeps the long prompt. *@
+        <div class="room-list-confirm-host" title="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)">
+            <InlineConfirm Class="room-list-confirm" Narrow="true" Prompt="Delete?" Busy="this.busy"
+                           OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+        </div>
     }
     else
     {
         <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass"
-                    Icon="@(this.oneToOneTeammate is null ? Icons.Material.Filled.Chat : null)">
-            @if (this.oneToOneTeammate is not null)
+                    Icon="@(this.oneToOneAgent is null ? Icons.Material.Filled.Chat : null)">
+            @if (this.oneToOneAgent is not null)
             {
-                @* A 1:1 Room's leading visual is the Teammate's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
-                <TeammateAvatar Name="@this.oneToOneTeammate.Name" Avatar="this.Avatars.Get(this.oneToOneTeammate.Name)" Size="Size.Small" Class="room-row-avatar" />
+                @* A 1:1 Room's leading visual is the Agent's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
+                <AgentAvatar Name="@this.oneToOneAgent.Name" Avatar="this.Avatars.Get(this.oneToOneAgent.Name)" Size="Size.Small" Class="room-row-avatar" />
             }
-            @this.Room.Name
+            @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
+            <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
             @if (this.TeamLabel is not null)
             {
                 <span class="room-team-label">(@this.TeamLabel)</span>
             }
+            <NeedsYouPill RoomId="@this.Room.Id" />
         </NavTabLink>
-        <MudMenu @ref="this.menu" Class="hover-reveal-menu">
+        <MudMenu @ref="this.menu" Class="hover-reveal-menu" Dense="true">
             @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                MudMenu does not wire a click listener around it automatically - the
                supplied MenuContext.ToggleAsync is how custom activator content opens
                the menu, which is why the button's OnClick calls it explicitly rather
-               than relying on MudMenu's default ActivationEvent handling. *@
+               than relying on MudMenu's default ActivationEvent handling. The activator
+               has no hover tooltip (it would stay up over the first item); its aria-label
+               names the Room (design-system "Menus"). *@
             <ActivatorContent Context="menuContext">
-                <MudTooltip Text="Room actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                   aria-label="Room actions" Class="hover-reveal-menu-button"
-                                   OnClick="menuContext.ToggleAsync" />
-                </MudTooltip>
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                               aria-label="@MenuDialogs.ActivatorLabel(this.Room.Name)" Class="hover-reveal-menu-button"
+                               OnClick="menuContext.ToggleAsync" />
             </ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
-                <MudMenuItem Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
-                <MudMenuItem Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Link" OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Archive" Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Filled.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
             </ChildContent>
         </MudMenu>
     }
@@ -71,7 +79,7 @@
     private bool confirmingDelete;
     private bool busy;
     private int uploadCount;
-    private User? oneToOneTeammate;
+    private User? oneToOneAgent;
 
     /// <summary>The Room this row shows.</summary>
     [Parameter, EditorRequired]
@@ -89,12 +97,12 @@
     [Parameter]
     public EventCallback<string?> OnError { get; set; }
 
-    /// <summary>Finds the Room's one Teammate when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
+    /// <summary>Finds the Room's one Agent when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
     protected override async Task OnParametersSetAsync()
     {
         IReadOnlyList<User> members = await this.TeamDirectory.GetRoomMembersAsync(this.Room.Id);
         List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
-        this.oneToOneTeammate = agents.Count == 1 ? agents[0] : null;
+        this.oneToOneAgent = agents.Count == 1 ? agents[0] : null;
     }
 
     private string LinkClass => this.Class is null ? "hover-reveal-link" : $"hover-reveal-link {this.Class}";

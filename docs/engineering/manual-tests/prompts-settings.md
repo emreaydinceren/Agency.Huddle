@@ -1,6 +1,6 @@
 # Settings: the Prompts, editing, per-field reset and Save
 
-Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running teammate, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
+Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running agent, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
 
 **41 tests** · 38 free, 3 paid 💰 · about 4.7 hours.
 
@@ -15,8 +15,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Confirm the clean starting state before the first test: `App_Data` should hold `Teammates` (one folder per Teammate, each holding `<Name>.md` and `work`), `Teams` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
-2. Browse to `http://localhost:5100/settings`.
+1. Confirm the clean starting state before the first test: `App_Data` should hold `Agents` (one folder per Agent, each holding `<Name>.md` and `work`), `Teams` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
+2. Browse to `http://localhost:5100/settings/prompts`. (A bare `/settings` opens the **Profile** tab, the first of seven; every test below that works on prompt fields means the Prompts tab.)
 3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
 4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\prompts.json` while the app is running.
 5. Open `<repo>\src\Huddle.App\prompts.default.json` in that editor and leave it open. It holds every shipped default, one key per prompt, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
@@ -25,11 +25,11 @@ standing conventions. This area adds:
 
 ## Tests
 
-### PROMPTSSETTINGS-01 — /settings opens on the Prompts tab with a six-tab rail
+### PROMPTSSETTINGS-01 — /settings opens on the Profile tab with a seven-tab rail
 
 **Free** · about 2 min
 
-*Proves the page routes, renders, and defaults to Prompts when no tab segment is given.*
+*Proves the page routes, renders, and defaults to Profile, the first tab, when no tab segment is given, with Prompts second.*
 
 **Before you start**
 
@@ -49,15 +49,16 @@ standing conventions. This area adds:
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly six buttons, in this order: `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
-- `PROMPTS` is the visually selected tab and the other five are not.
-- The content pane below shows prompt fields (bold field labels with textareas), not a theme picker.
+- The tab rail contains exactly seven buttons, in this order: `PROFILE`, `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
+- `PROFILE` is the visually selected tab and the other six are not.
+- The content pane below shows the Human's profile card with fields `Name`, `Alias`, `Title` and `Description` under it, not prompt fields and not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.
 
 **Fail if — any of these**
 
 - A 404 page or a yellow/ASP.NET exception page -> the route `/settings` with no `{Tab}` segment no longer resolves.
-- A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Prompts.
+- A blank content pane -> the fallback arm of the tab switch has broken; landing with no tab must still render Profile.
+- The Prompts pane shows on a bare `/settings` -> the fallback still names Prompts, the default before the Profile tab existed.
 - No tab looks active, or more than one does -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
 - The rail renders as a vertical column down the left, or anywhere other than horizontally above the content -> `MudTabs.Position` was set away from its default (`Position.Top`), which nothing in this area asked for.
 
@@ -66,9 +67,9 @@ standing conventions. This area adds:
 If the browser shows a connection error, the app is not running — redo `P-LAUNCH-FREE` and check `T-A` for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
 
 > [!NOTE]
-> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `PROMPTS` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
+> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `PROFILE` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
 
-### PROMPTSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Prompts instead of 404ing
+### PROMPTSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Profile instead of 404ing
 
 **Free** · about 4 min
 
@@ -94,13 +95,13 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 **Pass if — all of these**
 
-- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`, then one list of themes (a single `MudList`, labelled `Theme`, with group sub-headings; Custom Accent Light and Custom Accent Dark are among its items), a `Library pane` radio pair (`Right`, `Left`), a theme-credit paragraph, a note giving the path of `appearance.json`, and a `Your avatar` section. There is NO select control and no light/dark `Appearance` select, and no accent colour picker unless a Custom Accent theme is selected (ADR-0017).
+- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`, then one list of themes (a single `MudList`, labelled `Theme`, with group sub-headings; Custom Accent Light and Custom Accent Dark are among its items), a `Library pane` radio pair (`Right`, `Left`), a theme-credit paragraph, a note giving the path of `appearance.json`, and last a paragraph reading `Your own avatar is set on the Profile tab.`, where `Profile` links to `/settings/profile`. There is no avatar editor on this tab, NO select control and no light/dark `Appearance` select, and no accent colour picker unless a Custom Accent theme is selected (ADR-0017).
 - After step 3 the URL is `http://localhost:5100/settings/prompts` and the prompt textareas are back.
 - Step 5 renders the Prompts pane.
 - Step 6 (`/settings/PROMPTS`) renders the Prompts pane — the parse is case-insensitive.
 - Step 7 (`/settings/Appearance`) renders the Appearance pane.
-- Step 8 (`/settings/nonsense`) renders the PROMPTS pane, with `nonsense` still visible in the address bar.
-- Step 9 renders a page (Prompts pane) rather than an error.
+- Step 8 (`/settings/nonsense`) renders the PROFILE pane (the profile card and its fields) with `PROFILE` the selected tab, and `nonsense` still visible in the address bar.
+- Step 9 renders a page (Profile pane) rather than an error.
 - Back and Forward move between the tabs you visited without error.
 
 **Fail if — any of these**
@@ -122,7 +123,7 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -134,7 +135,7 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 
 **Pass if — all of these**
 
-- The first paragraph reads: `A prompt is one piece of wording this application sends to a model — part of a system prompt, a turn, get_help's output, or a tool's own description. Editing one changes what every teammate is told, not how the application itself behaves, and a prompt you have changed can always be restored to the wording it shipped with.`
+- The first paragraph reads: `A prompt is one piece of wording this application sends to a model — part of a system prompt, a turn, get_help's output, or a tool's own description. Editing one changes what every agent is told, not how the application itself behaves, and a prompt you have changed can always be restored to the wording it shipped with.`
 - The second paragraph reads: `Overrides are stored at <path>, which holds only the prompts you have changed — hand-edit it for fast prototyping if you like. The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
 - The `<path>` is a full absolute Windows path ending in `\App_Data\prompts.json` — for a default checkout, `<repo>\src\Huddle.App\App_Data\prompts.json`.
 - Explorer opens (or reports 'file not found' for) that exact folder, and that folder is the one containing `team.db`.
@@ -162,7 +163,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 - The app is running.
 - No prompts.json (fresh state).
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -178,7 +179,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 - Within `System prompt` these fields appear in this relative order: `Orientation`, `Identity`, `Chat rules`, `Tools`, `Asking the Human`, `Role block`, `Skills block`, `Memory block`.
 - Within `Turn` these fields appear in this relative order: `Onboarding turn`, `Room label`, `Message`, `Catch-up header`, `Catch-up line`, `Transcript header`, `Greeting`.
 - Within `Get help` these fields appear in this relative order: `Help: introduction`, `Help: Rooms`, `Help: messages`, `Help: mentions`, `Help: replying`, `Help: budget`, `Help: tools heading`, `Help: tool entry`, `Help: footer`, `Help: tasks`.
-- Within `Tool descriptions` these fields appear in this relative order: `get_help description`, `list_agents description`, `create_room description`, `add_evidence description`, `read_records description`, `list_teams description`, `file_request description`, `confirm_request description`, `triage_request description`, `propose_sprint description`, `mark_retro_row description`, `propose_retro_changes description`, `invite_agent description`, `post_message description`, `follow_room description`, `unfollow_room description`, `read_skill description`, `validate_teammate description`, `propose_teammates description`. The nine added by the prompt-catalog change (`add_evidence`, `read_records`, `list_teams`, `file_request`, `confirm_request`, `triage_request`, `propose_sprint`, `mark_retro_row`, `propose_retro_changes`) are all present.
+- Within `Tool descriptions` these fields appear in this relative order: `get_help description`, `list_agents description`, `create_room description`, `add_evidence description`, `read_records description`, `list_teams description`, `file_request description`, `confirm_request description`, `triage_request description`, `propose_sprint description`, `mark_retro_row description`, `propose_retro_changes description`, `invite_agent description`, `post_message description`, `follow_room description`, `unfollow_room description`, `read_skill description`, `validate_agent description`, `propose_agents description`. The nine added by the prompt-catalog change (`add_evidence`, `read_records`, `list_teams`, `file_request`, `confirm_request`, `triage_request`, `propose_sprint`, `mark_retro_row`, `propose_retro_changes`) are all present.
 - `Tasks` holds `Task wake-up message`; `Cadence` holds `Digest prompt`, `Roll-up prompt`, `Retro prompt`.
 - Every key in `prompts.default.json` has exactly one field, and no field lacks a key.
 - Every field has a bold label, an editable textarea, and one muted helper sentence.
@@ -197,7 +198,7 @@ If you cannot tell where one group ends and the next begins because headings are
 > [!NOTE]
 > Cross-check against `<repo>\src\Huddle.App\prompts.default.json`. Every label on screen must correspond to one of its keys and every key to one label. Do not skim — this test's entire value is that nothing is missing. The group list and order come from `PromptFieldFactory.cs:32-40`; the field order within a group is the order of `PromptCatalog.All`, so the lists above name only the fields the test relies on, in relative order, and the page may hold more between them. No total is asserted because the catalog grows.
 
-### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the prompts whose edits cannot reach a running teammate
+### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the prompts whose edits cannot reach a running agent
 
 **Free** · about 5 min
 
@@ -206,7 +207,7 @@ If you cannot tell where one group ends and the next begins because headings are
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -221,13 +222,13 @@ If you cannot tell where one group ends and the next begins because headings are
 - Every field under `System prompt` carries a `Next session` pill, including `Orientation`, `Identity`, `Chat rules`, `Tools`, `Skills block` and `Memory block`.
 - Every field under `Tool descriptions` carries a `Next session` pill, including `get_help description`, `list_agents description`, `create_room description`, `invite_agent description`, `post_message description` and the nine added by the prompt-catalog change: `add_evidence description`, `read_records description`, `list_teams description`, `file_request description`, `confirm_request description`, `triage_request description`, `propose_sprint description`, `mark_retro_row description`, `propose_retro_changes description`.
 - No field under `Turn`, `Get help`, `Tasks` or `Cadence` carries a timing pill at all (spot-check `Onboarding turn`, `Room label`, `Greeting`, `Help: Rooms`, `Help: tasks`, `Task wake-up message` and `Digest prompt`).
-- Hovering a `Next session` pill shows the tooltip `Applies to teammates started after the change`.
+- Hovering a `Next session` pill shows the tooltip `Applies to agents started after the change`.
 - No field shows a `Live` pill — there is deliberately no such badge.
 
 **Fail if — any of these**
 
-- A missing badge on any System prompt or Tool descriptions field -> the only warning a user ever gets that their system-prompt or tool-description edit will not reach a running teammate is gone; the failure that follows is completely silent, at runtime and in the logs.
-- A badge on any Turn, Get help, Tasks or Cadence field -> a user is told a restart is needed when it is not, and will pointlessly destroy a teammate's conversation memory to apply an edit that was already live.
+- A missing badge on any System prompt or Tool descriptions field -> the only warning a user ever gets that their system-prompt or tool-description edit will not reach a running agent is gone; the failure that follows is completely silent, at runtime and in the logs.
+- A badge on any Turn, Get help, Tasks or Cadence field -> a user is told a restart is needed when it is not, and will pointlessly destroy an agent's conversation memory to apply an edit that was already live.
 - Hovering shows no tooltip -> the `title` attribute has been dropped, which is a silent loss of the explanation.
 
 **Inconclusive if**
@@ -246,7 +247,7 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -290,7 +291,7 @@ If chips render but are visually indistinguishable from the surrounding text, re
 **Before you start**
 
 - No prompts.json (every field must show its shipped default).
-- The app is running and you are on /settings (Prompts tab).
+- The app is running and you are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -327,7 +328,7 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json.
 
 **Steps**
@@ -368,7 +369,7 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer is open on App_Data.
 
 **Steps**
@@ -417,7 +418,7 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 **Before you start**
 
 - No prompts.json at the start.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - `src\Huddle.App\prompts.default.json` is open in a text editor.
 
 **Steps**
@@ -462,7 +463,7 @@ Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to c
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data in Details view.
 
 **Steps**
@@ -513,7 +514,7 @@ If the Date modified column shows only minutes and both operations happen inside
 **Steps**
 
 1. Confirm in Explorer that `prompts.json` is absent.
-2. Load `http://localhost:5100/settings`, then press F5 twice. Refresh Explorer and check again.
+2. Load `http://localhost:5100/settings/prompts`, then press F5 twice. Refresh Explorer and check again.
 3. Type ` A` into `Room label`, ` B` into `Help: budget`, and ` C` into `Identity`. Refresh Explorer and check again.
 4. Click the `Reset` button on the `Identity` field. Refresh Explorer and check again.
 5. Click `Save`.
@@ -550,7 +551,7 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json to start.
 
 **Steps**
@@ -594,7 +595,7 @@ Straight double quotes inside a prompt's text WILL legitimately appear as `\"` i
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -632,13 +633,13 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 
 **Before you start**
 
-- The app is running, on /settings.
+- The app is running, on /settings/prompts.
 - File Explorer open on App_Data.
 
 **Steps**
 
 1. Type ` SEED` at the end of `Room label` and click `Save`, so `prompts.json` exists. Note its Date modified and copy its content into a scratch file for comparison.
-2. Press F5 to reload /settings. Refresh Explorer and compare.
+2. Press F5 to reload /settings/prompts. Refresh Explorer and compare.
 3. Type text into three different fields. Refresh Explorer and compare.
 4. Click the `Reset` button on one of those fields. Refresh Explorer and compare.
 5. Click `Reset all to defaults` in the header, then click `Reset all`. Refresh Explorer and compare.
@@ -675,7 +676,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -701,7 +702,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 
 **Fail if — any of these**
 
-- A JavaScript `confirm()` dialog or a modal -> the repo deliberately uses the same inline-confirm pattern as Remove on /teammates; a dialog is a different interaction model and is blocked by some browsers.
+- A JavaScript `confirm()` dialog or a modal -> the repo deliberately uses the same inline-confirm pattern as Remove on /agents; a dialog is a different interaction model and is blocked by some browsers.
 - The button being enabled with nothing modified -> a user can 'reset' from an already-default state, which stages one no-op edit per prompt and makes Save look actionable for nothing.
 - The destructive action firing on the FIRST click with no confirm step -> one stray click discards every customisation on the page.
 
@@ -717,7 +718,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
@@ -728,7 +729,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 4. Scan every field header, group by group, and note every badge you can see.
 5. Look at the `Save` button and at the header's `Reset all to defaults` button.
 6. Refresh Explorer, compare `prompts.json`'s timestamp and content with the scratch copy.
-7. WITHOUT clicking Save, click `Teammates` in the left sidebar.
+7. WITHOUT clicking Save, click `Agents` in the left sidebar.
 8. Click `Settings` in the left sidebar to come back.
 9. Read the `Room label`, `Help: budget` and `Identity` textareas and their badges.
 
@@ -763,7 +764,7 @@ If step 9 shows the overrides gone rather than restored, check `prompts.json` fi
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -798,7 +799,7 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - You can change file attributes in App_Data.
 
 **Steps**
@@ -845,7 +846,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -856,7 +857,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 5. Click `Save`.
 6. Look for any dialog, prompt or confirmation.
 7. Open `App_Data\prompts.json` and read the value for `turn.roomLabel`.
-8. Press F5 to reload /settings and look at the `Room label` field again.
+8. Press F5 to reload /settings/prompts and look at the `Room label` field again.
 
 **Pass if — all of these**
 
@@ -889,7 +890,7 @@ If you cannot judge red from amber, inspect the element in devtools: each issue 
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -933,7 +934,7 @@ If the message text differs only in the trailing helper sentence (the part after
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -972,7 +973,7 @@ The empty parenthesised list at step 7 is ugly but correct — it is what an emp
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
@@ -1011,7 +1012,7 @@ If nothing updates live at all, first re-run PROMPTSSETTINGS-08 — if the texta
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - Browser devtools open on the Console tab.
 
 **Steps**
@@ -1057,7 +1058,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json.
 
 **Steps**
@@ -1101,7 +1102,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 **Before you start**
 
 - No prompts.json and no appearance.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -1111,7 +1112,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 4. Read both fields and their badges.
 5. Press the browser Back button, then Forward. Read both fields again.
 6. Now press F5. Read both fields and their badges.
-7. Type ` LOSEME` into `Room label` (no save). Click `Teammates` in the sidebar, then click `Settings`. Read the field.
+7. Type ` LOSEME` into `Room label` (no save). Click `Agents` in the sidebar, then click `Settings`. Read the field.
 8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Theme` list, click `Huddle Dark`.
 9. Watch what the browser does — in particular, whether it performs a full page load.
 10. Click the `Prompts` tab and read `Room label`.
@@ -1122,7 +1123,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 - After steps 2-4 both edits and both `Unsaved` badges are still present — a tab switch preserves pending work.
 - Back/Forward between the two tabs behaves the same way.
 - After F5 (step 6) both edits are GONE and the fields show their defaults, with no badges.
-- After step 7 the edit is GONE — leaving the Settings page for Teammates and back destroys pending work, because it is a genuinely different route with no Prompts component instance to return to.
+- After step 7 the edit is GONE — leaving the Settings page for Agents and back destroys pending work, because it is a genuinely different route with no Prompts component instance to return to.
 - After step 8 the page repaints dark IMMEDIATELY with NO page load (see `appearance-theme.md`'s APPEARANCETHEME-04) — the whole point of this step is that the theme change behaves like the harmless tab switch in steps 2-4, not like F5.
 - After step 10 the `LOSEME2` edit is STILL PRESENT with its `Unsaved` badge — the theme change did not destroy it.
 - No unsaved-changes prompt appears at any point — this is current designed behaviour.
@@ -1148,7 +1149,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 
 **Before you start**
 
-- The app is running, on /settings.
+- The app is running, on /settings/prompts.
 - File Explorer open on App_Data.
 
 **Steps**
@@ -1198,8 +1199,8 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 
 **Steps**
 
-1. Open `http://localhost:5100/settings` in browser tab A.
-2. Open `http://localhost:5100/settings` in a second browser tab, tab B.
+1. Open `http://localhost:5100/settings/prompts` in browser tab A.
+2. Open `http://localhost:5100/settings/prompts` in a second browser tab, tab B.
 3. In tab A, type ` FROMA` at the end of `Chat rules` and click `Save`.
 4. Switch to tab B WITHOUT reloading it. Wait up to five seconds and read the `Chat rules` textarea and its badges.
 5. In tab B, type ` TYPEDINB` into `Room label`. Do not save.
@@ -1207,7 +1208,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 7. Switch to tab B without reloading. Read `Room label` and `Help: footer`.
 8. Close tab B entirely.
 9. Read the server console for the next ten seconds.
-10. Open and close `/settings` in a new tab five times in a row, watching the console each time.
+10. Open and close `/settings/prompts` in a new tab five times in a row, watching the console each time.
 
 **Pass if — all of these**
 
@@ -1236,7 +1237,7 @@ If the repaint takes longer than about five seconds but does arrive, note the de
 **Before you start**
 
 - No prompts.json.
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 
 **Steps**
 
@@ -1279,7 +1280,7 @@ If nothing updates, before failing, check the server console for the line `Promp
 **Before you start**
 
 - prompts.json exists with at least two overrides.
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 
 **Steps**
 
@@ -1320,7 +1321,7 @@ If Windows refuses the delete because a text editor still holds the file open, c
 
 **Before you start**
 
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 - The server console terminal is visible.
 
 **Steps**
@@ -1371,7 +1372,7 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 2. In the text editor, replace the entire contents of `App_Data\prompts.json` with: `{"turn.roomLabel": 42}` (a non-string value) and save. Copy that content to a scratch file.
 3. Start the app: `dotnet run --project src/Huddle.App` from the repo root.
 4. Watch the console output during startup.
-5. Browse to `http://localhost:5100/settings`.
+5. Browse to `http://localhost:5100/settings/prompts`.
 6. Read every field in every group, and their badges (spot-check at least `Room label`, `Help: footer` and one field from the `Tasks` group).
 7. Read the whole page for any error, banner or mention of an unreadable file.
 8. Open `App_Data\prompts.json` and compare its content to the scratch copy.
@@ -1406,7 +1407,7 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 
 **Before you start**
 
-- The app is running, /settings open.
+- The app is running, /settings/prompts open.
 - The server console is visible.
 
 **Steps**
@@ -1445,7 +1446,7 @@ If you do not see the Information line, check that the console log level for `Ag
 **Before you start**
 
 - No prompts.json.
-- The app is running, /settings (Prompts tab) open.
+- The app is running, /settings/prompts (Prompts tab) open.
 - A text editor ready on the prompts.json path.
 
 **Steps**
@@ -1487,7 +1488,7 @@ If neither field updates at step 3, re-run PROMPTSSETTINGS-29 first — if the w
 **Before you start**
 
 - No prompts.json.
-- The app is running, /settings (Prompts tab) open.
+- The app is running, /settings/prompts (Prompts tab) open.
 - A text editor that can set line endings (VS Code shows LF/CRLF in its status bar; Notepad++ has Edit > EOL Conversion).
 
 **Steps**
@@ -1525,7 +1526,7 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 
 **Free** · about 5 min
 
-*Proves the page that has nothing to do with models never spawns one — the same rule the repo pins for /teammates.*
+*Proves the page that has nothing to do with models never spawns one — the same rule the repo pins for /agents.*
 
 **Before you start**
 
@@ -1535,7 +1536,7 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 **Steps**
 
 1. In `T-B` run `O-ADAPTERS-LIST` and note the result (probably nothing).
-2. In the browser, load `http://localhost:5100/settings`.
+2. In the browser, load `http://localhost:5100/settings/prompts`.
 3. Re-run `O-ADAPTERS-LIST`.
 4. Press F5 on the page five times, then re-run the command.
 5. Click the `Appearance` tab and the `Prompts` tab three times each, then re-run the command.
@@ -1556,23 +1557,23 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 If you already have `node` processes running for unrelated reasons (an editor's language server, a dev tool), compare by process Id and StartTime rather than by count — only a NEW process started at the moment you loaded the page counts. If you cannot tell, close unrelated node processes and re-run, or mark INCONCLUSIVE rather than guessing.
 
 > [!NOTE]
-> Contrast with /teammates, where opening a New or Edit card legitimately probes for models and may start an adapter. That is expected there and out of scope here.
+> Contrast with /agents, where opening a New or Edit card legitimately probes for models and may start an adapter. That is expected there and out of scope here.
 
-### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any teammate's session
+### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any agent's session
 
 **Free** · about 12 min
 
-*Proves the binding rule that editing a prompt never throws away an agent's conversation memory. A restart here is invisible except as a teammate that suddenly forgot the conversation.*
+*Proves the binding rule that editing a prompt never throws away an agent's conversation memory. A restart here is invisible except as an agent that suddenly forgot the conversation.*
 
 **Before you start**
 
-- Launched with `P-LAUNCH-UAT`: ACP on, the free mock adapter, and the Teammates Ada and Bo (the stock install finds its adapter by itself, so no `Team:Acp:AdapterPath` is needed).
-- Ada shows Online on /teammates.
+- Launched with `P-LAUNCH-UAT`: ACP on, the free mock adapter, and the Agents Ada and Bo (the stock install finds its adapter by itself, so no `Team:Acp:AdapterPath` is needed).
+- Ada shows Online on /agents.
 
 **Steps**
 
-1. Open `http://localhost:5100/teammates` in browser tab A and confirm Ada's status badge reads Online.
-2. Open `http://localhost:5100/settings` in browser tab B.
+1. Open `http://localhost:5100/agents` in browser tab A and confirm Ada's status badge reads Online.
+2. Open `http://localhost:5100/settings/prompts` in browser tab B.
 3. Clear or note the current end of the server console output. In `T-B` run `Get-Process mock-acp | Select-Object Id, StartTime` and note the rows (`O-MOCK-ADAPTERS` counts them).
 4. In tab B, type ` EDIT1` into `Room label` (a Live prompt) and click `Save`.
 5. Switch to tab A and watch the status badge for ten seconds.
@@ -1584,14 +1585,14 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 
 **Pass if — all of these**
 
-- The teammate's status badge stays `Online` throughout — it never flickers to `Starting` and never goes `Offline`. (The card shows a `Restart` button in every state except Starting, Online included, so the button proves nothing either way.)
+- The agent's status badge stays `Online` throughout — it never flickers to `Starting` and never goes `Offline`. (The card shows a `Restart` button in every state except Starting, Online included, so the button proves nothing either way.)
 - The server console shows NO start, stop or restart log lines for any Persona across steps 4-9.
 - The `mock-acp` rows after step 10 have the same `Id` and `StartTime` values as before step 4 — no adapter process was replaced.
 - Each Save otherwise behaves normally (badges clear, Save goes disabled).
 
 **Fail if — any of these**
 
-- Any status change or restart log line after a prompt Save -> binding rule violated. A restart silently destroys the agent's conversation memory, and the only symptom a user ever sees is a teammate that suddenly forgot what was being discussed. Saving five edits as one save must produce at most one store event and zero restarts.
+- Any status change or restart log line after a prompt Save -> binding rule violated. A restart silently destroys the agent's conversation memory, and the only symptom a user ever sees is an agent that suddenly forgot what was being discussed. Saving five edits as one save must produce at most one store event and zero restarts.
 - A different `Id` or `StartTime` on a `mock-acp` row after the saves -> the adapter process was replaced even though the badge may have flipped too fast to see.
 
 **Inconclusive if**
@@ -1610,29 +1611,29 @@ If Ada is not Online before you start (Offline or Degraded), this test cannot di
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /teammates with Model = Haiku and Effort = low.
-- A Room containing that teammate and you.
-- The teammate shows Online.
+- One Persona configured on /agents with Model = Haiku and Effort = low.
+- A Room containing that agent and you.
+- The agent shows Online.
 
 **Steps**
 
-1. Open the Room with your teammate and send one short message: `hi`
-2. Confirm the teammate replies. (This is Turn 1.)
-3. In another tab open `/settings`, find `Room label`, and replace its entire text with exactly: `((ROOM {{roomName}} :: {{roomId}}))`
+1. Open the Room with your agent and send one short message: `hi`
+2. Confirm the agent replies. (This is Turn 1.)
+3. In another tab open `/settings/prompts`, find `Room label`, and replace its entire text with exactly: `((ROOM {{roomName}} :: {{roomId}}))`
 4. Click `Save`. Do NOT restart anything.
 5. Return to the Room and send exactly this one-line message: `Quote back, verbatim, only the first line of the message you just received. Nothing else.`
 6. Read the reply.
 
 **Pass if — all of these**
 
-- The teammate replies to the second message.
+- The agent replies to the second message.
 - The reply contains the new framing — it quotes something of the form `((ROOM <name> :: <id>))` — and NOT the old `[Room: <name> (id: <id>)]` form.
-- No restart of the teammate was needed between the edit and the effect.
+- No restart of the agent was needed between the edit and the effect.
 
 **Fail if — any of these**
 
-- The reply still showing the old `[Room: ... (id: ...)]` framing -> a Live prompt now needs a restart, which defeats the entire feature: every wording tweak would cost the teammate its conversation memory.
-- The teammate not replying at all after the prompt edit -> the edited prompt broke turn delivery; check the server console for an exception and report that as the primary finding.
+- The reply still showing the old `[Room: ... (id: ...)]` framing -> a Live prompt now needs a restart, which defeats the entire feature: every wording tweak would cost the agent its conversation memory.
+- The agent not replying at all after the prompt edit -> the edited prompt broke turn delivery; check the server console for an exception and report that as the primary finding.
 
 **Inconclusive if**
 
@@ -1641,7 +1642,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 > [!NOTE]
 > COST: two short Turns on Haiku at low effort — a few seconds of model time each, cents at most. Keep both messages to a single line.
 
-### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running teammate until it restarts
+### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running agent until it restarts
 
 **💰 Spends money** · about 20 min
 
@@ -1650,22 +1651,22 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /teammates with Model = Haiku and Effort = low.
-- A Room with that teammate; the teammate shows Online.
+- One Persona configured on /agents with Model = Haiku and Effort = low.
+- A Room with that agent; the agent shows Online.
 
 **Steps**
 
 1. In the Room, send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 1, the baseline.)
-2. In another tab open `/settings`, find the `Identity` field (it carries a `Next session` badge), and change its text to exactly: `You are a member of the Team chat application. You speak as "{{personaName}}". Always begin every reply with the word BANANA.`
+2. In another tab open `/settings/prompts`, find the `Identity` field (it carries a `Next session` badge), and change its text to exactly: `You are a member of the Team chat application. You speak as "{{personaName}}". Always begin every reply with the word BANANA.`
 3. Click `Save`. Confirm the `Unsaved` badge clears.
 4. Watch the page and the server console for ten seconds for any message saying the edit will not apply.
 5. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 2.)
-6. Now force a new session: go to /teammates, click `Restart` on that teammate's card (it is offered in every state except Starting), and wait for the status to return to Online.
+6. Now force a new session: go to /agents, click `Restart` on that agent's card (it is offered in every state except Starting), and wait for the status to return to Online.
 7. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 3.)
 
 **Pass if — all of these**
 
-- Turn 2's reply does NOT begin with `BANANA` — the running teammate's behaviour is unchanged by the edit.
+- Turn 2's reply does NOT begin with `BANANA` — the running agent's behaviour is unchanged by the edit.
 - Nothing on the Settings page, in the Room, or in the server console reports that the edit did not land. The `Next session` badge on the field is the only warning that exists.
 - Turn 3's reply, after the forced new session, DOES begin with `BANANA` — the new wording is now in effect.
 
@@ -1690,18 +1691,18 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /teammates with Model = Haiku and Effort = low.
-- A Room with that teammate; the teammate shows Online.
-- The teammate has been running for at least one Turn.
+- One Persona configured on /agents with Model = Haiku and Effort = low.
+- A Room with that agent; the agent shows Online.
+- The agent has been running for at least one Turn.
 
 **Steps**
 
-1. In another tab open `/settings` and find `Help: budget` (under `Get help`; it carries NO timing badge).
+1. In another tab open `/settings/prompts` and find `Help: budget` (under `Get help`; it carries NO timing badge).
 2. Add this sentence to the end of its text, on its own line: `PINEAPPLE is the safe word.`
 3. Click `Save`. Do NOT restart anything.
 4. In the Room, send exactly: `Call your help tool, then quote back only the BUDGET section of what it returned. Nothing else.`
 5. Read the reply.
-6. Now go back to `/settings` and find `get_help description` (under `Tool descriptions`; it carries a `Next session` badge). Add this to the end of its text: ` MANGO.`
+6. Now go back to `/settings/prompts` and find `get_help description` (under `Tool descriptions`; it carries a `Next session` badge). Add this to the end of its text: ` MANGO.`
 7. Click `Save`. Do NOT restart anything.
 8. In the Room, send exactly: `In one short sentence, what does the description of your help tool say? Quote its last few words.`
 9. Read the reply.
@@ -1709,7 +1710,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 **Pass if — all of these**
 
 - The reply at step 5 contains `PINEAPPLE is the safe word.` — the get_help body is built fresh on every call, so a `Get help` prompt edit lands on the very next call with no restart.
-- The reply at step 9 does NOT contain `MANGO` — the running teammate's tool listing still carries the old description, because tool descriptions are sent once per session.
+- The reply at step 9 does NOT contain `MANGO` — the running agent's tool listing still carries the old description, because tool descriptions are sent once per session.
 
 **Fail if — any of these**
 
@@ -1721,21 +1722,21 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 Models are unreliable at quoting tool descriptions back, so step 9 is the weaker half. If the step-9 reply is evasive or the model claims it cannot see its tool descriptions, do NOT fail — mark that half INCONCLUSIVE and, if you need certainty, use `O-TOOLCALLS`: the newest line in the Persona's tool-call log must show `tool` = `get_help` for step 4, which proves the call was made (the log holds a cut-down argument summary, not the result text, so the `PINEAPPLE` half still rests on the reply). `Team:Acp:TraceWire` is never set. If ACP cannot be enabled, mark the whole test INCONCLUSIVE.
 
 > [!NOTE]
-> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the mock Teammates Ada and Bo (`P-LAUNCH-UAT`) only echo the prompt back and never act on prompt-rendered text — never use them to test whether a prompt took effect.
+> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the mock Agents Ada and Bo (`P-LAUNCH-UAT`) only echo the prompt back and never act on prompt-rendered text — never use them to test whether a prompt took effect.
 
 ### PROMPTSSETTINGS-41 — The Library tab opens its own pane and does not fall back to Prompts
 
 **Free** · about 4 min
 
-*Guards decision D3: the sixth tab used to be unreachable (a click on it, or `/settings/library`, showed Prompts). Proves the tab, the address and the pane agree.*
+*Guards decision D3: the Library tab (then the sixth, now the last of seven) used to be unreachable (a click on it, or `/settings/library`, showed Prompts). Proves the tab, the address and the pane agree.*
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
-1. Click the sixth tab, `Library`, in the tab rail.
+1. Click the last tab, `Library` (the seventh), in the tab rail.
 2. Read the address bar and the pane under the tabs.
 3. Look at the table's rows and the control in the last column of each row.
 4. Press F5 and read the address bar and the pane again.
@@ -1744,15 +1745,15 @@ Models are unreliable at quoting tool descriptions back, so step 9 is the weaker
 
 **Pass if — all of these**
 
-- Step 2: the address is `/settings/library`, the `Library` tab is the active one, and the pane starts with the sentence `A Library Root is a folder the Library can read and change. Teams and Teammates are always here; pin any other folder to add it.` (`LibraryPanel.razor:18-21`).
-- Step 3: a table with the columns `Name`, `Path` and an unlabelled last column lists at least the two built-in roots, `Teams` and `Teammates`, each with a `Hide` switch and no `Remove` button (`LibraryPanel.razor:23-47`).
+- Step 2: the address is `/settings/library`, the `Library` tab is the active one, and the pane starts with the sentence `A Library Root is a folder the Library can read and change. Teams and Agents are always here; pin any other folder to add it.` (`LibraryPanel.razor:18-21`).
+- Step 3: a table with the columns `Name`, `Path` and an unlabelled last column lists at least the two built-in roots, `Teams` and `Agents`, each with a `Hide` switch and no `Remove` button (`LibraryPanel.razor:23-47`).
 - Step 4 and step 6: the same tab and pane are shown after a reload and after a direct visit to the address.
 - The Prompts form, `Save` and the field list are not shown in the Library pane.
 
 **Fail if — any of these**
 
 - Clicking `Library` or visiting `/settings/library` shows the Prompts pane -> the tab is unreachable again (the defect decision D3 fixed).
-- The address stays `/settings/prompts` after the click -> the tab rail is not routing for the sixth tab.
+- The address stays `/settings/prompts` after the click -> the tab rail is not routing for the Library tab.
 
 **Inconclusive if**
 

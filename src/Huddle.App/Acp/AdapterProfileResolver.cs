@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Acp;
 /// Turns a Persona's Adapter id into a profile. Never fails; see Spec §6.2. Returning a tuple
 /// rather than throwing is P4 (Spec §4, "Degrade, never reject") and mirrors
 /// <c>PersonaRunner</c>'s existing treatment of an unadvertised Model: the session starts, the
-/// Teammate reports <c>Degraded</c>, and the human sees why. This type produces the warning text
+/// Agent reports <c>Degraded</c>, and the human sees why. This type produces the warning text
 /// only — surfacing it through <c>PersonaSupervisor</c>'s
 /// <c>RaiseStatusChanged(PersonaState.Degraded, …)</c> path is that type's responsibility, not
 /// this one's.

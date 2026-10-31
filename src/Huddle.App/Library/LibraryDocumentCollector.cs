@@ -1,15 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Text;
-using Markdig;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Uploads;
+using Markdig;
+using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
+using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 
 namespace Agency.Huddle.App.Library;
 
@@ -29,7 +30,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// <summary>The most known-extension boundaries tried per plain-text candidate start (corrections-B6 item 2).</summary>
     private const int MaxCandidateEnds = 8;
 
-    /// <summary>The Teammates-root Work Dir folder name, matching <see cref="LibraryPathResolver"/>'s own
+    /// <summary>The Agents-root Work Dir folder name, matching <see cref="LibraryPathResolver"/>'s own
     /// (currently unconfigurable) convention for classifying a folder as a Work Dir.</summary>
     private const string WorkDirFolderName = "work";
 
@@ -108,7 +109,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
         List<PlanInput> inputs = [];
         foreach (LibraryPath path in kept)
         {
-            (LibraryDocumentItem Item, LibraryFileKind Kind)? built = await this.TryBuildItemAsync(path, readsFiles, ct);
+            (LibraryDocumentItem Item, LibraryFileKind Kind)? built = await this.TryBuildItemAsync(path, readsFiles, ct).ConfigureAwait(false);
             if (built is { } read)
             {
                 items.Add(read.Item);
@@ -122,7 +123,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
                 inputs,
                 delivery,
                 (path, token) => this.files.ReadImageAsync(path, library.MaxImageBytes, library.MaxImageEdgePixels, token),
-                ct);
+                ct).ConfigureAwait(false);
             for (int index = 0; index < items.Count; index++)
             {
                 PlannedDocument decision = plan[index];
@@ -266,9 +267,9 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     {
         try
         {
-            LibraryDocumentContent content = await this.files.ReadAsync(path, ct);
+            LibraryDocumentContent content = await this.files.ReadAsync(path, ct).ConfigureAwait(false);
             string size = LibrarySize.Format(content.Length);
-            string location = await this.ResolveLocationAsync(path, ct);
+            string location = await this.ResolveLocationAsync(path, ct).ConfigureAwait(false);
             bool tooLarge = content.Length > this.options.Value.Library.MaxEditableBytes;
             bool isTextKind = content.Kind is LibraryFileKind.Markdown or LibraryFileKind.Text;
 
@@ -318,7 +319,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
     /// <summary>
     /// Builds a document's §6.14 location label from its <see cref="LibraryPath"/>: <c>Team {Team}</c>,
-    /// <c>Team {Team}, Project {Project}</c>, <c>{Name}'s Work Dir</c>, <c>teammate {Name}</c> (corrections-B6
+    /// <c>Team {Team}, Project {Project}</c>, <c>{Name}'s Work Dir</c>, <c>agent {Name}</c> (corrections-B6
     /// item 4), <c>pinned root "{Name}"</c> or <c>upload</c> for a file in the Uploads root.
     /// </summary>
     private async Task<string> ResolveLocationAsync(LibraryPath path, CancellationToken ct)
@@ -330,7 +331,12 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
         if (path.Root.Kind == LibraryRootKind.Uploads)
         {
-            return "upload";
+            return LibraryDocumentCollector.UploadLocation(path);
+        }
+
+        if (path.Root.Kind == LibraryRootKind.SkillSources)
+        {
+            return "skill sources";
         }
 
         string[] segments = path.RelativePath.Split('/');
@@ -342,29 +348,41 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
                 : string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}");
         }
 
-        string teammateFolder = segments[0];
-        string name = await this.ResolveTeammateNameAsync(path.Root, teammateFolder, ct) ?? teammateFolder;
+        string agentFolder = segments[0];
+        string name = await this.ResolveAgentNameAsync(path.Root, agentFolder, ct).ConfigureAwait(false) ?? agentFolder;
 
         if (segments.Length >= 3 && FolderSnapshot.PathComparer.Equals(segments[1], LibraryDocumentCollector.WorkDirFolderName))
         {
             return string.Create(CultureInfo.InvariantCulture, $"{name}'s Work Dir");
         }
 
-        return string.Create(CultureInfo.InvariantCulture, $"teammate {name}");
+        return string.Create(CultureInfo.InvariantCulture, $"agent {name}");
     }
 
-    /// <summary>Reads a Teammate's definition file and returns its frontmatter <c>Name</c>, or
-    /// <see langword="null"/> when the definition can't be resolved, read or parsed.</summary>
-    private async Task<string?> ResolveTeammateNameAsync(LibraryRoot teammatesRoot, string teammateFolder, CancellationToken ct)
+    /// <summary>
+    /// The label of a file in the Uploads root: <c>Task {ID}</c> under <c>Tasks/{ID}/</c> (TaskAttachments spec 6.6),
+    /// otherwise <c>upload</c>.
+    /// </summary>
+    private static string UploadLocation(LibraryPath path)
     {
-        if (!this.resolver.TryResolve(teammatesRoot.Id, $"{teammateFolder}/{teammateFolder}.md", out LibraryPath? definitionPath, out _))
+        string[] segments = path.RelativePath.Split('/');
+        return segments.Length >= 3 && string.Equals(segments[0], TaskUploadFolders.FolderName, StringComparison.Ordinal)
+            ? string.Create(CultureInfo.InvariantCulture, $"Task {segments[1]}")
+            : "upload";
+    }
+
+    /// <summary>Reads an Agent's definition file and returns its frontmatter <c>Name</c>, or
+    /// <see langword="null"/> when the definition can't be resolved, read or parsed.</summary>
+    private async Task<string?> ResolveAgentNameAsync(LibraryRoot agentsRoot, string agentFolder, CancellationToken ct)
+    {
+        if (!this.resolver.TryResolve(agentsRoot.Id, $"{agentFolder}/{agentFolder}.md", out LibraryPath? definitionPath, out _))
         {
             return null;
         }
 
         try
         {
-            LibraryDocumentContent content = await this.files.ReadAsync(definitionPath, ct);
+            LibraryDocumentContent content = await this.files.ReadAsync(definitionPath, ct).ConfigureAwait(false);
             if (content.Text is null || !PersonaFrontmatter.TryReadIdentity(content.Text, out PersonaIdentity? identity, out _))
             {
                 return null;
@@ -378,36 +396,3 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
         }
     }
 }
-
-/// <summary>The Library documents mentioned across a Turn, capped and deduped (Spec §6.14).</summary>
-/// <param name="Items">The kept documents, in first-seen order.</param>
-/// <param name="NotListed">How many further, distinct documents were mentioned beyond the cap.</param>
-/// <param name="MaxInlineBytes">The <see cref="LibraryOptions.MaxInlineBytes"/> cap in effect when this report was built; Spec §6.14's <c>turn.libraryDocTruncated</c> line names it.</param>
-internal sealed record LibraryDocumentsReport(IReadOnlyList<LibraryDocumentItem> Items, int NotListed, int MaxInlineBytes)
-{
-    /// <summary>Whether nothing was collected at all.</summary>
-    internal bool IsEmpty => this.Items.Count == 0;
-}
-
-/// <summary>One Library document mentioned in a Turn (Spec §6.14).</summary>
-/// <param name="FullPath">The resolved absolute path on disk.</param>
-/// <param name="Location">The §6.14 location label.</param>
-/// <param name="Size">The document's size, formatted with <see cref="LibrarySize.Format"/>.</param>
-/// <param name="Text">The decoded, possibly-truncated text, or <see langword="null"/> when not inlined.</param>
-/// <param name="Truncated">Whether <see cref="Text"/> was cut short of the document's full content.</param>
-/// <param name="Length">The document's true size in bytes.</param>
-/// <param name="TooLarge">Whether the document is over <see cref="LibraryOptions.MaxEditableBytes"/>.</param>
-/// <param name="Delivery">How the document reaches the model; <see cref="LibraryDocumentDelivery.Path"/>, today's line, unless the collector was given a <see cref="PromptDelivery"/>.</param>
-/// <param name="Block">The Prompt block that carries the document when <paramref name="Delivery"/> is <see cref="LibraryDocumentDelivery.Block"/>.</param>
-/// <param name="Withheld">Why an image that could have been a block was not sent, for the Information log; <see cref="PromptBlockWithheld.None"/> otherwise.</param>
-internal sealed record LibraryDocumentItem(
-    string FullPath,
-    string Location,
-    string Size,
-    string? Text,
-    bool Truncated,
-    long Length,
-    bool TooLarge,
-    LibraryDocumentDelivery Delivery = LibraryDocumentDelivery.Path,
-    AgentPromptBlock? Block = null,
-    PromptBlockWithheld Withheld = PromptBlockWithheld.None);

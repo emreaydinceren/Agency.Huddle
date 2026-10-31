@@ -9,7 +9,7 @@ its **Memory** (§6.15 there) · **Lifts:** the known limit "One session per Per
 This is the design for making an Agent answer every Message in the context of the Room it was
 asked in. Today one session per Persona spans every Room that Persona is in. After this, an Agent
 holds one **Room Session** per Room: a working context holding that Room's conversation and
-nothing else. What makes the Agent one Teammate stays per Persona and is shared by all its Room
+nothing else. What makes the Agent one Agent stays per Persona and is shared by all its Room
 Sessions: its Persona text, Work Dir, Memory, App Tools and Adapter process. Continuity between
 Rooms comes **only** through Memory and File Changes, which are visible, attributed, and editable
 by the Human.
@@ -127,7 +127,7 @@ through an explicit store.
 | --- | --- |
 | **Sharing working context between Rooms** | That is the defect. Memory and File Changes are the route (§8.2) |
 | **Memory per Room** | Memory exists to cross Rooms (File Changes D-20) |
-| **A health badge per Room** | Four surfaces render one badge per Teammate through `PersonaStatusResolver`. The reason names the Room instead |
+| **A health badge per Room** | Four surfaces render one badge per Agent through `PersonaStatusResolver`. The reason names the Room instead |
 | **Restarting a dead Adapter process by itself** | As today: Offline, and the Human presses Restart |
 | **A `read_room` App Tool** | Deferred (Appendix C) |
 | **Changing the Reply Gate, the Budget or Following** | All three are already per Room |
@@ -137,7 +137,7 @@ through an explicit store.
 
 ## 4. Principles
 
-1. **Per Room what the model reads; per Persona what the Teammate is.**
+1. **Per Room what the model reads; per Persona what the Agent is.**
 2. **Only deliberate routes cross Rooms.** Memory and File Changes are visible and attributed. A
    shared context window is neither.
 3. **The pipe stays the only door.** `PersonaRunner` stays an ordinary pipe client with no Team
@@ -596,7 +596,7 @@ Under `Team:Acp`:
 | `TranscriptCatchUpMessages` | `20` | The most a new session's first Turn carries |
 | `Adapters:*:SessionPerRoom` | `true` | §6.12 |
 
-With `Acp:MaxTeammates` at 8 and these defaults, the worst case is 8 Adapter processes and 24
+With `Acp:MaxAgents` at 8 and these defaults, the worst case is 8 Adapter processes and 24
 Claude Code CLI children.
 
 ---
@@ -744,7 +744,7 @@ both.
 | # | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D-1 | **One session per (Persona, Room); identity, Work Dir, Memory, tools and process per Persona** | One per Persona, with better labels and Prompts; one per Turn, rebuilt from the Transcript | A label is a convention the model may ignore over a long run. Per Turn re-reads everything every Turn and loses tool results |
-| D-2 | **One Adapter process per Persona, hosting its Room Sessions** | A process per Room Session; one for all Personas | Each session already has its own CLI child. One for all puts every Teammate behind one crash |
+| D-2 | **One Adapter process per Persona, hosting its Room Sessions** | A process per Room Session; one for all Personas | Each session already has its own CLI child. One for all puts every Agent behind one crash |
 | D-3 | **Lazy open, except the Room with the Human** | All at start; all lazy | All at start is a CLI child per Room at boot. All lazy shows Online until a Turn finds an authentication failure |
 | D-4 | **Idle eviction and an LRU cap** | Never close; close after each Turn | Unbounded children, or a spawn and a cold cache per Turn |
 | D-5 | **Resume by stored id where advertised; else fresh with Transcript Catch-up** | `session/load`; Transcript only; resume only | Load replays through the live event stream. Transcript only loses tool results. Resume only leaves `agency-acp` blank |

@@ -1,0 +1,73 @@
+@*
+    The Right sidebar's Blocks panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
+    one row per open Task whose Blocked by names this one - the Tasks waiting on it. It asks TaskStore.BlockedOn, the same
+    query TaskTriggerService runs to wake dependants.
+*@
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents TaskEvents
+
+@foreach (TaskItem waiting in this.rows)
+{
+    <TaskSidebarRow Task="waiting" />
+}
+
+@code {
+    private IReadOnlyList<TaskItem> rows = [];
+
+    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab the panel's Subject lives in.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, which receives the row count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Resolve();
+
+    /// <summary>Stops listening.</summary>
+    public void Dispose()
+    {
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnTasksReloaded;
+    }
+
+    /// <summary>Reads the open Tasks waiting on the saved Task and reports how many there are.</summary>
+    private void Resolve()
+    {
+        if (this.Subject is not TaskSubject subject)
+        {
+            this.rows = [];
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        this.rows = [.. this.Store.BlockedOn(subject.Id).Where(static task => !task.Status.IsTerminal())];
+        this.Panel?.SetCount(this.rows.Count);
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.Redraw();
+
+    private void OnTasksReloaded() => this.Redraw();
+
+    private void Redraw() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.Resolve();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

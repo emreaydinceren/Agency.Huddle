@@ -59,9 +59,11 @@ description = "Private / RFC1918 IP address committed"
 regex = '''\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'''
 
   [rules.allowlist]
-  description = "SonarAnalyzer.CSharp uses an unusual 4-segment version scheme (10.32.0.713), which coincidentally matches the 10.x.x.x private-IP shape. Update this alongside the pinned version in Directory.Packages.props when it changes."
+  description = "SonarAnalyzer.CSharp uses an unusual 4-segment version scheme (10.32.0.713), which coincidentally matches the 10.x.x.x private-IP shape. Update this alongside the pinned version in Directory.Packages.props when it changes. 192.168.1.20 and 192.168.1.34 are invented example addresses in old revisions of the remote-access spec and manual-test page (PR #283); the current docs use RFC 5737 addresses, but the GitHub mirror sync scans history."
   regexes = [
     '''10\.32\.0\.713''',
+    '''192\.168\.1\.20\b''',
+    '''192\.168\.1\.34\b''',
   ]
 
 [[rules]]
@@ -98,9 +100,17 @@ paths = [
   # Vendored, pre-built CodeMirror 6 bundle (Library task 11.1): minified third-party JS, not
   # source we wrote, and dense enough to false-positive the generic secret regexes.
   '''(^|/)src/Huddle\.App/wwwroot/lib/codemirror/.*''',
+  # Vendored, pre-built emoji-picker-element bundle and its emoji data: minified third-party JS and a 440 KB data file.
+  '''(^|/)src/Huddle\.App/wwwroot/lib/emoji-picker/.*''',
   # The analyzer probes need fake secret-shaped literals so Sonar's S2068/S6418/S1313 have something
   # to flag. Secrets.cs holds the one that must stay; Security.cs and Hazards.cs held the same
   # kind of dummy value (a fake API key, a private IP) in earlier revisions, and the sync's history
   # scan still sees those. Paths, not commits: the sync rewrites every hash before it scans.
   '''(^|/)tests/Huddle\.AnalyzerProbes/Probes/(Secrets|Security|Hazards)\.cs$''',
+  # The remote-access tests exercise the private-address, .local-name and token-shaped inputs the gateway
+  # classifies, so their fixtures must contain such values; every one is a fake. Narrow to the folders that
+  # hold them (plus the one desktop hand-off test that carries a fake bootstrap token). Never docs/ or src/.
+  '''(^|/)tests/Huddle\.Tests\.(Common|Domain|Hosted)/Gateway/.*''',
+  '''(^|/)tests/Huddle\.Tests\.Components/Settings/RemoteAccess/.*''',
+  '''(^|/)tests/Huddle\.Tests\.Domain/Desktop/DesktopHandOffBootstrapTests\.cs$''',
 ]

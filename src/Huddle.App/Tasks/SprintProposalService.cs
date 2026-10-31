@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
@@ -19,7 +19,7 @@ internal sealed class SprintProposalService(
     ChatService chat,
     ITeamDirectory directory,
     ITeamCatalog teams,
-    IOptions<TeamOptions> options,
+    IHumanIdentity humanIdentity,
     ILogger<SprintProposalService> logger)
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> approveGates = new(StringComparer.Ordinal);
@@ -37,7 +37,7 @@ internal sealed class SprintProposalService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct);
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         List<SprintProposal> pending = [];
         foreach (TeamSummary team in teams.Teams)
         {
@@ -67,10 +67,10 @@ internal sealed class SprintProposalService(
 
         // One approval of a proposal at a time, so a second approve finds it gone (idempotence) while a failed one leaves it pending.
         SemaphoreSlim gate = this.approveGates.GetOrAdd(proposalId, static _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
+        await gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await this.ApproveCoreAsync(roomId, proposalId, ct);
+            return await this.ApproveCoreAsync(roomId, proposalId, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -84,7 +84,7 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the lookups and the post.</param>
     private async Task<SprintProposalOutcome> ApproveCoreAsync(string roomId, string proposalId, CancellationToken ct)
     {
-        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         if (proposal is null)
         {
@@ -112,7 +112,7 @@ internal sealed class SprintProposalService(
 
         _ = proposals.Remove(proposal.Id);
 
-        TaskActor human = TaskActors.Human(options.Value);
+        TaskActor human = TaskActors.Human(humanIdentity);
         List<string> applied = [];
         List<SkippedTask> skipped = [];
         foreach (string idText in proposal.TaskIds)
@@ -128,7 +128,7 @@ internal sealed class SprintProposalService(
             }
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct);
+        string mention = await HumanPost.MentionAsync(directory, proposal.Proposer, ct).ConfigureAwait(false);
         string added = applied.Count == 0 ? "none" : string.Join(", ", applied);
         string text = $"Approved Sprint '{proposal.Name}'{(existed ? " (it already existed)" : string.Empty)}. Added: {added}.";
         if (skipped.Count > 0)
@@ -138,7 +138,7 @@ internal sealed class SprintProposalService(
         }
 
         text += mention;
-        await this.PostAsync(roomId, text, ct);
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new SprintProposalOutcome(SprintProposalOutcomeKind.Approved, existed, applied, skipped, text);
     }
 
@@ -154,16 +154,16 @@ internal sealed class SprintProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
         ArgumentNullException.ThrowIfNull(reason);
 
-        SprintProposal? proposal = await this.TakeAsync(roomId, proposalId, ct);
+        SprintProposal? proposal = await this.TakeAsync(roomId, proposalId, ct).ConfigureAwait(false);
         if (proposal is null)
         {
             return Gone();
         }
 
-        string mention = await this.MentionAsync(proposal.Proposer, ct);
+        string mention = await HumanPost.MentionAsync(directory, proposal.Proposer, ct).ConfigureAwait(false);
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoDeclineReason : reason.Trim();
         string text = $"Declined the proposed Sprint '{proposal.Name}': {reasonText}{mention}";
-        await this.PostAsync(roomId, text, ct);
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new SprintProposalOutcome(SprintProposalOutcomeKind.Declined, false, [], [], text);
     }
 
@@ -176,7 +176,7 @@ internal sealed class SprintProposalService(
     /// <param name="ct">Cancels the member lookup.</param>
     private async Task<SprintProposal?> TakeAsync(string roomId, string proposalId, CancellationToken ct)
     {
-        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         return proposal is not null && proposals.Remove(proposal.Id) ? proposal : null;
     }
@@ -209,29 +209,16 @@ internal sealed class SprintProposalService(
         };
     }
 
-    /// <summary>The trailing Mention that wakes the proposer, or an empty string when the proposer no longer exists.</summary>
-    /// <param name="proposer">The proposer's name.</param>
-    /// <param name="ct">Cancels the lookup.</param>
-    private async Task<string> MentionAsync(string proposer, CancellationToken ct)
-    {
-        User? user = await directory.FindUserByNameAsync(proposer, ct);
-        return user is null ? string.Empty : " @" + user.Name;
-    }
-
     /// <summary>Posts <paramref name="text"/> in the room as the Human; a refused post is logged, never thrown.</summary>
     /// <param name="roomId">The room to post in.</param>
     /// <param name="text">The text.</param>
     /// <param name="ct">Cancels the post.</param>
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
-        }
-        catch (ChatException ex)
-        {
-            logger.LogWarning("Could not post the Sprint proposal outcome in room {RoomId}: {Problem}", roomId, ex.Message);
+            logger.LogWarning("Could not post the Sprint proposal outcome in room {RoomId}: {Problem}", roomId, problem);
         }
     }
 }

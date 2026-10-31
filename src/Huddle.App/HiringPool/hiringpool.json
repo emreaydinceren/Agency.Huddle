@@ -9,7 +9,7 @@
     {
       "id": "household",
       "name": "Household",
-      "description": "Keeps family and school admin moving. The team reads school mail, tracks to-dos and events, and drafts replies for a parent to send."
+      "description": "Runs a family's home together: school mail, meals, upkeep, appointments, bills and renewals, each with one owner and a weekly check-in. It drafts and tracks; a parent pays, signs and sends."
     },
     {
       "id": "small-business",
@@ -49,7 +49,7 @@
     {
       "id": "life-admin",
       "name": "Life Admin",
-      "description": "Keeps your personal admin moving: trips, bills and spending, appointments and forms, and the inbox they arrive in. It drafts and tracks; you book, pay and send."
+      "description": "Keeps one person's own admin moving: trips, bills and spending, appointments and forms, and the inbox they arrive in. It drafts and tracks; you book, pay and send."
     },
     {
       "id": "learning",
@@ -497,7 +497,8 @@
         "sales-outreach",
         "small-business",
         "support-desk",
-        "tax-season"
+        "tax-season",
+        "household"
       ],
       "model": {
         "tier": "strongest"
@@ -522,7 +523,7 @@
     {
       "id": "household-manager",
       "title": "Household Manager",
-      "description": "Runs the household's Tasks, checks each draft against its source and posts the Evidence line.",
+      "description": "Runs a family's shared home: gives each chore and school Task one owner, checks every draft against its source and leads the weekly check-in.",
       "tags": [
         "home",
         "family",
@@ -604,6 +605,83 @@
         "teacher_dark_f_01.png",
         "teacher_light_m_01.png",
         "nanny_light_m_01.png"
+      ]
+    },
+    {
+      "id": "meal-planner",
+      "title": "Meal Planner",
+      "description": "Plans the week's meals around the family's allergies and tastes, keeps the pantry list and drafts the grocery list for a parent to order.",
+      "tags": [
+        "home",
+        "family",
+        "planning",
+        "health",
+        "purchasing"
+      ],
+      "skills": [
+        "cost-estimation",
+        "deadline-tracking",
+        "web-research"
+      ],
+      "teamTypes": [
+        "household",
+        "caregiving"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Olive",
+        "Basil",
+        "Rafa"
+      ],
+      "avatars": [
+        "cook_fair_f_01.png",
+        "cook_tan_m_01.png",
+        "cook_dark_f_01.png",
+        "cook_light_m_01.png",
+        "cook_brown_f_01.png",
+        "cook_fair_m_01.png",
+        "cook_tan_f_01.png",
+        "cook_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "home-keeper",
+      "title": "Home Keeper",
+      "description": "Keeps the home's upkeep calendar, contractors and warranties, and turns each recurring job into a Task; every spend goes to a parent.",
+      "tags": [
+        "home",
+        "scheduling",
+        "tracking",
+        "purchasing"
+      ],
+      "skills": [
+        "deadline-tracking",
+        "quote-comparison",
+        "cost-estimation"
+      ],
+      "teamTypes": [
+        "household",
+        "home-project"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Ravi",
+        "Hugo",
+        "Wren"
+      ],
+      "avatars": [
+        "blue-collar-worker_fair_m_01.png",
+        "blue-collar-worker_tan_f_01.png",
+        "blue-collar-worker_dark_m_02.png",
+        "blue-collar-worker_brown_f_01.png",
+        "blue-collar-worker_tan_m_01.png",
+        "blue-collar-worker_fair_f_01.png",
+        "blue-collar-worker_dark_f_01.png",
+        "blue-collar-worker_dark_m_01.png"
       ]
     },
     {
@@ -1640,7 +1718,7 @@
     {
       "id": "chief-of-household",
       "title": "Chief of Household",
-      "description": "Runs your personal admin team, sets the order of work and checks every draft before it reaches you.",
+      "description": "Runs one person's own admin: trips, bills, appointments and the inbox. Sets the order of work and checks every draft before it reaches you.",
       "tags": [
         "planning",
         "operations",
@@ -2101,7 +2179,8 @@
         "community-org",
         "book-project",
         "caregiving",
-        "relocation"
+        "relocation",
+        "household"
       ],
       "model": {
         "tier": "fast"
@@ -2142,7 +2221,8 @@
         "home-project",
         "home-lab",
         "relocation",
-        "small-business"
+        "small-business",
+        "household"
       ],
       "model": {
         "tier": "fast"

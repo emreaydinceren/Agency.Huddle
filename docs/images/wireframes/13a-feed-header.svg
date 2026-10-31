@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" width="900" height="250" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 13a: The Feed Tab header">
+<title>Figure 13a: The Feed Tab header</title>
+<rect width="900" height="250" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 13a: The Feed Tab header (proposed)</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Owner wireframe, 2026-10-20. F2 PageHeader with the Live chip, F2b read-only note, F3 filter bar with Category counts and the Team select.</text>
+<rect x="24" y="62" width="852" height="170" rx="6" fill="#fff" stroke="#8b93a1" stroke-width="1.4"/>
+<text x="44" y="104" font-size="24" font-weight="700" fill="#1f2430" text-anchor="start">Feed</text>
+<rect x="112" y="86" width="58" height="22" rx="11" fill="#ecfdf3" stroke="#bbf7d0"/><circle cx="126" cy="97" r="4" fill="#16a34a"/>
+<text x="135" y="101" font-size="12" font-weight="600" fill="#166534" text-anchor="start">Live</text>
+<text x="44" y="130" font-size="14" font-weight="400" fill="#6b7280" text-anchor="start">What Agents and Huddle did, newest first. Each line links to the Task, Room or document it’s about.</text>
+<text x="44" y="154" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">◉  Read-only — the Feed never changes the work and never shows message text.</text>
+<rect x="44" y="172" width="568" height="36" rx="8" fill="#f1f2f5"/>
+<rect x="50" y="177" width="59" height="26" rx="6" fill="#fff" stroke="#d6d9df"/>
+<text x="59" y="195" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">All</text>
+<text x="86" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">28</text>
+<text x="122" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Needs you</text>
+<text x="193" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">12</text>
+<text x="229" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Tasks</text>
+<text x="271" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">9</text>
+<text x="301" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Documents</text>
+<text x="372" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">3</text>
+<text x="402" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Rooms</text>
+<text x="444" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">7</text>
+<text x="475" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Gates</text>
+<text x="516" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">7</text>
+<text x="546" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">Helpers</text>
+<text x="598" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">2</text>
+<rect x="716" y="172" width="140" height="36" rx="6" fill="#fff" stroke="#c9ced6"/><rect x="728" y="182" width="16" height="16" rx="4" fill="#eef0f3"/><text x="736" y="194" font-size="10" font-weight="700" fill="#6b7280" text-anchor="middle">◎</text><text x="752" y="195" font-size="13" font-weight="500" fill="#1f2430" text-anchor="start">All teams</text><text x="842" y="195" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<rect x="620" y="180" width="88" height="20" rx="10" fill="#fff" stroke="#8b93a1" stroke-dasharray="4 3"/><text x="664" y="194" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Agent: Nova ×</text>
+<rect x="30" y="66" width="22" height="17" rx="8.5" fill="#b45309"/><text x="41.0" y="78.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F2</text><text x="57" y="79" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Header</text>
+<rect x="178" y="88" width="29" height="17" rx="8.5" fill="#b45309"/><text x="192.5" y="100.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F2a</text><text x="212" y="101" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Live chip</text>
+<rect x="30" y="140" width="29" height="17" rx="8.5" fill="#b45309"/><text x="44.5" y="152.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F2b</text>
+<rect x="30" y="176" width="29" height="17" rx="8.5" fill="#b45309"/><text x="44.5" y="188.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F3a</text>
+<rect x="720" y="152" width="29" height="17" rx="8.5" fill="#b45309"/><text x="734.5" y="164.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F3b</text><text x="754" y="165" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Team select</text>
+<rect x="620" y="216" width="29" height="17" rx="8.5" fill="#b45309"/><text x="634.5" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F3c</text><text x="654" y="229" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Agent chip (dashed)</text>
+<rect x="30" y="212" width="22" height="17" rx="8.5" fill="#b45309"/><text x="41.0" y="224.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">F3</text><text x="57" y="225" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Filter bar</text>
+</svg>

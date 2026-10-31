@@ -4,6 +4,7 @@ obj/
 .vs/
 tools/acp/node_modules/
 tools/codemirror/node_modules/
+tools/emoji-picker/node_modules/
 TestResults/
 App_Data/
 

@@ -257,7 +257,7 @@ actually advertised, because a protocol reader that silently drops an
 advertised option is exactly the failure class
 [traps.md](../engineering/traps.md) exists for.
 `ModelCatalogProbe.WithoutAdapterDefault` does the filtering instead, one layer
-up. The Teammate card's blank "Use the agent's default" option *is* that
+up. The Agent card's blank "Agent default" option *is* that
 filtered-out choice, and it stores `null`, which means no
 `session/set_config_option` is sent for effort at all.
 
@@ -270,7 +270,7 @@ them both resolved to **no new mechanism**:
   restart-on-change; Effort joins them rather than getting its own path. Buzz
   has none either.
 - **`currentValue` staleness does not arise.** Team never caches a
-  `currentValue` at all — the Teammate card shows the **stored** choice, not
+  `currentValue` at all — the Agent card shows the **stored** choice, not
   the session's live value. The visible consequence: if the adapter clamps a
   requested level back to `"default"`, the card will not say so. That is
   recorded in [known-limits.md](../engineering/known-limits.md) rather than
@@ -300,6 +300,28 @@ Its counterpart setter is `session/set_model { sessionId, modelId }`. This path 
 still marked unstable, has no effort equivalent, and Team does not read it. Prefer
 `configOptions`, and fall back to `models` only for an agent that advertises
 nothing else — buzz checks them in that order.
+
+## Helper sessions (spike HL-0, 2026-10-20)
+
+A Helper ([Huddle.Helpers-Specifications.md](../Huddle.Helpers-Specifications.md)) opens a throwaway session
+with a replaced system prompt and no Huddle tool server. Driven live against
+`@agentclientprotocol/claude-agent-acp` 0.75.1 on a Claude account with three claude.ai connectors, it showed:
+
+- **The Haiku-class Model id is `haiku`.** The catalog lists `default`, `opus[1m]`, `claude-fable-5-1[1m]`, `sonnet`
+  and `haiku`; the adapter keeps these family aliases current, so `haiku` is the id to configure, not a dated one.
+  `low` Effort is offered (`default`, `low`, `medium`, `high`, `xhigh`, `max`).
+- **`tools: []` alone is not enough.** The default `claude_code` preset adds about 20 built-in tools; setting
+  `_meta.claudeCode.options.tools = []` removes them (the adapter's own switch, `acp-agent.js` "Resolve which built-in
+  tools to expose"). The model still listed the account's claude.ai connectors (Claude Docs, Microsoft Learn,
+  Spotify): tools a Helper must not have, and a large part of the prompt it is billed for.
+- **Three settings together make a toolless Helper session:** `options.tools = []`,
+  `options.env.ENABLE_CLAUDEAI_MCP_SERVERS = "false"` and `options.extraArgs["strict-mcp-config"] = null`. The model then
+  reported no tools and made no tool call.
+- **Cost of one call to `haiku` at `low`, same short prompt:** $0.069 with the defaults, $0.018 with `tools: []`, and
+  $0.0024 with all three settings. At the default cap of 50 calls a day that is about $0.12.
+- **The answer is not only JSON.** Haiku often wrapped the object in a Markdown fence and added prose before or after it.
+  The runner takes the text from the first `{` to the last `}`; prose that itself contains a brace after the object would
+  defeat that, which would show on the card as an unparseable answer.
 
 ## Troubleshooting
 

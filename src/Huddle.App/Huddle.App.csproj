@@ -2,23 +2,35 @@
 
   <PropertyGroup>
     <RootNamespace>Agency.Huddle.App</RootNamespace>
-    <NoWarn>$(NoWarn);CA1031;CA1848;CA2007</NoWarn>
+    <!-- [LibraryImport] (the Windows Job object in ProcessTailscaleCli) generates unsafe code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);CA1031;CA1848</NoWarn>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests" />
+    <InternalsVisibleTo Include="Huddle.Tests.Common" />
+    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
+    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
+    <InternalsVisibleTo Include="Huddle.Tests.Components" />
+    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
+    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
+    <InternalsVisibleTo Include="huddle-seed" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Markdig" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
+    <PackageReference Include="QRCoder" />
     <PackageReference Include="MudBlazor" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Huddle.Contracts\Huddle.Contracts.csproj" />
     <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
+    <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+    <ProjectReference Include="..\Huddle.Packs\Huddle.Packs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,9 +49,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Skills\Defaults\**\*.md" LogicalName="Skills/Defaults/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Skills\SkillsCatalog.json" LogicalName="Skills/SkillsCatalog.json" />
-    <EmbeddedResource Include="Teammates\TeammateNames.json" LogicalName="Teammates/TeammateNames.json" />
+    <EmbeddedResource Include="Agents\AgentNames.json" LogicalName="Agents/AgentNames.json" />
+    <EmbeddedResource Include="Themes\Skins\*.json" LogicalName="Themes/Skins/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Builtin\*.md" LogicalName="Builtin/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="TeamTypes\Builtin\SkillPacks\*.json" LogicalName="TeamTypes/Builtin/SkillPacks/%(Filename)%(Extension)" />
     <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\hiringpool.json" LogicalName="HiringPool/hiringpool.json" />
     <EmbeddedResource Include="HiringPool\personas\*.md" LogicalName="HiringPool/personas/%(Filename)%(Extension)" />

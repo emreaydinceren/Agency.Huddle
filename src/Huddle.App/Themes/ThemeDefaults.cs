@@ -3,9 +3,9 @@ using MudBlazor;
 namespace Agency.Huddle.App.Themes;
 
 /// <summary>
-/// Builds the pieces every theme in this application shares. A VS Code theme — the source most of
-/// the themes in this catalog are ported from — carries colours but no font information, so the UI
-/// font stack is written once here instead of once per theme file.
+/// Builds the pieces every theme in this application shares. A palette carries colours but no font
+/// information, so the UI font stack and type scale are written once here instead of once per theme
+/// file.
 /// </summary>
 /// <remarks>
 /// The two builders below each fill exactly one of <see cref="MudTheme"/>'s two palette slots,
@@ -44,8 +44,32 @@ internal static class ThemeDefaults
 
         // Sentence-case buttons everywhere: MudBlazor upper-cases Typo.button by default.
         theme.Typography.Button.TextTransform = "none";
-        theme.Typography.H5.FontSize = "1.375rem";
-        theme.Typography.H5.FontWeight = "600";
+
+        // The type scale, in rendered pixels. The page is not zoomed (ADR-0056), so each size below is the size on
+        // screen, and none is under 11px. Three weights: 400 text, 500 controls, 600 emphasis and headings.
+        SetRole(theme.Typography.H5, "20px", "600", "1.3");
+        SetRole(theme.Typography.H6, "16px", "600", "1.35");
+        SetRole(theme.Typography.Subtitle1, "14px", "600", "1.4");
+        SetRole(theme.Typography.Subtitle2, "16px", "600", "1.35");
+        SetRole(theme.Typography.Body1, "14px", "400", "1.55");
+        SetRole(theme.Typography.Body2, "13px", "400", "1.4");
+        SetRole(theme.Typography.Caption, "12px", "400", "1.35");
+        SetRole(theme.Typography.Overline, "11px", "600", "1.3");
+        theme.Typography.Overline.LetterSpacing = "0.04em";
+        theme.Typography.Overline.TextTransform = "uppercase";
+        SetRole(theme.Typography.Button, "14px", "500", "1.4");
         return theme;
+    }
+
+    /// <summary>Sets one typography role's size, weight and line height.</summary>
+    /// <param name="role">The role to set, such as <c>theme.Typography.H5</c>.</param>
+    /// <param name="size">The font size as a CSS length, in rendered pixels.</param>
+    /// <param name="weight">The font weight, one of 400, 500 or 600.</param>
+    /// <param name="lineHeight">The unitless line height.</param>
+    private static void SetRole(BaseTypography role, string size, string weight, string lineHeight)
+    {
+        role.FontSize = size;
+        role.FontWeight = weight;
+        role.LineHeight = lineHeight;
     }
 }

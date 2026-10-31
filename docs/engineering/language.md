@@ -11,24 +11,31 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 ## People and processes
 
-**Teammate**
-: Any named participant in Team. Two kinds exist: the Human, and Agents. This is
-  the umbrella term, and the one the `/teammates` page is named for.
-: *Avoid*: user, member (that means something narrower), participant.
-
 **Human**
 : The single seeded person using the browser. One per installation, a Member of
   every Room.
 : *Avoid*: user, operator, admin. In interface copy, write "you".
 
 **Agent**
-: A Teammate that is not the Human — a chat identity registered by name over the
+: A named chat identity that is not the Human, registered by name over the
   pipe. A Persona brought online is an Agent. The chat surface knows nothing else
-  about one.
-: *Avoid*: bot, assistant, AI, agent host.
+  about one, and the `/agents` page is named for it. Where text means the Human
+  and Agents together, say "participants" or "the Human or an Agent".
+: *Avoid*: teammate, team member, bot, assistant, AI, agent host.
+
+**History** (of a document)
+: The entries a Markdown document's editors logged, oldest first on disk and newest first on screen. An Agent adds to
+  it by calling `log_change`; Huddle adds the Human's saves. It is what the editors reported, not a record Huddle
+  verified ([ADR-0060](../adr/0060-a-documents-history-is-what-its-editors-report.md)).
+: *Avoid*: revision history, version history, audit log, changelog: none of those is a copy of the document.
+
+**Byline**
+: The one line under a document's toolbar that summarises its History: who wrote it, who edited, reviewed and
+  objected to it, and when it last changed.
+: *Avoid*: author line, credits.
 
 **Name**
-: What a Teammate is called — a display name, not a slug. Letters, digits, `_`,
+: What an Agent is called — a display name, not a slug. Letters, digits, `_`,
   `-` and single interior spaces, at most 64 characters, opening on a letter or a
   digit. `NameRules.IsValidAgentName` is the whole rule. A Name is a wire identity
   at `hello`, the `name` field of a Persona's frontmatter, the key its **Model**,
@@ -42,7 +49,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `NameRules.IsValidId`, no spaces, used for Rooms and Messages.
 
 **Alias**
-: A second handle that resolves to the same Teammate, so `@jar` reaches
+: A second handle that resolves to the same Agent, so `@jar` reaches
   `@Jarvis`. Required on every Persona, validated exactly like a **Name**, and
   unique across the library — no two Personas may share one, and one may not
   equal another Persona's Name. A Name always wins a tie. Aliases work wherever
@@ -51,7 +58,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: nickname, shortname, handle on its own.
 
 **Title**
-: A Teammate's job, as free display text — `Chief of Staff` for a Persona whose
+: An Agent's job, as free display text — `Chief of Staff` for a Persona whose
   Name is `Jarvis`. Required, but never validated as a Name, never an identity,
   and never resolved against: a Title is prose. It is the one structural
   frontmatter field `mcp__team__list_agents` still renders.
@@ -59,18 +66,19 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   different thing.
 
 **Avatar**
-: What a Teammate shows for itself — the small picture beside its Name on the
-  Teammates page, in the invite and new-chat lists, and against every Message it
+: What an Agent shows for itself — the small picture beside its Name on the
+  Agents page, in the invite and new-chat lists, and against every Message it
   posts. Three ways to fill it, and a background colour that is separate from all
   three:
 : **Initials** — the first and last word of the Name, as `Monogram` derives them.
   The default, and *not* a stored kind: it is what renders when neither of the other
-  two is set. **Label** — up to three characters, counted as Unicode text elements so
-  one emoji is one character however many code units it takes. **Image** — an uploaded
+  two is set. **Label** — up to six characters, counted as Unicode text elements so
+  one emoji is one character however many code units it takes (the 24px row avatar draws
+  only the first three). **Image** — an uploaded
   PNG, JPEG or WebP.
-: Held per Teammate in `{DataDir}/avatars.json`, keyed by **Name**, which is why the
+: Held per Agent in `{DataDir}/avatars.json`, keyed by **Name**, which is why the
   Human has one too and why a Message finds one from its sender. Deliberately **not**
-  part of the Persona — an Avatar changes nothing about how a Teammate runs, and
+  part of the Persona — an Avatar changes nothing about how an Agent runs, and
   putting it in frontmatter would restart the session and lose what that Agent
   remembers ([ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)).
 : *Avoid*: icon (`Icons.Material` entries are icons), picture, profile photo, headshot.
@@ -78,20 +86,20 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   choice.
 
 **Avatar Library**
-: A folder of ready-made Avatar images the Human maintains, configured by `Team:AvatarLibrary:Dir` and read through its `master.json` index. The Human chooses an image from it with the picker. Read-only from Huddle's side: a pick **copies** the image into the Avatar store, so a Teammate keeps its face if the library moves or is deleted ([ADR-0044](../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md)).
+: A folder of ready-made Avatar images the Human maintains, configured by `Team:AvatarLibrary:Dir` and read through its `master.json` index. The Human chooses an image from it with the picker. Read-only from Huddle's side: a pick **copies** the image into the Avatar store, so an Agent keeps its face if the library moves or is deleted ([ADR-0044](../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md)).
 : *Avoid*: gallery, stock images, catalogue (as the name of the folder; the parsed index in memory is the catalogue).
 
 **Team**
-: A label naming a group of Teammates, listed in a Persona's `teams` frontmatter
-  field. A Teammate may belong to several, or to none. A Team is a **view** —
-  it groups and filters the Teammates page and the invite dialog, and nothing
+: A label naming a group of Agents, listed in a Persona's `teams` frontmatter
+  field. An Agent may belong to several, or to none. A Team is a **view** —
+  it groups and filters the Agents page and the invite dialog, and nothing
   more. It is never a permission: every Agent still sees every other Agent
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
   A Team has a page at `/teams/<Team>` with Members, Files and Tasks tabs, and a
   Process tab once it has a **Process**. A Team set up from a **Team type** also
   has a **Team card** (`_team.md`) that names its type, manager and workspace.
 : A Persona's Team is **not a folder**: its Team membership is its frontmatter
-  alone, and where the Persona's Teammate folder sits changes nothing.
+  alone, and where the Persona's Agent folder sits changes nothing.
   On disk, a Team has a folder under `Teams/` (ADR-0030) for its notes, Projects
   and Tasks; that folder never decides who is in the Team.
 : **In Tasks, the opposite holds, and on purpose.** Under `Teams/`, a
@@ -114,21 +122,51 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: template, kind, blueprint.
 
 **Role**
-: A job slot a **Team type** defines, such as Developer or Reviewer. A Teammate has
+: A job slot a **Team type** defines, such as Developer or Reviewer. An Agent has
   one Role, named by its `_role` frontmatter key; a Team type's **coverage** says which steps its
   hired Roles cover.
 : *Avoid*: position, seat, job.
 
 **Candidate**
-: A Teammate template for one Role, read from a Team type's `candidates/*.md`. The
-  hiring pool shows one card per Candidate; hiring a card writes a Teammate.
+: An Agent template for one Role, read from a Team type's `candidates/*.md`. The
+  hiring pool shows one card per Candidate; hiring a card writes an Agent.
 : *Avoid*: template, profile, persona file.
 
 **Pack**
-: A named set of Skills, from the `SkillPacks` folder beside the Team types, that a Teammate's card adds
-  or removes as one chip. A pack can also say when to consult the Teammate, such as
-  build failures.
-: *Avoid*: bundle, plugin.
+: A named set of Skills that an Agent's card adds or removes as one chip: a `.skillpack.json` file
+  that a row of the Packs table in `SKILLS.md` names. An AI tool writes it; Huddle reads it. A pack
+  can also say when to consult the Agent, such as build failures. Huddle ships none. See
+  [the Skill Packs design](../Huddle.SkillPacks-Specifications.md).
+: *Avoid*: bundle, plugin, Skill pack in the old sense of a JSON file in `SkillPacks/`.
+
+**Skill Sources folder**
+: The folder that holds `SKILLS.md`, the Pack and catalog files and one folder per **Source**:
+  `{DataDir}/SkillSources` unless `Team:SkillSourcesDir` or Settings › Skills › Sources moves it.
+  The AI tool owns what is in it, and several Huddles may share one. Never confuse it with
+  `{DataDir}/Skills/`, which holds the copies Agents read.
+: *Avoid*: registry folder, skills repo, library.
+
+**Source**
+: Where a set of Skills came from: a GitHub repository, another git remote, or a local folder,
+  named by an id such as `github.com/anthropics/skills` or `local/my-packs`. Its folder under
+  `sources/` holds `source.json` (URL, commit, when and by what it was fetched, and a status:
+  Active, Deprecated, Withdrawn or Moved), `NOTES.md` and Huddle's `log.jsonl`.
+: *Avoid*: origin, provider, publisher, repo (a Source need not be a repository).
+
+**Catalog**
+: In the Skill sense, a `.skillcatalog.json` file that a row of the Catalogs table names: a list of
+  Skills a Source offers, each with a category and, once the AI tool has fetched it, a **Skill
+  pointer**. A catalog Skill with no pointer on this computer is **Not downloaded**. Not the
+  `PromptCatalog`, `ThemeCatalog` or `TeamTypeCatalog`, which are code.
+: *Avoid*: index, marketplace, store.
+
+**Skill pointer**
+: The `path` a catalog or Pack entry gives for one Skill folder on this computer — usually inside
+  a clone the AI tool made, anywhere on disk. Huddle never runs or edits what a pointer names; it
+  checks the folder and **copies** it into `{DataDir}/Skills/<name>/` with a `.source.json` when an
+  Agent needs it. A pointer folder whose hash no longer matches the copy is one reason for **Update available**; a
+  Pack whose list of Skills changed is the other.
+: *Avoid*: link, reference (a reference is the chat feature), install path.
 
 **Process**
 : How a Team's work is done: its `Process.md`, copied from a Team type's process
@@ -139,14 +177,41 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Gate**
 : A rule in a Team's **Process** that refuses one change until a condition is met,
   such as a Task moving to Done. Only the Human can override one, and the override is
-  recorded on the Task (ADR-0039).
+  recorded on the Task (ADR-0039), except on a **Human-gated** Task, where nothing
+  overrides (ADR-0061).
 : *Avoid*: check, approval, guard.
 
 **Evidence**
 : A line added to a Task that records what was checked, and by whom. Gates read
   Evidence: a Task's move to Done needs it, and a merge needs one whose check command
-  passed.
-: *Avoid*: proof, log, result.
+  passed. One line of Evidence can meet one item of **Proof**.
+: *Avoid*: proof (that is the checklist), log, result.
+
+**Definition of Done**
+: The list in a Team's **Process** of what must be shown before a **Human-gated** Task
+  reaches the Human: one item per bullet under `## Definition of Done`, each met by
+  Evidence, a passing check, a finished sub-Task or an attached document reviewed after
+  its last edit (ADR-0062).
+: *Avoid*: acceptance criteria, checklist (the checklist on a Task is its **Proof**).
+
+**Proof**
+: A Task's **Definition of Done**, evaluated: each item met or open, counted as
+  "Proof 3/4". Locks the move to **Needs You** and the Human's Accept until it is
+  complete. Shown on every Task, enforced only on a Human-gated one.
+: *Avoid*: Evidence (one line), sign-off, verification.
+
+**Human gate**
+: The rule that a Task reaches Done only when the Human accepts it. A Task is
+  **Human-gated** when it names an **Action** or the Human turned on *Requires your
+  acceptance*. The Human decides with **Accept**, **Request changes** or **Decline**;
+  only an acceptance opens Done, and it is void if the text changes (ADR-0061).
+: *Avoid*: approval, sign-off, override, review (Review is a status).
+
+**Action**
+: What a Human-gated Task will do outside the Team once accepted, in one line: "Send
+  reply to Acme", "Merge PR #418". Setting one locks the **Human gate** on. The
+  assignee carries it out after the Human accepts, then moves the Task to Done.
+: *Avoid*: side effect, outcome, operation.
 
 **Request**
 : A Task in a receiving Team's backlog, asking for a bug, feature, feedback or
@@ -189,8 +254,8 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Adapter command**
 : A command an Adapter advertises for a session, sent to it as the start of a prompt. Not a
   **Skill**, which is Huddle's own folder of Markdown and not Claude's `.claude/skills/`, and not an
-  **App Tool**. The Human runs one on a Teammate by Mentioning it, `@Nova /compact`, and only a command
-  that the Teammate's Adapter Profile names in `Commands` is offered: the list an Adapter advertises is
+  **App Tool**. The Human runs one on an Agent by Mentioning it, `@Nova /compact`, and only a command
+  that the Agent's Adapter Profile names in `Commands` is offered: the list an Adapter advertises is
   much longer, and without isolation includes the Human's own Claude Code skills. Built 2026-09-30;
   see [the Adapter commands spec](../Huddle.Commands-Specifications.md).
 : *Avoid*: slash command on its own (`/invite` is Huddle's), skill, tool.
@@ -222,7 +287,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Team Room**
 : The Room scoped to a Team and named after it, holding the Human and every
-  member. Created when the Team first has a member; a Teammate who joins the
+  member. Created when the Team first has a member; an Agent who joins the
   Team later is added to it.
 : *Avoid*: team channel, general.
 
@@ -240,12 +305,12 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: hidden, closed, muted, inactive, soft-deleted. A Room that was
   *deleted* is gone, not Archived — the two are not degrees of the same thing.
 **Member**
-: A Teammate that belongs to a Room and receives its Messages.
+: An Agent that belongs to a Room and receives its Messages.
 : *Avoid*: participant, subscriber.
 
 **Invitation**
 : Adding an Agent to a Room that already exists. Three doors, one behaviour:
-  the Human types `/invite @name` in the composer or uses **Add teammate** on the
+  the Human types `/invite @name` in the composer or uses **Add agent** on the
   Room header, and an Agent calls `mcp__team__invite_agent`. All three end in
   `ChatService.InviteAsync`, so the Room renames itself after its Agents however
   the Invitation was issued.
@@ -255,7 +320,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Persona**
 : The Markdown instructions defining one Agent's character, stored as one file
-  in its own folder, `{DataDir}/{Acp:TeammatesDir}/<Name>/<Name>.md`, found by a
+  in its own folder, `{DataDir}/{Acp:AgentsDir}/<Name>/<Name>.md`, found by a
   one-level scan (ADR-0031) — together with the **Model**,
   the **Effort** and the **Work Mode** it runs on, stored in the `persona_models`,
   `persona_efforts` and `persona_work_modes` tables. The file body *becomes* part of a system prompt; it
@@ -263,7 +328,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : Its leading YAML frontmatter block is **partly schema**. `name`, `title` and
   `alias` are required and `teams` is optional; a file missing any required one
   is not a Persona at all — it is a rejected file, listed with its reason on the
-  Teammates page rather than silently ignored. Every *other* top-level field
+  Agents page rather than silently ignored. Every *other* top-level field
   whose key does not start with `_` becomes one title-cased line of the job
   description `mcp__team__list_agents` shows, in file order, as before;
   `_`-prefixed fields stay reserved for future programmatic use. `name` alone is
@@ -275,7 +340,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : A `.md` file under the Teams directory that did not become a Persona — a
   required frontmatter field missing or invalid, or a Name or Alias colliding
   with another file's. Both sides of a collision are rejected, never one
-  arbitrary winner. Rejected files are surfaced on the Teammates page with their
+  arbitrary winner. Rejected files are surfaced on the Agents page with their
   path and reason; being wrong is loud, not invisible. See `RejectedPersonaFile`.
 : *Avoid*: invalid persona, broken persona — it is a file, and it is not a
   Persona.
@@ -309,7 +374,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `bypassPermissions` where the process is not root. Unset means the Adapter's own mode and
   nothing is sent, which is the normal case. Fixed for the life of a session, exactly like a
   Model, and chosen only by the Human. See [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md).
-: *Avoid*: "mode" alone — it already means light/dark, a Teammate card's Create/Edit/View state
+: *Avoid*: "mode" alone — it already means light/dark, an Agent card's Create/Edit/View state
   and the system-prompt mode; "permission mode", "ACP mode". Not a **Plan**: the Adapter's `plan`
   mode is one Work Mode, and a Plan is an Agent's own checklist.
 
@@ -374,7 +439,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: quota, limit, cap, rate limit, throttle, allowance.
 
 **Spend**
-: What the Adapter has reported spending for one Teammate since the app started, shown in money on
+: What the Adapter has reported spending for one Agent since the app started, shown in money on
   its card. Display only: it informs and never limits, which is what a **Budget** is for, and it is
   lost on restart. Built 2026-09-30.
 : *Avoid*: cost in interface copy, bill, and **Budget** for this.
@@ -393,7 +458,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : A folder whose files an Agent is told about when they change. Every Agent
   watches its own Work Dir. A Persona's `watches` frontmatter adds more, and so does
   the Agent itself with `watch_folder`, which lasts until `unwatch_folder`, even
-  across a restart. Each is named by a Teammate's Name, meaning their Work Dir, or
+  across a restart. Each is named by an Agent's Name, meaning their Work Dir, or
   by a folder inside `DataDir`. **Delivered 2026-09-23** — see
   [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md).
 : Not **Following**, which is about Rooms and wakes the Agent. Watching a folder
@@ -435,10 +500,10 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: shared memory, project memory, team notes.
 
 **Context only**
-: What a delivery amounted to when it named no Teammate the Reply Gate would wake:
+: What a delivery amounted to when it named no Agent the Reply Gate would wake:
   the Message was read as context and no Turn began. A property of the delivery, the
   same way **Mentioned** is — never of the Message, which may be context only for one
-  Teammate and a Mention for another. It is what the Room view says, and it instructs
+  Agent and a Mention for another. It is what the Room view says, and it instructs
   rather than predicts, because the gate is permission and not obligation.
 : *Avoid*: ignored, dropped, unread, silent.
 
@@ -460,14 +525,14 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `.claude/skills/`, which only one Adapter honours.
 
 **Proposal**
-: A roster of new Teammates an Agent asks the Human to create, made with
-  `propose_teammates` in one Room and shown there with Approve and Decline. An
-  Agent never creates a Teammate; the Human's Approve does, and the outcome is
+: A roster of new Agents an Agent asks the Human to create, made with
+  `propose_agents` in one Room and shown there with Approve and Decline. An
+  Agent never creates an Agent; the Human's Approve does, and the outcome is
   posted as a Message from the Human, which wakes the proposer. At most one per
   Room, held in memory, so a restart loses it.
-: Each proposed Teammate in it is a **Candidate** — never a *draft*, which is
+: Each proposed Agent in it is a **Candidate** — never a *draft*, which is
   already the Turn text shown before it becomes a Message.
-: *Avoid*: request, application, pending Teammate, draft.
+: *Avoid*: request, application, pending Agent, draft.
 
 **Question**
 : One multiple-choice question an Agent puts to the Human with `ask_human`: a line
@@ -503,9 +568,42 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   listed until the Human posts in it or dismisses it. Opening the Room does not
   clear it. In interface copy the card reads "Needs you". See
   [ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md).
-: *Avoid*: inbox, notifications, unread, alerts, pending. **Unread** in
-  particular is a different idea: Needs You is about who is blocked on the Human,
-  not what the Human has read.
+: Also the Task status between Review and Done that only a **Human-gated** Task can
+  enter, once its **Proof** is complete. A Task in it, not yet accepted, is listed on
+  the card and the `/needs-you` page; it leaves only by a decision or a status change
+  (ADR-0061). The status and the card share the name on purpose.
+: *Avoid*: inbox, notifications (a **Notification** is a stored **Feed item**,
+  ADR-0063), unread, alerts, pending. **Unread** in particular is a different
+  idea: Needs You is about who is blocked on the Human, not what the Human has read.
+
+**Feed**
+: The stored history of what Agents and Huddle did: one row per event, posted by
+  the component that knows it, never worked out from other events. Shown as the
+  Notifications panel and the Feed Tab (`/feed`). Beside **Needs You**, not instead
+  of it. See
+  [ADR-0063](../adr/0063-the-feed-is-a-stored-history-that-each-domain-component-posts-to.md).
+: *Avoid*: timeline, activity log, inbox, stream.
+
+**Feed item**
+: One row of the Feed: who, when, what, and the stable key of its target (a Task id,
+  a Room id, a Library path). Never holds Message text.
+: *Avoid*: post (a Message's word), event, entry (a History or Change log line).
+
+**Notification**
+: A Feed item its sender marked for the Human (`notify`). It is shown in the
+  Notifications panel, is counted until seen, and can be dismissed. It is resolved,
+  dimmed and uncounted when its sender says the condition cleared.
+: *Avoid*: alert, unread (the count is **unseen**), Needs You (the live list).
+
+**Activity**
+: A Feed item that is not a Notification: shown only in the Feed Tab, and deleted
+  after `Team:Feed:ActivityRetentionDays`.
+: *Avoid*: Change log (a Task's own history), History (a document's).
+
+**Feed publisher**
+: `IFeedPublisher`, the one interface producers call: `Post` and `Resolve`, both
+  enqueue-only and never throwing.
+: *Avoid*: notifier (`IRequestNotifier` wakes Personas), event bus.
 
 **Greeting**
 : The first Message the built-in Chief of Staff posts to a new Human, unprompted,
@@ -518,7 +616,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Work Dir**
 : The per-Persona working directory handed to the agent process as its `cwd`,
-  under `{DataDir}/{Acp:TeammatesDir}/<Name>/work/`.
+  under `{DataDir}/{Acp:AgentsDir}/<Name>/work/`.
 : *Avoid*: sandbox — it is not a jail, and the old name implied one.
 
 **Room Session**
@@ -538,13 +636,43 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   see [Known limits](known-limits.md).
 : *Avoid*: conversation, thread, agent session, instance.
 
+**Helper**
+: A background agent that makes one stateless judgement about an event and answers
+  in JSON, which Huddle parses into a **Verdict** and applies through the ordinary
+  domain service. It has no tools, no Room, no Persona and no Room Budget, and posts
+  no Messages. In code, `HelperAgent` (`IHelperAgent<TInput, TVerdict>`). If it
+  talks, keeps memory or works in a Room, it is an Agent instead. Each Helper has
+  a daily call cap; reaching it pauses that Helper until the Human presses Continue.
+  See [ADR-0064](../adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md).
+: Capitalised, it means only this. The lowercase "helper" (a code utility class,
+  MudBlazor helper text) is unrelated.
+: *Avoid*: special agent, bot, assistant, background Agent.
+
+**Verdict**
+: A Helper's parsed answer, a typed record such as `NeedsHumanVerdict(NeedsHuman,
+  Reason)`. Huddle applies it; the Helper never acts.
+
+**Needs Human Helper**
+: The first Helper. It reads each Task an Agent creates or rewrites and turns its
+  Human gate on when the work leaves the Team or can't be undone, writing as
+  `Needs Human (Helper)` with its reason in the Change log. It never turns the gate
+  off, and never judges a Task again once the Human has turned that Task's gate off.
+
+**Huddle (as sender)**
+: The sender of a Message Huddle itself writes, such as a Helper's wake-up to the
+  assignee: `KnownIds.Huddle`, neither the Human nor an Agent, with no `User` row
+  and no Membership. Its Messages answer no Mention, clear nothing from Needs You
+  and reset no Budget. See
+  [ADR-0065](../adr/0065-huddle-posts-as-itself.md).
+: *Avoid*: system, bot, the app.
+
 ## Library
 
 **Library**
 : The explorer, viewer and editor as a whole.
 
 **Library Root**
-: One top-level folder the Library may reach, with an id: `teams`, `teammates`,
+: One top-level folder the Library may reach, with an id: `teams`, `agents`,
   or a pinned root's slug.
 
 **Library Pane**
@@ -558,11 +686,17 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   whose name starts with `_` or `.`, or is `memory` (Team Memory, proposed in
   ADR-0032), is never a Project.
 
-**Teammate folder**
-: `{DataDir}/Teammates/<Name>/`: the Teammate's definition and its `work/` Work Dir.
+**Agent folder**
+: `{DataDir}/Agents/<Name>/`: the Agent's definition and its `work/` Work Dir.
 
 **Pinned root**
 : A Library Root the Human added in configuration or Settings.
+
+**Library tag**
+: A label on a Library note, written `#tag` in its body or in its frontmatter `tags`
+  list, matched without case and nested on `/` (`work/active` is under `work`), as in
+  Obsidian. Huddle reads it and never writes it. Not a Task's `tags` field, and never a
+  Mention or a reference. *Avoid*: hashtag.
 
 ## Tasks
 
@@ -645,14 +779,14 @@ See
   the Human, is the actor, or when the Task's **wake budget** is spent. The wake
   budget is a per-Task count of wake-ups caused by Agents; the Human grants more.
   See [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
-: *Avoid*: notify (except in button text such as *Save & Notify Nova*), ping,
+: *Avoid*: notify (except in button text such as *Save & notify Nova*), ping,
   trigger, alert, nudge.
 
 **Awake / Asleep / Offline**
-: An AI Teammate's presence as the Tasks interface shows it. **Awake** means a
+: An AI Agent's presence as the Tasks interface shows it. **Awake** means a
   Turn is running. **Asleep** means the Persona is running with no Turn in
   progress, and can be woken. **Offline** means the Persona isn't running; a
-  wake-up Message is still posted, but the Teammate doesn't receive it.
+  wake-up Message is still posted, but the Agent doesn't receive it.
 : *Avoid*: idle, busy, online (that is `PersonaState`'s word, which these three
   refine), available.
 
@@ -737,6 +871,81 @@ See
   directory.
 : *Avoid*: database, registry, store.
 
+## Remote access
+
+The words for using Huddle from another device ([Huddle.RemoteAccess-Specifications.md](../Huddle.RemoteAccess-Specifications.md)).
+OpenClaw's own word is kept wherever Huddle has no clash. In interface copy, a person is "you", and a device is a
+"device", never a "client".
+
+**Gateway**
+: Huddle's HTTP surface as a whole: every page, asset, endpoint and the `/_blazor` connection. Named as OpenClaw names
+  its own.
+: *Avoid*: server, API.
+
+**Gateway auth**
+: The shared secret every connection presents: the gateway token (48 hex characters, the default) or the gateway
+  password (`Auth:Mode`), or Tailscale identity, or trusted-proxy identity.
+: *Avoid*: login.
+
+**Device identity**
+: An Ed25519 key pair the browser generates and keeps in its local storage. The **device id** is the SHA-256 hex of
+  the public key.
+: *Avoid*: fingerprint, client id.
+
+**Connect handshake**
+: What `/auth` does: the browser asks for a challenge, signs it with its device key together with its credential, and
+  receives a **Session**.
+: *Avoid*: login, sign-in.
+
+**Session**
+: The proof of one successful handshake: an HttpOnly cookie that Huddle's pages and `/_blazor` carry. It lasts 12
+  hours. Huddle's equivalent of an authenticated OpenClaw WebSocket.
+: *Avoid*: login session.
+
+**Pairing**
+: A device becoming known. A pairing request waits up to 5 minutes for an admin's **Approve** or **Reject**, unless
+  it is auto-approved.
+: *Avoid*: registration.
+
+**Device token**
+: The per-device credential issued on approval, scoped to a role and scopes, kept by the browser in local storage and
+  presented on later handshakes instead of the gateway token.
+: *Avoid*: API key.
+
+**Scope**
+: What a session may do: `operator.read`, `operator.write`, `operator.pairing`, `operator.admin`.
+: *Avoid*: permission, role.
+
+**Limited access**
+: A device without `operator.admin`. It may **Request admin**, which needs approval. Limited is not read-only: there is
+  no read-only device ([known-limits.md](known-limits.md)).
+: *Avoid*: read-only.
+
+**Bootstrap token**
+: A single-use credential, valid 10 minutes and bound to the first device that redeems it, that opens one browser
+  already authenticated. Minted for the host's own browser by the desktop launcher or the `dashboard` verb, or for
+  another device as a **setup link**. Carried in the URL fragment.
+: *Avoid*: magic link.
+
+**Ingress**
+: How a request arrives: loopback, managed (through Huddle's own Tailscale Serve or Funnel), direct (a tailnet or LAN
+  bind), or trusted proxy. Decided only by the ingress classifier.
+: *Avoid*: transport.
+
+**Managed listener**
+: The extra loopback listener on a random port that only Huddle's own `tailscale serve` points at.
+: *Avoid*: proxy port.
+
+**Downgraded**
+: OpenClaw's word for plain HTTP off loopback: it works, but nothing is encrypted and the page can be altered in
+  transit.
+: *Avoid*: insecure mode.
+
+**Instance id**
+: A random id stored once per `{DataDir}`, part of every cookie name, because cookies ignore ports and copies run side
+  by side.
+: *Avoid*: port.
+
 ## Model-facing text
 
 **Prompt**
@@ -773,7 +982,7 @@ See
 
 **Timing**
 : Whether an edit to a Prompt reaches a model on the next Turn (`Live`) or only
-  for Teammates started afterwards (`NextSession`). Not a preference — a system
+  for Agents started afterwards (`NextSession`). Not a preference — a system
   prompt is fixed at `session/new` and there is no later event that re-reads it.
   Editing a Prompt never restarts a session; see [Rules](rules.md).
 : *Avoid*: scope, refresh, reload.
@@ -781,7 +990,7 @@ See
 ## Search
 
 **Global Search**
-: The search box in the Top Bar and its dropdown, which finds Teams, Teammates, Library
+: The search box in the Top Bar and its dropdown, which finds Teams, Agents, Library
   entries, Tasks and Rooms by exact phrase, ignoring case. It keeps no index of its own:
   every search reads again.
 : *Avoid*: quick open, find, lookup, omnibox.
@@ -793,15 +1002,15 @@ See
 : *Avoid*: header, app bar, title bar, toolbar.
 
 **Filter**
-: In Global Search, one of All, Teams, Teammates, Library, Tasks and Rooms, drawn as a chip.
-  Typing its prefix (`team:`, `teammate:`, `lib:`, `task:`, `room:`) and picking its chip
+: In Global Search, one of All, Teams, Agents, Library, Tasks and Rooms, drawn as a chip.
+  Typing its prefix (`team:`, `agent:`, `lib:`, `task:`, `room:`) and picking its chip
   are the same act.
 : *Avoid*: scope (that is the Active or Archived pass), category, tab.
 
 **Card** (search)
 : One result row in the Global Search dropdown, drawn by the component for its kind of hit.
-  *Card* already names two other things: a Board's drawing of a Task, and the Teammate card
-  that opens from the Teammates page. Say *search card* where the three could be confused.
+  *Card* already names two other things: a Board's drawing of a Task, and the Agent card
+  that opens from the Agents page. Say *search card* where the three could be confused.
 : *Avoid*: result item, tile, row.
 
 ## References
@@ -809,7 +1018,7 @@ See
 **Reference**
 : Text in a Message that names one Task, Room, Team or Library file by its stable key: a Task id,
   a `/rooms/<id>` or `/teams/<Team>` link, or a Library path. Written by the Reference picker or
-  typed; either way it is ordinary text. A Teammate is never referenced: it is **Mentioned**. When
+  typed; either way it is ordinary text. An Agent is never referenced: it is **Mentioned**. When
   the Message is posted, what each reference named is kept beside the text as its snapshot.
 : *Avoid*: tag, hashtag, link card, pill.
 
@@ -831,27 +1040,28 @@ See
 ## Appearance
 
 **Theme**
-: One `MudTheme` object in `ThemeCatalog`, carrying **one** palette and the
+: One skin file per Theme and mode, loaded into a `MudTheme` in `ThemeCatalog`, carrying **one** palette and the
   `ThemeDescriptor.Mode` naming which — so a Theme *is* a light one or a dark one rather
   than spanning both, and choosing it chooses the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). It fills only that slot;
-  the other keeps MudBlazor's defaults and is never rendered. Twenty-one ship built in:
-  this application's own `huddle` (labelled "Huddle Light") and `huddle-dark`, the two
-  Custom Accent Themes (`custom-accent` and `custom-accent-dark`, whose accent colour the
-  Appearance tab sets), and seventeen of the colour Themes bundled with Visual Studio Code, converted once at
-  authoring time into `MudTheme` objects under `Themes/VsCode/` — see
-  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
-  A Theme also carries a **`ThemeGroup`** — Light, Dark or High contrast — which is the
-  heading the picker lists it under and is *not* its Mode: "Dark High Contrast" is a dark
-  Theme in the High contrast group.
+  the other keeps MudBlazor's defaults and is never rendered. Eight ship built in, the
+  Lumen (the default), Fluent, Nordic and Cobalt Soft pairs (lumen-light, lumen-dark and so on,
+  mapped from the approved mockup directions). The Huddle pair, the Custom Accent Themes and
+  seventeen Visual Studio Code ports shipped until 2026-10-17 — see
+  [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) and
+  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)
+  (superseded). A Theme is a **skin**: a palette, `--hu-*` tokens, ten traits, faces, radius,
+  typography and shadows. A Human's own accent is a per-Theme **customization**, not a Theme.
+  A Theme also carries a **`ThemeGroup`** — Light or Dark — which is the picker list it
+  appears in. Today it always equals its Mode, but it is a separate field.
   A Theme is identified by its **id**, which is what
   `appearance.json` stores; never by its display label, for the reason
   [Rules](rules.md) gives for a Model. Roadmap item 7 is what remains: importing an
   *arbitrary* Theme a Human supplies, mapped from JSON into a `MudTheme` at run time
-  rather than generated as CSS. The bundled Themes needed no importer — they were
-  converted once, by hand, and are ordinary C#.
+  rather than generated as CSS. The bundled Themes needed no importer — they are
+  embedded JSON skins.
 : *Avoid*: stylesheet (a Theme stopped being one on 2026-09-14 — see
-  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), skin, palette (that is one
+  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), palette (that is one
   half of a Theme, and a MudBlazor type name), colour scheme (`color-scheme` is a CSS
   property here and no longer carries anything).
 
@@ -866,16 +1076,16 @@ See
 
 **Appearance**
 : The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
-  selected Theme id (`theme`), and the accent colour (`accentColor`), and nothing else (a retired `libraryPaneSide` key is ignored). Per installation, hand-editable and watched,
-  exactly like `hooks.json`. There are no per-property overrides — that layer was removed
-  with the Tokens — and since 2026-09-21 there is no light/dark preference either: a
+  selected Theme ids (`theme`, `lightTheme`, `darkTheme`), and `customizations` per Theme id (a palette and token override validated like a skin; the Appearance tab writes only `primary`), and nothing else (a retired `libraryPaneSide` key is ignored). Per installation, hand-editable and watched,
+  exactly like `hooks.json`. The old CSS-Token override layer was removed
+  with the Tokens, and since 2026-09-21 there is no light/dark preference either: a
   Theme carries its own palette, so selecting one selects the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before then
   still holds a `dark` key; it is an unknown key now, ignored and kept. Appearance is the
   choice; a **Theme** is what it selects.
 : **The tab is not the file.** Since 2026-09-22 the tab has a second section — the
-  Human's own **Avatar** — because the Human has no Persona file and so no Teammate
+  Human's own **Avatar** — because the Human has no Persona file and so no Agent
   card to edit one on. That Avatar is stored in `avatars.json`, a different file with a
-  different owner; `appearance.json` still holds the selected Theme id and the accent colour, and nothing else.
+  different owner; `appearance.json` still holds the selected Theme ids and the Theme customizations, and nothing else.
 : *Avoid*: dark mode and light/dark preference (there is no such setting any more — say
   *a dark Theme*), display settings.

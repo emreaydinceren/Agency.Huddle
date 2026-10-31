@@ -6,7 +6,12 @@
     <AssemblyName>mock-acp</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests" />
+    <InternalsVisibleTo Include="Huddle.Tests.Common" />
+    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
+    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
+    <InternalsVisibleTo Include="Huddle.Tests.Components" />
+    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
+    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
   </ItemGroup>
   <ItemGroup>
     <!-- Links the ACP effort's scripted fake agent rather than moving it, per Spec §6.10

@@ -1,0 +1,248 @@
+@*
+    The Right sidebar's Notifications panel (Feed spec 6.8, D-21). It shows the Feed, not only Notifications: a compact Category control with
+    the seven Categories and their counts, opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
+    "Show more", and a last row that opens the Feed Tab on the same Category. Opening the panel is what marks the Notifications it draws as
+    seen: only the ones drawn, never one parked behind the "new items" pill, and only in Needs you and All, because a seen mark covers
+    every Notification up to an id. The x on a row dismisses its Notification: in Needs you the row goes at once, in All it stays because
+    dismissing hides it from the bell and not from the Feed. The Category choice lives only as long as the panel does. The arrow keys move
+    the Category choice.
+*@
+@using Agency.Huddle.App.Components.Layout
+@using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Sidebar
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject FeedStore Store
+@inject FeedQueue Queue
+@inject FeedEvents Events
+@inject IOptions<TeamOptions> Options
+@inject IJSRuntime Js
+
+<div class="notifications-panel">
+    <div role="radiogroup" aria-label="Category" class="feed-categories" @ref="this.categoryGroup" @onkeydown="this.OnCategoryKeyDown">
+        <MudChipSet T="FeedCategory"
+                    SelectionMode="SelectionMode.SingleSelection"
+                    SelectedValue="@this.category"
+                    SelectedValueChanged="this.OnCategoryChanged">
+            @foreach (FeedCategory entry in FeedCategories.Order)
+            {
+                <MudChip T="FeedCategory"
+                         Value="@entry"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         role="radio"
+                         aria-checked="@(entry == this.category ? "true" : "false")">
+                    <span>@FeedCategories.Label(entry)</span> <span class="feed-category-count">@FeedCategories.CountOf(this.counts, entry)</span>
+                </MudChip>
+            }
+        </MudChipSet>
+    </div>
+
+    @if (this.Pager.Items.Count == 0 && !this.Pager.Arrived)
+    {
+        <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
+    }
+
+    <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" OnDismiss="this.DismissAsync" OnDismissMany="this.DismissManyAsync"
+              OnNewItemsInserted="this.OnNewItemsInserted" />
+
+    @if (this.Pager.HasMore)
+    {
+        <MudButton Size="Size.Small" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+    }
+
+    <NavTabLink Href="@("/feed?category=" + FeedCategories.ToWire(this.category))" TabTitle="Feed" Match="NavLinkMatch.All" Class="feed-see-all">See all activity</NavTabLink>
+</div>
+
+@code {
+    private FeedPager? pager;
+    private FeedCategory category = FeedCategory.NeedsYou;
+    private FeedCounts counts = new(0, 0, 0, 0, 0, 0, 0);
+    private FeedList? list;
+    private ElementReference categoryGroup;
+    private long markedUpTo;
+    private long drawnArrivedNotificationId;
+    private bool focusChosen;
+
+    /// <summary>The frame's context, which shows the unseen count in the header.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    private FeedPager Pager => this.pager ??= new FeedPager(this.Store, Math.Max(1, this.Options.Value.Feed.PanelLimit), hideDismissed: true);
+
+    private string EmptyTitle => this.category == FeedCategory.NeedsYou ? "Nothing needs you" : "Nothing yet";
+
+    private string EmptyText => this.category == FeedCategory.NeedsYou ? "Asks from your Agents appear here." : "What your Agents do appears here.";
+
+    /// <summary>Loads the first page of Needs you and listens for Feed changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.Load();
+        this.Events.ItemsAdded += this.OnItemsAdded;
+        this.Events.ItemsChanged += this.OnItemsChanged;
+    }
+
+    /// <summary>Moves focus onto the Category the arrow keys just chose.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    /// <returns>A task that completes once the focus moved.</returns>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.focusChosen)
+        {
+            return;
+        }
+
+        this.focusChosen = false;
+        try
+        {
+            await this.Js.InvokeVoidAsync("huddleFeed.focusChecked", this.categoryGroup);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
+        {
+            // The circuit is gone or the page has no script, and only the focus ring is lost.
+        }
+    }
+
+    /// <summary>Unsubscribes from the Feed hub.</summary>
+    public void Dispose()
+    {
+        this.Events.ItemsAdded -= this.OnItemsAdded;
+        this.Events.ItemsChanged -= this.OnItemsChanged;
+    }
+
+    /// <summary>Reads the first page of the chosen Category and starts a fresh list.</summary>
+    private void Load()
+    {
+        this.Pager.Category = this.category;
+        this.Pager.Load();
+        this.drawnArrivedNotificationId = 0;
+        this.Refresh();
+    }
+
+    /// <summary>Re-reads the counts and the header count, and marks the Notifications now drawn as seen.</summary>
+    private void Refresh()
+    {
+        this.counts = this.Store.Counts(null, null);
+        int unseen = this.Store.UnseenCount();
+        this.Panel?.SetCount(unseen > 0 ? unseen : null);
+        this.MarkShownSeen();
+    }
+
+    /// <summary>
+    /// Marks seen up to the highest Notification actually drawn. A seen mark covers every Notification up to its id, so it is only safe in
+    /// Needs you and All, where every Notification below the highest drawn is drawn too; a single Task or Room Category must not mark the rest.
+    /// </summary>
+    private void MarkShownSeen()
+    {
+        if (this.category is not (FeedCategory.NeedsYou or FeedCategory.All))
+        {
+            return;
+        }
+
+        long highest = this.Pager.Items.Where(static item => item.Notify).Select(static item => item.Id).DefaultIfEmpty(0).Max();
+        highest = Math.Max(highest, this.drawnArrivedNotificationId);
+        if (highest > this.markedUpTo)
+        {
+            this.markedUpTo = highest;
+            this.Queue.MarkSeen(highest);
+        }
+    }
+
+    private void OnCategoryChanged(FeedCategory chosen)
+    {
+        if (chosen == this.category)
+        {
+            return;
+        }
+
+        this.category = chosen;
+        this.Load();
+    }
+
+    /// <summary>The arrow keys move the Category choice, wrapping at the ends, as a radio group does.</summary>
+    private void OnCategoryKeyDown(KeyboardEventArgs args)
+    {
+        int step = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => 1,
+            "ArrowLeft" or "ArrowUp" => -1,
+            _ => 0,
+        };
+        if (step == 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<FeedCategory> order = FeedCategories.Order;
+        int next = (((order.ToList().IndexOf(this.category) + step) % order.Count) + order.Count) % order.Count;
+        this.focusChosen = true;
+        this.OnCategoryChanged(order[next]);
+    }
+
+    private void ShowMore()
+    {
+        this.Pager.ShowMore();
+        this.Refresh();
+    }
+
+    /// <summary>Marks seen the Notifications that were parked behind the "new items" pill, or arrived at the top, now that they are drawn.</summary>
+    private void OnNewItemsInserted(IReadOnlyList<FeedItem> inserted)
+    {
+        long newest = inserted.Where(static item => item.Notify).Select(static item => item.Id).DefaultIfEmpty(0).Max();
+        this.drawnArrivedNotificationId = Math.Max(this.drawnArrivedNotificationId, newest);
+        this.Refresh();
+    }
+
+    private Task DismissAsync(FeedItem item) => this.DismissManyAsync([item]);
+
+    /// <summary>Dismisses the Notifications together; in Needs you the rows go at once and the panel reads once.</summary>
+    private Task DismissManyAsync(IReadOnlyList<FeedItem> dismissed)
+    {
+        foreach (FeedItem item in dismissed)
+        {
+            this.Queue.Dismiss(item.Id);
+        }
+
+        if (this.category == FeedCategory.NeedsYou)
+        {
+            FeedRefresh removal = this.Pager.Hide([.. dismissed.Select(static item => item.Id)]);
+            this.list?.Refresh(removal);
+        }
+
+        this.Refresh();
+        return Task.CompletedTask;
+    }
+
+    private void OnItemsAdded(IReadOnlyList<FeedItem> added)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            IReadOnlyList<FeedItem> matching = this.Pager.Take(added);
+            if (matching.Count > 0 && this.list is not null)
+            {
+                await this.list.AddNewItemsAsync(matching);
+            }
+
+            this.Refresh();
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnItemsChanged()
+    {
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.RefreshShownRows);
+    }
+
+    /// <summary>Brings the rows drawn up to date in place when one was resolved or dismissed; the open card and the pill stay.</summary>
+    private void RefreshShownRows()
+    {
+        FeedRefresh refresh = this.Pager.RefreshInPlace();
+        if (refresh.Any)
+        {
+            this.list?.Refresh(refresh);
+        }
+
+        this.Refresh();
+        this.StateHasChanged();
+    }
+}

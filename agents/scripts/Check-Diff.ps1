@@ -156,6 +156,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# git output must be read as UTF-8 so non-ASCII copy (em-dash, middle dot) matches.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 if (-not $AcceptedUntestedPath) {
     $AcceptedUntestedPath = Join-Path $PSScriptRoot 'accepted-untested.example.txt'

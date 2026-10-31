@@ -34,6 +34,11 @@ retro: { every: 14, unit: 'days' }
 
 - This process declares no hard gate. The Tutor Lead's Evidence line is the check, and the Human closes each Task.
 
+## Definition of Done
+
+- Understanding checked: evidence from verify
+- Study plan reviewed: document reviewed by verify
+
 ## Cadence
 
 - Follow the order of the plan, one topic at a time.

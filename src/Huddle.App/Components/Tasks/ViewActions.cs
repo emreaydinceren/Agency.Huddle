@@ -70,7 +70,7 @@ internal static class ViewActions
         }
 
         ViewSaveResult result = store.Save(view with { Name = name });
-        return result.Saved ? null : string.Join(" ", result.Problems);
+        return result.Saved ? null : string.Join(' ', result.Problems);
     }
 
     /// <summary>The name a created View starts with: "New view", or "New view 2", "New view 3" and so on - the first no other View holds, ignoring case. The Human renames it from the ⋮ menu.</summary>
@@ -98,7 +98,7 @@ internal static class ViewActions
         ArgumentNullException.ThrowIfNull(view);
 
         return dialogService.ConfirmAsync(
-            $"Delete '{view.Name}'?",
+            ConfirmCopy.DeleteTitle(view.Name),
             "This removes the View. Tasks are not affected.",
             "Delete",
             danger: true,

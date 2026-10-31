@@ -4,35 +4,6 @@ using Agency.Huddle.App.Services;
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// What a Room's delivery of one Message amounted to, once every reachable Agent recipient's
-/// <see cref="ReplyGate"/> decision is folded together.
-/// </summary>
-internal enum RoomReply
-{
-    /// <summary>At least one reachable Agent recipient's Reply Gate said Reply.</summary>
-    Expected,
-
-    /// <summary>Every reachable Agent recipient decided CatchUp: no teammate was addressed.</summary>
-    ContextOnly,
-
-    /// <summary>The Room's Budget is spent. ADR-0006's Continue prompt already owns this surface.</summary>
-    Paused,
-
-    /// <summary>Nobody was left to deliver to: the only Agent Members are the sender, or unreachable, or absent.</summary>
-    NoRecipients,
-
-    /// <summary>
-    /// A Teammate was Mentioned by name but cannot receive the Message - Offline, Degraded, or
-    /// otherwise not reachable. Deliberately its own outcome rather than folded into
-    /// <see cref="ContextOnly"/>, which would be false (a Teammate WAS named), or into
-    /// <see cref="NoRecipients"/>, which would be false too whenever some other Teammate did receive
-    /// it. Every surface renders nothing for this today: explaining it is the deferred half of
-    /// ADR-0012, and rendering nothing is how the Room avoids saying something wrong in the meantime.
-    /// </summary>
-    MentionedUnreachable,
-}
-
-/// <summary>
 /// Folds every reachable Agent recipient's individual <see cref="ReplyGate"/> decision into one
 /// <see cref="RoomReply"/> for the Room as a whole — the answer a Room banner or health strip needs,
 /// where <see cref="ReplyGate"/> only ever speaks for a single Agent.
@@ -58,8 +29,8 @@ internal static class RoomReplyResolver
     /// out is a guarantee: this function reports what the gate would permit, not what a runner will
     /// actually do with the delivery - a raw pipe client can reply to anything regardless of what this
     /// resolves to, and a following Persona still has to be online and listening. So the copy built
-    /// from this result must still be worded to instruct ("mention a teammate to get a reply"), never
-    /// to predict ("a teammate will reply") - following is now a known input rather than an assumed
+    /// from this result must still be worded to instruct ("mention an agent to get a reply"), never
+    /// to predict ("an agent will reply") - following is now a known input rather than an assumed
     /// <see langword="false"/>, but the gate remains permission, not obligation.
     /// </para>
     /// <para>
@@ -67,7 +38,7 @@ internal static class RoomReplyResolver
     /// <see cref="Agency.Huddle.App.Pipes.AgentGateway.DeliverAsync"/> also skips a disconnected Agent, and with
     /// <c>Team:Acp:Enabled</c> false - the default - no Persona has ever started. Folding reachability
     /// into the Reply/CatchUp/BudgetExhausted decision instead of filtering recipients with it first
-    /// would let a Mention of an offline teammate resolve to <see cref="RoomReply.Expected"/>, and the
+    /// would let a Mention of an offline agent resolve to <see cref="RoomReply.Expected"/>, and the
     /// Room view would tell the Human to address someone who cannot answer.
     /// </para>
     /// </summary>
@@ -96,10 +67,10 @@ internal static class RoomReplyResolver
         IReadOnlySet<string> followingAgentIds,
         RoomBudget budget)
     {
-        // Checked before anything else, and the ordering is deliberate. A Teammate the Human named
-        // but that cannot receive the Message makes every other answer here untrue: "no teammate was
+        // Checked before anything else, and the ordering is deliberate. An Agent the Human named
+        // but that cannot receive the Message makes every other answer here untrue: "no agent was
         // mentioned" is false because one was, and "there was nobody to wake" is false whenever some
-        // other Teammate did receive it. So it is reported as itself and rendered as nothing.
+        // other Agent did receive it. So it is reported as itself and rendered as nothing.
         foreach (User mention in mentions)
         {
             if (MessagePostedEvent.IsRecipient(mention, senderId) && !reachableAgentIds.Contains(mention.Id))

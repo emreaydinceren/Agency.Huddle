@@ -24,4 +24,17 @@ internal sealed record AdapterProbeOutcome(
     /// everywhere a catalog is faked is unchanged.
     /// </summary>
     public IReadOnlyList<AgentModeOption> Modes { get; init; } = [];
+
+    /// <summary>
+    /// The id of the model the throwaway session reported running (<see cref="IAgentSession.CurrentModelId"/>),
+    /// or null when the Adapter did not say. When the probe requested no model, this is the Adapter's own
+    /// default. An init property for the same reason as <see cref="Modes"/>.
+    /// </summary>
+    public string? CurrentModel { get; init; }
+
+    /// <summary>
+    /// The id of the effort the throwaway session reported running (<see cref="IAgentSession.CurrentEffortId"/>),
+    /// UNFILTERED: it may be the Adapter's <c>"default"</c> sentinel, which names no level.
+    /// </summary>
+    public string? CurrentEffort { get; init; }
 }

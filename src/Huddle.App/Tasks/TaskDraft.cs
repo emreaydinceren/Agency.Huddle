@@ -38,6 +38,12 @@ public sealed record TaskDraft(
     string Description = "",
     SprintId? Sprint = null)
 {
+    /// <summary>Whether the Task waits for the Human before it can be Done. Defaults to <see langword="false"/>.</summary>
+    public bool HumanGate { get; init; }
+
+    /// <summary>The one-line outward action the Task will take once accepted, or <see langword="null"/> for none.</summary>
+    public string? Action { get; init; }
+
     /// <summary>Extra frontmatter keys written verbatim (a Request's six fields); <see langword="null"/> for none.</summary>
     public IReadOnlyList<KeyValuePair<string, string>>? ExtraFields { get; init; }
 }

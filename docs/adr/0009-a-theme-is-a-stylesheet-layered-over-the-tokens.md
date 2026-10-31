@@ -5,6 +5,8 @@ date: 2026-09-13
 
 # A Theme is a stylesheet layered over the tokens
 
+> **Status note 2026-10-17.** Superseded by ADR-0010 and, for how a Theme is built today, by [ADR-0058](0058-a-theme-is-a-palette-a-skin-and-traits.md): a Theme is a JSON skin of palette, `--hu-*` tokens and traits. The 39 Tokens named here no longer exist.
+
 [Roadmap](../engineering/roadmap.md) item 6 put the problem in one line: *dark mode
 is not so much a second feature as the test that the first one is finished — a
 colour still written as a literal shows up immediately as the one element that did
@@ -286,7 +288,7 @@ worth more than one asserted, so:
   decision. Fenced code blocks gained a monospace family they never had. The reconnect
   modal's button moved off the framework's own blue (`#6b9ed2`) onto `--accent`, so it now
   matches the rest of the application.
-- **`.teammate-card-persona` deliberately keeps `font: inherit`.** It shows a Persona's
+- **`.agent-profile-card-persona` deliberately keeps `font: inherit`.** It shows a Persona's
   Markdown source, and the obvious "improvement" — pointing it at `--font-mono` — would be a
   design change smuggled in under a tokenisation diff. `CssSource.FindFontFamilyLiterals`
   accepts the four CSS-wide keywords (`inherit`, `initial`, `unset`, `revert`) for exactly

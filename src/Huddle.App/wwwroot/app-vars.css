@@ -2,8 +2,188 @@
    MudBlazor's theme generates --mud-typography-* variables for prose fonts, but ships nothing for
    a monospace stack, so --font-mono has no --mud-* counterpart to fall through to. This file is
    the sole declaration of it, kept out of app.css so that file's "every var() must name a
-   MudBlazor variable" rule (AppCss_UsesOnlyMudBlazorVariables) stays true without an exemption for
+   MudBlazor variable" rule (AppCss_UsesOnlyMudBlazorOrSkinTokens) stays true without an exemption for
    one hard-coded name. Linked in App.razor after app.css. */
 :root {
     --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    /* The reading face: Library prose and quotes. Every Theme reads in its UI face; a style pack (ADR-0057) may give
+       it a serif, as Nordic gives it Literata. */
+    --font-read: var(--mud-typography-body1-family);
+
+    /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.RenderDefaults writes (a test pins it). This is
+       the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
+    --hu-ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+    --hu-ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+    --hu-ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
+    --hu-ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+    --hu-ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
+    --hu-ground-page: var(--mud-palette-surface);
+    --hu-ground-sidebar: var(--mud-palette-surface);
+    --hu-ground-rail: var(--mud-palette-surface);
+    --hu-ground-raised: var(--mud-palette-surface);
+    --hu-ground-sunk: var(--mud-palette-surface);
+    --hu-line-region: var(--mud-palette-lines-default);
+    --hu-line-control: var(--mud-palette-lines-default);
+    --hu-accent-ink: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    --hu-current-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-current-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    --hu-current-foreground: var(--hu-accent-ink);
+    --hu-current-icon: var(--hu-accent-ink);
+    --hu-current-weight: 500;
+    --hu-current-shadow: none;
+    --hu-selected-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-selected-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    --hu-selected-foreground: var(--hu-accent-ink);
+    --hu-selected-task-background: var(--hu-selected-background);
+    --hu-selected-task-bar: var(--mud-palette-primary);
+    --hu-tree-current-bar: var(--mud-palette-primary);
+    --hu-hover: var(--mud-palette-action-default-hover);
+    --hu-focus: var(--mud-palette-text-primary);
+    --hu-needs: var(--mud-palette-warning);
+    --hu-text-subtle: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-neutral-soft: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
+    --hu-tone-neutral-ink: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-primary-soft: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-tone-primary-ink: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-primary-tint: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    --hu-tone-info-soft: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
+    --hu-tone-info-ink: color-mix(in srgb, var(--mud-palette-info) 50%, var(--mud-palette-text-primary));
+    --hu-tone-warning-soft: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+    --hu-tone-warning-ink: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-text-primary));
+    --hu-tone-warning-tint: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+    --hu-tone-warning-line: color-mix(in srgb, var(--mud-palette-warning) 55%, var(--mud-palette-surface));
+    --hu-tone-success-soft: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+    --hu-tone-success-ink: color-mix(in srgb, var(--mud-palette-success) 50%, var(--mud-palette-text-primary));
+    --hu-tone-error-soft: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
+    --hu-tone-error-ink: color-mix(in srgb, var(--mud-palette-error) 50%, var(--mud-palette-text-primary));
+    --hu-tone-tertiary-soft: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
+    --hu-tone-tertiary-ink: color-mix(in srgb, var(--mud-palette-tertiary) 50%, var(--mud-palette-text-primary));
+    --hu-shadow-card: none;
+    --hu-shadow-card-hover: none;
+    --hu-shadow-panel: var(--mud-elevation-4);
+    --hu-field-background: transparent;
+    --hu-field-focus-line: var(--mud-palette-primary);
+    --hu-field-focus-shadow: none;
+    --hu-scrim: var(--mud-palette-overlay-dark);
+    --hu-tabs-strip-background: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+    --hu-tabs-item-hover: color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-surface));
+    --hu-message-line-height: var(--mud-typography-body1-lineheight);
+
+    /* The Composer's Send button: Primary icon on no ground, which is today's look. */
+    --hu-send-fg: var(--mud-palette-primary);
+    --hu-send-bg: transparent;
+
+    /* The cut-out ring around a presence badge on an avatar. A region sets it to the ground behind the avatar. */
+    --hu-ring: var(--mud-palette-surface);
+
+    /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
+    --hu-feed-summary-ink: var(--mud-palette-text-primary);
+    --hu-feed-day-rule: var(--hu-ink-rule);
+    --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
+    --hu-feed-live-line: transparent;
+    --hu-feed-live-ink: var(--mud-palette-success);
+    --hu-feed-note-background: transparent;
+    --hu-feed-note-line: transparent;
+    --hu-feed-card-radius: 8px;
+    --hu-feed-card-hover-shadow: var(--hu-shadow-card);
+    --hu-feed-card-open-shadow: var(--hu-shadow-card-hover);
+    --hu-feed-card-hover-line: var(--hu-line-control);
+    --hu-feed-card-hover-fill: var(--hu-ground-raised);
+    --hu-feed-card-open-line: var(--hu-line-control);
+    --hu-feed-card-kindbar: 0px;
+    --hu-feed-card-kindbar-ink: var(--mud-palette-primary);
+    --hu-feed-detail-background: transparent;
+    --hu-feed-unseen-background: transparent;
+    --hu-feed-unseen-dot: var(--mud-palette-primary);
+    --hu-feed-unseen-weight: 400;
+    --hu-feed-unseen-bar: var(--mud-palette-primary);
+    --hu-control-track: var(--hu-ink-wash);
+    --hu-control-ink: var(--hu-text-subtle);
+    --hu-control-selected-ink: var(--mud-palette-text-primary);
+    --hu-control-selected-line: var(--hu-line-region);
+    --hu-control-set-background: var(--hu-tone-info-soft);
+    --hu-control-set-line: var(--hu-tone-info-ink);
+    --hu-control-set-ink: var(--hu-tone-info-ink);
+
+    /* The Task pages (detail panel, edit page, Tasks List and Board): each default is the look they had before Themes differed. */
+    --hu-detail-background: var(--hu-ground-sidebar);
+    --hu-detail-blur: 0px;
+    --hu-detail-edge: transparent;
+    --hu-detail-decision-background: transparent;
+    --hu-detail-decision-line: transparent;
+    --hu-detail-accent-from: transparent;
+    --hu-detail-accent-to: transparent;
+    --hu-detail-head-line: transparent;
+    --hu-detail-row-line: var(--hu-ink-edge);
+    --hu-detail-section-line: transparent;
+    --hu-edit-header-background: var(--hu-ground-raised);
+    --hu-edit-header-blur: 0px;
+    --hu-field-line: var(--hu-ink-field);
+    --hu-field-line-bottom: var(--hu-field-line);
+    --hu-field-shadow: none;
+    --hu-control-radius: var(--mud-default-borderradius);
+    --hu-form-group-background: transparent;
+    --hu-form-group-line: transparent;
+    --hu-form-group-shadow: none;
+    --hu-form-group-radius: 0px;
+    --hu-form-group-padding: 0px;
+    --hu-form-group-head-line: transparent;
+    --hu-gate-background: transparent;
+    --hu-gate-line: transparent;
+    --hu-gate-halo: none;
+    --hu-gate-radius: 0px;
+    --hu-gate-padding: 0px;
+    --hu-chip-set-background: transparent;
+    --hu-chip-set-line: var(--mud-palette-primary);
+    --hu-chip-set-ink: var(--mud-palette-text-primary);
+    --hu-toolbar-line: transparent;
+    --hu-button-filled-shadow: none;
+    --hu-list-row-line: var(--hu-line-region);
+    --hu-list-row-hover: var(--hu-hover);
+    --hu-list-group-background: var(--hu-ground-page);
+    --hu-list-selected-bar: transparent;
+    --hu-list-needs-background: transparent;
+    --hu-list-needs-bar: transparent;
+    --hu-list-blocked-bar: transparent;
+    --hu-list-title-weight: 400;
+    --hu-board-background: transparent;
+    --hu-board-column-background: var(--hu-ground-sunk);
+    --hu-board-column-line: var(--hu-line-region);
+    --hu-board-count-background: transparent;
+    --hu-board-count-line: transparent;
+    --hu-board-needs-background: transparent;
+    --hu-board-needs-line: var(--hu-board-column-line);
+    --hu-board-needs-halo: 0 0 0 0 transparent;
+    --hu-board-needs-bar: transparent;
+    --hu-board-card-hover-line: var(--hu-line-control);
+    --hu-board-card-hover-shadow: var(--hu-shadow-card-hover);
+
+    /* The Description editor of the Task edit page. */
+    --hu-editor-radius: var(--mud-default-borderradius);
+    --hu-editor-shadow: none;
+    --hu-editor-toolbar-line: transparent;
+    --hu-editor-text-size: var(--mud-typography-body2-size);
+    --hu-editor-text-leading: 1.75;
+    --hu-editor-text-ink: var(--mud-palette-text-primary);
+    --hu-note-prose-ink: var(--mud-palette-text-primary);
+    --hu-note-heading-weight: 600;
+    --hu-note-h1-size: 1.5em;
+    --hu-note-h1-tracking: normal;
+}
+
+/* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------
+   A line or a wash is Ink (text-primary) mixed into Surface, so it keeps the same rank in every Theme,
+   ported ones included, without nudging a faithful palette value. The rungs, faintest first:
+     Strip 4%  the tab strip's tint          Rule 10%  an inner rule inside a card or list
+     Wash  6%  a washed shape's fill         Edge 18%  a card, tile or washed shape's outline
+     Field 30% an input's line (Chrome, --mud-palette-lines-default, sits on the same rung for the
+               shell's own hairlines).
+   A wash never defines a shape on its own: it also carries an Edge. */
+:root {
+    --ink-strip: var(--hu-ink-strip);
+    --ink-wash: var(--hu-ink-wash);
+    --ink-rule: var(--hu-ink-rule);
+    --ink-edge: var(--hu-ink-edge);
+    --ink-field: var(--hu-ink-field);
 }

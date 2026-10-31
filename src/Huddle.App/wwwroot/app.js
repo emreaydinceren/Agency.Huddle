@@ -45,6 +45,39 @@ window.teamComposer = {
         el.style.height = (el.scrollHeight + border) + "px";
     },
 
+    // Refits when the box's width changes (the window or a pane was resized): text that wrapped to many lines
+    // when narrow no longer does, and without this an empty-looking Composer stayed as tall as it had grown.
+    // Only a width change refits - fit() itself changes the box's height, which must not feed the observer.
+    // detach() disconnects it when the Composer is disposed.
+    observeResize(el) {
+        if (typeof ResizeObserver !== "function") {
+            return;
+        }
+
+        const box = el.closest(".composer-box") || el;
+        let lastWidth = null;
+        el._resizeObserver = new ResizeObserver((entries) => {
+            const width = entries[0] ? entries[0].contentRect.width : null;
+            if (width === lastWidth) {
+                return;
+            }
+
+            const first = lastWidth === null;
+            lastWidth = width;
+            if (!first) {
+                window.teamComposer.fit(el);
+            }
+        });
+        el._resizeObserver.observe(box);
+    },
+
+    detach(el) {
+        if (el && el._resizeObserver) {
+            el._resizeObserver.disconnect();
+            el._resizeObserver = null;
+        }
+    },
+
     // Puts dropped or pasted files into the hidden file input and fires `change`, so Blazor's
     // InputFile handles them exactly as a pick from the paperclip.
     handOver(input, files) {
@@ -119,6 +152,7 @@ window.teamComposer = {
             }
         }
         window.teamComposer.fit(el);
+        window.teamComposer.observeResize(el);
 
         el.addEventListener("keydown", async (e) => {
             const picker = el._picker;
@@ -342,7 +376,6 @@ window.teamScroll = {
     },
     // Scrolls the Message row with this id to the middle of the list, moves focus to it without
     // scrolling again, and flashes it (Global Search spec 9.1). Returns false when no row has the id.
-    // scrollIntoView works in the zoomed page's own coordinates, so the 90% zoom needs no correction.
     toMessage(el, id) {
         const row = el.querySelector('[data-message-id="' + CSS.escape(id) + '"]');
         if (!row) {
@@ -359,9 +392,134 @@ window.teamScroll = {
         setTimeout(clear, 2000);
         return true;
     },
-    // True when the list is scrolled to within 4 px of its bottom, in its own (zoomed) coordinates.
+    // Scrolls the element with this id into the middle of the view (the Pack card a "ready" snackbar's Show points at,
+    // Skill Packs spec 6.9.9). Returns false when no element has the id.
+    intoView(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            return false;
+        }
+
+        el.scrollIntoView({ block: "center" });
+        return true;
+    },
+    // True when the list is scrolled to within 4 px of its bottom, in its own coordinates.
     isAtBottom(el) {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
+    },
+};
+
+// The Feed list's scroll awareness (Feed spec 6.12, D-22): the list is not the scroller itself, so both calls act on the
+// nearest scrollable ancestor (the panel body or the page). Unavailable scrolling reads as "at the top".
+window.huddleFeed = {
+    scroller(el) {
+        for (let node = el; node; node = node.parentElement) {
+            const overflow = getComputedStyle(node).overflowY;
+            if ((overflow === "auto" || overflow === "scroll") && node.scrollHeight > node.clientHeight) {
+                return node;
+            }
+        }
+
+        return document.scrollingElement;
+    },
+    // True when the list is scrolled down by more than 4 px.
+    isScrolled(el) {
+        const scroller = window.huddleFeed.scroller(el);
+        return !!scroller && scroller.scrollTop > 4;
+    },
+    scrollToTop(el) {
+        const scroller = window.huddleFeed.scroller(el);
+        if (scroller) {
+            scroller.scrollTop = 0;
+        }
+    },
+    // Moves focus onto the checked radio of a group, after the arrow keys changed the choice.
+    focusChecked(group) {
+        const checkedChip = group && group.querySelector("[role='radio'][aria-checked='true']");
+        if (checkedChip) {
+            checkedChip.focus();
+        }
+    },
+};
+
+// Remembers which Right sidebar panels a viewer collapsed (Right sidebar spec D-8). A per-viewer
+// convenience: storage can be missing or throw, so every access is guarded and a failure reads as
+// "expanded".
+window.huddleSidebar = {
+    isCollapsed(id) {
+        try {
+            return window.localStorage.getItem("huddle.sidebar.collapsed." + id) === "1";
+        } catch {
+            return false;
+        }
+    },
+    setCollapsed(id, collapsed) {
+        try {
+            if (collapsed) {
+                window.localStorage.setItem("huddle.sidebar.collapsed." + id, "1");
+            } else {
+                window.localStorage.removeItem("huddle.sidebar.collapsed." + id);
+            }
+        } catch {
+            // Storage is unavailable (private window, blocked site data): the choice is not kept.
+        }
+    },
+    // The Outline's scroll watch: tells the panel (ref.OnHeadingInView) which heading is in view, i.e. the last one
+    // whose top has passed the line just under the Tab strip, or the first one when none has. Only a rendered
+    // (Read mode) document has heading elements; with none found nothing is reported and a clicked heading stays marked.
+    _headingWatch: null,
+    watchHeadings(ids, ref) {
+        window.huddleSidebar.unwatchHeadings();
+        let last;
+        let frame = 0;
+        let timer = 0;
+        let stopped = false;
+        const report = () => {
+            frame = 0;
+            if (stopped) {
+                return;
+            }
+            let current = null;
+            for (const id of ids) {
+                const element = document.getElementById(id);
+                if (!element) {
+                    continue;
+                }
+                if (current === null || element.getBoundingClientRect().top <= 140) {
+                    current = id;
+                } else {
+                    break;
+                }
+            }
+            if (current !== null && current !== last) {
+                last = current;
+                // The panel may be gone by the time this lands (its reference is disposed with it): nothing is left to tell.
+                ref.invokeMethodAsync("OnHeadingInView", current).catch(() => { });
+            }
+        };
+        const onScroll = () => {
+            if (!frame) {
+                frame = window.requestAnimationFrame(report);
+            }
+        };
+        document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+        window.huddleSidebar._headingWatch = () => {
+            // Stop the pending frame and the first-report timer too, or one can still call into a disposed panel.
+            stopped = true;
+            window.clearTimeout(timer);
+            if (frame) {
+                window.cancelAnimationFrame(frame);
+            }
+            document.removeEventListener("scroll", onScroll, { capture: true });
+        };
+        timer = window.setTimeout(report, 100);
+    },
+    unwatchHeadings() {
+        const stop = window.huddleSidebar._headingWatch;
+        if (stop) {
+            stop();
+            window.huddleSidebar._headingWatch = null;
+        }
     },
 };
 
@@ -491,6 +649,15 @@ window.huddleStorage = {
 };
 
 window.huddleResize = {
+  // The drawer shows different content (another Task, or New task): MudBlazor's .mud-drawer-content is the
+  // scroll container and outlives the keyed body, so its scroll position is reset here.
+  scrollDrawerToTop(body) {
+    const scroller = body?.closest(".mud-drawer-content");
+    if (scroller) {
+      scroller.scrollTop = 0;
+    }
+  },
+
   // Drag-to-resize for the Task detail panel's End-anchored MudDrawer. Writes straight to the
   // drawer's own "--mud-drawer-width" instance variable on every pointermove - the same one
   // MudBlazor's compiled CSS already falls back to var(--mud-drawer-width-right) for - so dragging
@@ -550,9 +717,9 @@ window.huddleResize = {
       }
       // Anchor.End puts the drawer on the right, so dragging the handle left (clientX decreasing,
       // startX - e.clientX growing) is what should grow it.
-      // The page runs at html { zoom: 0.9 }. offsetWidth is the unzoomed layout width (the CSS px that
-      // --mud-drawer-width takes), whereas getBoundingClientRect() and clientX are visual (zoomed) pixels
-      // in Chromium, so the pointer delta is divided by the zoom factor to land in the same unit.
+      // The page is not zoomed (ADR-0056), so the factor is 1. It is still read: offsetWidth is the layout width
+      // (the CSS px that --mud-drawer-width takes), whereas clientX is in visual pixels, which differ only if a
+      // zoom is ever applied to the page again.
       const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
       setWidth(startWidth + ((startX - e.clientX) / zoom));
     });
@@ -564,6 +731,95 @@ window.huddleResize = {
       dragging = false;
       handle.releasePointerCapture(e.pointerId);
       window.huddleStorage.set(storageKey, String(Math.round(drawer.offsetWidth)));
+    };
+
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+  },
+
+  // Drag-to-resize for the left drawer's Sidebar (the Activity bar is fixed). MudBlazor's layout reads the drawer's
+  // width from "--mud-drawer-width-left" on .mud-layout, so a drag sets that variable live; the settled width is then
+  // reported to .NET, whose render writes the same value (and so replaces this inline one). barPx is the part of the
+  // drawer that is not Sidebar. Anchor.Start puts the drawer on the left, so dragging right (or ArrowRight) grows it.
+  // side is "left" (the default) or "right": the Right sidebar's handle sits on its left edge, so dragging left grows it
+  // and it also publishes --right-sidebar-width on <html>, which the Task drawer's rules use to stay clear of it.
+  attachSidebar(handle, dotnet, storageKey, minPx, maxPx, defaultPx, barPx, side = "left") {
+    const layout = handle.closest(".mud-layout");
+    if (!layout) {
+      return;
+    }
+
+    const dir = side === "right" ? -1 : 1;
+    const clamp = (px) => Math.min(maxPx, Math.max(minPx, Math.round(px)));
+    const apply = (px) => {
+      const width = clamp(px);
+      layout.style.setProperty("--mud-drawer-width-" + side, (width + barPx) + "px");
+      if (side === "right") {
+        document.documentElement.style.setProperty("--right-sidebar-width", width + "px");
+      }
+      handle.setAttribute("aria-valuenow", String(width));
+      return width;
+    };
+    const commit = (px) => {
+      const width = apply(px);
+      window.huddleStorage.set(storageKey, String(width));
+      return dotnet.invokeMethodAsync("OnWidthCommittedAsync", width);
+    };
+    const currentWidth = () => {
+      const drawer = handle.closest(".mud-drawer");
+      return (drawer ? drawer.offsetWidth : defaultPx + barPx) - barPx;
+    };
+
+    const stored = parseInt(window.huddleStorage.get(storageKey) ?? "", 10);
+    if (Number.isFinite(stored) && clamp(stored) !== defaultPx) {
+      commit(stored);
+    }
+
+    handle.addEventListener("keydown", (e) => {
+      const step = e.shiftKey ? 64 : 16;
+      let next;
+      switch (e.key) {
+        case "ArrowRight": next = currentWidth() + (dir * step); break;
+        case "ArrowLeft": next = currentWidth() - (dir * step); break;
+        case "Home": next = minPx; break;
+        case "End": next = maxPx; break;
+        default: return;
+      }
+      e.preventDefault();
+      commit(next);
+    });
+
+    let dragging = false;
+    let startX = 0;
+    let startWidth = 0;
+    let lastWidth = 0;
+
+    handle.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startWidth = currentWidth();
+      lastWidth = startWidth;
+      handle.setPointerCapture(e.pointerId);
+      document.body.classList.add("sidebar-resizing");
+      e.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) {
+        return;
+      }
+      const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      lastWidth = apply(startWidth + (dir * (e.clientX - startX) / zoom));
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      handle.releasePointerCapture(e.pointerId);
+      document.body.classList.remove("sidebar-resizing");
+      commit(lastWidth);
     };
 
     handle.addEventListener("pointerup", endDrag);
@@ -606,6 +862,16 @@ window.huddleLibrary = {
       document.removeEventListener("visibilitychange", handler);
       delete dotNetRef._huddleLibraryVisibilityHandler;
     }
+  },
+  // Scrolls the heading with the given id inside root to the top of its scroll container. The id is
+  // escaped so a heading id with selector characters cannot break the query. Returns whether it was found.
+  scrollToHeading(root, id) {
+    const el = root && root.querySelector("#" + CSS.escape(id));
+    if (!el) {
+      return false;
+    }
+    el.scrollIntoView({ block: "start" });
+    return true;
   },
 };
 

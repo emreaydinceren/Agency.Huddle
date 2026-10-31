@@ -1,8 +1,8 @@
 @* <summary>
-     A Teammate's profile card: avatar, name with status dot, title, description, and the membership,
-     tier and skills chips, with an optional row of caller-supplied actions. It is the card Build a
+     An Agent's profile card: avatar, name with status dot, title, description, and the membership,
+     tier and skills chips, an optional Adapter, Model and Effort list, with an optional row of caller-supplied actions. It is the card Build a
      team's roster draws (B9c/B12) and the card the avatar profile popover shows, so both read as the
-     same thing. The caller supplies the data as a <see cref="TeammateProfile"/> and the buttons as
+     same thing. The caller supplies the data as a <see cref="AgentProfile"/> and the buttons as
      <see cref="Actions"/>; the card owns the markup and its <c>roster-*</c> CSS classes.
    </summary> *@
 @using Agency.Huddle.App.Avatars
@@ -11,15 +11,28 @@
 {
 <div class="@this.CardClass" role="@(this.ListItem ? "listitem" : null)">
     <div class="roster-card-head">
-        <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+        @if (this.OnAvatarClick.HasDelegate)
+        {
+            @* Editable (Settings > Profile): the pencil is easy to miss, so a quiet text button under the avatar says plainly that it
+               can be changed (ADR-0047). Both call OnAvatarClick. *@
+            <div class="avatar-edit-column">
+                <PresenceAnchor Cue="@(profile.State is { } editCueState ? PresenceCue.From(editCueState) : null)">
+                    <button type="button" class="agent-profile-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.OnAvatarClick">
+                        <span class="roster-avatar-ring"><AgentAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+                    </button>
+                </PresenceAnchor>
+                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.OnAvatarClick.InvokeAsync())">Edit avatar…</MudButton>
+            </div>
+        }
+        else
+        {
+            <PresenceAnchor Cue="@(profile.State is { } cueState ? PresenceCue.From(cueState) : null)">
+                <span class="roster-avatar-ring" aria-hidden="true"><AgentAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+            </PresenceAnchor>
+        }
         <span class="roster-card-who">
-            <span class="roster-name">
-                @if (profile.State is { } state)
-                {
-                    <StatusDot State="@state" />
-                }
-                @profile.Name
-            </span>
+            <span class="roster-name">@profile.Name</span>
             <span class="roster-title">@profile.Title</span>
         </span>
         @if (this.Manager)
@@ -50,6 +63,17 @@
             <span class="roster-skills" title="@string.Join(", ", profile.SkillNames)">@Plural.Of(profile.SkillNames.Count, "skill", "skills")</span>
         }
     </span>
+    @if (profile.Runtime is { } runtime)
+    {
+        <dl class="roster-runtime">
+            <dt>Adapter</dt>
+            <dd class="roster-runtime-adapter">@runtime.Adapter</dd>
+            <dt>Model</dt>
+            <dd class="roster-runtime-model">@runtime.Model</dd>
+            <dt>Effort</dt>
+            <dd class="roster-runtime-effort">@runtime.Effort</dd>
+        </dl>
+    }
     @if (profile.SetupReasons.Count > 0)
     {
         <span class="roster-setup">Needs setup: @string.Join("; ", profile.SetupReasons)</span>
@@ -62,16 +86,16 @@
 }
 
 @code {
-    /// <summary>The Teammate to draw; nothing is drawn while it is <see langword="null"/>.</summary>
+    /// <summary>The Agent to draw; nothing is drawn while it is <see langword="null"/>.</summary>
     [Parameter]
     [EditorRequired]
-    public TeammateProfile? Profile { get; set; }
+    public AgentProfile? Profile { get; set; }
 
     /// <summary>Draws the "Manager" badge and the manager card class.</summary>
     [Parameter]
     public bool Manager { get; set; }
 
-    /// <summary>Draws the solid avatar ring that marks a Teammate who already exists.</summary>
+    /// <summary>Draws the solid avatar ring that marks an Agent who already exists.</summary>
     [Parameter]
     public bool Existing { get; set; }
 
@@ -90,6 +114,10 @@
     /// <summary>The buttons inside the card's actions row; when null the row is not drawn.</summary>
     [Parameter]
     public RenderFragment? Actions { get; set; }
+
+    /// <summary>When set, the avatar becomes a <c>Change avatar</c> button that invokes this; the Settings Profile tab uses it to open the avatar editor.</summary>
+    [Parameter]
+    public EventCallback OnAvatarClick { get; set; }
 
     /// <summary>Extra classes appended to the root.</summary>
     [Parameter]

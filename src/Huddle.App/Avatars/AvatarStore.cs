@@ -270,7 +270,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// </summary>
     /// <remarks>
     /// The file name is <see cref="Guid.NewGuid()"/> plus <paramref name="extension"/> - never derived
-    /// from the Teammate's Name, for three reasons, each a real defect this avoids:
+    /// from the Agent's Name, for three reasons, each a real defect this avoids:
     /// <list type="number">
     /// <item><description>A Name may contain interior spaces (<c>rules.md</c>), so a Name-derived URL would need percent-encoding at every call site.</description></item>
     /// <item><description><c>docs/engineering/known-limits.md</c> records that Windows reserved device names (<c>CON</c>, <c>NUL</c>, <c>COM1</c>) pass <c>NameRules</c>, and <c>CON.png</c> is a file Windows will not create.</description></item>
@@ -288,6 +288,35 @@ internal sealed partial class AvatarStore : IDisposable
         File.WriteAllBytes(Path.Combine(this.imageDirectory, fileName), bytes);
 
         return fileName;
+    }
+
+    /// <summary>
+    /// Commits the image an avatar editor held in memory: when <paramref name="pendingBytes"/> and <paramref name="pendingExtension"/> are both
+    /// set it writes them through <see cref="WriteImage(ReadOnlySpan{byte}, string)"/> and gives back <paramref name="avatar"/> naming the new file.
+    /// The one place an editor's result becomes a stored file, shared by the Agent card and the Team page. It never deletes the image it replaces:
+    /// the caller does that once the avatar that names the new file is saved.
+    /// </summary>
+    /// <param name="avatar">The avatar the editor produced; its <see cref="Avatar.Image"/> is the stored name, never the pending one.</param>
+    /// <param name="pendingBytes">The chosen image's bytes, or <see langword="null"/> when none is pending.</param>
+    /// <param name="pendingExtension">The extension, with its dot, of <paramref name="pendingBytes"/>.</param>
+    /// <returns><paramref name="avatar"/>, with <see cref="Avatar.Image"/> set to the new file when an image was pending.</returns>
+    internal Avatar CommitPendingImage(Avatar avatar, byte[]? pendingBytes, string? pendingExtension) =>
+        pendingBytes is not null && pendingExtension is not null
+            ? avatar with { Image = this.WriteImage(pendingBytes, pendingExtension) }
+            : avatar;
+
+    /// <summary>Reads one image file under <see cref="ImageDirectory"/>, for a caller that gives another owner its own copy of it.</summary>
+    /// <param name="fileName">The file name, as <see cref="WriteImage(ReadOnlySpan{byte}, string)"/> made it.</param>
+    /// <returns>The file's bytes, or <see langword="null"/> when <paramref name="fileName"/> is empty, is not a bare file name, or names no file on disk.</returns>
+    internal byte[]? ReadImage(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName) || !Avatar.IsBareImageName(fileName))
+        {
+            return null;
+        }
+
+        var filePath = Path.Combine(this.imageDirectory, fileName);
+        return File.Exists(filePath) ? File.ReadAllBytes(filePath) : null;
     }
 
     /// <summary>Deletes one image file under <see cref="ImageDirectory"/>. A no-op, never a throw, when <paramref name="fileName"/> is <see langword="null"/>, empty, or names no file on disk.</summary>
@@ -341,7 +370,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// </summary>
     /// <remarks>
     /// This is not defensive padding - it is the boundary this store is responsible for. A background
-    /// reaches <c>TeammateAvatar</c> as a <see cref="MudColor"/>, and <see cref="MudColor"/>'s string
+    /// reaches <c>AgentAvatar</c> as a <see cref="MudColor"/>, and <see cref="MudColor"/>'s string
     /// constructor <b>throws</b> on anything it cannot parse (<see cref="ArgumentException"/> for
     /// <c>"not-a-colour"</c>, <see cref="FormatException"/> for <c>"zzz"</c>) rather than returning a
     /// fallback. <c>avatars.json</c> is hand-editable by design, so a Human typing <c>purple-ish</c>
@@ -471,38 +500,8 @@ internal sealed partial class AvatarStore : IDisposable
     /// The freshly parsed document; an empty object if <see cref="path"/> no longer exists (a
     /// legitimate delete); or <see langword="null"/> if every attempt failed.
     /// </returns>
-    private JsonObject? ReadDocumentForWatcherRebuild()
-    {
-        if (!File.Exists(this.path))
-        {
-            return new JsonObject(CaseInsensitiveNodeOptions);
-        }
-
-        return RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
-    }
-
-    /// <summary>Logs why <see cref="ReadDocumentForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
-    /// <param name="ex">The last failure.</param>
-    private JsonObject? OnReadGaveUp(Exception ex)
-    {
-        if (ex is JsonException)
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not parse avatar overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved avatars rather than reverting to empty over what may be a mid-write race.",
-                this.path);
-        }
-        else
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not read avatar overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved avatars.",
-                this.path,
-                RetryingFileRead.Attempts);
-        }
-
-        return null;
-    }
+    private JsonObject? ReadDocumentForWatcherRebuild() =>
+        RetryingFileRead.RereadKeepingPrevious(this.path, static () => new JsonObject(CaseInsensitiveNodeOptions), () => ParseDocumentFile(this.path), this.logger, "avatar overrides file", "avatars");
 
     /// <summary>
     /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the

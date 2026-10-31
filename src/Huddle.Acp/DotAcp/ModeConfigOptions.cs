@@ -43,8 +43,7 @@ internal static class ModeConfigOptions
     /// <returns>The current mode id, or null.</returns>
     internal static string? CurrentValue(dotacp.protocol.SessionConfigOption[]? configOptions)
     {
-        dotacp.protocol.SessionConfigSelect? select = SessionConfigSelects.Find(configOptions, dotacp.protocol.SessionConfigOptionCategory.Mode);
-        return select is null ? null : (string)select.CurrentValue;
+        return SessionConfigSelects.CurrentValue(configOptions, dotacp.protocol.SessionConfigOptionCategory.Mode);
     }
 
     /// <summary>

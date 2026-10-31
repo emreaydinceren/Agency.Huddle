@@ -1,0 +1,13 @@
+{
+  "name": "huddle-emoji-picker-bundle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-time vendoring of emoji-picker-element into a single pre-built ES module bundle, plus its offline emoji data, for Huddle.App's avatar editor.",
+  "dependencies": {
+    "emoji-picker-element": "1.29.1",
+    "emoji-picker-element-data": "1.8.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

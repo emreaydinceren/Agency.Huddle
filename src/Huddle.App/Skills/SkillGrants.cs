@@ -15,10 +15,10 @@ internal static class SkillGrants
     private const string ReadSkillToolName = "read_skill";
 
     /// <summary>The name of the tool that checks a Candidate roster against Spec §8.3.</summary>
-    private const string ValidateTeammateToolName = "validate_teammate";
+    private const string ValidateAgentToolName = "validate_agent";
 
-    /// <summary>The name of the tool that proposes new Teammates to the Human (Spec §6.8).</summary>
-    private const string ProposeTeammatesToolName = "propose_teammates";
+    /// <summary>The name of the tool that proposes new Agents to the Human (Spec §6.8).</summary>
+    private const string ProposeAgentsToolName = "propose_agents";
 
     /// <summary>The name of the tool that proposes a Sprint to the Human (Task 62).</summary>
     private const string ProposeSprintToolName = "propose_sprint";
@@ -48,8 +48,8 @@ internal static class SkillGrants
     internal static readonly FrozenSet<string> Grantable =
         FrozenSet.ToFrozenSet(
             [
-                ValidateTeammateToolName,
-                ProposeTeammatesToolName,
+                ValidateAgentToolName,
+                ProposeAgentsToolName,
                 ProposeSprintToolName,
                 ListTeamsToolName,
                 FileRequestToolName,

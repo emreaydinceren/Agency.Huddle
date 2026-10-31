@@ -1,59 +1,5 @@
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>An event that moves a Request through its lifecycle (Spec §Lifecycle table).</summary>
-internal enum RequestEvent
-{
-    /// <summary>The requesting manager filed the Request.</summary>
-    Filed,
-
-    /// <summary>The receiving manager asked the requester for more information.</summary>
-    MarkNeedsInfo,
-
-    /// <summary>The requesting manager added the missing information.</summary>
-    InfoAdded,
-
-    /// <summary>The receiving manager accepted the Request.</summary>
-    Accept,
-
-    /// <summary>The receiving manager declined the Request with a reason.</summary>
-    Decline,
-
-    /// <summary>The receiving Team worked the Request (To Do to Review).</summary>
-    Work,
-
-    /// <summary>The receiving QA attached evidence in Review.</summary>
-    EvidenceAttached,
-
-    /// <summary>The requesting Team's QA confirmed the Request is done.</summary>
-    Confirm,
-}
-
-/// <summary>Who a Request transition wakes.</summary>
-internal enum WakeTarget
-{
-    /// <summary>The manager of the Team that filed the Request.</summary>
-    RequestingManager,
-
-    /// <summary>The manager of the Team that received the Request.</summary>
-    ReceivingManager,
-
-    /// <summary>The Chief of Staff built-in Teammate.</summary>
-    ChiefOfStaff,
-}
-
-/// <summary>Where a Request stands: its Task status wire name and its triage state.</summary>
-/// <param name="Status">The Task status wire name; empty before the Request is filed.</param>
-/// <param name="Triage">The triage state.</param>
-internal sealed record RequestState(string Status, TriageState Triage);
-
-/// <summary>The outcome of applying an event to a Request.</summary>
-/// <param name="Allowed">Whether the event is legal in the current state.</param>
-/// <param name="Error">Why it is not, or null when allowed.</param>
-/// <param name="Next">The state after the event, or null when refused.</param>
-/// <param name="Wake">Who to wake, in order; empty when refused.</param>
-/// <param name="Closes">Whether the Request is closed by this event.</param>
-internal sealed record RequestTransition(bool Allowed, string? Error, RequestState? Next, IReadOnlyList<WakeTarget> Wake, bool Closes);
-
 /// <summary>The pure state machine of the Request lifecycle table (RQ-3 to RQ-7, Spec §Lifecycle). It touches no store and sends no wake.</summary>
 internal static class RequestLifecycle
 {

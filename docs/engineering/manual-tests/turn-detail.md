@@ -1,6 +1,6 @@
 # Turn detail and Spend
 
-Prove, in a real browser against a real Adapter, that a Draft shows its recent tool calls as rows, that an edit opens to an Edit preview while the Turn runs, that a Teammate's card shows the Spend its Adapter reported and that the figure behaves as the Adapter's own running total, and that the view holds up at phone width, under different Themes and through a burst of fast calls. The automated suite proves the parts; this page proves they hold together on a screen, against wire data a fake cannot invent. **Written 2026-09-30, repaired 2026-10-09, not run**: four of the five tests spend money, because nothing shows a tool call without a Turn.
+Prove, in a real browser against a real Adapter, that a Draft shows its recent tool calls as rows, that an edit opens to an Edit preview while the Turn runs, that an Agent's card shows the Spend its Adapter reported and that the figure behaves as the Adapter's own running total, and that the view holds up at phone width, under different Themes and through a burst of fast calls. The automated suite proves the parts; this page proves they hold together on a screen, against wire data a fake cannot invent. **Written 2026-09-30, repaired 2026-10-09, not run**: four of the five tests spend money, because nothing shows a tool call without a Turn.
 
 **5 tests** · 1 free, 4 paid 💰 · about 1.8 hours.
 
@@ -15,22 +15,22 @@ assert is its Appendix D.5.
 Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 [Common procedures](common.md). This area adds:
 
-1. Use a **scratch** Teammate, never one that matters, made with
+1. Use a **scratch** Agent, never one that matters, made with
    [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Scratch`, **Model** Haiku, **Effort** `low`. A Model
-   or Effort change restarts a Teammate and clears what it remembers, and every paid test below asks
+   or Effort change restarts an Agent and clears what it remembers, and every paid test below asks
    it to edit or write a file.
-2. Put one small text file in the scratch Teammate's Work Dir, `<data>\Teammates\Scratch\work\notes.md`
+2. Put one small text file in the scratch Agent's Work Dir, `<data>\Agents\Scratch\work\notes.md`
    (a few lines, two of which carry a typo each): `Teh meeting is on Friday.` and
    `Please recieve the report by noon.` Two typos, because TURNDETAIL-01 fixes one in step 1 and a
    different one in step 6.
-3. Keep the Teammate's Effort at `low`, the script's convention. `claude-agent-acp` sends no Plan or
+3. Keep the Agent's Effort at `low`, the script's convention. `claude-agent-acp` sends no Plan or
    thinking at the default Effort, which is what these tests assume; do not raise it here.
 4. "Restart the app" always means `P-STOP` then the launch line for the lane the test names.
    Spend is in memory, so a restart starts it from zero, which TURNDETAIL-02 relies on.
 5. A tool call is observed on the Draft's rows. For a second record, `O-TOOLCALLS` for `Scratch` has
    one line per call, written as the call is made, with the Adapter's own tool name; the folder does
    not exist until the first call, so read it after the Turn, not before. `TraceWire` is forbidden
-   (common.md, standing conventions) and `O-WIRE` never sees an in-process Teammate, so no test here
+   (common.md, standing conventions) and `O-WIRE` never sees an in-process Agent, so no test here
    reads the wire.
 
 ## Tests
@@ -82,12 +82,12 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 **Before you start**
 
 - Paid lane, app just restarted, so Spend is zero. `Scratch` is Online.
-- Write down your decimal separator: the line uses the current culture (`N3`), so a comma-decimal browser locale reads `0,091`, not `0.091` (`TeammateCard.razor:125`).
+- Write down your decimal separator: the line uses the current culture (`N3`), so a comma-decimal browser locale reads `0,091`, not `0.091` (`AgentProfileCard.razor:125`).
 
 **Steps**
 
-1. Open the Teammate's card from `/teammates`. Confirm there is **no** `Spent since start` line.
-2. Send the Teammate a one-word request (`Reply with the word yes.`) in a direct Room. Wait for the reply.
+1. Open the Agent's card from `/agents`. Confirm there is **no** `Spent since start` line.
+2. Send the Agent a one-word request (`Reply with the word yes.`) in a direct Room. Wait for the reply.
 3. Reopen the card. Read the Spend line and write the amount down (call it A).
 4. Send the same request again. Wait for the reply, reopen the card, read the line (call it B).
 5. Keep the card open, send a third request from another browser tab, and watch the line.
@@ -98,7 +98,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 - After step 3 the line reads `Spent since start: {amount} USD`, with the amount to three decimals and above zero.
 - After step 4, B is larger than A, and B minus A is smaller than A. A sum of running totals would make B at least double A plus a second Turn's cost; the first Turn pays for the fixed overhead of the session, so the second adds less. Write down A, B and the difference.
 - The line updates by itself in step 5, without closing the card.
-- The figure reads as a limit on this run, not an invoice: the line is labelled `since start`, and a restart of the app clears it. A role-hired Teammate would also show `Total spent:` (the persisted total); `Scratch` is not role-hired, so that line is absent.
+- The figure reads as a limit on this run, not an invoice: the line is labelled `since start`, and a restart of the app clears it. A role-hired Agent would also show `Total spent:` (the persisted total); `Scratch` is not role-hired, so that line is absent.
 
 **Fail if — any of these**
 
@@ -115,12 +115,12 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 **Before you start**
 
 - This is not `P-LAUNCH-FREE`: that lane sets `Acp:Enabled=false`, so no runner starts and even Restart refuses (`PersonaSupervisor.cs:508-512`). Use the **agency lane**: ACP on, with the profile list of [adapters](adapters.md) Setup 1 and the third `agency` profile of its Setup 2, **with `mock` first** so the default Adapter, and the Chief of Staff, are free. Launch as that page's RESTART LANE does, after `P-BUILD`.
-- Cost guard: no Teammate in this test is on `claude`. Before the first Message, open each card and check the Adapter field; set any Teammate that reads `claude` to `mock`, or leave it unused.
-- A scratch Teammate `Scratch` on Adapter `agency` is Online, with a local model reachable (adapters.md Setup 2), and `notes.md` in its Work Dir.
+- Cost guard: no Agent in this test is on `claude`. Before the first Message, open each card and check the Adapter field; set any Agent that reads `claude` to `mock`, or leave it unused.
+- A scratch Agent `Scratch` on Adapter `agency` is Online, with a local model reachable (adapters.md Setup 2), and `notes.md` in its Work Dir.
 
 **Steps**
 
-1. Send the Teammate `Read notes.md and tell me what it says.`
+1. Send the Agent `Read notes.md and tell me what it says.`
 2. Watch the Draft's rows.
 3. Open its card.
 
@@ -133,13 +133,13 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 - A row shows an empty expander or an empty preview -> the view renders a container for an absent `Edit`.
 - The card shows a zero -> an absent cost is being reported as zero.
-- No row appears although the Teammate answered from the file -> the Adapter sends no tool activity at all, which is not a defect of this feature; record it.
+- No row appears although the Agent answered from the file -> the Adapter sends no tool activity at all, which is not a defect of this feature; record it.
 
 ### TURNDETAIL-04 — The list and preview at 320 px and under three Themes
 
 **Paid** 💰 · about 25 min
 
-*Proves the layout and colour rules in [Appendix D.6 and D.7](../../Huddle.TurnDetail-Specifications.md): no horizontal scroll at phone width, a long block scrolling inside its capped height, and every mark and border readable under a dark Theme, a light Theme and a High contrast Theme.*
+*Proves the layout and colour rules in [Appendix D.6 and D.7](../../Huddle.TurnDetail-Specifications.md): no horizontal scroll at phone width, a long block scrolling inside its capped height, and every mark and border readable under Huddle Dark, Huddle Light and Nordic Dark.*
 
 **Before you start**
 
@@ -151,7 +151,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 1. Send `Create long.md with 120 lines, each reading "Line N: the quick brown fox jumps over the lazy dog" with N counting up, then read it back twice and summarise it.` The Turn must still be running while you do the steps below; if it finishes first, send the request again with a different file name.
 2. When the `Write` row appears, press its expander. Scroll inside the opened block with the mouse wheel.
 3. In DevTools, emulate a 320 px wide viewport. Read the row and the open preview.
-4. Switch the Theme at `/settings/appearance` to one from each of three groups: a dark one, a light one and one from the High contrast group. Open the Room again each time you come back. After each switch, check whether the row is still open; if it closed, open it again. Look at the status marks, the two borders and the text in the preview under each.
+4. Switch the Theme at `/settings/appearance` to each of three Themes: Huddle Dark, Huddle Light and Nordic Dark. Open the Room again each time you come back. After each switch, check whether the row is still open; if it closed, open it again. Look at the status marks, the two borders and the text in the preview under each.
 5. In the 320 px view press Tab until the expander has focus and press Enter, then Space.
 
 **Pass if — all of these**

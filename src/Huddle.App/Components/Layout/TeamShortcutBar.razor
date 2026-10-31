@@ -1,0 +1,124 @@
+@*
+    The Team shortcuts at the top of the Activity bar (S5): one 40px tile per Team, its avatar, above a hairline that
+    sets them apart from the Sidebar view buttons. A click opens the Sidebar on that Team's own folders (the Rooms,
+    Library and Tasks an open Team shows in the Teams view), and a click on the selected one collapses it, as a view
+    button does. A right-click opens one MudMenu for the whole strip at the pointer, with no activator of its own
+    (TabStrip.razor's approach), filled for the Team that was right-clicked. Which Teams have a tile is
+    TeamShortcutStore's; the selected Team is MainLayout's, so this strip holds no state of its own beyond the menu.
+*@
+@implements IDisposable
+@inject ITeamCatalog Catalog
+@inject TeamShortcutStore Shortcuts
+
+@{
+    IReadOnlyList<TeamSummary> teams = this.Shortcuts.Visible(this.Catalog.Teams);
+}
+@if (teams.Count > 0)
+{
+    <div class="activity-bar-shortcuts" role="group" aria-label="Team shortcuts">
+        @foreach (TeamSummary team in teams)
+        {
+            bool pressed = string.Equals(this.Selected, team.Name, StringComparison.OrdinalIgnoreCase);
+            string name = team.Name;
+            <MudTooltip @key="team.Name" Text="@team.Name" Placement="Placement.Right">
+                <button type="button"
+                        class="@(pressed ? "activity-bar-shortcut activity-bar-item-selected" : "activity-bar-shortcut")"
+                        aria-label="@team.Name"
+                        aria-pressed="@(pressed ? "true" : "false")"
+                        aria-controls="@ActivityBar.SidebarElementId"
+                        data-team="@team.Name"
+                        @onclick="@(() => this.SelectAsync(name))"
+                        @oncontextmenu="@(e => this.OnContextMenuAsync(name, e))"
+                        @oncontextmenu:preventDefault="true">
+                    <TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="avatar-transcript" />
+                </button>
+            </MudTooltip>
+        }
+    </div>
+    <hr class="activity-bar-divider" />
+}
+<MudMenu @ref="this.menu" PositionAtCursor="true" Class="team-shortcut-menu">
+    <ChildContent>
+        @if (this.menuTeam is { } target)
+        {
+            <MudMenuItem Icon="@Icons.Material.Filled.RemoveCircleOutline" OnClick="@(() => this.RemoveAsync(target))">Remove shortcut</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.VisibilityOff" OnClick="this.TurnOffAsync">Turn off Team shortcuts</MudMenuItem>
+        }
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private MudMenu? menu;
+
+    /// <summary>The Team whose tile was right-clicked last, which the menu acts on.</summary>
+    private string? menuTeam;
+
+    /// <summary>The Team whose folders the Sidebar shows, or <see langword="null"/> while no shortcut is selected.</summary>
+    [Parameter]
+    public string? Selected { get; set; }
+
+    /// <summary>Raised with the Team a click selects, or <see langword="null"/> when the click collapses the Sidebar.</summary>
+    [Parameter]
+    public EventCallback<string?> SelectedChanged { get; set; }
+
+    /// <summary>Follows the catalog and the shortcut choice.</summary>
+    protected override void OnInitialized()
+    {
+        this.Catalog.Changed += this.OnChanged;
+        this.Shortcuts.Changed += this.OnChanged;
+    }
+
+    /// <summary>Reads the remembered shortcut choice once the browser can be reached.</summary>
+    /// <param name="firstRender">Whether this is the component's first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.Shortcuts.LoadAsync();
+        }
+    }
+
+    /// <summary>Unsubscribes from the catalog and the shortcut store.</summary>
+    public void Dispose()
+    {
+        this.Catalog.Changed -= this.OnChanged;
+        this.Shortcuts.Changed -= this.OnChanged;
+    }
+
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private async Task SelectAsync(string team)
+    {
+        bool same = string.Equals(this.Selected, team, StringComparison.OrdinalIgnoreCase);
+        await this.SelectedChanged.InvokeAsync(same ? null : team);
+    }
+
+    private async Task OnContextMenuAsync(string team, MouseEventArgs e)
+    {
+        this.menuTeam = team;
+        if (this.menu is not null)
+        {
+            await this.menu.OpenMenuAsync(e);
+        }
+    }
+
+    /// <summary>Removes <paramref name="team"/>'s tile, and collapses the Sidebar when it was showing that Team.</summary>
+    private async Task RemoveAsync(string team)
+    {
+        await this.Shortcuts.RemoveAsync(team);
+        if (string.Equals(this.Selected, team, StringComparison.OrdinalIgnoreCase))
+        {
+            await this.SelectedChanged.InvokeAsync(null);
+        }
+    }
+
+    /// <summary>Removes every tile, and collapses the Sidebar when it was showing a Team from one.</summary>
+    private async Task TurnOffAsync()
+    {
+        await this.Shortcuts.TurnOffAsync();
+        if (this.Selected is not null)
+        {
+            await this.SelectedChanged.InvokeAsync(null);
+        }
+    }
+}

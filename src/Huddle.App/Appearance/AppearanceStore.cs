@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
@@ -90,7 +91,14 @@ internal sealed partial class AppearanceStore : IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.current = this.BuildSettings(this.ReadDocumentFromDisk());
+        var document = this.ReadDocumentFromDisk();
+        if (this.MigrateRetiredThemes(document))
+        {
+            // Written once, here, before the watcher exists, so the rewrite raises no event; a second load finds nothing to migrate.
+            this.WriteDocumentToDisk(document);
+        }
+
+        this.current = this.BuildSettings(document);
 
         this.watcher = new DebouncedFileWatcher(directory, "appearance.json", this.OnWatcherSettled, this.logger, nameof(AppearanceStore));
     }
@@ -145,26 +153,93 @@ internal sealed partial class AppearanceStore : IDisposable
     }
 
     /// <summary>
-    /// Selects (or clears) the Human's own accent colour for <see cref="Themes.AccentTheme"/>, under
-    /// the write lock: re-reads the file so a concurrent hand-edit is not lost, sets <c>accentColor</c>
-    /// while leaving every other key - including <c>theme</c> - exactly as found, writes, rebuilds the
-    /// resolved snapshot, releases the lock, and only then raises <see cref="AppearanceChanged"/>.
-    /// Mirrors <see cref="Save"/> exactly, one key over.
+    /// Sets (or clears) the Human's own accent colour for one Theme: <c>customizations[themeId].palette.primary</c>, under the
+    /// write lock, leaving every other key - the Theme's other customizations included - exactly as found. A value that is
+    /// not <c>#rrggbb</c>, or an id that names no Theme, is refused: nothing is written and nothing is raised. Clearing a
+    /// colour that is not set is likewise a no-op. An entry left empty by clearing is removed, and so is an empty
+    /// <c>customizations</c> object.
     /// </summary>
-    /// <param name="accentColorHex">The accent colour to store, as <c>#rrggbb</c>, or <see langword="null"/> to clear it and remove the <c>accentColor</c> key entirely.</param>
-    public void SaveAccentColor(string? accentColorHex)
+    /// <param name="themeId">The Theme the accent belongs to.</param>
+    /// <param name="accentColorHex">The accent colour to store, as <c>#rrggbb</c>, or <see langword="null"/> to clear it.</param>
+    public void SaveAccentColor(string themeId, string? accentColorHex)
+    {
+        ArgumentNullException.ThrowIfNull(themeId);
+
+        if (FindTheme(themeId) is null || (accentColorHex is not null && !AccentColorPattern().IsMatch(accentColorHex)))
+        {
+            return;
+        }
+
+        this.Mutate(document =>
+        {
+            if (accentColorHex is null
+                && (document["customizations"] is not JsonObject existing
+                    || existing[themeId] is not JsonObject entry
+                    || entry["palette"] is not JsonObject existingPalette
+                    || !existingPalette.ContainsKey("primary")))
+            {
+                return false;
+            }
+
+            JsonObject customizations = EnsureObject(document, "customizations");
+            JsonObject themeEntry = EnsureObject(customizations, themeId);
+            JsonObject palette = EnsureObject(themeEntry, "palette");
+
+            if (accentColorHex is null)
+            {
+                _ = palette.Remove("primary");
+            }
+            else
+            {
+                palette["primary"] = accentColorHex;
+            }
+
+            PruneEmpty(document, customizations, themeId, themeEntry, palette);
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// Removes everything the Human customised for one Theme: its whole <c>customizations[themeId]</c> entry, palette and
+    /// tokens, under the write lock, leaving every other key as found. A Theme with no entry is a no-op: nothing is written
+    /// and nothing is raised.
+    /// </summary>
+    /// <param name="themeId">The Theme to reset.</param>
+    public void ResetCustomization(string themeId)
+    {
+        ArgumentNullException.ThrowIfNull(themeId);
+
+        this.Mutate(document =>
+        {
+            if (document["customizations"] is not JsonObject customizations || !customizations.ContainsKey(themeId))
+            {
+                return false;
+            }
+
+            _ = customizations.Remove(themeId);
+            if (customizations.Count == 0)
+            {
+                _ = document.Remove("customizations");
+            }
+
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// Runs <paramref name="edit"/> over a fresh read of the file under the write lock; when it reports a change, writes the
+    /// file, rebuilds the snapshot, releases the lock, and only then raises <see cref="AppearanceChanged"/> - never before, or
+    /// an observer would see stale state.
+    /// </summary>
+    /// <param name="edit">Edits the document in place and returns whether it changed anything.</param>
+    private void Mutate(Func<JsonObject, bool> edit)
     {
         lock (this.writeGate)
         {
             var document = this.ReadDocumentFromDisk();
-
-            if (accentColorHex is null)
+            if (!edit(document))
             {
-                document.Remove("accentColor");
-            }
-            else
-            {
-                document["accentColor"] = accentColorHex;
+                return;
             }
 
             this.WriteDocumentToDisk(document);
@@ -172,6 +247,45 @@ internal sealed partial class AppearanceStore : IDisposable
         }
 
         this.AppearanceChanged?.Invoke();
+    }
+
+    /// <summary>The object at <paramref name="key"/> of <paramref name="parent"/>, created and attached when it is missing or not an object.</summary>
+    /// <param name="parent">The object holding the key.</param>
+    /// <param name="key">The key.</param>
+    private static JsonObject EnsureObject(JsonObject parent, string key)
+    {
+        if (parent[key] is JsonObject existing)
+        {
+            return existing;
+        }
+
+        JsonObject created = new();
+        parent[key] = created;
+        return created;
+    }
+
+    /// <summary>Detaches each emptied level of a customization from the document, innermost first, so clearing the last value leaves no empty shell behind.</summary>
+    /// <param name="document">The whole document.</param>
+    /// <param name="customizations">Its <c>customizations</c> object.</param>
+    /// <param name="themeId">The Theme id keying the entry.</param>
+    /// <param name="entry">The Theme's entry.</param>
+    /// <param name="palette">The entry's palette object.</param>
+    private static void PruneEmpty(JsonObject document, JsonObject customizations, string themeId, JsonObject entry, JsonObject palette)
+    {
+        if (palette.Count == 0)
+        {
+            _ = entry.Remove("palette");
+        }
+
+        if (entry.Count == 0)
+        {
+            _ = customizations.Remove(themeId);
+        }
+
+        if (customizations.Count == 0)
+        {
+            _ = document.Remove("customizations");
+        }
     }
 
     /// <summary>
@@ -253,9 +367,79 @@ internal sealed partial class AppearanceStore : IDisposable
     [GeneratedRegex(@"\A[a-z0-9-]{1,64}\z", RegexOptions.CultureInvariant)]
     private static partial Regex ThemeIdPattern();
 
-    /// <summary>A valid accent colour: <c>#</c> followed by exactly six hex digits - <c>MudColorPicker</c>'s own HEX mode output, and what <see cref="Themes.AccentTheme.BuildTheme"/> expects.</summary>
+    /// <summary>A valid accent colour: <c>#</c> followed by exactly six hex digits - <c>MudColorPicker</c>'s own HEX mode output.</summary>
     [GeneratedRegex(@"\A#[0-9a-fA-F]{6}\z", RegexOptions.CultureInvariant)]
     private static partial Regex AccentColorPattern();
+
+    /// <summary>The keys of <c>appearance.json</c> that hold a Theme id.</summary>
+    private static readonly string[] SelectionKeys = ["theme", "lightTheme", "darkTheme"];
+
+    /// <summary>The Theme that replaces a retired one, or <see langword="null"/> when <paramref name="themeId"/> was never retired.</summary>
+    /// <param name="themeId">A Theme id as stored.</param>
+    private static string? ReplacementFor(string themeId) =>
+        themeId switch
+        {
+            "huddle" or "custom-accent" => ThemeCatalog.DefaultLightId,
+            "huddle-dark" or "custom-accent-dark" => ThemeCatalog.DefaultDarkId,
+            _ => null,
+        };
+
+    /// <summary>
+    /// Moves a file written for the Huddle and Custom Accent Themes onto Lumen, in place: a retired id in <c>theme</c>,
+    /// <c>lightTheme</c> or <c>darkTheme</c> becomes its replacement, and the <c>accentColor</c> a Custom Accent choice
+    /// carried becomes <c>customizations[replacement].palette.primary</c> (never over a colour already there). An
+    /// <c>accentColor</c> with no Custom Accent choice to move into, and one that is not <c>#rrggbb</c>, stay as found - the
+    /// second with a warning - and an id that was never a Theme is left for <see cref="BuildSettings"/> to warn about.
+    /// </summary>
+    /// <param name="document">The parsed file; edited in place.</param>
+    /// <returns>Whether the document changed and so must be written back.</returns>
+    private bool MigrateRetiredThemes(JsonObject document)
+    {
+        var changed = false;
+        HashSet<string> accentTargets = new(StringComparer.Ordinal);
+
+        foreach (var key in SelectionKeys)
+        {
+            if (document[key] is JsonValue value && value.TryGetValue<string>(out var id) && ReplacementFor(id) is { } replacement)
+            {
+                if (id.StartsWith("custom-accent", StringComparison.Ordinal))
+                {
+                    _ = accentTargets.Add(replacement);
+                }
+
+                document[key] = replacement;
+                changed = true;
+            }
+        }
+
+        if (accentTargets.Count == 0 || document["accentColor"] is not { } accentNode)
+        {
+            return changed;
+        }
+
+        var accent = accentNode is JsonValue accentValue && accentValue.TryGetValue<string>(out var text) ? text : null;
+        if (accent is null || !AccentColorPattern().IsMatch(accent))
+        {
+            this.logger.LogWarning(
+                "Appearance file '{Path}' sets accentColor '{AccentColor}', which is not a valid #rrggbb colour; it is not moved into a customization and is left in the file.",
+                this.path,
+                accent ?? accentNode.ToJsonString());
+            return changed;
+        }
+
+        var customizations = EnsureObject(document, "customizations");
+        foreach (var target in accentTargets)
+        {
+            var palette = EnsureObject(EnsureObject(customizations, target), "palette");
+            if (!palette.ContainsKey("primary"))
+            {
+                palette["primary"] = accent;
+            }
+        }
+
+        _ = document.Remove("accentColor");
+        return true;
+    }
 
     /// <summary>Whether <paramref name="candidate"/> is a well-formed id naming an entry in <see cref="ThemeCatalog.BuiltIn"/>.</summary>
     /// <param name="candidate">The raw <c>theme</c> value read from the file.</param>
@@ -307,33 +491,111 @@ internal sealed partial class AppearanceStore : IDisposable
             }
         }
 
-        string? accentColorHex = null;
-
-        if (document.TryGetPropertyValue("accentColor", out var accentColorNode) && accentColorNode is not null)
-        {
-            var candidate = accentColorNode is JsonValue accentColorValue && accentColorValue.TryGetValue<string>(out var accentColorText)
-                ? accentColorText
-                : null;
-
-            if (candidate is not null && AccentColorPattern().IsMatch(candidate))
-            {
-                accentColorHex = candidate;
-            }
-            else
-            {
-                var shown = candidate ?? accentColorNode.ToJsonString();
-                this.logger.LogWarning(
-                    "Appearance file '{Path}' sets accentColor '{AccentColor}', which is not a valid #rrggbb colour; no accent colour is used instead and the file is left unchanged.",
-                    this.path,
-                    shown);
-            }
-        }
-
         var active = FindTheme(themeId) ?? ThemeCatalog.BuiltIn[0];
         var lightThemeId = this.ReadPreferred(document, "lightTheme", ThemeMode.Light, active);
         var darkThemeId = this.ReadPreferred(document, "darkTheme", ThemeMode.Dark, active);
 
-        return new AppearanceSettings(themeId, accentColorHex, lightThemeId, darkThemeId);
+        return new AppearanceSettings(themeId, lightThemeId, darkThemeId, this.ReadCustomizations(document));
+    }
+
+    /// <summary>
+    /// Reads <c>customizations</c>, keeping what a skin file would accept and dropping the rest with one warning each, so a bad
+    /// entry never reaches a render. The file is left exactly as it was: fixing the entry restores it with no further edit.
+    /// </summary>
+    /// <param name="document">The parsed <c>appearance.json</c> object.</param>
+    private Dictionary<string, SkinCustomization> ReadCustomizations(JsonObject document)
+    {
+        Dictionary<string, SkinCustomization> result = new(StringComparer.Ordinal);
+
+        if (!document.TryGetPropertyValue("customizations", out var node) || node is null)
+        {
+            return result;
+        }
+
+        if (node is not JsonObject entries)
+        {
+            this.WarnCustomization("customizations", "is not an object");
+            return result;
+        }
+
+        foreach (var (themeId, body) in entries)
+        {
+            var theme = FindTheme(themeId);
+            if (theme is null)
+            {
+                this.WarnCustomization(themeId, "names no known theme");
+                continue;
+            }
+
+            if (body is not JsonObject sections)
+            {
+                this.WarnCustomization(themeId, "is not an object");
+                continue;
+            }
+
+            foreach (var section in sections.Select(static pair => pair.Key).Where(static key => key is not ("palette" or "tokens")))
+            {
+                this.WarnCustomization(themeId, $"{section}: unknown section; expected palette or tokens");
+            }
+
+            var requested = new SkinCustomization(
+                this.ReadStrings(themeId, "palette", sections),
+                this.ReadStrings(themeId, "tokens", sections));
+            var clean = SkinLoader.Sanitize(theme.Skin, requested, problem => this.WarnCustomization(themeId, problem));
+
+            if (!clean.IsEmpty)
+            {
+                result[themeId] = clean;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Reads one section of a customization as string-to-string, warning about and skipping a value that is not a string.</summary>
+    /// <param name="themeId">The Theme id the entry belongs to, for the warning.</param>
+    /// <param name="section">The section name: <c>palette</c> or <c>tokens</c>.</param>
+    /// <param name="sections">The entry's object.</param>
+    private Dictionary<string, string> ReadStrings(string themeId, string section, JsonObject sections)
+    {
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+
+        if (!sections.TryGetPropertyValue(section, out var node))
+        {
+            return values;
+        }
+
+        if (node is not JsonObject map)
+        {
+            this.WarnCustomization(themeId, $"{section} is not an object");
+            return values;
+        }
+
+        foreach (var (key, value) in map)
+        {
+            if (value is JsonValue text && text.TryGetValue<string>(out var content))
+            {
+                values[key] = content;
+            }
+            else
+            {
+                this.WarnCustomization(themeId, $"{section}.{key}: must be a string");
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>Logs the one warning a dropped customization gets.</summary>
+    /// <param name="entry">What the warning is about: a Theme id, or <c>customizations</c> itself.</param>
+    /// <param name="problem">What is wrong with it.</param>
+    private void WarnCustomization(string entry, string problem)
+    {
+        this.logger.LogWarning(
+            "Appearance file '{Path}' customization '{Entry}': {Problem}; it is ignored and the file is left unchanged.",
+            this.path,
+            entry,
+            problem);
     }
 
     /// <summary>
@@ -363,7 +625,9 @@ internal sealed partial class AppearanceStore : IDisposable
                 this.path,
                 key,
                 candidate ?? node.ToJsonString(),
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
                 mode);
+#pragma warning restore HAA0601
         }
 
         return active.Mode == mode ? active.Id : null;
@@ -427,38 +691,8 @@ internal sealed partial class AppearanceStore : IDisposable
     /// The freshly parsed document; an empty object if <see cref="path"/> no longer exists (a
     /// legitimate delete); or <see langword="null"/> if every attempt failed.
     /// </returns>
-    private JsonObject? ReadDocumentForWatcherRebuild()
-    {
-        if (!File.Exists(this.path))
-        {
-            return new JsonObject();
-        }
-
-        return RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
-    }
-
-    /// <summary>Logs why <see cref="ReadDocumentForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
-    /// <param name="ex">The last failure.</param>
-    private JsonObject? OnReadGaveUp(Exception ex)
-    {
-        if (ex is JsonException)
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not parse appearance file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved appearance rather than reverting to the default over what may be a mid-write race.",
-                this.path);
-        }
-        else
-        {
-            this.logger.LogWarning(
-                ex,
-                "Could not read appearance file '{Path}' after {Attempts} attempts; keeping the previously resolved appearance.",
-                this.path,
-                RetryingFileRead.Attempts);
-        }
-
-        return null;
-    }
+    private JsonObject? ReadDocumentForWatcherRebuild() =>
+        RetryingFileRead.RereadKeepingPrevious(this.path, static () => new JsonObject(), () => ParseDocumentFile(this.path), this.logger, "appearance file", "appearance");
 
     /// <summary>
     /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the

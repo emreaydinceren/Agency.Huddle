@@ -19,6 +19,7 @@ internal sealed class TabService
 
     private readonly List<GroupState> groups = [];
     private readonly Dictionary<string, IReadOnlyList<TrailCrumb>> trails = new(StringComparer.Ordinal);
+    private readonly HashSet<string> dirtyKeys = new(StringComparer.Ordinal);
     private IReadOnlyList<TabGroup> groupSnapshot = [];
     private IReadOnlyList<Tab> tabSnapshot = [];
     private string focusedId;
@@ -262,6 +263,23 @@ internal sealed class TabService
     }
 
     /// <summary>
+    /// Records whether the page in the Tab with <paramref name="key"/> holds edits that closing the Tab would lose. The Tab strip and the
+    /// close shortcut ask the Human before they close a Tab for which this is <see langword="true"/>. A page sets it while it has pending
+    /// edits and clears it when they are saved, discarded or the page goes away. It changes no Tab and raises no event.
+    /// </summary>
+    /// <param name="key">The key of the Tab whose page holds the edits.</param>
+    /// <param name="dirty">Whether the page has unsaved edits.</param>
+    public void SetDirty(string key, bool dirty)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _ = dirty ? this.dirtyKeys.Add(key) : this.dirtyKeys.Remove(key);
+    }
+
+    /// <summary>Whether the page in the Tab with <paramref name="key"/> has unsaved edits (<see cref="SetDirty(string, bool)"/>).</summary>
+    /// <param name="key">The key of the Tab to ask about.</param>
+    public bool IsDirty(string key) => this.dirtyKeys.Contains(key);
+
+    /// <summary>
     /// Replaces the breadcrumb trail <see cref="Trail(Tab)"/> gives for the Tab with <paramref name="key"/>,
     /// for a page whose location changes inside one URL, such as the Library's open file. The trail is
     /// not stored with the Tab, so a restored layout starts from the URL's own trail until the page
@@ -295,7 +313,7 @@ internal sealed class TabService
     public IReadOnlyList<TrailCrumb> Trail(Tab tab)
     {
         ArgumentNullException.ThrowIfNull(tab);
-        return this.trails.TryGetValue(tab.Key, out IReadOnlyList<TrailCrumb>? crumbs) ? crumbs : TabTrail.Build(tab.Url, tab.Title);
+        return this.trails.TryGetValue(tab.Key, out IReadOnlyList<TrailCrumb>? crumbs) ? crumbs : TabTrail.Build(tab.Url);
     }
 
     /// <summary>Whether <see cref="MoveLeft(string)"/> would do something for the Tab with <paramref name="id"/>.</summary>
@@ -362,7 +380,7 @@ internal sealed class TabService
                 null,
                 [],
                 exported,
-                this.groups.FindIndex(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)));
+                this.FocusedIndex());
 
         return new TabSnapshot(TabSnapshot.CurrentVersion, root);
     }
@@ -460,7 +478,25 @@ internal sealed class TabService
             ? number
             : 0;
 
-    private GroupState Focused() => this.groups.Find(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)) ?? this.groups[0];
+    private GroupState Focused()
+    {
+        int index = this.FocusedIndex();
+        return this.groups[index < 0 ? 0 : index];
+    }
+
+    /// <summary>The index of the focused group, or -1 when none matches; a plain loop, so the render path allocates no closure.</summary>
+    private int FocusedIndex()
+    {
+        for (int index = 0; index < this.groups.Count; index++)
+        {
+            if (string.Equals(this.groups[index].Id, this.focusedId, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
 
     private (GroupState Group, int Index)? Find(Predicate<Tab> match)
     {
@@ -598,7 +634,23 @@ internal sealed class TabService
 
         public string? ActiveId { get; set; }
 
-        public Tab? ActiveTab() => this.ActiveId is null ? null : this.Tabs.Find(tab => string.Equals(tab.Id, this.ActiveId, StringComparison.Ordinal));
+        public Tab? ActiveTab()
+        {
+            if (this.ActiveId is null)
+            {
+                return null;
+            }
+
+            foreach (Tab tab in this.Tabs)
+            {
+                if (string.Equals(tab.Id, this.ActiveId, StringComparison.Ordinal))
+                {
+                    return tab;
+                }
+            }
+
+            return null;
+        }
 
         public int PinnedCount()
         {

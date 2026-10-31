@@ -8,7 +8,7 @@ a Task wakes its assignee*) · **Vocabulary:** [language.md](engineering/languag
 Board) · **UX source:** the *Huddle Tasks Brief* artifact (v2), whose three concept mockups this
 spec turns into components
 
-This is the design for **Tasks**: work items that the Human and the AI Teammates share. Each Task
+This is the design for **Tasks**: work items that the Human and the AI Agents share. Each Task
 is a markdown file on disk. The Human sees Tasks through saved **Views**, either as a List or as a
 Kanban Board. Agents read and change Tasks through six App Tools. Every change to a Task wakes its
 AI assignee, which is done by posting a Message into a Room.
@@ -45,8 +45,8 @@ task plan · Appendix B — Follow-ups (V2)
 
 ## 1. Goal
 
-Give the Human and the AI Teammates a shared, file-backed task list. Humans and Agents both
-change it, Humans organise it into Views, and every change reaches the AI Teammate who owns the
+Give the Human and the AI Agents a shared, file-backed task list. Humans and Agents both
+change it, Humans organise it into Views, and every change reaches the AI Agent who owns the
 Task.
 
 1. **A Task is a markdown file** that people can read and edit in any text editor. It lives at
@@ -79,7 +79,7 @@ Agent takes a single action.
 | T7 | The Human edits `PLAT-0042.md` in a text editor while Huddle runs | The watcher sees the change and appends `edited outside Huddle: priority: High → Urgent`, attributed to the Human. The assignee is woken |
 | T8 | Huddle is stopped, the file is edited, and Huddle starts | The Change log gains `edited outside Huddle`. No one is woken, because nothing is woken at startup (D-16) |
 | T9 | The Human clicks **Close task** on a Done Task | The file moves to `_closed/`, the Change log gains `closed`, and the assignee is woken. The Task leaves Active Views |
-| T10 | Nova and Kai hand a Task back and forth by reassigning it 10 times with no Human action | The 11th trigger isn't sent. The Task shows *"Wake-ups paused after 10 changes by Teammates — Allow 10 more"* |
+| T10 | Nova and Kai hand a Task back and forth by reassigning it 10 times with no Human action | The 11th trigger isn't sent. The Task shows *"Wake-ups paused after 10 changes by Agents — Allow 10 more"* |
 | T11 | The Human saves a description, but Nova changed the description since the panel opened | Nothing is overwritten. A conflict bar shows both versions, with **Keep mine** and **Take theirs** |
 | T12 | The Human saves the priority, but Nova changed only the status since the panel opened | The change is merged silently. Changes to different fields don't conflict |
 | T13 | A Task's assignee is Offline | It is saved, and the notice reads *"Nova is offline and won't see this until they're back"*. The Message is still posted |
@@ -108,7 +108,7 @@ Agent takes a single action.
 | Reordering cards by hand | A rank field would make every reorder a file write, and therefore a wake-up |
 | Closed Tasks on a Board | A Board is for work in progress |
 | A formatting toolbar in the description editor | V2 will use `BitMarkdownEditor` (Appendix B) |
-| Attachments | Links in the description work |
+| Attachments | Links in the description work. Designed for V2 in [TaskAttachments](Huddle.TaskAttachments-Specifications.md) |
 | Agents using Views | `list_tasks` takes plain filters. Views are the Human's |
 | A Task history beyond the Change log | The Change log is the history |
 | Deleting a Task | Close it instead. A Task file deleted by hand simply disappears from the index (§15, E-9) |
@@ -139,7 +139,7 @@ Agent takes a single action.
 6. **MudBlazor before custom UI.** Check [mudblazor.md](engineering/mudblazor.md) before writing
    a component or a CSS rule. §13.0 maps every need in this spec to a component.
 7. **Copy the house precedents.** The store follows `AvatarStore` and `PersonaStore`. Tools follow
-   `FollowRoomTool`. The dialog follows `TeammateCard`. The event subscription follows
+   `FollowRoomTool`. The dialog follows `AgentProfileCard`. The event subscription follows
    `RoomList`. Nothing is generalised in advance for a feature that doesn't exist.
 
 ---
@@ -170,7 +170,7 @@ Agent takes a single action.
      "woken in Room R", outcome, Awake/Asleep/Offline  ──▶ toast, "AI reacting", card badge
 
   ViewStore ── {DataDir}/views.json ── TaskQuery / BoardLayout (pure) ──▶ List / Board
-  PersonaRenameCascade ──▶ TaskService.RenameTeammate + ViewStore.RenameTeammate
+  PersonaRenameCascade ──▶ TaskService.RenameAgent + ViewStore.RenameAgent
 ```
 
 ### 5.1 New code (folder `src/Huddle.App/Tasks/`, namespace `Agency.Huddle.App.Tasks`)
@@ -216,7 +216,7 @@ Agent takes a single action.
 | `TeamOptions.cs` | `public TasksOptions Tasks { get; set; } = new();` | §14 |
 | `Data/ITeamDirectory.cs`, `SqliteTeamDirectory.cs` | `FindRoomWithExactMemberSetAsync` | §10.4 |
 | `Acp/Sessions/RoomSession.cs` (:873, :981) | Call `TurnActivity.Begin` / `End` next to `OwnPosts.BeginTurn` / `EndTurn` | §10.8 |
-| `Acp/PersonaRenameCascade.cs` (block at :112-155) | Call `TaskService.RenameTeammate` and `ViewStore.RenameTeammate`, each in its own try/catch, above the "no Agent row" early return | §9.6 |
+| `Acp/PersonaRenameCascade.cs` (block at :112-155) | Call `TaskService.RenameAgent` and `ViewStore.RenameAgent`, each in its own try/catch, above the "no Agent row" early return | §9.6 |
 | `Acp/DotAcpAgentHostFactory.cs` (:135-147) | Append the six task tools when `Tasks.Enabled` | §11.1 |
 | `Prompts/PromptCatalog.cs`, `prompts.default.json` | Six tool descriptions, `task.wake.message`, `getHelp.tasks`, one clause in `systemPrompt.tools` | §11.9 |
 | `Acp/Tools/GetHelpTool.cs` (:113-127) | Add `getHelp.tasks` to `sections` when Tasks is enabled | §11.9 |
@@ -547,7 +547,7 @@ public sealed record OutsideEdit(TaskItem? Before, TaskItem After);
   other paths. This is the Persona rule (rules.md L21).
 - The **filename isn't identity.** New files are named `{Id}.md`. A file whose name doesn't match
   its id still loads.
-- **`Tasks.Dir` must not resolve inside `Acp.TeammatesDir`.** Throw at startup if it does, because the
+- **`Tasks.Dir` must not resolve inside `Acp.AgentsDir`.** Throw at startup if it does, because the
   Persona scanner would read every Task as a rejected Persona. Follow the startup throw for the
   old `PersonaDir` key (`ServiceCollectionExtensions.cs:121-127`).
 
@@ -658,7 +658,7 @@ public sealed class TaskService
     public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor);
     public TaskResult Close(TaskId id, TaskActor actor);
     public TaskResult Reopen(TaskId id, TaskActor actor);
-    internal void RenameTeammate(string oldName, string newName);          // §9.6
+    internal void RenameAgent(string oldName, string newName);          // §9.6
     internal void OnOutsideEdit(OutsideEdit edit);                          // §9.4
 }
 ```
@@ -718,7 +718,7 @@ the store propagates. The UI catches it and shows it, and the tools turn it into
 | The Team is a known Team label **or** an existing Team folder | `Unknown team 'X'. Known teams: A, B.` |
 | The Team name can be a folder name | `The team name 'X' cannot be a folder name on this computer (it contains ':').` Check against `Path.GetInvalidFileNameChars()`, plus a trailing `.` or space, and reserved names such as `CON` |
 | The Project can be a folder name and doesn't start with `_` | the same wording for Project |
-| The assignee is a known Persona Name or Alias, or the Human's Name | `Unknown teammate 'X'.` An Alias is resolved to the Name before storing |
+| The assignee is a known Persona Name or Alias, or the Human's Name | `Unknown agent 'X'.` An Alias is resolved to the Name before storing |
 | `DuplicateOf` is set exactly when the status is `Duplicate` | `Status Duplicate needs duplicate_of.` / `duplicate_of is only allowed when status is Duplicate.` |
 | References don't point at the Task itself | `A task cannot block itself.` (and the same for parent and duplicate) |
 | `parent` doesn't create a cycle | `PLAT-0042 is already a descendant of PLAT-0050, so it cannot be its parent.` |
@@ -788,23 +788,23 @@ public sealed record TaskChange(TaskItem? Before, TaskItem After, IReadOnlyList<
 Handlers run synchronously on the thread that raised the event. A handler that throws is logged
 and skipped, following `PersonaStore`'s rename handlers (:774-791).
 
-### 9.6 Renaming a Teammate
+### 9.6 Renaming an Agent
 
 `PersonaRenameCascade.OnPersonaRenamed` (`Acp/PersonaRenameCascade.cs:112-173`) gets two new
 calls, each in its own `try/catch` with a logged warning:
 
 ```csharp
-try { this.tasks.RenameTeammate(renamed.OldName, renamed.NewName); } catch (IOException ex) { … }
-try { this.views.RenameTeammate(renamed.OldName, renamed.NewName); } catch (IOException ex) { … }
+try { this.tasks.RenameAgent(renamed.OldName, renamed.NewName); } catch (IOException ex) { … }
+try { this.views.RenameAgent(renamed.OldName, renamed.NewName); } catch (IOException ex) { … }
 ```
 
 Put them after `roomSessions.Rename` (:148) and before the "no Agent row" early return (:155), as
 the comments there require. The Human's Name can't be renamed through this path.
 
-`TaskService.RenameTeammate` rewrites `creator:` and `assignee:` in every Task, including Closed
+`TaskService.RenameAgent` rewrites `creator:` and `assignee:` in every Task, including Closed
 ones, whose value equals `oldName` (OrdinalIgnoreCase). It changes these files **with no Change log
 entry and no `TaskChanged` event**: it's a change of identity, not of the Task. ADR-0011 says *a
-rename moves the Teammate, not its history*, so old log lines keep the old name. It raises one
+rename moves the Agent, not its history*, so old log lines keep the old name. It raises one
 `TasksReloaded` at the end.
 
 `PersonaRemoved` needs **no** hook. A removed assignee stays in the file and shows as *(missing)*.
@@ -1010,13 +1010,13 @@ where `TurnActivity.IsBusyIn(assignee, roomId)` is true.
 ### 11.1 Registration
 
 In `DotAcpAgentHostFactory.StartAsync`, add the six tools to `chatTools` after
-`ProposeTeammatesTool` (:147) and **before** `SkillGrants.Offer` (:152), and only when
+`ProposeAgentsTool` (:147) and **before** `SkillGrants.Offer` (:152), and only when
 `options.Tasks.Enabled`. The tools aren't in `SkillGrants.Grantable`, so every Persona gets them:
 they cost nothing, and waking is governed by §10.
 
 Construct each with `ActivatorUtilities.CreateInstance<T>(serviceProvider, agentId)`, as
 `PostMessageTool` is (:135-147). Every tool takes `string callerAgentId` and resolves the caller's
-Name through `directory.GetUserAsync(callerAgentId)`, following `ProposeTeammatesTool` (:133-134).
+Name through `directory.GetUserAsync(callerAgentId)`, following `ProposeAgentsTool` (:133-134).
 The actor is `TaskActor(Agent, name, callerAgentId)`.
 
 **Shared conventions for all six**, copied from `FollowRoomTool` (quoted in the survey above):
@@ -1150,7 +1150,7 @@ checks each description.
 
 | Key | Timing | Content (the author writes the final text; this is the brief) |
 | --- | --- | --- |
-| `tool.createTask.description` | NextSession | What a Task is, *when* to create one (to hand work to a Teammate durably, or to track your own multi-step work), that the assignee is woken, and to pass `originRoomId` when acting in a Room |
+| `tool.createTask.description` | NextSession | What a Task is, *when* to create one (to hand work to an Agent durably, or to track your own multi-step work), that the assignee is woken, and to pass `originRoomId` when acting in a Room |
 | `tool.getTask.description` | NextSession | Reads one Task, with an option for its Change log. **Must also say:** *Task ids such as PLAT-0042 in Messages refer to Tasks; call get_task to read one* (§13.13) |
 | `tool.listTasks.description` | NextSession | Filters, and `assignee: "me"` to find your own work |
 | `tool.updateTask.description` | NextSession | Changing fields wakes the assignee unless it's you. Set status as you work (To Do → In Progress → Review → Done). Duplicate needs `duplicate_of` |
@@ -1160,7 +1160,7 @@ checks each description.
 | `getHelp.tasks` | Live | A short section: Tasks, assignee wake-ups, and the six tools, named without a prefix. Also: *write a Task's id, for example PLAT-0042, to refer to it in a Message; the Human sees it as a link* |
 
 **`systemPrompt.tools`** (`PromptCatalog.cs:99-118`) gains one clause in the same style as the
-others: *"… to track work as Tasks and hand it to a Teammate …"*.
+others: *"… to track work as Tasks and hand it to an Agent …"*.
 
 ---
 
@@ -1169,7 +1169,7 @@ others: *"… to track work as Tasks and hand it to a Teammate …"*.
 ### 12.1 Records
 
 ```csharp
-public enum ViewKind { List, Board }
+public enum ViewKind { List, Kanban } // saved as "list" / "kanban"; the old "board" still reads
 public enum ViewScope { Active, Closed }
 public enum TaskGroupField { Team, Project, Assignee, State }       // Board: State is invalid
 public enum SortDirection { Ascending, Descending }
@@ -1217,7 +1217,7 @@ public sealed record BoardColumn(string Label, IReadOnlyList<TaskState> States, 
   "version": 1,
   "views": [
     { "id": "3f2a9c…", "name": "Platform board", "description": "Engineering work in flight",
-      "kind": "board", "scope": "active",
+      "kind": "kanban", "scope": "active",
       "fields": ["assignee", "priority", "due_date"],
       "filter": { "teams": ["Platform"], "priorities": ["High", "Urgent"],
                   "projects": [{ "team": "Platform", "project": "Auth v2" }, { "team": "Platform", "project": null }],
@@ -1260,7 +1260,7 @@ public sealed partial class ViewStore : IDisposable
     public TaskView? Get(string id);
     public ViewSaveResult Save(TaskView view);                      // add or replace by Id
     public ViewSaveResult Delete(string id);                        // built-ins refused
-    internal void RenameTeammate(string oldName, string newName);   // §9.6
+    internal void RenameAgent(string oldName, string newName);   // §9.6
     public event Action? ViewsChanged;
 }
 ```
@@ -1363,22 +1363,22 @@ release).
 | Warn before leaving unsaved edits | `MudExitPrompt` (`Disabled`, `Title`, `Text`) | [Usage](https://mudblazor.com/components/exitprompt#usage) | none |
 | Status and priority chips | `MudChip<T>` with `Color` (no custom CSS) | [Filled Chips](https://mudblazor.com/components/chips#filled-chips) | `SkillsPanel.razor` |
 | Tags, Blocked by, filter values | `MudChipSet<T>` with closable chips (`OnClose`) plus a `MudAutocomplete<T>` to add one | [Adding and removing chips](https://mudblazor.com/components/chipset#adding-and-removing-chips) | — |
-| Pick a Teammate, a Task or a Project by typing | `MudAutocomplete<T>` (`SearchFunc`, `ToStringFunc`, `Strict`, `CoerceValue`) | [Usage](https://mudblazor.com/components/autocomplete#usage) | — |
-| Pick several known values (filters, column states) | `MudSelect<T> MultiSelection="true"` | [Multiselect](https://mudblazor.com/components/select#multiselect) | `TeammateCard.razor` |
-| Avatars | `TeammateAvatar.razor` (wraps `MudAvatar`) | — | `Components/Shared/TeammateAvatar.razor` |
+| Pick an Agent, a Task or a Project by typing | `MudAutocomplete<T>` (`SearchFunc`, `ToStringFunc`, `Strict`, `CoerceValue`) | [Usage](https://mudblazor.com/components/autocomplete#usage) | — |
+| Pick several known values (filters, column states) | `MudSelect<T> MultiSelection="true"` | [Multiselect](https://mudblazor.com/components/select#multiselect) | `AgentProfileCard.razor` |
+| Avatars | `AgentAvatar.razor` (wraps `MudAvatar`) | — | `Components/Shared/AgentAvatar.razor` |
 | Presence dot on an avatar | `MudBadge Dot="true" Overlap="true"` + `MudTooltip` | [Usage](https://mudblazor.com/components/badge#usage) | — |
 | "AI reacting" | `MudChip` holding `MudProgressCircular Indeterminate="true" Size="Size.Small"` | [Circular Progress](https://mudblazor.com/components/progress#circular-progress) | — |
 | Dates | `MudDatePicker` (`Date` is `DateTime?`; convert to and from `DateOnly` at the component) | [Basic Usage](https://mudblazor.com/components/datepicker#basic-usage) | — |
 | Change log | `MudTimeline` (dense, one item per entry) inside a `MudExpansionPanel` | [Basic](https://mudblazor.com/components/timeline#basic) | `ProposalCard.razor` for expansion panels |
-| Description Edit / Preview | `MudToggleGroup` + `MudTextField Lines AutoGrow` | [Multiline](https://mudblazor.com/components/textfield#multiline) | `TeammateCard.razor:252-257` |
+| Description Edit / Preview | `MudToggleGroup` + `MudTextField Lines AutoGrow` | [Multiline](https://mudblazor.com/components/textfield#multiline) | `AgentProfileCard.razor:252-257` |
 | Search matches in titles | `MudHighlighter` | [Usage](https://mudblazor.com/components/highlighter#usage) | — |
 | Wake-up toast | `ISnackbar.Add(RenderFragment, …)` with a per-Task `key` | [RenderFragment messages](https://mudblazor.com/components/snackbar#renderfragment-messages), [Preventing duplication](https://mudblazor.com/components/snackbar#preventing-duplication) | `SkillsPanel.razor` |
-| Rejected files, conflicts, unsaved-edits bar, errors | `MudAlert` (**add `role` yourself**, traps.md L22-27) | [Simple alerts](https://mudblazor.com/components/alert#simple-alerts) | `Teammates.razor:32-48` |
+| Rejected files, conflicts, unsaved-edits bar, errors | `MudAlert` (**add `role` yourself**, traps.md L22-27) | [Simple alerts](https://mudblazor.com/components/alert#simple-alerts) | `Agents.razor:32-48` |
 | Row and column layout | `MudStack`, and MudBlazor spacing and gap utility classes (`pa-2`, `gap-2`) | [Stack](https://mudblazor.com/components/stack#basic-usage) | `Chat.razor` |
 
 **What stays custom, and why:**
 - **`TaskCard`** is a `<button>` rather than a `MudCard`, so it takes keyboard focus. That is the
-  `Teammates.razor:85-90` precedent.
+  `Agents.razor:85-90` precedent.
 - **The ghost buckets** are a composition of `MudDropZone`s, not a new control.
 - **The Board's horizontal column scroll**, the column's coloured left edge and the bucket styles
   need a few `app.css` rules (§13.10). Everything else uses component parameters or utility
@@ -1386,7 +1386,7 @@ release).
 
 ### 13.1 Navigation — `TaskViewNav.razor`
 
-- Place it in `MainLayout.razor` between the Teammates `MudNavMenu` (:20-22) and the settings menu
+- Place it in `MainLayout.razor` between the Agents `MudNavMenu` (:20-22) and the settings menu
   (:23), and render it only when `Tasks.Enabled`.
 - Copy `Components/Shared/RoomList.razor`: its own `@inject`s, and a `MudNavMenu` with a
   `@foreach` of `MudNavLink Href="@($"/tasks/{view.Id}")"`.
@@ -1412,7 +1412,9 @@ release).
 - **Layout:**
   - A header row with the counts, the **AI reacting** chip, Group by, List | Kanban and **+ New task**,
     and the View's ⋮ menu. There is no `h1` and no description: the View name is the breadcrumb's last
-    crumb, and `PageTitle` sets the document title.
+    crumb ("Tasks › {View name}"), and `PageTitle` sets the document title. The crumb and the Tab
+    show the View's display name, never its slug (`my-tasks`, `platform-board`): `TabReconciler.ReconcileViews`
+    retitles the `tasks:{id}` Tab, also when the View is renamed.
   - The toolbar (§13.3).
   - Rejected-file and orphan alerts (§13.12).
   - Then either `TaskListView` or `TaskBoard`.
@@ -1435,7 +1437,7 @@ separates the view controls from **+ New task**. Don't write flex CSS for it.
 | Filter | `MudMenu` showing the active filters as a `MudChipSet` of closable chips | Saved to the View as it is changed. Filters that are set also show as `TaskFilterChip`s with a clear button |
 | Group, Sort | `MudMenu` | Group by is a `TaskFilterChip` in the header row; saved to the View as it is changed |
 | Search | `MudTextField Immediate="true" DebounceInterval="200" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"` | `SearchField`. Never saved. Matches are highlighted with `MudHighlighter` in the List's title cells and on cards |
-| List / Board | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Board applies the default columns if there are none |
+| List / Kanban | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Kanban applies the default columns if there are none |
 | View ⋮ menu | `MudMenu` | **Rename** and **Fields…** open the dialogs of §13.5; **Delete view** (not for built-ins) asks first |
 | + New task | `MudButton Variant.Filled` | Opens `TaskDetail` in create mode, with the Team and Project defaulting from the View's filter when it names exactly one |
 
@@ -1484,6 +1486,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
   filtering belong to the Fields dialog and the toolbar, and two ways to change them would drift apart.
 - **Row styling.** `RowClassFunc` returns `task-overdue` for overdue rows that aren't terminal. The
   row also shows a warning `MudIcon`, because colour is never the only signal.
+- **Density and columns.** Rows are 36px high (32px when Dense) with 13px body text; header cells are 12px, weight 600, `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`) and the row menu 40px; Title takes the rest. The open Task's row is `task-row-selected` (accent 14% over the surface, 20% when hovered).
 - **Row click.** `RowClick` opens the detail panel (§13.6).
 
 > [!NOTE]
@@ -1522,7 +1525,7 @@ This is the first drag-and-drop in the app. Start from MudBlazor's own kanban,
                   ItemsSelector="@((item, zone) => this.ZoneOf(item) == zone)"
                   CanDrop="@((item, zone) => this.CanDrop(item, zone))"
                   ItemDropped="@this.OnDroppedAsync"
-                  ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                  ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                   ItemDraggingClass="task-card-dragging">
   <ChildContent> … one MudDropZone per (lane, column) … </ChildContent>
   <ItemRenderer> <TaskCard Task="@context" … /> </ItemRenderer>
@@ -1574,25 +1577,35 @@ dragging are saved immediately; that is by design (D-20).
 lists all eight states. Choosing one takes the same path as a drop, so Duplicate still asks for its
 target.
 
-**Columns.** Each column header shows its label, the count, and a `⋮` `MudMenu` with *Rename*,
-and *Hide*. Changes made
+**Columns.** Each column header shows an 8px dot in the colour of the column's first state, its label (13px,
+weight 600), the count (12px, `TextSecondary`) and a `⋮` `MudMenu` with *Rename*, and *Hide*. An empty column
+shows one centred 12px `TextSecondary` line worded for its state (*"Backlog is empty."*, *"Nothing to do yet."*,
+*"Nothing in progress."*, *"Nothing in review."*, *"Nothing done yet."*, or *"Nothing here yet."* for a
+column of several states). The line ignores the pointer and hides while a card is dragged. Changes made
 from the header menu are saved to the View immediately. When columns are hidden, a hidden-count
 chip on the Board reads *"4 tasks in hidden columns"*.
 
 **Cards — `TaskCard.razor`.** A card is a `<button type="button" class="task-card">`, not a
-MudCard, because keyboard focus matters (the precedent is `Teammates.razor:85-90`). It shows:
+MudCard, because keyboard focus matters (the precedent is `Agents.razor:85-90`). It shows:
 
-- The id, the title (through `MudHighlighter` while searching), and a priority
-  `MudChip Size="Size.Small" Color="…"` with an icon (§13.10 maps the colours).
-- The assignee, drawn with `Components/Shared/TeammateAvatar.razor` inside a
-  `MudBadge Dot="true" Overlap="true"`, whose colour shows presence: Awake is `Color.Success`,
-  Asleep `Color.Default`, Offline `Color.Error`. A `MudTooltip` says it in words.
+- A header row (`.task-card-header`) with the id (12px, `TextSecondary`) and the priority chip
+  (`StatusChip`: a tinted, text-variant `MudChip Size="Size.Small"` with a leading icon; §13.10 maps the
+  colours). Below it, the title (14px, weight 600, up to three lines, through `MudHighlighter` while
+  searching) and the tags as quiet tag chips. The card has 12px of padding, a 1px `Divider` border and the
+  card radius; cards sit 8px apart.
+- The assignee, a 24px avatar drawn with `Components/Shared/AgentAvatar.razor` inside a
+  `MudBadge Dot="true" Overlap="true"` that sits on the avatar's rim and shows presence as a glyph
+  (Awake an amber circle with a breathing pulse, Asleep and Offline a hollow grey ring; red is kept for
+  Degraded health), beside the name at 12px. A `MudTooltip` says it in words.
 - The View's extra fields.
-- A left border in the column's colour class (§13.10).
+- No left edge: the column already names the state, so the card has no border in the column's colour.
 - When the card's `LastWake` Room has a Turn running (§10.8), an **Awake** chip and the line
   *"active in Room {name}"*, which links to `/rooms/{id}` with a `MudLink`.
-- Due dates in the past on a Task that isn't terminal get the `task-overdue` class and a warning
-  icon. **Colour is never the only signal.**
+- Due dates in the past on a Task that isn't terminal get the `task-overdue` marker class and a 14px warning
+  icon before the date, inside the date's own span (`task-due-overdue`). The date is set at weight 600 in the
+  error colour mixed with body text (70% error, 30% body text; 5.79:1 Dark, 9.70:1 Light), so it is not plain
+  red text. An overdue card shows its date even when the View hides `due_date`.
+  **Colour is never the only signal.**
 
 Clicking a card opens the detail panel.
 
@@ -1627,7 +1640,7 @@ have the same fields and logic, and only the layout differs:
   the left, and the description editor plus Origin are on the right.
 
 `TaskDetailDialog` passes **only the `TaskId`**, or a `TaskDraft` for create and copy, because
-MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard.razor:12-24`).
+MudBlazor freezes a dialog's parameters once it opens (the trap at `AgentProfileCard.razor:12-24`).
 `TaskDetail` loads the Task itself and subscribes to `TaskEvents`.
 
 - **⤢ Expand** in the Panel closes the drawer and opens the dialog.
@@ -1641,22 +1654,36 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard
 - `TaskPatch pending`: the fields the Human has touched.
 - `TaskResult.Conflict? conflict`.
 
+**Layout.** The Panel form is four headed groups (`section` with an h3 `.group-heading`, `subtitle2`):
+Status and priority (Status, Duplicate of or Reason, Priority, the wake notice), People (Assignee, the
+"Woken in Room" link), Planning (Team, Project, Sprint, Parent, Blocked by, Tags) and Dates (Start, Due).
+Created, Updated and Closed are not a group: they are the footer meta (`.task-detail-footer-meta`, 12px
+`TextSecondary`) at the bottom of the form, after the Change log. Group headings are 14px, weight 600; the
+label column is 120px and 13px `TextSecondary`. Every field has a visible label, the Description included. The groups are a
+size container (`task-detail`): from 368px of container width (a 400px drawer less its padding) each
+property is two columns, label | value; narrower, the label sits above the value. The drawer (`ResizableEndDrawer`)
+has an `Eyebrow` parameter: a 12px `TextSecondary` line above the title with the id, then the Project or,
+with none, the Team ("PLAT-0013 · Platform"). The title is the Task's name only (16px, weight 600, up to three
+lines). A draft reads "New task" with no eyebrow. The edit, copy-id and menu icons sit in a right-aligned row
+just under the header, not in it. The Expanded dialog is titled "{id} · {title}". Tag and blocker chips are quiet
+(`.tag-chip`); Closed and Request chips are tinted.
+
 **Fields**, in the order of the mockup:
 
 | Field | Control |
 | --- | --- |
 | Title | `PLAT-0050:` followed by the title, which a pencil button turns into a `MudTextField` |
-| Assignee | `MudAutocomplete<AssigneeOption>` with `Strict="true"` and an `ItemTemplate` showing `TeammateAvatar` inside a presence `MudBadge` (as on cards), the Name, the Persona `title` as a small `MudChip`, and the presence in words. When the Task has a `LastWake`, a line underneath reads *"Woken in Room: {name}"* and links to the Room with a `MudLink` |
+| Assignee | `MudAutocomplete<AssigneeOption>` with `Strict="true"` and an `ItemTemplate` showing `AgentAvatar` inside a presence `MudBadge` (as on cards), the Name, the Persona `title` as a small `MudChip`, and the presence in words. When the Task has a `LastWake`, a line underneath reads *"Woken in Room: {name}"* and links to the Room with a `MudLink` |
 | Status | a `MudToggleGroup<TaskState> SelectionMode="SelectionMode.SingleSelection"` with five `MudToggleItem`s (Backlog, To Do, In Progress, Review, Done), plus a sixth **Won't do ▾** `MudMenu` offering Cancelled, Duplicate and Rejected. The menu's activator shows the chosen Won't do state, and is highlighted while one is selected. Choosing Duplicate reveals a required `duplicate_of` picker. Choosing Cancelled or Rejected reveals an optional Reason field |
 | Priority | `MudSelect` with a priority icon |
-| Team, Project | `MudSelect` for Team. For Project, a `MudAutocomplete<string>` with `CoerceValue="true"`, so a new name can be typed and creates the folder on save. The Panel combines them into one `Team / Project` control |
+| Team, Project | `MudSelect` for Team. For Project, a `MudAutocomplete<string>` with `CoerceValue="true"`, so a new name can be typed and creates the folder on save. Team and Project are two rows in both modes, each with its own label |
 | Parent | `MudAutocomplete<TaskItem>` with `Strict="true"` and `ToStringFunc` giving `"PLAT-0030 · title"` |
 | Blocked by | **`MudAutocomplete` selects one value only in 9.10** (there's no `MultiSelection`), so use the [Adding and removing chips](https://mudblazor.com/components/chipset#adding-and-removing-chips) pattern. A `MudChipSet<TaskId>` shows one closable chip per blocker, with its status (*PLAT-0047 ✓ Done*) and `OnClose` removing it. Next to it, a `MudAutocomplete<TaskItem>` adds a blocker and then clears itself. The read-only summary reads *"Blocked by 2 open tasks"* |
 | Start date, Due date | `MudDatePicker`. Its `Date` is **`DateTime?`**, so convert with `DateOnly.FromDateTime` and `ToDateTime(TimeOnly.MinValue)` in the binding. Don't change the model to `DateTime`. The due date gets a warning `Adornment` icon and the `task-overdue` class when it's past and the Task isn't terminal |
 | Tags | the same chip-set pattern as Blocked by: closable chips, plus a `MudTextField` that adds a tag on Enter |
-| Description | V1 has an **Edit / Preview** `MudToggleGroup`. Edit is a `MudTextField Lines="10" AutoGrow` (the `TeammateCard.razor:252-257` pattern). Preview is `@((MarkupString)MarkdownRenderer.ToHtml(text))` (the `MessageList.razor:15` pattern) |
+| Description | V1 has an **Edit / Preview** `MudToggleGroup`. Edit is a `MudTextField Lines="10" AutoGrow` (the `AgentProfileCard.razor:252-257` pattern). Preview is `@((MarkupString)MarkdownRenderer.ToHtml(text))` (the `MessageList.razor:15` pattern) |
 | Origin | a link to `/rooms/{id}`, or *(Room no longer exists)* |
-| Created, Updated, Closed | read-only, derived |
+| Created, Updated, Closed | read-only, derived; shown as the footer meta line at the bottom of the form, after the Change log |
 | Change log | a `MudExpansionPanels` holding one `MudExpansionPanel` titled **Change log (N)**, collapsed. Inside it is a `MudTimeline TimelinePosition="TimelinePosition.Start"` with one small `MudTimelineItem` per entry, newest first. Each item shows the date and time in `ItemOpposite`, and the actor and summary in `ItemContent` (both `RenderFragment`s, confirmed by reflection) |
 
 **The wake notice and the Save button.** On every change to `pending`, call
@@ -1667,7 +1694,7 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard
 | Assignee Awake or Asleep | *"Nova is asleep and will be notified."* (or *awake*) | **Save & Notify Nova** |
 | Assignee Offline | *"Nova is offline and won't see this until they're back."* | **Save** |
 | `NoAssignee`, `AssigneeIsHuman` or `AssigneeIsActor` | none | **Save** |
-| `BudgetPaused` | *"Wake-ups for this task are paused after 10 changes by Teammates."* with **Allow 10 more** | **Save** |
+| `BudgetPaused` | *"Wake-ups for this task are paused after 10 changes by Agents."* with **Allow 10 more** | **Save** |
 
 **The unsaved-edits bar.** When `pending` isn't empty, a
 `MudAlert Severity="Severity.Info" Dense="true" role="status"` at the top of the Panel reads
@@ -1691,7 +1718,7 @@ through `ShowMessageBoxAsync("Discard changes?", …)`.
   doesn't exist yet.
 
 **Save errors.** Catch `IOException` into a `MudAlert Severity.Error role="alert"`, keeping
-`pending`, following `TeammateCard.SaveAsync` (:1367-1397). `Refused` lists its problems in the
+`pending`, following `AgentProfileCard.SaveAsync` (:1367-1397). `Refused` lists its problems in the
 same alert.
 
 ### 13.7 Conflict
@@ -1748,13 +1775,16 @@ window.huddleStorage = {
 **Use component parameters first, then MudBlazor utility classes. Write CSS last.**
 
 Chips, badges, icons and alerts take a `Color`, or a `Severity` for alerts, so they need **no
-CSS**. One static helper, `TaskColors`, holds the mapping:
+CSS**. A State or Priority chip is a *tinted* chip (`StatusChip`: the colour at 14% over the surface, the
+text and icon the colour mixed toward the text colour so it clears 4.5:1), never a solid fill under text, and
+it always carries an icon (`TaskColors.Icon(TaskState)` for a State). One static helper, `TaskColors`,
+holds the mapping:
 
 | | `Color` |
 | --- | --- |
 | State | Backlog `Default`, To Do `Info`, In Progress `Warning`, Review `Secondary`, Done `Success`, Cancelled, Duplicate and Rejected `Error` |
 | Priority | Low `Default`, Medium `Info`, High `Warning`, Urgent `Error`. **Always paired with an icon and the word** |
-| Presence badge | Awake `Success`, Asleep `Default`, Offline `Error`, always with a tooltip in words |
+| Presence badge | Awake `Warning`, Asleep and Offline `Default` (a hollow grey ring), always with a tooltip in words |
 
 Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-flex`,
 `overflow-x-auto`) instead of new rules.
@@ -1764,10 +1794,9 @@ Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-f
 | Element | Style |
 | --- | --- |
 | Board scroller and fixed-width columns | `display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr)` on the lane row |
-| Column left edge | one class per state family, with `border-inline-start: 3px solid var(--mud-palette-info)` (and so on, following the `Color` mapping above) |
 | Ghost bucket | a dashed border in `--mud-palette-lines-default`. When it can take the drop (`task-zone-can`), a solid `--mud-palette-primary` border on a `--mud-palette-action-default-hover` background |
 | Dragged card | `task-card-dragging`: a `--mud-palette-primary` border |
-| Overdue row or date | `task-overdue`: `--mud-palette-warning-text`, plus the icon in markup |
+| Overdue date | `task-due-overdue`: weight 600 only, beside the warning icon in markup. `task-overdue` on the row or card is a marker with no style |
 | Card focus ring | `--mud-palette-text-primary` (the rules.md L70 habit) |
 
 - Verify each `--mud-palette-*` name exists in MudBlazor 9.10's generated variables. The
@@ -1777,7 +1806,7 @@ Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-f
 
 ### 13.11 The live-update pattern to copy
 
-This pattern is used by `RoomList`, `Teammates` and `Chat`:
+This pattern is used by `RoomList`, `Agents` and `Chat`:
 
 ```csharp
 @implements IDisposable
@@ -1798,8 +1827,8 @@ Each `catch` block needs its comment, because an empty catch fails the build.
 
 | Situation | Rendering |
 | --- | --- |
-| Rejected task files | `MudAlert Severity.Warning` titled *"Tasks that didn't load"*, listing path and reason, which is the `Teammates.razor:32-48` precedent. **Add `role="status"`**, because the precedent omits it (traps.md L22-27) |
-| Orphan Team | A warning chip next to the Team's group label or filter option: *"No teammate is in Legal"* |
+| Rejected task files | `MudAlert Severity.Warning` titled *"Tasks that didn't load"*, listing path and reason, which is the `Agents.razor:32-48` precedent. **Add `role="status"`**, because the precedent omits it (traps.md L22-27) |
+| Orphan Team | A warning chip next to the Team's group label or filter option: *"No agent is in Legal"* |
 | `ViewStore.LoadError` | `MudAlert Severity.Error role="alert"`: *"views.json could not be read (line 12, column 5): {message}. Views are read-only until the file is fixed; nothing has been lost."* |
 | Invalid View | In the nav, the View is shown with a warning icon. Opening it shows its reason and **Edit View** |
 | No Tasks at all | *"No tasks yet."* with **+ New task** |
@@ -2129,10 +2158,10 @@ TASKS-10 to TASKS-12 are paid 💰.
 | D-22 | **The words are Close/Reopen, "Change log" and "Make a copy"** | Archive, Activity, Duplicate | *Owner* |
 | D-23 | **`BitMarkdownEditor` moves to V2** | Adopting it in V1 | *Owner*. V1 uses the same text box and preview as the Persona editor |
 | D-24 | **Tools are offered to every Persona** | Granting them through a Skill | They cost nothing. Waking has its own guards |
-| D-25 | **A rename rewrites names without a log entry or a wake-up** | Logging it | ADR-0011: a rename moves the Teammate, not its history |
+| D-25 | **A rename rewrites names without a log entry or a wake-up** | Logging it | ADR-0011: a rename moves the Agent, not its history |
 | D-26 | **The List is a `MudDataGrid`**, with its column menu and filters turned off | A hand-built grouped `MudSimpleTable`, or `MudTable` | In 9.10 the grid is read-only by default, sorts on several columns by default, groups on several levels (`GroupByOrder`) and hides columns. That covers everything the View needs. Header sorting that is temporary comes for free. mudblazor.md names it the default for tabular work |
 | D-27 | **MudBlazor components before custom CSS**: `Color` on chips, badges and alerts; `MudToolBar`, `MudStack` and utility classes for layout; `MudTimeline` for the Change log; `MudProgressCircular` for "AI reacting" | Custom classes and animations | Fewer theme-test failures and less `app.css`. What remains custom is listed in §13.0 |
-| D-28 | **`MudExitPrompt`, plus a message box, guard unsaved edits** | No guard, which is `TeammateCard`'s behaviour | A panel collects several edits, and losing them to a stray click in the nav is the likeliest way to lose work |
+| D-28 | **`MudExitPrompt`, plus a message box, guard unsaved edits** | No guard, which is `AgentProfileCard`'s behaviour | A panel collects several edits, and losing them to a stray click in the nav is the likeliest way to lose work |
 | D-29 | **Deleting a View is confirmed through `ShowMessageBoxAsync`** | An inline Confirm/Cancel swap | mudblazor.md's choice for destructive confirmations, and the `SkillsPanel` precedent. The drawer isn't a dialog, so nothing is nested |
 | D-30 | **Blocked by and Tags are a closable `MudChipSet` plus a single-value `MudAutocomplete`** | A multi-select autocomplete | 9.10's `MudAutocomplete` has no `MultiSelection` (checked in the XML docs) |
 | D-31 | **A Task is referenced in chat by its plain id**, which is what the copy button copies | Copying a URL, a markdown link, or the id with its title | The id never changes and is short. Models already use it with `get_task`. A title copied along with it goes out of date. *Owner* |
@@ -2182,7 +2211,7 @@ WS5 lands `task.wake.message` first.
 | TK-I4 | 2 | Impl | `TaskIdAllocator` | `PersonaModelStore.cs:22-49` | T4 green |
 | TK-T5 | 2 | Functional | `TaskStoreTests`: the layout mapping table; root and too-deep files rejected; duplicate ids reject both; `_x` folders ignored; orphan flag follows `PersonaStore`; atomic write leaves no `.tmp`; move and close paths; startup reconciliation appends one entry and raises nothing; the watcher sees an outside edit exactly once; the app's own write raises no `OutsideEditDetected`; throws when `Tasks.Dir` is inside `TeamsDir` | §8 | Fails |
 | TK-I5 | 2 | Impl | `TaskStore`, `RejectedTaskFile`, `TeamFolder`, `TasksOptions` | `PersonaStore.cs`, traps L115/L120/L128 | T5 green |
-| TK-T6 | 3 | Functional | `TaskServiceTests`: create writes the file and a `created` entry; each §9.2 rule, all reported at once; Alias resolved; `Unchanged` doesn't write; merge vs `Conflict` (§9.3) including an evicted base; close and reopen move with log entries; outside edit logs as the Human with the prefix and keeps the Human's formatting; `RenameTeammate` rewrites without an entry or event; `TaskChanged` raised once, after the write | §9 | Fails |
+| TK-T6 | 3 | Functional | `TaskServiceTests`: create writes the file and a `created` entry; each §9.2 rule, all reported at once; Alias resolved; `Unchanged` doesn't write; merge vs `Conflict` (§9.3) including an evicted base; close and reopen move with log entries; outside edit logs as the Human with the prefix and keeps the Human's formatting; `RenameAgent` rewrites without an entry or event; `TaskChanged` raised once, after the write | §9 | Fails |
 | TK-I6 | 3 | Impl | `TaskService`, `TaskPatch`, `TaskDraft`, `TaskResult`, `Optional<T>`, `TaskEvents`, DI registration of **all** Tasks singletons | §9, §14 | T6 green |
 | TK-T7 | 4 | Functional | `SqliteTeamDirectoryTests.FindRoomWithExactMemberSet_*`: exact match, superset not matched, Archived skipped, oldest wins | §10.4 | Fails |
 | TK-I7 | 4 | Impl | `ITeamDirectory.FindRoomWithExactMemberSetAsync` | `SqliteTeamDirectory.cs:375-388` | T7 green |
@@ -2194,7 +2223,7 @@ WS5 lands `task.wake.message` first.
 | TK-I10 | 5 | Impl | Prompts, regenerated `prompts.default.json`, `getHelp.tasks` wiring, and the `systemPrompt.tools` clause | `PromptCatalog.cs:99-118, 506-660` | T10 green |
 | TK-T11 | 6 | Unit | `ViewValidatorTests`, `TaskQueryTests` (OR/AND, `@me`, `@unassigned`, No project, search, multi-key sort with nulls last, nested grouping labels and counts), `BoardLayoutTests` (lanes, zone id round trip, hidden count) | §12.4-12.6 | Fails |
 | TK-I11 | 6 | Impl | `TaskView` records, `ViewValidator`, `TaskQuery`, `BoardLayout` | §12 | T11 green |
-| TK-T12 | 6 | Functional | `ViewStoreTests`: an absent file gives the built-ins and no file is created; a malformed file sets `LoadError`, refuses `Save` and leaves the file byte-identical; an invalid entry is kept and flagged; atomic write; the watcher reloads; `RenameTeammate`; built-in delete refused | §12.3 | Fails |
+| TK-T12 | 6 | Functional | `ViewStoreTests`: an absent file gives the built-ins and no file is created; a malformed file sets `LoadError`, refuses `Save` and leaves the file byte-identical; an invalid entry is kept and flagged; atomic write; the watcher reloads; `RenameAgent`; built-in delete refused | §12.3 | Fails |
 | TK-I12 | 6 | Impl | `ViewStore`, plus the two `PersonaRenameCascade` calls (§9.6) | `AvatarStore.cs`, `PersonaRenameCascade.cs:112-155` | T12 green |
 | TK-T13 | 7 | bUnit | `TaskViewNavTests` lists Views and New View; `TasksPageTests` renders All Tasks in prerender (HTTP GET via `TeamWebApplicationFactory`); the `MudDataGrid` List hides the columns not in `Fields`, groups on two levels in `view.Grouping` order with `GroupLabel` labels, and a header click doesn't change the saved View; rejected and `LoadError` alerts have roles | §13.0-13.3a, §13.12 | Fails |
 | TK-I13 | 7 | Impl | `TaskViewNav` (`MudNavGroup`), `Tasks.razor`, `TaskToolbar` (`MudToolBar`), `TaskListView` (`MudDataGrid`), `TaskColors`, the `app.js` storage, the minimal `app.css` block, and `MainLayout` wiring. Settle the group-order note in §13.3a and record the answer in this spec | §13.0-13.3a | T13 green, `ThemeSourceTests` green |
@@ -2224,6 +2253,6 @@ WS5 lands `task.wake.message` first.
 | Waking at startup for offline edits | Would need a queue with a Human prompt, to avoid a flood |
 | Queued delivery to an offline assignee | Needs a change to the ACP side (ADR-0004) |
 | Agents using Views | A `view` argument on `list_tasks` |
-| Attachments | A sibling `<ID>/` folder that moves with the Task |
+| Attachments | Designed in [TaskAttachments](Huddle.TaskAttachments-Specifications.md): link a Library file, or upload to `Uploads/Tasks/<ID>/`. The sibling `<ID>/` folder first proposed here was rejected there (D-1): `_` folders are hidden from the Library |
 | The `#` picker in the description editor | The same `teamComposer` logic attached to `MudTextField`'s inner textarea |
 | A preview card on hovering a Task link | Needs a Blazor-rendered Message body, or a small JavaScript-delegated click and hover handler |

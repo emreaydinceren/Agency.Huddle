@@ -3,7 +3,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
@@ -18,11 +18,8 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, Persona
     /// <inheritdoc />
     public string Name => "list_teams";
 
-    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.listTeams.description", NoValues);
+    public string Description => prompts.Render("tool.listTeams.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()
@@ -36,7 +33,7 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, Persona
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -44,7 +41,7 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, Persona
 
         bool isManager = teams.Teams.Any(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase));
         bool isChiefOfStaff = personas.Entries.Any(entry =>
-            string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal)
+            string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal)
             && string.Equals(entry.Name, actor.Name, StringComparison.OrdinalIgnoreCase));
         if (!isManager && !isChiefOfStaff)
         {

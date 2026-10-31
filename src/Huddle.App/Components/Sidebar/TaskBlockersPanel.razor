@@ -1,0 +1,73 @@
+@*
+    The Right sidebar's Blocked by panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
+    one row per Task in the saved Task's Blocked by, with its live state. The count is the blockers that are still open.
+    It reads the stored Task, so a Blocked by edit in the form shows here only once it is saved.
+*@
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents TaskEvents
+
+@foreach (TaskItem blocker in this.rows)
+{
+    <TaskSidebarRow Task="blocker" />
+}
+
+@code {
+    private IReadOnlyList<TaskItem> rows = [];
+
+    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab the panel's Subject lives in.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, which receives the open blockers' count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Resolve();
+
+    /// <summary>Stops listening.</summary>
+    public void Dispose()
+    {
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnTasksReloaded;
+    }
+
+    /// <summary>Reads the saved Task's blockers from the store and reports how many are open.</summary>
+    private void Resolve()
+    {
+        if (this.Subject is not TaskSubject subject || this.Store.Get(subject.Id) is not { } task)
+        {
+            this.rows = [];
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        this.rows = [.. task.BlockedBy.Select(this.Store.Get).OfType<TaskItem>()];
+        this.Panel?.SetCount(this.rows.Count(static blocker => !blocker.Status.IsTerminal()));
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.Redraw();
+
+    private void OnTasksReloaded() => this.Redraw();
+
+    private void Redraw() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.Resolve();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

@@ -6,7 +6,7 @@ against the pinned package, with the facts already checked. Choosing components 
 spec and the plan — see [MudBlazorDesign.md](MudBlazorDesign.md). For bUnit technique, see
 [BlazorTesting.md](BlazorTesting.md).
 
-Applies to **MudBlazor 9.10.0**, the version pinned in
+Applies to **MudBlazor 9.11.0**, the version pinned in
 [`Directory.Packages.props`](../Directory.Packages.props).
 
 ## Components Huddle already uses
@@ -20,14 +20,14 @@ styles and tests the component, which the MudBlazor example does not.
 | `MudNavMenu`, `MudNavLink`, `MudMenu` | [`RoomList.razor`](../src/Huddle.App/Components/Shared/RoomList.razor) |
 | `MudTextField`, `MudButton`, `MudIconButton`, `MudAlert`, `MudStack` | [`Chat.razor`](../src/Huddle.App/Components/Pages/Chat.razor) |
 | `MudTabs`, `MudTabPanel` | [`Settings.razor`](../src/Huddle.App/Components/Pages/Settings.razor) |
-| `MudSelect`, `MudRadioGroup`, `MudColorPicker`, `MudFileUpload` | [`TeammateCard.razor`](../src/Huddle.App/Components/Shared/TeammateCard.razor) |
+| `MudSelect`, `MudRadioGroup`, `MudColorPicker`, `MudFileUpload` | [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor) |
 | `MudList`, `MudPaper` | [`Appearance.razor`](../src/Huddle.App/Components/Settings/Appearance.razor) |
 | `MudDialog` opened through `IDialogService` | [`ArchivedChatsDialog.razor`](../src/Huddle.App/Components/Shared/ArchivedChatsDialog.razor), opened from [`ArchivedChats.razor`](../src/Huddle.App/Components/Shared/ArchivedChats.razor) |
 | Confirm through `ShowMessageBoxAsync`, report through `ISnackbar` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudExpansionPanels`, `MudTable` | [`ProposalCard.razor`](../src/Huddle.App/Components/Shared/ProposalCard.razor) |
 | `MudSimpleTable`, `MudChip` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudCollapse`, `MudCheckBox` | [`NewChat.razor`](../src/Huddle.App/Components/Shared/NewChat.razor) |
-| `MudAvatar` | [`TeammateAvatar.razor`](../src/Huddle.App/Components/Shared/TeammateAvatar.razor) |
+| `MudAvatar` | [`AgentAvatar.razor`](../src/Huddle.App/Components/Shared/AgentAvatar.razor) |
 | `MudDataGrid` grouped, with hidden columns | [`TaskListView.razor`](../src/Huddle.App/Components/Tasks/TaskListView.razor) |
 | `MudDropContainer`, `MudDropZone` | [`TaskBoard.razor`](../src/Huddle.App/Components/Tasks/TaskBoard.razor) |
 | `MudToggleGroup`, `MudTimeline`, `MudExitPrompt` | [`TaskDetail.razor`](../src/Huddle.App/Components/Tasks/TaskDetail.razor) |
@@ -49,7 +49,7 @@ MudBlazor example will lead you to break:
   Tests fail the build otherwise. Pass `Color="Color.Primary"` rather than a hex.
   A Theme is a `MudTheme` — see [ADR-0010](../docs/adr/0010-a-theme-is-a-mudblazor-theme.md).
 - **`Disabled`, not `ReadOnly`, on an input that must look inert.** MudBlazor
-  9.10.0 styles only the disabled state.
+  9.11.0 styles only the disabled state.
 - **A `string` parameter needs a leading `@`.** `Label="this.name"` passes the
   literal text; the compiler cannot catch it.
 - **No `MaxLength` on a `MudTextField` whose limit is counted in characters
@@ -65,7 +65,7 @@ a MudBlazor example won't warn you about:
 - **An open dialog's parameters are frozen.** MudBlazor ignores every
   `SetParametersAsync` after `IDialogService.ShowAsync` opens it. Pass an id or
   a snapshot, and let the dialog load and subscribe for itself. The reasoning is
-  in the header comment of [`TeammateCard.razor`](../src/Huddle.App/Components/Shared/TeammateCard.razor).
+  in the header comment of [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor).
 - **Scoped CSS can't reach inside a MudBlazor component.** `::deep` only
   matches under an HTML element written in your own markup, and a `MudDrawer` or
   `MudLayout` is a component, not one. Such rules go in `app.css`; see the
@@ -75,7 +75,7 @@ a MudBlazor example won't warn you about:
   through `MudBunitContext.RenderWithPopovers` and drive dialogs through the
   real `IDialogService` ([testing.md](../docs/engineering/testing.md)).
 
-## Checking an API against 9.10.0
+## Checking an API against the pinned package
 
 mudblazor.com shows the latest release, so a parameter, overload or default can
 differ from the pinned package. Two local checks settle it, with no build.
@@ -84,7 +84,7 @@ differ from the pinned package. Two local checks settle it, with no build.
 docs that ship in the package:
 
 ```powershell
-$xml = "$env:USERPROFILE\.nuget\packages\mudblazor\9.10.0\lib\net10.0\MudBlazor.xml"
+$xml = "$env:USERPROFILE\.nuget\packages\mudblazor\9.11.0\lib\net10.0\MudBlazor.xml"
 Select-String -Path $xml -Pattern 'name="P:MudBlazor\.MudDataGrid`1\.(\w+)"' |
     ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique
 ```
@@ -99,7 +99,7 @@ reflection, and resolve its dependencies from the ASP.NET Core shared framework:
 ```powershell
 $fw  = Get-ChildItem "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App" -Directory |
        Sort-Object Name -Descending | Select-Object -First 1
-$dll = "$env:USERPROFILE\.nuget\packages\mudblazor\9.10.0\lib\net10.0\MudBlazor.dll"
+$dll = "$env:USERPROFILE\.nuget\packages\mudblazor\9.11.0\lib\net10.0\MudBlazor.dll"
 $dirs = @($fw.FullName, (Split-Path $dll))
 [AppDomain]::CurrentDomain.add_AssemblyResolve({ param($s, $e)
     $n = (New-Object Reflection.AssemblyName($e.Name)).Name
@@ -119,6 +119,16 @@ in markup; subscribe to it in code (see the table below).
 Each of these was confirmed against the 9.10.0 package on 2026-09-24, while
 specifying the Tasks feature. They are the ones most likely to differ from the
 website, or from what a MudBlazor example suggests.
+
+**Rechecked for 9.11.0 on 2026-10-17.** Nothing in 9.11.0 contradicts a fact in this
+table, or one the specs and docs mark "checked against 9.10.0". The check had three
+parts: the release notes list no breaking change, the full test suite passes
+unchanged, and the API docs were diffed. Between the two packages' XML docs, 25 members
+were added and 6 removed. The removed ones are internal
+constructors and render overrides, and none is named here. `MudDrawer`, `MudGlobal`,
+`MudHotkey` and `JsKeyModifier` are unchanged. `MudBlazor.min.css` gained one rule (the
+required asterisk in an outlined input's notch), so the `Disabled`/`ReadOnly` styling is
+unchanged too.
 
 | Component | Fact |
 | --- | --- |

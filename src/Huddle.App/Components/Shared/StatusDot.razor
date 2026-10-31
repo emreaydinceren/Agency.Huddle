@@ -1,19 +1,27 @@
 @* <summary>
-     The small coloured dot every Teammate surface uses to show a Persona's <see cref="PersonaState"/>
-     at a glance - the tile in <c>Teammates.razor</c>, the header of <c>TeammateCard.razor</c>, and
-     the candidate rows in <c>NewChat.razor</c> and <c>InviteTeammate.razor</c>. The mapping from
+     The small coloured dot every Agent surface uses to show a Persona's <see cref="PersonaState"/>
+     at a glance - the tile in <c>Agents.razor</c>, the header of <c>AgentProfileCard.razor</c>, and
+     the candidate rows in <c>NewChat.razor</c> and <c>InviteAgent.razor</c>. The mapping from
      state to CSS class used to be copy-pasted four times; this component is now the single place it
      lives, per rules.md's argument that one pure function should own the status ordering and one
      component should own its rendering.
    </summary> *@
 @using Agency.Huddle.App.Acp
 
-<span class="agent-dot @StatusDot.StatusClass(this.State)" role="img" aria-label="@StatusDot.Label(this.State)" title="@StatusDot.Label(this.State)"></span>
+<PresenceBadge Cue="PresenceCue.From(this.State)" OnAvatar="this.OnAvatar" Detail="@this.Detail" />
 
 @code {
     /// <summary>The Persona state this dot renders.</summary>
     [Parameter]
     public PersonaState State { get; set; }
+
+    /// <summary>Whether the dot sits on an avatar's rim; see <see cref="PresenceBadge.OnAvatar"/>.</summary>
+    [Parameter]
+    public bool OnAvatar { get; set; }
+
+    /// <summary>Extra tooltip words after the state name, such as the Reason; see <see cref="PresenceBadge.Detail"/>.</summary>
+    [Parameter]
+    public string? Detail { get; set; }
 
     /// <summary>The CSS class - and this dot's own tooltip text - for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
     /// <param name="state">The state to classify.</param>

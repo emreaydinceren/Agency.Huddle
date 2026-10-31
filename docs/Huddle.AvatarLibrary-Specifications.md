@@ -3,7 +3,7 @@
 **Date:** 2026-10-08 · **Status:** Built 2026-10-08 · **Decision record:** ADR-0044 (Accepted) ·
 **Builds on:**
 [ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) (the Avatar, its store and
-its image rules) · **Vocabulary:** [language.md](engineering/language.md) (**Avatar**, **Teammate**,
+its image rules) · **Vocabulary:** [language.md](engineering/language.md) (**Avatar**, **Agent**,
 **Human**)
 
 This is the design for choosing an Avatar image from a ready-made library of 324 illustrated
@@ -26,7 +26,7 @@ Appendix A for the ordered, test-first task list.
 
 ## 1. Goal
 
-A Human giving a Teammate (or themselves) a face should not need to find, crop and upload an image.
+A Human giving an Agent (or themselves) a face should not need to find, crop and upload an image.
 They open a dialog, narrow 324 pictures to a handful, and click one.
 
 1. **A library, not a gallery of captions.** The dialog shows pictures and chips. No thumbnail
@@ -34,7 +34,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 2. **Four ways to narrow, all combining.** A skin tone switch, a text box, profession chips and tag
    chips. Each one can only shrink the result (§6.4).
 3. **A pick is a copy.** The chosen file is read and handed to the same code path an upload uses.
-   The library can be moved or deleted afterwards and every Teammate keeps its face.
+   The library can be moved or deleted afterwards and every Agent keeps its face.
 4. **Nothing stays in memory.** The library's index is read when the dialog opens and is released
    when it closes (§6.2, R-1). Nothing caches it between openings.
 5. **Ships with the app, and replaceable.** The library is part of the repository and is the default, so
@@ -46,7 +46,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 
 | # | Situation | What happens |
 | --- | --- | --- |
-| L1 | The Human clicks a Teammate's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of 324 pictures and the filters |
+| L1 | The Human clicks an Agent's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of 324 pictures and the filters |
 | L2 | They press **Tan** | Only avatars whose `skin_tone` is `tan` or `brown` remain |
 | L3 | They type `headset` | Only avatars with a profession or tag word starting `headset` remain |
 | L4 | They press the **Butler** profession chip | The chip moves to the far left and shows an X. Only butlers remain |
@@ -54,7 +54,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 | L6 | They press the tags `glasses` and `bow tie` | Only avatars with **both** tags remain |
 | L7 | They press the X on `Butler` | The chip returns to its normal place; the grid widens again |
 | L8 | They press **Clear all** | Every filter resets to All, empty text, no chips |
-| L9 | They click a picture | The picker closes. The **Avatar** window previews the picture and shows **New image selected (not yet saved)**, exactly as after an upload; **Apply** puts it on the card, and the card's **Save** writes it (from a viewed Teammate the window's own **Save** does) |
+| L9 | They click a picture | The picker closes. The **Avatar** window previews the picture and shows **New image selected (not yet saved)**, exactly as after an upload; **Apply** puts it on the card, and the card's **Save** writes it (from a viewed Agent the window's own **Save** does) |
 | L10 | They press **Cancel** in the window, or on the card after **Apply** | Nothing is written. The copy happens at Save, as for an upload |
 | L11 | The Human opens **Settings → Appearance** and picks one for themselves | The same dialog; the image is written at once, as an upload is on that page |
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
@@ -83,7 +83,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 Team:AvatarLibrary:Dir ──► folder ├─ master.json            read when the dialog opens, then dropped
                                   └─ <name>.png × 324       served as-is, never held in memory
 
- AvatarEditorDialog (from TeammateCard) / Appearance.razor
+ AvatarEditorDialog (from AgentProfileCard) / Appearance.razor
         │  "Choose from library"   (only if AvatarLibraryLocator.IsConfigured)
         ▼
  AvatarLibraryDialog.razor   (MudDialog, modal; owns the catalogue as a field)
@@ -186,7 +186,7 @@ The requirement: the contents of `master.json`, and any structure built from it,
 ### 6.3 Serving thumbnails
 
 A second `UseStaticFiles` mount at `/avatar-library` with a `PhysicalFileProvider` rooted at
-`Dir`, built like the `/teammate-avatars` mount in `Program.cs`:
+`Dir`, built like the `/agent-avatars` mount in `Program.cs`:
 
 - The same enumerated content types (`.png`, `.jpg`, `.webp`), `ServeUnknownFileTypes = false`.
   `master.json` and any `.svg` therefore return 404.
@@ -254,7 +254,7 @@ all**; then the grid.
   **raw** `skin_tone` (so `fair woman Podcaster`, not `Light woman Podcaster`). No `title`, no
   caption, no tooltip.
 - Result is `DialogResult.Ok(fileName)`; cancelling returns `DialogResult.Cancel()`.
-- **Nested dialog.** From `TeammateCard`, which is itself a `MudDialog`, this opens a second dialog
+- **Nested dialog.** From `AgentProfileCard`, which is itself a `MudDialog`, this opens a second dialog
   above it. Confirm the stack's focus and Escape behaviour in task 6 before relying on it. From
   `Appearance.razor`, a page, it is a single dialog.
 
@@ -269,7 +269,7 @@ all**; then the grid.
 3. Anything else returns `null`, and the host shows **That image could not be read** in the same
    error line an upload uses.
 
-`TeammateCard` feeds the result into `avatarPendingBytes` and `avatarPendingExtension` — exactly the
+`AgentProfileCard` feeds the result into `avatarPendingBytes` and `avatarPendingExtension` — exactly the
 state `OnAvatarFileChangedAsync` sets — so the existing pending-image notice, **Save**, `WriteImage` (which makes
 the opaque generated id), replacement cleanup and Cancel behave as for an upload. `Appearance.razor`
 does the same and writes at once, as it does for an upload. **`AvatarStore`, `Avatar` and
@@ -295,7 +295,7 @@ Legend for every mock below: `(Chip)` is an unselected chip; `[Chip x]` is a sel
 has floated to the left and carries an X; `(o)` is a thumbnail, a 72 px circular picture with no
 text; `{o}` is the thumbnail under the pointer or keyboard focus, drawn with a visible ring.
 
-**M1 — Where it starts.** The **Avatar** window that the Teammate card's avatar opens, with the new button beside the
+**M1 — Where it starts.** The **Avatar** window that the Agent card's avatar opens, with the new button beside the
 upload button. It appears only in the **An image** choice, and only when a library is configured
 (L13). Under **Initials of the name** and **A short label** the window shows the **Background** palette, a grid of swatches with no text field and no button to clear the colour; it is not offered under **An image**, because the image covers it.
 
@@ -421,7 +421,7 @@ field of the catalogue or collection types. `NoStaticCatalogueField` — a sourc
 under `Avatars/` declares a `static` field of the catalogue type. `Reopen_ReadsFreshFile` — edit
 `master.json` between two openings and see the change.
 
-**`AvatarLibraryMountTests`** (the `/teammate-avatars` tests as a model)
+**`AvatarLibraryMountTests`** (the `/agent-avatars` tests as a model)
 `Mount_ServesPng`, `Mount_MasterJson_Returns404_WhileFileExists`,
 `Mount_Svg_Returns404_WhileFileExists`, `Mount_DefaultsToTheBundledLibrary_WhenDirUnset`,
 `Mount_BundledMasterJson_Returns404`, `Mount_NotAdded_WhenDirMissing`.
@@ -442,7 +442,7 @@ under `Avatars/` declares a `static` field of the catalogue type. `Reopen_ReadsF
 `SelectedState_IsNotColourAlone` (the X, the bracket and `aria-pressed` are all present),
 `Chip_Press_NeverMovesAnotherChip`, `Pick_NeedsNoConfirmButton`, `NoMatch_KeepsClearAll`.
 
-**`TeammateCardTests` / `AppearanceTests`** (extended)
+**`AgentProfileCardTests` / `AppearanceTests`** (extended)
 `LibraryButton_Hidden_WhenNotConfigured`, `LibraryPick_SetsPendingBytes_AsUploadDoes`,
 `LibraryPick_Cancel_WritesNothing`, `LibraryPick_Unreadable_ShowsAvatarError`,
 `Appearance_LibraryPick_WritesImmediately`.
@@ -469,7 +469,7 @@ cap of 40 once seen with real data.
 
 | # | Decision | The alternative it beat |
 | --- | --- | --- |
-| D-1 | **A pick copies the file into the Avatar store.** | Putting a library file name in `avatars.json`. That needs a second image namespace in `TeammateAvatar`, and a moved library would blank every Teammate |
+| D-1 | **A pick copies the file into the Avatar store.** | Putting a library file name in `avatars.json`. That needs a second image namespace in `AgentAvatar`, and a moved library would blank every Agent |
 | D-2 | **A second static mount for thumbnails.** | A `data:` URI per thumbnail (ADR-0019's reasoning: payload, no caching), or a custom endpoint |
 | D-3 | **A modal `MudDialog`.** | A drawer or sliding panel (rejected by the product owner); an inline expander inside the card |
 | D-4 | **No visible text on pictures; the accessible name is `aria-label` only.** | Captions or tooltips; `title`, which is a tooltip |
@@ -495,7 +495,7 @@ cap of 40 once seen with real data.
    stack first. `AvatarLibraryDialogTests`.
 7. **Memory.** `AvatarLibraryMemoryTests`. Run before wiring, so a retaining reference is found while
    the dialog is the only consumer.
-8. **Wire in.** The button and pick handling in `TeammateCard` and `Appearance.razor`.
+8. **Wire in.** The button and pick handling in `AgentProfileCard` and `Appearance.razor`.
 9. **Docs.** §8, including the Index row. Run `agents/scripts/Check-All.ps1`.
 10. **Verify.** `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --`, then the manual test
     with the real library of 324.

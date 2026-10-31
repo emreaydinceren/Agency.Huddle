@@ -178,6 +178,15 @@ record and reports "not running"; otherwise it sends `POST /_desktop/stop` with 
 the `X-Huddle-Token` header (loopback only, token compared in constant time), then waits up
 to 45 seconds for the lock to be released.
 
+**Remote access.** The launcher mints a bootstrap token when it starts the app and opens
+`http://127.0.0.1:<port>/auth?return=%2F#bootstrapToken=...`, so the browser connects without a typed token. A second
+launch asks the running copy for a fresh link through `POST /_desktop/bootstrap` (authenticated with the same token in
+`instance.json`), and falls back to `<url>/auth` if that fails. Because `ASPNETCORE_URLS=http://127.0.0.1:0` would give the
+browser a new origin, and so a new device key, on every start, the app stores the first port it gets in `gateway_settings`
+and binds it again on the next start, falling back to a free port when it is busy. A non-loopback bind
+(`Team:Gateway:Bind` other than `loopback`) on an installed copy still needs `Team:Gateway:Port`; without it the copy
+starts loopback-only and says why. `AllowedHosts` stays `localhost;127.0.0.1`, and the gateway adds the hosts it needs.
+
 On macOS the installer picks `osx-arm64` or `osx-x64` from the real CPU, including from a
 Rosetta shell on Apple Silicon.
 

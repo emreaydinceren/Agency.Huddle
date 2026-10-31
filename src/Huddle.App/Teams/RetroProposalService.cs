@@ -9,13 +9,13 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Shows a retro agent's proposed changes to the Human and applies the ones the Human accepts (RT-5, Spec §Retro). Huddle, not the
 /// agent, makes the edit: the replacement is applied only when <see cref="RetroChange.Find"/> occurs exactly once in the file as it is
-/// at Accept time, a Teammate file goes through <see cref="PersonaStore.Update"/> so Persona rules still apply, and the change is recorded
+/// at Accept time, an Agent file goes through <see cref="PersonaStore.Update"/> so Persona rules still apply, and the change is recorded
 /// as one <see cref="RetroStatus.Done"/> row with a single <see cref="RetroFileStore.AppendRows"/> call.
 /// </summary>
 /// <param name="proposals">Holds the pending sets.</param>
 /// <param name="teams">Gives each Team's members.</param>
 /// <param name="folders">Finds the Team folder.</param>
-/// <param name="personas">Reads and updates Teammate files.</param>
+/// <param name="personas">Reads and updates Agent files.</param>
 /// <param name="retro">Appends the register row.</param>
 /// <param name="directory">Reads the room's members and the Human.</param>
 /// <param name="chat">Posts the outcome in the room.</param>
@@ -47,7 +47,7 @@ internal sealed class RetroProposalService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct);
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         List<RetroProposalSet> pending = [];
         foreach (TeamSummary team in teams.Teams)
         {
@@ -89,7 +89,7 @@ internal sealed class RetroProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(setId);
         ArgumentException.ThrowIfNullOrWhiteSpace(changeId);
 
-        if (!await this.IsPendingAsync(roomId, setId, changeId, ct))
+        if (!await this.IsPendingAsync(roomId, setId, changeId, ct).ConfigureAwait(false))
         {
             return Gone();
         }
@@ -110,8 +110,8 @@ internal sealed class RetroProposalService(
 
         if (outcome.Kind == RetroChangeOutcomeKind.Applied)
         {
-            string text = outcome.Text + await this.MentionAsync(set.Proposer, ct);
-            await this.PostAsync(roomId, text, ct);
+            string text = outcome.Text + await HumanPost.MentionAsync(directory, set.Proposer, ct).ConfigureAwait(false);
+            await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
             return outcome with { Text = text };
         }
 
@@ -132,7 +132,7 @@ internal sealed class RetroProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(changeId);
         ArgumentNullException.ThrowIfNull(reason);
 
-        if (!await this.IsPendingAsync(roomId, setId, changeId, ct))
+        if (!await this.IsPendingAsync(roomId, setId, changeId, ct).ConfigureAwait(false))
         {
             return Gone();
         }
@@ -145,8 +145,8 @@ internal sealed class RetroProposalService(
         }
 
         string reasonText = string.IsNullOrWhiteSpace(reason) ? NoReason : reason.Trim();
-        string text = $"Rejected '{change.Title}': {reasonText}{await this.MentionAsync(set.Proposer, ct)}";
-        await this.PostAsync(roomId, text, ct);
+        string text = $"Rejected '{change.Title}': {reasonText}{await HumanPost.MentionAsync(directory, set.Proposer, ct).ConfigureAwait(false)}";
+        await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
         return new RetroChangeOutcome(RetroChangeOutcomeKind.Rejected, text);
     }
 
@@ -156,7 +156,7 @@ internal sealed class RetroProposalService(
 
     private async Task<bool> IsPendingAsync(string roomId, string setId, string changeId, CancellationToken ct)
     {
-        IReadOnlyList<RetroProposalSet> pending = await this.PendingAsync(roomId, ct);
+        IReadOnlyList<RetroProposalSet> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         return pending.Any(set => string.Equals(set.Id, setId, StringComparison.Ordinal)
             && set.Changes.Any(change => string.Equals(change.Id, changeId, StringComparison.Ordinal)));
     }
@@ -195,7 +195,7 @@ internal sealed class RetroProposalService(
             && PersonaFrontmatter.TryReadIdentity(edited, out PersonaIdentity? identity, out _)
             && !string.Equals(identity.Name, member.Name, StringComparison.Ordinal))
         {
-            return Refused($"A retro change cannot rename a Teammate; {file} was not changed.");
+            return Refused($"A retro change cannot rename an Agent; {file} was not changed.");
         }
 
         if (!this.TryWrite(set.Team, file, path, edited, teamFile))
@@ -226,7 +226,7 @@ internal sealed class RetroProposalService(
         }
     }
 
-    /// <summary>Reads the target file's current text. <c>path</c> is the file for the two Team files and <see langword="null"/> for a Teammate file.</summary>
+    /// <summary>Reads the target file's current text. <c>path</c> is the file for the two Team files and <see langword="null"/> for an Agent file.</summary>
     private bool TryRead(string team, string file, out string text, out string? path)
     {
         text = string.Empty;
@@ -329,22 +329,16 @@ internal sealed class RetroProposalService(
         return summary is not null && summary.Members.Contains(name, StringComparer.OrdinalIgnoreCase) ? personas.Get(name) : null;
     }
 
-    private async Task<string> MentionAsync(string proposer, CancellationToken ct)
-    {
-        User? user = await directory.FindUserByNameAsync(proposer, ct);
-        return user is null ? string.Empty : " @" + user.Name;
-    }
-
+    /// <summary>Posts <paramref name="text"/> in the room as the Human; a refused post is logged, never thrown.</summary>
+    /// <param name="roomId">The room to post in.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="ct">Cancels the post.</param>
     private async Task PostAsync(string roomId, string text, CancellationToken ct)
     {
-        User human = await directory.GetHumanAsync(ct);
-        try
+        string? problem = await HumanPost.TryPostAsync(chat, directory, roomId, text, ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            _ = await chat.PostAsync(roomId, human.Id, text, ct: ct);
-        }
-        catch (ChatException ex)
-        {
-            logger.LogWarning("Could not post the retro proposal outcome in room {RoomId}: {Problem}", roomId, ex.Message);
+            logger.LogWarning("Could not post the retro proposal outcome in room {RoomId}: {Problem}", roomId, problem);
         }
     }
 }

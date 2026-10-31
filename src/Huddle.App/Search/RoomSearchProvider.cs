@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Search;
@@ -31,7 +32,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     {
         if (query.Purpose == SearchPurpose.Reference)
         {
-            return await this.NamesOnlyAsync(query, ct);
+            return await this.NamesOnlyAsync(query, ct).ConfigureAwait(false);
         }
 
         if (string.IsNullOrWhiteSpace(query.Text))
@@ -39,8 +40,11 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             return SearchResult.Empty;
         }
 
-        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
-        List<Room> inPass = rooms.Where(room => room.Archived == (query.Scope == SearchScope.Archived)).ToList();
+        string? human = (await directory.GetUserAsync(KnownIds.Human, ct).ConfigureAwait(false))?.Name;
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
+        List<Room> inPass = rooms
+            .Where(room => room.Archived == (query.Scope == SearchScope.Archived) && (query.RoomIds is null || query.RoomIds.Contains(room.Id)))
+            .ToList();
         List<SearchHit> hits = [];
         int failures = 0;
         foreach (Room room in inPass)
@@ -49,7 +53,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             IReadOnlyList<ChatMessage> messages;
             try
             {
-                messages = await chats.ReadAllAsync(room.Id, ct);
+                messages = await chats.ReadAllAsync(room.Id, ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -58,7 +62,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
                 continue;
             }
 
-            RoomHit? hit = Hit(room, messages, query.Text);
+            RoomHit? hit = Hit(room, messages, query.Text, human);
             if (hit is not null)
             {
                 hits.Add(hit);
@@ -82,10 +86,10 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     /// <returns>One row per Room, in the provider's order.</returns>
     private async Task<SearchResult> NamesOnlyAsync(SearchQuery query, CancellationToken ct)
     {
-        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct).ConfigureAwait(false);
         bool archived = query.Scope == SearchScope.Archived;
         List<SearchHit> hits = [];
-        foreach (Room room in rooms.Where(room => room.Archived == archived).OrderByDescending(room => room.Created))
+        foreach (Room room in rooms.Where(room => room.Archived == archived && (query.RoomIds is null || query.RoomIds.Contains(room.Id))).OrderByDescending(room => room.Created))
         {
             ct.ThrowIfCancellationRequested();
             MatchTier? tier = query.Text.Length == 0 ? MatchTier.ExactName : SearchMatch.Tier(room.Name, query.Text);
@@ -110,8 +114,9 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     /// <param name="room">The Room being judged.</param>
     /// <param name="messages">Its whole Transcript, in file order.</param>
     /// <param name="phrase">The phrase, ignoring case.</param>
+    /// <param name="human">The Human's current Name, shown for the Human's own Messages whatever Name they were posted under.</param>
     /// <returns>The hit, or null.</returns>
-    private static RoomHit? Hit(Room room, IReadOnlyList<ChatMessage> messages, string phrase)
+    private static RoomHit? Hit(Room room, IReadOnlyList<ChatMessage> messages, string phrase, string? human)
     {
         int count = 0;
         ChatMessage? newest = null;
@@ -140,7 +145,7 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             room.Name,
             count,
             newest?.Id,
-            newest?.SenderName,
+            newest is null ? null : SenderDisplay.NameOf(newest, human),
             newest is null ? null : SearchSnippet.Around(newest.Text, phrase, SearchLimits.SnippetWidth),
             newest?.Timestamp,
             room.Archived,

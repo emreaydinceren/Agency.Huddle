@@ -5,15 +5,15 @@
 **Vocabulary:** [language.md](engineering/language.md) (**Adapter command**)
 
 This is the design for **Adapter commands**: the commands an Adapter advertises for a session,
-which the Human runs on one Teammate by writing a Message that addresses it, such as
+which the Human runs on one Agent by writing a Message that addresses it, such as
 `@Nova /compact`. V1 exposes only the commands an Adapter Profile's allowlist names, and ships
-one: `compact`, for the Claude Adapter. `/compact` frees a long-running Teammate's context window
+one: `compact`, for the Claude Adapter. `/compact` frees a long-running Agent's context window
 without the Restart that today is the only other way, and which forgets the conversation.
 
 This is the V2 that the Turn detail spec sketched and gated in
 [§6.7](Huddle.TurnDetail-Specifications.md#67-adapter-commands--v2-sketch-gated). It answers that
-section's three open questions: which Teammate a command addresses, where the allowlist lives, and
-what to do about commands a Teammate's Skills already cover.
+section's three open questions: which Agent a command addresses, where the allowlist lives, and
+what to do about commands an Agent's Skills already cover.
 
 It is written for the engineers or agents building it, with no memory of the conversation that
 produced it. Read §5 for the shape, §6 for the parts, §14 for the decisions and the alternatives
@@ -39,7 +39,7 @@ each beat, and Appendix A for the ordered, test-first task list.
 
 > [!NOTE]
 > **Sequencing.** Build this after Turn detail and Spend, which shipped on `feat/turn-detail` and
-> changed `AgentEvent`, `SessionUpdateMapper`, `RoomSession`'s event reader and `TeammateCard`. The
+> changed `AgentEvent`, `SessionUpdateMapper`, `RoomSession`'s event reader and `AgentProfileCard`. The
 > Work Modes spec (a proposed design, not yet merged) is proposed and touches the same mapper and
 > card; whichever lands second rebases onto the first, and neither depends on the other.
 
@@ -52,7 +52,7 @@ observed, except where a task says so.
 
 ## 1. Goal
 
-Let the Human run a small, deliberate set of Adapter commands on one Teammate, from the composer,
+Let the Human run a small, deliberate set of Adapter commands on one Agent, from the composer,
 through the machinery every Turn already uses.
 
 Concretely:
@@ -65,14 +65,14 @@ Concretely:
    is the allowlist. An Adapter with no entry offers nothing.
 3. **The command runs alone.** The Adapter receives `/compact` as the only text of the prompt, and
    nothing Huddle was holding for the next Turn is consumed by it.
-4. **The Room says what happened.** `/compact` produces no reply text *(observed)*, so the Teammate
+4. **The Room says what happened.** `/compact` produces no reply text *(observed)*, so the Agent
    posts one line: `Compacted my conversation: 50,624 → 2,964 tokens in 9 s.`
 
-**Why this matters.** A Teammate's context only grows. A session closed by `SessionIdleMinutes` is
+**Why this matters.** An Agent's context only grows. A session closed by `SessionIdleMinutes` is
 *resumed* with its whole context restored, so idling does not shed it. Restart forgets the
 conversation on purpose ([rules.md](engineering/rules.md), "Restart forgets Room Sessions"), which is
 the wrong tool for "I want you to keep going, with less weight". In the observed console session, two
-tiny turns had already filled 50,624 tokens, most of it the session's fixed overhead; a Teammate in
+tiny turns had already filled 50,624 tokens, most of it the session's fixed overhead; an Agent in
 several busy Rooms reaches the per-Persona token Budget (`Acp:TokenBudget`, 1,000,000) sooner than it
 needs to. `/compact` is the one command that answers a problem Huddle already has.
 
@@ -90,7 +90,7 @@ needs to. `/compact` is the one command that answers a problem Huddle already ha
 | C6 | `@Nova /config key=value`: advertised by the Adapter, not on the allowlist | Same as C5. The Adapter is never asked to run `/config` |
 | C7 | An Agent posts `@Kai /compact` with `post_message` | For Kai it is an ordinary Message. Only a Message from the Human can be a command |
 | C8 | `@Kai @Nova /compact` | Nova's Mention is not the leading token, so for Nova it is an ordinary Message. One command, one addressee |
-| C9 | Nova's Teammate was restarted a second ago and has no list yet | Ordinary Message (C5). The Human retries |
+| C9 | Nova's Agent was restarted a second ago and has no list yet | Ordinary Message (C5). The Human retries |
 | C10 | The Human clicks Stop while Nova is compacting | The Turn is cancelled like any Stop. Nothing is posted. The session stays usable |
 | C11 | The Room has spent its Budget | The Reply Gate refuses the Message as it would any other. No command Turn starts |
 | C12 | `Team:Acp:Adapters` names an `agency-acp` profile with no `Commands` | Nothing is offered. `@Nova /compact` is an ordinary Message |
@@ -107,7 +107,7 @@ needs to. `/compact` is the one command that answers a problem Huddle already ha
 | Not in scope | Why |
 | --- | --- |
 | **A bare `/compact` in a Room with one Agent** | Needs the composer to know the live list and to decide whether `/word` is Huddle's or an Adapter's. The Mention form avoids the ambiguity. V2 (D-3) |
-| **A composer picker for commands** | Copies the `#` Task picker and needs caret detection, keyboard handling and accessibility work. V1 discovers commands on the Teammate card (D-7). V2 |
+| **A composer picker for commands** | Copies the `#` Task picker and needs caret detection, keyboard handling and accessibility work. V1 discovers commands on the Agent card (D-7). V2 |
 | **Every advertised command** | 51 remain even under isolation, including `/config`, `/mcp`, `/model`, `/effort` and `/init`. Most are wrong to reach from a chat Room, and two duplicate Huddle's own Model and Effort settings |
 | **A per-Persona allowlist** | A name means something per Adapter, and a frontmatter field would be public to every Agent through `list_agents` and, as a list, would break `NeedsRestart` (D-2) |
 | **An Agent running a command** | Model output must never reach `/config`. Only the Human's Message can (§4, principle 2) |
@@ -123,13 +123,13 @@ needs to. `/compact` is the one command that answers a problem Huddle already ha
 ## 4. Design principles
 
 1. **A command is a Message.** Not a second door into a Turn. The Transcript records that the Human
-   asked, the Reply Gate decides whether the Teammate hears it, and Stop, Budget and the idle timeout
+   asked, the Reply Gate decides whether the Agent hears it, and Stop, Budget and the idle timeout
    need no new code.
 2. **Only the Human types a command, and code decides.** The sender check, the leading-Mention check
    and the allowlist are C#. No Prompt asks a model to be careful. Text never guards.
 3. **An ordinary prompt can never be a command.** The Adapter recognises a command from the start of
    the prompt *(observed)*, so the start of every ordinary prompt is guarded (D-9).
-4. **The Adapter names, Huddle permits.** What a Teammate offers is the intersection of what its
+4. **The Adapter names, Huddle permits.** What an Agent offers is the intersection of what its
    Adapter advertises now and what its Adapter Profile allows. Neither side alone decides.
 5. **A command Turn consumes only what it sends.** Catch-up, this Agent's own-post lines and File
    Changes stay queued for the next ordinary Turn. A Turn that drops them has lost a Message.
@@ -174,7 +174,7 @@ needs to. `/compact` is the one command that answers a problem Huddle already ha
   Independent of any Turn:
   Adapter ── available_commands_update ─▶ SessionUpdateMapper ─▶ AvailableCommandsUpdated
         ─▶ RoomSession event reader ─▶ owner.SetCommands ─▶ filter by Profile.Commands
-        ─▶ PersonaCommands (per Persona, replaced whole) ─▶ CommandsChanged ─▶ TeammateCard
+        ─▶ PersonaCommands (per Persona, replaced whole) ─▶ CommandsChanged ─▶ AgentProfileCard
 ```
 
 | Component | Kind | New or changed |
@@ -187,7 +187,7 @@ needs to. `/compact` is the one command that answers a problem Huddle already ha
 | `Acp/Sessions/WorkItem.cs` | `WorkItemKind.Command`, `Command` member | Changed |
 | `Acp/PersonaRunner.cs` | Detection in the read loop; `SetCommands` | Changed |
 | `Acp/Sessions/RoomSession.cs` | `BuildPrompt` branch, command guard, outcome, baseline | Changed |
-| `Components/Shared/TeammateCard.razor` | One read-only line | Changed |
+| `Components/Shared/AgentProfileCard.razor` | One read-only line | Changed |
 | `PersonaRenameCascade.cs`, `ServiceCollectionExtensions.cs` | Rename and registration, as for `PersonaSpend` | Changed |
 
 ---
@@ -276,7 +276,7 @@ returning the command with the Adapter's own casing, or `null`; `Get(personaName
 - **Filtered at ingest.** The full advertised list (83 entries, including the Human's own skills when
   isolation is off) is never stored or shown. `PersonaCommands` holds at most the allowlist.
 - Keyed `OrdinalIgnoreCase`, like `PersonaSpend`. `PersonaRenameCascade` moves the key on a rename;
-  `PersonaRemoved` drops it. A runner that stops drops its entry, so a stopped Teammate offers nothing.
+  `PersonaRemoved` drops it. A runner that stops drops its entry, so a stopped Agent offers nothing.
 - A lock, and the change event raised outside it, exactly as `PersonaSpend` does.
 
 **Constraints.** Registered as a singleton in `ServiceCollectionExtensions`. A `Razor [Parameter]`
@@ -287,7 +287,7 @@ injected service and a public view type, as it does for Spend.
 
 ### 6.4 The invocation parser (`AdapterCommandInvocation`)
 
-**Purpose.** Decide, from a Message's text alone, whether it is a command for this Teammate.
+**Purpose.** Decide, from a Message's text alone, whether it is a command for this Agent.
 
 **Responsibilities.** A pure, allocation-light function with no I/O, so it is tested exhaustively.
 
@@ -299,12 +299,12 @@ Persona's Name and Alias, and `Invocation` is `(Name, Arguments)`.
 **Implementation notes.**
 - **Resolved against the known handle, never by a pattern.** A Name may contain spaces, so
   `@Emily Lee /compact` and `@Emily` followed by the word `Lee` are the same characters. The parser
-  matches the Teammate's **own** handles, longest first, exactly as `MentionParser` does, and lets the
+  matches the Agent's **own** handles, longest first, exactly as `MentionParser` does, and lets the
   handle decide where the Mention ends ([rules.md](engineering/rules.md), Name row; [traps.md](engineering/traps.md)).
 - It reuses `MentionParser`'s boundary rule (a handle ends at a character that is not a Name
   character). That rule is private today; expose it `internal` rather than copying it.
 - **Alias works wherever a Name does** ([rules.md](engineering/rules.md), Alias row): `@jar /compact`.
-- **Leading only.** After trimming, the text must begin with the Teammate's own Mention, then
+- **Leading only.** After trimming, the text must begin with the Agent's own Mention, then
   whitespace, then `/`. Any other shape is not a command (C8).
 - The command name is the run of non-whitespace characters after `/`. Names may contain `:`, `-`,
   `_` and letters in either case *(observed: `code-review:code-review`, `Create-PR`)*.
@@ -359,7 +359,7 @@ dictionary lookup.
 File Changes, and posting one outcome Message.
 
 **Inputs and outputs.** `WorkItem(Kind: Command)`, the Adapter's `ToolCallUpdated` events; one
-`PostMessage` as the Teammate.
+`PostMessage` as the Agent.
 
 **Flow.**
 1. `BuildPrompt` for a Command returns `/{name}` or `/{name} {arguments}`: one text block, no Room
@@ -384,15 +384,15 @@ File Changes, and posting one outcome Message.
   start a command. The marker is `Message: `, settled by V-3: a live `Message: /compact` ran no compaction and was answered
   as text, and so was `Message: /config` (Appendix C).
 - **The outcome is interface copy, in code**, not a **Prompt**: it is read by the Human and by every
-  Teammate in the Room, it is not sent to a model as instruction, and configurability is a non-goal.
+  Agent in the Room, it is not sent to a model as instruction, and configurability is a non-goal.
   Wording is in §8.3.
 - The figures come from `rawOutput` `{preTokens, postTokens, durationMs}` *(observed)*, which is
   `ToolCallUpdated.RawOutputJson`. The `_meta.contextCompaction` copy is ignored, so the parser depends
   on the generic field, not the vendor block.
 - The Message counts toward the Room's agent-message Budget like any Agent Message.
 
-**Constraints.** The Message is authored as the Teammate and worded in the first person because it
-describes that Teammate's own conversation. It is fixed text built from numbers, so it carries no
+**Constraints.** The Message is authored as the Agent and worded in the first person because it
+describes that Agent's own conversation. It is fixed text built from numbers, so it carries no
 model output and no Mention.
 
 **V1 versus V2.** V1 knows one figure shape. Another Adapter's command needs its own tolerated shape,
@@ -419,17 +419,17 @@ treats a lower total as a restart.
 
 **V1 versus V2.** V1 resets the baseline. V2 may read the true usage from `_meta.quota` (§11).
 
-### 6.8 The Teammate card line
+### 6.8 The Agent card line
 
-**Purpose.** Let the Human discover what a Teammate offers (D-7).
+**Purpose.** Let the Human discover what an Agent offers (D-7).
 
-**Flow.** `TeammateCard.razor` reads `PersonaCommands.Get(name)` and renders one read-only line per
+**Flow.** `AgentProfileCard.razor` reads `PersonaCommands.Get(name)` and renders one read-only line per
 command under the Spend line: `/compact — Free up context by summarizing the conversation so far`. It
 subscribes to `CommandsChanged` and unsubscribes in `Dispose`, as Spend does.
 
 **Implementation notes.**
 - The description is the **Adapter's own text**, rendered as text, never as Markdown or HTML.
-- Nothing renders when the Teammate is offline or offers no command, so a stock install without the
+- Nothing renders when the Agent is offline or offers no command, so a stock install without the
   feature shows no new UI. No empty heading.
 - Before building the component read
   [MudBlazorImplementation.md](../agents/MudBlazorImplementation.md). A bUnit test pins the line and its
@@ -455,7 +455,7 @@ subscribes to `CommandsChanged` and unsubscribes in `Dispose`, as Spend does.
 
 | Key | Default | Note |
 | --- | --- | --- |
-| `Acp:Adapters:*:Commands` | `null` | Names of Adapter commands a Human may run on a Teammate on this Adapter. Absent means none. The synthesised legacy profile is `["compact"]`. Compared case-insensitively. A name the Adapter does not advertise is not offered |
+| `Acp:Adapters:*:Commands` | `null` | Names of Adapter commands a Human may run on an Agent on this Adapter. Absent means none. The synthesised legacy profile is `["compact"]`. Compared case-insensitively. A name the Adapter does not advertise is not offered |
 
 **Differences between Adapters.**
 
@@ -502,7 +502,7 @@ On AvailableCommandsUpdated(sessionId, advertised):
 
 ### 8.3 The outcome text
 
-| Situation | Message posted as the Teammate |
+| Situation | Message posted as the Agent |
 | --- | --- |
 | `EndTurn`, command is `compact`, figures present, duration present and `postTokens` ≤ `preTokens` | `Compacted my conversation: {pre} → {post} tokens in {s} s.` |
 | `EndTurn`, command is `compact`, figures present, no duration, `postTokens` ≤ `preTokens` | `Compacted my conversation: {pre} → {post} tokens.` |
@@ -585,7 +585,7 @@ compaction and the ordinary Turn after it. Reading `_meta.quota` would be Adapte
 | # | Situation | Behaviour |
 | --- | --- | --- |
 | E-1 | Sender is an Agent | Ordinary Message. Only the Human's Message is a command |
-| E-2 | The Message has two Mentions, this Teammate's second | Ordinary. The handle must lead |
+| E-2 | The Message has two Mentions, this Agent's second | Ordinary. The handle must lead |
 | E-3 | `@Nova/compact`, `@Nova  /compact`, `  @Nova /compact` | No space: ordinary. Extra spaces or leading whitespace: a command |
 | E-4 | A Name with a space: `@Emily Lee /compact` | The handle decides where the Mention ends. A command |
 | E-5 | `@jar /compact` with Alias `jar` | A command |
@@ -600,7 +600,7 @@ compaction and the ordinary Turn after it. Reading `_meta.quota` would be Adapte
 | E-14 | A Turn for this Room is already running | The command queues behind it in arrival order |
 | E-15 | The Persona is edited or restarted during the command | The Turn ends by the existing paths. The list is cleared with the runner and relearned |
 | E-16 | `turn.message` is overridden to `{{text}}` and another Agent's text starts with `/` | The command guard prefixes it. The Adapter never sees a leading `/` (§6.6) |
-| E-17 | Two Teammates share the Adapter and Work Dir | Each has its own `PersonaCommands` entry. Nothing is shared |
+| E-17 | Two Agents share the Adapter and Work Dir | Each has its own `PersonaCommands` entry. Nothing is shared |
 | E-18 | The argument is very long or multi-line | Sent verbatim. The Adapter owns its meaning. No extra cap |
 | E-19 | The Message is a Library or Task reference containing `/` | Not after the Mention in the required shape, so ordinary |
 | E-20 | A command Turn completes while File Changes are pending | They stay pending for the next ordinary Turn (§6.6) |
@@ -652,8 +652,8 @@ Each was put to the repo owner, with a recommendation, on 2026-09-30 unless mark
 | D-3 | **The Mention is required in every Room in V1** | A bare `/compact` taken by the runner in a Room with one Agent | One rule and no composer change. The shorthand needs the composer to know the live list and to tell Huddle's `/word` from an Adapter's. It stays open for V2 |
 | D-4 | **An unknown or disallowed name falls through as an ordinary Message** | Validating in the composer against the known list | No composer coupling, and the Adapter can never run it: the prompt is framed (D-9). The cost is one Turn on a typo |
 | D-5 | **The command is sent bare; context stays queued** | Two blocks, the command then the Room context (as Buzz does) | `PromptAsync` takes one string, so two blocks change the ACP subtree's interface, and `/compact`'s input is summarisation guidance, which Room context would pollute |
-| D-6 | **One Message from the Teammate reports the outcome** *(derived from the probe)* | Turn detail only; nothing | `/compact` posts no text *(observed)*, and `RoomSession` posts only a non-blank reply. Silence cannot be told from failure. The Turn detail row vanishes with the Draft |
-| D-7 | **Discovery is a read-only line on the Teammate card** | A composer picker; the user guide alone | Cheap, needs no composer or JavaScript change, and is fed by the same `PersonaCommands` |
+| D-6 | **One Message from the Agent reports the outcome** *(derived from the probe)* | Turn detail only; nothing | `/compact` posts no text *(observed)*, and `RoomSession` posts only a non-blank reply. Silence cannot be told from failure. The Turn detail row vanishes with the Draft |
+| D-7 | **Discovery is a read-only line on the Agent card** | A composer picker; the user guide alone | Cheap, needs no composer or JavaScript change, and is fed by the same `PersonaCommands` |
 | D-8 | **The list is per Persona and filtered at ingest** *(derived)* | Per Room Session; storing all 83 | The list depends on the Adapter and the Work Dir, both per Persona. The Human's own skills must never be held, let alone shown |
 | D-9 | **Guard every ordinary prompt against a leading `/`** *(derived from reading the code)* | Trusting the Prompt templates | A hand-edited `prompts.json` can make a prompt open with another Agent's text, and `PromptValidator` reports and never refuses |
 | D-10 | **Reset the usage baseline after a command Turn** *(derived from the probe)* | Counting the re-fill; subtracting a fixed overhead | A 40,944-token rise per compaction would be charged as spend. A small undercount beats a large overcount |
@@ -714,8 +714,8 @@ whether it is a defect.
 | 1 | A command that replies with text posts **that text**, not the fixed line (§8.3, E-23) | The allowlist is configurable, so a command other than `compact` may say something. Overwriting an Adapter's own words with a generic line would lose information |
 | 2 | Only `compact` is worded *"Compacted my conversation"*; any other command with figures reads `Ran /{name}: {pre} → {post} tokens.` A missing duration drops the `in N s` clause | The compaction wording is a claim about what happened, true for one command. The figures' shape was observed for one command |
 | 3 | The read loop has **no** `try`/`catch` around the parser and lookup (§8.4) | Both are pure and cannot throw on any input. A catch-all would hide a defect behind a Warning |
-| 4 | A Command Turn does not consume the first-Turn Transcript read (E-22) | The draft did not foresee it. A resumed Teammate is the likeliest one to be compacted, and it is exactly the one whose next ordinary Turn needs the Catch-up |
-| 5 | `PersonaCommands.Forget` raises `CommandsChanged` and is called on a runner's stop, not only on removal | A stopped Teammate must stop showing commands it cannot run |
+| 4 | A Command Turn does not consume the first-Turn Transcript read (E-22) | The draft did not foresee it. A resumed Agent is the likeliest one to be compacted, and it is exactly the one whose next ordinary Turn needs the Catch-up |
+| 5 | `PersonaCommands.Forget` raises `CommandsChanged` and is called on a runner's stop, not only on removal | A stopped Agent must stop showing commands it cannot run |
 | 6 | The guard marker is the prefix `Message: ` (V-3) | Settled by the live probe; a bare `Message:` prefix kept both `/compact` and `/config` from running |
 | 7 | `BuildPrompt` throws for a `Command` item that carries no command | An illegal state, not an empty prompt |
 | 8 | The card line carries a tooltip, *"Write @{name} /{command} in a Room to run it"* | The Human should not have to guess the syntax, and the line is otherwise the only discovery surface (D-7) |
@@ -799,8 +799,8 @@ before the code it covers exists. Names follow `Method_Scenario_Expectation`.
 
 | # | Task | Files |
 | --- | --- | --- |
-| T9.1 | **Test.** bUnit, built on `TeammateCardTestSupport`: with `compact` offered the line renders its description as text (no Markdown or HTML); with none, or offline, nothing renders; a `CommandsChanged` re-renders; the component unsubscribes in `Dispose` | `tests/Huddle.Tests/Ui/TeammateCardCommandsTests.cs` |
-| T9.2 | **Implement.** The read-only line. Read `agents/MudBlazorImplementation.md` first | `Components/Shared/TeammateCard.razor` |
+| T9.1 | **Test.** bUnit, built on `AgentProfileCardTestSupport`: with `compact` offered the line renders its description as text (no Markdown or HTML); with none, or offline, nothing renders; a `CommandsChanged` re-renders; the component unsubscribes in `Dispose` | `tests/Huddle.Tests/Ui/AgentProfileCardCommandsTests.cs` |
+| T9.2 | **Implement.** The read-only line. Read `agents/MudBlazorImplementation.md` first | `Components/Shared/AgentProfileCard.razor` |
 
 ### Phase 10: documents
 

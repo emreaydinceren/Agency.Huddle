@@ -57,5 +57,69 @@ internal static class RetryingFileRead
         }
     }
 
+    /// <summary>
+    /// The watcher rebuild a store that keeps its previous snapshot runs: a missing file is a
+    /// legitimate delete and yields <paramref name="whenMissing"/>; otherwise <paramref name="read"/>
+    /// runs through <see cref="Run{T}"/>, and when every attempt fails the standard warning is logged
+    /// and <see langword="null"/> returned, so the caller keeps what it had rather than flickering to
+    /// a default over what may be a mid-write race.
+    /// </summary>
+    /// <typeparam name="T">The parsed document.</typeparam>
+    /// <param name="path">The store's file.</param>
+    /// <param name="whenMissing">Builds the empty document a deleted file stands for.</param>
+    /// <param name="read">Reads and parses <paramref name="path"/>.</param>
+    /// <param name="logger">The store's logger.</param>
+    /// <param name="fileKind">What the file is, for the warning, such as <c>appearance file</c>.</param>
+    /// <param name="contents">What the store keeps, for the warning, such as <c>appearance</c>.</param>
+    /// <returns>The document, or <see langword="null"/> when the caller should keep its current snapshot.</returns>
+    public static T? RereadKeepingPrevious<T>(string path, Func<T> whenMissing, Func<T> read, ILogger logger, string fileKind, string contents)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(whenMissing);
+
+        if (!File.Exists(path))
+        {
+            return whenMissing();
+        }
+
+        return Run(read, ex => LogGaveUp<T>(ex, path, logger, fileKind, contents));
+    }
+
+    /// <summary>Logs why <see cref="RereadKeepingPrevious{T}"/> gave up; the "keeping the previously resolved" wording is what the locked-file tests wait for.</summary>
+    /// <typeparam name="T">The parsed document.</typeparam>
+    /// <param name="ex">The last failure.</param>
+    /// <param name="path">The store's file.</param>
+    /// <param name="logger">The store's logger.</param>
+    /// <param name="fileKind">What the file is.</param>
+    /// <param name="contents">What the store keeps.</param>
+    /// <returns><see langword="null"/>, always.</returns>
+    private static T? LogGaveUp<T>(Exception ex, string path, ILogger logger, string fileKind, string contents)
+        where T : class
+    {
+        if (ex is JsonException)
+        {
+            logger.LogWarning(
+                ex,
+                "Could not parse {FileKind} '{Path}' after a filesystem change, even after retrying; keeping the previously resolved {Contents} rather than reverting to a default over what may be a mid-write race.",
+                fileKind,
+                path,
+                contents);
+        }
+        else
+        {
+            logger.LogWarning(
+                ex,
+                "Could not read {FileKind} '{Path}' after {Attempts} attempts; keeping the previously resolved {Contents}.",
+                fileKind,
+                path,
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
+                Attempts,
+#pragma warning restore HAA0601
+                contents);
+        }
+
+        return null;
+    }
+
     private static bool IsTransient(Exception ex) => ex is JsonException or IOException or UnauthorizedAccessException;
 }

@@ -13,41 +13,26 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "unfollow_room";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.unfollowRoom.description", NoValues);
+    public string Description => prompts.Render("tool.unfollowRoom.description");
 
     /// <inheritdoc />
-    public JsonObject InputSchema => new JsonObject
-    {
-        ["type"] = "object",
-        ["properties"] = new JsonObject
-        {
-            ["roomId"] = new JsonObject { ["type"] = "string" },
-        },
-        ["required"] = new JsonArray { "roomId" },
-    };
+    public JsonObject InputSchema => TaskToolText.SingleStringSchema("roomId");
 
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        if (!TaskToolText.TryGetRequiredString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
         {
             return roomIdRefusal;
         }
 
-        if (string.IsNullOrWhiteSpace(roomId))
-        {
-            return "'roomId' is a required argument.";
-        }
-
-        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken);
+        var room = await teamDirectory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (room is null)
         {
             return $"Unknown room '{roomId}'.";

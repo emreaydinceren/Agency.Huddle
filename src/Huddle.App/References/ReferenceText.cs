@@ -20,7 +20,7 @@ internal static class ReferenceText
     private const string TeamPrefix = "/teams/";
 
     /// <summary>The full-width commercial at that replaces every @ in a label (D-9 rule 2).</summary>
-    private const string FullwidthAt = "＠";
+    private const char FullwidthAt = '＠';
 
     /// <summary>The mark that shows a label was cut (D-9 rule 4).</summary>
     private const string Ellipsis = "…";
@@ -43,7 +43,7 @@ internal static class ReferenceText
     /// <returns>The plain label, never empty.</returns>
     public static string PlainLabelFor(string name, ReferenceKind kind)
     {
-        string collapsed = string.Join(' ', name.Replace("@", ReferenceText.FullwidthAt, StringComparison.Ordinal).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        string collapsed = string.Join(' ', name.Replace('@', ReferenceText.FullwidthAt).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         if (collapsed.Length == 0)
         {
             return kind == ReferenceKind.Team ? "Team" : "Room";
@@ -151,7 +151,7 @@ internal static class ReferenceText
     /// <returns>The text, or null for a kind the picker does not insert by this rule (a Library file).</returns>
     public static string? InsertFor(SearchHit hit) => hit switch
     {
-        TeammateHit teammate => string.Concat("@", teammate.Name),
+        AgentHit agent => string.Concat("@", agent.Name),
         TaskHit task => task.Id.ToString(),
         RoomHit room => string.Concat("[", ReferenceText.RoomLabelFor(room.RoomName, room.Team, room.IsTeamRoom), "](", ReferenceText.RoomHref(room.RoomId), ")"),
         TeamHit team => string.Concat("[", ReferenceText.LabelFor(team.Name, ReferenceKind.Team), "](", ReferenceText.TeamHref(team.Name), ")"),

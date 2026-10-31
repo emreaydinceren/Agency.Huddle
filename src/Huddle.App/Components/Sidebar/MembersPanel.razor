@@ -1,0 +1,186 @@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.Contracts
+@implements IDisposable
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject AvatarStore Avatars
+@inject RoomEvents RoomEvents
+@inject ContextFill ContextFill
+
+@*
+    The Members panel (Spec Members): every member of the open Room, Agents first and then Humans, each by name.
+    A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent's avatar also wears its
+    presence badge on the rim, resolved from pipe liveness and then reported health, as TeamRoster draws it.
+    An Agent's row also carries a context meter: the percentage of its context window in use in this Room and a thin
+    bar that takes the Warning and Error bands; a Human's row has neither.
+*@
+
+@if (this.members is { } list)
+{
+    @if (list.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No members in this chat.</MudText>
+    }
+    else
+    {
+        @foreach (User member in list)
+        {
+            <div class="sidebar-row members-row" @key="member.Id">
+                <PresenceAnchor Cue="@(member.Kind == UserKind.Agent ? PresenceCue.From(this.StateOf(member)) : null)">
+                    <ProfileAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" Team="@this.team" />
+                </PresenceAnchor>
+                <div class="members-body">
+                    <div class="members-line">
+                        <span class="sidebar-row-text members-name" title="@member.Name">@member.Name</span>
+                        @if (member.Kind == UserKind.Agent)
+                        {
+                            ContextFillReading? reading = this.ReadingOf(member);
+                            <span class="sidebar-row-meta members-context" title="@ContextFillText.Tooltip(reading, member.Name)">@ContextFillText.Label(reading)</span>
+                        }
+                    </div>
+                    @if (member.Kind == UserKind.Agent && this.ReadingOf(member)?.Percent is { } percent)
+                    {
+                        <MudProgressLinear Value="percent" Color="@ContextColour(percent)" Size="Size.Small" Class="members-context-bar"
+                                           aria-label="@($"{member.Name}'s context: {percent}% used")" />
+                    }
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    private CancellationTokenSource? loadCts;
+    private IReadOnlyList<User>? members;
+    private string? team;
+    private string? loadedKey;
+    private string? roomId;
+
+    /// <summary>What the page is showing; only a <see cref="RoomSubject"/> is drawn.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab this panel belongs to.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, through which the panel reports its count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.RoomEvents.RoomsChanged += this.OnRoomsChanged;
+        this.Health.Changed += this.OnLiveChanged;
+        this.Gateway.PresenceChanged += this.OnLiveChanged;
+        this.Avatars.AvatarsChanged += this.OnLiveChanged;
+        this.ContextFill.Changed += this.OnLiveChanged;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.Subject is not RoomSubject room)
+        {
+            this.members = null;
+            this.loadedKey = null;
+            this.roomId = null;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (string.Equals(this.loadedKey, this.Subject.Key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.loadedKey = this.Subject.Key;
+        this.roomId = room.RoomId;
+        await this.LoadAsync(room);
+    }
+
+    /// <summary>Stops listening and cancels a load in flight.</summary>
+    public void Dispose()
+    {
+        this.RoomEvents.RoomsChanged -= this.OnRoomsChanged;
+        this.Health.Changed -= this.OnLiveChanged;
+        this.Gateway.PresenceChanged -= this.OnLiveChanged;
+        this.Avatars.AvatarsChanged -= this.OnLiveChanged;
+        this.ContextFill.Changed -= this.OnLiveChanged;
+        this.loadCts?.Cancel();
+        this.loadCts?.Dispose();
+    }
+
+    /// <summary>Loads the Room and its members; a load for an older Subject never overwrites a newer one.</summary>
+    /// <param name="room">The Room to load.</param>
+    private async Task LoadAsync(RoomSubject room)
+    {
+        this.loadCts?.Cancel();
+        this.loadCts?.Dispose();
+        CancellationTokenSource cts = new();
+        this.loadCts = cts;
+        string key = room.Key;
+        try
+        {
+            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId, cts.Token);
+            IReadOnlyList<User> loaded = await this.TeamDirectory.GetRoomMembersAsync(room.RoomId, cts.Token);
+            if (cts.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            List<User> ordered =
+            [
+                .. loaded.Where(static u => u.Kind == UserKind.Agent).OrderBy(static u => u.Name, StringComparer.CurrentCultureIgnoreCase),
+                .. loaded.Where(static u => u.Kind != UserKind.Agent).OrderBy(static u => u.Name, StringComparer.CurrentCultureIgnoreCase),
+            ];
+            this.team = found?.Team;
+            this.members = ordered;
+            this.Panel?.SetCount(ordered.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer load or Dispose cancelled this one; its result is not wanted.
+        }
+    }
+
+    /// <summary>An Agent's state, resolved as the Agents page resolves it.</summary>
+    /// <param name="member">The Agent user.</param>
+    private PersonaState StateOf(User member) =>
+        PersonaStatusResolver.Resolve(this.Gateway.IsOnline(member.Id), this.Health.Get(member.Name)).State;
+
+    /// <summary>The context reading for an Agent in the open Room, read at render time.</summary>
+    /// <param name="member">The Agent user.</param>
+    private ContextFillReading? ReadingOf(User member) =>
+        this.roomId is { } id ? this.ContextFill.Get(member.Id, id) : null;
+
+    /// <summary>The bar's colour for a fill: Primary until the Warning band, then Warning, then Error.</summary>
+    /// <param name="percent">The fill as a whole percent.</param>
+    private static Color ContextColour(int percent) => ContextFillBand.Of(percent) switch
+    {
+        ContextFillBandKind.Error => Color.Error,
+        ContextFillBandKind.Warning => Color.Warning,
+        _ => Color.Primary,
+    };
+
+    private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+    {
+        if (this.Subject is RoomSubject room)
+        {
+            await this.LoadAsync(room);
+            this.StateHasChanged();
+        }
+    });
+
+    private void OnLiveChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

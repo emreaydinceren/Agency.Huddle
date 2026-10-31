@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "code-review-and-quality",
+  "version": "1.0.0",
+  "title": "Code Review and Quality",
+  "source": "local/skills",
+  "appliesTo": ["reviewer"],
+  "consultWhenAdds": "A change is in Review and needs depth beyond style",
+  "skills": [
+    { "name": "code-review-and-quality", "catalog": "addyosmani-agent-skills" }
+  ]
+}

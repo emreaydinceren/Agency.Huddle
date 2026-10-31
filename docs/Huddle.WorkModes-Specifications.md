@@ -56,7 +56,7 @@ Let a Persona have a Work Mode, chosen from what its Adapter advertises, and app
 4. **Dangerous modes are hidden by default,** and the hiding is enforced when a session opens.
 5. **A stale, unknown or unadvertised mode never stops a Persona starting.** It is a warning.
 
-**Why this matters.** Today the handler approves every request, so a reviewer Teammate can edit
+**Why this matters.** Today the handler approves every request, so a reviewer Agent can edit
 files. A live Turn on 2026-09-30 also showed that an ordinary edit inside the Work Dir asks
 first, and the handler approves it without the Human seeing anything. A mode changes what the
 Agent is allowed to try, which a handler that answers after the Agent has asked cannot do.
@@ -91,7 +91,7 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
 | **Asking the Human before a tool runs** | Roadmap §20: not designed, and not decided. A request that waits collides with the idle watchdog |
 | **`session/set_mode` and the legacy `modes` field** | Deprecated, and the v2 draft removes them. Config options carry the same information |
 | **A fixed list of mode ids in code** | Adapters differ, and the spec says a category carries no correctness (D-1) |
-| **Setting a mode from `propose_teammates` or a Persona file** | `Candidate` cannot set Model, Effort or Adapter, for the same reason: each one grants capability or cost (D-9) |
+| **Setting a mode from `propose_agents` or a Persona file** | `Candidate` cannot set Model, Effort or Adapter, for the same reason: each one grants capability or cost (D-9) |
 | **Changing what the handler approves, beyond the plan guard** | Roadmap §20 owns that decision |
 | **ACP elicitation** | Advertised since 2026-10-01 (`Acp:AdvertiseElicitation`), and unrelated to a Work Mode or plan approval. [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md), [the Questions spec](Huddle.Questions-Specifications.md) §6.8a |
 
@@ -118,7 +118,7 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
  Settings
    Team:Acp:HiddenModes ─────────────────────────────┐
                                                      ▼
- Teammate card ── GetWorkModesAsync(adapter, model) ─▶ ModelCatalogProbe ─▶ throwaway session/new
+ Agent card ── GetWorkModesAsync(adapter, model) ─▶ ModelCatalogProbe ─▶ throwaway session/new
    pick a mode ──▶ PersonaStore.Update(…, workMode)                          (one probe: models, efforts,
         │                                                                     modes; no prompt sent)
         ▼
@@ -154,7 +154,7 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
 | `Acp/PlanModePermissionHandler.cs` | Decorator that refuses plan exit | New |
 | `IModelCatalog`, `ModelCatalogProbe`, `AdapterProbeOutcome` | Modes share the effort probe | Changed |
 | `Acp/Sessions/RoomSessionStore.cs`, `RoomSession.cs` | Resume match rule | Changed |
-| `TeammateCard.razor`, `Teammates.razor` | The picker | Changed |
+| `AgentProfileCard.razor`, `Agents.razor` | The picker | Changed |
 | `AcpOptions` | `HiddenModes` | Changed |
 
 ---
@@ -280,7 +280,7 @@ A scalar, so `PersonaSupervisor.NeedsRestart` (`started is null || persona != st
 up with no edit. **Never add a list-typed member** to this record (rules.md).
 
 **Why `WorkMode` here and `Mode` in the ACP layer.** `Mode` already means light or dark
-(`ThemeDescriptor.Mode`), the card state (`TeammateCardMode`, and `TeammateCard` already has a
+(`ThemeDescriptor.Mode`), the card state (`AgentProfileCardMode`, and `AgentProfileCard` already has a
 `[Parameter] Mode`) and `SystemPromptMode`. The Persona and the UI use **Work Mode**. The ACP
 layer keeps ACP's own word, `Mode`, where it is unambiguous.
 
@@ -313,11 +313,11 @@ therefore pass the mode, and one of them is easy to miss:
 
 | Caller | Passes |
 | --- | --- |
-| `TeammateCard.razor` `SaveAsync` | The card's `workMode` |
+| `AgentProfileCard.razor` `SaveAsync` | The card's `workMode` |
 | `Teams/TeamMembership.cs:120` | `persona.WorkMode`. **Missing this wipes the mode on every membership edit**; a test pins it |
-| `Teammates/BuiltinTeammateReset.cs` | `null` |
-| `Teammates/BuiltinTeammateSeeder.cs` | `null` |
-| `Teammates/ProposalService.cs` | Nothing. `Add` defaults it to `null` |
+| `Agents/BuiltinAgentReset.cs` | `null` |
+| `Agents/BuiltinAgentSeeder.cs` | `null` |
+| `Agents/ProposalService.cs` | Nothing. `Add` defaults it to `null` |
 
 The rename cascade (`PersonaRenameCascade`) moves the row through `PersonaStore.Update`, as it
 does for Model and Effort.
@@ -374,7 +374,7 @@ Adapter spawn.
 | `ModelCatalogProbe` | The effort cache value becomes a small `SessionCatalog(EffortLevels, Modes)`, so one probe fills both. Keyed per (resolved Adapter id, model) as now |
 
 Behaviour is inherited: failures are never cached, a successful empty answer is cached, the
-probe runs from the Teammate definitions folder, and it runs even when `Team:Acp:Enabled` is
+probe runs from the Agent definitions folder, and it runs even when `Team:Acp:Enabled` is
 false. **`WithoutAdapterDefault` is not applied to modes** (§8.1). The `HiddenModes` filter is
 applied on the way out, and the cache holds the unfiltered list, so changing the setting needs
 no re-probe.
@@ -463,7 +463,7 @@ again is phase 3 (§10), which captures the plan from the tool call.
 - Update the prose that names the rule: `RoomSession.cs`, `RoomSessionPool.cs`,
   `PersonaRunner.cs`, `PersonaSupervisor.cs`, and rules.md.
 
-### 6.11 The Teammate card
+### 6.11 The Agent card
 
 A `MudSelect` after Effort, following its markup and rules exactly.
 
@@ -471,7 +471,7 @@ A `MudSelect` after Effort, following its markup and rules exactly.
 | --- | --- |
 | Parameter and field | `[Parameter] WorkMode` and a private `workMode`. **Not** `Mode` or `mode` |
 | Label | *Work mode* |
-| Blank option | *Use the agent's default* (null) |
+| Blank option | *Agent default* (null) |
 | Choices | The catalog's modes. A stored id absent from it is **synthesised**, as `EffortChoices` does |
 | Helper text | The selected mode's `Description`, which the Adapter supplies. Model descriptions are rendered nowhere today; this one is |
 | While probing | `Disabled`, not `ReadOnly` (rules.md) |
@@ -488,10 +488,10 @@ Traps the card already carries, that this must respect:
 - **Modes load in `LoadEffortsAsync`** (renamed `LoadSessionCatalogAsync`), from the same probe
   result, under the same generation counter, so the faster-probe-wins rule holds. No new
   in-flight path is created, so no second `StateHasChanged` is needed.
-- A string `[Parameter]` is written with a leading `@` (`TeammatesRazorSourceTests` guards it).
+- A string `[Parameter]` is written with a leading `@` (`AgentsRazorSourceTests` guards it).
 - No colour literals, and no `role="alert"` for a consequence of the Human's own action.
 
-`Teammates.razor` `BuildViewParameters` passes `WorkMode` beside `Model` and `Effort`.
+`Agents.razor` `BuildViewParameters` passes `WorkMode` beside `Model` and `Effort`.
 
 ---
 
@@ -533,7 +533,7 @@ Traps the card already carries, that this must respect:
 
 ### 8.3 Who may set it
 
-Only the Human, in the Teammate card. It is not a field of a Persona file, not a
+Only the Human, in the Agent card. It is not a field of a Persona file, not a
 `Candidate` field, and not an argument of any App Tool. Each of those would let an Agent choose
 its own permissions.
 
@@ -727,8 +727,8 @@ new test copies the named effort test.
 | WM-T10 | Unit | `RoomSessionResumeTests`: the entry stores the mode; add a mode case to `Reopen_ModelEffortOrAdapterChanged_NeverResumes`; an old entry with no `workMode` still resumes for a Persona with none | Fails |
 | WM-I10 | Impl | `RoomSessionEntry`, `RoomSession`, prose | T10 green |
 | WM-T11 | Unit | `PersonaSupervisorLifecycleTests`: a changed Work Mode restarts the host; an unchanged one does not | Fails |
-| WM-T12 | bUnit | `TeammateCardWorkModeTests`, copying `TeammateCardModelEffortTests`: offered in create mode; the stored mode preselected; a stored mode not in the catalog is still offered; an Adapter change clears it with `role="status"`; inert while loading; the view paper; hidden when the catalog is empty and nothing is stored; no `role="alert"` | Fails |
-| WM-I11 | Impl | `TeammateCard.razor`, `Teammates.razor` | T12 green |
+| WM-T12 | bUnit | `AgentProfileCardWorkModeTests`, copying `AgentProfileCardModelEffortTests`: offered in create mode; the stored mode preselected; a stored mode not in the catalog is still offered; an Adapter change clears it with `role="status"`; inert while loading; the view paper; hidden when the catalog is empty and nothing is stored; no `role="alert"` | Fails |
+| WM-I11 | Impl | `AgentProfileCard.razor`, `Agents.razor` | T12 green |
 | WM-G1 | Guard | `PromptGoldenTests` passes with no golden change | Passes |
 | WM-D | Docs | Appendix B | Reviewed |
 

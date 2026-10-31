@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
@@ -25,13 +26,11 @@ internal sealed class FileRequestTool(
 {
     private static readonly string[] Kinds = ["bug", "feature", "feedback", "question"];
 
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
     public string Name => "file_request";
 
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.fileRequest.description", NoValues);
+    public string Description => prompts.Render("tool.fileRequest.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()
@@ -54,138 +53,241 @@ internal sealed class FileRequestTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
         }
 
-        List<TeamSummary> managed = [.. teams.Teams.Where(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase))];
-        if (managed.Count == 0)
-        {
-            return "Only managers file Requests; ask your own manager.";
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "fromTeam", out string? fromTeamText, out string fromTeamRefusal))
+        if (!this.TryResolveFromTeam(arguments, actor, out TeamSummary? fromTeam, out string fromTeamRefusal))
         {
             return fromTeamRefusal;
         }
 
-        TeamSummary? fromTeam;
+        if (!TryReadTexts(arguments, out RequestTexts? texts, out string textsRefusal))
+        {
+            return textsRefusal;
+        }
+
+        if (!this.TryResolveToTeam(texts.ToTeam, fromTeam, out TeamSummary? toTeam, out string toTeamRefusal))
+        {
+            return toTeamRefusal;
+        }
+
+        if (!TryParseKind(texts, out RequestKind kind, out string kindRefusal))
+        {
+            return kindRefusal;
+        }
+
+        if (!this.TryResolveRelated(texts.Related, fromTeam, out TaskItem? related, out string relatedRefusal))
+        {
+            return relatedRefusal;
+        }
+
+        if (!this.TryCreateRequest(kind, fromTeam, toTeam, texts, actor, out TaskItem? request, out string createRefusal))
+        {
+            return createRefusal;
+        }
+
+        string block = related is null ? string.Empty : this.BlockRelated(related, request, actor);
+
+        RequestTransition transition = RequestLifecycle.Apply(new RequestState(string.Empty, TriageState.None), RequestEvent.Filed);
+        await notifier.NotifyAsync(request, RequestEvent.Filed, transition.Wake, actor.Name, cancellationToken).ConfigureAwait(false);
+
+        return string.Create(CultureInfo.InvariantCulture, $"Filed {request.Id} in {toTeam.Name}.{block}");
+    }
+
+    /// <summary>Picks the Team the Request is filed from: the one named in <c>fromTeam</c>, or the caller's only managed Team.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="actor">The caller.</param>
+    /// <param name="fromTeam">The requesting Team when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryResolveFromTeam(JsonObject arguments, TaskActor actor, [NotNullWhen(true)] out TeamSummary? fromTeam, out string refusal)
+    {
+        fromTeam = null;
+        List<TeamSummary> managed = [.. teams.Teams.Where(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase))];
+        if (managed.Count == 0)
+        {
+            refusal = "Only managers file Requests; ask your own manager.";
+            return false;
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "fromTeam", out string? fromTeamText, out refusal))
+        {
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(fromTeamText))
         {
             fromTeam = managed.FirstOrDefault(team => string.Equals(team.Name, fromTeamText.Trim(), StringComparison.OrdinalIgnoreCase));
             if (fromTeam is null)
             {
-                return string.Create(CultureInfo.InvariantCulture, $"You do not manage a Team named '{fromTeamText.Trim()}'.");
+                refusal = string.Create(CultureInfo.InvariantCulture, $"You do not manage a Team named '{fromTeamText.Trim()}'.");
+                return false;
             }
         }
         else if (managed.Count > 1)
         {
             string names = string.Join(", ", managed.Select(static team => team.Name).Order(StringComparer.Ordinal));
-            return string.Create(CultureInfo.InvariantCulture, $"You manage several Teams ({names}); name the Team filing this Request in 'fromTeam'.");
+            refusal = string.Create(CultureInfo.InvariantCulture, $"You manage several Teams ({names}); name the Team filing this Request in 'fromTeam'.");
+            return false;
         }
         else
         {
             fromTeam = managed[0];
         }
 
-        if (!TaskToolText.TryGetString(arguments, "toTeam", out string? toTeamText, out string toTeamRefusal))
-        {
-            return toTeamRefusal;
-        }
+        refusal = string.Empty;
+        return true;
+    }
 
-        if (!TaskToolText.TryGetString(arguments, "kind", out string? kindText, out string kindRefusal))
+    /// <summary>Reads the five text arguments in order, then checks that the required ones are not blank.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="texts">The argument texts when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadTexts(JsonObject arguments, [NotNullWhen(true)] out RequestTexts? texts, out string refusal)
+    {
+        texts = null;
+        if (!TaskToolText.TryGetString(arguments, "toTeam", out string? toTeamText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "kind", out string? kindText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "title", out string? titleText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "body", out string? bodyText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "relatedTaskId", out string? relatedText, out refusal))
         {
-            return kindRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "title", out string? titleText, out string titleRefusal))
-        {
-            return titleRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "body", out string? bodyText, out string bodyRefusal))
-        {
-            return bodyRefusal;
-        }
-
-        if (!TaskToolText.TryGetString(arguments, "relatedTaskId", out string? relatedText, out string relatedRefusal))
-        {
-            return relatedRefusal;
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(toTeamText) || string.IsNullOrWhiteSpace(titleText) || string.IsNullOrWhiteSpace(bodyText))
         {
-            return "'toTeam', 'kind', 'title' and 'body' are all required.";
+            refusal = "'toTeam', 'kind', 'title' and 'body' are all required.";
+            return false;
         }
 
-        TeamSummary? toTeam = teams.Find(toTeamText.Trim());
+        texts = new RequestTexts(toTeamText, kindText, titleText, bodyText, relatedText);
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Finds the receiving Team, which must exist and must not be the requesting Team.</summary>
+    /// <param name="toTeamText">The <c>toTeam</c> argument.</param>
+    /// <param name="fromTeam">The requesting Team.</param>
+    /// <param name="toTeam">The receiving Team when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryResolveToTeam(string toTeamText, TeamSummary fromTeam, [NotNullWhen(true)] out TeamSummary? toTeam, out string refusal)
+    {
+        toTeam = teams.Find(toTeamText.Trim());
         if (toTeam is null)
         {
-            return string.Create(CultureInfo.InvariantCulture, $"There is no Team named '{toTeamText.Trim()}'; call list_teams.");
+            refusal = string.Create(CultureInfo.InvariantCulture, $"There is no Team named '{toTeamText.Trim()}'; call list_teams.");
+            return false;
         }
 
         if (string.Equals(toTeam.Name, fromTeam.Name, StringComparison.OrdinalIgnoreCase))
         {
-            return "A Request goes to another Team; use create_task for your own Team's work.";
+            refusal = "A Request goes to another Team; use create_task for your own Team's work.";
+            return false;
         }
 
-        string kindWire = (kindText ?? string.Empty).Trim().ToLowerInvariant();
-        if (!Kinds.Contains(kindWire, StringComparer.Ordinal) || !Enum.TryParse(kindWire, ignoreCase: true, out RequestKind kind))
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Parses <c>kind</c> and checks that the body has content under each heading that kind requires.</summary>
+    /// <param name="texts">The argument texts.</param>
+    /// <param name="kind">The parsed kind when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryParseKind(RequestTexts texts, out RequestKind kind, out string refusal)
+    {
+        string kindWire = (texts.Kind ?? string.Empty).Trim().ToLowerInvariant();
+        if (!Kinds.Contains(kindWire, StringComparer.Ordinal) || !Enum.TryParse(kindWire, ignoreCase: true, out kind))
         {
-            return "'kind' must be one of bug, feature, feedback, question.";
+            kind = default;
+            refusal = "'kind' must be one of bug, feature, feedback, question.";
+            return false;
         }
 
         foreach (string section in RequestFields.RequiredSections(kind))
         {
-            if (!HasSectionContent(bodyText, section))
+            if (!HasSectionContent(texts.Body, section))
             {
-                return string.Create(CultureInfo.InvariantCulture, $"A {kindWire} Request needs content under the '## {section}' heading.");
+                refusal = string.Create(CultureInfo.InvariantCulture, $"A {kindWire} Request needs content under the '## {section}' heading.");
+                return false;
             }
         }
 
-        TaskItem? related = null;
-        if (!string.IsNullOrWhiteSpace(relatedText))
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Resolves the optional related Task, which must belong to the requesting Team.</summary>
+    /// <param name="relatedText">The <c>relatedTaskId</c> argument, if any.</param>
+    /// <param name="fromTeam">The requesting Team.</param>
+    /// <param name="related">The related Task, or null when none was named.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryResolveRelated(string? relatedText, TeamSummary fromTeam, out TaskItem? related, out string refusal)
+    {
+        related = null;
+        if (string.IsNullOrWhiteSpace(relatedText))
         {
-            if (!TaskToolText.TryResolve(store, relatedText, out related, out string resolveRefusal))
-            {
-                return resolveRefusal;
-            }
-
-            if (!string.Equals(related.Location.Team, fromTeam.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                return "The related Task must be one of your own Team's Tasks.";
-            }
+            refusal = string.Empty;
+            return true;
         }
 
+        if (!TaskToolText.TryResolve(store, relatedText, out related, out refusal))
+        {
+            return false;
+        }
+
+        if (!string.Equals(related.Location.Team, fromTeam.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            refusal = "The related Task must be one of your own Team's Tasks.";
+            return false;
+        }
+
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Creates the Request Task in the receiving Team's folder through <see cref="TaskService.Create"/>.</summary>
+    /// <param name="kind">The Request kind.</param>
+    /// <param name="fromTeam">The requesting Team.</param>
+    /// <param name="toTeam">The receiving Team.</param>
+    /// <param name="texts">The argument texts.</param>
+    /// <param name="actor">The caller.</param>
+    /// <param name="request">The created Task when this returns <see langword="true"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private bool TryCreateRequest(
+        RequestKind kind,
+        TeamSummary fromTeam,
+        TeamSummary toTeam,
+        RequestTexts texts,
+        TaskActor actor,
+        [NotNullWhen(true)] out TaskItem? request,
+        out string refusal)
+    {
+        request = null;
         RequestFields fields = new(kind, fromTeam.Name, actor.Name, TriageState.None, string.Empty, string.Empty);
-        TaskDraft draft = new(titleText.Trim(), toTeam.Name, null, Description: bodyText) { ExtraFields = [.. fields.ToFrontmatter()] };
-        if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out string runRefusal))
+        TaskDraft draft = new(texts.Title.Trim(), toTeam.Name, null, Description: texts.Body) { ExtraFields = [.. fields.ToFrontmatter()] };
+        if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out refusal))
         {
-            return runRefusal;
+            return false;
         }
 
-        TaskItem request;
         switch (result)
         {
             case TaskResult.Saved saved:
                 request = saved.Task;
-                break;
+                refusal = string.Empty;
+                return true;
             case TaskResult.Refused refused:
-                return string.Join('\n', refused.Problems);
+                refusal = string.Join('\n', refused.Problems);
+                return false;
             case TaskResult.GateRefused gateRefused:
-                return gateRefused.Message;
+                refusal = gateRefused.Message;
+                return false;
             default:
                 throw new UnreachableException("TaskService.Create returns only Saved, Refused or GateRefused.");
         }
-
-        string block = related is null ? string.Empty : this.BlockRelated(related, request, actor);
-
-        RequestTransition transition = RequestLifecycle.Apply(new RequestState(string.Empty, TriageState.None), RequestEvent.Filed);
-        await notifier.NotifyAsync(request, RequestEvent.Filed, transition.Wake, actor.Name, cancellationToken);
-
-        return string.Create(CultureInfo.InvariantCulture, $"Filed {request.Id} in {toTeam.Name}.{block}");
     }
 
     /// <summary>Makes the requesting Team's related Task wait on the new Request so that the Request closing wakes it (RQ-6).</summary>
@@ -226,4 +328,12 @@ internal sealed class FileRequestTool(
 
         return false;
     }
+
+    /// <summary>The five text arguments, once each is known to be a string and the required ones are not blank.</summary>
+    /// <param name="ToTeam">The non-blank receiving Team name.</param>
+    /// <param name="Kind">The kind text, if any.</param>
+    /// <param name="Title">The non-blank title.</param>
+    /// <param name="Body">The non-blank body.</param>
+    /// <param name="Related">The related Task id text, if any.</param>
+    private sealed record RequestTexts(string ToTeam, string? Kind, string Title, string Body, string? Related);
 }

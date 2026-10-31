@@ -1,20 +1,9 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
-
-/// <summary>A source member that was not copied, with the plain reason.</summary>
-/// <param name="Name">The source member's name.</param>
-/// <param name="Reason">Why the member was left out.</param>
-internal sealed record SkippedMember(string Name, string Reason);
-
-/// <summary>The outcome of <see cref="TeamDuplicator.Duplicate"/>.</summary>
-/// <param name="Ok">Whether the new Team was created.</param>
-/// <param name="Error">The plain refusal when <paramref name="Ok"/> is false; otherwise <see langword="null"/>.</param>
-/// <param name="Hired">The names of the new Teammates, in hire order.</param>
-/// <param name="Skipped">The source members that were not copied.</param>
-internal sealed record DuplicateResult(bool Ok, string? Error, IReadOnlyList<string> Hired, IReadOnlyList<SkippedMember> Skipped);
 
 /// <summary>
 /// Copies a Team's roster to a new Team with new names, a new workspace and fresh memory (HR-12). Only the
@@ -27,8 +16,9 @@ internal sealed class TeamDuplicator(
     ITeamFolders folders,
     HireService hire,
     PersonaStore personas,
-    SkillPackStore packs,
-    IHireContext context)
+    ISkillAvailability skills,
+    IHireContext context,
+    AvatarStore avatars)
 {
     /// <summary>The refusal for a target name that is taken.</summary>
     internal const string ExistsMessage = "A Team with that name exists.";
@@ -58,7 +48,7 @@ internal sealed class TeamDuplicator(
     /// <param name="sourceTeam">The Team to copy.</param>
     /// <param name="newTeam">The new Team's name.</param>
     /// <param name="newWorkspace">The new Team's workspace folder, or <see langword="null"/> or blank for none.</param>
-    /// <returns>The new Teammates and the source members that were skipped, or the refusal.</returns>
+    /// <returns>The new Agents and the source members that were skipped, or the refusal.</returns>
     public DuplicateResult Duplicate(string sourceTeam, string newTeam, string? newWorkspace)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceTeam);
@@ -84,7 +74,10 @@ internal sealed class TeamDuplicator(
             return TeamDuplicator.Refuse(workspaceProblem);
         }
 
-        TeamFile file = new(sourceFile.TeamType, null, workspace, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(sourceFile.TeamType, null, workspace, null, TeamPaths.ProcessFileName, string.Empty)
+        {
+            Avatar = this.CopyAvatar(sourceFile.Avatar),
+        };
         TeamCreateResult created = folders.CreateTeam(target, file);
         if (created.Outcome != TeamCreateOutcome.Created)
         {
@@ -99,6 +92,25 @@ internal sealed class TeamDuplicator(
         }
 
         return new DuplicateResult(true, null, hired, skipped);
+    }
+
+    /// <summary>
+    /// Gives the new Team its own copy of the source's avatar. An image is read and written under a new file name, never shared:
+    /// replacing or deleting one Team's picture must not remove the other's. An image whose file is gone is dropped.
+    /// </summary>
+    /// <param name="source">The source Team's avatar.</param>
+    /// <returns>The avatar to store for the new Team.</returns>
+    private Avatar CopyAvatar(Avatar source)
+    {
+        if (source.Image is null)
+        {
+            return source;
+        }
+
+        byte[]? bytes = avatars.ReadImage(source.Image);
+        return bytes is null
+            ? source with { Image = null }
+            : source with { Image = avatars.WriteImage(bytes, Path.GetExtension(source.Image)) };
     }
 
     /// <summary>Reads each source member's role; members without a usable role go to <paramref name="skipped"/>.</summary>
@@ -130,7 +142,7 @@ internal sealed class TeamDuplicator(
     /// <summary>Resolves a fresh card for the member's role and hires it into <paramref name="target"/>.</summary>
     private void CopyOne(SourceMember member, string target, List<string> hired, List<SkippedMember> skipped)
     {
-        CardState card = CardResolver.Resolve(member.Spec, personas.ListNames(), context.Answered, context.TierMap, context.AvoidAdapters, packs.All, context.Connectors);
+        CardState card = CardResolver.Resolve(member.Spec, personas.ListNames(), context.Answered, context.TierMap, context.AvoidAdapters, skills, context.Connectors);
         if (card.Readiness != CardReadiness.Ready)
         {
             skipped.Add(new SkippedMember(member.Name, string.Join(", ", card.Reasons)));

@@ -1,0 +1,200 @@
+@*
+    A note's front matter as a Properties block above its rendered body (front matter properties spec): one key/value
+    row per property, in file order, each drawn as its type (D-4). A list is one chip per item, a checkbox is a read-only
+    icon, a date is spelled in the app's own format, a nested or unreadable value is its YAML source in a monospace block, and
+    a value that does not fit its assigned type is shown as written with a warning mark (D-3). Links in values resolve
+    through the same resolver as body links (D-5). Everything here is untrusted text from a file (D-11): it is drawn as Razor
+    text, never as markup, no class comes from a file, and a link's href is built only by the resolver or from http, https
+    or mailto. The tags row draws what the tag index reads (Spec §6.17), so the block and the index cannot disagree.
+*@
+@using System.Globalization
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@inject ILibraryNoteResolver Resolver
+@inject TimeProvider Clock
+
+<section class="library-properties" aria-label="Properties">
+    <MudText Typo="Typo.overline" Class="library-properties-title">Properties</MudText>
+    <dl class="library-properties-list">
+        @foreach (NoteProperty property in this.Properties)
+        {
+            <div class="library-properties-row">
+                <dt class="library-properties-key">@NotePropertyText.Prepare(property.Key)</dt>
+                <dd class="library-properties-value">
+                    @if (property.Shape != NotePropertyShape.Empty || property.Kind == NotePropertyKind.Checkbox)
+                    {
+                        @switch (property.Kind)
+                        {
+                            case NotePropertyKind.Checkbox:
+                                bool ticked = NotePropertyValues.TryParseBoolean(property.Value, out bool truth) && truth;
+                                <MudIcon Icon="@(ticked ? Icons.Material.Outlined.CheckBox : Icons.Material.Outlined.CheckBoxOutlineBlank)" Size="Size.Small"
+                                         Class="library-properties-checkbox" role="img" aria-label="@(ticked ? "Yes" : "No")" />
+                                break;
+                            case NotePropertyKind.Date or NotePropertyKind.DateTime:
+                                <span class="library-properties-date" title="@NotePropertyText.Prepare(property.Value)">@this.FormatTemporal(property)</span>
+                                break;
+                            case NotePropertyKind.Number:
+                                <span class="library-properties-number">@NotePropertyText.Prepare(property.Value)</span>
+                                break;
+                            case NotePropertyKind.Unsupported:
+                                <pre class="library-properties-source">@NotePropertyText.Prepare(property.Source)</pre>
+                                break;
+                            case NotePropertyKind.Mismatch:
+                                <span class="library-properties-mismatch-value">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
+                                <span class="library-properties-mismatch" role="img" title="@MismatchText(property)" aria-label="@MismatchText(property)">
+                                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+                                </span>
+                                break;
+                            case NotePropertyKind.List or NotePropertyKind.Aliases or NotePropertyKind.Tags:
+                                @foreach (string item in this.ChipItems(property))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip library-properties-chip">@this.Linked(NotePropertyText.Prepare(item))</MudChip>
+                                }
+
+                                @if (this.UsesRawFallback(property))
+                                {
+                                    <span class="library-properties-text">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
+                                }
+
+                                break;
+                            default:
+                                <span class="library-properties-text">@this.Linked(NotePropertyText.Prepare(property.Value))</span>
+                                break;
+                        }
+                    }
+                </dd>
+            </div>
+        }
+    </dl>
+</section>
+
+@code {
+    /// <summary>The note's properties, typed, in file order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NoteProperty> Properties { get; set; } = [];
+
+    /// <summary>The note's path, the origin of every link in a value; <see langword="null"/> draws links as text.</summary>
+    [Parameter]
+    public LibraryPath? Path { get; set; }
+
+    /// <summary>The tags <see cref="NoteTagReader"/> read from the block, drawn as the <c>tags</c> row's chips; <see langword="null"/> draws that row from its own items.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? Tags { get; set; }
+
+    /// <summary>The chips a List, Aliases or Tags property draws. The <c>tags</c> row draws what the tag index reads; any other list draws its items, and a lone scalar draws as one.</summary>
+    /// <param name="property">The property.</param>
+    private IReadOnlyList<string> ChipItems(NoteProperty property)
+    {
+        if (property.Kind == NotePropertyKind.Tags && string.Equals(property.Key, "tags", StringComparison.Ordinal) && this.Tags is not null)
+        {
+            return this.Tags;
+        }
+
+        return property.Shape switch
+        {
+            NotePropertyShape.List => property.Items,
+            NotePropertyShape.Scalar => [property.Value],
+            _ => [],
+        };
+    }
+
+    /// <summary>Whether a list-typed property that drew no chip shows its value as plain text instead: a <c>tags</c> value the index skipped, or an unreadable entry.</summary>
+    /// <param name="property">The property.</param>
+    private bool UsesRawFallback(NoteProperty property) =>
+        this.ChipItems(property).Count == 0 && (property.Shape == NotePropertyShape.Nested || property.Kind == NotePropertyKind.Tags);
+
+    /// <summary>The warning's tooltip and accessible name for a Mismatch.</summary>
+    /// <param name="property">The Mismatch property.</param>
+    private static string MismatchText(NoteProperty property) =>
+        $"Type mismatch: expected {TypeName(property.Expected ?? NotePropertyKind.Text)}";
+
+    /// <summary>The name a type is shown by in a tooltip.</summary>
+    /// <param name="kind">The type.</param>
+    private static string TypeName(NotePropertyKind kind) => kind switch
+    {
+        NotePropertyKind.DateTime => "Date and time",
+        _ => kind.ToString(),
+    };
+
+    /// <summary>A Date or Date and time as <c>d MMMM yyyy</c> or <c>d MMMM yyyy HH:mm</c>, in invariant culture as the document byline spells it. A value with an offset is converted to the clock's local zone; one without is the wall time as written.</summary>
+    /// <param name="property">A Date or Date and time property.</param>
+    private string FormatTemporal(NoteProperty property)
+    {
+        string raw = property.Value;
+        if (property.Kind == NotePropertyKind.Date || !NotePropertyValues.TryParseDateTime(raw, out DateTime wall, out TimeSpan? offset))
+        {
+            return this.FormatDateOrRaw(raw, property.Kind);
+        }
+
+        DateTime shown = offset is { } written
+            ? TimeZoneInfo.ConvertTime(new DateTimeOffset(wall, written), this.Clock.LocalTimeZone).DateTime
+            : wall;
+        return shown.ToString("d MMMM yyyy HH:mm", CultureInfo.InvariantCulture);
+    }
+
+    private string FormatDateOrRaw(string raw, NotePropertyKind kind)
+    {
+        if (!NotePropertyValues.TryParseDate(raw, out DateOnly date))
+        {
+            return NotePropertyText.Prepare(raw);
+        }
+
+        return date.ToDateTime(TimeOnly.MinValue).ToString(kind == NotePropertyKind.Date ? "d MMMM yyyy" : "d MMMM yyyy HH:mm", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Draws <paramref name="text"/> with its links (D-5, D-4): a whole-value http, https or mailto URL is one external link; each quoted <c>[[wikilink]]</c> is a link through the body's resolver and the rest stays text.</summary>
+    /// <param name="text">The value or list item, already prepared for drawing.</param>
+    private RenderFragment Linked(string text) => builder =>
+    {
+        if (ExternalUrl(text))
+        {
+            builder.OpenElement(0, "a");
+            builder.AddAttribute(1, "class", "library-properties-url");
+            builder.AddAttribute(2, "href", text);
+            builder.AddAttribute(3, "target", "_blank");
+            builder.AddAttribute(4, "rel", "noopener noreferrer");
+            builder.AddContent(5, text);
+            builder.CloseElement();
+            return;
+        }
+
+        int cursor = 0;
+        if (this.Path is not null)
+        {
+            foreach (WikiLink link in WikiLinkParser.ParseSlice(text))
+            {
+                LibraryReference? reference = link.IsEmbed ? null : this.Resolver.ResolveWikiLink(this.Path, link);
+                if (reference is null)
+                {
+                    continue;
+                }
+
+                builder.AddContent(10, text[cursor..link.Start]);
+                this.AddWikiLink(builder, link, reference);
+                cursor = link.Start + link.Length;
+            }
+        }
+
+        builder.AddContent(11, text[cursor..]);
+    };
+
+    /// <summary>Draws one resolved wikilink exactly as the body's renderer does: the <c>library-ref</c> class, the missing class and the title for a missing or ambiguous target, and the resolver's href.</summary>
+    private void AddWikiLink(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, WikiLink link, LibraryReference reference)
+    {
+        string? title = MarkdownRenderer.WikiLinkTitle(reference, link.Target);
+        builder.OpenElement(20, "a");
+        builder.AddAttribute(21, "class", reference.Exists ? "library-ref" : "library-ref library-ref-missing");
+        builder.AddAttribute(22, "href", MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath));
+        builder.AddAttribute(23, "title", title);
+        builder.AddContent(24, MarkdownRenderer.WikiLinkLabel(link));
+        builder.CloseElement();
+    }
+
+    /// <summary>Whether the whole text is one http, https or mailto URL (D-5): nothing else becomes a link's href.</summary>
+    /// <param name="text">The text to test.</param>
+    private static bool ExternalUrl(string text) =>
+        text.Length > 0
+        && !text.Any(static c => char.IsWhiteSpace(c) || char.IsControl(c))
+        && Uri.TryCreate(text, UriKind.Absolute, out Uri? uri)
+        && uri.Scheme is "http" or "https" or "mailto";
+}

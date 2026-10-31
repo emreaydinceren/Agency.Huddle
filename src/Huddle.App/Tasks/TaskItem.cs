@@ -1,28 +1,6 @@
 namespace Agency.Huddle.App.Tasks;
 
-/// <summary>Who made a change. Names are Persona Names, or the Human's Name.</summary>
-public sealed record TaskActor(TaskActorKind Kind, string Name, string? UserId);
-
-/// <summary>The kind of actor who made a change to a Task.</summary>
-public enum TaskActorKind
-{
-    /// <summary>The human user.</summary>
-    Human,
-
-    /// <summary>An AI agent.</summary>
-    Agent,
-
-    /// <summary>Someone outside Huddle who edited the file.</summary>
-    OutsideHuddle,
-}
-
-/// <summary>Where a Task lives. Project is null for a Task directly under its Team.</summary>
-public sealed record TaskLocation(string Team, string? Project, bool Closed);
-
-/// <summary>One entry in a Task's change log.</summary>
-public sealed record ChangeLogEntry(DateTimeOffset At, string Actor, string Summary);
-
-/// <summary>A work item that the Human and AI Teammates share.</summary>
+/// <summary>A work item that the Human and AI Agents share.</summary>
 public sealed record TaskItem
 {
     /// <summary>The Task's unique identifier.</summary>
@@ -66,6 +44,15 @@ public sealed record TaskItem
 
     /// <summary>The Sprint the Task belongs to, or null for none. The id need not be in <c>sprints.md</c>.</summary>
     public SprintId? Sprint { get; init; }
+
+    /// <summary>Whether the Task waits for the Human before it can be Done (<c>human_gate: true</c>). <see langword="false"/> is the absent key.</summary>
+    public bool HumanGate { get; init; }
+
+    /// <summary>The one-line outward action the Task will take once the Human accepts (at most 200 characters), or null for none.</summary>
+    public string? Action { get; init; }
+
+    /// <summary>True when the Task is gated: it carries <see cref="HumanGate"/> or an <see cref="Action"/>.</summary>
+    public bool IsGated => this.HumanGate || this.Action is not null;
 
     /// <summary>The Task's description in markdown format.</summary>
     public string Description { get; init; } = "";

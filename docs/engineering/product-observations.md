@@ -18,21 +18,21 @@ whether it is correct.
 ## From the manual test run of 2026-09-15
 
 The run drove the app for several hours across every area of the chat surface: rooms,
-teammates, budgets, prompts, personas and the app tools.
+agents, budgets, prompts, personas and the app tools.
 
 ### 1. Silence is the product's main failure mode, and it is never explained
 
 **Fixed 2026-09-16 (#40)**, with observation 5 folded in. The Room now says when a Message
-named no Teammate, and what to do about it. See
+named no Agent, and what to do about it. See
 [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) for why it is a Room-level note
 rather than the per-Message line suggested below, and [Known limits](known-limits.md) for the
-three gaps left deliberately - chief among them that a Room whose Teammates are all Offline
+three gaps left deliberately - chief among them that a Room whose Agents are all Offline
 still explains nothing.
 
-This is the biggest thing I would fix. Four different mechanisms cause a teammate to
+This is the biggest thing I would fix. Four different mechanisms cause an agent to
 correctly say nothing, and **none of them shows anything on screen**:
 
-| What happened | Why the teammate was right to stay quiet |
+| What happened | Why the agent was right to stay quiet |
 | --- | --- |
 | Plain message in a room with three or more members | Nobody was `@`-mentioned, so it is context-only |
 | Message arriving in a room whose budget is spent | The turn is declined before any prompt is built |
@@ -86,7 +86,7 @@ Two members and three members are genuinely different products in the same windo
 room crosses that line, say so in the transcript — *"Zellandine joined. Messages here now
 need an `@mention`."*
 
-### 4. Teammates routinely reply twice to one message
+### 4. Agents routinely reply twice to one message
 
 **Filed as #42.** Not re-verified since - it needs paid turns - but nothing merged since touches it.
 
@@ -103,20 +103,20 @@ Nova :: PLUM OK.PLUM Remembered—ZEBRA is saved.
 ```
 
 Nothing is broken — these are two deliberate messages, not a double-delivery bug, and the
-budget counts them correctly. But it reads as the teammate talking to itself, it burns
+budget counts them correctly. But it reads as the agent talking to itself, it burns
 budget twice as fast as the user expects, and it happened often enough across the run to
-look like the norm rather than the exception. Worth a line in the tool guidance telling a
-teammate not to post what it is already about to say.
+look like the norm rather than the exception. Worth a line in the tool guidance telling an
+agent not to post what it is already about to say.
 
 ### 5. Continue behaves like a coin flip
 
 **Fixed 2026-09-16 (#40)**, because it is the same defect reached through a different control.
 Both halves this entry asked for shipped: Continue now names what it will do *before* the
-click when the last Message is a Teammate's own, and reports what it did afterwards.
+click when the last Message is an Agent's own, and reports what it did afterwards.
 
 Of three **Continue** presses across the run, two granted the budget correctly and then
 produced no visible effect whatsoever. The reason is reasonable — the message being
-re-delivered mentioned nobody, so no teammate was woken — but the button gives no hint of
+re-delivered mentioned nobody, so no agent was woken — but the button gives no hint of
 this either before or after.
 
 The button is the human's only control for un-pausing a room, and pressing it can
@@ -142,23 +142,23 @@ mark of any kind. I navigated by URL id for the rest of the run.
 
 A last-message snippet or a created date under the name would settle it.
 
-### 7. What a teammate remembers is invisible and unmanageable
+### 7. What an agent remembers is invisible and unmanageable
 
-**Partly addressed. Filed as #44.** PR #38 closed the specific vector - a tool call naming a path inside `~/.claude` is now refused (#22) - but the general complaint stands: a `Bash` redirect is not caught, and the human still has no view of what a teammate holds.
+**Partly addressed. Filed as #44.** PR #38 closed the specific vector - a tool call naming a path inside `~/.claude` is now refused (#22) - but the general complaint stands: a `Bash` redirect is not caught, and the human still has no view of what an agent holds.
 
 Asked what word it had been asked to remember, a freshly restarted Nova answered with a
 word from a **different room, two tests earlier** — because it had written that word to
 disk during an unrelated turn.
 
 The sandbox side of this is already filed (issue #22). The product gap is separate and
-survives whatever that fix does: a teammate accumulates memory across rooms and across
+survives whatever that fix does: an agent accumulates memory across rooms and across
 restarts, and the human has no view of what it holds and no way to clear it. "Restart
 clears what it remembers" is what the UI promises on the Edit card, and it is no longer
-quite true once a teammate can write itself notes.
+quite true once an agent can write itself notes.
 
 ### 8. Smaller things
 
-- **A refused reply vanishes without trace.** When a teammate's reply is refused for
+- **A refused reply vanishes without trace.** When an agent's reply is refused for
   budget, you watch a draft row type out a full answer and then disappear, leaving
   nothing. Documented as correct, and it is — but it looks like the app lost the message.
   *Still true. Deliberately left out of #40 and recorded in [Known limits](known-limits.md):
@@ -183,9 +183,9 @@ quite true once a teammate can write itself notes.
   levels. The reset itself is deliberate and unchanged — PERSONALIFECYCLE-29 asserts it, and
   a bUnit test now does too, so a future "fix" that preserved the Effort across a Model
   change fails the build rather than reintroducing this.*
-- **Restarting a teammate means editing it.** There was no Restart control on an Online
-  teammate's card, so the only route was to change the Persona text and save — making an
-  edit you do not want in order to get an effect you do, and losing the teammate's memory
+- **Restarting an agent means editing it.** There was no Restart control on an Online
+  agent's card, so the only route was to change the Persona text and save — making an
+  edit you do not want in order to get an effect you do, and losing the agent's memory
   on the way. ***FIXED** on `main` by PR #38 (#32): Restart is now offered in every settled
   state. `Starting` stays excluded, because a restart there races the start it would
   cancel.*
@@ -193,11 +193,11 @@ quite true once a teammate can write itself notes.
 ## Notes
 
 Observations 1, 2 and 3 compounded, and fixing 2 has already removed a third of it: a new
-user's first encounter with a quiet teammate no longer includes a built-in demo agent
+user's first encounter with a quiet agent no longer includes a built-in demo agent
 quietly following a different rule from the one the product just explained.
 
 What remains is 1 and 3, and they are still worth taking together. A user's first
-encounter with a quiet teammate has several plausible explanations and no on-screen
+encounter with a quiet agent has several plausible explanations and no on-screen
 evidence for any of them. If only one thing here gets attention, make it observation 1
 (#40) — it is the cheapest to fix and it removes most of the confusion 3 causes. Entry 3
 (#41) is the one case where the human can be told *before* the confusing silence rather

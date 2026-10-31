@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -10,11 +11,9 @@ using Agency.Huddle.Contracts;
 /// <summary>Creates a Room containing the calling Agent, the Human, and the named agents.</summary>
 internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
 {
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     public string Name => "create_room";
 
-    public string Description => prompts.Render("tool.createRoom.description", NoValues);
+    public string Description => prompts.Render("tool.createRoom.description");
 
     public JsonObject InputSchema => new JsonObject
     {
@@ -46,24 +45,45 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
             return "Every entry in 'agents' must be a non-empty agent name.";
         }
 
-        // Alias-aware, matching ChatService.InviteAsync: PersonaFrontmatter.ComposeJobDescription
-        // deliberately keeps a Persona's Alias visible in list_agents' job description precisely so a
-        // reading agent learns "@jar" is a working handle for "Jarvis" - rejecting that same handle
-        // here would make the tool contradict what it just told the model. Each entry in 'agents' is
-        // a complete JSON string the model filled in, never carved out of free text by a pattern, so
-        // resolving it is a plain lookup, not the truncation-prone parsing docs/engineering/traps.md
-        // warns about.
+        (List<string> agentIds, List<string> unknown) = await this.ResolveAgentsAsync(names, cancellationToken).ConfigureAwait(false);
+        if (unknown.Count > 0)
+        {
+            return await this.DescribeUnknownAgentsAsync(unknown, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Read before the Room exists, so a wrongly-typed seed is refused without half-creating one.
+        if (!TaskToolText.TryGetString(arguments, "seed", out string? seed, out string seedRefusal))
+        {
+            return seedRefusal;
+        }
+
+        return await this.CreateRoomWithSeedAsync(agentIds, seed, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves every named agent to its user id, starting with the caller. Alias-aware, matching ChatService.InviteAsync:
+    /// PersonaFrontmatter.ComposeJobDescription deliberately keeps a Persona's Alias visible in list_agents' job
+    /// description precisely so a reading agent learns "@jar" is a working handle for "Jarvis" - rejecting that same
+    /// handle here would make the tool contradict what it just told the model. Each entry in 'agents' is a complete JSON
+    /// string the model filled in, never carved out of free text by a pattern, so resolving it is a plain lookup, not
+    /// the truncation-prone parsing docs/engineering/traps.md warns about.
+    /// </summary>
+    /// <param name="names">The non-empty agent names the model sent.</param>
+    /// <param name="cancellationToken">Cancels the directory lookups.</param>
+    /// <returns>The distinct agent ids to put in the Room, and the names that match no agent.</returns>
+    private async Task<(List<string> AgentIds, List<string> Unknown)> ResolveAgentsAsync(List<string?> names, CancellationToken cancellationToken)
+    {
         var agentIds = new List<string> { callerAgentId };
         var unknown = new List<string>();
         foreach (var name in names)
         {
-            var user = await teamDirectory.FindUserByNameAsync(name!, cancellationToken);
+            var user = await teamDirectory.FindUserByNameAsync(name!, cancellationToken).ConfigureAwait(false);
             if (user is null || user.Kind != UserKind.Agent)
             {
                 var alias = aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, name, StringComparison.OrdinalIgnoreCase));
                 if (alias is not null)
                 {
-                    user = await teamDirectory.FindUserByNameAsync(alias.Name, cancellationToken);
+                    user = await teamDirectory.FindUserByNameAsync(alias.Name, cancellationToken).ConfigureAwait(false);
                 }
             }
 
@@ -79,24 +99,31 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
             }
         }
 
-        if (unknown.Count > 0)
-        {
-            var existingUsers = await teamDirectory.GetUsersAsync(cancellationToken);
-            var existingNames = existingUsers.Where(u => u.Kind == UserKind.Agent).Select(u => u.Name).ToList();
-            var existingText = existingNames.Count == 0 ? "none" : string.Join(", ", existingNames);
-            return $"Unknown agent(s): {string.Join(", ", unknown)}. Agents that do exist: {existingText}.";
-        }
+        return (agentIds, unknown);
+    }
 
-        // Read before the Room exists, so a wrongly-typed seed is refused without half-creating one.
-        if (!TaskToolText.TryGetString(arguments, "seed", out string? seed, out string seedRefusal))
-        {
-            return seedRefusal;
-        }
+    /// <summary>Words the refusal for names that match no agent, listing the agents that do exist.</summary>
+    /// <param name="unknown">The names that matched no agent.</param>
+    /// <param name="cancellationToken">Cancels the directory lookup.</param>
+    private async Task<string> DescribeUnknownAgentsAsync(List<string> unknown, CancellationToken cancellationToken)
+    {
+        var existingUsers = await teamDirectory.GetUsersAsync(cancellationToken).ConfigureAwait(false);
+        var existingNames = existingUsers.Where(u => u.Kind == UserKind.Agent).Select(u => u.Name).ToList();
+        var existingText = existingNames.Count == 0 ? "none" : string.Join(", ", existingNames);
+        return $"Unknown agent(s): {string.Join(", ", unknown)}. Agents that do exist: {existingText}.";
+    }
 
+    /// <summary>Creates the Room, then posts the optional seed Message as the caller; a failed seed post never un-creates the Room.</summary>
+    /// <param name="agentIds">The user ids to put in the Room.</param>
+    /// <param name="seed">The optional first Message.</param>
+    /// <param name="cancellationToken">Cancels the chat calls.</param>
+    private async Task<string> CreateRoomWithSeedAsync(List<string> agentIds, string? seed, CancellationToken cancellationToken)
+    {
         Room room;
         try
         {
-            room = await chat.CreateRoomForAsync(agentIds, cancellationToken);
+            User? caller = await teamDirectory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
+            room = await chat.CreateRoomForAsync(agentIds, null, new FeedActor(FeedActorKind.Agent, caller?.Name ?? "An Agent"), cancellationToken).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
@@ -115,7 +142,7 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
 
         try
         {
-            await chat.PostAsync(room.Id, callerAgentId, seed, ct: cancellationToken);
+            await chat.PostAsync(room.Id, callerAgentId, seed, ct: cancellationToken).ConfigureAwait(false);
             return $"Created room '{room.Name}' (id {room.Id}) and posted the seed message into it.";
         }
         catch (ChatException ex)

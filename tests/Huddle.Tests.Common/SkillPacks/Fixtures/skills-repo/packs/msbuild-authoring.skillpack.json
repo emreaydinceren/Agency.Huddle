@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "msbuild-authoring",
+  "version": "1.0.0",
+  "title": "MSBuild Authoring",
+  "source": "local/skills",
+  "appliesTo": ["developer", "release-engineer"],
+  "consultWhenAdds": ".csproj, .props or .targets changes, build failures, slow or broken incremental builds",
+  "skills": [
+    { "name": "target-authoring", "catalog": "dotnet-skills" }
+  ]
+}

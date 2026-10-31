@@ -1,6 +1,6 @@
 # Global Search: the box, the dropdown, filters and the jump to a Message
 
-Prove, in a real browser against the running app, everything the Global Search box does: the three ways it opens, the browser keys it must win, the order and fill of the groups, the content hits and their cut-off, the jump to a Message in a Room, the dimmed Archived side, a locked folder, the keyboard path, the box's place in the Top Bar and the dropdown's height under the 90% zoom. The automated suite covers the pure parser, the ranker and the providers against fakes; it cannot see the browser keys, the zoom, the fade or the screen reader, so each of those is checked here. The tests are all free: search reads files and the database and never calls an Agent.
+Prove, in a real browser against the running app, everything the Global Search box does: the three ways it opens, the browser keys it must win, the order and fill of the groups, the content hits and their cut-off, the jump to a Message in a Room, the dimmed Archived side, a locked folder, the keyboard path, the box's place in the Top Bar and the dropdown's height at the default 100% render. The automated suite covers the pure parser, the ranker and the providers against fakes; it cannot see the browser keys, the zoom, the fade or the screen reader, so each of those is checked here. The tests are all free: search reads files and the database and never calls an Agent.
 
 **10 tests** · all free · about 2.25 hours.
 
@@ -9,7 +9,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 ## Setup
 
 1. Run [`P-BUILD`](common.md#p-build), then [`P-LAUNCH-FREE`](common.md#p-launch-free) in `T-A` and wait for `Now listening on: http://localhost:5100`. No Adapter is needed.
-2. Make the data the tests search for, once, before GLOBALSEARCH-01: one Team named `Marketing`; one Teammate named `Nova` in that Team; one Library file under the Teams root whose text contains the word `login` (for example `Teams/Marketing/plan.md`); one Task whose title contains `login`; one Room `findings` with a Message that contains `login`; one archived Room and one closed Task that also contain `login`. Record the Message's Room URL for GLOBALSEARCH-05.
+2. Make the data the tests search for, once, before GLOBALSEARCH-01: one Team named `Marketing`; one Agent named `Nova` in that Team; one Library file under the Teams root whose text contains the word `login` (for example `Teams/Marketing/plan.md`); one Task whose title contains `login`; one Room `findings` with a Message that contains `login`; one archived Room and one closed Task that also contain `login`. Record the Message's Room URL for GLOBALSEARCH-05.
 3. Use the browser you will test in, at its normal zoom unless a test says otherwise. Never test through a private window.
 4. A Library root that is pinned in the tree is needed for GLOBALSEARCH-03 and GLOBALSEARCH-07. Pin a folder with many files for GLOBALSEARCH-03 only.
 
@@ -146,7 +146,7 @@ If the pinned root is too small to take longer than a second, note the time and 
 
 If no file in the root is over 1 MB, make one as in the Before list and rerun the test.
 
-### GLOBALSEARCH-05 — A Room hit jumps to its Message at 90 percent zoom (GS-M5)
+### GLOBALSEARCH-05 — A Room hit jumps to its Message (GS-M5)
 
 **Free** · about 15 min
 
@@ -155,7 +155,7 @@ If no file in the root is over 1 MB, make one as in the Before list and rerun th
 **Before you start**
 
 - The Room `findings` has many Messages, and one of them contains `login` far above the bottom. Note its text.
-- The browser zoom is 90%.
+- The browser zoom is 100%.
 
 **Steps**
 
@@ -198,7 +198,7 @@ If the Room has no Message above the fold, scroll so it is, and record the scrol
 
 **Pass if — all of these**
 
-- The headings appear in this order: Teams, Teammates, Library, Tasks, Closed Tasks, Rooms, Archived Rooms, with empty groups not drawn in All.
+- The headings appear in this order: Teams, Agents, Library, Tasks, Closed Tasks, Rooms, Archived Rooms, with empty groups not drawn in All.
 - The Closed Tasks and Archived Rooms cards are dimmed, and their group headings say so in words (the state does not rest on colour alone).
 - In the Tasks filter, the closed Task appears under Closed Tasks. In the Rooms filter, the archived Room appears under Archived Rooms.
 
@@ -259,7 +259,7 @@ If the locked folder cannot be made, record that the test is not performed; do n
 
 **Pass if — all of these**
 
-- Every chip is reachable and `Alt+1` to `Alt+6` pick All, Teams, Teammates, Library, Tasks and Rooms.
+- Every chip is reachable and `Alt+1` to `Alt+6` pick All, Teams, Agents, Library, Tasks and Rooms.
 - `Up` and `Down` skip the headings and reach every card.
 - The screen reader announces the highlighted card's name and kind, and then the result count (`<n> results` or `1 result`).
 
@@ -284,7 +284,7 @@ If no screen reader is available, record the keyboard steps only and mark the an
 **Steps**
 
 1. Look at the Top Bar. Read the breadcrumb on the left and the box in the middle.
-2. Use the Tab right-click menu on one Tab and choose Move Right to make two panes. Click into the right pane's page.
+2. Use the Tab right-click menu on one Tab and choose Move right to make two panes. Click into the right pane's page.
 3. Read the breadcrumb again.
 
 **Pass if — all of these**
@@ -300,15 +300,15 @@ If no screen reader is available, record the keyboard steps only and mark the an
 
 If the window cannot show both, resize it and record the width.
 
-### GLOBALSEARCH-10 — The dropdown height under 90 percent zoom (GS-M10)
+### GLOBALSEARCH-10 — The dropdown height and width (GS-M10)
 
 **Free** · about 15 min
 
-*Proves that under the 90% zoom the dropdown is anchored flush under the box at its left edge, with a long list its height is 80% of the window and no more, and it is no wider than a narrow window.*
+*Proves that at the default 100% render (no page zoom) the dropdown is anchored flush under the box at its left edge, with a long list its height is 80% of the window and no more, and it is no wider than a narrow window.*
 
 **Before you start**
 
-- The browser zoom is 90% and the window is at its normal width. Open the browser's developer tools (F12) on the app page, Console tab.
+- The browser zoom is 100% and the window is at its normal width. Open the browser's developer tools (F12) on the app page, Console tab.
 
 **Steps**
 

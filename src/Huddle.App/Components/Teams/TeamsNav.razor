@@ -1,5 +1,9 @@
 @*
-    Spec §6.5: the sidebar's list of Teams and their Projects, one MudNavGroup titled "Teams".
+    Spec §6.5: the sidebar's list of Teams, each a root row of the Teams view (no "Teams" header over them: the
+    Activity bar already says it). An open Team holds three folders, Rooms, Library and Tasks, the Chats view's folder
+    shape (RoomList.razor's room-folder): each starts open, closes by its header, and is not drawn when it is empty.
+    The Tasks folder lists the same Views as TaskViewNav.razor, each linking to /teams/{Team}/tasks/{ViewId}, where
+    the Tasks page narrows that View to the Team; Rename and Delete stay on the Tasks view's own rows.
     Copies TaskViewNav.razor's shape: subscribe to ITeamCatalog.Changed, marshal with
     DispatchAsync and unsubscribe in Dispose (the catalog is a singleton, so an undisposed
     subscription would throw on the next publish after this component is torn down), plus the
@@ -9,29 +13,37 @@
     A MudNavGroup title toggles the group and has no Href, so a Team is a link plus a separate
     chevron rather than a nested group. The chevron's behaviour (expansion state) and the New project
     handler arrive in tasks 7.3 and 7.4; this file only lists.
+
+    With Team set (a Team shortcut in the Activity bar, TeamShortcutBar.razor) it lists that one Team's folders and
+    nothing else: no Team row, no "Show all" and no "Build a team", and the folders are always shown. Its Rooms folder is
+    drawn even when empty, splits into "Needs you" and "All" while a Room waits on the Human, and ends with "New chat".
 *@
 
 @using System.Text.Json
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.NeedsYou
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ITeamCatalog Catalog
 @inject ITeamDirectory TeamDirectory
 @inject RoomEvents Events
 @inject ITeamFolders Folders
+@inject ViewStore Views
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IOptions<TeamOptions> TeamConfig
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject NeedsYouTracker Tracker
 
 <div class="teams-nav-host">
     <MudNavMenu Class="teams-nav">
-        <MudNavGroup Title="Teams" Icon="@Icons.Material.Outlined.Groups" @bind-Expanded="this.expanded">
-            @foreach (TeamSummary team in this.Catalog.Teams)
+        @foreach (TeamSummary team in this.ListedTeams())
+        {
+            bool isExpanded = this.Team is not null || this.IsExpanded(team.Name);
+            @if (this.Team is null)
             {
-                bool isExpanded = this.IsExpanded(team.Name);
                 <div class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
                      @oncontextmenu:preventDefault="true">
@@ -41,68 +53,178 @@
                                    aria-expanded="@(isExpanded ? "true" : "false")"
                                    OnClick="@(() => this.ToggleAsync(team.Name))" />
                     <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
-                                Class="hover-reveal-link">@team.Name</NavTabLink>
-                    @if (!team.HasMembers)
-                    {
-                        <MudText Typo="Typo.caption" Class="teams-nav-nomembers">No members</MudText>
-                    }
-                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu">
+                                Class="hover-reveal-link"><TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="teams-nav-avatar" /><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
+                    @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
+                    <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
+                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the
                            supplied MenuContext.ToggleAsync is how custom activator content opens
                            the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
                         <ActivatorContent Context="menuContext">
-                            <MudTooltip Text="Team actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="Team actions" Class="hover-reveal-menu-button"
-                                               OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
+                            @* No hover tooltip (it would stay up over the first item); the label names the Team. *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@MenuDialogs.ActivatorLabel(team.Name)" Class="hover-reveal-menu-button"
+                                           OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
                             @if (this.ProjectsAllowed)
                             {
-                                <MudMenuItem OnClick="@(() => this.NewProjectAsync(team.Name))">New project</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
                 </div>
-                @if (string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
+            }
+            @if (this.Team is null && string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                <NewChat Team="@team.Name" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
+            }
+            @if (isExpanded)
+            {
+                IReadOnlyList<Room> teamRooms = this.RoomsOf(team);
+                @if (this.Team is not null && teamRooms.Count == 0 && team.Projects.Count == 0 && !this.ShowsTasksFolder)
                 {
-                    <NewChat Team="@team.Name" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
+                    <EmptyState Title="@($"Nothing in {team.Name} yet")" Text="Its Rooms, Projects and Task Views will be listed here." />
+                    <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Icon="@Icons.Material.Outlined.Groups"
+                                Class="nav-action-link">Open @team.Name</NavTabLink>
                 }
-                @if (isExpanded)
+                @if (this.Team is not null)
                 {
-                    @if (this.roomsByTeam.TryGetValue(team.Name, out IReadOnlyList<Room>? teamRooms))
-                    {
-                        @foreach (Room room in teamRooms)
+                    @* A shortcut's Rooms folder is the Chats view's All grouping for one Team (RoomList.razor): the Rooms waiting
+                       on the Human in a "Needs you" folder, the rest in "All", every Room listed with no "Show all", and New chat
+                       last. With nothing waiting there is nothing to split, so the Rooms are listed flat. *@
+                    string roomsKey = FolderKey(team.Name, RoomsFolder);
+                    List<Room> waiting = [.. teamRooms.Where(this.IsWaiting)];
+                    <MudNavGroup Class="teams-nav-folder teams-nav-rooms" Title="Rooms" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(roomsKey)" ExpandedChanged="@(open => this.SetFolderOpen(roomsKey, open))">
+                        @if (waiting.Count > 0)
+                        {
+                            string needsYouKey = FolderKey(team.Name, NeedsYouFolder);
+                            string allKey = FolderKey(team.Name, AllFolder);
+                            <MudNavGroup Class="teams-nav-subfolder room-folder-needs-you" Title="Needs you" Icon="@Icons.Material.Outlined.NotificationsActive"
+                                         Expanded="this.IsFolderOpen(needsYouKey)" ExpandedChanged="@(open => this.SetFolderOpen(needsYouKey, open))">
+                                @foreach (Room room in waiting)
+                                {
+                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                }
+                            </MudNavGroup>
+                            <MudNavGroup Class="teams-nav-subfolder teams-nav-all" Title="All" Icon="@Icons.Material.Outlined.Folder"
+                                         Expanded="this.IsFolderOpen(allKey)" ExpandedChanged="@(open => this.SetFolderOpen(allKey, open))">
+                                @foreach (Room room in teamRooms.Where(room => !this.IsWaiting(room)))
+                                {
+                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                }
+                                @this.NewChatRow(team.Name)
+                            </MudNavGroup>
+                        }
+                        else
+                        {
+                            @foreach (Room room in teamRooms)
+                            {
+                                <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                            }
+                            @this.NewChatRow(team.Name)
+                        }
+                    </MudNavGroup>
+                }
+                else if (teamRooms.Count > 0)
+                {
+                    string roomsKey = FolderKey(team.Name, RoomsFolder);
+                    <MudNavGroup Class="teams-nav-folder teams-nav-rooms" Title="Rooms" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(roomsKey)" ExpandedChanged="@(open => this.SetFolderOpen(roomsKey, open))">
+                        @foreach (Room room in SidebarRows.Visible(teamRooms, this.showAllRows.Contains(roomsKey), this.IsActiveRoom))
                         {
                             <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
                         }
-                    }
-
-                    @foreach (string project in team.Projects)
-                    {
-                        <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
-                                    TabTitle="@project"
-                                    Icon="@Icons.Material.Filled.LibraryBooks"
-                                    Class="nav-project-link">@project</NavTabLink>
-                    }
+                        <ShowAllRow Total="teamRooms.Count" Expanded="this.showAllRows.Contains(roomsKey)" OnToggle="@(() => this.ToggleShowAllRows(roomsKey))" />
+                    </MudNavGroup>
+                }
+                @if (team.Projects.Count > 0)
+                {
+                    string libraryKey = FolderKey(team.Name, LibraryFolder);
+                    <MudNavGroup Class="teams-nav-folder teams-nav-library" Title="Library" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(libraryKey)" ExpandedChanged="@(open => this.SetFolderOpen(libraryKey, open))">
+                        @foreach (string project in SidebarRows.Visible(team.Projects, this.showAllRows.Contains(libraryKey), static _ => false))
+                        {
+                            <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
+                                        TabTitle="@project"
+                                        Icon="@Icons.Material.Filled.LibraryBooks"
+                                        Class="nav-project-link"><span class="sidebar-row-label" title="@project">@project</span></NavTabLink>
+                        }
+                        <ShowAllRow Total="team.Projects.Count" Expanded="this.showAllRows.Contains(libraryKey)" OnToggle="@(() => this.ToggleShowAllRows(libraryKey))" />
+                    </MudNavGroup>
+                }
+                @if (this.ShowsTasksFolder)
+                {
+                    string tasksKey = FolderKey(team.Name, TasksFolder);
+                    string teamName = team.Name;
+                    <MudNavGroup Class="teams-nav-folder teams-nav-tasks" Title="Tasks" Icon="@Icons.Material.Outlined.Folder"
+                                 Expanded="this.IsFolderOpen(tasksKey)" ExpandedChanged="@(open => this.SetFolderOpen(tasksKey, open))">
+                        @foreach (TaskView view in SidebarRows.Visible(this.Views.Views, this.showAllRows.Contains(tasksKey), view => this.IsActiveView(teamName, view)))
+                        {
+                            <NavTabLink @key="view.Id" Href="@TeamViewHref(teamName, view.Id)"
+                                        TabTitle="@Tasks.TeamViewTitle(teamName, view.Name)"
+                                        Icon="@(view.Kind == ViewKind.Kanban ? Icons.Material.Outlined.ViewKanban : Icons.Material.Outlined.ViewList)"
+                                        Class="nav-team-view-link"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
+                        }
+                        <ShowAllRow Total="this.Views.Views.Count" Expanded="this.showAllRows.Contains(tasksKey)" OnToggle="@(() => this.ToggleShowAllRows(tasksKey))" />
+                    </MudNavGroup>
                 }
             }
-            <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">Build a team</NavTabLink>
-        </MudNavGroup>
+        }
+        @if (this.Team is null)
+        {
+            <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
+            <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">Build a team</NavTabLink>
+        }
     </MudNavMenu>
 </div>
 
 @code {
-    private bool expanded = true;
+    /// <summary>The one Team to list the folders of, from its Activity bar shortcut, or <see langword="null"/> for every Team.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    private bool showAllTeams;
+
+    /// <summary>Folder keys (see <see cref="FolderKey"/>) whose folder the Human opened with "Show all".</summary>
+    private readonly HashSet<string> showAllRows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
 
-    private const string CollapsedKey = "teamsNav:collapsed";
+    private const string ExpandedKey = "teamsNav:expanded";
 
-    /// <summary>Lower-cased names of the Teams the user collapsed (stored under <c>teamsNav:collapsed</c>); a Team not in it is expanded.</summary>
-    private readonly HashSet<string> collapsed = new(StringComparer.Ordinal);
+    /// <summary>Lower-cased names of the Teams the user opened (stored under <c>teamsNav:expanded</c>); a Team not in it is collapsed unless the route is inside it.</summary>
+    private readonly HashSet<string> opened = new(StringComparer.Ordinal);
+
+    /// <summary>The folder names under a Team, after a control character that keeps them apart from any Team name.</summary>
+    private const string RoomsFolder = "\u0001rooms";
+    private const string LibraryFolder = "\u0001library";
+    private const string TasksFolder = "\u0001tasks";
+
+    /// <summary>The two folders inside a shortcut's Rooms folder while a Room waits on the Human.</summary>
+    private const string NeedsYouFolder = RoomsFolder + "\u0001needs-you";
+    private const string AllFolder = RoomsFolder + "\u0001all";
+
+    /// <summary>The ids of the Rooms waiting on the Human, as the tracker holds them.</summary>
+    private HashSet<string> waitingIds = new(StringComparer.Ordinal);
+
+    private bool IsWaiting(Room room) => this.waitingIds.Contains(room.Id);
+
+    /// <summary>The "New chat" row at the bottom of a shortcut's Rooms folder, and the panel it opens for <paramref name="team"/>.</summary>
+    /// <param name="team">The shortcut's Team.</param>
+    private RenderFragment NewChatRow(string team) =>
+        @<div class="teams-nav-new-chat">
+            <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team))" Class="nav-action-link">New chat</MudNavLink>
+            @if (string.Equals(this.newChatTeam, team, StringComparison.OrdinalIgnoreCase))
+            {
+                <NewChat Team="@team" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
+            }
+        </div>;
+
+    /// <summary>Folder keys of the folders the Human closed. Every folder starts open, and the choice lasts for this circuit only.</summary>
+    private readonly HashSet<string> closedFolders = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The lower-cased, unescaped Team of the current route, or <see langword="null"/> outside <c>/teams/{Team}</c>.</summary>
     private string? routeTeam;
@@ -121,12 +243,13 @@
     /// <summary>Counts the Room loads started; a load that finds a higher number than its own has been overtaken and drops its result.</summary>
     private int loadVersion;
 
-    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
+    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/>, <see cref="ViewStore.ViewsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
     protected override async Task OnInitializedAsync()
     {
-        this.UpdateRoute();
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
+        this.Views.ViewsChanged += this.OnViewsChanged;
+        this.Tracker.Changed += this.OnTrackerChanged;
         this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.UpdateRoute();
@@ -135,6 +258,7 @@
         });
         this.Navigation.LocationChanged += this.locationChanged;
         await this.LoadRoomsAsync();
+        this.UpdateRoute();
     }
 
     /// <summary>Loads the remembered collapsed Teams once, after the first render.</summary>
@@ -148,7 +272,7 @@
 
         try
         {
-            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", CollapsedKey);
+            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", ExpandedKey);
             if (stored is null)
             {
                 return;
@@ -164,7 +288,7 @@
             {
                 if (!string.IsNullOrWhiteSpace(name))
                 {
-                    this.collapsed.Add(name.ToLowerInvariant());
+                    this.opened.Add(name.ToLowerInvariant());
                 }
             }
 
@@ -172,7 +296,7 @@
         }
         catch (JSException)
         {
-            // Storage may be blocked (private mode, policy): every Team stays expanded.
+            // Storage may be blocked (private mode, policy): every Team stays collapsed.
         }
         catch (JSDisconnectedException)
         {
@@ -180,26 +304,70 @@
         }
         catch (JsonException)
         {
-            // Stored text may be stale or hand-edited and not a JSON array of strings: every Team stays expanded.
+            // Stored text may be stale or hand-edited and not a JSON array of strings: every Team stays collapsed.
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation.</summary>
+    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/>, <see cref="ViewStore.ViewsChanged"/> and navigation.</summary>
     public void Dispose()
     {
         this.Catalog.Changed -= this.OnCatalogChanged;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
+        this.Views.ViewsChanged -= this.OnViewsChanged;
+        this.Tracker.Changed -= this.OnTrackerChanged;
         if (this.locationChanged is not null)
         {
             this.Navigation.LocationChanged -= this.locationChanged;
         }
     }
 
-    /// <summary>A Team is expanded when it is the route's Team (and the chevron has not collapsed it since the last navigation) or is not in the collapsed set.</summary>
+    /// <summary>A Team is expanded when it is the route's Team (and the chevron has not collapsed it since the last navigation) or the Human opened it.</summary>
     private bool IsExpanded(string team)
     {
         string key = team.ToLowerInvariant();
-        return (this.routeOpen && string.Equals(key, this.routeTeam, StringComparison.Ordinal)) || !this.collapsed.Contains(key);
+        return (this.routeOpen && string.Equals(key, this.routeTeam, StringComparison.Ordinal)) || this.opened.Contains(key);
+    }
+
+    /// <summary>The Teams to list: the catalog's rows (cut to the first few until "Show all"), or just <see cref="Team"/> when it is set.</summary>
+    private IEnumerable<TeamSummary> ListedTeams() => this.Team is { } only
+        ? this.Catalog.Teams.Where(team => string.Equals(team.Name, only, StringComparison.OrdinalIgnoreCase))
+        : SidebarRows.Visible(this.Catalog.Teams, this.showAllTeams, this.IsRouteTeam);
+
+    /// <summary>Whether a Team's Tasks folder is drawn: Tasks is on and there is a View to list.</summary>
+    private bool ShowsTasksFolder => this.TeamConfig.Value.Tasks.Enabled && this.Views.Views.Count > 0;
+
+    private bool IsRouteTeam(TeamSummary team) => string.Equals(team.Name, this.routeTeam, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsActiveRoom(Room room) =>
+        string.Equals(room.Id, SidebarRows.RoomId(SidebarRows.CurrentPath(this.Navigation)), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The address of <paramref name="viewId"/> narrowed to <paramref name="team"/>, the Tasks page's <c>/teams/{Team}/tasks/{ViewId}</c> route.</summary>
+    private static string TeamViewHref(string team, string viewId) =>
+        $"/teams/{Uri.EscapeDataString(team)}/tasks/{Uri.EscapeDataString(viewId)}";
+
+    private bool IsActiveView(string team, TaskView view) =>
+        string.Equals("/" + SidebarRows.CurrentPath(this.Navigation), TeamViewHref(team, view.Id), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The Rooms listed in the Team's Rooms folder (see <see cref="roomsByTeam"/>), or none before they load.</summary>
+    private IReadOnlyList<Room> RoomsOf(TeamSummary team) =>
+        this.roomsByTeam.TryGetValue(team.Name, out IReadOnlyList<Room>? teamRooms) ? teamRooms : [];
+
+    /// <summary>The key of one folder under one Team: the Team's name followed by <paramref name="folder"/>.</summary>
+    private static string FolderKey(string team, string folder) => team + folder;
+
+    private bool IsFolderOpen(string folderKey) => !this.closedFolders.Contains(folderKey);
+
+    private void SetFolderOpen(string folderKey, bool open) =>
+        _ = open ? this.closedFolders.Remove(folderKey) : this.closedFolders.Add(folderKey);
+
+    private void ToggleShowAllTeams() => this.showAllTeams = !this.showAllTeams;
+
+    private void ToggleShowAllRows(string folderKey)
+    {
+        if (!this.showAllRows.Remove(folderKey))
+        {
+            this.showAllRows.Add(folderKey);
+        }
     }
 
     /// <summary>Flips the Team's state and remembers the choice; a click on the route's forced-open Team collapses it for real until the next navigation into it.</summary>
@@ -208,7 +376,7 @@
         string key = team.ToLowerInvariant();
         if (this.IsExpanded(team))
         {
-            this.collapsed.Add(key);
+            this.opened.Remove(key);
             if (string.Equals(key, this.routeTeam, StringComparison.Ordinal))
             {
                 this.routeOpen = false;
@@ -216,13 +384,13 @@
         }
         else
         {
-            this.collapsed.Remove(key);
+            this.opened.Add(key);
         }
 
         try
         {
-            string json = JsonSerializer.Serialize(this.collapsed.Order(StringComparer.Ordinal));
-            await this.JS.InvokeVoidAsync("huddleStorage.set", CollapsedKey, json);
+            string json = JsonSerializer.Serialize(this.opened.Order(StringComparer.Ordinal));
+            await this.JS.InvokeVoidAsync("huddleStorage.set", ExpandedKey, json);
         }
         catch (JSException)
         {
@@ -234,7 +402,31 @@
         }
     }
 
-    /// <summary>Reads the Team out of <c>/teams/{Team}[/...]</c> (unescaped, lower-cased) and forces it open until the chevron collapses it.</summary>
+    /// <summary>The lower-cased Team that lists the Room <paramref name="roomId"/>, or <see langword="null"/> when none does.</summary>
+    /// <param name="roomId">The Room id of the current page, or <see langword="null"/>.</param>
+    private string? TeamOfRoom(string? roomId)
+    {
+        if (roomId is null)
+        {
+            return null;
+        }
+
+        foreach ((string team, IReadOnlyList<Room> rooms) in this.roomsByTeam)
+        {
+            if (rooms.Any(room => string.Equals(room.Id, roomId, StringComparison.OrdinalIgnoreCase)))
+            {
+                return team.ToLowerInvariant();
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Reads the Team out of <c>/teams/{Team}[/...]</c> (unescaped, lower-cased) and forces it open until the chevron
+    /// collapses it; the folder holding the page (Library for a Project, Rooms for a Room) is opened too, so the page
+    /// the Human is on is never folded away.
+    /// </summary>
     private void UpdateRoute()
     {
         string path = this.Navigation.ToBaseRelativePath(this.Navigation.Uri);
@@ -243,8 +435,27 @@
         bool inTeam = segments.Length >= 2
             && string.Equals(segments[0], "teams", StringComparison.OrdinalIgnoreCase)
             && segments[1].Length > 0;
-        this.routeTeam = inTeam ? Uri.UnescapeDataString(segments[1]).ToLowerInvariant() : null;
-        this.routeOpen = inTeam;
+        this.routeTeam = inTeam ? Uri.UnescapeDataString(segments[1]).ToLowerInvariant() : this.TeamOfRoom(SidebarRows.RoomId(path));
+        this.routeOpen = this.routeTeam is not null;
+        if (this.routeTeam is null)
+        {
+            return;
+        }
+
+        if (!inTeam)
+        {
+            this.closedFolders.Remove(FolderKey(this.routeTeam, RoomsFolder));
+            this.closedFolders.Remove(FolderKey(this.routeTeam, NeedsYouFolder));
+            this.closedFolders.Remove(FolderKey(this.routeTeam, AllFolder));
+        }
+        else if (segments.Length >= 3 && string.Equals(segments[2], "projects", StringComparison.OrdinalIgnoreCase))
+        {
+            this.closedFolders.Remove(FolderKey(this.routeTeam, LibraryFolder));
+        }
+        else if (segments.Length >= 4 && string.Equals(segments[2], "tasks", StringComparison.OrdinalIgnoreCase))
+        {
+            this.closedFolders.Remove(FolderKey(this.routeTeam, TasksFolder));
+        }
     }
 
     private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
@@ -253,6 +464,19 @@
         await this.LoadRoomsAsync();
         this.StateHasChanged();
     });
+
+    private void OnViewsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private void OnTrackerChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.ReadWaiting();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Reads the ids of the Rooms waiting on the Human (see <see cref="waitingIds"/>).</summary>
+    private void ReadWaiting() =>
+        this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
 
     private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
@@ -282,6 +506,7 @@
             ];
         }
 
+        this.ReadWaiting();
         this.roomsByTeam.Clear();
         foreach ((string name, IReadOnlyList<Room> rooms) in loaded)
         {
@@ -324,7 +549,8 @@
         IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
         TeamSummary summary = teams.FirstOrDefault(t => string.Equals(t.Name, team, StringComparison.OrdinalIgnoreCase))
             ?? new TeamSummary(team, [], [], false);
-        string? project = await NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null));
+        this.menuRefs.TryGetValue(team, out MudMenu? menu);
+        string? project = await MenuDialogs.AfterClosingAsync(menu, () => NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null)));
         if (project is null)
         {
             return;

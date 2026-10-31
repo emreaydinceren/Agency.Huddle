@@ -1,6 +1,6 @@
 using System.ComponentModel;
+using Agency.Huddle.App.Gateway;
 using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Desktop;
@@ -17,6 +17,8 @@ namespace Agency.Huddle.App.Desktop;
 /// <param name="session">The per-instance session holding the stop token.</param>
 /// <param name="opener">Opens the instance URL in the browser.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="bootstrap">Mints the bootstrap token the opened URL carries (Spec 6.9, C-9); <see langword="null"/> opens the bare address.</param>
+/// <param name="gateway">The recorded listeners; its app URL wins over the server's address list and the managed endpoint is skipped (D-5).</param>
 internal sealed class DesktopLifetimeService(
     IServer server,
     IHostApplicationLifetime lifetime,
@@ -24,8 +26,12 @@ internal sealed class DesktopLifetimeService(
     IOptions<TeamOptions> team,
     DesktopSession session,
     IBrowserOpener opener,
-    ILogger<DesktopLifetimeService> logger) : IHostedService
+    ILogger<DesktopLifetimeService> logger,
+    BootstrapLinks? bootstrap = null,
+    GatewayListener? gateway = null) : IHostedService
 {
+    private readonly BootstrapLinks? bootstrap = bootstrap;
+
     private CancellationTokenRegistration startedRegistration;
 
     /// <summary>
@@ -45,11 +51,10 @@ internal sealed class DesktopLifetimeService(
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
     /// <returns>A completed task.</returns>
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        this.startedRegistration.Dispose();
+        await this.startedRegistration.DisposeAsync().ConfigureAwait(false);
         InstanceFile.Delete(team.Value.DataDir);
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -58,7 +63,7 @@ internal sealed class DesktopLifetimeService(
     /// </summary>
     private void Publish()
     {
-        string? url = server.Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault();
+        string? url = gateway?.AppUrl ?? this.FirstUnmanagedAddress();
 
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -66,36 +71,42 @@ internal sealed class DesktopLifetimeService(
             return;
         }
 
-        InstanceFile.Write(team.Value.DataDir, new InstanceInfo(url, session.StopToken, Environment.ProcessId));
+        string address = this.bootstrap is null ? url : BootstrapLinks.NormalizeListenAddress(url);
+        InstanceFile.Write(team.Value.DataDir, new InstanceInfo(address, session.StopToken, Environment.ProcessId));
 
         if (options.Value.OpenBrowser)
         {
-            this.TryOpen(url);
+            this.TryOpen(this.bootstrap?.AdminUrl(address) ?? address, address);
         }
+    }
+
+    /// <summary>The first address the server reports that is not the managed (Tailscale) loopback endpoint (D-5).</summary>
+    private string? FirstUnmanagedAddress()
+    {
+        int? managedPort = gateway?.ManagedEndpoint?.Port;
+        return BoundServerAddresses.Of(server).FirstOrDefault(
+            address => managedPort is null || !Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) || uri.Port != managedPort);
     }
 
     /// <summary>
     /// Opens <paramref name="url"/>, logging instead of throwing when the opener rejects it or cannot launch a
     /// browser, so an unopenable address never fails startup.
     /// </summary>
-    /// <param name="url">The instance URL.</param>
-    private void TryOpen(string url)
+    /// <remarks>
+    /// <paramref name="url"/> carries the bootstrap token in its fragment (R-3), and an opener's exception message may
+    /// repeat it, so only the bare <paramref name="address"/> and the exception type are logged, never the exception itself.
+    /// </remarks>
+    /// <param name="url">The URL to open, possibly with the bootstrap fragment.</param>
+    /// <param name="address">The bare instance address, safe to log.</param>
+    private void TryOpen(string url, string address)
     {
         try
         {
             opener.Open(url);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or UriFormatException or Win32Exception)
         {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
-        }
-        catch (UriFormatException ex)
-        {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
-        }
-        catch (Win32Exception ex)
-        {
-            logger.LogWarning(ex, "The browser was not opened for {Url}.", url);
+            logger.LogWarning("The browser was not opened for {Url} ({Reason}).", address, ex.GetType().Name);
         }
     }
 }

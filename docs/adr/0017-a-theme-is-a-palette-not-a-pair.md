@@ -5,6 +5,8 @@ date: 2026-09-21
 
 # A Theme is a palette, not a pair
 
+> **Status note 2026-10-17.** Still holds under [ADR-0058](0058-a-theme-is-a-palette-a-skin-and-traits.md). Superseded details: a Theme is now a skin file, `huddle` and `huddle-dark` migrate to Lumen, and `appearance.json` also carries `customizations`.
+
 > **Narrows [ADR-0010](0010-a-theme-is-a-mudblazor-theme.md).** That decision stands: a Theme is
 > still a `MudTheme` in `ThemeCatalog` and there is still no stylesheet. Two of its details are
 > now wrong — a Theme carries *one* palette rather than a `PaletteLight` and a `PaletteDark`, and

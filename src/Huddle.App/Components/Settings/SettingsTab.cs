@@ -1,14 +1,20 @@
 namespace Agency.Huddle.App.Components.Settings;
 
 /// <summary>
-/// Which pane the Settings page's tab rail is showing. Public for the same reason
-/// <c>TeammateCardMode</c> is: Razor generates <c>Settings.razor</c>'s component as a public type, and
+/// Which section the Settings page's left menu is showing. Public for the same reason
+/// <c>AgentProfileCardMode</c> is: Razor generates <c>Settings.razor</c>'s component as a public type, and
 /// a route parameter or field of an <c>internal</c> enum type would not compile there.
 /// </summary>
 public enum SettingsTab
 {
+    /// <summary>The Human's own profile: Name, Alias, Title, Description and Avatar. The first tab, and where a blank system opens.</summary>
+    Profile,
+
     /// <summary>The read-only view of every model-facing prompt, grouped by area.</summary>
     Prompts,
+
+    /// <summary>Helpers: the background agents that make one judgement each, and what they may spend.</summary>
+    Helpers,
 
     /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>
     Appearance,
@@ -24,4 +30,7 @@ public enum SettingsTab
 
     /// <summary>The Library settings: pinned roots and the pane side.</summary>
     Library,
+
+    /// <summary>Remote access: the gateway, pairing requests, devices and the Security check. Admin only (Spec 6.12).</summary>
+    RemoteAccess,
 }

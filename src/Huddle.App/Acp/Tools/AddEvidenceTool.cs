@@ -1,6 +1,5 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
@@ -28,11 +27,8 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public string Name => "add_evidence";
 
-    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
-    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
-
     /// <inheritdoc />
-    public string Description => prompts.Render("tool.addEvidence.description", NoValues);
+    public string Description => prompts.Render("tool.addEvidence.description");
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -52,16 +48,10 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(arguments);
-
-        if (!TaskToolText.TryGetString(arguments, "taskId", out string? taskIdText, out string taskIdRefusal))
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        if (target is null)
         {
-            return taskIdRefusal;
-        }
-
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal))
-        {
-            return resolveRefusal;
+            return refusal;
         }
 
         if (!TaskToolText.TryGetString(arguments, "command", out string? command, out string commandRefusal))
@@ -79,15 +69,9 @@ internal sealed class AddEvidenceTool(
             return logRefRefusal;
         }
 
-        int? exitCode = null;
-        if (arguments["exitCode"] is not null)
+        if (!TryReadExitCode(arguments, out int? exitCode, out string exitRefusal))
         {
-            if (!TaskToolText.TryGetInt(arguments, "exitCode", null, out int code, out string exitRefusal))
-            {
-                return exitRefusal;
-            }
-
-            exitCode = code;
+            return exitRefusal;
         }
 
         string cleanCommand = Clean(command);
@@ -97,55 +81,91 @@ internal sealed class AddEvidenceTool(
             return "Give a command or a note.";
         }
 
-        string? logPath = null;
-        int? logLine = null;
-        if (cleanCommand.Length > 0 && !string.IsNullOrWhiteSpace(logRef))
+        if (!TryReadExplicitLogRef(cleanCommand, logRef, out string? logPath, out int? logLine))
         {
-            if (!TryParseLogRef(logRef, out logPath, out int explicitLine))
-            {
-                return "'logRef' must look like path#L12.";
-            }
-
-            logLine = explicitLine;
+            return "'logRef' must look like path#L12.";
         }
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
-        if (actor is null)
-        {
-            return actorRefusal;
-        }
+        EvidenceLine line = this.BuildLine(target.Actor.Name, cleanCommand, cleanNote, exitCode, logPath, logLine);
 
-        EvidenceLine line;
-        if (cleanCommand.Length == 0)
-        {
-            line = new EvidenceLine(default, string.Empty, string.Empty, null, null, null, cleanNote);
-        }
-        else
-        {
-            if (logPath is null)
-            {
-                ToolCallLogRef? found = this.FindLogReference(actor.Name, cleanCommand);
-                logPath = found?.RelativePath;
-                logLine = found?.Line;
-            }
-
-            string text = cleanNote.Length == 0 ? cleanCommand : string.Create(CultureInfo.InvariantCulture, $"{cleanCommand} ({cleanNote})");
-            line = new EvidenceLine(clock.GetUtcNow(), actor.Name, text, exitCode, logPath, logLine, string.Empty);
-        }
-
-        if (!TaskToolText.TryRun(() => tasks.AddEvidence(current.Id, line, actor), out TaskResult? result, out string runRefusal))
+        if (!TaskToolText.TryRun(() => tasks.AddEvidence(target.Task.Id, line, target.Actor), out TaskResult? result, out string runRefusal))
         {
             return runRefusal;
         }
 
-        return result switch
+        return result is TaskResult.Saved saved
+            ? $"Added evidence to {saved.Task.Id}."
+            : TaskToolText.Refusal(result, this.Name);
+    }
+
+    /// <summary>Reads the optional <c>exitCode</c> argument; <paramref name="exitCode"/> stays null when it is absent.</summary>
+    /// <param name="arguments">The tool arguments.</param>
+    /// <param name="exitCode">The parsed exit code, or null when none was given.</param>
+    /// <param name="refusal">The refusal text when the value is not an integer.</param>
+    private static bool TryReadExitCode(JsonObject arguments, out int? exitCode, out string refusal)
+    {
+        exitCode = null;
+        refusal = string.Empty;
+        if (arguments["exitCode"] is null)
         {
-            TaskResult.Saved saved => $"Added evidence to {saved.Task.Id}.",
-            TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
-            TaskResult.Conflict conflict => $"{conflict.Current.Id} was changed by someone else; please try again.",
-            TaskResult.Refused refused => string.Join('\n', refused.Problems),
-            _ => throw new UnreachableException("add_evidence's TaskService.AddEvidence never returns Unchanged."),
-        };
+            return true;
+        }
+
+        if (!TaskToolText.TryGetInt(arguments, "exitCode", null, out int code, out refusal))
+        {
+            return false;
+        }
+
+        exitCode = code;
+        return true;
+    }
+
+    /// <summary>Parses a caller-supplied <c>logRef</c>; it only counts when a command is given. Returns false when it is malformed.</summary>
+    /// <param name="cleanCommand">The cleaned command text.</param>
+    /// <param name="logRef">The raw <c>logRef</c> argument.</param>
+    /// <param name="logPath">The path part, or null when no reference was supplied.</param>
+    /// <param name="logLine">The line part, or null when no reference was supplied.</param>
+    private static bool TryReadExplicitLogRef(string cleanCommand, string? logRef, out string? logPath, out int? logLine)
+    {
+        logPath = null;
+        logLine = null;
+        if (cleanCommand.Length == 0 || string.IsNullOrWhiteSpace(logRef))
+        {
+            return true;
+        }
+
+        if (!TryParseLogRef(logRef, out logPath, out int explicitLine))
+        {
+            return false;
+        }
+
+        logLine = explicitLine;
+        return true;
+    }
+
+    /// <summary>Builds the Evidence line: a note-only line carries no clock or caller, a command line looks up the log reference when none was given.</summary>
+    /// <param name="actorName">The caller's name.</param>
+    /// <param name="cleanCommand">The cleaned command text, possibly empty.</param>
+    /// <param name="cleanNote">The cleaned note text, possibly empty.</param>
+    /// <param name="exitCode">The exit code, if any.</param>
+    /// <param name="logPath">The explicit log path, if any.</param>
+    /// <param name="logLine">The explicit log line, if any.</param>
+    private EvidenceLine BuildLine(string actorName, string cleanCommand, string cleanNote, int? exitCode, string? logPath, int? logLine)
+    {
+        if (cleanCommand.Length == 0)
+        {
+            return new EvidenceLine(default, string.Empty, string.Empty, null, null, null, cleanNote);
+        }
+
+        if (logPath is null)
+        {
+            ToolCallLogRef? found = this.FindLogReference(actorName, cleanCommand);
+            logPath = found?.RelativePath;
+            logLine = found?.Line;
+        }
+
+        string text = cleanNote.Length == 0 ? cleanCommand : string.Create(CultureInfo.InvariantCulture, $"{cleanCommand} ({cleanNote})");
+        return new EvidenceLine(clock.GetUtcNow(), actorName, text, exitCode, logPath, logLine, string.Empty);
     }
 
     /// <summary>Collapses line breaks and replaces the Evidence field separator so the text stays one field of one line.</summary>

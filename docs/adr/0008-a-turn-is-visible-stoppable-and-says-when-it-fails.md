@@ -142,7 +142,7 @@ exactly when something *reported* a failure. An Agent that is simply not running
 has none — and `Team:Acp:Enabled` is `false` by default, so in a stock
 configuration no Persona has ever started and every Agent is Offline. Listing
 those would have put a permanent `role="alert"` in every Room, saying nothing the
-Teammate tile does not already show. An alert that is always on is one nobody
+Agent tile does not already show. An alert that is always on is one nobody
 reads, which is precisely the failure this strip exists to prevent.
 
 ## Restart, because a surfaced failure should be actionable
@@ -150,7 +150,7 @@ reads, which is precisely the failure this strip exists to prevent.
 Every one of the twenty-one otherwise needed the whole application restarted,
 since a runner is restarted only when its Persona file changes. Restarting a
 Persona that never started **starts** it, which is the case the button exists
-for. Its hint says plainly that a restart clears what the Teammate remembers: a
+for. Its hint says plainly that a restart clears what the Agent remembers: a
 system prompt, a Model and an Effort are all fixed at `session/new`.
 
 ## Consequences
