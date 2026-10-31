@@ -16,7 +16,7 @@ never by hand, so the status line stays true.
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
 | **D0. Setup** | | | |
-| 0.1 #1 Baseline build and test [Haiku] | | ✔ | |
+| 0.1 #1 Baseline build and test [Haiku] | ✔ | | |
 | **D1. Phase 0: retention and isolation** | | | |
 | 1.1.t #2 Warning for an un-isolated prefixed profile [Haiku] | ✔ | | |
 | 1.1.i #3 Log the Warning [Haiku] | ✔ | | |
