@@ -38,4 +38,14 @@ internal sealed class FakeAgentGateway : IAgentGateway
     {
         return Task.CompletedTask;
     }
+
+    /// <summary>Every <see cref="StartAfreshAsync"/> call, in the order received, for a test to assert against.</summary>
+    public List<(string AgentId, string RoomId)> StartAfreshCalls { get; } = [];
+
+    /// <summary>Records the call in <see cref="StartAfreshCalls"/>; sends nothing.</summary>
+    public Task StartAfreshAsync(string agentId, string roomId, CancellationToken cancellationToken = default)
+    {
+        this.StartAfreshCalls.Add((agentId, roomId));
+        return Task.CompletedTask;
+    }
 }
