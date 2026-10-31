@@ -1,6 +1,6 @@
 # Testing Blazor components with bUnit
 
-How to test Razor components in `tests/Huddle.Tests.Components/Ui` with bUnit 2.11.3 and MudBlazor 9.11, and
+How to test Razor components in the feature test project for the component's feature (see *Where a test goes* in `agents/Testing.md`) with bUnit 2.11.3 and MudBlazor 9.11, and
 the Razor authoring traps those tests keep catching. Read it before writing a component or its
 tests. General test practice is in [Testing.md](Testing.md); per-component MudBlazor facts (which
 parameter exists, how a component renders) are in

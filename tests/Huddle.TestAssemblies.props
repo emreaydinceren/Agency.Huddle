@@ -1,0 +1,16 @@
+<Project>
+  <!-- The chat surface's test assemblies. Every src project they test, and Huddle.Tests.Common, imports this file. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Tests.Common" />
+    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
+    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
+    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
+    <InternalsVisibleTo Include="Huddle.Tests.Tasks" />
+    <InternalsVisibleTo Include="Huddle.Tests.Library" />
+    <InternalsVisibleTo Include="Huddle.Tests.Teams" />
+    <InternalsVisibleTo Include="Huddle.Tests.Personas" />
+    <InternalsVisibleTo Include="Huddle.Tests.Rooms" />
+    <InternalsVisibleTo Include="Huddle.Tests.Gateway" />
+    <InternalsVisibleTo Include="Huddle.Tests.Shell" />
+  </ItemGroup>
+</Project>

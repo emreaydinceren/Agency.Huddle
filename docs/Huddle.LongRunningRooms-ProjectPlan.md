@@ -133,7 +133,7 @@ boundary, the manager stops dispatching and runs a retrospective.
 | House style | [`agents/CSharpPrinciples.md`](../agents/CSharpPrinciples.md). Most-failed rules: `this.` on members; `sealed`; `ConfigureAwait(false)` in `src`; one type per file; throw helpers; `StringComparison.Ordinal`; `TimeProvider`, never `DateTime.Now` |
 | Tests | [`agents/Testing.md`](../agents/Testing.md); bUnit: [`agents/BlazorTesting.md`](../agents/BlazorTesting.md). Every test has a `///` summary (`Check-TestDocs.ps1`). `TestContext.Current.CancellationToken` on every awaited call |
 | Internals | `Huddle.App` already has `[InternalsVisibleTo]` for every test project; new types are `internal sealed` and tests reach them directly |
-| Test projects | Pure logic, contracts, prompt catalog: `tests/Huddle.Tests.Domain`. `RoomSession`, runner, pipe: `tests/Huddle.Tests.Agents`. Goldens: `tests/Huddle.Tests.Hosted/Acp/Golden/`. bUnit: `tests/Huddle.Tests.Components` |
+| Test projects | Pure logic, contracts, prompt catalog: `tests/Huddle.Tests.Personas`. `RoomSession`, runner, pipe: `tests/Huddle.Tests.Agents`. Goldens: `tests/Huddle.Tests.Hosted/Acp/Golden/`. bUnit: the feature project (Settings tabs: `tests/Huddle.Tests.Shell`) |
 | Fakes | `tests/Huddle.Tests.Common/Acp/Fakes/` (`FakeAgentHostFactory`, `FakeAgentSession`, `FakePromptSource`), `tests/Huddle.Tests.Common/Acp/Sessions/RoomSessionHarness.cs`, `tests/Huddle.Tests.Common/Ui/FakeAgentGateway.cs` and `tests/Huddle.Tests.Common/Acp/Tools/FakeAgentGateway.cs` |
 | Prompt defaults | After adding a prompt to `PromptCatalog`, run `agents/scripts/Regenerate-PromptDefaults.ps1` (rewrites `src/Huddle.App/prompts.default.json`) |
 | Goldens | Never reseed a golden in this delivery: LR-R2 says they stay unchanged |
@@ -248,7 +248,7 @@ separator (`N0`).
 - **Goal:** Pin LR-R5: a configured Adapter entry with `UsesToolNamePrefix` true and `IsolateUserSettings` false logs one Warning naming it (Spec §3.2, correction C8).
 - **Read first:** `src/Huddle.App/Acp/AdapterCatalog.cs` lines 1–100; Settled text T17.
 - **Risk:** `data`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/AdapterIsolationWarningTests.cs`, `public sealed class AdapterIsolationWarningTests`. Build `AdapterCatalog` with `IOptions<TeamOptions>` holding configured `Adapters` entries and a recording `ILogger<AdapterCatalog>` (a small private `RecordingLogger` in the test file). An entry **runs Claude** when its `Command`, its `AdapterPath` or any of its `Args` contains `claude-agent-acp` (`OrdinalIgnoreCase`); correction C11. Rows: (1) runs Claude and isolate false: exactly one Warning, message equal to T17 with the entry's id; (2) runs Claude and isolate true: none; (3) a `mock-acp` entry (prefix true by default) with isolate false: none; (4) an `agency-acp` entry with isolate false: none; (5) two offending Claude entries: two Warnings, one per id; (6) the synthesised built-in Claude profile (no configured entries): none. The constructor's new parameter is `ILogger<AdapterCatalog>? logger = null`.
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/AdapterIsolationWarningTests.cs`, `public sealed class AdapterIsolationWarningTests`. Build `AdapterCatalog` with `IOptions<TeamOptions>` holding configured `Adapters` entries and a recording `ILogger<AdapterCatalog>` (a small private `RecordingLogger` in the test file). An entry **runs Claude** when its `Command`, its `AdapterPath` or any of its `Args` contains `claude-agent-acp` (`OrdinalIgnoreCase`); correction C11. Rows: (1) runs Claude and isolate false: exactly one Warning, message equal to T17 with the entry's id; (2) runs Claude and isolate true: none; (3) a `mock-acp` entry (prefix true by default) with isolate false: none; (4) an `agency-acp` entry with isolate false: none; (5) two offending Claude entries: two Warnings, one per id; (6) the synthesised built-in Claude profile (no configured entries): none. The constructor's new parameter is `ILogger<AdapterCatalog>? logger = null`.
 - **Acceptance:** Red with a compile error on the new constructor parameter, recorded by `Run-Tests.ps1 -RedTask 1.1.t -NewNames "AdapterCatalog(logger)"`.
 
 ### Task 3 — 1.1.i Log the Warning [Haiku]
@@ -288,7 +288,7 @@ separator (`N0`).
 - **Goal:** Pin LR-R6: with a working route, every Claude-profile session gets `Team:Acp:SessionRetentionDays` (default 365) (Spec §3.2, §11).
 - **Read first:** `v0-2.md`; `AcpOptions.cs` lines 160–175; for route 1, the code that prepares a Persona's Work Dir (`grep -rn "WorkDir" src/Huddle.App/Acp/PersonaSupervisor.cs`); for route 2, `AdapterProfile.cs` remarks on the `settings` `_meta` and where `_meta` is built (`grep -rn "autoMemoryEnabled" src/Huddle.App`).
 - **Risk:** `boundary`.
-- **Deliverable:** Skip, with a note in the plan's log, if 1.3 found no route. Otherwise tests in `tests/Huddle.Tests.Domain/Acp/SessionRetentionTests.cs`: default 365; route 1 writes `cleanupPeriodDays` into the Work Dir's `.claude/settings.json` without removing the keys already there (byte-compare the other keys), and leaves a non-Claude profile alone; route 2 sends `cleanupPeriodDays` **and** still sends `autoMemoryEnabled: false` and the model config. Only the route 1.3 proved is built.
+- **Deliverable:** Skip, with a note in the plan's log, if 1.3 found no route. Otherwise tests in `tests/Huddle.Tests.Personas/Acp/SessionRetentionTests.cs`: default 365; route 1 writes `cleanupPeriodDays` into the Work Dir's `.claude/settings.json` without removing the keys already there (byte-compare the other keys), and leaves a non-Claude profile alone; route 2 sends `cleanupPeriodDays` **and** still sends `autoMemoryEnabled: false` and the model config. Only the route 1.3 proved is built.
 - **Acceptance:** Red for the missing `AcpOptions.SessionRetentionDays` or the missing write.
 
 ### Task 8 — 1.5.i Apply session retention (conditional on 1.3) [Sonnet]
@@ -308,7 +308,7 @@ separator (`N0`).
 ### Task 9 — 2.1.t New Catch-up options [Haiku]
 
 - **Goal:** Pin the two new configuration keys and their defaults (Spec §11, LR-R14).
-- **Read first:** `tests/Huddle.Tests.Domain/Acp/AcpOptionsTests.cs` lines 30–45.
+- **Read first:** `tests/Huddle.Tests.Personas/Acp/AcpOptionsTests.cs` lines 30–45.
 - **Risk:** `data`.
 - **Deliverable:** Add to `AcpOptionsTests`: `TranscriptCatchUpTokens_Default_Is100000` and `CatchUpKeepOwnMessages_Default_Is5`.
 - **Acceptance:** Red: the two properties don't exist.
@@ -326,7 +326,7 @@ separator (`N0`).
 - **Goal:** Pin the ranges and refusal texts of LR-R13 as a pure function (Spec §3.3).
 - **Read first:** Settled texts T6, T7.
 - **Risk:** `data`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/Sessions/SessionSettingsRulesTests.cs`. Target, in namespace `Agency.Huddle.App.Acp.Sessions`: `internal static class SessionSettingsRules` with `internal static string? CheckMessages(int value)` and `internal static string? CheckTokens(int value)`, each returning `null` when valid, else T6 or T7. `[Theory]` rows: messages 0 → T6, 1 → null, 2000 → null, 2001 → T6, -5 → T6; tokens 999 → T7, 1000 → null, 150000 → null, 150001 → T7.
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/Sessions/SessionSettingsRulesTests.cs`. Target, in namespace `Agency.Huddle.App.Acp.Sessions`: `internal static class SessionSettingsRules` with `internal static string? CheckMessages(int value)` and `internal static string? CheckTokens(int value)`, each returning `null` when valid, else T6 or T7. `[Theory]` rows: messages 0 → T6, 1 → null, 2000 → null, 2001 → T6, -5 → T6; tokens 999 → T7, 1000 → null, 150000 → null, 150001 → T7.
 - **Acceptance:** Red: `SessionSettingsRules` doesn't exist.
 
 ### Task 12 — 2.2.i Implement the rules [Haiku]
@@ -340,9 +340,9 @@ separator (`N0`).
 ### Task 13 — 2.3.t `SessionSettingsStore` [Sonnet]
 
 - **Goal:** Pin `{DataDir}/session-settings.json` as an overrides-only, watched, hand-editable store (Spec §5.2, LR-R9, LR-R10, LR-E12).
-- **Read first:** Spec §5.2 (lines 365–372); `AppearanceStore.cs` lines 49–125 (the pattern); `tests/Huddle.Tests.Domain` for an existing `AppearanceStore` test (`grep -rln "AppearanceStore" tests/Huddle.Tests.Domain`) to copy its fixture.
+- **Read first:** Spec §5.2 (lines 365–372); `AppearanceStore.cs` lines 49–125 (the pattern); `tests/Huddle.Tests.Shell` for an existing `AppearanceStore` test (`grep -rln "AppearanceStore" tests/Huddle.Tests.Shell`) to copy its fixture.
 - **Risk:** `boundary`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/Sessions/SessionSettingsStoreTests.cs`. Target types:
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/Sessions/SessionSettingsStoreTests.cs`. Target types:
   - `internal interface ISessionSettings { SessionSettings Current { get; } }`
   - `internal sealed record SessionSettings(int CatchUpMessages, int CatchUpTokens)`
   - `internal sealed class SessionSettingsStore : ISessionSettings, IDisposable` with constructor `(IOptions<TeamOptions> options, ILogger<SessionSettingsStore> logger)`. It reads the defaults from `options.Value.Acp` and the Data Dir from `options.Value.DataDir`: `IOptions<AcpOptions>` is **not** registered (`AcpOptions` is bound only as `TeamOptions.Acp`, `src/Huddle.App/TeamOptions.cs` line 40, configured at `ServiceCollectionExtensions.cs` line 181), so injecting it would yield an unconfigured default; members `string FilePath`, `string? LoadError`, `int? MessagesOverride`, `int? TokensOverride`, `string? SaveMessages(int? value)`, `string? SaveTokens(int? value)` (null value = Reset; returns the refusal text or `null`), `event Action? Changed`.
@@ -369,7 +369,7 @@ separator (`N0`).
 - **Goal:** Pin LR-R8's estimate as a pure function (Spec §3.3, correction C5).
 - **Read first:** correction C5.
 - **Risk:** `data`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/Sessions/TokenEstimateTests.cs`. Target: `internal static class TokenEstimate` in `Agency.Huddle.App.Acp.Sessions`, with `internal static int OfChars(int chars)` = `ceil(chars / 3)` and `internal static int OfMessage(ChatMessage message)` = `OfChars(SenderName.Length + 2 + Text.Length)`. Rows: `OfChars(0)` 0, `(1)` 1, `(3)` 1, `(4)` 2, `(300)` 100; `OfMessage` with sender `Nova` and text `hello` gives `ceil(11/3) = 4`.
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/Sessions/TokenEstimateTests.cs`. Target: `internal static class TokenEstimate` in `Agency.Huddle.App.Acp.Sessions`, with `internal static int OfChars(int chars)` = `ceil(chars / 3)` and `internal static int OfMessage(ChatMessage message)` = `OfChars(SenderName.Length + 2 + Text.Length)`. Rows: `OfChars(0)` 0, `(1)` 1, `(3)` 1, `(4)` 2, `(300)` 100; `OfMessage` with sender `Nova` and text `hello` gives `ceil(11/3) = 4`.
 - **Acceptance:** Red: the type doesn't exist.
 
 > **Retrospective 1** runs at the next pair boundary after task 15 (that is, after 3.1.i).
@@ -387,7 +387,7 @@ separator (`N0`).
 - **Goal:** Pin LR-R11's drop order as a pure function (Spec §3.3, §5.3; corrections C6, C7).
 - **Read first:** Spec LR-R11 (line 274); corrections C5 to C7.
 - **Risk:** `data`. The complete rule table is below; no design is left.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/Sessions/CatchUpTrimTests.cs`. Target:
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/Sessions/CatchUpTrimTests.cs`. Target:
 
   ```csharp
   internal sealed record CatchUpTrimResult(IReadOnlyList<ChatMessage> Kept, int Dropped, int DroppedOwn, int EstimatedTokens);
@@ -413,7 +413,7 @@ separator (`N0`).
 ### Task 19 — 3.3.t The `turn.transcriptOmittedOwn` prompt [Haiku]
 
 - **Goal:** Pin the new prompt key LR-R12 names (Spec §3.3, correction C10, text T1).
-- **Read first:** `src/Huddle.App/Prompts/PromptCatalog.cs` lines 515–535 (the `turn.transcriptOmitted` definition); `tests/Huddle.Tests.Domain/Prompts/PromptCatalogTests.cs`, first 60 lines, for how a key is asserted.
+- **Read first:** `src/Huddle.App/Prompts/PromptCatalog.cs` lines 515–535 (the `turn.transcriptOmitted` definition); `tests/Huddle.Tests.Personas/Prompts/PromptCatalogTests.cs`, first 60 lines, for how a key is asserted.
 - **Risk:** `data`.
 - **Deliverable:** Add to `PromptCatalogTests`: the key `turn.transcriptOmittedOwn` exists, directly after `turn.transcriptOmitted`; its `Default` equals T1; `Placeholders` and `RequiredPlaceholders` are both `["{{count}}"]`; `Timing` is `PromptTiming.Live`. If the class pins a total key count, raise it by one in the same test.
 - **Acceptance:** Red: the key is missing.
@@ -467,7 +467,7 @@ separator (`N0`).
 ### Task 25 — 4.1.t The Sessions tab entry [Haiku]
 
 - **Goal:** Pin the new Settings section (Spec §5.4, text T2).
-- **Read first:** `src/Huddle.App/Components/Settings/SettingsTab.cs`; `Settings.razor` lines 160–190; the existing bUnit test for the Settings menu (`grep -rln "SettingsTab.Library" tests/Huddle.Tests.Components`).
+- **Read first:** `src/Huddle.App/Components/Settings/SettingsTab.cs`; `Settings.razor` lines 160–190; the existing bUnit test for the Settings menu (`grep -rln "SettingsTab.Library" tests/Huddle.Tests.Shell`).
 - **Risk:** `data`.
 - **Deliverable:** In that test class add rows: the menu lists `Sessions` directly after `Library`; `/settings/sessions` selects `SettingsTab.Sessions` and renders a `SessionsPanel`.
 - **Acceptance:** Red: `SettingsTab.Sessions` doesn't exist.
@@ -485,7 +485,7 @@ separator (`N0`).
 - **Goal:** Pin the panel's copy, validation, Reset and error display (Spec §5.4, LR-R13, LR-E12; texts T3 to T9).
 - **Read first:** Spec §5.4 (lines 381–386); `agents/MudBlazorImplementation.md` (the house pattern section only); `LibraryPanel.razor` as the nearest settings panel to copy; `SessionSettingsStore.cs`.
 - **Risk:** `logic`.
-- **Deliverable:** New `tests/Huddle.Tests.Components/Settings/SessionsPanelTests.cs` with a real `SessionSettingsStore` over a temp Data Dir. Rows: both labels equal T3 and T4; the budget helper equals T5 with the current value formatted `N0`; entering 0 in the cap shows T6 on that field and writes nothing; entering 400 saves it (the file holds 400) and shows it; each field's `Reset` (T8) removes its override and shows the default again; a corrupt file shows T9 with the error in a `role="alert"` alert; the panel re-renders when the store raises `Changed`.
+- **Deliverable:** New `tests/Huddle.Tests.Shell/Settings/SessionsPanelTests.cs` with a real `SessionSettingsStore` over a temp Data Dir. Rows: both labels equal T3 and T4; the budget helper equals T5 with the current value formatted `N0`; entering 0 in the cap shows T6 on that field and writes nothing; entering 400 saves it (the file holds 400) and shows it; each field's `Reset` (T8) removes its override and shows the default again; a corrupt file shows T9 with the error in a `role="alert"` alert; the panel re-renders when the store raises `Changed`.
 - **Acceptance:** Red on the missing fields.
 
 ### Task 28 — 4.2.i Build the panel [Sonnet]
@@ -532,9 +532,9 @@ separator (`N0`).
 ### Task 32 — 5.1.t The two Envelopes [Haiku]
 
 - **Goal:** Pin the literal JSON of `StartAfresh` and `FreshStartNote`, and that `ProtocolVersion.Current` stays 3 (Spec §6.1, §6.3, §10 `ProtocolJsonTests`; correction C2).
-- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Domain/Contracts/ProtocolJsonTests.cs` lines 195–210; the Envelope and versioning rows of `docs/engineering/traps.md` (`grep -n "Envelope\|ProtocolVersion\|JsonDerivedType" docs/engineering/traps.md`), binding for the wire.
+- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Personas/Contracts/ProtocolJsonTests.cs` lines 195–210; the Envelope and versioning rows of `docs/engineering/traps.md` (`grep -n "Envelope\|ProtocolVersion\|JsonDerivedType" docs/engineering/traps.md`), binding for the wire.
 - **Risk:** `data`.
-- **Deliverable:** Add to `tests/Huddle.Tests.Domain/Contracts/ProtocolJsonTests.cs`, beside `ProtocolJson_RoundTripsStopTurn` (line ~201; copy its shape: `ProtocolJson.Serialize`, then `ProtocolJson.Deserialize`). Rows: `ProtocolJson.Serialize(new StartAfresh("room-1"))` equals exactly `{"type":"startAfresh","roomId":"room-1","version":3}`; `new FreshStartNote("room-1", "asked", 38, 31000, false)` equals `{"type":"freshStartNote","roomId":"room-1","reason":"asked","messageCount":38,"estimatedTokens":31000,"readFailed":false,"version":3}` (every `ProtocolMessage` carries `version`); both round-trip to an equal record; `ProtocolVersion.Current == 3`.
+- **Deliverable:** Add to `tests/Huddle.Tests.Personas/Contracts/ProtocolJsonTests.cs`, beside `ProtocolJson_RoundTripsStopTurn` (line ~201; copy its shape: `ProtocolJson.Serialize`, then `ProtocolJson.Deserialize`). Rows: `ProtocolJson.Serialize(new StartAfresh("room-1"))` equals exactly `{"type":"startAfresh","roomId":"room-1","version":3}`; `new FreshStartNote("room-1", "asked", 38, 31000, false)` equals `{"type":"freshStartNote","roomId":"room-1","reason":"asked","messageCount":38,"estimatedTokens":31000,"readFailed":false,"version":3}` (every `ProtocolMessage` carries `version`); both round-trip to an equal record; `ProtocolVersion.Current == 3`.
 - **Acceptance:** Red: the types don't exist.
 
 ### Task 33 — 5.1.i Add the Envelopes [Haiku]
@@ -591,14 +591,14 @@ separator (`N0`).
 - **Read first:** the 5.4.t tests; the same ranges; `corrections-D5.md`.
 - **Risk:** `boundary`.
 - **Deliverable:** A `freshStartPending` flag under `this.gate`, set by `RequestFreshStartAsync`. Applied (a) at once when `Idle` with an empty queue and no user-input lease, or (b) in the consumer before serving the next admitted item, once no lease is held. Applying it: tear down as `CloseAsync` does (reuse or extract the shared teardown, don't duplicate it), `Forget` the stored entry, `contextFill?.Forget`, set `Closed`, clear the flag, and set a `freshStartNotePending` flag that 5.6 consumes. The next item lazy-opens through the existing path, which sets `firstTurnPending`. Keep each method under 60 lines.
-- **Acceptance:** 5.4.t green; `RoomSessionStopTests` (in `tests/Huddle.Tests.Domain/Acp/Sessions/`), `RoomSessionHealthTests` and `RoomSessionResumeTests` (both in `tests/Huddle.Tests.Agents/Acp/Sessions/`) green. Check each run reports a non-zero test count: a filter that matches nothing reads as a green no-op.
+- **Acceptance:** 5.4.t green; `RoomSessionStopTests` (in `tests/Huddle.Tests.Personas/Acp/Sessions/`), `RoomSessionHealthTests` and `RoomSessionResumeTests` (both in `tests/Huddle.Tests.Agents/Acp/Sessions/`) green. Check each run reports a non-zero test count: a filter that matches nothing reads as a green no-op.
 
 ### Task 40 — 5.5.t `LastCatchUpStore` [Sonnet]
 
 - **Goal:** Pin the store for `{DataDir}/room-sessions/last-catch-up/{Name}/{roomId}.md` (Spec §6.3 step 6, LR-R22, LR-E10, LR-E11; correction C3).
 - **Read first:** `RoomSessionStore.cs` (whole file, under 150 lines) for the folder, the name-to-file mapping and its `Rename` and `Remove`.
 - **Risk:** `boundary`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Acp/Sessions/LastCatchUpStoreTests.cs`. Target: `internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<LastCatchUpStore> logger)` with `void Write(string name, string roomId, string text)`, `string? Read(string name, string roomId)`, and for the note (C12) `void WriteNote(string name, FreshStartNote note)` (writes `{roomId}.json` beside the `.md`, using `ProtocolJson.Serialize`), `IReadOnlyList<(string Name, FreshStartNote Note)> ReadNotes(string roomId)` (every Name's note for that Room), `void RemoveNote(string name, string roomId)` (the `.json` only); plus `void Rename(string oldName, string newName)`, `void Remove(string name)`, `void RemoveRoom(string roomId)` (both the `.md` and the `.json`). Rows: a write then read returns the exact text (CRLF and LF kept); a second write replaces it; a read of nothing is `null`; a note written then read back equals the original record; `ReadNotes` returns one entry per Name and ignores a corrupt `.json` with a Warning; `RemoveNote` leaves the `.md`; `Rename` moves the folder, and a later read under the old name is `null`; `Remove` deletes the folder; `RemoveRoom` deletes that room's file under every name and leaves other rooms'; a room id that isn't a valid id (`NameRules.IsValidId`) is refused with `ArgumentException` and writes nothing; an IO failure on write is logged as a Warning and doesn't throw.
+- **Deliverable:** New `tests/Huddle.Tests.Personas/Acp/Sessions/LastCatchUpStoreTests.cs`. Target: `internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<LastCatchUpStore> logger)` with `void Write(string name, string roomId, string text)`, `string? Read(string name, string roomId)`, and for the note (C12) `void WriteNote(string name, FreshStartNote note)` (writes `{roomId}.json` beside the `.md`, using `ProtocolJson.Serialize`), `IReadOnlyList<(string Name, FreshStartNote Note)> ReadNotes(string roomId)` (every Name's note for that Room), `void RemoveNote(string name, string roomId)` (the `.json` only); plus `void Rename(string oldName, string newName)`, `void Remove(string name)`, `void RemoveRoom(string roomId)` (both the `.md` and the `.json`). Rows: a write then read returns the exact text (CRLF and LF kept); a second write replaces it; a read of nothing is `null`; a note written then read back equals the original record; `ReadNotes` returns one entry per Name and ignores a corrupt `.json` with a Warning; `RemoveNote` leaves the `.md`; `Rename` moves the folder, and a later read under the old name is `null`; `Remove` deletes the folder; `RemoveRoom` deletes that room's file under every name and leaves other rooms'; a room id that isn't a valid id (`NameRules.IsValidId`) is refused with `ArgumentException` and writes nothing; an IO failure on write is logged as a Warning and doesn't throw.
 - **Acceptance:** Red: the type doesn't exist.
 
 ### Task 41 — 5.5.i Implement `LastCatchUpStore` [Sonnet]
@@ -628,9 +628,9 @@ separator (`N0`).
 ### Task 44 — 5.7.t Cleanup on rename, removal and Room delete [Sonnet]
 
 - **Goal:** Pin LR-E10 and LR-E11 for `last-catch-up` (Spec §8, §10 `PersonaRenameCascadeTests` extended).
-- **Read first:** `PersonaRenameCascade.cs` lines 120–215 and 260–285; the existing `PersonaRenameCascadeTests` (`grep -rln "class PersonaRenameCascadeTests" tests`), the room-sessions rename row; `ChatService.cs` lines 895–960 (`DeleteRoomAsync`); `tests/Huddle.Tests.Domain/Services/ChatServiceTests.cs`, its fixture setup only (the `ChatService` construction over a temp Data Dir).
+- **Read first:** `PersonaRenameCascade.cs` lines 120–215 and 260–285; the existing `PersonaRenameCascadeTests` (`grep -rln "class PersonaRenameCascadeTests" tests`), the room-sessions rename row; `ChatService.cs` lines 895–960 (`DeleteRoomAsync`); `tests/Huddle.Tests.Rooms/Services/ChatServiceTests.cs`, its fixture setup only (the `ChatService` construction over a temp Data Dir).
 - **Risk:** `boundary`.
-- **Deliverable:** In `PersonaRenameCascadeTests`: a rename moves `last-catch-up/{Old}/` to `{New}/` **even when the Persona has no Agent row** (the early-return case); a removal deletes it. In a **new** `tests/Huddle.Tests.Domain/Services/ChatServiceDeleteRoomTests.cs` (copy `ChatServiceTests`' fixture; don't add rows to a conformance class): deleting a Room removes its `last-catch-up` `.md` and `.json` under every Name and leaves other Rooms' files; archiving removes nothing.
+- **Deliverable:** In `PersonaRenameCascadeTests`: a rename moves `last-catch-up/{Old}/` to `{New}/` **even when the Persona has no Agent row** (the early-return case); a removal deletes it. In a **new** `tests/Huddle.Tests.Rooms/Services/ChatServiceDeleteRoomTests.cs` (copy `ChatServiceTests`' fixture; don't add rows to a conformance class): deleting a Room removes its `last-catch-up` `.md` and `.json` under every Name and leaves other Rooms' files; archiving removes nothing.
 - **Acceptance:** Red.
 
 ### Task 45 — 5.7.i Wire the cleanup [Sonnet]
@@ -670,7 +670,7 @@ separator (`N0`).
 - **Goal:** Pin the note text as a pure function (Spec LR-R21; texts T12 to T14).
 - **Read first:** Settled texts T12 to T14.
 - **Risk:** `data`.
-- **Deliverable:** New `tests/Huddle.Tests.Domain/Chat/FreshStartNoteTextTests.cs`. Target: `internal static class FreshStartNoteText` in `Agency.Huddle.App.Components.Chat` (create the folder if missing) with `internal static string Format(string agentName, FreshStartNote note)`. Rows: 38 Messages, 31000 tokens → T12 with `38` and `31,000`; 1 Message, 120 tokens → `Nova started afresh, as you asked. It reread the last Message (about 120 tokens).`; 0 Messages, not failed → T13; `ReadFailed` true → T14 whatever the counts.
+- **Deliverable:** New `tests/Huddle.Tests.Rooms/Chat/FreshStartNoteTextTests.cs`. Target: `internal static class FreshStartNoteText` in `Agency.Huddle.App.Components.Chat` (create the folder if missing) with `internal static string Format(string agentName, FreshStartNote note)`. Rows: 38 Messages, 31000 tokens → T12 with `38` and `31,000`; 1 Message, 120 tokens → `Nova started afresh, as you asked. It reread the last Message (about 120 tokens).`; 0 Messages, not failed → T13; `ReadFailed` true → T14 whatever the counts.
 - **Acceptance:** Red.
 
 ### Task 49 — 6.2.i Implement the wording [Haiku]
@@ -684,7 +684,7 @@ separator (`N0`).
 ### Task 50 — 6.3.t The note in the Room, and what it reread [Sonnet]
 
 - **Goal:** Pin the Room-level note strip and the dialog that shows the `last-catch-up` text as sent (Spec LR-R21, LR-R22; texts T12 to T16).
-- **Read first:** `Chat.razor` lines 130–235 (the note strips and their comments); `docs/engineering/rules.md`, the rule on string Parameters missing a leading `@`; the existing bUnit tests of the `ContextOnly` strip (`grep -rln "No agent was" tests/Huddle.Tests.Components`).
+- **Read first:** `Chat.razor` lines 130–235 (the note strips and their comments); `docs/engineering/rules.md`, the rule on string Parameters missing a leading `@`; the existing bUnit tests of the `ContextOnly` strip (`grep -rln "No agent was" tests/Huddle.Tests.Rooms`).
 - **Risk:** `logic`.
 - **Deliverable:** Tests beside the `ContextOnly` strip tests: with a `FreshStartNotes` entry for this Room, a `MudAlert` with `role="status"` and class `room-notice-column` shows `FreshStartNoteText.Format` exactly; a `See what it reread` (T15) button opens a dialog titled T16 whose body is the `LastCatchUpStore.Read` text in a `<pre>`; when no file exists the button is absent; dismissing the strip calls `Dismiss` and removes it; the strip appears on `FreshStartNotesChanged` without a reload; another Room's note isn't shown; a note and file written before an app restart (a fresh `FreshStartNotes` and `LastCatchUpStore` over the same Data Dir) still render the strip and its working button (C12).
 - **Acceptance:** Red.
@@ -700,7 +700,7 @@ separator (`N0`).
 ### Task 52 — 6.4.t *Start afresh* in the Teammate's popover [Sonnet]
 
 - **Goal:** Pin the Human's lever: from a Room's header avatar, *Start afresh* sends `StartAfresh` for that Agent and Room, after an inline confirm (Spec LR-R15, §6.1, LR-E5; corrections C1, C9; texts T10, T11).
-- **Read first:** `ProfilePopover.razor` (156 lines); `ProfileAvatar.razor` (86 lines); `Chat.razor` lines 60–80; `InlineConfirm` usage in `AgentProfileCard.razor` lines 220–230; the existing `ProfilePopover` bUnit tests (`grep -rln "ProfilePopover" tests/Huddle.Tests.Components`).
+- **Read first:** `ProfilePopover.razor` (156 lines); `ProfileAvatar.razor` (86 lines); `Chat.razor` lines 60–80; `InlineConfirm` usage in `AgentProfileCard.razor` lines 220–230; the existing `ProfilePopover` bUnit tests (`grep -rln "ProfilePopover" tests/Huddle.Tests.Teams`).
 - **Risk:** `logic`.
 - **Deliverable:** `ProfileAvatar` and `ProfilePopover` gain optional `[Parameter] public string? StartAfreshRoomId` and `[Parameter] public string? StartAfreshAgentId`; `Chat.razor` passes `StartAfreshRoomId="@this.room.Id"` and `StartAfreshAgentId="@agent.Id"` in the header loop (the leading `@` is load-bearing). Tests: with both set, for an Agent whose Adapter profile has `SessionPerRoom` true, a `Start afresh` button (T10, with its aria-label) shows beside Edit and Message; clicking it shows the T11 confirm; confirming calls `FakeAgentGateway.StartAfreshCalls` once with that agent id and room id and closes the popover; Cancel calls nothing; without the parameters (any other page) there's no button; for a shared-session Adapter (`SessionPerRoom` false) there's no button; for the Human's own avatar there's no button.
 - **Acceptance:** Red.

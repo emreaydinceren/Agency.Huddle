@@ -18,9 +18,14 @@
     <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />
     <Project Path="tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj" />
     <Project Path="tests/Huddle.Tests.Common/Huddle.Tests.Common.csproj" />
-    <Project Path="tests/Huddle.Tests.Components/Huddle.Tests.Components.csproj" />
     <Project Path="tests/Huddle.Tests.SkillPacks/Huddle.Tests.SkillPacks.csproj" />
     <Project Path="tests/Huddle.Tests.Hosted/Huddle.Tests.Hosted.csproj" />
-    <Project Path="tests/Huddle.Tests.Domain/Huddle.Tests.Domain.csproj" />
+    <Project Path="tests/Huddle.Tests.Library/Huddle.Tests.Library.csproj" />
+    <Project Path="tests/Huddle.Tests.Tasks/Huddle.Tests.Tasks.csproj" />
+    <Project Path="tests/Huddle.Tests.Teams/Huddle.Tests.Teams.csproj" />
+    <Project Path="tests/Huddle.Tests.Personas/Huddle.Tests.Personas.csproj" />
+    <Project Path="tests/Huddle.Tests.Rooms/Huddle.Tests.Rooms.csproj" />
+    <Project Path="tests/Huddle.Tests.Gateway/Huddle.Tests.Gateway.csproj" />
+    <Project Path="tests/Huddle.Tests.Shell/Huddle.Tests.Shell.csproj" />
   </Folder>
 </Solution>

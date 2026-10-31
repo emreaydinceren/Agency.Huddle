@@ -614,7 +614,13 @@ try {
     $waitStart = Get-Date
     $printedWaiting = $false
     while (-not $acquired) {
-        $acquired = $mutex.WaitOne([TimeSpan]::FromSeconds(5))
+        try {
+            $acquired = $mutex.WaitOne([TimeSpan]::FromSeconds(5))
+        }
+        catch [System.Threading.AbandonedMutexException] {
+            $acquired = $true
+            Write-Host 'previous test run died holding the lock; continuing'
+        }
         if (-not $acquired) {
             if (-not $printedWaiting) {
                 Write-Host 'waiting for another test run'

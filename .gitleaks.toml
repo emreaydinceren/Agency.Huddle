@@ -113,4 +113,8 @@ paths = [
   '''(^|/)tests/Huddle\.Tests\.(Common|Domain|Hosted)/Gateway/.*''',
   '''(^|/)tests/Huddle\.Tests\.Components/Settings/RemoteAccess/.*''',
   '''(^|/)tests/Huddle\.Tests\.Domain/Desktop/DesktopHandOffBootstrapTests\.cs$''',
+  # The same fixtures after the feature split moved them into Huddle.Tests.Gateway. The three Domain and
+  # Components lines above stay: the sync's history scan still sees those files at their old paths.
+  '''(^|/)tests/Huddle\.Tests\.Gateway/(Gateway|Settings/RemoteAccess)/.*''',
+  '''(^|/)tests/Huddle\.Tests\.Gateway/Desktop/DesktopHandOffBootstrapTests\.cs$''',
 ]
