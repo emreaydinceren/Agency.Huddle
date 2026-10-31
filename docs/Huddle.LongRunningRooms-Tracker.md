@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 48 of 59 tasks Done · 2 of 3 retrospectives done · last updated 2026-10-31.
+**Status:** 48 of 59 tasks Done · 3 of 3 retrospectives done · last updated 2026-10-31.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -68,7 +68,7 @@ never by hand, so the status line stays true.
 | 5.6.i #43 Send the note, write the file [Sonnet] | ✔ | | |
 | 5.7.t #44 Cleanup on rename, removal and Room delete [Sonnet] | | | ✔ |
 | 5.7.i #45 Wire the cleanup [Sonnet] | | | ✔ |
-| 🔁 R3 Retrospective 3 (tasks 31–45): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
+| 🔁 R3 Retrospective 3 (tasks 31–45): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | **D6. Phase 2a: server and UI** | | | |
 | 6.1.t #46 The server keeps the note [Sonnet] | | | ✔ |
 | 6.1.i #47 Handle the note [Sonnet] | | | ✔ |
@@ -83,5 +83,5 @@ never by hand, so the status line stays true.
 | 7.1 #55 Reconcile the Spec [Sonnet] | | | ✔ |
 | 7.2 #56 Finish the experiment page [Haiku] | | | ✔ |
 | 7.3 #57 Final verification [Haiku] | ✔ | | |
-| 7.4 #58 Delivery note for the Human [Haiku] | ✔ | | |
+| 7.4 #58 Delivery note for the Human [manager] | ✔ | | |
 | 7.5 #59 Plan housekeeping [Haiku] | ✔ | | |

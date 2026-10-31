@@ -742,7 +742,7 @@ separator (`N0`).
 - **Deliverable:** Run `agents/scripts/Check-All.ps1`, then the full `Run-Tests.ps1 -Label final`. Confirm `git diff origin/main --stat -- tests/Huddle.Tests.Hosted/Acp/Golden/` is empty. Record the summary lines in `Conversation/long-running-rooms/final.md`.
 - **Acceptance:** All checks pass; the full suite is green apart from failures listed in `baseline.md`; no golden changed.
 
-### Task 58 — 7.4 Delivery note for the Human [Haiku]
+### Task 58 — 7.4 Delivery note for the Human [manager]
 
 - **Goal:** Tell the Human what shipped and what the experiment needs (Spec §9).
 - **Read first:** `final.md`, `v0-1.md`, `v0-2.md`.
@@ -787,4 +787,4 @@ separator (`N0`).
 | --- | --- | --- | --- | --- |
 | 1 | 2026-10-30 | 1–16 | Agents rediscovered the `-FilterClass` wildcard, implicit usings, helper namespaces and store helpers; a frozen 2.3.t row hid CA1859 behind the compile red and blocked 2.3.i; every agent starts at about 69K from inherited tools; the manager is most of the cost | Six front-load facts added to Delivery facts; 4.4 retagged Haiku; 5.1.t reads the wire rows of `traps.md`; `Check-Eol.ps1 -Fix` named for CRLF instead of a new script |
 | 2 | 2026-10-30 | 16–30 | Three frozen reds hid analyzer errors behind the compile error and blocked their `.i`; bUnit facts (`TestContext` ambiguity, `ServicePresets`, MudBlazor `Validation`) cost 4.2 eight compile rounds; full-suite runs in every `.i` caused 10–15 minute mutex waits and found nothing new; the manager is still most of the cost | Stub check before a compile-error red; bUnit and namespace facts added; `.i` tasks run touched and neighbouring classes in one call, and the full suite moves to batch boundaries |
-| 3 | | 31–45 | | |
+| 3 | 2026-10-31 | 31–45 | A 5.3 test built its pool on `CancellationToken.None` and hung the Agents assembly for 22 minutes while holding the machine-wide test mutex; killing every `dotnet` process to clear it abandoned the mutex, and `Run-Tests.ps1` then fails the next caller instead of taking ownership; agents re-read `RoomSession.cs` because the plan's line numbers had moved; the manager reached 455K context | Pool and session tests cancel their run token before disposal; `Check-Eol.ps1 -Fix` once instead of `Fix-Crlf.ps1` per file; the Chat page harness and the current `RoomSession` members added to the facts; 7.4 written by the manager; `Run-Tests.ps1` fixes (abandoned mutex, `--timeout`, bounded mutex wait) left as a follow-up, because `agents/scripts` is shared tooling |
