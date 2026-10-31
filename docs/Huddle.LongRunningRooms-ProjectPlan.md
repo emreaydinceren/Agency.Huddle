@@ -11,6 +11,15 @@ experiment, so each gets its own plan then.
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**,
 and its `.i` partner ends **green**. Chore, docs, manual and verification tasks have no test partner.
 
+> [!NOTE]
+> **Delivery status, 2026-10-31.** Tasks 1–3, 6 and 9–59 are **done** on `feat/long-running-rooms`;
+> [the tracker](Huddle.LongRunningRooms-Tracker.md) holds each one's state. Tasks 4 and 5 (1.2 and
+> 1.3, the live checks V0-1 and V0-2) are **deferred to user acceptance**: the Human chose that on
+> 2026-10-30, and `known-limits.md` records both as not yet run. Tasks 7 and 8 (1.5.t and 1.5.i,
+> session retention) are **skipped**: they run only once 1.3 proves a route, and 1.3 has not run.
+> All three retrospectives ran, and the lessons that apply beyond this delivery were moved to
+> `agents/DeliveryPlaybook.md`.
+
 | Stream | Deliverables | Spec | May start |
 | --- | --- | --- | --- |
 | **A — Setup** | D0 | — | First |
