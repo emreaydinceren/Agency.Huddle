@@ -22,7 +22,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// </summary>
 public sealed class LibraryPanelTests
 {
-    /// <summary>The Library section follows Skills in the Settings section menu (Task 13.4.i's deliverable); Team Types (Task 30) sits between them.</summary>
+    /// <summary>The Library section follows Skills in the Settings section menu (Task 13.4.i's deliverable); Team Types (Task 30) sits between them, and Sessions (Long-Running Rooms 4.1) follows it.</summary>
     [Fact]
     public async Task Tab_IsNamedLibrary_AfterSkills()
     {
@@ -38,7 +38,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.Render<Settings>();
 
         List<string> tabLabels = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(e => e.TextContent.Trim())];
-        Assert.Equal(["Profile", "Prompts", "Helpers", "Appearance", "Personas", "Skills", "Team types", "Library", "Remote access"], tabLabels);
+        Assert.Equal(["Profile", "Prompts", "Helpers", "Appearance", "Personas", "Skills", "Team types", "Library", "Sessions", "Remote access"], tabLabels);
     }
 
     /// <summary>The roots table lists the two built-ins first, then any pinned root, in
