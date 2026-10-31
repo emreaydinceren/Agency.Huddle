@@ -65,7 +65,7 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
             try
             {
                 _ = Directory.CreateDirectory(directory);
-                File.WriteAllText(Path.Combine(directory, proposal.Id + ".json"), JsonSerializer.Serialize(proposal, JsonOptions));
+                AtomicFile.WriteText(Path.Combine(directory, proposal.Id + ".json"), JsonSerializer.Serialize(proposal, JsonOptions));
             }
             catch (IOException)
             {
