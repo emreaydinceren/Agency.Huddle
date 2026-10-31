@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 24 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 29 of 59 tasks Done · 1 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -43,12 +43,12 @@ never by hand, so the status line stays true.
 | 3.4.t #21 Render the own-omitted line [Sonnet] | | | ✔ |
 | 3.4.i #22 Render it [Sonnet] | | | ✔ |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | | | ✔ |
-| 3.5.i #24 Wire the settings and the trim [Sonnet] | | ✔ | |
+| 3.5.i #24 Wire the settings and the trim [Sonnet] | | | ✔ |
 | **D4. Phase 1: Settings › Sessions** | | | |
 | 4.1.t #25 The Sessions tab entry [Haiku] | | | ✔ |
 | 4.1.i #26 Add the tab [Haiku] | | | ✔ |
-| 4.2.t #27 `SessionsPanel` [Sonnet] | | ✔ | |
-| 4.2.i #28 Build the panel [Sonnet] | ✔ | | |
+| 4.2.t #27 `SessionsPanel` [Sonnet] | | | ✔ |
+| 4.2.i #28 Build the panel [Sonnet] | | ✔ | |
 | 4.3 #29 Configuration docs [Haiku] | | | ✔ |
 | 4.4 #30 The experiment's test page, phase 1 part [Haiku] | | | ✔ |
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
@@ -56,14 +56,14 @@ never by hand, so the status line stays true.
 | 5.0.t #31 End-to-end: *Start afresh* over the pipe [Sonnet] | ✔ | | |
 | 5.1.t #32 The two Envelopes [Haiku] | | | ✔ |
 | 5.1.i #33 Add the Envelopes [Haiku] | | | ✔ |
-| 5.2.t #34 `IAgentGateway.StartAfreshAsync` [Haiku] | | ✔ | |
-| 5.2.i #35 Add the gateway call [Haiku] | ✔ | | |
+| 5.2.t #34 `IAgentGateway.StartAfreshAsync` [Haiku] | | | ✔ |
+| 5.2.i #35 Add the gateway call [Haiku] | | ✔ | |
 | 5.3.t #36 The runner routes `StartAfresh` [Sonnet] | ✔ | | |
 | 5.3.i #37 Route it [Sonnet] | ✔ | | |
 | 5.4.t #38 `RoomSession` starts afresh between Turns [Sonnet] | ✔ | | |
 | 5.4.i #39 Implement the fresh start [Sonnet] | ✔ | | |
-| 5.5.t #40 `LastCatchUpStore` [Sonnet] | ✔ | | |
-| 5.5.i #41 Implement `LastCatchUpStore` [Sonnet] | ✔ | | |
+| 5.5.t #40 `LastCatchUpStore` [Sonnet] | | | ✔ |
+| 5.5.i #41 Implement `LastCatchUpStore` [Sonnet] | | ✔ | |
 | 5.6.t #42 The note and the file after the fresh session's first Turn [Sonnet] | ✔ | | |
 | 5.6.i #43 Send the note, write the file [Sonnet] | ✔ | | |
 | 5.7.t #44 Cleanup on rename, removal and Room delete [Sonnet] | ✔ | | |
@@ -72,8 +72,8 @@ never by hand, so the status line stays true.
 | **D6. Phase 2a: server and UI** | | | |
 | 6.1.t #46 The server keeps the note [Sonnet] | ✔ | | |
 | 6.1.i #47 Handle the note [Sonnet] | ✔ | | |
-| 6.2.t #48 The note's wording [Haiku] | | ✔ | |
-| 6.2.i #49 Implement the wording [Haiku] | ✔ | | |
+| 6.2.t #48 The note's wording [Haiku] | | | ✔ |
+| 6.2.i #49 Implement the wording [Haiku] | | ✔ | |
 | 6.3.t #50 The note in the Room, and what it reread [Sonnet] | ✔ | | |
 | 6.3.i #51 Render the note [Sonnet] | ✔ | | |
 | 6.4.t #52 *Start afresh* in the Teammate's popover [Sonnet] | ✔ | | |
