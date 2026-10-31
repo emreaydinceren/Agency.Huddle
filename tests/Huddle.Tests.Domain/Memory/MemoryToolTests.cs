@@ -426,6 +426,25 @@ public sealed class MemoryToolTests
         Assert.Equal(original, await File.ReadAllTextAsync(path, ct));
     }
 
+    /// <summary>
+    /// An Agent that reads a file and writes it back whole, frontmatter included, gets one frontmatter block; a text that is only the
+    /// block is refused and nothing is written.
+    /// </summary>
+    [Fact]
+    public async Task Write_EchoingTheFrontmatter_WritesOneBlockAndRefusesAHeaderAlone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        string echoed = MemoryFileRules.Compose(GoodDescription, "Ms Patel teaches maths.");
+
+        _ = await harness.RunAsync(MemoryToolHarness.Args("write", ("file", "school.md"), ("description", GoodDescription), ("text", echoed)), ct);
+        string headerOnly = await harness.RunAsync(MemoryToolHarness.Args("write", ("file", "other.md"), ("description", GoodDescription), ("text", $"---\ndescription: {GoodDescription}\n---\n")), ct);
+
+        Assert.Equal(echoed, await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "school.md"), ct));
+        Assert.Equal(new FakePromptSource().Say("systemPrompt.memoryOnlyFrontmatter", ("file", "other.md")), headerOnly);
+        Assert.False(File.Exists(Path.Combine(harness.MemoryDir(), "other.md")));
+    }
+
     /// <summary>A file the Human saved with Windows line breaks is still matched by an <c>old</c> written with plain ones.</summary>
     [Fact]
     public async Task Replace_FileWithWindowsLineBreaks_StillMatches()

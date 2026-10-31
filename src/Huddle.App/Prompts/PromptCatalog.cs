@@ -2400,6 +2400,15 @@ internal static class PromptCatalog
             Placeholders: ["{{file}}"],
             RequiredPlaceholders: ["{{file}}"],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryOnlyFrontmatter",
+            Label: "Memory text is only frontmatter",
+            HelperText: "Said when a write's text is nothing but a --- frontmatter block, so the file would have no body. Must keep {{file}}.",
+            Default: "The text for {{file}} is only a frontmatter block. Huddle writes the frontmatter: pass the description in 'description' and the body, without frontmatter, in 'text'.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
     ];
 
     /// <summary>Builds the rest of the <c>propose_team_memory</c> tool's refusals (Team Memory Helper spec §6.1).</summary>

@@ -222,6 +222,8 @@ internal sealed class MemoryTool(
             case MemoryWriteResult.Written written:
                 this.LogCommitted(request, folder, written.Version);
                 return $"written {file} (version {written.Version})";
+            case MemoryWriteResult.OnlyFrontmatter:
+                return this.Say("systemPrompt.memoryOnlyFrontmatter", ("file", file));
             case MemoryWriteResult.BadDescription bad:
                 return this.Say("systemPrompt.memoryBadDescription", ("problem", bad.Problem));
             case MemoryWriteResult.TooLarge tooLarge:

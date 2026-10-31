@@ -68,10 +68,18 @@ internal sealed class MemoryWriter(MemoryFolderGate gate, IOptions<TeamOptions> 
             return new MemoryWriteResult.BadDescription(problem);
         }
 
+        // A writer that read the file and wrote it back whole echoes its frontmatter: the writer adds it, so strip the echo, and
+        // refuse a text that was nothing but the echo rather than write an empty body.
+        string body = MemoryFileRules.WithoutFrontmatter(text ?? string.Empty);
+        if (body.Trim().Length == 0 && !string.IsNullOrWhiteSpace(text))
+        {
+            return new MemoryWriteResult.OnlyFrontmatter();
+        }
+
         // Read first, so a replaced file keeps the frontmatter keys other than its description that it already had.
         byte[]? current = File.Exists(path) ? await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false) : null;
         string? otherKeys = current is null ? null : MemoryFileRules.OtherKeys(Utf8.GetString(current));
-        byte[] bytes = Utf8.GetBytes(MemoryFileRules.Compose((description ?? string.Empty).Trim(), text ?? string.Empty, otherKeys));
+        byte[] bytes = Utf8.GetBytes(MemoryFileRules.Compose((description ?? string.Empty).Trim(), body, otherKeys));
         int max = options.Value.Memory.MaxFileBytes;
         if (max > 0 && bytes.Length > max)
         {

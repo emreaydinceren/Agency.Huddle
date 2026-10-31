@@ -20,6 +20,9 @@ internal abstract record MemoryWriteResult
     /// <param name="Problem">What is wrong with it, as <see cref="MemoryFileRules.DescriptionProblem"/> says.</param>
     internal sealed record BadDescription(string Problem) : MemoryWriteResult;
 
+    /// <summary>The text was nothing but a <c>---</c> frontmatter block, so the file would have no body.</summary>
+    internal sealed record OnlyFrontmatter : MemoryWriteResult;
+
     /// <summary>The composed file is over <c>Team:Memory:MaxFileBytes</c>.</summary>
     /// <param name="Size">The size it would have.</param>
     /// <param name="Max">The cap.</param>

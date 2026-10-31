@@ -154,6 +154,22 @@ public sealed class TeamMemoryHelperTests
         Assert.Equal($"---\ndescription: {Description}\nowner: Ana\n---\n\nRecorded verbal consent is enough.\n", File.ReadAllText(path));
     }
 
+    /// <summary>A Verdict whose text is only a frontmatter block passes the shape check but is refused at the write, and the file is left as it was.</summary>
+    [Fact]
+    public async Task Apply_TextThatIsOnlyFrontmatter_IsRefused()
+    {
+        using TeamMemoryHarness harness = new();
+        string path = harness.Put("interview-consent.md", Description, "Written consent only.");
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("Interview recording consent."));
+        TeamMemoryVerdict verdict = new("update", "Research", "interview-consent.md", Description, $"---\ndescription: {Description}\n---\n", "why");
+
+        HelperApplied applied = await harness.ApplyAsync(input, verdict);
+
+        Assert.Null(harness.Helper.Validate(verdict));
+        Assert.Equal("The answer's text for interview-consent.md is only a frontmatter block, with no body", Assert.IsType<HelperApplied.Refused>(applied).Message);
+        Assert.Equal(MemoryFileRules.Compose(Description, "Written consent only."), File.ReadAllText(path));
+    }
+
     /// <summary>The fingerprint covers the proposer, the folders and the attempt, so one member's cached Verdict is never reported against another's proposal.</summary>
     [Fact]
     public void Fingerprint_CoversProposerFoldersAndAttempt()

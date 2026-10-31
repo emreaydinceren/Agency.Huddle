@@ -33,6 +33,8 @@ public sealed class MemoryFileRulesTests
     [InlineData("---\ndescription: Echoed\n---\n\nThe body.\n", "The body.\n")]
     [InlineData("\uFEFF---\ndescription: Echoed\n---\nThe body.\n", "The body.\n")]
     [InlineData("The body.\n---\nnot frontmatter\n---\n", "The body.\n---\nnot frontmatter\n---\n")]
+    [InlineData("{\"endpoint\": \"/v2/orders\", \"retries\": 3}\n\nCall it twice at most.\n", "{\"endpoint\": \"/v2/orders\", \"retries\": 3}\n\nCall it twice at most.\n")]
+    [InlineData("---\ndescription: Echoed\n---\n", "")]
     [InlineData("\uFEFFThe body.", "The body.")]
     public void WithoutFrontmatter_RemovesOnlyALeadingBlock(string text, string expected)
     {

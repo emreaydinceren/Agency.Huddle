@@ -191,17 +191,18 @@ internal static partial class MemoryFileRules
     }
 
     /// <summary>
-    /// <paramref name="text"/> without a leading frontmatter block, and without the blank lines after it: a body a model wrote by
-    /// echoing a whole file, frontmatter included, would otherwise be written under a second block.
+    /// <paramref name="text"/> without a leading <c>---</c> frontmatter block, and without the blank lines after it: a body written by
+    /// echoing a whole file, frontmatter included, would otherwise be written under a second block. Only the <c>---</c> form is
+    /// stripped: a body may well open with a JSON example, which the Library would also read as frontmatter (D-9).
     /// </summary>
     /// <param name="text">A body as given.</param>
-    /// <returns>The body.</returns>
+    /// <returns>The body; empty when the text was nothing but a block.</returns>
     public static string WithoutFrontmatter(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
 
         NoteFrontmatterBlock block = NoteFrontmatter.Locate(text);
-        return block.Text is null ? text.TrimStart('\uFEFF') : text[block.BodyStart..].TrimStart('\r', '\n');
+        return block.Text is null || block.Form != NoteFrontmatterForm.Yaml ? text.TrimStart('\uFEFF') : text[block.BodyStart..].TrimStart('\r', '\n');
     }
 
     /// <summary>

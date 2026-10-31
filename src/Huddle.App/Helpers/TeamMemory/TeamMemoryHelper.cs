@@ -174,9 +174,8 @@ internal sealed class TeamMemoryHelper(
             return new HelperApplied.Dropped("the Helper was turned off");
         }
 
-        // The candidates are shown in full, frontmatter included, so a model may echo it: the writer adds the frontmatter itself.
-        string body = MemoryFileRules.WithoutFrontmatter(verdict.Text ?? string.Empty);
-        MemoryWriteResult result = await writer.WriteAsync(folder, file, verdict.Description, body, expectedVersion, cancellationToken).ConfigureAwait(false);
+        // The candidates are shown in full, frontmatter included, so a model may echo it: the writer strips the echo.
+        MemoryWriteResult result = await writer.WriteAsync(folder, file, verdict.Description, verdict.Text, expectedVersion, cancellationToken).ConfigureAwait(false);
         return this.Settle(input, folder, file, reason, result);
     }
 
@@ -210,6 +209,8 @@ internal sealed class TeamMemoryHelper(
                 return new HelperApplied.Changed($"{(written.Created ? "Created" : "Updated")} {folder.Label}/{file}");
             case MemoryWriteResult.BadName:
                 return this.Refuse($"The answer's file name is not a memory file name: {file}");
+            case MemoryWriteResult.OnlyFrontmatter:
+                return this.Refuse($"The answer's text for {file} is only a frontmatter block, with no body");
             case MemoryWriteResult.BadDescription bad:
                 return this.Refuse($"The answer's description for {file} is not usable: {bad.Problem}");
             case MemoryWriteResult.TooLarge tooLarge:

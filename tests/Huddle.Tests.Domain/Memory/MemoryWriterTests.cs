@@ -74,6 +74,35 @@ public sealed class MemoryWriterTests : IDisposable
             await File.ReadAllTextAsync(path, ct));
     }
 
+    /// <summary>
+    /// A text that echoes the file's <c>---</c> frontmatter, as a writer that read the file and wrote it back whole would send, is
+    /// written under one block; a body that opens with a JSON object is written as given.
+    /// </summary>
+    /// <param name="text">The text as the writer sent it.</param>
+    /// <param name="body">The body the file must hold.</param>
+    [Theory]
+    [InlineData("---\ndescription: Old one\nowner: Ana\n---\n\nWritten consent only.\n", "Written consent only.\n")]
+    [InlineData("{\"consent\": \"written\"}\n\nNo exceptions.\n", "{\"consent\": \"written\"}\n\nNo exceptions.\n")]
+    public async Task WriteAsync_TextWithALeadingBlock_WritesOneFrontmatter(string text, string body)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        MemoryWriteResult.Written written = Assert.IsType<MemoryWriteResult.Written>(
+            await this.writer.WriteAsync(this.folder, "consent.md", Description, text, null, ct));
+
+        Assert.Equal(MemoryFileRules.Compose(Description, body), await File.ReadAllTextAsync(written.Path, ct));
+    }
+
+    /// <summary>A text that is nothing but a frontmatter block is <see cref="MemoryWriteResult.OnlyFrontmatter"/>, and nothing is written.</summary>
+    [Fact]
+    public async Task WriteAsync_TextThatIsOnlyFrontmatter_IsRefused()
+    {
+        MemoryWriteResult result = await this.writer.WriteAsync(this.folder, "consent.md", Description, "---\ndescription: Echoed\n---\n\n", null, TestContext.Current.CancellationToken);
+
+        Assert.IsType<MemoryWriteResult.OnlyFrontmatter>(result);
+        Assert.False(File.Exists(Path.Combine(this.folder.Path, "consent.md")));
+    }
+
     /// <summary>No version for a file that exists is <see cref="MemoryWriteResult.Exists"/>, and the file is left as it was.</summary>
     [Fact]
     public async Task WriteAsync_ExistingFileWithoutVersion_IsExistsAndWritesNothing()

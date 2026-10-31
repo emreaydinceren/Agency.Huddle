@@ -105,6 +105,7 @@ public sealed class InstructionsAndMemoryPromptTests
     [InlineData("systemPrompt.memoryBadCommand")]
     [InlineData("systemPrompt.memoryWriteFailed")]
     [InlineData("systemPrompt.memoryReadFailed")]
+    [InlineData("systemPrompt.memoryOnlyFrontmatter")]
     [InlineData("systemPrompt.teamMemoryManager")]
     [InlineData("systemPrompt.teamMemoryMember")]
     public void MemoryPrompts_ExistAndAreClean(string key)
