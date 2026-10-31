@@ -30,6 +30,9 @@ internal static partial class MemoryFileRules
     /// <summary>The frontmatter key that holds the index line.</summary>
     private const string DescriptionKey = "description";
 
+    /// <summary>The byte-order mark a Windows editor may put at the start of a file.</summary>
+    private const char ByteOrderMark = (char)0xFEFF;
+
     /// <summary>The Windows device names, which are reserved however many extensions follow.</summary>
     private static readonly string[] DeviceNames =
     [
@@ -138,28 +141,7 @@ internal static partial class MemoryFileRules
         ArgumentNullException.ThrowIfNull(fileText);
 
         NoteFrontmatterBlock block = NoteFrontmatter.Locate(fileText);
-        if (block.Text is null || block.Form != NoteFrontmatterForm.Yaml)
-        {
-            return null;
-        }
-
-        StringBuilder kept = new();
-        bool inDescription = false;
-        foreach (string line in block.Text.ReplaceLineEndings("\n").Split('\n'))
-        {
-            bool continues = line.Length > 0 && (char.IsWhiteSpace(line[0]) || line[0] == '-');
-            if (!continues)
-            {
-                inDescription = DescriptionKeyLine().IsMatch(line);
-            }
-
-            if (!inDescription && line.Length > 0)
-            {
-                _ = kept.Append(line).Append('\n');
-            }
-        }
-
-        return kept.Length == 0 ? null : kept.ToString();
+        return block.Text is null || block.Form != NoteFrontmatterForm.Yaml ? null : OtherKeysOf(block.Text);
     }
 
     /// <summary>A file's <c>description</c>, read from its frontmatter, or <see langword="null"/> when it has none that is a non-blank single value.</summary>
@@ -191,19 +173,117 @@ internal static partial class MemoryFileRules
     }
 
     /// <summary>
-    /// <paramref name="text"/> without a leading <c>---</c> frontmatter block, and without the blank lines after it: a body written by
-    /// echoing a whole file, frontmatter included, would otherwise be written under a second block. Only the <c>---</c> form is
-    /// stripped: a body may well open with a JSON example, which the Library would also read as frontmatter (D-9).
+    /// Splits an echoed header off <paramref name="text"/>: a leading <c>---</c> block that has a <c>description</c> key, as a writer
+    /// that read a memory file and sent it back whole would include. Its other keys are returned so the write can keep them, and the
+    /// blank lines after it are dropped. Any other leading block is part of the body: a body may open with a YAML or JSON example.
     /// </summary>
     /// <param name="text">A body as given.</param>
-    /// <returns>The body; empty when the text was nothing but a block.</returns>
-    public static string WithoutFrontmatter(string text)
+    /// <param name="echoedKeys">The echoed header's keys other than <c>description</c>, each line ending in a line feed, or <see langword="null"/>.</param>
+    /// <returns>The body; empty when the text was nothing but the header.</returns>
+    public static string SplitEcho(string text, out string? echoedKeys)
     {
         ArgumentNullException.ThrowIfNull(text);
 
+        echoedKeys = null;
         NoteFrontmatterBlock block = NoteFrontmatter.Locate(text);
-        return block.Text is null || block.Form != NoteFrontmatterForm.Yaml ? text.TrimStart('\uFEFF') : text[block.BodyStart..].TrimStart('\r', '\n');
+        if (block.Text is null || block.Form != NoteFrontmatterForm.Yaml || !HasDescriptionLine(block.Text))
+        {
+            return text.TrimStart(ByteOrderMark);
+        }
+
+        echoedKeys = OtherKeysOf(block.Text);
+        return text[block.BodyStart..].TrimStart('\r', '\n');
     }
+
+    /// <summary>
+    /// Merges two sets of frontmatter key lines: <paramref name="kept"/> in its order, each key replaced by the same key in
+    /// <paramref name="echoed"/> (ignoring case), then the keys only <paramref name="echoed"/> has.
+    /// </summary>
+    /// <param name="kept">The replaced file's other keys, or <see langword="null"/>.</param>
+    /// <param name="echoed">The echoed header's other keys, or <see langword="null"/>.</param>
+    /// <returns>The merged lines, or <see langword="null"/> when both are empty.</returns>
+    public static string? MergeKeys(string? kept, string? echoed)
+    {
+        if (echoed is null)
+        {
+            return kept;
+        }
+
+        List<(string Key, string Lines)> merged = KeyEntries(kept);
+        foreach ((string key, string lines) in KeyEntries(echoed))
+        {
+            int at = merged.FindIndex(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (at >= 0)
+            {
+                merged[at] = (key, lines);
+            }
+            else
+            {
+                merged.Add((key, lines));
+            }
+        }
+
+        return merged.Count == 0 ? null : string.Concat(merged.Select(static entry => entry.Lines));
+    }
+
+    /// <summary>
+    /// <paramref name="text"/> without an echoed header (see <see cref="SplitEcho"/>), and without the blank lines after it.
+    /// </summary>
+    /// <param name="text">A body as given.</param>
+    /// <returns>The body; empty when the text was nothing but the header.</returns>
+    public static string WithoutFrontmatter(string text) => SplitEcho(text, out _);
+
+    /// <summary>The lines of a <c>---</c> block other than its <c>description</c> key and that key's continuation lines.</summary>
+    /// <param name="blockText">The block's text, between its marker lines.</param>
+    /// <returns>The kept lines, each ending in a line feed, or <see langword="null"/> when there are none.</returns>
+    private static string? OtherKeysOf(string blockText)
+    {
+        StringBuilder kept = new();
+        bool inDescription = false;
+        foreach (string line in blockText.ReplaceLineEndings("\n").Split('\n'))
+        {
+            if (!IsContinuation(line))
+            {
+                inDescription = DescriptionKeyLine().IsMatch(line);
+            }
+
+            if (!inDescription && line.Length > 0)
+            {
+                _ = kept.Append(line).Append('\n');
+            }
+        }
+
+        return kept.Length == 0 ? null : kept.ToString();
+    }
+
+    /// <summary>Whether a block has a top-level <c>description</c> key line.</summary>
+    /// <param name="blockText">The block's text.</param>
+    private static bool HasDescriptionLine(string blockText) =>
+        blockText.ReplaceLineEndings("\n").Split('\n').Any(static line => DescriptionKeyLine().IsMatch(line));
+
+    /// <summary>Key lines grouped one entry per top-level key, each with its continuation lines, in order.</summary>
+    /// <param name="lines">Key lines, each ending in a line feed, or <see langword="null"/>.</param>
+    private static List<(string Key, string Lines)> KeyEntries(string? lines)
+    {
+        List<(string Key, string Lines)> entries = [];
+        foreach (string line in (lines ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (IsContinuation(line) && entries.Count > 0)
+            {
+                entries[^1] = (entries[^1].Key, entries[^1].Lines + line + "\n");
+                continue;
+            }
+
+            int colon = line.IndexOf(':', StringComparison.Ordinal);
+            entries.Add((colon > 0 ? line[..colon].Trim() : line.Trim(), line + "\n"));
+        }
+
+        return entries;
+    }
+
+    /// <summary>Whether a frontmatter line continues the key above it: an indented line or a list item.</summary>
+    /// <param name="line">The line.</param>
+    private static bool IsContinuation(string line) => line.Length > 0 && (char.IsWhiteSpace(line[0]) || line[0] == '-');
 
     /// <summary>
     /// Writes <paramref name="value"/> as a YAML scalar: plain when that reads back as the same text, single-quoted

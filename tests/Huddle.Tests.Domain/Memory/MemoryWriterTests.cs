@@ -75,22 +75,41 @@ public sealed class MemoryWriterTests : IDisposable
     }
 
     /// <summary>
-    /// A text that echoes the file's <c>---</c> frontmatter, as a writer that read the file and wrote it back whole would send, is
-    /// written under one block; a body that opens with a JSON object is written as given.
+    /// A text that echoes a memory file's header, as a writer that read the file and wrote it back whole would send, is written under
+    /// one block that keeps the echoed keys; a body that opens with a JSON object, or with a YAML block that has no description, is
+    /// written as given.
     /// </summary>
     /// <param name="text">The text as the writer sent it.</param>
+    /// <param name="keys">The other frontmatter lines the file must hold, or <see langword="null"/>.</param>
     /// <param name="body">The body the file must hold.</param>
     [Theory]
-    [InlineData("---\ndescription: Old one\nowner: Ana\n---\n\nWritten consent only.\n", "Written consent only.\n")]
-    [InlineData("{\"consent\": \"written\"}\n\nNo exceptions.\n", "{\"consent\": \"written\"}\n\nNo exceptions.\n")]
-    public async Task WriteAsync_TextWithALeadingBlock_WritesOneFrontmatter(string text, string body)
+    [InlineData("---\ndescription: Old one\nowner: Ana\n---\n\nWritten consent only.\n", "owner: Ana\n", "Written consent only.\n")]
+    [InlineData("{\"consent\": \"written\"}\n\nNo exceptions.\n", null, "{\"consent\": \"written\"}\n\nNo exceptions.\n")]
+    [InlineData("---\nretries: 3\n---\nThat is the client's default.\n", null, "---\nretries: 3\n---\nThat is the client's default.\n")]
+    public async Task WriteAsync_TextWithALeadingBlock_WritesOneFrontmatter(string text, string? keys, string body)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
 
         MemoryWriteResult.Written written = Assert.IsType<MemoryWriteResult.Written>(
             await this.writer.WriteAsync(this.folder, "consent.md", Description, text, null, ct));
 
-        Assert.Equal(MemoryFileRules.Compose(Description, body), await File.ReadAllTextAsync(written.Path, ct));
+        Assert.Equal(MemoryFileRules.Compose(Description, body, keys), await File.ReadAllTextAsync(written.Path, ct));
+    }
+
+    /// <summary>An echoed header's keys are merged into the replaced file's: an echoed value replaces the file's, a new key is added after them.</summary>
+    [Fact]
+    public async Task WriteAsync_EchoedKeys_MergeIntoTheFilesKeys()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string path = Path.Combine(this.folder.Path, "consent.md");
+        Directory.CreateDirectory(this.folder.Path);
+        await File.WriteAllTextAsync(path, $"---\ndescription: {Description}\nowner: Ana\ntags:\n  - legal\n---\n\nOld.\n", ct);
+        string echoed = $"---\ndescription: {Description}\nowner: Bo\nstatus: agreed\n---\n\nNew.\n";
+
+        MemoryWriteResult result = await this.writer.WriteAsync(this.folder, "consent.md", Description, echoed, MemoryVersion.Of(await File.ReadAllBytesAsync(path, ct)), ct);
+
+        Assert.IsType<MemoryWriteResult.Written>(result);
+        Assert.Equal($"---\ndescription: {Description}\nowner: Bo\ntags:\n  - legal\nstatus: agreed\n---\n\nNew.\n", await File.ReadAllTextAsync(path, ct));
     }
 
     /// <summary>A text that is nothing but a frontmatter block is <see cref="MemoryWriteResult.OnlyFrontmatter"/>, and nothing is written.</summary>
