@@ -186,6 +186,8 @@ Causes found, all fixed at the root:
 | Red on `main`, but both PRs were green | Not a flake: two PRs met. One added a service every renderer of a page must register, and the other added a test with its own context that does not register it (`ChatSubjectTests`). Fix the test's setup, and look for other private context builders |
 | A count off by one in server-rendered HTML, ~1 run in 100 | A bare word matched inside the prerender marker's random base64 — count the element |
 | A rename not visible right after `Update` returns | A real product bug: the watcher's debounce rescan ran inside `Update` and raised the rename from its timer thread (`PersonaStore`, fixed by lock order) |
+| "Hosting failed to start" with `cannot change into wal mode from within a transaction` in `SqliteTeamDirectory.InitializeAsync` | Not our code: `Microsoft.Data.Sqlite` up to 10.0.12 could lend one pooled native handle to two connections opened at once (dotnet/efcore#39008), and the other owner's running statement blocked the `PRAGMA`. Fixed by 10.0.13; `SqliteConnectionPoolTests` pins it, so do not downgrade the package |
+| `ObjectDisposedException` from a `CancellationTokenSource` in a hosted service's `StoppingAsync` during `WebApplicationFactory` teardown | The stopping step ran after the singleton had already been disposed. A service that owns a token source makes `Dispose` and stopping safe in either order (`TailscaleRuntime`, pinned by `TailscaleRuntimeTests`) |
 | The run ends red with `failed: 0` and "Foreground threads were left running" | Pooled SQLite connections kept every temp `team.db` open until exit — `TempDataDir.Dispose` clears them |
 
 A failure in an **unrelated** test: capture its name, rerun it alone five times, and report it —

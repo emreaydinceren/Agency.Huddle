@@ -19,7 +19,9 @@ internal sealed class TailscaleRuntime(
     ILogger<TailscaleRuntime> logger) : IHostedLifecycleService, IDisposable
 {
     private readonly CancellationTokenSource stop = new();
+    private readonly Lock gate = new();
     private Task? work;
+    private bool disposed;
     private volatile TailscaleStatusPoller? poller;
 
     /// <summary>The latest Tailscale status and stray Serve routes the poller read, or <see langword="null"/> before the first poll or when Tailscale is off.</summary>
@@ -34,8 +36,11 @@ internal sealed class TailscaleRuntime(
             || string.Equals(options.Tailscale.Mode, "funnel", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <inheritdoc />
-    public void Dispose() => this.stop.Dispose();
+    /// <summary>
+    /// Cancels the work and disposes the token source. The host can dispose its services before (or while) it runs
+    /// <see cref="StoppingAsync"/>, so the two share <see cref="gate"/> and a second call does nothing.
+    /// </summary>
+    public void Dispose() => this.CancelWork(dispose: true);
 
     /// <inheritdoc />
     public Task StartedAsync(CancellationToken cancellationToken)
@@ -51,7 +56,7 @@ internal sealed class TailscaleRuntime(
     /// <inheritdoc />
     public async Task StoppingAsync(CancellationToken cancellationToken)
     {
-        await this.stop.CancelAsync().ConfigureAwait(false);
+        this.CancelWork(dispose: false);
         if (this.work is not null)
         {
             await this.work.ConfigureAwait(false);
@@ -71,6 +76,30 @@ internal sealed class TailscaleRuntime(
 
     /// <inheritdoc />
     public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Cancels the work and, when <paramref name="dispose"/>, disposes the token source, under <see cref="gate"/> so a dispose
+    /// racing the stopping step never cancels a disposed source. Once disposed the source was already cancelled, so later
+    /// calls do nothing. Synchronous on purpose: <c>CancelAsync</c> cannot be awaited inside the lock.
+    /// </summary>
+    /// <param name="dispose">Whether to dispose the token source too.</param>
+    private void CancelWork(bool dispose)
+    {
+        lock (this.gate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.stop.Cancel();
+            if (dispose)
+            {
+                this.disposed = true;
+                this.stop.Dispose();
+            }
+        }
+    }
 
     private async Task RunAsync(CancellationToken cancellationToken)
     {
