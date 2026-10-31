@@ -124,7 +124,7 @@ try {
 '@
 
     Invoke-Git @('init', '-q') | Out-Null
-    Invoke-Git @('config', 'user.email', 'fixture@example.invalid') | Out-Null
+    Invoke-Git @('config', 'user.email', 'fixture@example.com') | Out-Null
     Invoke-Git @('config', 'user.name', 'fixture') | Out-Null
     Invoke-Git @('config', 'core.autocrlf', 'false') | Out-Null
     Invoke-Git @('add', '-A') | Out-Null
