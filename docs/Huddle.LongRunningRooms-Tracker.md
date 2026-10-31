@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 10 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 11 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -19,7 +19,7 @@ never by hand, so the status line stays true.
 | 0.1 #1 Baseline build and test [Haiku] | | | ✔ |
 | **D1. Phase 0: retention and isolation** | | | |
 | 1.1.t #2 Warning for an un-isolated prefixed profile [Haiku] | | | ✔ |
-| 1.1.i #3 Log the Warning [Haiku] | | ✔ | |
+| 1.1.i #3 Log the Warning [Haiku] | | | ✔ |
 | 1.2 #4 Live check V0-1: is isolation real? [manual, manager with the Human] | ✔ | | |
 | 1.3 #5 Live check V0-2: can retention be set? [manual, manager with the Human] | ✔ | | |
 | 1.4 #6 Record the phase 0 findings [Haiku] | ✔ | | |
