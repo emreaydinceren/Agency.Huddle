@@ -201,6 +201,9 @@ list, notices, cards, composer.
 | `C10c` | Attach | `MudFileUpload` button | Present only where attachments are available |
 | `C10d` | Send | `MudIconButton` | Disabled while uploading |
 | `C11` | Reference picker | `ReferencePicker` popover | Opens when the Human types `@` |
+| `C12` | Fresh-start note | `MudAlert` Info, dense, `role="status"`, `.fresh-start-note room-notice-column` | A notice in the `C9` zone, after the agent cards (`C8`) and before the Budget prompt (`C9c`). One row for each Agent whose session started afresh in this Room, saying what it has reread; it stays until its Dismiss (`C12b`) is pressed |
+| `C12a` | See what it reread | `MudButton` text | Opens the last catch-up dialog (`O10`). Shown only when that Agent's reread text exists |
+| `C12b` | Dismiss | `MudIconButton` with the close icon, `aria-label="Dismiss"` | Hides the note for this Room |
 
 Not drawn: the empty state ("No rooms yet. Start an agent to create one."), the rename
 error alert, the budget caption and the "continue" notes, which sit in the `C9` zone.
@@ -401,6 +404,11 @@ popover (`O9`), which leaves the page as it is.
 | `O8` | Reconnect modal | `ReconnectModal.razor`, a `<dialog>` | The circuit dropped; offers Retry or Resume |
 | `O9` | Profile popover | `ProfileAvatar` (the button) opening `ProfilePopover`: a `MudPopover` with `.floating-panel` over a transparent `MudOverlay` | An Agent's profile, from a click on their avatar in a message row (`C5a`, and a Draft's), in the Room's Members (`C3`), or on a Task List row's assignee when that assignee is an Agent (the Human's own avatar stays plain). It holds the same `ProfileCard` as the roster (`B9c`, `B12`): ring and presence badge on the avatar, Name, title, Manager badge (in a Team's Room, for its manager), description, Member chip (in a Team's Room), tier and skills, then an Adapter, Model and Effort list for an Agent (the Human's card has none): the Adapter it actually runs on by display name (the default when none is set or the set one is no longer configured), the Model and Effort by display name ("Sonnet", "High") when the model catalog has already cached them, else as their stored ids. When none is stored it reads "{name} (default)", for example "Opus 5.5 (default)" and "High (default)", once the Adapter's defaults are cached, else "Agent default" and "Model default", the Agent card's own words. It never probes while opening: an empty cache starts a background warm-up, so the next open shows the names. Built when it opens, not when the avatar draws; "No profile for {Name}." for a name with no Persona behind it. Click-away or Escape closes it and focus returns to the avatar. An avatar inside another control keeps the plain `AgentAvatar`: the sidebar room rows, picker rows, search results, Agent tiles (`P4`) and a Task card (`T6`, whose body is a button) |
 | `O9a` | Profile actions | `ProfileCard`'s `Actions` | Edit (closes the popover, opens the Agent card) and Message (only once the Agent has connected; opens the Team's one-to-one in a Team's Room, else the root one-to-one). No Remove, Re-roll or Undo: those are roster decisions |
+| `O9b` | Start afresh | `MudButton` text in `ProfileCard`'s `Actions`, `.roster-start-afresh` | Shown only when the popover opens from a Room's Members (`C3`) for an Agent (not the Human) whose Adapter keeps one session per Room. Starts that Agent's session afresh in this Room: every Message stays, its working notes are forgotten. Hidden while the confirm (`O9c`) is open |
+| `O9c` | Start afresh confirm | `InlineConfirm` in place of `O9b` | "Start afresh? {Name} keeps every Message but forgets its working notes for this Room." with Cancel, then "Start afresh". A Gateway error shows in the popover's Snackbar (`O4`) |
+| `O10` | Last catch-up dialog | `LastCatchUpDialog`, `MudDialog` through `IDialogService` | The text an Agent reread when its session started afresh, as sent. Opened from "See what it reread" (`C12a`) with `ShortPicker` options |
+| `O10a` | Dialog title | `MudText` h6 | "What {Name} reread" |
+| `O10b` | Reread text | `pre.last-catch-up-text` | The catch-up prompt exactly as sent, with its line breaks kept |
 
 ## Figure 9: The Build a team page
 
