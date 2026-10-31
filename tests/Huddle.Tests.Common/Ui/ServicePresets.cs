@@ -96,6 +96,10 @@ internal static class ServicePresets
 
         // Chat.razor draws a Team Room's Team avatar in its header, read from the Team catalog.
         typeof(ITeamCatalog),
+
+        // Chat.razor shows the Room's fresh-start note strip (LR-R21) and the reread text behind it (LR-R22).
+        typeof(FreshStartNotes),
+        typeof(Agency.Huddle.App.Acp.Sessions.LastCatchUpStore),
     ];
 
     /// <summary>

@@ -43,6 +43,23 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
         }
     }
 
+    /// <summary>Whether a reread text exists for <paramref name="roomId"/> under <paramref name="name"/>, without reading it; an IO failure counts as no.</summary>
+    /// <param name="name">The Agent's Name.</param>
+    /// <param name="roomId">The Room id.</param>
+    internal bool Has(string name, string roomId)
+    {
+        string path = this.PathFor(name, roomId, ".md");
+        try
+        {
+            return File.Exists(path);
+        }
+        catch (IOException)
+        {
+            // File.Exists does not normally throw; an IO failure means the text cannot be shown, so report none.
+            return false;
+        }
+    }
+
     /// <summary>Writes <paramref name="note"/> to <c>{note.RoomId}.json</c> under <paramref name="name"/>.</summary>
     /// <param name="name">The Agent's Name.</param>
     /// <param name="note">The note to keep.</param>
