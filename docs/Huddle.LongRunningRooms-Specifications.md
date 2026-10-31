@@ -788,6 +788,7 @@ isolated (Claude Code's session file sat outside the copied data folder, since f
 page); and phase 1's own-Messages-first trim was not in play. **Next:** rerun LONGROOMS-04 (the
 repeats) on the real Room with the built *Start afresh*, about $5, before choosing between the
 single-session mode and phase 2b.
+
 ---
 
 ## 10. Testing
