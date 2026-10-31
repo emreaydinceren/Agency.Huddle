@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <summary>
 /// Exercises the <c>/agent-avatars</c> static-file middleware registered in <c>Program.cs</c>,
 /// through a real <see cref="System.Net.Http.HttpClient"/> hosted by <see cref="TeamWebApplicationFactory"/> -
-/// the same shape <see cref="AppHostTests"/> uses for <c>/health</c>, so these prove the real pipeline
+/// the same shape <c>AppHostTests</c> uses for <c>/health</c>, so these prove the real pipeline
 /// rather than a hand-built <c>StaticFileOptions</c> in isolation.
 /// </summary>
 public sealed class AvatarEndpointTests

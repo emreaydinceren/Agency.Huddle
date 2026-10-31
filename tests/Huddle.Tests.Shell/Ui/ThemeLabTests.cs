@@ -285,11 +285,13 @@ public sealed class ThemeLabTests : IDisposable
         BunitJSModuleInterop module = ctx.JSInterop.SetupModule(ModulePath);
         foreach (string name in new[] { "apply", "reset", "copy", "inspect" })
         {
+            // Complete each call: a planned invocation without SetVoidResult stays pending, and the lab's awaits then held
+            // these tests for 20-30 s each.
             module.SetupVoid(name, _ =>
             {
                 calls.Add(name);
                 return true;
-            });
+            }).SetVoidResult();
         }
 
         return module;

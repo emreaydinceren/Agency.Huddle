@@ -20,6 +20,8 @@
     <Project Path="tests/Huddle.Tests.Common/Huddle.Tests.Common.csproj" />
     <Project Path="tests/Huddle.Tests.SkillPacks/Huddle.Tests.SkillPacks.csproj" />
     <Project Path="tests/Huddle.Tests.Hosted/Huddle.Tests.Hosted.csproj" />
+    <Project Path="tests/Huddle.Tests.Hosted.Personas/Huddle.Tests.Hosted.Personas.csproj" />
+    <Project Path="tests/Huddle.Tests.Hosted.Workspace/Huddle.Tests.Hosted.Workspace.csproj" />
     <Project Path="tests/Huddle.Tests.Library/Huddle.Tests.Library.csproj" />
     <Project Path="tests/Huddle.Tests.Tasks/Huddle.Tests.Tasks.csproj" />
     <Project Path="tests/Huddle.Tests.Teams/Huddle.Tests.Teams.csproj" />
