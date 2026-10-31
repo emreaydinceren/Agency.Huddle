@@ -18,6 +18,21 @@ internal sealed class FiringTimeProvider : TimeProvider
     private DateTimeOffset utcNow = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private long nextSequence;
 
+    /// <summary>
+    /// How many live timers are scheduled to fire. A test waits on this before <see cref="Advance"/> when the code under test
+    /// arms its timer on another thread, so the advance cannot run before the timer exists and leave it waiting forever.
+    /// </summary>
+    public int ScheduledTimerCount
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.timers.Count(static timer => timer.IsScheduled);
+            }
+        }
+    }
+
     /// <inheritdoc/>
     public override DateTimeOffset GetUtcNow()
     {
@@ -121,6 +136,9 @@ internal sealed class FiringTimeProvider : TimeProvider
 
         /// <summary>This timer's creation order among every timer <see cref="FiringTimeProvider"/> has created, used to break due-time ties.</summary>
         public long Sequence { get; }
+
+        /// <summary>Whether this timer will fire on a later <see cref="FiringTimeProvider.Advance"/>. Must be read while holding <see cref="FiringTimeProvider.gate"/>.</summary>
+        public bool IsScheduled => !this.disposed && this.scheduledAt is not null;
 
         /// <summary>
         /// This timer's due instant, or <see langword="null"/> if it is disposed, has no schedule
