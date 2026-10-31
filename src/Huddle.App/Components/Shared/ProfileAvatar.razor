@@ -25,7 +25,7 @@
     </button>
     @if (this.open)
     {
-        <ProfilePopover Name="@this.Name" Team="@this.Team" OnClose="this.CloseAsync" />
+        <ProfilePopover Name="@this.Name" Team="@this.Team" StartAfreshRoomId="@this.StartAfreshRoomId" StartAfreshAgentId="@this.StartAfreshAgentId" OnClose="this.CloseAsync" />
     }
 </span>
 
@@ -53,6 +53,14 @@
     /// <summary>The Team the avatar was seen in, or <see langword="null"/> outside any Team; it picks the one-to-one Message opens.</summary>
     [Parameter]
     public string? Team { get; set; }
+
+    /// <summary>The Room whose header drew this avatar; with <see cref="StartAfreshAgentId"/> it lets the popover offer Start afresh. Omit on any other page.</summary>
+    [Parameter]
+    public string? StartAfreshRoomId { get; set; }
+
+    /// <summary>The Agent's agent-user id, sent with <see cref="StartAfreshRoomId"/> when Start afresh is confirmed.</summary>
+    [Parameter]
+    public string? StartAfreshAgentId { get; set; }
 
     /// <summary>Opens the popover, or closes it when it is already open.</summary>
     private async Task ToggleAsync()

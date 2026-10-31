@@ -68,7 +68,7 @@ else
                         <MudAvatarGroup Spacing="2">
                             @foreach (var agent in agentMembers.Take(MembersShown))
                             {
-                                <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" />
+                                <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" StartAfreshRoomId="@this.room.Id" StartAfreshAgentId="@agent.Id" />
                             }
                             @if (agentMembers.Count > MembersShown)
                             {
