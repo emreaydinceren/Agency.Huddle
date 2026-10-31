@@ -47,7 +47,7 @@
     pwsh -NoProfile -File agents/scripts/Freeze-Tests.ps1 -Check
 
 .EXAMPLE
-    pwsh -NoProfile -File agents/scripts/Freeze-Tests.ps1 -Release -Path tests/Huddle.Tests.Domain/FooTests.cs
+    pwsh -NoProfile -File agents/scripts/Freeze-Tests.ps1 -Release -Path tests/Huddle.Tests.Tasks/Tasks/FooTests.cs
 #>
 [CmdletBinding()]
 param(

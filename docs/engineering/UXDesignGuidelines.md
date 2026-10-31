@@ -351,7 +351,7 @@ Browser-side code lives in `wwwroot/` and is loaded once from `Components/App.ra
 | `task-list-resize.js` | Drag-to-resize columns on any `.task-list-grid`. A drag trades width between the two columns beside the border, so the table keeps its width; neither goes below 56px or its content. `TaskListView` registers through `window.taskListResize.register`, and a finished drag calls its `[JSInvokable] OnColumnsResized`, which saves the widths to `TaskView.ColumnWidths`. Each handle is focusable (`tabindex="0"`, an `aria-label` naming its column); Left and Right move the border 16px, Shift 64px, and each press is saved, like `T7a` |
 
 Many rules in `app.css` are pinned by tests (`ThemeSourceTests`, `AppStylesheetTests`, the
-`AppCss*Tests` in `tests/Huddle.Tests.Domain/Ui/`, and source tests per feature). If a CSS
+`AppCss*Tests` in `tests/Huddle.Tests.Shell/Ui/`, and source tests per feature). If a CSS
 change fails a test, read the test's summary before changing it: it records why the rule
 exists.
 
@@ -374,7 +374,7 @@ the catalog above.
 | Global stylesheet | `src/Huddle.App/wwwroot/app.css` (and `app-vars.css` for `--font-mono`) |
 | A component's own styles | `ComponentName.razor.css` beside it |
 | Browser-side code (resize handles, clipboard, CodeMirror) | `src/Huddle.App/wwwroot/app.js`; List column resizing in `task-list-resize.js` (see [Browser scripts](#browser-scripts)) |
-| Component tests (bUnit) | `tests/Huddle.Tests.Components/Ui/` and the feature folders in `tests/Huddle.Tests.*/` |
+| Component tests (bUnit) | The feature test project for the component's feature, `tests/Huddle.Tests.<Feature>/` (see *Where a test goes* in `agents/Testing.md`) |
 | The bUnit host for MudBlazor | `tests/Huddle.Tests.Common/Ui/MudBunitContext.cs` (`RenderWithPopovers`) |
 | Wireframe figures | `docs/images/wireframes/` |
 
@@ -528,7 +528,7 @@ browser's `preview_start` instead of starting the server itself. Then check:
   shared component, helper or utility class.
 - [Index.md](../Index.md) if you added, renamed or deleted a page under `docs/`.
 
-**The convention test.** `tests/Huddle.Tests.Domain/Ui/Conventions` (`UiConventionTests`) scans
+**The convention test.** `tests/Huddle.Tests.Shell/Ui/Conventions` (`UiConventionTests`) scans
 `src/Huddle.App` for eleven rules, CV1 to CV11: `Size.Small`, outlined and dense inputs, a
 `role` on every `MudAlert`, a snackbar `key`, no `ReadOnly`, no `h1` to `h4` outside
 `PageHeader`, no `!` initialisers, the action-icon rules, no literal `style`, no local

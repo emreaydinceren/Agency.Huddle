@@ -140,7 +140,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
    ```
 
 3. Give the rule's colours tokens or palette variables, never literals.
-4. Run the tests. `Traits_EveryValueHasCss` (one per trait group, under `tests/Huddle.Tests.Domain/Ui/Traits/`) fails for an
+4. Run the tests. `Traits_EveryValueHasCss` (one per trait group, under `tests/Huddle.Tests.Shell/Ui/Traits/`) fails for an
    enum value no stylesheet rule mentions. `Css_SelectorClasses_AreEmittedBySomeSource` fails for a selector that
    no component can produce.
 

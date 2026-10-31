@@ -1,18 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\tests\Huddle.TestAssemblies.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Agency.Huddle.MockAdapter</RootNamespace>
     <AssemblyName>mock-acp</AssemblyName>
   </PropertyGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="Huddle.Tests.Common" />
-    <InternalsVisibleTo Include="Huddle.Tests.Domain" />
-    <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
-    <InternalsVisibleTo Include="Huddle.Tests.Components" />
-    <InternalsVisibleTo Include="Huddle.Tests.Agents" />
-    <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
-  </ItemGroup>
   <ItemGroup>
     <!-- Links the ACP effort's scripted fake agent rather than moving it, per Spec §6.10
          ("Placement, and why the source is linked rather than moved"): no file leaves
