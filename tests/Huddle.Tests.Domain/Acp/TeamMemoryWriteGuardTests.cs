@@ -187,7 +187,7 @@ public sealed class TeamMemoryWriteGuardTests
     [InlineData(ToolKind.Delete, "Leo", "Dev")]
     [InlineData(ToolKind.Move, "Leo", "Dev")]
     [InlineData(ToolKind.Delete, "Leo", "Dev/Apollo")]
-    [InlineData(ToolKind.Move, "Leo", "dev/apollo")]
+    [InlineData(ToolKind.Move, "Leo", "Dev/Apollo")]
     [InlineData(ToolKind.Delete, "Leo", "Dev/memory")]
     [InlineData(ToolKind.Delete, "Ada", "")]
     [InlineData(ToolKind.Delete, "Ada", "Ops")]
@@ -196,6 +196,20 @@ public sealed class TeamMemoryWriteGuardTests
         ArgumentNullException.ThrowIfNull(relative);
 
         string chosen = await DecideAsync(Handler(persona, NullLogger<WorkDirPermissionHandler>.Instance), kind, Path.Combine(TeamsRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("reject-1", chosen);
+    }
+
+    /// <summary>
+    /// Windows only: a folder named in another letter case is the same folder on a case-insensitive file system, so moving
+    /// <c>dev/apollo</c> is refused like <c>Dev/Apollo</c>. On Linux it is a different folder that holds no Memory.
+    /// </summary>
+    [Fact]
+    public async Task Move_OfAFolderAboveTeamMemoryInAnotherCase_IsRefusedOnWindows()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Only a case-insensitive file system makes dev/apollo the Team's Dev/Apollo.");
+
+        string chosen = await DecideAsync(Handler("Leo", NullLogger<WorkDirPermissionHandler>.Instance), ToolKind.Move, Path.Combine(TeamsRoot, "dev", "apollo"));
 
         Assert.Equal("reject-1", chosen);
     }

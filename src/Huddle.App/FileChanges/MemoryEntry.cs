@@ -5,6 +5,13 @@ namespace Agency.Huddle.App.FileChanges;
 /// <param name="FullPath">The file's full path.</param>
 internal sealed record MemoryEntry(string Summary, string FullPath)
 {
-    /// <summary>The file's name with its extension, which the index line shows.</summary>
-    public string FileName => Path.GetFileName(this.FullPath);
+    /// <summary>The characters that end a folder in <see cref="FullPath"/>.</summary>
+    private static readonly char[] Separators = ['/', '\\'];
+
+    /// <summary>
+    /// The file's name with its extension, which the index line shows. A backslash ends a folder on every platform here, not
+    /// only on Windows: a memory file name can never hold one (<c>LibraryNames.Validate</c>), and a Windows-style path in a
+    /// snapshot must give the same name on Linux.
+    /// </summary>
+    public string FileName => this.FullPath[(this.FullPath.LastIndexOfAny(Separators) + 1)..];
 }
