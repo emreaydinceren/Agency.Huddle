@@ -277,6 +277,11 @@ public static class ServiceCollectionExtensions
         // Room Session so it can be resumed.
         services.AddSingleton<RoomSessionStore>();
 
+        // LR §5.2: the Session settings (catch-up cap and budget), an overrides-only watched file
+        // {DataDir}/session-settings.json; consumers read it through ISessionSettings.
+        services.AddSingleton<SessionSettingsStore>();
+        services.AddSingleton<ISessionSettings>(sp => sp.GetRequiredService<SessionSettingsStore>());
+
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
