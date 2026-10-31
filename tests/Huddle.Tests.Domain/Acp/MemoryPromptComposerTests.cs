@@ -40,7 +40,7 @@ public sealed class MemoryPromptComposerTests
     {
         string actual = Compose(["mcp__team__get_help", "mcp__team__memory"], SessionScope.Shared, memoryChangesListed: true);
 
-        Assert.Contains("Use the mcp__team__memory\ntool for it.", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("memory files only with mcp__team__memory, even when you know a file's path: never with your built-in Read, Write or Edit tools", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.Contains("\n- dentist.md - Dentist visits and insurance. Read before booking.\n", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain(Path.Combine(MemoryDir, "dentist.md"), actual, StringComparison.Ordinal);
     }
@@ -56,7 +56,7 @@ public sealed class MemoryPromptComposerTests
 
         string actual = Compose(toolNames, SessionScope.Shared, memoryChangesListed: true);
 
-        Assert.Contains("Use the memory\ntool for it.", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("memory files only with memory, even when you know a file's path", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
     }
 

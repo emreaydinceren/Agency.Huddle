@@ -44,6 +44,38 @@ public sealed class WorkDirPermissionHandlerTests
         Assert.Equal("reject-1", selected.OptionId);
     }
 
+    /// <summary>A relative path resolves against the Work Dir, the Adapter's working directory, not the process's: a climb out of the Work Dir into the protected directory is refused.</summary>
+    [Fact]
+    public async Task Write_ToARelativePathReachingTheProtectedDirectoryFromTheWorkDir_IsRefused()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var root = Path.Combine(Path.GetTempPath(), "huddle-protected");
+        var workDir = Path.Combine(Path.GetTempPath(), "huddle-protected-agents", "nova", "work");
+        var relative = Path.GetRelativePath(workDir, Path.Combine(root, "memory", "x.md"));
+        WorkDirPermissionHandler handler = new(root, NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir);
+
+        var decision = await handler.DecideAsync(Request($$"""{"file_path":{{System.Text.Json.JsonSerializer.Serialize(relative)}}}"""), ct);
+
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(decision).OptionId);
+    }
+
+    /// <summary>The protected directory is guarded against a move's destination as well as its source, because the path arguments are read in one place for every guard.</summary>
+    /// <param name="argument">The destination argument's name.</param>
+    [Theory]
+    [InlineData("new_path")]
+    [InlineData("destination")]
+    public async Task Move_IntoTheProtectedDirectory_IsRefused(string argument)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var root = Path.Combine(Path.GetTempPath(), "huddle-protected");
+        var source = System.Text.Json.JsonSerializer.Serialize(Path.Combine(Path.GetTempPath(), "huddle-work", "a.md"));
+        var destination = System.Text.Json.JsonSerializer.Serialize(Path.Combine(root, "memory", "a.md"));
+
+        var decision = await Handler(root).DecideAsync(Request($$"""{"old_path":{{source}},"{{argument}}":{{destination}}}"""), ct);
+
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(decision).OptionId);
+    }
+
     /// <summary>
     /// A sibling whose name merely starts with the protected directory's name is outside it. Without
     /// the separator in the comparison this passes as "inside" and ordinary work gets refused.

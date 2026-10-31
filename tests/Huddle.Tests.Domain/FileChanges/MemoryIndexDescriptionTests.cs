@@ -143,6 +143,43 @@ public sealed class MemoryIndexDescriptionTests
         Assert.Equal("The first body line.", entry.Summary);
     }
 
+    /// <summary>A valid frontmatter block longer than the scan bound is too long to read, not unclosed: no warning, and the summary is the file name, never one of the block's key lines.</summary>
+    /// <param name="block">The block's lines.</param>
+    [Theory]
+    [MemberData(nameof(OverlongBlocks))]
+    public void Build_FrontmatterBlockPastTheScanBound_IsTooLongNotUnclosed(string block)
+    {
+        using TempDataDir dataDir = new();
+        RecordingLogger<MemoryWarnings> logger = new();
+        MemoryWarnings warnings = new(logger);
+
+        MemoryEntry entry = IndexOne(dataDir, $"---\ntags: [a, b]\n{block}---\n\n# The first body line.\n", warnings);
+
+        Assert.Equal("topic", entry.Summary);
+        Assert.Empty(logger.AtExactly(LogLevel.Warning));
+    }
+
+    /// <summary>A block longer than 200 lines, and one under 200 lines that is longer than 16K characters.</summary>
+    public static TheoryData<string> OverlongBlocks() =>
+        new()
+        {
+            string.Concat(Enumerable.Range(0, 250).Select(static i => $"key{i}: value{i}\n")),
+            string.Concat(Enumerable.Range(0, 20).Select(static i => $"key{i}: {new string('v', 1000)}\n")),
+        };
+
+    /// <summary>A block that ends with the file, short of the bound, is unclosed and still warned about.</summary>
+    [Fact]
+    public void Build_UnclosedBlockAtTheEndOfTheFile_StillWarns()
+    {
+        using TempDataDir dataDir = new();
+        RecordingLogger<MemoryWarnings> logger = new();
+        MemoryWarnings warnings = new(logger);
+
+        _ = IndexOne(dataDir, string.Concat(Enumerable.Range(0, 150).Select(static i => i == 0 ? "---\n" : $"key{i}: value{i}\n")), warnings);
+
+        Assert.Single(logger.AtExactly(LogLevel.Warning));
+    }
+
     /// <summary>The warn-once memory is bounded: after it fills it is cleared, so a file may be warned about again but the set never grows without limit.</summary>
     [Fact]
     public void Warnings_AreRememberedPerFileAndContent_WithABound()

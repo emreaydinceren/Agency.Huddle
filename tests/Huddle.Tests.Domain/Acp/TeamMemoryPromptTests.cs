@@ -72,11 +72,11 @@ public sealed class TeamMemoryPromptTests
             - Business, one Project: {Path.Combine(TeamDir("Business"), "<Project>", "memory")}{Sep}
             """,
             $"""
-            Business:
+            Business (folder: Business):
             - invoicing.md - Invoices go out on the 1st.
-            Business › Marketing:
+            Business › Marketing (folder: Business/Marketing):
             - launch-date.md - The campaign launches on 3 November.
-            Business › Taxes:
+            Business › Taxes (folder: Business/Taxes):
             Nothing yet.
             """);
 
@@ -106,9 +106,9 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             BusinessPaths(),
             $"""
-            Business:
+            Business (folder: Business):
             Nothing yet.
-            Business › Charlie:
+            Business › Charlie (folder: Business/Charlie):
             - kickoff.md - Kickoff is on Monday.
             """);
 
@@ -136,17 +136,17 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             BusinessPaths(),
             """
-            Business:
+            Business (folder: Business):
             Nothing yet.
-            Business › Alpha:
+            Business › Alpha (folder: Business/Alpha):
             Nothing yet.
-            Business › Bravo:
+            Business › Bravo (folder: Business/Bravo):
             Nothing yet.
-            Business › Charlie:
+            Business › Charlie (folder: Business/Charlie):
             Nothing yet.
-            Business › Delta:
+            Business › Delta (folder: Business/Delta):
             Nothing yet.
-            Business › Echo:
+            Business › Echo (folder: Business/Echo):
             Nothing yet.
             """);
 
@@ -175,7 +175,7 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             BusinessPaths(),
             """
-            Business:
+            Business (folder: Business):
             Nothing yet.
             """);
 
@@ -195,7 +195,7 @@ public sealed class TeamMemoryPromptTests
             NotListed: notListed);
 
         var entryIndex = $"""
-            Business:
+            Business (folder: Business):
             - invoicing.md - Invoices go out on the 1st.
             """;
         var expected = Block(BusinessPaths(), moreLine is null ? entryIndex : entryIndex + "\n" + moreLine);
@@ -228,13 +228,42 @@ public sealed class TeamMemoryPromptTests
             {BusinessPaths()}
             """,
             index: $"""
-            Ops:
+            Ops (folder: Ops):
             Nothing yet.
-            Business:
+            Business (folder: Business):
             - invoicing.md - Invoices go out on the 1st.
-            Business › Marketing:
+            Business › Marketing (folder: Business/Marketing):
             - launch-date.md - The campaign launches on 3 November.
             …and 3 more in the Teams' memory folders.
+            """);
+
+        Assert.Equal(expected, TeamBlock(Compose(prompts, snapshot), prompts));
+    }
+
+    /// <summary>
+    /// The same file name in two folders is told apart by the heading: each group states the folder to pass to the memory tool once, the
+    /// Team for its Team-wide Memory and <c>Team/Project</c> for a Project's, while the entry lines keep the <c>file - description</c> form.
+    /// </summary>
+    [Fact]
+    public void Compose_SameFileNameInTwoFolders_EachHeadingNamesItsFolder()
+    {
+        FakePromptSource prompts = new();
+        TeamMemorySnapshot snapshot = new(
+            [
+                Group(
+                    "Business",
+                    Snapshot(MemoryDir("Business"), 0, new MemoryEntry("The Team's notes.", Path.Combine(MemoryDir("Business"), "notes.md"))),
+                    ("Marketing", Snapshot(ProjectMemoryDir("Business", "Marketing"), 0, new MemoryEntry("The campaign notes.", Path.Combine(ProjectMemoryDir("Business", "Marketing"), "notes.md"))))),
+            ],
+            NotListed: 0);
+
+        var expected = Block(
+            BusinessPaths(),
+            $"""
+            Business (folder: Business):
+            - notes.md - The Team's notes.
+            Business › Marketing (folder: Business/Marketing):
+            - notes.md - The campaign notes.
             """);
 
         Assert.Equal(expected, TeamBlock(Compose(prompts, snapshot), prompts));
@@ -280,7 +309,7 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             $"Business|{MemoryDir("Business")}{Sep}|{Path.Combine(TeamDir("Business"), "<Project>", "memory")}{Sep}",
             """
-            Business:
+            Business (folder: Business):
             Nothing yet.
             +7
             """);
@@ -299,7 +328,7 @@ public sealed class TeamMemoryPromptTests
             [new MemoryEntry("The Human prefers C# for all code.", personalFile)],
             NotListed: 0);
         TeamMemorySnapshot snapshot = new([Group("Business", Snapshot(MemoryDir("Business"), 0))], NotListed: 0);
-        var teamBlock = Block(BusinessPaths(), "Business:\nNothing yet.");
+        var teamBlock = Block(BusinessPaths(), "Business (folder: Business):\nNothing yet.");
 
         var prompt = Compose(prompts, snapshot, personal);
 
@@ -315,7 +344,7 @@ public sealed class TeamMemoryPromptTests
     {
         FakePromptSource prompts = new();
         TeamMemorySnapshot snapshot = new([Group("Business", Snapshot(MemoryDir("Business"), 0))], NotListed: 0);
-        var teamBlock = Block(BusinessPaths(), "Business:\nNothing yet.");
+        var teamBlock = Block(BusinessPaths(), "Business (folder: Business):\nNothing yet.");
 
         var prompt = Compose(prompts, snapshot, memory: null);
 
@@ -329,7 +358,7 @@ public sealed class TeamMemoryPromptTests
     {
         FakePromptSource prompts = new();
         TeamMemorySnapshot snapshot = new([Group("Business", Snapshot(MemoryDir("Business"), 0))], NotListed: 0);
-        var teamBlock = Block(BusinessPaths(), "Business:\nNothing yet.");
+        var teamBlock = Block(BusinessPaths(), "Business (folder: Business):\nNothing yet.");
         var roomSessions = prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>());
         var carry = prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>());
 
@@ -351,7 +380,7 @@ public sealed class TeamMemoryPromptTests
             [new MemoryEntry("The Human prefers C# for all code.", personalFile)],
             NotListed: 0);
         TeamMemorySnapshot snapshot = new([Group("Business", Snapshot(MemoryDir("Business"), 0))], NotListed: 0);
-        var teamBlock = Block(BusinessPaths(), "Business:\nNothing yet.");
+        var teamBlock = Block(BusinessPaths(), "Business (folder: Business):\nNothing yet.");
         var roomSessions = prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>());
         var carry = prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>());
 
@@ -379,7 +408,7 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             BusinessPaths(),
             """
-            Business:
+            Business (folder: Business):
             …and 5 more in the Teams' memory folders.
             """);
 
@@ -408,9 +437,9 @@ public sealed class TeamMemoryPromptTests
         var expected = Block(
             BusinessPaths(),
             $"""
-            Business:
+            Business (folder: Business):
             - invoicing.md - Invoices go out on the 1st.
-            Business › Taxes:
+            Business › Taxes (folder: Business/Taxes):
             Nothing yet.
             …and 2 more in the Teams' memory folders.
             """);
@@ -443,9 +472,9 @@ public sealed class TeamMemoryPromptTests
             - {team}, one Project: {Path.Combine(TeamDir(team), "<Project>", "memory")}{Sep}
             """,
             index: $"""
-            {team}:
+            {team} (folder: {team}):
             - note.md - {summary}
-            {team} › {project}:
+            {team} › {project} (folder: {team}/{project}):
             Nothing yet.
             """);
 

@@ -248,8 +248,9 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(),
             this.mergeGate,
             this.persona.Name,
-            new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts),
-            new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts));
+            new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts, this.sources.AgentPaths),
+            new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts),
+            this.workDir);
     }
 
     /// <summary>
@@ -260,7 +261,6 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <returns>The prompt appended to the Adapter's own.</returns>
     private string ComposeSystemPrompt()
     {
-        ILogger logger = this.loggerFactory.CreateLogger<DotAcpPersonaHost>();
         var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries, this.sources.Warnings);
         MemorySnapshot memory = new(this.memoryDir, entries, notListed);
 
@@ -288,7 +288,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             roleBlock: this.roleBlock(),
             instructions: this.ReadInstructions(),
             memoryChangesListed: this.readsMemory,
-            logger: logger);
+            warnings: this.sources.Warnings);
     }
 
     /// <summary>

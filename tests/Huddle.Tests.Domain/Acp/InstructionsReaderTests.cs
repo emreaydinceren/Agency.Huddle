@@ -107,6 +107,39 @@ public sealed class InstructionsReaderTests : IDisposable
         Assert.Equal($"{new string('a', 10)}\n…cut at 10 characters; the rest is in {Path.Combine(this.WorkDir, "Instructions.md")}.", text);
     }
 
+    /// <summary>A cut that would fall between the two halves of an emoji keeps neither half, so the prompt never carries a lone surrogate.</summary>
+    [Fact]
+    public void Read_CutInsideASurrogatePair_BacksOffToThePairsStart()
+    {
+        Write(this.WorkDir, "Instructions.md", "aaaa😀bbbb");
+
+        InstructionsSnapshot snapshot = Reader(new(), maxChars: 5).Read(this.TeamsRoot, [], this.WorkDir);
+
+        Assert.Equal($"aaaa\n…cut at 5 characters; the rest is in {Path.Combine(this.WorkDir, "Instructions.md")}.", Assert.Single(snapshot.Sections).Text);
+    }
+
+    /// <summary>A cut that would fall between the CR and the LF of a line break keeps neither, so the kept text never ends in a lone carriage return.</summary>
+    [Fact]
+    public void Read_CutInsideACrLf_BacksOffToTheLineBreaksStart()
+    {
+        Write(this.WorkDir, "Instructions.md", "aaaa\r\nbbbb");
+
+        InstructionsSnapshot snapshot = Reader(new(), maxChars: 5).Read(this.TeamsRoot, [], this.WorkDir);
+
+        Assert.Equal($"aaaa\n…cut at 5 characters; the rest is in {Path.Combine(this.WorkDir, "Instructions.md")}.", Assert.Single(snapshot.Sections).Text);
+    }
+
+    /// <summary>A cut right after a whole emoji or a whole CRLF keeps it: the back-off applies only to a split.</summary>
+    [Fact]
+    public void Read_CutAfterAWholePair_KeepsIt()
+    {
+        Write(this.WorkDir, "Instructions.md", "aa😀\r\nbbbb");
+
+        InstructionsSnapshot snapshot = Reader(new(), maxChars: 6).Read(this.TeamsRoot, [], this.WorkDir);
+
+        Assert.Equal($"aa😀\r\n\n…cut at 6 characters; the rest is in {Path.Combine(this.WorkDir, "Instructions.md")}.", Assert.Single(snapshot.Sections).Text);
+    }
+
     /// <summary>A file exactly at the cap is not cut.</summary>
     [Fact]
     public void Read_FileAtTheCap_IsNotCut()

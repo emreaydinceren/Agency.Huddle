@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Acp;
 using Microsoft.Extensions.Logging;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Elicitation;
@@ -37,10 +38,10 @@ public sealed class TeamMemoryRolesTests
 
     /// <summary>Composes Nova's whole prompt with the groups.</summary>
     /// <param name="prompts">The Prompt source.</param>
-    /// <param name="logger">Receives the composer's log entries, or null.</param>
+    /// <param name="warnings">Receives the composer's warnings, or null.</param>
     /// <param name="toolNames">The offered tools.</param>
     /// <param name="groups">The Persona's Team Memory groups.</param>
-    private static string Compose(FakePromptSource prompts, ILogger? logger, IReadOnlyList<string> toolNames, params TeamMemoryGroup[] groups) =>
+    private static string Compose(FakePromptSource prompts, MemoryWarnings? warnings, IReadOnlyList<string> toolNames, params TeamMemoryGroup[] groups) =>
         SystemPromptComposer.Compose(
             new Persona("Nova", "You are Nova."),
             prompts,
@@ -51,16 +52,16 @@ public sealed class TeamMemoryRolesTests
             memory: null,
             SessionScope.Shared,
             teamMemory: new TeamMemorySnapshot(groups, 0),
-            logger: logger);
+            warnings: warnings);
 
     /// <summary>Composes Nova's prompt with the groups and returns the Team Memory block alone.</summary>
     /// <param name="prompts">The Prompt source.</param>
-    /// <param name="logger">Receives the composer's log entries, or null.</param>
+    /// <param name="warnings">Receives the composer's warnings, or null.</param>
     /// <param name="toolNames">The offered tools.</param>
     /// <param name="groups">The Persona's Team Memory groups.</param>
-    private static string TeamBlock(FakePromptSource prompts, ILogger? logger, IReadOnlyList<string> toolNames, params TeamMemoryGroup[] groups)
+    private static string TeamBlock(FakePromptSource prompts, MemoryWarnings? warnings, IReadOnlyList<string> toolNames, params TeamMemoryGroup[] groups)
     {
-        string prompt = Compose(prompts, logger, toolNames, groups);
+        string prompt = Compose(prompts, warnings, toolNames, groups);
         string closing = "\n\n" + prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>());
         int start = prompt.IndexOf("## Team Memory", StringComparison.Ordinal);
         int end = prompt.LastIndexOf(closing, StringComparison.Ordinal);
@@ -85,7 +86,7 @@ public sealed class TeamMemoryRolesTests
             Only what the whole Team benefits from belongs here. When a decision is reversed, replace it and
             note briefly that it changed. Descriptions follow the same rules as your own Memory.
 
-            Dev:
+            Dev (folder: Dev):
             Nothing yet.
             """.ReplaceLineEndings("\n");
         Assert.Equal(expected, actual);
@@ -132,13 +133,86 @@ public sealed class TeamMemoryRolesTests
     {
         FakePromptSource prompts = new();
         prompts.SetOverride("systemPrompt.teamMemory", "OLD FRAME\n{{teamMemoryPaths}}\n{{teamMemoryIndex}}");
-        RecordingLogger logger = new();
+        RecordingLogger<MemoryWarnings> logger = new();
 
-        string actual = Compose(prompts, logger, ToolNames, Group("Dev", isManager: true), Group("Ops", isManager: false));
+        string actual = Compose(prompts, new MemoryWarnings(logger), ToolNames, Group("Dev", isManager: true), Group("Ops", isManager: false));
 
-        Assert.Contains($"OLD FRAME\n{Paths("Dev")}\n{Paths("Ops")}\nDev:\nNothing yet.\nOps:\nNothing yet.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains($"OLD FRAME\n{Paths("Dev")}\n{Paths("Ops")}\nDev (folder: Dev):\nNothing yet.\nOps (folder: Ops):\nNothing yet.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain("You own the shared Memory", actual, StringComparison.Ordinal);
         LogEntry warning = Assert.Single(logger.AtExactly(LogLevel.Warning));
         Assert.Equal("The 'systemPrompt.teamMemory' override still uses {{teamMemoryPaths}}; it is rendered the old way. Use {{teamMemoryRoles}} to say who writes Team Memory.", warning.Message);
+    }
+
+    /// <summary>The old-frame Warning is logged once per override text, not at every session start; an edited override warns again.</summary>
+    [Fact]
+    public void OldFrameOverride_WarnsOncePerOverrideText()
+    {
+        FakePromptSource prompts = new();
+        prompts.SetOverride("systemPrompt.teamMemory", "OLD FRAME\n{{teamMemoryPaths}}\n{{teamMemoryIndex}}");
+        RecordingLogger<MemoryWarnings> logger = new();
+        MemoryWarnings warnings = new(logger);
+
+        _ = Compose(prompts, warnings, ToolNames, Group("Dev", isManager: true));
+        _ = Compose(prompts, warnings, ToolNames, Group("Dev", isManager: true));
+        _ = Compose(prompts, warnings, ToolNames, Group("Ops", isManager: false));
+        Assert.Single(logger.AtExactly(LogLevel.Warning));
+
+        prompts.SetOverride("systemPrompt.teamMemory", "OLDER FRAME\n{{teamMemoryPaths}}\n{{teamMemoryIndex}}");
+        _ = Compose(prompts, warnings, ToolNames, Group("Dev", isManager: true));
+
+        Assert.Equal(2, logger.AtExactly(LogLevel.Warning).Count);
+    }
+
+    /// <summary>The placeholder names reach the logger as arguments, never inside the template, where a structured provider would read the doubled braces as an escape and print one brace.</summary>
+    [Fact]
+    public void OldFrameOverride_NamesThePlaceholdersAsArguments()
+    {
+        FakePromptSource prompts = new();
+        prompts.SetOverride("systemPrompt.teamMemory", "OLD FRAME\n{{teamMemoryPaths}}\n{{teamMemoryIndex}}");
+        TemplateCapturingLogger logger = new();
+
+        _ = Compose(prompts, new MemoryWarnings(logger), ToolNames, Group("Dev", isManager: true));
+
+        Assert.DoesNotContain("{{", logger.Template, StringComparison.Ordinal);
+        Assert.Contains("{{teamMemoryPaths}}", logger.Arguments);
+        Assert.Contains("{{teamMemoryRoles}}", logger.Arguments);
+    }
+
+    /// <summary>Keeps the original message template and the argument values of the Warning it receives.</summary>
+    private sealed class TemplateCapturingLogger : ILogger<MemoryWarnings>
+    {
+        /// <summary>The template as written at the call site, with its placeholders.</summary>
+        public string Template { get; private set; } = string.Empty;
+
+        /// <summary>The argument values, in order.</summary>
+        public List<string> Arguments { get; } = [];
+
+        /// <inheritdoc />
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <inheritdoc />
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <inheritdoc />
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (state is not IReadOnlyList<KeyValuePair<string, object?>> pairs)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<string, object?> pair in pairs)
+            {
+                if (string.Equals(pair.Key, "{OriginalFormat}", StringComparison.Ordinal))
+                {
+                    this.Template = pair.Value?.ToString() ?? string.Empty;
+                }
+                else
+                {
+                    this.Arguments.Add(pair.Value?.ToString() ?? string.Empty);
+                }
+            }
+        }
     }
 }

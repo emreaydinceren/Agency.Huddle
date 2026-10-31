@@ -57,8 +57,7 @@ internal sealed class TeamMemoryAccess
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        return this.CanWrite(persona, team)
-            || team.Members.Contains(persona, StringComparer.OrdinalIgnoreCase);
+        return CanRead(persona, team, this.isChiefOfStaff(persona));
     }
 
     /// <summary>Whether the Persona may write the Team's Memory: its manager, or the Chief of Staff.</summary>
@@ -68,12 +67,43 @@ internal sealed class TeamMemoryAccess
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        return this.isChiefOfStaff(persona)
-            || (team.Manager is { } manager && string.Equals(manager, persona, StringComparison.OrdinalIgnoreCase));
+        return CanWrite(persona, team, this.isChiefOfStaff(persona));
     }
+
+    /// <summary>
+    /// A test of whether the Persona may write a Team's Memory that looks the Persona up once, for a caller that asks about several Teams in one
+    /// decision (the permission guard on the hot path of every file tool call).
+    /// </summary>
+    /// <param name="persona">The Persona's name.</param>
+    /// <returns>A predicate over a Team.</returns>
+    public Func<TeamSummary, bool> WriterFor(string persona)
+    {
+        bool chief = this.isChiefOfStaff(persona);
+        return team => CanWrite(persona, team, chief);
+    }
+
+    /// <summary>Every Team in the catalog, in its order.</summary>
+    public IReadOnlyList<TeamSummary> AllTeams => this.teams.Teams;
 
     /// <summary>The Teams the Persona may read, in the catalog's order.</summary>
     /// <param name="persona">The Persona's name.</param>
-    public IReadOnlyList<TeamSummary> Readable(string persona) =>
-        [.. this.teams.Teams.Where(team => team.HasFolder && this.CanRead(persona, team))];
+    public IReadOnlyList<TeamSummary> Readable(string persona)
+    {
+        bool chief = this.isChiefOfStaff(persona);
+        return [.. this.teams.Teams.Where(team => team.HasFolder && CanRead(persona, team, chief))];
+    }
+
+    /// <summary>Whether the Persona may read the Team's Memory, given whether it is the Chief of Staff.</summary>
+    /// <param name="persona">The Persona's name.</param>
+    /// <param name="team">The Team.</param>
+    /// <param name="chief">Whether the Persona is the Chief of Staff, resolved once by the caller.</param>
+    private static bool CanRead(string persona, TeamSummary team, bool chief) =>
+        CanWrite(persona, team, chief) || team.Members.Contains(persona, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Whether the Persona may write the Team's Memory, given whether it is the Chief of Staff.</summary>
+    /// <param name="persona">The Persona's name.</param>
+    /// <param name="team">The Team.</param>
+    /// <param name="chief">Whether the Persona is the Chief of Staff, resolved once by the caller.</param>
+    private static bool CanWrite(string persona, TeamSummary team, bool chief) =>
+        chief || (team.Manager is { } manager && string.Equals(manager, persona, StringComparison.OrdinalIgnoreCase));
 }

@@ -3,7 +3,9 @@ namespace Agency.Huddle.Tests.Acp;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Elicitation;
@@ -177,6 +179,145 @@ public sealed class InstructionsWriteGuardTests
         string chosen = await DecideAsync(handler, Request(ToolKind.Edit, PathFor("huddle", "Instructions.md")));
 
         Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>The Agents' definitions root the other tests' Work Dir lives under: <c>huddle-guard/Agents</c>.</summary>
+    private static AgentPaths Agents() =>
+        new(Options.Create(new TeamOptions { DataDir = Path.Combine(Path.GetTempPath(), "huddle-guard") }));
+
+    /// <summary>Builds the handler under test with the guard on and every Agent's Work Dir located, as the application builds it.</summary>
+    private static WorkDirPermissionHandler HandlerWithAgents() =>
+        new(
+            Path.Combine(Path.GetTempPath(), "huddle-guard", ".claude"),
+            NullLogger<WorkDirPermissionHandler>.Instance,
+            instructionsGuard: new InstructionsWriteGuard(TeamsRoot, WorkDir, new FakePromptSource(), Agents()));
+
+    /// <summary>Builds a permission request for a tool call of one kind carrying the given raw input.</summary>
+    /// <param name="kind">The tool call's kind.</param>
+    /// <param name="rawInputJson">The raw input.</param>
+    private static PermissionRequestContext RequestJson(ToolKind kind, string rawInputJson) =>
+        new("session-1", new ToolCallInfo("call-1", "Tool", kind, ToolCallStatus.Pending, rawInputJson), BothKinds);
+
+    /// <summary>A path under the shared temp root.</summary>
+    /// <param name="relative">The path below <c>huddle-guard</c>, with forward slashes.</param>
+    private static string Under(string relative) =>
+        Path.Combine(Path.GetTempPath(), "huddle-guard", relative.Replace('/', Path.DirectorySeparatorChar));
+
+    /// <summary>Another Agent's <c>Instructions.md</c> is that Agent's highest-precedence level, so an edit, delete or move of it by this Agent is refused.</summary>
+    /// <param name="kind">The write kind.</param>
+    [Theory]
+    [InlineData(ToolKind.Edit)]
+    [InlineData(ToolKind.Delete)]
+    [InlineData(ToolKind.Move)]
+    public async Task Write_ToAnotherAgentsInstructions_IsRefused(ToolKind kind)
+    {
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(kind, Under("Agents/Other/work/Instructions.md")));
+
+        Assert.Equal("reject-1", chosen);
+    }
+
+    /// <summary>Only the file directly in another Agent's Work Dir is guarded; its other files, its sub-folders and its definition folder are written as before.</summary>
+    /// <param name="relative">The path below <c>huddle-guard</c>.</param>
+    [Theory]
+    [InlineData("Agents/Other/work/memory/Instructions.md")]
+    [InlineData("Agents/Other/Instructions.md")]
+    [InlineData("Agents/Other/work/notes.md")]
+    public async Task Write_ToAnotherAgentsOtherFiles_IsAllowed(string relative)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(ToolKind.Edit, Under(relative)));
+
+        Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>A move's destination is read: moving a file onto an Instructions file is refused, whichever argument name carries the destination.</summary>
+    /// <param name="argument">The destination argument's name.</param>
+    [Theory]
+    [InlineData("new_path")]
+    [InlineData("destination")]
+    [InlineData("target")]
+    public async Task Move_ToAnInstructionsFile_IsRefused(string argument)
+    {
+        string source = JsonSerializer.Serialize(Under("elsewhere/a.md"));
+        string destination = JsonSerializer.Serialize(Path.Combine(TeamsRoot, "Dev", "Instructions.md"));
+
+        string chosen = await DecideAsync(Handler(NullLogger<WorkDirPermissionHandler>.Instance), RequestJson(ToolKind.Move, $$"""{"old_path":{{source}},"{{argument}}":{{destination}}}"""));
+
+        Assert.Equal("reject-1", chosen);
+    }
+
+    /// <summary>Deleting or moving a folder that holds a guarded Instructions file takes the file with it, so it is refused.</summary>
+    /// <param name="kind">The delete or move kind.</param>
+    /// <param name="relative">The path below <c>huddle-guard</c>.</param>
+    [Theory]
+    [InlineData(ToolKind.Delete, "Teams")]
+    [InlineData(ToolKind.Move, "Teams")]
+    [InlineData(ToolKind.Delete, "Teams/Alpha")]
+    [InlineData(ToolKind.Move, "Teams/Alpha")]
+    [InlineData(ToolKind.Delete, "Agents/Nova/work")]
+    [InlineData(ToolKind.Delete, "Agents/Nova")]
+    [InlineData(ToolKind.Delete, "Agents")]
+    [InlineData(ToolKind.Delete, "Agents/Other/work")]
+    [InlineData(ToolKind.Move, "Agents/Other")]
+    public async Task DeleteOrMove_OfAFolderHoldingInstructions_IsRefused(ToolKind kind, string relative)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+        Directory.CreateDirectory(Under("Teams/Alpha"));
+
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(kind, Under(relative)));
+
+        Assert.Equal("reject-1", chosen);
+    }
+
+    /// <summary>A delete of something that holds no Instructions file, an edit of a folder path, and a delete below the guarded files are left alone.</summary>
+    /// <param name="kind">The write kind.</param>
+    /// <param name="relative">The path below <c>huddle-guard</c>.</param>
+    [Theory]
+    [InlineData(ToolKind.Delete, "Teams/Alpha/Notes")]
+    [InlineData(ToolKind.Delete, "Teams/loose.txt")]
+    [InlineData(ToolKind.Delete, "Agents/Nova/work/memory")]
+    [InlineData(ToolKind.Delete, "Agents/Nova/Nova.md")]
+    [InlineData(ToolKind.Delete, "elsewhere")]
+    [InlineData(ToolKind.Edit, "Teams/Alpha")]
+    public async Task DeleteOrMove_OfSomethingHoldingNoInstructions_IsAllowed(ToolKind kind, string relative)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+        Directory.CreateDirectory(Under("Teams/Alpha"));
+        await File.WriteAllTextAsync(Under("Teams/loose.txt"), "x", TestContext.Current.CancellationToken);
+
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(kind, Under(relative)));
+
+        Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>Windows only: an 8.3 short name or a stream outside the guarded files is an ordinary path, so the edit is allowed.</summary>
+    /// <param name="relative">The path below <c>huddle-guard</c>.</param>
+    [Theory]
+    [InlineData("elsewhere/RUNNER~1/notes.md")]
+    [InlineData("elsewhere/notes~2.md")]
+    [InlineData("Agents/Nova/work/notes~2.md")]
+    [InlineData("Agents/Nova/work/sub/DEV~1/x.md")]
+    [InlineData("Teams/Dev/memory/NOTES~1.md")]
+    public async Task Write_ThroughAnAliasOutsideTheGuardedFiles_IsAllowed(string relative)
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
+        ArgumentNullException.ThrowIfNull(relative);
+
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(ToolKind.Edit, Under(relative)));
+
+        Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>Windows only: a short name of an Instructions file in another Agent's Work Dir is refused like one in the Agent's own.</summary>
+    [Fact]
+    public async Task Write_ThroughAShortNameInAnotherAgentsWorkDir_IsRefused()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
+
+        string chosen = await DecideAsync(HandlerWithAgents(), Request(ToolKind.Edit, Under("Agents/Other/work/INSTRU~1.MD")));
+
+        Assert.Equal("reject-1", chosen);
     }
 
     /// <summary>The path of <paramref name="fileName"/> in one of the three places.</summary>

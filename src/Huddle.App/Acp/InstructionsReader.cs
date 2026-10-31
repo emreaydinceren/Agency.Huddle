@@ -127,6 +127,15 @@ internal sealed class InstructionsReader(IPromptSource prompts, int maxChars, IL
                 ["{{path}}"] = path,
             });
 
-        return text[..maxChars] + "\n" + cutLine;
+        return text[..KeptLength(text)] + "\n" + cutLine;
+    }
+
+    /// <summary>The number of characters to keep: the cap, less one when the cut would split a surrogate pair or a CR LF line break.</summary>
+    /// <param name="text">The file's whole text, longer than the cap.</param>
+    private int KeptLength(string text)
+    {
+        bool splitsPair = char.IsHighSurrogate(text[maxChars - 1]) && char.IsLowSurrogate(text[maxChars]);
+        bool splitsLineBreak = text[maxChars - 1] == '\r' && text[maxChars] == '\n';
+        return splitsPair || splitsLineBreak ? maxChars - 1 : maxChars;
     }
 }

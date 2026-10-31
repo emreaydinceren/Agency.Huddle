@@ -996,7 +996,7 @@ apply unchanged to their tabs.
 | --- | --- | --- |
 | `systemPrompt.teamMemory` | `## Team Memory`, the instruction paragraph from §6.4 with `{{teamMemoryPaths}}` where its two path lines go, the closing line *Keep private preferences in your own Memory.*, a blank line, then `{{teamMemoryIndex}}` | `{{teamMemoryPaths}}`, `{{teamMemoryIndex}}` |
 | `systemPrompt.teamMemoryPaths` | `- {{team}}, whole Team: {{teamMemoryPath}}` and `- {{team}}, one Project: {{projectMemoryPattern}}`, rendered once per Team and joined with a line break | `{{team}}`, `{{teamMemoryPath}}`, `{{projectMemoryPattern}}` (`<Team folder>\<Project>\memory\`) |
-| `systemPrompt.teamMemoryHeading` | `{{scope}}:` where the code composes `{{scope}}` as `Team` or `Team › Project` | `{{scope}}` |
+| `systemPrompt.teamMemoryHeading` | `{{scope}}:` where the code composes `{{scope}}` as `Team` or `Team › Project` (now `{{scope}} (folder: {{folder}}):`, see Instructions and Memory Appendix B, B-21) | `{{scope}}` |
 | `systemPrompt.teamMemoryMore` | `…and {{count}} more in the Teams' memory folders.` | `{{count}}` |
 
 Entries reuse `systemPrompt.memoryEntry` (`- {{summary}} ({{path}})`) and

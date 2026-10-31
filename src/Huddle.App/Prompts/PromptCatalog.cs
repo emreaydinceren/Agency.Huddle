@@ -208,7 +208,7 @@ internal static class PromptCatalog
                 "{{logChangeTool}}: the tool's exact, prefixed name is substituted in.",
             Default:
                 """
-                Before every final reply, ask yourself: did I Write or Edit a Markdown (.md) file, or check or judge one? If you wrote a new .md file (kind created) or edited an existing one (kind edited), call {{logChangeTool}} once for it. If you checked a .md document's citations or facts without changing it (kind reviewed), or you disagree with part of one (kind objected), call it too, even when you were asked not to edit the file. Its arguments are path (the document's full path), kind and summary (one line saying what you did and why), for example {{logChangeTool}}(path="/work/notes.md", kind="created", summary="Wrote three findings about the report"). Skip it only for a file that is not Markdown, or a document you only read to answer a question or summarise it. It is how the Human sees who changed a document and when.
+                Before every final reply, ask yourself: did I Write or Edit a Markdown (.md) file, or check or judge one? If you wrote a new .md file (kind created) or edited an existing one (kind edited), call {{logChangeTool}} once for it. If you checked a .md document's citations or facts without changing it (kind reviewed), or you disagree with part of one (kind objected), call it too, even when you were asked not to edit the file. Its arguments are path (the document's full path), kind and summary (one line saying what you did and why), for example {{logChangeTool}}(path="/work/notes.md", kind="created", summary="Wrote three findings about the report"). Skip it for a memory file (anything in your own or a Team's memory folder, which you change with the memory tool instead), for a file that is not Markdown, and for a document you only read to answer a question or summarise it. It is how the Human sees who changed a document and when.
                 """,
             Placeholders: ["{{logChangeTool}}"],
             RequiredPlaceholders: ["{{logChangeTool}}"],
@@ -1367,8 +1367,8 @@ internal static class PromptCatalog
                 """
                 ## Memory
                 Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
-                restarts, and every copy of you in your other Rooms reads the same folder. Use the {{memoryTool}}
-                tool for it.
+                restarts, and every copy of you in your other Rooms reads the same folder.
+                Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them.
 
                 Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
                 about the people or work you support), write it to the right topic file at once, not at the end.
@@ -1542,9 +1542,11 @@ internal static class PromptCatalog
             Label: "Team Memory heading",
             HelperText:
                 "The heading line above each group of Team Memory entries, naming the Team or Project " +
-                "they belong to. Must keep {{scope}}: without it the entries are not labelled.",
-            Default: "{{scope}}:",
-            Placeholders: ["{{scope}}"],
+                "they belong to. Must keep {{scope}}: without it the entries are not labelled. {{folder}} is the " +
+                "value to pass to the memory tool as the folder (the Team, or Team/Project); it names the folder " +
+                "once per group, so a file name that appears in two folders is unambiguous.",
+            Default: "{{scope}} (folder: {{folder}}):",
+            Placeholders: ["{{scope}}", "{{folder}}"],
             RequiredPlaceholders: ["{{scope}}"],
             Timing: PromptTiming.NextSession),
 
@@ -1991,7 +1993,6 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
-    /// <summary>The fixed sections of <c>InstallSkillPack.md</c>, kept out of the definition so the slice that lists it stays short.</summary>
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.instructionsRefusal</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart39() =>
@@ -2071,7 +2072,7 @@ internal static class PromptCatalog
                 "The job description a model reads for the memory tool. Takes no placeholders.",
             Default:
                 """
-                Reads and writes Markdown memory files, one topic per file. 'command' is one of: list (the files in a folder, each with its description), read (the whole file and its version), write (create a file, or replace one by passing the version read before; needs 'description', a single line of 20 to 200 characters that says when to read the file, and 'text', the body without frontmatter), append (add 'text' as a new line at the end), replace (swap 'old' for 'new'; 'old' must occur exactly once) and delete (needs the version, and is only for when the Human asked you to delete the file). 'folder' is 'me' (your own memory, the default), or a Team or 'Team/Project' whose shared Memory you may read; only a Team's manager writes it. 'file' is a bare file name ending in .md. Always read a file before you write over it.
+                Reads and writes Markdown memory files, one topic per file. Use this tool, never your file, edit or shell tools, for every memory file, even when you know its path. 'command' is one of: list (the files in a folder, each with its description), read (the whole file and its version), write (create a file, or replace one by passing the version read before; needs 'description', a single line of 20 to 200 characters that says when to read the file, and 'text', the body without frontmatter), append (add 'text' as a new line at the end), replace (swap 'old' for 'new'; 'old' must occur exactly once) and delete (needs the version, and is only for when the Human asked you to delete the file). 'folder' is 'me' (your own memory, the default), or a Team or 'Team/Project' whose shared Memory you may read; only a Team's manager writes it. 'file' is a bare file name ending in .md. Always read a file before you write over it.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2271,6 +2272,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
+    /// <summary>The fixed sections of <c>InstallSkillPack.md</c>, kept out of the definition so the slice that lists it stays short.</summary>
     private const string InstallSkillPackBody =
                 """
                 ## 1. What you are doing

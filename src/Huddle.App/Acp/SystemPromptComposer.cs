@@ -2,6 +2,7 @@ namespace Agency.Huddle.App.Acp;
 
 using System.Globalization;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
@@ -204,8 +205,8 @@ internal static class SystemPromptComposer
     /// out <c>systemPrompt.memoryChanges</c> and the per-Room closing leaves out <c>systemPrompt.roomSessionsCarry</c>,
     /// since both name File Changes (Instructions and Memory §6.1). Defaults to <see langword="true"/>.
     /// </param>
-    /// <param name="logger">
-    /// Receives the Warning about a <c>systemPrompt.teamMemory</c> override that still uses the old frame; <see langword="null"/> logs nothing.
+    /// <param name="warnings">
+    /// Warns, once per override text, about a <c>systemPrompt.teamMemory</c> override that still uses the old frame; <see langword="null"/> warns of nothing.
     /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
@@ -230,7 +231,7 @@ internal static class SystemPromptComposer
         RoleBlockInput? roleBlock = null,
         InstructionsSnapshot? instructions = null,
         bool memoryChangesListed = true,
-        ILogger? logger = null)
+        MemoryWarnings? warnings = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -265,7 +266,7 @@ internal static class SystemPromptComposer
 
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
-        AddMemoryParts(parts, prompts, memory, teamMemory, FindMemoryTool(toolNames), memoryChangesListed, logger);
+        AddMemoryParts(parts, prompts, memory, teamMemory, FindMemoryTool(toolNames), memoryChangesListed, warnings);
 
         AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
 
@@ -291,7 +292,7 @@ internal static class SystemPromptComposer
     /// <param name="teamMemory">The Persona's Team Memory snapshot, or <see langword="null"/> for none.</param>
     /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
-    /// <param name="logger">Receives the warning about an old-style Team Memory override; <see langword="null"/> logs nothing.</param>
+    /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     private static void AddMemoryParts(
         List<string> parts,
         IPromptSource prompts,
@@ -299,7 +300,7 @@ internal static class SystemPromptComposer
         TeamMemorySnapshot? teamMemory,
         string memoryToolName,
         bool memoryChangesListed,
-        ILogger? logger)
+        MemoryWarnings? warnings)
     {
         if (memory is not null)
         {
@@ -308,7 +309,7 @@ internal static class SystemPromptComposer
 
         if (teamMemory is not null && teamMemory.Groups.Count > 0)
         {
-            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, memoryToolName, logger));
+            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, memoryToolName, warnings));
         }
     }
 
@@ -537,18 +538,18 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each Team Memory prompt's current text.</param>
     /// <param name="teamMemory">The Persona's Team Memory snapshot; it holds at least one Group.</param>
     /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
-    /// <param name="logger">Receives the warning when a Human's override still uses the old frame; <see langword="null"/> logs nothing.</param>
-    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory, string memoryToolName, ILogger? logger)
+    /// <param name="warnings">Warns, once per override text, when a Human's override still uses the old frame; <see langword="null"/> warns of nothing.</param>
+    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory, string memoryToolName, MemoryWarnings? warnings)
     {
         List<string> lines = [];
         foreach (var group in teamMemory.Groups)
         {
-            AddScope(prompts, lines, group.Team, group.TeamWide, isProject: false, listWhenEmpty: true);
+            AddScope(prompts, lines, group.Team, group.Team, group.TeamWide, isProject: false, listWhenEmpty: true);
 
             var listEmptyProjects = group.Projects.Count <= MaxProjectsListedWhenEmpty;
             foreach (var (project, memory) in group.Projects)
             {
-                AddScope(prompts, lines, $"{group.Team} › {project}", memory, isProject: true, listWhenEmpty: listEmptyProjects);
+                AddScope(prompts, lines, $"{group.Team} › {project}", $"{group.Team}/{project}", memory, isProject: true, listWhenEmpty: listEmptyProjects);
             }
         }
 
@@ -567,7 +568,7 @@ internal static class SystemPromptComposer
         string frame = prompts.Raw("systemPrompt.teamMemory");
         if (frame.Contains("{{teamMemoryPaths}}", StringComparison.Ordinal) && !frame.Contains("{{teamMemoryRoles}}", StringComparison.Ordinal))
         {
-            logger?.LogWarning("The 'systemPrompt.teamMemory' override still uses {{teamMemoryPaths}}; it is rendered the old way. Use {{teamMemoryRoles}} to say who writes Team Memory.");
+            warnings?.OldTeamMemoryFrame(frame, "{{teamMemoryPaths}}", "{{teamMemoryRoles}}");
 
             return prompts.Render(
                 "systemPrompt.teamMemory",
@@ -676,6 +677,7 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="lines">The index lines built so far.</param>
     /// <param name="scope">The heading's scope: the Team, or <c>Team › Project</c>.</param>
+    /// <param name="folder">The <c>folder</c> value that reaches the scope with the memory tool: the Team, or <c>Team/Project</c>.</param>
     /// <param name="memory">The scope's Memory snapshot.</param>
     /// <param name="isProject">Whether the scope is a Project rather than the Team-wide Memory.</param>
     /// <param name="listWhenEmpty">Whether a scope with neither entries nor unlisted files is listed.</param>
@@ -683,6 +685,7 @@ internal static class SystemPromptComposer
         IPromptSource prompts,
         List<string> lines,
         string scope,
+        string folder,
         MemorySnapshot memory,
         bool isProject,
         bool listWhenEmpty)
@@ -695,7 +698,9 @@ internal static class SystemPromptComposer
             return;
         }
 
-        lines.Add(prompts.Render("systemPrompt.teamMemoryHeading", new Dictionary<string, string> { ["{{scope}}"] = scope }));
+        lines.Add(prompts.Render(
+            "systemPrompt.teamMemoryHeading",
+            new Dictionary<string, string> { ["{{scope}}"] = scope, ["{{folder}}"] = folder }));
 
         if (isEmpty)
         {

@@ -180,7 +180,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         return new SessionPromptSources(
             new InstructionsReader(prompts, this.options.Instructions.MaxChars, this.loggerFactory.CreateLogger<InstructionsReader>()),
             this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
-            this.serviceProvider.GetRequiredService<MemoryWarnings>());
+            this.serviceProvider.GetRequiredService<MemoryWarnings>(),
+            this.agentPaths);
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>

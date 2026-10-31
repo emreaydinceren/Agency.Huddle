@@ -215,8 +215,8 @@ public sealed partial class PromptCatalogTests
         new object[] { "{{teamMemoryPath}}", "{{projectMemoryPattern}}" })]
     [InlineData(
         "systemPrompt.teamMemoryHeading",
-        "{{scope}}:",
-        new object[] { "{{scope}}" },
+        "{{scope}} (folder: {{folder}}):",
+        new object[] { "{{scope}}", "{{folder}}" },
         new object[] { "{{scope}}" })]
     [InlineData(
         "systemPrompt.teamMemoryMore",

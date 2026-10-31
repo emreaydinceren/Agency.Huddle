@@ -28,7 +28,7 @@ public sealed class TeamMemorySessionTests
 
         string expected = TeamMemorySessionTests.ExpectedBlock(
             teamFolder,
-            "Business:",
+            "Business (folder: Business):",
             "- a.md - Business fact alpha");
         // contains-ok: composed system prompt text; the whole Team Memory block is the expected value.
         Assert.Contains(expected, prompt, StringComparison.Ordinal);
@@ -48,9 +48,9 @@ public sealed class TeamMemorySessionTests
 
         string expected = TeamMemorySessionTests.ExpectedBlock(
             teamFolder,
-            "Business:",
+            "Business (folder: Business):",
             "Nothing yet.",
-            "Business › Marketing:",
+            "Business › Marketing (folder: Business/Marketing):",
             "- b.md - Marketing fact beta");
         // contains-ok: composed system prompt text; the whole Team Memory block is the expected value.
         Assert.Contains(expected, prompt, StringComparison.Ordinal);

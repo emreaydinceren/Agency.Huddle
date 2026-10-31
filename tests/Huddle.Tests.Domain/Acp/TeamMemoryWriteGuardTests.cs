@@ -177,6 +177,134 @@ public sealed class TeamMemoryWriteGuardTests
         Assert.Equal("reject-1", chosen);
     }
 
+    /// <summary>Deleting or moving a folder that holds a Memory folder takes the Memory with it, so a Persona who may not write it is refused: the Teams root, the Team folder, a Project folder and the memory folder itself.</summary>
+    /// <param name="kind">The delete or move kind.</param>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="relative">The path under the Teams root, empty for the root itself.</param>
+    [Theory]
+    [InlineData(ToolKind.Delete, "Leo", "")]
+    [InlineData(ToolKind.Move, "Leo", "")]
+    [InlineData(ToolKind.Delete, "Leo", "Dev")]
+    [InlineData(ToolKind.Move, "Leo", "Dev")]
+    [InlineData(ToolKind.Delete, "Leo", "Dev/Apollo")]
+    [InlineData(ToolKind.Move, "Leo", "dev/apollo")]
+    [InlineData(ToolKind.Delete, "Leo", "Dev/memory")]
+    [InlineData(ToolKind.Delete, "Ada", "")]
+    [InlineData(ToolKind.Delete, "Ada", "Ops")]
+    public async Task DeleteOrMove_OfAFolderAboveTeamMemory_IsRefusedUnlessTheCallerWritesIt(ToolKind kind, string persona, string relative)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+
+        string chosen = await DecideAsync(Handler(persona, NullLogger<WorkDirPermissionHandler>.Instance), kind, Path.Combine(TeamsRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("reject-1", chosen);
+    }
+
+    /// <summary>The manager of every Team a folder holds, and the Chief of Staff, may delete or move it; a folder holding no Memory is anyone's.</summary>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="relative">The path under the Teams root, empty for the root itself.</param>
+    [Theory]
+    [InlineData("Ada", "Dev")]
+    [InlineData("Ada", "Dev/Apollo")]
+    [InlineData("Chief", "")]
+    [InlineData("Chief", "Dev")]
+    [InlineData("Leo", "Dev/Apollo/notes")]
+    [InlineData("Leo", "Other")]
+    public async Task DeleteOrMove_ByAnAuthorisedPersonaOrOfNoMemory_IsAllowed(string persona, string relative)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+
+        string chosen = await DecideAsync(Handler(persona, NullLogger<WorkDirPermissionHandler>.Instance), ToolKind.Delete, Path.Combine(TeamsRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>A member's edit of a folder path, which changes no file under it, is not a delete: only a delete or a move reaches what is below.</summary>
+    [Fact]
+    public async Task Edit_OfAFolderAboveTeamMemory_IsAllowed()
+    {
+        string chosen = await DecideAsync(Handler("Leo", NullLogger<WorkDirPermissionHandler>.Instance), ToolKind.Edit, Path.Combine(TeamsRoot, "Dev"));
+
+        Assert.Equal("allow-1", chosen);
+    }
+
+    /// <summary>A move's destination is read: moving a file into a Team's memory folder, under any destination argument name, is refused for a member.</summary>
+    /// <param name="argument">The destination argument's name.</param>
+    [Theory]
+    [InlineData("new_path")]
+    [InlineData("destination")]
+    [InlineData("target")]
+    [InlineData("to")]
+    public async Task Move_IntoTeamMemory_IsRefusedForAMember(string argument)
+    {
+        string source = JsonSerializer.Serialize(Path.Combine(Root, "elsewhere", "a.md"));
+        string destination = JsonSerializer.Serialize(Path.Combine(TeamsRoot, "Dev", "memory", "a.md"));
+        PermissionRequestContext request = new(
+            "session-1",
+            new ToolCallInfo("call-1", "Tool", ToolKind.Move, ToolCallStatus.Pending, $$"""{"old_path":{{source}},"{{argument}}":{{destination}}}"""),
+            BothKinds);
+
+        PermissionDecision decision = await Handler("Leo", NullLogger<WorkDirPermissionHandler>.Instance).DecideAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(decision).OptionId);
+    }
+
+    /// <summary>Windows only: a short name or a stream outside the Teams root is an ordinary path and is allowed; one inside it is still refused.</summary>
+    /// <param name="relative">The path under the temp root.</param>
+    /// <param name="expected">The option id expected.</param>
+    [Theory]
+    [InlineData("elsewhere/RUNNER~1/notes.md", "allow-1")]
+    [InlineData("Agents/Leo/work/notes~2.md", "allow-1")]
+    [InlineData("Teams/Dev/MEMORY~1/x.md", "reject-1")]
+    public async Task Write_ThroughAnAlias_IsRefusedOnlyInsideTheTeamsRoot(string relative, string expected)
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
+        ArgumentNullException.ThrowIfNull(relative);
+
+        string chosen = await DecideAsync(Handler("Ada", NullLogger<WorkDirPermissionHandler>.Instance), ToolKind.Edit, Path.Combine(Root, relative.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal(expected, chosen);
+    }
+
+    /// <summary>One permission decision looks the Persona up once, however many Teams the path reaches.</summary>
+    [Fact]
+    public async Task Decision_ReachingEveryTeam_ResolvesTheChiefOfStaffOnce()
+    {
+        int lookups = 0;
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [new TeamSummary("Dev", [], ["Leo"], true) { Manager = "Ada" }, new TeamSummary("Ops", [], ["Leo"], true), new TeamSummary("Qa", [], ["Leo"], true)],
+        };
+        TeamMemoryAccess access = new(catalog, name => { lookups++; return string.Equals(name, "Chief", StringComparison.Ordinal); });
+        WorkDirPermissionHandler handler = new(
+            Path.Combine(Root, ".claude"),
+            NullLogger<WorkDirPermissionHandler>.Instance,
+            personaName: "Chief",
+            teamMemoryGuard: new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, new FakePromptSource()));
+
+        string chosen = await DecideAsync(handler, ToolKind.Delete, TeamsRoot);
+
+        Assert.Equal("allow-1", chosen);
+        Assert.Equal(1, lookups);
+    }
+
+    /// <summary>Listing the Teams a Persona reads looks the Persona up once, not once per Team.</summary>
+    [Fact]
+    public void Readable_OverSeveralTeams_ResolvesTheChiefOfStaffOnce()
+    {
+        int lookups = 0;
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [new TeamSummary("Dev", [], ["Leo"], true), new TeamSummary("Ops", [], ["Leo"], true), new TeamSummary("Qa", [], ["Zed"], true)],
+        };
+        TeamMemoryAccess access = new(catalog, name => { lookups++; return false; });
+
+        IReadOnlyList<TeamSummary> readable = access.Readable("Leo");
+
+        Assert.Equal(2, readable.Count);
+        Assert.Equal(1, lookups);
+    }
+
     /// <summary>The refusal is logged with the reason, naming the manager (or saying the Team has none).</summary>
     [Fact]
     public async Task Refusal_IsLoggedWithTheManagersName()

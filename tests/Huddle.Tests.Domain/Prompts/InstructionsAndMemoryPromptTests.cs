@@ -133,4 +133,39 @@ public sealed class InstructionsAndMemoryPromptTests
             "A memory file name is one name ending in .md, with no folders.",
             PromptCatalog.Get("systemPrompt.memoryBadFile").Default);
     }
+
+    /// <summary>
+    /// The Memory block forbids the built-in file tools on memory files and says why, because a live Agent that knew a
+    /// file's path edited it with Edit and deleted it with a shell command, skipping the version check and the Recycle Bin.
+    /// </summary>
+    [Fact]
+    public void Memory_ForbidsTheBuiltInFileTools_AndSaysWhy()
+    {
+        string memory = PromptCatalog.Get("systemPrompt.memory").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains( // contains-ok: prompt or tool-result text, not markup
+            "\nRead, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with " +
+            "your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read " +
+            "it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it " +
+            "back; the built-in tools do none of that. Memory files are not documents: do not log changes to them.\n",
+            memory,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The document-history paragraph excludes memory files, because its "did I Write or Edit a Markdown file" check made a
+    /// live Agent log a change to its own memory file.
+    /// </summary>
+    [Fact]
+    public void DocHistory_SkipsMemoryFiles()
+    {
+        string docHistory = PromptCatalog.Get("systemPrompt.docHistory").Default;
+
+        Assert.EndsWith( // contains-ok: prompt or tool-result text, not markup
+            "Skip it for a memory file (anything in your own or a Team's memory folder, which you change with the memory tool " +
+            "instead), for a file that is not Markdown, and for a document you only read to answer a question or summarise it. " +
+            "It is how the Human sees who changed a document and when.",
+            docHistory.TrimEnd(),
+            StringComparison.Ordinal);
+    }
 }

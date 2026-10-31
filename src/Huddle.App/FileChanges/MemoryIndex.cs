@@ -60,8 +60,8 @@ internal static class MemoryIndex
     /// first non-blank body line, with a leading <c>#</c> and spaces removed, cut at <see cref="MaxSummaryLength"/>
     /// characters. A frontmatter block is never read as the summary. Only the start of the file is read: the frontmatter block
     /// and the first body line, within <see cref="MaxScannedLines"/> lines and <see cref="MaxScannedCharacters"/> characters.
-    /// Falls back to the file name, without its extension, when the file is blank or empty (E-15), or when it
-    /// cannot be read (correction item 13).
+    /// Falls back to the file name, without its extension, when the file is blank or empty (E-15), when it
+    /// cannot be read (correction item 13), or when its frontmatter block is still open at the scan bound (too long to read).
     /// </summary>
     /// <param name="filePath">The memory file.</param>
     /// <param name="warnings">Warns once per file and content about malformed frontmatter; <see langword="null"/> warns of nothing.</param>
@@ -73,7 +73,14 @@ internal static class MemoryIndex
         string text;
         try
         {
-            text = ReadHead(filePath);
+            bool tooLong;
+            (text, tooLong) = ReadHead(filePath);
+            if (tooLong)
+            {
+                // A frontmatter block that is still open at the scan bound is too long to read, not unclosed: nothing is known about its
+                // description, a key line is not a summary, and the file is not malformed, so there is no warning.
+                return fileName;
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -105,8 +112,11 @@ internal static class MemoryIndex
     /// file without one. Stops at the bounds, so a large file is never read whole.
     /// </summary>
     /// <param name="filePath">The memory file.</param>
-    /// <returns>The lines read, joined by line feeds.</returns>
-    private static string ReadHead(string filePath)
+    /// <returns>
+    /// The lines read, joined by line feeds, and whether the bound was hit with a frontmatter block still open and more of the file unread: the
+    /// block is then too long to read, which is not the same as a block that never closes.
+    /// </returns>
+    private static (string Text, bool TooLong) ReadHead(string filePath)
     {
         using StreamReader reader = new(filePath, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         StringBuilder head = new();
@@ -134,7 +144,8 @@ internal static class MemoryIndex
             }
         }
 
-        return head.ToString();
+        bool tooLong = inFrontmatter && !closed && reader.Peek() >= 0;
+        return (head.ToString(), tooLong);
     }
 
     /// <summary>The block's <c>description</c> when it is a non-blank scalar, else <see langword="null"/>.</summary>

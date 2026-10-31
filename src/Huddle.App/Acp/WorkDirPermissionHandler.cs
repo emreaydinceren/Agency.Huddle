@@ -66,13 +66,15 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
 /// <param name="instructionsGuard">Refuses an edit, delete or move of an <c>Instructions.md</c> (Instructions spec §3.3); <see langword="null"/> leaves them approved.</param>
 /// <param name="teamMemoryGuard">Refuses an edit, delete or move inside a Team's Memory by anyone but its manager or the Chief of Staff (Instructions spec §5.6); <see langword="null"/> leaves them approved.</param>
+/// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
 internal sealed class WorkDirPermissionHandler(
     string? protectedDirectory,
     ILogger<WorkDirPermissionHandler> logger,
     IMergeGate? mergeGate = null,
     string personaName = "",
     InstructionsWriteGuard? instructionsGuard = null,
-    TeamMemoryWriteGuard? teamMemoryGuard = null)
+    TeamMemoryWriteGuard? teamMemoryGuard = null,
+    string? workDir = null)
     : IPermissionHandler
 {
     /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
@@ -151,12 +153,6 @@ internal sealed class WorkDirPermissionHandler(
 
     /// <summary>Git options that consume the next word.</summary>
     private static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
-
-    /// <summary>
-    /// Argument names that carry a filesystem path in the tool calls this application sees. Matched
-    /// case-insensitively against the tool call's raw input.
-    /// </summary>
-    private static readonly string[] PathArgumentNames = ["file_path", "path", "notebook_path"];
 
     /// <summary>The Agent's home configuration directory for the current user, or null when it cannot be resolved.</summary>
     /// <returns>The absolute path to <c>~/.claude</c>, or <see langword="null"/> when the profile directory is unknown.</returns>
@@ -335,80 +331,22 @@ internal sealed class WorkDirPermissionHandler(
     {
         path = null;
 
-        if (toolCall.RawInputJson is not { Length: > 0 } json)
-        {
-            return false;
-        }
-
-        JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(json);
-        }
-        catch (JsonException)
-        {
-            // Not something this type can judge; approving matches the "identify positively" rule above.
-            return false;
-        }
-
-        using (document)
-        {
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return false;
-            }
-
-            foreach (var name in PathArgumentNames)
-            {
-                if (document.RootElement.TryGetProperty(name, out var value) &&
-                    value.ValueKind == JsonValueKind.String &&
-                    value.GetString() is { Length: > 0 } candidate &&
-                    this.IsInsideProtectedDirectory(candidate))
-                {
-                    path = candidate;
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="candidate"/> resolves to something inside the protected directory.
-    /// Compared case-insensitively: Windows paths are, and rules.md already leans on that elsewhere.
-    /// </summary>
-    /// <param name="candidate">The path named by the tool call, absolute or relative.</param>
-    /// <returns><see langword="true"/> when it is inside the protected directory.</returns>
-    private bool IsInsideProtectedDirectory(string candidate)
-    {
         if (protectedDirectory is null)
         {
             return false;
         }
 
-        string full;
-        try
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(protectedDirectory));
+        foreach (string candidate in ToolCallPaths.From(toolCall, workDir ?? Directory.GetCurrentDirectory()))
         {
-            full = Path.GetFullPath(candidate);
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (PathTooLongException)
-        {
-            return false;
+            // The separator matters: without it "…\.claudex" would count as inside "…\.claude".
+            if (ToolCallPaths.IsInside(candidate, root))
+            {
+                path = candidate;
+                return true;
+            }
         }
 
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(protectedDirectory));
-
-        // The separator matters: without it "…\.claudex" would count as inside "…\.claude".
-        return full.Equals(root, StringComparison.OrdinalIgnoreCase) ||
-               full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 }
