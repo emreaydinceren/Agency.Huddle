@@ -215,6 +215,7 @@ public static class ServiceCollectionExtensions
             ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
             service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
             service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+            service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
             service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
             return service;
         });
@@ -276,6 +277,13 @@ public static class ServiceCollectionExtensions
         // one JSON file per Agent under {DataDir}/room-sessions/, holding what is kept about each
         // Room Session so it can be resumed.
         services.AddSingleton<RoomSessionStore>();
+        services.AddSingleton<LastCatchUpStore>();
+        services.AddSingleton<FreshStartNotes>();
+
+        // LR §5.2: the Session settings (catch-up cap and budget), an overrides-only watched file
+        // {DataDir}/session-settings.json; consumers read it through ISessionSettings.
+        services.AddSingleton<SessionSettingsStore>();
+        services.AddSingleton<ISessionSettings>(sp => sp.GetRequiredService<SessionSettingsStore>());
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());

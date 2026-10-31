@@ -57,6 +57,21 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         await connection.SendAsync(new StopTurn(roomId), cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task StartAfreshAsync(string agentId, string roomId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        // An offline Agent has no session to forget in this process, so this is a silent no-op rather than an error.
+        if (!this.connections.TryGetValue(agentId, out var connection))
+        {
+            return;
+        }
+
+        await connection.SendAsync(new StartAfresh(roomId), cancellationToken).ConfigureAwait(false);
+    }
+
     internal void Register(AgentConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);

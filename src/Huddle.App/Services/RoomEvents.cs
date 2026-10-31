@@ -54,6 +54,12 @@ public sealed class RoomEvents
     public event Action<string>? QuestionsChanged;
 
     /// <summary>
+    /// A Fresh Start note in a Room was stored or dismissed. Carries the Room id, not the note, for the same
+    /// reason <see cref="QuestionsChanged"/> does: a subscriber rereads the current notes.
+    /// </summary>
+    public event Action<string>? FreshStartNotesChanged;
+
+    /// <summary>
     /// The forms waiting for the Human in a Room changed - one arrived, was taken (answered or skipped),
     /// or was dropped (its request was cancelled, a typed Human Message, an archive or a delete). Carries
     /// the Room id, not the cards, for the same reason <see cref="QuestionsChanged"/> does. The Room view
@@ -136,6 +142,13 @@ public sealed class RoomEvents
     internal void PublishQuestionsChanged(string roomId)
     {
         this.PublishRoomId(this.QuestionsChanged, roomId, nameof(this.QuestionsChanged));
+    }
+
+    /// <summary>Publishes <see cref="FreshStartNotesChanged"/> for <paramref name="roomId"/>.</summary>
+    /// <param name="roomId">The Room whose Fresh Start notes changed.</param>
+    internal void PublishFreshStartNotesChanged(string roomId)
+    {
+        this.PublishRoomId(this.FreshStartNotesChanged, roomId, nameof(this.FreshStartNotesChanged));
     }
 
     /// <summary>

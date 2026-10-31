@@ -11,6 +11,15 @@ experiment, so each gets its own plan then.
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**,
 and its `.i` partner ends **green**. Chore, docs, manual and verification tasks have no test partner.
 
+> [!NOTE]
+> **Delivery status, 2026-10-31.** Tasks 1–3, 6 and 9–59 are **done** on `feat/long-running-rooms`;
+> [the tracker](Huddle.LongRunningRooms-Tracker.md) holds each one's state. Tasks 4 and 5 (1.2 and
+> 1.3, the live checks V0-1 and V0-2) are **deferred to user acceptance**: the Human chose that on
+> 2026-10-30, and `known-limits.md` records both as not yet run. Tasks 7 and 8 (1.5.t and 1.5.i,
+> session retention) are **skipped**: they run only once 1.3 proves a route, and 1.3 has not run.
+> All three retrospectives ran, and the lessons that apply beyond this delivery were moved to
+> `agents/DeliveryPlaybook.md`.
+
 | Stream | Deliverables | Spec | May start |
 | --- | --- | --- | --- |
 | **A — Setup** | D0 | — | First |
@@ -157,6 +166,16 @@ The manager keeps this section; retrospectives add to it.
 | Room events | `src/Huddle.App/Services/RoomEvents.cs`: `event Action<string>? QuestionsChanged` (line 54) is the per-Room pattern |
 | Adapter profiles | `src/Huddle.App/Acp/AdapterCatalog.cs` lines 78–98 build configured entries; the class has no logger today |
 | Config table | `docs/Huddle.EngineeringGuide.md` line 285, the `Acp:TranscriptCatchUpMessages` row |
+| `-FilterClass` | Needs a leading `*` (`-FilterClass "*FooTests"`); without it zero tests run and a `-RedTask` still writes an invalid red file (rerun with `-Force`). Retrospective 1 |
+| Reds for a missing type | Fully qualify the missing type; an unused `using` pollutes the red with IDE0005. Make sure no other analyzer error (for example CA1859 on `IFoo x = concrete;`) hides behind it, or the frozen test blocks the `.i`. Retrospective 1 |
+| Implicit usings | `Huddle.App` is a web SDK project: `Microsoft.Extensions.Logging`, `.DependencyInjection` and `.Options` are implicit. Retrospective 1 |
+| Test helpers | `RecordingLogger<T>` (`AtExactly`) in namespace `Agency.Huddle.Tests.Elicitation`, `tests/Huddle.Tests.Common/Logging/RecordingLogger.cs`; `Eventually.UntilAsync` in `Agency.Huddle.Tests.Waiting`; `TempDataDir.Options(...)`. Retrospective 1 |
+| File-backed stores | `RetryingFileRead.Run` and `RereadKeepingPrevious` in `src/Huddle.App/Watching/RetryingFileRead.cs`; `DebouncedFileWatcher` (fixed 500 ms debounce). Retrospective 1 |
+| CRLF | `agents/scripts/Check-Eol.ps1 -Fix` repairs every changed file at once. Retrospective 1 |
+| Reds hide analyzer errors | Analyzers don't run while a compile error exists, so three frozen reds later failed on CA1859 (twice) and xUnit2029. Before recording a compile-error red, build once against throwaway stubs and fix the test file's analyzer errors. Retrospective 2 |
+| Test namespaces | `TempDataDir` in `Agency.Huddle.Tests`; `MudBunitContext` in `Agency.Huddle.Tests.Ui`; `RoomSessionHarness` in `Agency.Huddle.Tests.Acp.Sessions`; `IAgentSession` in `Agency.Huddle.Acp.Abstractions`. Retrospective 2 |
+| bUnit | Write `Xunit.TestContext.Current` (Bunit has its own `TestContext`); a service a Settings panel injects must be added to `tests/Huddle.Tests.Common/Ui/ServicePresets.cs` or the page tests fail; MudBlazor clears a field's `Error` on blur unless it has `Validation`. Retrospective 2 |
+| Test runs | `-FilterClass` takes several classes in one call (one mutex wait); `.i` tasks run the touched and neighbouring classes, and the full suite runs at batch boundaries, unless the task edits shared test infrastructure or DI. Retrospective 2 |
 
 ---
 
@@ -485,7 +504,7 @@ separator (`N0`).
 - **Deliverable:** Check that the rows added in 2.1.i read: `Acp:TranscriptCatchUpTokens | 100000 | LR-R7. The most estimated tokens (3 characters each) a first Turn rereads; Settings › Sessions may override.` and `Acp:CatchUpKeepOwnMessages | 5 | LR-R11. The Agent's newest own Messages a trim keeps.` Add one line under the table on `{DataDir}/session-settings.json`: overrides only, absent is normal, written by Settings › Sessions, hand-editable and watched.
 - **Acceptance:** Rows and line present; `Check-DocIndex.ps1` passes.
 
-### Task 30 — 4.4 The experiment's test page, phase 1 part [Sonnet]
+### Task 30 — 4.4 The experiment's test page, phase 1 part [Haiku]
 
 - **Goal:** Write `docs/engineering/manual-tests/long-running-rooms.md`, which Spec §9.1 says ships with phase 1.
 - **Read first:** Spec §9.1 (lines 674–716); `docs/engineering/manual-tests/planning.md`, the test-page format section only; one existing page in `docs/engineering/manual-tests/` for its layout.
@@ -513,7 +532,7 @@ separator (`N0`).
 ### Task 32 — 5.1.t The two Envelopes [Haiku]
 
 - **Goal:** Pin the literal JSON of `StartAfresh` and `FreshStartNote`, and that `ProtocolVersion.Current` stays 3 (Spec §6.1, §6.3, §10 `ProtocolJsonTests`; correction C2).
-- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Personas/Contracts/ProtocolJsonTests.cs` lines 195–210.
+- **Read first:** `src/Huddle.Contracts/StopTurn.cs`; `src/Huddle.Contracts/ProtocolMessage.cs` lines 1–20; `tests/Huddle.Tests.Personas/Contracts/ProtocolJsonTests.cs` lines 195–210; the Envelope and versioning rows of `docs/engineering/traps.md` (`grep -n "Envelope\|ProtocolVersion\|JsonDerivedType" docs/engineering/traps.md`), binding for the wire.
 - **Risk:** `data`.
 - **Deliverable:** Add to `tests/Huddle.Tests.Personas/Contracts/ProtocolJsonTests.cs`, beside `ProtocolJson_RoundTripsStopTurn` (line ~201; copy its shape: `ProtocolJson.Serialize`, then `ProtocolJson.Deserialize`). Rows: `ProtocolJson.Serialize(new StartAfresh("room-1"))` equals exactly `{"type":"startAfresh","roomId":"room-1","version":3}`; `new FreshStartNote("room-1", "asked", 38, 31000, false)` equals `{"type":"freshStartNote","roomId":"room-1","reason":"asked","messageCount":38,"estimatedTokens":31000,"readFailed":false,"version":3}` (every `ProtocolMessage` carries `version`); both round-trip to an equal record; `ProtocolVersion.Current == 3`.
 - **Acceptance:** Red: the types don't exist.
@@ -732,7 +751,7 @@ separator (`N0`).
 - **Deliverable:** Run `agents/scripts/Check-All.ps1`, then the full `Run-Tests.ps1 -Label final`. Confirm `git diff origin/main --stat -- tests/Huddle.Tests.Hosted/Acp/Golden/` is empty. Record the summary lines in `Conversation/long-running-rooms/final.md`.
 - **Acceptance:** All checks pass; the full suite is green apart from failures listed in `baseline.md`; no golden changed.
 
-### Task 58 — 7.4 Delivery note for the Human [Haiku]
+### Task 58 — 7.4 Delivery note for the Human [manager]
 
 - **Goal:** Tell the Human what shipped and what the experiment needs (Spec §9).
 - **Read first:** `final.md`, `v0-1.md`, `v0-2.md`.
@@ -775,6 +794,6 @@ separator (`N0`).
 
 | # | Date | Tasks covered | Top findings | What changed |
 | --- | --- | --- | --- | --- |
-| 1 | | 1–15 | | |
-| 2 | | 16–30 | | |
-| 3 | | 31–45 | | |
+| 1 | 2026-10-30 | 1–16 | Agents rediscovered the `-FilterClass` wildcard, implicit usings, helper namespaces and store helpers; a frozen 2.3.t row hid CA1859 behind the compile red and blocked 2.3.i; every agent starts at about 69K from inherited tools; the manager is most of the cost | Six front-load facts added to Delivery facts; 4.4 retagged Haiku; 5.1.t reads the wire rows of `traps.md`; `Check-Eol.ps1 -Fix` named for CRLF instead of a new script |
+| 2 | 2026-10-30 | 16–30 | Three frozen reds hid analyzer errors behind the compile error and blocked their `.i`; bUnit facts (`TestContext` ambiguity, `ServicePresets`, MudBlazor `Validation`) cost 4.2 eight compile rounds; full-suite runs in every `.i` caused 10–15 minute mutex waits and found nothing new; the manager is still most of the cost | Stub check before a compile-error red; bUnit and namespace facts added; `.i` tasks run touched and neighbouring classes in one call, and the full suite moves to batch boundaries |
+| 3 | 2026-10-31 | 31–45 | A 5.3 test built its pool on `CancellationToken.None` and hung the Agents assembly for 22 minutes while holding the machine-wide test mutex; killing every `dotnet` process to clear it abandoned the mutex, and `Run-Tests.ps1` then fails the next caller instead of taking ownership; agents re-read `RoomSession.cs` because the plan's line numbers had moved; the manager reached 455K context | Pool and session tests cancel their run token before disposal; `Check-Eol.ps1 -Fix` once instead of `Fix-Crlf.ps1` per file; the Chat page harness and the current `RoomSession` members added to the facts; 7.4 written by the manager; `Run-Tests.ps1` fixes (abandoned mutex, `--timeout`, bounded mutex wait) left as a follow-up, because `agents/scripts` is shared tooling |

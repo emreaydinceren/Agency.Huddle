@@ -44,6 +44,30 @@ public sealed class AcpOptionsTests
     }
 
     /// <summary>
+    /// <see cref="AcpOptions.TranscriptCatchUpTokens"/> defaults to 100000 (LR-R7): the catch-up budget is
+    /// measured in tokens, not messages, so a resumed Room session reads a bounded transcript tail.
+    /// </summary>
+    [Fact]
+    public void TranscriptCatchUpTokens_Default_Is100000()
+    {
+        var options = new AcpOptions();
+
+        Assert.Equal(100_000, options.TranscriptCatchUpTokens);
+    }
+
+    /// <summary>
+    /// <see cref="AcpOptions.CatchUpKeepOwnMessages"/> defaults to 5 (LR-R11): the Persona's own most recent
+    /// messages are kept in the catch-up even when older turns are trimmed to fit the token budget.
+    /// </summary>
+    [Fact]
+    public void CatchUpKeepOwnMessages_Default_Is5()
+    {
+        var options = new AcpOptions();
+
+        Assert.Equal(5, options.CatchUpKeepOwnMessages);
+    }
+
+    /// <summary>
     /// <see cref="AcpOptions.AdvertiseElicitation"/> ships on: Claude's built-in <c>AskUserQuestion</c>, the
     /// refusal-fallback dialog and MCP forms reach the Human unless an operator turns it off (elicitation
     /// bridge E-1b, the last step of its delivery).

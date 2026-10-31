@@ -1,0 +1,28 @@
+@*
+    Shows the text an Agent reread when it started a Room's session afresh (Spec LR-R22): the
+    last-catch-up prompt exactly as sent, in a <pre> so line breaks survive. The title is set by the
+    opener (T16, "What {Name} reread"); the opener passes both Parameters through DialogParameters, so
+    the leading-@ string-Parameter hazard in docs/engineering/rules.md does not apply here.
+*@
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">What @this.AgentName reread</MudText>
+    </TitleContent>
+    <DialogContent>
+        <pre class="last-catch-up-text">@this.Text</pre>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>The dialog opens with the close button, a wide body and no backdrop dismissal.</summary>
+    public static readonly DialogOptions Options = Agency.Huddle.App.Components.Shared.Dialogs.HuddleDialogOptions.ShortPicker;
+
+    /// <summary>The Agent's Name, shown in the title.</summary>
+    [Parameter, EditorRequired]
+    public string AgentName { get; set; } = string.Empty;
+
+    /// <summary>The reread text, shown as sent.</summary>
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+}

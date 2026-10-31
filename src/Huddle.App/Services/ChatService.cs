@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Feed;
@@ -66,6 +67,11 @@ public sealed partial class ChatService
     /// <see cref="TeamCatalog"/>; <see langword="null"/> means uploads are not tracked and nothing is recycled.
     /// </summary>
     internal IRoomUploadFolders? UploadFolders { get; set; }
+
+    /// <summary>
+    /// The per-Agent catch-up records, so <see cref="DeleteRoomAsync"/> can remove a deleted Room's files. An optional settable property for the same reason as <see cref="UploadFolders"/>; <see langword="null"/> means nothing is removed.
+    /// </summary>
+    internal LastCatchUpStore? LastCatchUp { get; set; }
 
     /// <summary>
     /// Told when a Room is created, joined or archived (Feed spec §6.5.3). An optional settable property for the
@@ -918,6 +924,16 @@ public sealed partial class ChatService
             {
                 this.logger.LogWarning("Room '{RoomId}' was deleted but its uploads were not recycled: {Reason}", roomId, failure);
             }
+        }
+
+        // Long-Running Rooms: the Room's catch-up files go too. Best effort, like the uploads above.
+        try
+        {
+            this.LastCatchUp?.RemoveRoom(roomId);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "Room '{RoomId}' was deleted but its catch-up files were not removed.", roomId);
         }
 
         // Spec §12 F-16: a deleted Room can never be Approved or Declined into, so any Proposal still

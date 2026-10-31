@@ -38,12 +38,34 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141), plus <c>turn.transcriptOmittedOwn</c> added for Long-Running Rooms LR-R12 (Task 3.3.t; count now 142).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(141, PromptCatalog.All.Count);
+        Assert.Equal(142, PromptCatalog.All.Count);
+    }
+
+    /// <summary>3.3.t (LR-R12, correction C10): <c>turn.transcriptOmittedOwn</c> is in the catalog directly after <c>turn.transcriptOmitted</c>.</summary>
+    [Fact]
+    public void TranscriptOmittedOwn_FollowsTranscriptOmitted()
+    {
+        List<string> keys = PromptCatalog.All.Select(prompt => prompt.Key).ToList();
+
+        Assert.Contains("turn.transcriptOmittedOwn", keys);
+        Assert.Equal(keys.IndexOf("turn.transcriptOmitted") + 1, keys.IndexOf("turn.transcriptOmittedOwn"));
+    }
+
+    /// <summary>3.3.t (LR-R12, text T1): <c>turn.transcriptOmittedOwn</c> defaults to T1, takes and requires only <c>{{count}}</c>, and is Live.</summary>
+    [Fact]
+    public void TranscriptOmittedOwn_CarriesT1AndTakesCount()
+    {
+        var prompt = PromptCatalog.Get("turn.transcriptOmittedOwn");
+
+        Assert.Equal("…{{count}} of those are your own.", prompt.Default);
+        Assert.Equal(["{{count}}"], prompt.Placeholders);
+        Assert.Equal(["{{count}}"], prompt.RequiredPlaceholders);
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>

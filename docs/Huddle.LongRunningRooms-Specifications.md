@@ -1,7 +1,7 @@
 # Huddle.LongRunningRooms — Requirements and Design Specification
 
 **Date:** 2026-10-30 (first draft 2026-10-11 as *Huddle.PersistentMemory*; rewritten after review
-2026-10-16; renamed and extended with OpenClaw's prior art 2026-10-30) · **Status:** Proposed, not built ·
+2026-10-16; renamed and extended with OpenClaw's prior art 2026-10-30) · **Status:** Phases 1 and 2a built, phase 0's checks and `SessionRetentionDays` not run or built (2026-10-31); experiment next ·
 **Decision record:** none yet (§12 lists the ADR candidates) · **Builds on:**
 [the Room Sessions spec](Huddle.RoomSessions-Specifications.md) (cited as *RS §n*),
 [the Commands spec](Huddle.Commands-Specifications.md),
@@ -259,19 +259,19 @@ unless a recorded reason says otherwise.
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| LR-R4 | Before phase 2a ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). | 0 |
-| LR-R5 | A configured Adapter entry whose `UsesToolNamePrefix` is true and whose `IsolateUserSettings` is false SHOULD log one Warning at start-up naming the entry. | 0 |
-| LR-R6 | If V0-2 (§4.1) shows session retention can be set for an isolated session, Huddle MUST set it to `Team:Acp:SessionRetentionDays` (default 365) for every Claude-profile session. If it cannot, the finding MUST be recorded and nothing else in this spec changes. | 0 |
+| LR-R4 | Before phase 2a ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). **Status:** not run. Phases 0 to 2a were built without it; the check (V0-1) is deferred to the Human's acceptance (2026-10-30), so the requirement stands. | 0 |
+| LR-R5 | A configured Adapter entry that runs Claude (its `Command`, `AdapterPath` or `Args` contains `claude-agent-acp`) and whose `IsolateUserSettings` is false SHOULD log one Warning at start-up naming the entry. `AdapterCatalog` logs it, through an optional `ILogger<AdapterCatalog>`. `UsesToolNamePrefix` is not the test: it only means tool names carry `mcp__team__`, and it defaults to true for every configured entry, `mock-acp` and `agency-acp` included. | 0 |
+| LR-R6 | If V0-2 (§4.1) shows session retention can be set for an isolated session, Huddle MUST set it to `Team:Acp:SessionRetentionDays` (default 365) for every Claude-profile session. If it cannot, the finding MUST be recorded and nothing else in this spec changes. **Status:** not built. V0-2 was not run (deferred to the Human's acceptance, 2026-10-30), so `Team:Acp:SessionRetentionDays` does not exist yet; the requirement stands. | 0 |
 
 ### 3.3 Catch-up budget (phase 1)
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
 | LR-R7 | A first Turn's Catch-up MUST be bounded by `Team:Acp:TranscriptCatchUpTokens` (estimated tokens) as well as by `TranscriptCatchUpMessages` (a Message cap). Whichever is reached first ends it. | 1 |
-| LR-R8 | Tokens MUST be estimated at three characters per token, rounding up, and the estimate MUST be called an estimate wherever it is shown. | 1 |
+| LR-R8 | Tokens MUST be estimated at three characters per token, rounding up, and the estimate MUST be called an estimate wherever it is shown. One Message costs `ceil((SenderName.Length + 2 + Text.Length) / 3)` tokens, and the `EstimatedTokens` of a note is the sum over the Messages kept, so the trim and the note use the same measure. | 1 |
 | LR-R9 | Both values MUST be settable on the Settings page and MUST apply from the next first Turn without restarting the app, a Persona or a session. A Settings value overrides the configuration default. | 1 |
 | LR-R10 | Changing either value MUST NOT forget any Room Session and MUST NOT be part of the `Persona` record, so `PersonaSupervisor.NeedsRestart` never fires on it. | 1 |
-| LR-R11 | When the budget cuts the Catch-up, the receiving Agent's **own** Messages MUST be dropped before anyone else's, oldest first, except its newest `CatchUpKeepOwnMessages` (default 5). Only then are other Messages dropped, oldest first. The kept Messages stay in Transcript order. | 1 |
+| LR-R11 | When the budget cuts the Catch-up, the receiving Agent's **own** Messages MUST be dropped before anyone else's, oldest first, except its newest `CatchUpKeepOwnMessages` (default 5). Only then are other Messages dropped, oldest first. If the rest still does not fit, the second pass drops the oldest remaining Messages, **including** the protected newest own ones, until it does; no minimum is kept, because the budget is a hard bound. "Own" means `SenderId` equals the Agent's id when the Room Session has one, else `SenderName` equals the Persona's name (ignoring case). The kept Messages stay in Transcript order. | 1 |
 | LR-R12 | The existing `turn.transcriptOmitted` line MUST count every dropped Message. When some dropped Messages were the Agent's own, a proposed `turn.transcriptOmittedOwn` line MUST say how many. | 1 |
 | LR-R13 | The Message cap MUST accept 1 to 2000 and the token budget 1000 to 150000. A value outside the range MUST be refused with a message, never clamped silently. (A value of 0 is not offered: `HandleReadTranscriptAsync` refuses `Max < 1`.) | 1 |
 | LR-R14 | The defaults MUST stay `20` Messages and a token budget large enough not to bind at 20 Messages, so LR-R2 holds until the Human changes them. | 1 |
@@ -293,7 +293,7 @@ written now so the design is whole, not as a commitment to build them.
 | LR-R19 | A fresh start MUST close the old session, forget its `RoomSessionStore` entry, and open a new session through the existing lazy-open path, so its first Turn carries Catch-up at the configured budget. | 2a |
 | LR-R20 | A fresh start MUST NOT count as a Turn failure, touch the failure streak or post a Transcript Message. | 2a |
 | LR-R21 | Every fresh start MUST be shown in the Room as a Room-level note (ADR-0012's slot), naming the Teammate, the reason and what the new session reread, for example *Nova started afresh after its conversation was compacted. It reread the last 38 Messages (about 31,000 tokens).* | 2a |
-| LR-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. | 2a |
+| LR-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. The note persists beside the reread file, as `last-catch-up/{Name}/{roomId}.json` next to the `.md`, so both survive an app restart. Dismissing a note deletes its `.json` only. | 2a |
 | LR-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room and Agent per local day, counted in the records of §6.7, so a fresh start, which replaces the Room Session, does not reset the count. A trigger past the limit is logged and skipped, never queued. | 2b |
 | LR-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2b |
 | LR-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2b |
@@ -315,6 +315,10 @@ sketches the candidate.
 
 Phase 0 is two live checks and, if the first passes, one setting. It costs no model calls beyond
 the checks.
+
+**Built status (2026-10-31).** Only LR-R5's Warning was built. V0-1 and V0-2 were not run: they are
+deferred to the Human's acceptance (2026-10-30). Because V0-2 has not shown that retention can be
+set, `Team:Acp:SessionRetentionDays` (LR-R6) does not exist. Both requirements stand.
 
 ### 4.1 V0-2: can retention be set?
 
@@ -397,13 +401,18 @@ Room setting (§6.5), the flush (§6.6) and the records and fallback note (§6.7
 
 | Way | Who | Available |
 | --- | --- | --- |
-| **Start afresh** in the Room menu, per Teammate | The Human | Every Room, always (LR-R15) |
+| **Start afresh** in the Teammate's profile popover (opened from their avatar in the Room header) | The Human | Every Room, always (LR-R15); hidden for the Human and for an Adapter profile with `SessionPerRoom == false` (LR-E5) |
 | Automatic, on a trigger | Huddle | Only in a Room with automatic fresh starts on (LR-R16) |
 
 *Start afresh* is the Room-scoped sibling of the card's Restart: it forgets one Room Session, not
-all of them. It needs a proposed additive Envelope from server to runner, `StartAfresh(RoomId,
-AgentName)`, so `ProtocolVersion.Current` stays as it is (traps.md: adding to the wire is not
-changing it).
+all of them. It needs a proposed additive Envelope from server to runner, `StartAfresh(string
+RoomId)`, so `ProtocolVersion.Current` stays as it is (traps.md: adding to the wire is not
+changing it). The connection already identifies the Agent, as for `StopTurn` and `ToolActivity`; a
+name on the wire would be a second, spoofable source. The server accepts `FreshStartNote` before the
+runner sends one, because an unknown Envelope would otherwise be answered with `BadMessage` and mark
+the Agent Degraded. A Room with no live session yet creates no session object: its stored entry is
+forgotten and the Room is remembered in the pool as "note pending", so its next session still sends
+the note.
 
 ### 6.2 Triggers
 
@@ -465,10 +474,17 @@ session is idle):
 5. The item's Turn carries Catch-up at the configured budget (§5). The new session's system prompt
    is composed afresh, so it also carries the current Instructions and Memory indexes, including
    Huddle-wide Instructions edits that a running session never sees (Instructions and Memory §3.4).
-6. Send the Room note (LR-R21) through a proposed additive Envelope, `FreshStartNote(RoomId,
-   AgentName, Reason, MessageCount, EstimatedTokens, FlushOutcome, FilesSaved, FreshStartCount)`,
-   and write the first Turn's text to
-   `{DataDir}/room-sessions/last-catch-up/{Name}/{roomId}.md` for LR-R22.
+6. Send the Room note (LR-R21) through a proposed additive Envelope, `FreshStartNote(string RoomId,
+   string Reason, int MessageCount, int EstimatedTokens, bool ReadFailed)`; phase 2b adds
+   `FlushOutcome`, `FilesSaved` and `FreshStartCount` as trailing optional members. The server keeps
+   the latest note per Room and Agent (`FreshStartNotes`) and persists it through `LastCatchUpStore`
+   (LR-R22); that store, not the session, owns the folder. Write the whole prompt text the fresh
+   session's first ordinary Turn sent to
+   `{DataDir}/room-sessions/last-catch-up/{Name}/{roomId}.md` for LR-R22, and the note to the `.json`
+   beside it. The runner computes the text and writes the file before the Turn is published, and sends
+   the note after the Turn ends, never inside the watchdog window. `LastCatchUpStore.Has` tells the
+   UI whether a reread file exists. The notes cache is cleared whenever the store renames or removes a
+   folder, or a Room is deleted.
 
 The old session is not deleted from the Adapter in v1. ACP's `session/delete` is stable and
 `claude-agent-acp` advertises it, but `IAgentSession` has no delete today and `Huddle.Acp` belongs
@@ -640,9 +656,9 @@ is what decides whether this mode is safe to recommend.
 | LR-E7 | Restart, or a Persona edit that forgets every Room Session | Unchanged (`ForgetAll`) |
 | LR-E8 | The Human clicks Stop during a fresh session's first Turn | A Stop like any other; the new session stays |
 | LR-E9 | Several Teammates in one Room | Each Room Session is judged and started afresh on its own |
-| LR-E10 | The Room is archived or deleted | Archiving changes nothing (rules.md: archiving never reaches delivery). Deleting a Room drops its `room-fresh-starts.json` key and its `last-catch-up` files |
+| LR-E10 | The Room is archived or deleted | Archiving changes nothing (rules.md: archiving never reaches delivery). Deleting a Room drops its `room-fresh-starts.json` key and its `last-catch-up` files: `ChatService` removes them after the delete succeeds, and the cached notes are cleared |
 | LR-E11 | A Persona is renamed | `PersonaRenameCascade` moves `last-catch-up/{Name}/`, above the "no Agent row" early return (rules.md) |
-| LR-E12 | `session-settings.json` corrupt | Ignored with a Warning; configuration defaults apply; Settings shows the error |
+| LR-E12 | `session-settings.json` corrupt | Ignored with a Warning; configuration defaults apply; Settings shows `session-settings.json could not be read, so the defaults apply: {error}` (`{error}` is the parser's message) in an alert. The same holds when the watcher rereads a file that was corrupted by hand: `Current` falls back to the defaults and `LoadError` is set. Out-of-range keys show the same alert |
 | LR-E13 | A Room's Transcript is larger than the budget by far | Only the newest part within the budget is reread; the `Omitted` lines say how much was left out |
 | LR-E14 | Two triggers fire in one Turn | One fresh start; the note names the first in §6.2's order |
 | LR-E15 | The flush times out, fails or is refused | The fresh start goes ahead; the note says *Nova could not save first* (LR-R27) |
@@ -666,7 +682,7 @@ what would show it.
 | --- | --- | --- |
 | **0. Retention and isolation** | Live checks V0-1 and V0-2; `SessionRetentionDays` if V0-2 passes; LR-R5's Warning | LR-R4 to LR-R6. Findings recorded in known-limits.md |
 | **1. Catch-up by budget** | `ISessionSettings`, the token trim, `turn.transcriptOmittedOwn`, Settings › Sessions | LR-R7 to LR-R14. Goldens unchanged at the defaults; a changed value reaches the next first Turn, fresh or resumed, without a restart |
-| **2a. Start afresh** | *Start afresh* in the Room menu, the Room note, `last-catch-up` | LR-R15 and LR-R18 to LR-R22. Every Room behaves exactly as phase 1 until the Human presses *Start afresh*; it forgets one Room Session, with no flush |
+| **2a. Start afresh** | *Start afresh* in the Teammate's profile popover, the Room note, `last-catch-up` | LR-R15 and LR-R18 to LR-R22. Every Room behaves exactly as phase 1 until the Human presses *Start afresh*; it forgets one Room Session, with no flush |
 | **3. The experiment** | A manual test page and a recorded result (§9.1); no code | A result recorded, with the go or no-go for phase 2b, the single-session question (Q-13) and phase 4 |
 | **2b. Automatic fresh starts** | Only on a "go" from phase 3: the per-Room setting, the four triggers, the memory flush, the records and the fallback note, `BaselineTokens` on `RoomSessionEntry` | LR-R16, LR-R17 and LR-R23 to LR-R31, with thresholds set from phase 3's numbers. A Room with the setting Off behaves exactly as phase 2a, except that *Start afresh* flushes |
 | **4. Handoff note** | Only on a "go" from phase 3; specified then | To be written |
@@ -755,7 +771,7 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | `StartAfreshTests` | Forgets one Room's session only; other Rooms of the same Teammate keep theirs |
 | `ProtocolJsonTests` (extended) | Literal JSON of `StartAfresh` and `FreshStartNote`; `ProtocolVersion.Current` unchanged |
 | `PersonaRenameCascadeTests` (extended) | The `last-catch-up` move sits above the early return |
-| bUnit: Settings › Sessions, Room menu, Room note | Exact copy; Reset; the setting's label; the note's wording for each reason |
+| bUnit: Settings › Sessions, profile popover, Room note | Exact copy; Reset; the setting's label; the note's wording for each reason |
 
 ---
 
@@ -817,7 +833,7 @@ This section is written for the Human and moves into the [User Guide](Huddle.Use
 phase 2b ships; until then only *Start afresh* exists.
 
 Every Room keeps everything that was said, and you can always start a Teammate afresh in a Room
-from the Room menu. Automatic fresh starts let Huddle do it for you when a Teammate's conversation
+from the Teammate's profile popover. Automatic fresh starts let Huddle do it for you when a Teammate's conversation
 has grown too long or has just been squeezed by the AI. It is off until you turn it on.
 
 **Turn it on when** you talk to one Teammate in this Room most days for weeks, and you have noticed
@@ -880,6 +896,30 @@ memory feature.
 | Settings tab renamed from *Memory* to *Sessions* | Avoids the clash with the `memory` tool |
 | Daily reset considered and not taken (Q-11) | A clock alone retires healthy sessions |
 | Single-session mode proposed (§7.3, Q-13) | The goal is a Chief of Staff that works like OpenClaw's never-ending session; states plainly where the spec differs and how to close the gap |
+
+**Changed while building phases 0 to 2a (2026-10-31):**
+
+| Id | The spec said | What was built | Why |
+| --- | --- | --- | --- |
+| C1 | *Start afresh* in the Room menu, per Teammate (§6.1) | A button in the Teammate's profile popover, opened from the avatar in the Room header | There is no per-Teammate Room menu; the avatars already open a popover |
+| C2 | `StartAfresh(RoomId, AgentName)`; `FreshStartNote(RoomId, AgentName, …)` | `StartAfresh(RoomId)`; `FreshStartNote(RoomId, Reason, MessageCount, EstimatedTokens, ReadFailed)`; phase 2b adds the flush members as trailing optionals | The connection identifies the Agent; a name on the wire is a second, spoofable source |
+| C3 | Write "the first Turn's text" to `last-catch-up` (§6.3) | `LastCatchUpStore` owns the folder; the `.md` holds the whole prompt of the first ordinary Turn, the `.json` the note | One owner per folder |
+| C4 | A Room-level note (LR-R21) | Latest note per Room and Agent in `FreshStartNotes`, persisted through `LastCatchUpStore` | In memory alone, a restart orphaned the reread file (see C12) |
+| C5 | Three characters per token (LR-R8) | One Message costs `ceil((SenderName.Length + 2 + Text.Length) / 3)`; `EstimatedTokens` sums the kept Messages | The trim and the note need one measure |
+| C6 | Other Messages dropped oldest first (LR-R11) | The second pass also drops the protected newest own Messages; no minimum | The budget is a hard bound |
+| C7 | "The receiving Agent's own Messages" | `SenderId == agentId` when known, else `SenderName` equals the Persona name, ignoring case | `agentId` is optional |
+| C8 | LR-R5's Warning, no location | Logged by `AdapterCatalog` through an optional logger | It is where entries are built |
+| C9 | *Start afresh* not offered for a shared session (LR-E5) | The popover hides the button for `SessionPerRoom == false` and for the Human | The same rule, where the button lives |
+| C10 | `turn.transcriptOmittedOwn` wording unspecified | Wording settled in the plan's texts | Model-facing text needs one wording |
+| C11 | LR-R5 warns when `UsesToolNamePrefix` is true and `IsolateUserSettings` false | Warns when the entry runs `claude-agent-acp` and `IsolateUserSettings` is false | `UsesToolNamePrefix` is true for every configured entry, so the Warning fired for Adapters with no Claude settings to leak |
+| C12 | LR-R22: the reread text viewable from the note, with the note held in memory | The note persists as `last-catch-up/{Name}/{roomId}.json` beside the `.md`; dismissing deletes the `.json` only | A restart cleared the note and left the `.md` unreachable |
+| R-2.3 | A corrupt `session-settings.json` is ignored with a Warning (LR-E12) | The watcher's reread of a corrupt hand edit also falls back to the defaults and sets `LoadError` | The panel must show the error whenever the file cannot be read |
+| R-4.2 | Settings shows "the error" (LR-E12) | Exactly `session-settings.json could not be read, so the defaults apply: {error}` in an alert; the store's error text is the parser's message only | The panel's sentence already says the rest |
+| R-3.5 | Catch-up reads the settings (§5) | One snapshot per first Turn sets both the cap and the budget, and the settings reach every session through the pool | Without the pool's argument the feature is silently off |
+| R-D5a | The runner sends `FreshStartNote` (§6.3) | The server accepts it first | An unknown Envelope is a `BadMessage` and marks the Agent Degraded |
+| R-D5b | A fresh start applies to a live session (LR-R19) | A Room with no live session still forgets its entry and is remembered as "note pending" in the pool | The next session must still send its note |
+| R-D5c | Deleting or renaming touches `last-catch-up` (LR-E10, LR-E11) | `ChatService` removes a deleted Room's files; the notes cache is cleared on rename, removal and delete; `LastCatchUpStore.Has` reports a reread file | A stale cache showed notes for files that were gone |
+| P0 | V0-1 and V0-2 run in phase 0; `SessionRetentionDays` if V0-2 passes (LR-R4, LR-R6) | Not run and not built; both deferred to the Human's acceptance (2026-10-30) | A paid live session was not available; the requirements stand |
 
 **Changed 2026-10-30, after the review of PR 289:**
 

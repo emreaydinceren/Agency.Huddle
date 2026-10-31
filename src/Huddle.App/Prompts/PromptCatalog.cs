@@ -544,6 +544,20 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.transcriptOmittedOwn",
+            Label: "Transcript omitted, own",
+            HelperText:
+                "Added after the omitted line when some of the left-out Messages were the Agent's own (LR-R12). " +
+                "{{count}} is required: without it the line does not say how many.",
+            Default:
+                """
+                …{{count}} of those are your own.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.ownPostLine",
             Label: "Own post line",
             HelperText:

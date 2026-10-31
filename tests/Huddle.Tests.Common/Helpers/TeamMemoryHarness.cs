@@ -189,6 +189,22 @@ internal sealed class TeamMemoryHarness : IDisposable
     public Task CallsAsync(int count) =>
         Eventually.UntilAsync(() => this.Process.Calls >= count, TestContext.Current.CancellationToken, TestBudgets.Standard);
 
+    /// <summary>
+    /// Lets the wait pass, again and again, until the fake process has been called <paramref name="count"/> times. A judgement queued
+    /// during a run has its wait started only after that run has recorded its result, so a single advance can land before the timer
+    /// exists and never fire it.
+    /// </summary>
+    /// <param name="count">The number of calls.</param>
+    public Task PassTheWaitUntilCallsAsync(int count) =>
+        Eventually.UntilAsync(
+            () =>
+            {
+                this.PassTheWait();
+                return this.Process.Calls >= count;
+            },
+            TestContext.Current.CancellationToken,
+            TestBudgets.Standard);
+
     /// <summary>Waits until the Helper has recorded a result or an error.</summary>
     public Task RecordedAsync() =>
         Eventually.UntilAsync(

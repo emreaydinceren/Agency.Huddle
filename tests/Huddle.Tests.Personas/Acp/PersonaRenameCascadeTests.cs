@@ -542,6 +542,42 @@ public sealed class PersonaRenameCascadeTests
         Assert.Null(harness.RoomSessions.Get("echo", "room-1"));
     }
 
+    /// <summary>LR-E10: a rename moves the <see cref="LastCatchUpStore"/> folder even when no Agent has ever registered - the early-return case.</summary>
+    [Fact]
+    public async Task Rename_NoAgentRow_StillRenamesLastCatchUp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
+        harness.LastCatchUp.Write("ghost", "room-1", "reread text");
+        harness.LastCatchUp.WriteNote("ghost", new FreshStartNote("room-1", "reason", 3, 10, false));
+
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+
+        Assert.Equal("reread text", harness.LastCatchUp.Read("ghostprime", "room-1"));
+        Assert.Single(harness.LastCatchUp.ReadNotes("room-1"), n => n.Name == "ghostprime");
+        Assert.Null(harness.LastCatchUp.Read("ghost", "room-1"));
+    }
+
+    /// <summary>LR-E11: removing a Persona deletes its <see cref="LastCatchUpStore"/> folder.</summary>
+    [Fact]
+    public async Task Removal_RemovesLastCatchUp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        harness.LastCatchUp.Write("echo", "room-1", "reread text");
+        harness.LastCatchUp.WriteNote("echo", new FreshStartNote("room-1", "reason", 3, 10, false));
+        Assert.NotNull(harness.LastCatchUp.Read("echo", "room-1"));
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Null(harness.LastCatchUp.Read("echo", "room-1"));
+        Assert.Empty(harness.LastCatchUp.ReadNotes("room-1"));
+    }
+
     /// <summary>
     /// Functional test through a real <see cref="PersonaStore.Update"/> rename (Spec §9.6, corrections-B2
     /// D6 item 11): the cascade's new <c>this.tasks.RenameAgent(...)</c> call rewrites a real
@@ -774,6 +810,7 @@ public sealed class PersonaRenameCascadeTests
         var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         var fileState = new FileStateStore(dir.Options(), NullLogger<FileStateStore>.Instance);
         var roomSessions = new RoomSessionStore(dir.Options(), NullLogger<RoomSessionStore>.Instance);
+        var lastCatchUp = new LastCatchUpStore(dir.Options(), NullLogger<LastCatchUpStore>.Instance);
         var taskStore = new TaskStore(dir.Options(), personaStore, TimeProvider.System, NullLogger<TaskStore>.Instance);
         var taskService = new TaskService(
             taskStore,
@@ -802,7 +839,8 @@ public sealed class PersonaRenameCascadeTests
             views: viewStore,
             folderMoves: folderMoves,
             spend: spend,
-            commands: commands);
+            commands: commands,
+            lastCatchUp: lastCatchUp);
 
         await cascade.StartAsync(ct);
 
@@ -814,6 +852,7 @@ public sealed class PersonaRenameCascadeTests
             AvatarStore = avatarStore,
             FileState = fileState,
             RoomSessions = roomSessions,
+            LastCatchUp = lastCatchUp,
             TaskStore = taskStore,
             TaskService = taskService,
             ViewStore = viewStore,
@@ -910,6 +949,8 @@ public sealed class PersonaRenameCascadeTests
         public required FileStateStore FileState { get; init; }
 
         public required RoomSessionStore RoomSessions { get; init; }
+
+        public required LastCatchUpStore LastCatchUp { get; init; }
 
         public required TaskStore TaskStore { get; init; }
 
