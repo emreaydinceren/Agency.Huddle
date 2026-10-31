@@ -119,7 +119,7 @@ public sealed class TeamPagesEndToEndTests
         string kimPrompt = Compose(kim, prompts, kimSnapshot);
         string novaPrompt = Compose(nova, prompts, novaSnapshot);
         // contains-ok: the Team Memory block sits inside a larger composed system prompt.
-        Assert.Contains($"Business › Marketing Project:\n- {LaunchLine} ({launchFile})", kimPrompt, StringComparison.Ordinal);
+        Assert.Contains($"Business › Marketing Project:\n- launch-date.md - {LaunchLine}", kimPrompt, StringComparison.Ordinal);
         Assert.Empty(novaSnapshot.Groups);
         Assert.DoesNotContain("## Team Memory", novaPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain(LaunchLine, novaPrompt, StringComparison.Ordinal);

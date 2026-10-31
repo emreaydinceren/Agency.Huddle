@@ -81,6 +81,12 @@ internal static class PromptCatalog
         ..BuildPart36(),
         ..BuildPart37(),
         ..BuildPart38(),
+        ..BuildPart39(),
+        ..BuildPart40(),
+        ..BuildPart41(),
+        ..BuildPart42(),
+        ..BuildPart43(),
+        ..BuildPart44(),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
@@ -1350,25 +1356,37 @@ internal static class PromptCatalog
             Key: "systemPrompt.memory",
             Label: "Memory block",
             HelperText:
-                "Explains an Agent's memory folder and shows its current index, appended to the system " +
-                "prompt after Skills (FC §6.15). Must keep {{memoryPath}} and {{memoryIndex}}: without " +
-                "the first the Agent cannot name where to write, and without the second it is told " +
-                "nothing of what it already remembers.",
+                "Explains an Agent's memory folder and the protocol for keeping it, and shows its current " +
+                "index, appended to the system prompt after Skills (FC §6.15, Instructions and Memory §6.1). " +
+                "Must keep {{memoryPath}} and {{memoryIndex}}: without the first the Agent cannot name where " +
+                "its memory is, and without the second it is told nothing of what it already remembers. " +
+                "{{memoryTool}} is the memory tool's name, filled in by the application, and " +
+                "{{memoryChanges}} is the sentence about changes arriving at the start of a Turn, which is " +
+                "empty for an Agent that cannot read files.",
             Default:
                 """
+                ## Memory
                 Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
-                restarts, and every copy of you in your other Rooms reads the same folder. To remember
-                something from now on, write one Markdown file there per fact. Make its first line the fact
-                itself, in one sentence, such as "The Human prefers C# for all code.", and give the file a
-                short descriptive name. When a fact changes, edit its file, and delete it when it no longer
-                holds. Remember only what should hold in every Room: preferences, standing decisions, facts
-                about ongoing work. Do not write down something said for one Room's audience only, and do not
-                copy the conversation itself. When a memory file changes, including when another copy of you
-                writes it, the change is listed at the start of your next Turn in each Room. Do not claim to
+                restarts, and every copy of you in your other Rooms reads the same folder. Use the {{memoryTool}}
+                tool for it.
+
+                Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
+                about the people or work you support), write it to the right topic file at once, not at the end.
+                Assume your context can reset at any moment: what is not written down is lost.
+
+                One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
+                longer true. Delete a file only when the Human asks you to. Give each file a description that
+                names the specific people, projects, places or events inside and says when to read it ("Read
+                for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
+                it. When a file outgrows its description, update the description in the same step.
+
+                Do not save what is true only for this conversation, or what you can easily look up again. If you
+                are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
+                memory is the source of truth over what you think you remember.{{memoryChanges}} Do not claim to
                 remember what is not in your memory or in this conversation. Your memory now holds:
                 {{memoryIndex}}
                 """,
-            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}"],
             RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
             Timing: PromptTiming.NextSession),
 
@@ -1376,11 +1394,12 @@ internal static class PromptCatalog
             Key: "systemPrompt.memoryEntry",
             Label: "Memory index entry",
             HelperText:
-                "One line of the memory index per remembered fact. Must keep {{summary}} and {{path}}: " +
-                "the summary is what the Agent reads at a glance, the path is where to read the rest.",
-            Default: "- {{summary}} ({{path}})",
-            Placeholders: ["{{summary}}", "{{path}}"],
-            RequiredPlaceholders: ["{{summary}}", "{{path}}"],
+                "One line of the memory index per memory file. Must keep {{summary}}: it is the file's " +
+                "description, what the Agent reads at a glance. {{file}} is the file's name and {{path}} " +
+                "its full path.",
+            Default: "- {{file}} - {{summary}}",
+            Placeholders: ["{{file}}", "{{summary}}", "{{path}}"],
+            RequiredPlaceholders: ["{{summary}}"],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
@@ -1412,20 +1431,19 @@ internal static class PromptCatalog
             Key: "systemPrompt.teamMemory",
             Label: "Team Memory block",
             HelperText:
-                "Explains the shared Memory folders of the Teams an Agent belongs to and shows what they " +
-                "hold, appended to the system prompt after the personal Memory block. Must keep " +
-                "{{teamMemoryPaths}} and {{teamMemoryIndex}}: without the first the Agent cannot name " +
-                "where to write, and without the second it is told nothing of what its Teams remember.",
+                "The frame of the shared Memory section: the paragraphs that say who writes it, and what " +
+                "it holds, appended to the system prompt after the personal Memory block. Must keep " +
+                "{{teamMemoryRoles}} and {{teamMemoryIndex}}: without the first the Agent is not told " +
+                "whether it writes this Memory or only reads it, and without the second it is told " +
+                "nothing of what its Teams remember. {{teamMemoryPaths}} is the pre-roles placeholder; an " +
+                "override that still uses it is rendered the old way.",
             Default:
                 "## Team Memory\n" +
-                "Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the " +
-                "first line, when it matters to the whole Team or Project rather than only to you:\n" +
-                "{{teamMemoryPaths}}\n" +
-                "Keep private preferences in your own Memory.\n" +
+                "{{teamMemoryRoles}}\n" +
                 "\n" +
                 "{{teamMemoryIndex}}",
-            Placeholders: ["{{teamMemoryPaths}}", "{{teamMemoryIndex}}"],
-            RequiredPlaceholders: ["{{teamMemoryPaths}}", "{{teamMemoryIndex}}"],
+            Placeholders: ["{{teamMemoryRoles}}", "{{teamMemoryIndex}}", "{{teamMemoryPaths}}"],
+            RequiredPlaceholders: ["{{teamMemoryRoles}}", "{{teamMemoryIndex}}"],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
@@ -1440,6 +1458,78 @@ internal static class PromptCatalog
                 "- {{team}}, one Project: {{projectMemoryPattern}}",
             Placeholders: ["{{team}}", "{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
             RequiredPlaceholders: ["{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryDeleteNeedsVersion</c> to <c>systemPrompt.pathAliasRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart44() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryDeleteNeedsVersion",
+            Label: "Memory delete needs a version",
+            HelperText: "Said when a delete names no version for a file that exists. Must keep {{file}}.",
+            Default: "Read {{file}} first, then pass its version to delete it.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.pathAliasRefusal",
+            Label: "Write through a path alias refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, deletes or moves a file names a path through a Windows short " +
+                "name or an alternate data stream, which the Instructions and Team Memory guards cannot compare by name. Must keep {{path}}.",
+            Default: "{{path}} goes through a short name or a stream name, so it cannot be checked. Write the file by its full name.",
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.teamMemoryManager</c> to <c>systemPrompt.teamMemoryMember</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart43() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.teamMemoryManager",
+            Label: "Team Memory, manager paragraph",
+            HelperText:
+                "Told to an Agent that manages at least one of its Teams: it owns that Team's shared Memory " +
+                "and what belongs in it. {{managedTeams}} names the Teams, {{managedPaths}} their folders, " +
+                "and {{memoryTool}} the memory tool, filled in by the application.",
+            Default:
+                """
+                You own the shared Memory of {{managedTeams}}: other members read it, and only you write it,
+                with the {{memoryTool}} tool.
+                {{managedPaths}}
+                You see the Team's chat, Tasks and decisions as they happen, so decide for yourself what is worth
+                filing: goals, decisions and the reasons behind them, agreed ways of working, who owns what, and
+                lessons learned. Do it as you go, at natural points such as the end of a Task or after a decision.
+                Only what the whole Team benefits from belongs here. When a decision is reversed, replace it and
+                note briefly that it changed. Descriptions follow the same rules as your own Memory.
+                """,
+            Placeholders: ["{{managedTeams}}", "{{managedPaths}}", "{{memoryTool}}"],
+            RequiredPlaceholders: ["{{managedTeams}}", "{{managedPaths}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.teamMemoryMember",
+            Label: "Team Memory, member paragraph",
+            HelperText:
+                "Told to an Agent that is a member, not the manager, of at least one of its Teams: it reads " +
+                "the shared Memory and tells the manager what belongs in it. {{memberTeams}} names the " +
+                "Teams, {{memberPaths}} their folders, and {{memoryTool}} the memory tool, filled in by " +
+                "the application.",
+            Default:
+                """
+                {{memberTeams}} keep shared Memory, written by each Team's manager:
+                {{memberPaths}}
+                Read it with the {{memoryTool}} tool, passing the Team or Project as the folder. You do not write
+                it: when you learn something the whole Team should know, tell its manager. Keep your own notes
+                in your own Memory.
+                """,
+            Placeholders: ["{{memberTeams}}", "{{memberPaths}}", "{{memoryTool}}"],
+            RequiredPlaceholders: ["{{memberTeams}}", "{{memberPaths}}"],
             Timing: PromptTiming.NextSession),
     ];
 
@@ -1902,6 +1992,224 @@ internal static class PromptCatalog
     ];
 
     /// <summary>The fixed sections of <c>InstallSkillPack.md</c>, kept out of the definition so the slice that lists it stays short.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.instructionsRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart39() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.instructions",
+            Label: "Instructions block",
+            HelperText:
+                "The Human's standing Instructions, spliced into the system prompt right after the Agent's " +
+                "own text (Instructions and Memory §3.2). Left out entirely when no level has any text. Must " +
+                "keep {{instructions}}: it holds one section per level, from Huddle-wide to the Agent's own.",
+            Default:
+                """
+                ## Instructions
+                The Human wrote these standing instructions for you. Follow them in every Room. Where they
+                conflict, the more specific level wins: your own over your Team's, your Team's over Huddle's.
+                {{instructions}}
+                """,
+            Placeholders: ["{{instructions}}"],
+            RequiredPlaceholders: ["{{instructions}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.instructionsSection",
+            Label: "Instructions section",
+            HelperText:
+                "One level of the Instructions: a heading naming whose they are (Huddle, a Team or You) and " +
+                "the file's text. Must keep {{source}} and {{text}}.",
+            Default: "### {{source}}\n{{text}}",
+            Placeholders: ["{{source}}", "{{text}}"],
+            RequiredPlaceholders: ["{{source}}", "{{text}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.instructionsCut",
+            Label: "Instructions cut line",
+            HelperText:
+                "Appended to an Instructions file that was cut at Team:Instructions:MaxChars. Must keep " +
+                "{{max}} and {{path}}: they say how much was kept and where the rest is.",
+            Default: "…cut at {{max}} characters; the rest is in {{path}}.",
+            Placeholders: ["{{max}}", "{{path}}"],
+            RequiredPlaceholders: ["{{max}}", "{{path}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.instructionsRefusal",
+            Label: "Instructions write refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, deletes or moves an Instructions " +
+                "file is refused (Instructions and Memory §3.3). Must keep {{path}}.",
+            Default: "Instructions files are written by the Human. Ask the Human to change {{path}}.",
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryChanges</c> to <c>systemPrompt.memoryNoManager</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart40() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryChanges",
+            Label: "Memory changes sentence",
+            HelperText:
+                "Inserted where {{memoryChanges}} stands in the Memory block, only for an Agent whose " +
+                "Turns carry File Changes. Keep the leading space: it joins onto the sentence before it.",
+            Default:
+                " When a memory file changes, including when another copy of you writes it, the change is listed at the start of your next Turn in each Room.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.memory.description",
+            Label: "memory description",
+            HelperText:
+                "The job description a model reads for the memory tool. Takes no placeholders.",
+            Default:
+                """
+                Reads and writes Markdown memory files, one topic per file. 'command' is one of: list (the files in a folder, each with its description), read (the whole file and its version), write (create a file, or replace one by passing the version read before; needs 'description', a single line of 20 to 200 characters that says when to read the file, and 'text', the body without frontmatter), append (add 'text' as a new line at the end), replace (swap 'old' for 'new'; 'old' must occur exactly once) and delete (needs the version, and is only for when the Human asked you to delete the file). 'folder' is 'me' (your own memory, the default), or a Team or 'Team/Project' whose shared Memory you may read; only a Team's manager writes it. 'file' is a bare file name ending in .md. Always read a file before you write over it.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryConflict",
+            Label: "Memory write conflict",
+            HelperText:
+                "Said when a write or delete names an out-of-date version; the file's current text and " +
+                "version follow it. Must keep {{file}}.",
+            Default: "{{file}} changed since you read it. Its current text and version follow: merge your change into it and write again.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryManagerOnly",
+            Label: "Team Memory, manager only",
+            HelperText:
+                "Said when a member who is not the Team's manager tries to write its Team Memory. " +
+                "Must keep {{team}} and {{manager}}.",
+            Default: "Only {{team}}'s manager, {{manager}}, writes {{team}}'s Team Memory. Tell {{manager}}, or keep it in your own Memory.",
+            Placeholders: ["{{team}}", "{{manager}}"],
+            RequiredPlaceholders: ["{{team}}", "{{manager}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryNoManager",
+            Label: "Team Memory, no manager",
+            HelperText: "Said when an Agent tries to write the Team Memory of a Team that has no manager. Must keep {{team}}.",
+            Default: "{{team}} has no manager, so its Team Memory is written by the Human.",
+            Placeholders: ["{{team}}"],
+            RequiredPlaceholders: ["{{team}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryBadFile</c> to <c>systemPrompt.memoryReadFirst</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart41() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryBadFile",
+            Label: "Memory file name refused",
+            HelperText: "Said when a memory file name is not one plain name ending in .md. Takes no placeholders.",
+            Default: "A memory file name is one name ending in .md, with no folders.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryBadDescription",
+            Label: "Memory description refused",
+            HelperText: "Said when a write has no acceptable description. Must keep {{problem}}: it says which rule the description broke.",
+            Default:
+                "The description is not acceptable: {{problem}} Give one line of 20 to 200 characters (about 100 to 150 is best) that names the specific people, projects, places or events inside and says when to read the file, such as \"Read for...\" or \"Check before...\". Put no facts and nothing sensitive in it.",
+            Placeholders: ["{{problem}}"],
+            RequiredPlaceholders: ["{{problem}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryTooLarge",
+            Label: "Memory file too large",
+            HelperText: "Said when a write, append or replace would make a file larger than Team:Memory:MaxFileBytes. Must keep {{file}}, {{size}} and {{max}}.",
+            Default: "{{file}} would be {{size}} bytes, over the limit of {{max}}. Split it into topics, each in its own file.",
+            Placeholders: ["{{file}}", "{{size}}", "{{max}}"],
+            RequiredPlaceholders: ["{{file}}", "{{size}}", "{{max}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReadFirst",
+            Label: "Memory file must be read first",
+            HelperText: "Said when a write or delete names no version for a file that exists. Must keep {{file}}.",
+            Default: "{{file}} already exists. Read it first with the read command, then write it with the version it gives.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryDeleted</c> to <c>systemPrompt.memoryWriteFailed</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart42() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryDeleted",
+            Label: "Memory file was deleted",
+            HelperText: "Said when a write names a version for a file that no longer exists. Must keep {{file}}.",
+            Default: "{{file}} was deleted since you read it. To create it again, write it without a version.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryNotFound",
+            Label: "Memory file not found",
+            HelperText: "Said when a command names a file that does not exist. Must keep {{file}}.",
+            Default: "{{file}} does not exist in that folder. Use the list command to see what is there.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryOldNotUnique",
+            Label: "Memory replace text not unique",
+            HelperText: "Said when the text to replace does not occur exactly once. Must keep {{file}} and {{count}}.",
+            Default: "The text to replace must occur exactly once in {{file}}, and it occurs {{count}} times. Give a longer piece of text that occurs once.",
+            Placeholders: ["{{file}}", "{{count}}"],
+            RequiredPlaceholders: ["{{file}}", "{{count}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryBadFolder",
+            Label: "Memory folder refused",
+            HelperText: "Said when the folder is not one this Agent may use. Must keep {{folder}} and {{folders}}.",
+            Default: "'{{folder}}' is not a Memory folder you can use. Use one of: {{folders}}.",
+            Placeholders: ["{{folder}}", "{{folders}}"],
+            RequiredPlaceholders: ["{{folder}}", "{{folders}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryBadCommand",
+            Label: "Memory command refused",
+            HelperText: "Said when the command is missing or unknown, or lacks an argument it needs. Must keep {{problem}}.",
+            Default: "{{problem}} The commands are list, read, write, append, replace and delete.",
+            Placeholders: ["{{problem}}"],
+            RequiredPlaceholders: ["{{problem}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryWriteFailed",
+            Label: "Memory file could not be changed",
+            HelperText: "Said when the file could not be read, written or deleted on disk. Must keep {{file}}.",
+            Default: "{{file}} could not be read or changed because something else is using it. Nothing was lost; try again.",
+            Placeholders: ["{{file}}"],
+            RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
     /// <summary>Builds the Helper prompts: the Needs Human Helper's system prompt and its per-Task prompt (Helpers Spec §6.10).</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart38() =>

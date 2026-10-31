@@ -49,19 +49,30 @@ namespace Agency.Huddle.App.Acp;
 /// by another tool (an IDE, <c>gh</c>), or a command in an Adapter work mode that never asks permission.
 /// The Human's own approval of a prompt is never intercepted: only the Agent's requests are answered here.
 /// </para>
+/// <para>
+/// Two further refusals protect files the Human owns, and both look at the tool call's kind, so a read is never refused
+/// (Instructions spec §3.3, §5.6): an edit, delete or move of an <c>Instructions.md</c> (<see cref="InstructionsWriteGuard"/>)
+/// and of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>). The permission reply carries no
+/// reason text, so the reason is logged.
+/// </para>
 /// </remarks>
 /// <param name="protectedDirectory">
-/// The directory to refuse writes into, already absolute. Passed in rather than read from the
+/// The directory to refuse writes into, already absolute, or <see langword="null"/> when the profile directory cannot be resolved (the
+/// ~/.claude refusal is then off but the other guards still apply). Passed in rather than read from the
 /// environment here so a test can point it somewhere harmless.
 /// </param>
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
 /// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
 /// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
+/// <param name="instructionsGuard">Refuses an edit, delete or move of an <c>Instructions.md</c> (Instructions spec §3.3); <see langword="null"/> leaves them approved.</param>
+/// <param name="teamMemoryGuard">Refuses an edit, delete or move inside a Team's Memory by anyone but its manager or the Chief of Staff (Instructions spec §5.6); <see langword="null"/> leaves them approved.</param>
 internal sealed class WorkDirPermissionHandler(
-    string protectedDirectory,
+    string? protectedDirectory,
     ILogger<WorkDirPermissionHandler> logger,
     IMergeGate? mergeGate = null,
-    string personaName = "")
+    string personaName = "",
+    InstructionsWriteGuard? instructionsGuard = null,
+    TeamMemoryWriteGuard? teamMemoryGuard = null)
     : IPermissionHandler
 {
     /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
@@ -167,6 +178,14 @@ internal sealed class WorkDirPermissionHandler(
                 "Refused a tool call writing to '{Path}': it is inside the agent's own configuration directory '{ProtectedDirectory}'.",
                 path,
                 protectedDirectory);
+
+            return Task.FromResult(Refuse(context.Options));
+        }
+
+        string? guardReason = instructionsGuard?.RefusalFor(context.ToolCall) ?? teamMemoryGuard?.RefusalFor(context.ToolCall, personaName);
+        if (guardReason is not null)
+        {
+            logger.LogWarning("Refused a tool call for '{PersonaName}': {Reason}", personaName, guardReason);
 
             return Task.FromResult(Refuse(context.Options));
         }
@@ -363,6 +382,11 @@ internal sealed class WorkDirPermissionHandler(
     /// <returns><see langword="true"/> when it is inside the protected directory.</returns>
     private bool IsInsideProtectedDirectory(string candidate)
     {
+        if (protectedDirectory is null)
+        {
+            return false;
+        }
+
         string full;
         try
         {

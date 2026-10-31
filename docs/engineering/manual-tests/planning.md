@@ -59,6 +59,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 34 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | 8 | 5 | 1.4h |
 | 35 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | 17 | 4 | 3.1h |
 | 36 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | 15 | — | 3.0h |
+| 37 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | 9 | 8 | 2.6h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -189,6 +190,14 @@ The tests that spend money, with an estimate for each. This register is not yet 
 | [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | `work-mode` | Accept edits: a write into `~/.claude` is still refused | 15 min |
 | [WORKMODE-09](work-mode.md#workmode-09--a-mode-is-applied-again-after-an-app-restart) | `work-mode` | A mode is applied again after an app restart | 15 min |
 | [QUESTIONS-01](questions.md#questions-01--a-model-frames-its-ask-and-calls-ask_human-with-one-to-three-questions) | `questions` | A model frames its ask and calls `ask_human` with one to three Questions | 15 min |
+| [INSTRMEM-01](instructions-memory.md#instrmem-01--a-team-instructions-file-reaches-every-member-on-its-next-session) | `instructions-memory` | A Team Instructions file reaches every member on its next session | 15 min |
+| [INSTRMEM-02](instructions-memory.md#instrmem-02--a-new-topic-file-is-written-with-a-description-and-appears-in-the-next-session-index) | `instructions-memory` | A new topic file is written with a description and appears in the next session index | 15 min |
+| [INSTRMEM-03](instructions-memory.md#instrmem-03--two-rooms-write-one-memory-file-and-the-second-write-is-refused-with-the-current-text) | `instructions-memory` | Two Rooms write one memory file and the second write is refused with the current text | 20 min |
+| [INSTRMEM-04](instructions-memory.md#instrmem-04--a-member-write-to-team-memory-is-refused-through-the-tool-and-through-write-while-its-read-is-allowed) | `instructions-memory` | A member write to Team Memory is refused through the tool and through Write while its read is allowed | 20 min |
+| [INSTRMEM-05](instructions-memory.md#instrmem-05--a-human-edit-in-the-library-is-seen-at-the-next-read-and-an-old-version-is-refused) | `instructions-memory` | A Human edit in the Library is seen at the next read and an old version is refused | 15 min |
+| [INSTRMEM-06](instructions-memory.md#instrmem-06--an-agent-deletes-a-memory-file-only-when-the-human-asks) | `instructions-memory` | An Agent deletes a memory file only when the Human asks | 15 min |
+| [INSTRMEM-07](instructions-memory.md#instrmem-07--spike-s-1-whether-claude-code-loads-the-repository-claude-files-into-a-persona) | `instructions-memory` | Spike S-1 whether Claude Code loads the repository CLAUDE files into a Persona | 20 min |
+| [INSTRMEM-08](instructions-memory.md#instrmem-08--a-restart-recalls-a-memory-from-the-index-and-the-files) | `instructions-memory` | A restart recalls a memory from the index and the files | 20 min |
 | [QUESTIONS-02](questions.md#questions-02--the-asker-ends-its-turn-without-guessing-and-the-framing-lands-before-the-card-can-be-tapped) | `questions` | The asker ends its Turn without guessing, and the framing lands before the card can be tapped | 15 min |
 | [QUESTIONS-03](questions.md#questions-03--a-factual-question-and-a-request-for-an-opinion-do-not-call-ask_human) | `questions` | A factual question and a request for an opinion do not call `ask_human` | 15 min |
 | [QUESTIONS-04](questions.md#questions-04--the-same-on-an-agent-running-on-agency-acp) | `questions` | The same on an Agent running on `agency-acp` | 20 min |

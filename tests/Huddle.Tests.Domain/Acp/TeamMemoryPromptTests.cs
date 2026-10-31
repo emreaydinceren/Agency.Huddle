@@ -13,7 +13,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 /// </summary>
 public sealed class TeamMemoryPromptTests
 {
-    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help"];
+    private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help", "mcp__team__memory"];
 
     private static readonly string Root = Path.Combine(Path.GetTempPath(), "huddle-teams-root");
 
@@ -73,9 +73,9 @@ public sealed class TeamMemoryPromptTests
             """,
             $"""
             Business:
-            - Invoices go out on the 1st. ({invoicing})
+            - invoicing.md - Invoices go out on the 1st.
             Business › Marketing:
-            - The campaign launches on 3 November. ({launch})
+            - launch-date.md - The campaign launches on 3 November.
             Business › Taxes:
             Nothing yet.
             """);
@@ -109,7 +109,7 @@ public sealed class TeamMemoryPromptTests
             Business:
             Nothing yet.
             Business › Charlie:
-            - Kickoff is on Monday. ({kickoff})
+            - kickoff.md - Kickoff is on Monday.
             """);
 
         Assert.Equal(expected, TeamBlock(Compose(prompts, snapshot), prompts));
@@ -196,7 +196,7 @@ public sealed class TeamMemoryPromptTests
 
         var entryIndex = $"""
             Business:
-            - Invoices go out on the 1st. ({invoicing})
+            - invoicing.md - Invoices go out on the 1st.
             """;
         var expected = Block(BusinessPaths(), moreLine is null ? entryIndex : entryIndex + "\n" + moreLine);
 
@@ -221,18 +221,19 @@ public sealed class TeamMemoryPromptTests
             NotListed: 3);
 
         var expected = Block(
-            $"""
+            teams: "Ops and Business",
+            paths: $"""
             - Ops, whole Team: {MemoryDir("Ops")}{Sep}
             - Ops, one Project: {Path.Combine(TeamDir("Ops"), "<Project>", "memory")}{Sep}
             {BusinessPaths()}
             """,
-            $"""
+            index: $"""
             Ops:
             Nothing yet.
             Business:
-            - Invoices go out on the 1st. ({invoicing})
+            - invoicing.md - Invoices go out on the 1st.
             Business › Marketing:
-            - The campaign launches on 3 November. ({launch})
+            - launch-date.md - The campaign launches on 3 November.
             …and 3 more in the Teams' memory folders.
             """);
 
@@ -261,7 +262,7 @@ public sealed class TeamMemoryPromptTests
             [Business]
             Nothing yet.
             [Business › Marketing]
-            - The campaign launches on 3 November. ({launch})
+            - launch-date.md - The campaign launches on 3 November.
             """);
 
         Assert.Equal(expected, TeamBlock(Compose(prompts, snapshot), prompts));
@@ -302,10 +303,10 @@ public sealed class TeamMemoryPromptTests
 
         var prompt = Compose(prompts, snapshot, personal);
 
-        Assert.True(prompt.IndexOf(personalFile, StringComparison.Ordinal) < prompt.IndexOf("## Team Memory", StringComparison.Ordinal));
+        Assert.True(prompt.IndexOf("code-language.md", StringComparison.Ordinal) < prompt.IndexOf("## Team Memory", StringComparison.Ordinal));
         Assert.Equal(teamBlock, TeamBlock(prompt, prompts));
         Assert.EndsWith(teamBlock + "\n\n" + SharedText(prompts), prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        Assert.Contains(personalFile + ")\n\n## Team Memory", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("code-language.md - The Human prefers C# for all code.\n\n## Team Memory", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>With personal Memory <see langword="null"/> and a Team snapshot present, the Team block is still rendered, right before the closing part.</summary>
@@ -358,7 +359,7 @@ public sealed class TeamMemoryPromptTests
 
         Assert.Equal(teamBlock, TeamBlock(prompt, prompts, roomSessions));
         Assert.EndsWith(teamBlock + "\n\n" + roomSessions + "\n\n" + carry, prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
-        Assert.Contains(personalFile + ")\n\n## Team Memory", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("code-language.md - The Human prefers C# for all code.\n\n## Team Memory", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>Cap 0 with files present (D5 item 14): the scopes hold only unlisted files, so no "Nothing yet." appears, the Project is omitted, and the "more" line carries the total.</summary>
@@ -408,7 +409,7 @@ public sealed class TeamMemoryPromptTests
             BusinessPaths(),
             $"""
             Business:
-            - Invoices go out on the 1st. ({invoicing})
+            - invoicing.md - Invoices go out on the 1st.
             Business › Taxes:
             Nothing yet.
             …and 2 more in the Teams' memory folders.
@@ -436,13 +437,14 @@ public sealed class TeamMemoryPromptTests
             NotListed: 0);
 
         var expected = Block(
-            $"""
+            teams: team,
+            paths: $"""
             - {team}, whole Team: {MemoryDir(team)}{Sep}
             - {team}, one Project: {Path.Combine(TeamDir(team), "<Project>", "memory")}{Sep}
             """,
-            $"""
+            index: $"""
             {team}:
-            - {summary} ({file})
+            - note.md - {summary}
             {team} › {project}:
             Nothing yet.
             """);
@@ -450,7 +452,7 @@ public sealed class TeamMemoryPromptTests
         var block = TeamBlock(Compose(prompts, snapshot), prompts);
 
         Assert.Equal(expected, block);
-        Assert.Contains("- {{path}} (", block, StringComparison.Ordinal); // contains-ok: prompt text; the whole block is asserted above
+        Assert.Contains("- note.md - {{path}}", block, StringComparison.Ordinal); // contains-ok: prompt text; the whole block is asserted above
     }
 
     private static string TeamDir(string team) => Path.Combine(Root, team);
@@ -471,13 +473,18 @@ public sealed class TeamMemoryPromptTests
         - Business, one Project: {Path.Combine(TeamDir("Business"), "<Project>", "memory")}{Sep}
         """;
 
-    /// <summary>The default-Prompts block around a paths part and an index part, with the composer's <c>\n</c> line endings.</summary>
-    private static string Block(string paths, string index) =>
+    /// <summary>
+    /// The default-Prompts block for a Persona that is a member (not the manager) of every Team named: the frame, the member
+    /// paragraph around a paths part, then an index part, with the composer's line endings.
+    /// </summary>
+    private static string Block(string paths, string index, string teams = "Business") =>
         $"""
         ## Team Memory
-        Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first line, when it matters to the whole Team or Project rather than only to you:
+        {teams} keep shared Memory, written by each Team's manager:
         {paths}
-        Keep private preferences in your own Memory.
+        Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write
+        it: when you learn something the whole Team should know, tell its manager. Keep your own notes
+        in your own Memory.
 
         {index}
         """.ReplaceLineEndings("\n");

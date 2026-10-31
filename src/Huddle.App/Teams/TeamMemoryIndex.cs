@@ -1,4 +1,5 @@
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Memory;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -22,12 +23,16 @@ internal static class TeamMemoryIndex
     /// <param name="teamLabels">The Persona's Team labels, in the order written.</param>
     /// <param name="teams">The catalog's Teams.</param>
     /// <param name="maxEntries">The most entries to list across every Team; zero or less lists none.</param>
+    /// <param name="personaName">The Persona the snapshot is for; a group is marked as managed when this is its Team's manager. <see langword="null"/> marks none.</param>
+    /// <param name="warnings">Warns once per file and content about malformed frontmatter; <see langword="null"/> warns of nothing.</param>
     /// <returns>One group per distinct label that has a Team folder, in label order, and the total not listed.</returns>
     public static TeamMemorySnapshot Build(
         string teamsRoot,
         IReadOnlyList<string> teamLabels,
         IReadOnlyList<TeamSummary> teams,
-        int maxEntries)
+        int maxEntries,
+        string? personaName = null,
+        MemoryWarnings? warnings = null)
     {
         int remaining = Math.Max(0, maxEntries);
         int notListed = 0;
@@ -54,7 +59,7 @@ internal static class TeamMemoryIndex
             }
 
             string teamMemoryPath = Path.Combine(teamFolder, MemoryFolderName);
-            MemorySnapshot teamWide = BuildScope(teamMemoryPath, remaining);
+            MemorySnapshot teamWide = BuildScope(teamMemoryPath, remaining, warnings);
             remaining -= teamWide.Entries.Count;
             notListed += teamWide.NotListed;
 
@@ -67,17 +72,23 @@ internal static class TeamMemoryIndex
                     continue;
                 }
 
-                MemorySnapshot memory = BuildScope(Path.Combine(projectFolder, MemoryFolderName), remaining);
+                MemorySnapshot memory = BuildScope(Path.Combine(projectFolder, MemoryFolderName), remaining, warnings);
                 remaining -= memory.Entries.Count;
                 notListed += memory.NotListed;
                 projects.Add((project, memory));
             }
 
-            groups.Add(new TeamMemoryGroup(summary.Name, teamMemoryPath, teamWide, projects));
+            groups.Add(new TeamMemoryGroup(summary.Name, teamMemoryPath, teamWide, projects, IsManagedBy(summary, personaName)));
         }
 
         return new TeamMemorySnapshot(groups, notListed);
     }
+
+    /// <summary>Whether <paramref name="personaName"/> is the Team's manager.</summary>
+    /// <param name="summary">The Team.</param>
+    /// <param name="personaName">The Persona, or <see langword="null"/>.</param>
+    private static bool IsManagedBy(TeamSummary summary, string? personaName) =>
+        personaName is not null && summary.Manager is { } manager && string.Equals(manager, personaName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Indexes one <c>memory</c> folder. A reparse point is never followed, and a missing folder, a
@@ -85,7 +96,8 @@ internal static class TeamMemoryIndex
     /// </summary>
     /// <param name="memoryPath">The <c>memory</c> folder's path.</param>
     /// <param name="remaining">How many entries may still be listed.</param>
-    private static MemorySnapshot BuildScope(string memoryPath, int remaining)
+    /// <param name="warnings">Warns about malformed frontmatter, or <see langword="null"/>.</param>
+    private static MemorySnapshot BuildScope(string memoryPath, int remaining, MemoryWarnings? warnings)
     {
         if (IsSkipped(memoryPath))
         {
@@ -94,7 +106,7 @@ internal static class TeamMemoryIndex
 
         try
         {
-            (IReadOnlyList<MemoryEntry> entries, int notListed) = MemoryIndex.Build(memoryPath, remaining);
+            (IReadOnlyList<MemoryEntry> entries, int notListed) = MemoryIndex.Build(memoryPath, remaining, warnings);
             return new MemorySnapshot(memoryPath, entries, notListed);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

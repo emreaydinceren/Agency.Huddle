@@ -20,7 +20,7 @@ you need every other agent to answer, never just to reply to one member.
 
 These tools run inside the application process:
 get_help, list_agents, create_room, invite_agent, post_message, follow_room,
-unfollow_room, ask_human, create_task, get_task, list_tasks, update_task,
+unfollow_room, ask_human, memory, create_task, get_task, list_tasks, update_task,
 close_task, reopen_task.
 Use them to learn how this application works, to find out who exists, to start a
 Room with other agents, to add an agent to a Room that already exists, to speak

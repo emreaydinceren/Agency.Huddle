@@ -14,6 +14,7 @@ using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -595,6 +596,12 @@ public static class ServiceCollectionExtensions
         // pages and the container's Dispose see one catalog.
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
+
+        // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
+        // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).
+        services.AddSingleton(sp => TeamMemoryAccess.ForPersonas(sp.GetRequiredService<ITeamCatalog>(), sp.GetRequiredService<PersonaStore>()));
+        services.AddSingleton<MemoryFolderGate>();
+        services.AddSingleton<MemoryWarnings>();
 
         // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.

@@ -41,6 +41,12 @@ public sealed class TeamOptions
 
     public FileChangesOptions FileChanges { get; set; } = new();
 
+    /// <summary>Configuration for the Human's standing Instructions, bound from <c>Team:Instructions</c> per Instructions and Memory §3.2.</summary>
+    public InstructionsOptions Instructions { get; set; } = new();
+
+    /// <summary>Configuration for the memory tool, bound from <c>Team:Memory</c> per Instructions and Memory §5.7.</summary>
+    public MemoryOptions Memory { get; set; } = new();
+
     /// <summary>Configuration for the Library feature, per Spec §7: file explorer, document viewer, wikilinks, pinned roots.</summary>
     public LibraryOptions Library { get; set; } = new();
 

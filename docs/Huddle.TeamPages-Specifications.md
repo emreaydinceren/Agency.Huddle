@@ -491,6 +491,9 @@ character rule too. It stays separate in V1 because it belongs to Tasks' test su
 
 ### 6.4 Team Memory
 
+> [!NOTE]
+> **Amended 2026-10-30 by [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md).** Team Memory is no longer written by every member: only the Team's manager and the Chief of Staff write it, through the `memory` App Tool, and the same rule refuses a member's own file-tool edits in a `memory/` folder. Files are topics with a `description`, and the Team Memory block carries a manager paragraph and a member paragraph. See [the Instructions and Memory design](Huddle.InstructionsAndMemory-Specifications.md) §5 and §6.2. The rest of this section is unchanged.
+
 **Purpose.** Facts the whole Team keeps: decisions, dates, preferences and constraints for one
 Project or for the Team as a whole. They are visible to every member at every new session.
 

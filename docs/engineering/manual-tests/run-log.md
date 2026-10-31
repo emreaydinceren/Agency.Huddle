@@ -5908,6 +5908,71 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol
+
+### INSTRMEM-01 — A Team Instructions file reaches every member on its next session
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-01--a-team-instructions-file-reaches-every-member-on-its-next-session)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-02 — A new topic file is written with a description and appears in the next session index
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-02--a-new-topic-file-is-written-with-a-description-and-appears-in-the-next-session-index)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-03 — Two Rooms write one memory file and the second write is refused with the current text
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-03--two-rooms-write-one-memory-file-and-the-second-write-is-refused-with-the-current-text)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-04 — A member write to Team Memory is refused through the tool and through Write while its read is allowed
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-04--a-member-write-to-team-memory-is-refused-through-the-tool-and-through-write-while-its-read-is-allowed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-05 — A Human edit in the Library is seen at the next read and an old version is refused
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-05--a-human-edit-in-the-library-is-seen-at-the-next-read-and-an-old-version-is-refused)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-06 — An Agent deletes a memory file only when the Human asks
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-06--an-agent-deletes-a-memory-file-only-when-the-human-asks)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-07 — Spike S-1 whether Claude Code loads the repository CLAUDE files into a Persona
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-07--spike-s-1-whether-claude-code-loads-the-repository-claude-files-into-a-persona)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-08 — A restart recalls a memory from the index and the files
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-08--a-restart-recalls-a-memory-from-the-index-and-the-files)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### INSTRMEM-09 — An Adapter with no file tools still gets the memory tool and the Memory block
+
+File: [`docs/engineering/manual-tests/instructions-memory.md`](instructions-memory.md#instrmem-09--an-adapter-with-no-file-tools-still-gets-the-memory-tool-and-the-memory-block)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

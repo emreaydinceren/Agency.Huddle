@@ -45,6 +45,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly WorkModePolicy workModePolicy;
     private readonly Func<RoleBlockInput?> roleBlock;
     private readonly IMergeGate? mergeGate;
+    private readonly SessionPromptSources sources;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
     /// <param name="inner">The started ACP host, ready for <c>session/new</c> or <c>session/resume</c>.</param>
@@ -70,6 +71,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="loggerFactory">Creates the logger a fresh <see cref="WorkDirPermissionHandler"/> needs on every open or resume.</param>
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
+    /// <param name="sources">Reads the Human's Instructions, decides who writes a Team's Memory and warns about malformed memory files.</param>
     /// <param name="mergeGate">Decides the Persona's <c>git merge</c> and <c>git push</c> requests (PR-7); <see langword="null"/> approves them.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
@@ -95,10 +97,12 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ILoggerFactory loggerFactory,
         WorkModePolicy workModePolicy,
         Func<RoleBlockInput?> roleBlock,
+        SessionPromptSources sources,
         IMergeGate? mergeGate = null)
     {
         this.mergeGate = mergeGate;
-        ArgumentNullException.ThrowIfNull(roleBlock);
+        ValidateSessionPromptSources(roleBlock, sources);
+        this.sources = sources;
         this.roleBlock = roleBlock;
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
@@ -136,6 +140,15 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.meta = meta;
         this.loggerFactory = loggerFactory;
         this.workModePolicy = workModePolicy;
+    }
+
+    /// <summary>Guards the collaborators that build the system prompt's role block and Instructions and decide who writes a Team's Memory.</summary>
+    /// <param name="roleBlock">The role block factory.</param>
+    /// <param name="sources">The Instructions reader, Team Memory access rules and memory warnings.</param>
+    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources)
+    {
+        ArgumentNullException.ThrowIfNull(roleBlock);
+        ArgumentNullException.ThrowIfNull(sources);
     }
 
     /// <summary>Guards the constructor's collaborator arguments, in declaration order.</summary>
@@ -202,61 +215,97 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// </summary>
     private AgentSessionOptions BuildOptions()
     {
-        MemorySnapshot? memory = null;
-        TeamMemorySnapshot? teamMemory = null;
-        if (this.readsMemory)
-        {
-            var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries);
-            memory = new MemorySnapshot(this.memoryDir, entries, notListed);
-
-            if (this.teamLabels.Count > 0)
-            {
-                // Read once into a local: this runs per open or resume, concurrently across Rooms, and
-                // the catalog's snapshot is swapped atomically, so one read is one consistent view.
-                IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
-                TeamMemorySnapshot built = TeamMemoryIndex.Build(this.teamsRoot, this.teamLabels, catalogTeams, this.maxTeamMemoryEntries);
-                teamMemory = built.Groups.Count > 0 ? built : null;
-            }
-        }
-
         // Enforced here, where the options are built, so a database row written by hand for a hidden
         // mode is inert (ADR-0033). Whether the Adapter advertises the mode is DotAcpAgentHost's check.
         string? mode = this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
 
         return new AgentSessionOptions(
             this.workDir,
-            // Approves the way AutoApprovePermissionHandler does, except inside the human's own
-            // agent configuration directory - see WorkDirPermissionHandler for why that one
-            // exception is drawn there and not around the Work Dir. Falls back to the plain
-            // auto-approve only if the profile directory cannot be resolved at all, rather than
-            // inventing a path to protect. Built fresh per call: the handler itself holds no state
-            // worth reusing across opens. A plan-mode Persona's handler is wrapped so the Adapter's
-            // request to leave plan mode is refused (see PlanModePermissionHandler).
-            DotAcpPersonaHost.GuardPermissions(
-                WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
-                    ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(), this.mergeGate, this.persona.Name)
-                    : new AutoApprovePermissionHandler(),
-                mode,
-                this.loggerFactory),
-            new SystemPromptOptions(
-                SystemPromptComposer.Compose(
-                    this.persona,
-                    this.prompts,
-                    this.helpToolName,
-                    this.toolNames,
-                    this.skills,
-                    this.readSkillToolName,
-                    memory,
-                    this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
-                    teamMemory: teamMemory,
-                    askHumanToolName: this.askHumanToolName,
-                    roleBlock: this.roleBlock()),
-                SystemPromptMode.Append),
+            DotAcpPersonaHost.GuardPermissions(this.CreatePermissionHandler(), mode, this.loggerFactory),
+            new SystemPromptOptions(this.ComposeSystemPrompt(), SystemPromptMode.Append),
             this.toolServerEndpoint,
             this.persona.Model,
             this.persona.Effort,
             this.meta,
             mode);
+    }
+
+    /// <summary>
+    /// Approves the way <see cref="AutoApprovePermissionHandler"/> does, except inside the human's own
+    /// agent configuration directory - see <see cref="WorkDirPermissionHandler"/> for why that one
+    /// exception is drawn there and not around the Work Dir - and except for a write to an Instructions
+    /// file and a non-manager's write into a Team's Memory. If the profile directory cannot be resolved the
+    /// handler has no path to protect there, rather than inventing one, and the two file guards still apply. Built fresh per call: the handler itself holds no
+    /// state worth reusing across opens. A plan-mode Persona's handler is wrapped so the Adapter's
+    /// request to leave plan mode is refused (see <see cref="PlanModePermissionHandler"/>).
+    /// </summary>
+    /// <returns>The handler this session's permission requests go to.</returns>
+    private WorkDirPermissionHandler CreatePermissionHandler()
+    {
+        // Both file guards stay on even when the profile directory cannot be resolved: that case only switches the ~/.claude refusal off.
+        return new WorkDirPermissionHandler(
+            WorkDirPermissionHandler.DefaultProtectedDirectory(),
+            this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(),
+            this.mergeGate,
+            this.persona.Name,
+            new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts),
+            new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts));
+    }
+
+    /// <summary>
+    /// Composes the system prompt now, with the memory index and the Instructions read afresh. The Memory and Team Memory blocks are
+    /// built whenever the memory tool is offered, which is always, so an Adapter with no file tools gets them too; only the sentences
+    /// that name File Changes depend on <see cref="readsMemory"/> (Instructions spec §6.1).
+    /// </summary>
+    /// <returns>The prompt appended to the Adapter's own.</returns>
+    private string ComposeSystemPrompt()
+    {
+        ILogger logger = this.loggerFactory.CreateLogger<DotAcpPersonaHost>();
+        var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries, this.sources.Warnings);
+        MemorySnapshot memory = new(this.memoryDir, entries, notListed);
+
+        TeamMemorySnapshot? teamMemory = null;
+        if (this.teamLabels.Count > 0)
+        {
+            // Read once into a local: this runs per open or resume, concurrently across Rooms, and
+            // the catalog's snapshot is swapped atomically, so one read is one consistent view.
+            IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
+            TeamMemorySnapshot built = TeamMemoryIndex.Build(this.teamsRoot, this.teamLabels, catalogTeams, this.maxTeamMemoryEntries, this.persona.Name, this.sources.Warnings);
+            teamMemory = built.Groups.Count > 0 ? built : null;
+        }
+
+        return SystemPromptComposer.Compose(
+            this.persona,
+            this.prompts,
+            this.helpToolName,
+            this.toolNames,
+            this.skills,
+            this.readSkillToolName,
+            memory,
+            this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
+            teamMemory: teamMemory,
+            askHumanToolName: this.askHumanToolName,
+            roleBlock: this.roleBlock(),
+            instructions: this.ReadInstructions(),
+            memoryChangesListed: this.readsMemory,
+            logger: logger);
+    }
+
+    /// <summary>
+    /// Reads the Human's Instructions now, so an edit made since the last session reaches the next one
+    /// (Instructions spec §3.4). The Teams are the Persona's own, named by the catalog's folder spelling.
+    /// </summary>
+    /// <returns>The non-empty levels, or an empty snapshot.</returns>
+    private InstructionsSnapshot ReadInstructions()
+    {
+        IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
+        List<string> teamNames =
+        [
+            .. this.teamLabels.Select(label =>
+                catalogTeams.FirstOrDefault(team => string.Equals(team.Name, label, StringComparison.OrdinalIgnoreCase))?.Name ?? label),
+        ];
+
+        return this.sources.Instructions.Read(this.teamsRoot, teamNames, this.workDir);
     }
 
     /// <summary>

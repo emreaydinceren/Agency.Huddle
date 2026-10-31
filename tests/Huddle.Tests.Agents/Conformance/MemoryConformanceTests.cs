@@ -28,9 +28,12 @@ public sealed class MemoryConformanceTests
         Assert.True(Directory.Exists(memoryDir));
     }
 
-    /// <summary>With the resolved Adapter Profile's <c>ReadsFiles</c> false, no memory block reaches the composed system prompt - FC §6.11.</summary>
+    /// <summary>
+    /// With the resolved Adapter Profile's <c>ReadsFiles</c> false, the memory block still reaches the composed system prompt and
+    /// names the memory tool, but the sentence about changes arriving as File Changes does not (Instructions spec §6.1, U-10).
+    /// </summary>
     [Fact]
-    public async Task CreateAsync_ReadsFilesFalse_NoMemoryBlock()
+    public async Task CreateAsync_ReadsFilesFalse_MemoryBlockWithoutTheFileChangesSentence()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         Persona persona = new("nova", "You are Nova.", Adapter: "agency");
@@ -47,6 +50,8 @@ public sealed class MemoryConformanceTests
 
         string appendedPrompt = await fixture.AppendedSystemPromptAsync(ct);
 
-        Assert.DoesNotContain("Your memory is the folder", appendedPrompt, StringComparison.Ordinal);
+        Assert.Contains("Your memory is the folder", appendedPrompt, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("mcp__team__memory", appendedPrompt, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.DoesNotContain("the change is listed at the start of your next Turn", appendedPrompt, StringComparison.Ordinal);
     }
 }

@@ -2,7 +2,7 @@ using Agency.Huddle.App.FileChanges;
 
 namespace Agency.Huddle.Tests.FileChanges;
 
-/// <summary>Pins <see cref="MemoryIndex.Build(string, int)"/>: FC §6.15's index rules.</summary>
+/// <summary>Pins <see cref="MemoryIndex.Build(string, int, Agency.Huddle.App.Memory.MemoryWarnings)"/>: FC §6.15's index rules.</summary>
 public sealed class MemoryIndexTests
 {
     /// <summary>The first non-blank line becomes the summary, with a leading <c>#</c> and spaces removed.</summary>
@@ -70,7 +70,7 @@ public sealed class MemoryIndexTests
         Assert.Equal(["A fact.", "M fact.", "Z fact."], entries.Select(e => e.Summary));
     }
 
-    /// <summary>More than <c>maxEntries</c> files: the first by file name are listed, the rest counted in <see cref="MemoryIndex.Build(string, int)"/>'s <c>NotListed</c> (E-17).</summary>
+    /// <summary>More than <c>maxEntries</c> files: the first by file name are listed, the rest counted in <see cref="MemoryIndex.Build(string, int, Agency.Huddle.App.Memory.MemoryWarnings)"/>'s <c>NotListed</c> (E-17).</summary>
     [Fact]
     public void Build_OverMax_CountsNotListed()
     {

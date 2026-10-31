@@ -151,6 +151,7 @@ the per-area tables below.
 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | [below](#remote-access) |
+| [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
 ---
 
 ## at-tagging
@@ -1196,3 +1197,19 @@ Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bi
 ---
 
 Back to [the manual test script](../manual-tests.md).
+
+## instructions-memory
+
+Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol — [area file](instructions-memory.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [INSTRMEM-01](instructions-memory.md#instrmem-01--a-team-instructions-file-reaches-every-member-on-its-next-session) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-02](instructions-memory.md#instrmem-02--a-new-topic-file-is-written-with-a-description-and-appears-in-the-next-session-index) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-03](instructions-memory.md#instrmem-03--two-rooms-write-one-memory-file-and-the-second-write-is-refused-with-the-current-text) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-04](instructions-memory.md#instrmem-04--a-member-write-to-team-memory-is-refused-through-the-tool-and-through-write-while-its-read-is-allowed) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-05](instructions-memory.md#instrmem-05--a-human-edit-in-the-library-is-seen-at-the-next-read-and-an-old-version-is-refused) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-06](instructions-memory.md#instrmem-06--an-agent-deletes-a-memory-file-only-when-the-human-asks) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-07](instructions-memory.md#instrmem-07--spike-s-1-whether-claude-code-loads-the-repository-claude-files-into-a-persona) | 💰 | Active |  | not yet run; this is spike S-1 and needs a live, paid Claude Code session |
+| [INSTRMEM-08](instructions-memory.md#instrmem-08--a-restart-recalls-a-memory-from-the-index-and-the-files) | 💰 | Active |  | not yet run by a person |
+| [INSTRMEM-09](instructions-memory.md#instrmem-09--an-adapter-with-no-file-tools-still-gets-the-memory-tool-and-the-memory-block) |  | Active |  | not yet run by a person |
