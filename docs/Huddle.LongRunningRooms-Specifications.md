@@ -291,10 +291,11 @@ unless a recorded reason says otherwise.
 | LR-R28 | With automatic fresh starts on, a Room Session MUST be started afresh, not resumed and not flushed, when its next item arrives after `FreshStarts:IdleMinutes` without a Turn **and** its last reported context use was at least `FreshStarts:IdleAboveTokens`. | 2 |
 | LR-R29 | Each Room Session's fresh-start count, last reason, the context use at that moment and its time MUST be recorded (§6.7), and the Room note MUST show the count. | 2 |
 | LR-R30 | When a degraded Room Session cannot be started afresh (the daily limit is reached, or a Question or Form keeps it waiting past one item), the Room MUST say so once per degraded mark and suggest `@Name /compact` or *Start afresh*. | 2 |
+| LR-R31 | The Size and Idle-and-large triggers MUST measure a session's **growth** above its baseline, the context use reported at the end of its first Turn, not its absolute context use. A session with no recorded baseline MUST use a baseline of zero, so it behaves as an absolute threshold. A fresh start MUST therefore never mark the new session degraded for the size of its own Catch-up. | 2 |
 
 ### 3.5 Handoff note (phase 4, conditional)
 
-LR-R31 and onward are written only if the experiment (§9.1) shows phases 0 to 2 fall short. §9.2
+LR-R32 and onward are written only if the experiment (§9.1) shows phases 0 to 2 fall short. §9.2
 sketches the candidate.
 
 ---
@@ -397,9 +398,9 @@ Only with automatic fresh starts on. The first three are evaluated at the end of
 | Trigger | Fires when | Default |
 | --- | --- | --- |
 | **Observed compaction** | `Used` falls by more than `FreshStarts:CompactionDropPercent` between two `UsageUpdated` within one ordinary Turn. The Adapter has just replaced the context with its own summary; Huddle replaces it with the Room's own words instead | 50 % |
-| **Size** | `lastUsed` reaches `FreshStarts:AboveTokens` | 200,000 |
+| **Size** | `lastUsed` minus the session's baseline reaches `FreshStarts:AboveTokens` (LR-R31) | 200,000 |
 | **Turn count**, fallback | The session has completed `FreshStarts:AfterTurns` Turns **and** has reported no usage at all | 80 |
-| **Idle and large** | The next item arrives more than `FreshStarts:IdleMinutes` after the session's last Turn, **and** its last reported context use was at least `FreshStarts:IdleAboveTokens` (LR-R28) | 60 minutes, 50,000 tokens |
+| **Idle and large** | The next item arrives more than `FreshStarts:IdleMinutes` after the session's last Turn, **and** its last reported context use was at least `FreshStarts:IdleAboveTokens` above its baseline (LR-R28, LR-R31) | 60 minutes, 50,000 tokens |
 
 - The size trigger is absolute, not a percentage of `Size`. `Size` is the model's window (1M on
   current Claude models), not the point where Claude Code compacts (about 967K, or wherever the
@@ -421,6 +422,17 @@ Only with automatic fresh starts on. The first three are evaluated at the end of
   reload this trigger avoids.
 - A degraded mark set by one trigger is cleared by the fresh start; triggers are not re-evaluated
   until the new session's first Turn has finished.
+- **Why growth, not size (LR-R31).** A fresh session starts with its system prompt, the
+  Instructions and Memory indexes and a Catch-up of up to the budget (100,000 tokens by default,
+  150,000 at most). Measured absolutely, that start alone can be close to the Size trigger and is
+  already past Idle and large. The next trigger would then rotate a session that has learnt
+  nothing new, use up `MaxPerDay` and pay a cold refill each time. Growth is the right measure for both triggers. For Size, what
+  degrades the session is what accumulated after its start. For Idle and large, a fresh start
+  costs roughly the baseline anyway, so rotating saves only the growth above it. The baseline is
+  the `Used` reported at the end of the first Turn, kept on `RoomSessionEntry` as a trailing
+  optional `BaselineTokens` beside `LastUsedTokens`. A session opened before this change has
+  none and keeps the absolute behaviour. The Catch-up budget and the trigger thresholds therefore
+  stay independent settings, and no combination of them can make fresh starts loop.
 
 ### 6.3 What happens
 
@@ -555,6 +567,48 @@ edit its history, and Claude Code deletes it after 30 days unused. So this spec 
 | `memory_search`, `sessions_search` | **Elsewhere** | The `search` App Tool covers the Library; a Transcript `recall` stays a later feature (ADR-0051) |
 | Forks, resident history, store maintenance | **Not applicable** | OpenClaw's own session store and threading; Huddle has no equivalent |
 
+### 7.3 Toward OpenClaw's single session: a proposed mode
+
+The goal behind this spec is a Chief of Staff that works like OpenClaw's never-ending single
+session. The table in §7.2 takes OpenClaw's habits, but not its central idea, and the difference
+should be stated plainly:
+
+| | OpenClaw | This spec as written |
+| --- | --- | --- |
+| What lasts forever | **One session**, squeezed as it grows | **One Room**; the Claude session under it is replaced from time to time |
+| When the context gets long | Compacts and keeps going | A fresh start, rebriefed from the Transcript |
+| After a compaction | Carries on | An observed compaction *triggers* a fresh start (§6.2) |
+| When durable facts are saved | At a soft token threshold, before compaction (`softThresholdTokens`) | Only just before a fresh start (§6.6) |
+
+**Why the spec took the other route.** OpenClaw owns its sessions: it stores, reads and edits the
+history itself. Claude Code owns Huddle's: Huddle cannot read or edit that history, and Claude Code
+deletes it after 30 days unused. So the spec makes Huddle's own Transcript the thing that lasts, and
+treats the Claude session as disposable. From the Human's seat the Room still *looks* like one
+never-ending conversation, but the Agent under it is quietly rebuilt now and then.
+
+**What OpenClaw's "forever" actually is.** Not one context that never ends, but *compaction, plus
+facts saved before compaction, plus the recent part kept verbatim*. Huddle can get close to that for
+a Room such as the Chief of Staff's with three changes, proposed here as a **single-session mode**
+per Room. It is not yet a requirement (Q-13):
+
+1. **Let the Adapter's own auto-compaction run, and carry on.** In single-session mode an observed
+   compaction does not trigger a fresh start; it is only recorded (§6.7). The Size trigger stays,
+   as a ceiling well above the Adapter's compaction point, or is turned off.
+2. **Flush at a threshold, not only before a reset.** Watch `usage_update` and run the memory flush
+   (§6.6) once each time the session crosses a set size, as OpenClaw does with
+   `softThresholdTokens`, so durable facts reach Memory *before* the Adapter's compaction drops
+   detail. Once per crossing, never twice for the same compaction cycle.
+3. **Keep retention at 365 days** (phase 0, LR-R6), so a quiet month does not delete the one
+   session.
+
+The fresh start stays as the **escape hatch** for a session that has gone stale or into a rut,
+whether manual (*Start afresh*) or via the Degraded mark. It stops being the routine.
+
+**Cost of this mode.** It leans on Claude Code's compaction, whose summary Huddle cannot see or
+steer beyond `/compact` instructions; the rut that §7.1 describes after repeated compaction is the
+risk it accepts. The experiment's rut score (§9.1), after `/compact` against after a fresh start,
+is what decides whether this mode is safe to recommend.
+
 ---
 
 ## 8. Behaviour and edge cases
@@ -580,6 +634,7 @@ edit its history, and Claude Code deletes it after 30 days unused. So this spec 
 | LR-E17 | The Agent's Adapter does not offer the `memory` tool | No flush; the fresh start runs as before (§6.6) |
 | LR-E18 | The flush writes nothing | Normal: there was nothing new to save. The note omits the count |
 | LR-E19 | The app restarts while a large Room Session is idle | `LastUsedTokens` and `LastTurnUtc` on the stored entry let the idle trigger fire on the next item, opening fresh instead of resuming (LR-R28) |
+| LR-E20 | A fresh session's Catch-up is close to, or above, a trigger threshold | No trigger fires for it: the threshold counts growth above the baseline (LR-R31). A later fresh start happens only once the session has grown by the threshold since it opened |
 | LR-E20 | A stored entry written before this feature has no `LastUsedTokens` | The idle trigger does not fire for it; it resumes as today |
 
 ---
@@ -592,7 +647,7 @@ Each phase ships on its own and leaves the app coherent if the next never comes.
 | --- | --- | --- |
 | **0. Retention and isolation** | Live checks V0-1 and V0-2; `SessionRetentionDays` if V0-2 passes; LR-R5's Warning | LR-R4 to LR-R6. Findings recorded in known-limits.md |
 | **1. Catch-up by budget** | `ISessionSettings`, the token trim, `turn.transcriptOmittedOwn`, Settings › Sessions | LR-R7 to LR-R14. Goldens unchanged at the defaults; a changed value reaches the next first Turn, fresh or resumed, without a restart |
-| **2. Fresh starts** | *Start afresh*, the per-Room setting, the four triggers, the memory flush, the records and the fallback note, the Room note, `last-catch-up`, `LastUsedTokens` on `RoomSessionEntry` | LR-R15 to LR-R30. A Room with the setting Off behaves exactly as phase 1, except that *Start afresh* is offered and flushes |
+| **2. Fresh starts** | *Start afresh*, the per-Room setting, the four triggers, the memory flush, the records and the fallback note, the Room note, `last-catch-up`, `LastUsedTokens` and `BaselineTokens` on `RoomSessionEntry` | LR-R15 to LR-R31. A Room with the setting Off behaves exactly as phase 1, except that *Start afresh* is offered and flushes |
 | **3. The experiment** | A manual test page and a recorded result (§9.1); no code | A result recorded, with the go or no-go for phase 4 |
 | **4. Handoff note** | Only on a "go" from phase 3; specified then | To be written |
 
@@ -662,7 +717,7 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | `SessionSettingsStoreTests` | Absent file means configuration defaults; a save writes overrides only; out-of-range refused with its text; a hand edit is picked up; a corrupt file is ignored with a Warning |
 | `CatchUpBudgetTests` | The first Turn asks for the Message cap and trims to the budget; own Messages dropped first except the newest five; Transcript order kept; both omitted lines exact; applies to fresh and resumed first Turns; no `ForgetAll` |
 | `CatchUpDefaultsTests` | **LR-R2's proof:** at the defaults, `turnPromptTranscript.txt` and `turnPromptTranscriptResumed.txt` are unchanged |
-| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day; idle fires only when both idle time and size are met, survives an app restart through `LastUsedTokens`, and never fires for an entry without it |
+| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day; idle fires only when both idle time and size are met, survives an app restart through `LastUsedTokens`, and never fires for an entry without it; Size and idle count growth above `BaselineTokens`, so a fresh session whose Catch-up exceeds a threshold is not marked, and an entry without a baseline uses zero |
 | `MemoryFlushTests` | The flush runs once before a live fresh start and never for Idle and large; its text is never posted; skipped without the `memory` tool or with `FlushToMemory` false; a timeout, failure or refusal never blocks the fresh start; Stop cancels it and keeps the mark; the Prompt carries no tool-name prefix; files saved are counted in the note |
 | `FreshStartRecordTests` | Count, reason, context use and time recorded per Room and Name; moved on rename; the fallback note posted once per degraded mark, with its exact text |
 | `FreshStartTests` | The old entry is forgotten and the next Turn carries Catch-up; never mid-Turn; waits while a Question waits; not a failure; no Transcript Message; the note Envelope's fields; `last-catch-up` written as sent |
@@ -682,11 +737,11 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | `Team:Acp:CatchUpKeepOwnMessages` | `5` | Proposed (LR-R11) |
 | `Team:Acp:SessionRetentionDays` | `365` | Proposed; only if V0-2 passes |
 | `Team:Acp:FreshStarts:CompactionDropPercent` | `50` | Proposed |
-| `Team:Acp:FreshStarts:AboveTokens` | `200000` | Proposed. Zero disables |
+| `Team:Acp:FreshStarts:AboveTokens` | `200000` | Proposed. Growth above the session's baseline (LR-R31). Zero disables |
 | `Team:Acp:FreshStarts:AfterTurns` | `80` | Proposed. Only for a session that reports no usage. Zero disables |
 | `Team:Acp:FreshStarts:MaxPerDay` | `3` | Proposed. Automatic fresh starts per Room Session per local day |
 | `Team:Acp:FreshStarts:IdleMinutes` | `60` | Proposed. Matches the subscription prompt cache's lifetime. Zero disables the idle trigger |
-| `Team:Acp:FreshStarts:IdleAboveTokens` | `50000` | Proposed. A smaller session is always resumed |
+| `Team:Acp:FreshStarts:IdleAboveTokens` | `50000` | Proposed. Growth above the baseline (LR-R31); a session that grew less is always resumed |
 | `Team:Acp:FreshStarts:FlushToMemory` | `true` | Proposed (LR-R26); the experiment's A/B may change the default |
 | `Team:Acp:FreshStarts:FlushTimeoutSeconds` | `120` | Proposed (LR-R27) |
 
@@ -712,6 +767,7 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-10 | Does this spec depend on PR #287 merging first? | Phase 2's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
 | Q-11 | Should a daily reset be offered after all, as OpenClaw does? | No | No (§7.2); revisit only if the experiment shows the idle and size triggers miss stale sessions |
 | Q-12 | Should the flush also run after an observed compaction, when the Adapter's summary has already dropped detail? | No | Yes, as specified: it is cheap and can still save what survived. The records of §6.7 will show how often compaction fires before the Size trigger |
+| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1); if adopted it becomes requirements in phase 2 |
 
 ### 12.2 ADR candidates
 
@@ -791,6 +847,7 @@ memory feature.
 | Fallback note (LR-R30, §6.7) | OpenClaw's "retry, `/compact` or `/new`" advice |
 | Settings tab renamed from *Memory* to *Sessions* | Avoids the clash with the `memory` tool |
 | Daily reset considered and not taken (Q-11) | A clock alone retires healthy sessions |
+| Single-session mode proposed (§7.3, Q-13) | The goal is a Chief of Staff that works like OpenClaw's never-ending session; states plainly where the spec differs and how to close the gap |
 
 ---
 
