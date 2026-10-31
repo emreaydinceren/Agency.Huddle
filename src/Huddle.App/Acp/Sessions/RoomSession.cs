@@ -70,6 +70,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
     private readonly ContextFill? contextFill;
     private readonly ISessionSettings? sessionSettings;
+    private readonly LastCatchUpStore? lastCatchUp;
+
+    // The note the current Turn owes after a fresh start; set by AddTranscriptCatchUpAsync and
+    // cleared by SendFreshStartNoteAsync. Touched only from the single consumer thread.
+    private FreshStartNote? noteOwed;
 
     // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
     // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
@@ -168,6 +173,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
+    /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -191,7 +197,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
-        ISessionSettings? sessionSettings = null)
+        ISessionSettings? sessionSettings = null,
+        LastCatchUpStore? lastCatchUp = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -221,6 +228,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
+        this.lastCatchUp = lastCatchUp;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -1133,6 +1141,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
         item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
 
+        // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
+        this.WriteLastCatchUp(item);
         TurnRun? run = this.TryPublishTurn(item, collected, sequence, ct);
         if (run is null)
         {
@@ -1150,6 +1160,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             await this.FinishTurnAsync(run, ct).ConfigureAwait(false);
         }
+
+        await this.SendFreshStartNoteAsync(ct).ConfigureAwait(false);
 
         // D26, RS §6.8, finding P-14: a second consecutive failure closes and forgets THIS per-Room
         // session, so its next Turn opens fresh - checked here, after the block above, so a store
@@ -1217,6 +1229,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
         {
             this.firstTurnPending = false;
+            if (this.FreshStartNotePending)
+            {
+                this.noteOwed = new FreshStartNote(item.RoomId, "asked", 0, 0, false);
+            }
+
             if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
             {
                 SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
@@ -1249,6 +1266,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                         OwnPostLines = null,
                     };
                 }
+                else if (this.noteOwed is not null)
+                {
+                    this.noteOwed = this.noteOwed with { ReadFailed = true };
+                }
             }
         }
 
@@ -1262,7 +1283,60 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
     {
         CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.IsOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
+        if (this.noteOwed is not null)
+        {
+            this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };
+        }
+
         return new TranscriptCatchUp(this.resumedOnLastOpen, result.Kept, tail.Omitted + result.Dropped, result.DroppedOwn);
+    }
+
+    /// <summary>Writes the whole prompt text of the first ordinary Turn after a fresh start to the last-catch-up file (C3). A failure is logged and never fails the Turn.</summary>
+    /// <param name="item">The item about to be prompted, fully enriched.</param>
+    private void WriteLastCatchUp(WorkItem item)
+    {
+        if (this.noteOwed is null || this.lastCatchUp is null)
+        {
+            return;
+        }
+
+        try
+        {
+            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, RoomSession.BuildPrompt(item, this.prompts));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' could not write the last catch-up for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+        }
+    }
+
+    /// <summary>Sends the fresh-start note the finished Turn owed, if any, and clears the owed flag. A failure is logged and never fails the Turn.</summary>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>A task that completes when the note has been handed to the owner.</returns>
+    private async Task SendFreshStartNoteAsync(CancellationToken ct)
+    {
+        FreshStartNote? note = this.noteOwed;
+        if (note is null)
+        {
+            return;
+        }
+
+        this.noteOwed = null;
+        lock (this.gate)
+        {
+            this.freshStartNotePending = false;
+        }
+
+        try
+        {
+            await this.owner.WriteAsync(note, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' could not send the fresh-start note for room {RoomId}.", this.owner.PersonaName, note.RoomId);
+        }
     }
 
     /// <summary>Whether <paramref name="message"/> is this Agent's own (C7): by sender id when the session has an agent id, otherwise by Persona name.</summary>

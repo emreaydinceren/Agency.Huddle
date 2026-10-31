@@ -260,9 +260,9 @@ public sealed class StartAfreshTests
         Assert.True(rig.First.Disposed);
     }
 
-    /// <summary>Only the fresh session's first Turn owes the note: it is owed right after the start afresh is applied and stays owed until the Turn that writes it consumes it (5.6).</summary>
+    /// <summary>Two requests before the next item owe one note, which the fresh session's first Turn sends and so consumes (5.6).</summary>
     [Fact]
-    public async Task RequestFreshStart_TwiceBeforeNextItem_NotePendingUntilFirstTurnConsumesIt()
+    public async Task RequestFreshStart_TwiceBeforeNextItem_FirstTurnSendsOneNoteAndConsumesIt()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using FreshRig rig = FreshRig.Create();
@@ -272,8 +272,10 @@ public sealed class StartAfreshTests
         await rig.Room.RequestFreshStartAsync(ct);
         rig.Room.Enqueue(Item(2));
         await Eventually.UntilAsync(() => rig.PostCount == 2, ct, timeout: TestBudgets.Standard);
+        await Eventually.UntilAsync(() => rig.Owner.Written.OfType<FreshStartNote>().Any(), ct, timeout: TestBudgets.Standard);
 
-        Assert.True(rig.Room.FreshStartNotePending);
+        Assert.Single(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.False(rig.Room.FreshStartNotePending);
         Assert.False(rig.Room.FreshStartPending);
     }
 
@@ -295,6 +297,108 @@ public sealed class StartAfreshTests
         Assert.False(rig.Host.Sessions[1].Disposed);
         Assert.Equal(1, rig.PostCount);
         Assert.DoesNotContain("ReportTurnFailure", rig.Owner.ReportCalls);
+    }
+
+    /// <summary>The one earlier Message the owner's Transcript read returns.</summary>
+    private static readonly ChatMessage Earlier = new("m0", DateTimeOffset.UnixEpoch, "hu", "Human", "earlier");
+
+    /// <summary>After a fresh start, the next ordinary Turn writes a file whose text equals the prompt text the fresh session received (C3, LR-R21).</summary>
+    [Fact]
+    public async Task FreshSession_FirstOrdinaryTurn_WritesFileEqualToPromptText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create();
+        await rig.RunFirstTurnAsync(ct);
+        await rig.Room.RequestFreshStartAsync(ct);
+
+        rig.Room.Enqueue(Item(2));
+        await Eventually.UntilAsync(() => rig.PostCount == 2 && rig.Owner.Written.OfType<FreshStartNote>().Any(), ct, timeout: TestBudgets.Standard);
+
+        string prompt = Assert.Single(rig.Host.Sessions[1].Prompts);
+        Assert.Equal(prompt, rig.LastCatchUp.Read("nova", "room-1"));
+    }
+
+    /// <summary>The owner gets exactly one note for the fresh start: reason asked, the kept Message count, the trim's token estimate, no read failure (C2, C5).</summary>
+    [Fact]
+    public async Task FreshSession_FirstOrdinaryTurn_SendsExactlyOneNoteWithKeptCountAndTokens()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create();
+        await rig.RunFirstTurnAsync(ct);
+        await rig.Room.RequestFreshStartAsync(ct);
+
+        rig.Room.Enqueue(Item(2));
+        await Eventually.UntilAsync(() => rig.PostCount == 2 && rig.Owner.Written.OfType<FreshStartNote>().Any(), ct, timeout: TestBudgets.Standard);
+
+        FreshStartNote note = Assert.Single(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Equal(new FreshStartNote("room-1", "asked", 1, TokenEstimate.OfMessage(Earlier), false), note);
+    }
+
+    /// <summary>When the owner's Transcript read returns null the note says the read failed and carries counts 0 (LR-E3).</summary>
+    [Fact]
+    public async Task FreshSession_TranscriptReadFails_NoteIsReadFailedWithZeroCounts()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create(transcriptReadFails: true);
+        await rig.RunFirstTurnAsync(ct);
+        await rig.Room.RequestFreshStartAsync(ct);
+
+        rig.Room.Enqueue(Item(2));
+        await Eventually.UntilAsync(() => rig.PostCount == 2 && rig.Owner.Written.OfType<FreshStartNote>().Any(), ct, timeout: TestBudgets.Standard);
+
+        FreshStartNote note = Assert.Single(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Equal(new FreshStartNote("room-1", "asked", 0, 0, true), note);
+    }
+
+    /// <summary>A Command item first on the fresh session sends no note and writes no file; the next ordinary Turn sends the note and writes its prompt (LR-R22).</summary>
+    [Fact]
+    public async Task FreshSession_CommandItemFirst_SendsNothingUntilNextOrdinaryTurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create();
+        await rig.RunFirstTurnAsync(ct);
+        await rig.Room.RequestFreshStartAsync(ct);
+        rig.Room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-2", Command: new AdapterCommandCall("compact", string.Empty))));
+        await Eventually.UntilAsync(() => rig.Host.Sessions.Count == 2 && rig.Host.Sessions[1].Prompts.Count == 1 && rig.Room.State == RoomSessionState.Idle, ct, timeout: TestBudgets.Standard);
+
+        Assert.Empty(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Null(rig.LastCatchUp.Read("nova", "room-1"));
+        Assert.True(rig.Room.FreshStartNotePending);
+
+        rig.Room.Enqueue(Item(3));
+        await Eventually.UntilAsync(() => rig.Host.Sessions[1].Prompts.Count == 2 && rig.Owner.Written.OfType<FreshStartNote>().Any(), ct, timeout: TestBudgets.Standard);
+
+        Assert.Single(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Equal(rig.Host.Sessions[1].Prompts[1], rig.LastCatchUp.Read("nova", "room-1"));
+    }
+
+    /// <summary>An ordinary Turn with no fresh start before it sends no note and writes no file.</summary>
+    [Fact]
+    public async Task OrdinaryTurn_NoFreshStart_SendsNoNoteAndWritesNoFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create();
+        await rig.RunFirstTurnAsync(ct);
+        rig.First.EnqueueReply("two");
+        rig.Room.Enqueue(Item(2));
+        await Eventually.UntilAsync(() => rig.PostCount == 2 && rig.Room.State == RoomSessionState.Idle, ct, timeout: TestBudgets.Standard);
+
+        Assert.Empty(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Null(rig.LastCatchUp.Read("nova", "room-1"));
+    }
+
+    /// <summary>A resume is not a fresh start: the resumed session's Turn sends no note and writes no file.</summary>
+    [Fact]
+    public async Task ResumedSession_FirstTurn_SendsNoNoteAndWritesNoFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using FreshRig rig = FreshRig.Create(storedEntry: true);
+
+        await rig.RunFirstTurnAsync(ct);
+
+        Assert.Single(rig.Host.ResumeCalls);
+        Assert.Empty(rig.Owner.Written.OfType<FreshStartNote>());
+        Assert.Null(rig.LastCatchUp.Read("nova", "room-1"));
     }
 
     private static QueuedWork Item(long sequence) =>
@@ -343,8 +447,9 @@ public sealed class StartAfreshTests
         private readonly TempDataDir dataDir;
         private readonly RoomSessionHarness harness;
 
-        private FreshRig(TempDataDir dataDir, RoomSessionHarness harness, FakePersonaHost host, FakeRoomSessionOwner owner, RoomSessionStore store, ContextFill contextFill, FakeAgentSession first)
+        private FreshRig(TempDataDir dataDir, RoomSessionHarness harness, FakePersonaHost host, FakeRoomSessionOwner owner, RoomSessionStore store, ContextFill contextFill, FakeAgentSession first, LastCatchUpStore lastCatchUp)
         {
+            this.LastCatchUp = lastCatchUp;
             this.dataDir = dataDir;
             this.harness = harness;
             this.Host = host;
@@ -366,15 +471,25 @@ public sealed class StartAfreshTests
 
         public FakeAgentSession First { get; }
 
+        public LastCatchUpStore LastCatchUp { get; }
+
         public int PostCount => this.Owner.Written.OfType<PostMessage>().Count();
 
         /// <summary>Builds the rig; <paramref name="scriptLater"/> scripts every session after the first as it opens.</summary>
         /// <param name="scriptLater">Scripts a later session, or <see langword="null"/> for none.</param>
+        /// <param name="transcriptReadFails">Whether the owner answers every Transcript read with <see langword="null"/>.</param>
+        /// <param name="storedEntry">Whether the store already holds the Room's entry, so the first item resumes.</param>
         /// <returns>The rig, to be disposed with <c>await using</c>.</returns>
-        public static FreshRig Create(Action<FakeAgentSession>? scriptLater = null)
+        public static FreshRig Create(Action<FakeAgentSession>? scriptLater = null, bool transcriptReadFails = false, bool storedEntry = false)
         {
             TempDataDir dataDir = new();
             RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+            LastCatchUpStore lastCatchUp = new(dataDir.Options(), NullLogger<LastCatchUpStore>.Instance);
+            if (storedEntry)
+            {
+                store.Put("nova", "room-1", Entry());
+            }
+
             ContextFill contextFill = new();
             FakeAgentSession first = new();
             FakePersonaHost host = new(first, Profile(sessionPerRoom: true))
@@ -391,8 +506,9 @@ public sealed class StartAfreshTests
             };
             FakeRoomSessionOwner owner = new()
             {
-                ReadTranscriptHandler = static (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
-                    new TranscriptTail("req", roomId, [new ChatMessage("m0", DateTimeOffset.UnixEpoch, "hu", "Human", "earlier")], Omitted: 0)),
+                ReadTranscriptHandler = transcriptReadFails
+                    ? static (_, _, _, _, _) => Task.FromResult<TranscriptTail?>(null)
+                    : static (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(new TranscriptTail("req", roomId, [Earlier], Omitted: 0)),
             };
             RoomSessionHarness harness = RoomSessionHarness.Create(
                 owner,
@@ -404,8 +520,9 @@ public sealed class StartAfreshTests
                     ContextFill = contextFill,
                     RoomSessions = store,
                     Host = host,
+                    LastCatchUp = lastCatchUp,
                 });
-            return new FreshRig(dataDir, harness, host, owner, store, contextFill, first);
+            return new FreshRig(dataDir, harness, host, owner, store, contextFill, first, lastCatchUp);
         }
 
         /// <summary>Serves item 1 to completion and waits until the session is idle with its entry stored.</summary>

@@ -36,6 +36,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly ReferenceExpander? references;
     private readonly ContextFill? contextFill;
     private readonly ISessionSettings? sessionSettings;
+    private readonly LastCatchUpStore? lastCatchUp;
     private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
@@ -77,6 +78,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings passed to every Room Session, for the first Turn's Transcript catch-up. <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
+    /// <param name="lastCatchUp">The store every Room Session writes its first post-fresh-start prompt to. <see langword="null"/> writes no file.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -97,7 +99,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         IElicitationBridge? elicitationBridge = null,
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
-        ISessionSettings? sessionSettings = null)
+        ISessionSettings? sessionSettings = null,
+        LastCatchUpStore? lastCatchUp = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -126,6 +129,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.references = references;
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
+        this.lastCatchUp = lastCatchUp;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
@@ -452,7 +456,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             elicitationBridge: this.elicitationBridge,
             references: this.references,
             contextFill: this.contextFill,
-            sessionSettings: this.sessionSettings);
+            sessionSettings: this.sessionSettings,
+            lastCatchUp: this.lastCatchUp);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

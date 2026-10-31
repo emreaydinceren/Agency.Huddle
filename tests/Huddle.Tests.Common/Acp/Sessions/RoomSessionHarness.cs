@@ -50,6 +50,9 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>The Persona host the session consults for resume, or <see langword="null"/> for none.</summary>
     public IPersonaHost? Host { get; init; }
+
+    /// <summary>The store the first Turn after a fresh start writes its whole prompt text to, or <see langword="null"/> for none (no file is written).</summary>
+    public LastCatchUpStore? LastCatchUp { get; init; }
 }
 
 /// <summary>
@@ -110,7 +113,8 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             readsFiles: settings.ReadsFiles,
             roomSessions: settings.RoomSessions,
             host: settings.Host,
-            sessionSettings: settings.SessionSettings);
+            sessionSettings: settings.SessionSettings,
+            lastCatchUp: settings.LastCatchUp);
         return new RoomSessionHarness(session, runCts);
     }
 

@@ -1,5 +1,3 @@
-// Enabled by task 5.6.i (remove the #if).
-#if LRR_E2E
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -140,4 +138,3 @@ public sealed class StartAfreshEndToEndTests
             static session => session.Prompts.Any(static prompt => prompt.Contains("second in B", StringComparison.Ordinal)));
     }
 }
-#endif
