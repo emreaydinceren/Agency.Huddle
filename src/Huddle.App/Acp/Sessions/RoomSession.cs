@@ -91,6 +91,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private readonly SemaphoreSlim itemAvailable = new(0);
     private bool freshStartPending;
     private bool freshStartNotePending;
+    private bool skipResumeOnNextOpen;
+    private Task? pendingFreshTeardown;
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
     // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
@@ -409,18 +411,143 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
     }
 
-    /// <summary>Records that the Human asked this Room to start afresh. Only sets the flag; the behaviour follows in 5.4.</summary>
-    /// <param name="cancellationToken">Reserved for the behaviour 5.4 adds.</param>
-    /// <returns>A completed task.</returns>
+    /// <summary>
+    /// Records that the Human asked this Room to start afresh (Spec 6.3). An idle session is torn down at once, in
+    /// the background, and forgotten; an evicted one only forgets what is stored; a busy or opening one
+    /// is marked and starts afresh before the next item is served. A shared session ignores it.
+    /// </summary>
+    /// <param name="cancellationToken">Checked on entry.</param>
+    /// <returns>A completed task; any teardown is handed to the consumer, never awaited here.</returns>
     internal Task RequestFreshStartAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (this.RoomId is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        bool forgetNow = false;
+        TaskCompletionSource? teardownDone = null;
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken = default;
         lock (this.gate)
         {
-            this.freshStartPending = true;
+            if (this.state == RoomSessionState.Idle && !this.running && this.queue.Count == 0)
+            {
+                taken = this.TakeOpenLocked();
+                teardownDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                this.pendingFreshTeardown = teardownDone.Task;
+                this.skipResumeOnNextOpen = true;
+                this.freshStartNotePending = true;
+            }
+            else if (this.state == RoomSessionState.Closed && !this.running)
+            {
+                // Evicted: nothing is open, so only the stored state is forgotten.
+                this.skipResumeOnNextOpen = true;
+                this.freshStartNotePending = true;
+                forgetNow = true;
+            }
+            else
+            {
+                this.freshStartPending = true;
+            }
+        }
+
+        if (forgetNow)
+        {
+            this.ForgetStoredState();
+        }
+
+        if (teardownDone is not null)
+        {
+            // Off the caller's and the read loop's thread: disposal never runs under the gate or on the reader.
+            _ = Task.Run(() => this.TeardownThenForgetAsync(taken, teardownDone), CancellationToken.None);
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>Disposes the taken session, then forgets the stored state (the consumer path's order), then completes the pending teardown.</summary>
+    /// <param name="taken">The session, reader token source and reader loop taken under the gate.</param>
+    /// <param name="done">Completed when the teardown and the forget are over.</param>
+    private async Task TeardownThenForgetAsync((IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken, TaskCompletionSource done)
+    {
+        try
+        {
+            await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
+            this.ForgetStoredState();
+        }
+        finally
+        {
+            done.TrySetResult();
+        }
+    }
+
+    /// <summary>Forgets this Room's stored resume entry and context-fill reading.</summary>
+    private void ForgetStoredState()
+    {
+        if (this.RoomId is not { } roomId)
+        {
+            return;
+        }
+
+        this.roomSessionStore?.Forget(this.owner.PersonaName, roomId);
+        if (this.agentId is { } id)
+        {
+            this.contextFill?.Forget(id, roomId);
+        }
+    }
+
+    /// <summary>Takes the open session and its reader under <see cref="gate"/> (held by the caller) and marks the session Closed. Disposal is the caller's, outside the lock.</summary>
+    /// <returns>The taken session, reader token source and reader loop.</returns>
+    private (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) TakeOpenLocked()
+    {
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken = (this.session, this.eventReaderCts, this.eventReaderTask);
+        this.session = null;
+        this.state = RoomSessionState.Closed;
+        return taken;
+    }
+
+    /// <summary>
+    /// Runs before an admitted item opens or prompts: waits for a teardown started while idle, then
+    /// applies a pending start afresh (close, forget, mark note-pending) so the lazy open that follows is fresh.
+    /// </summary>
+    /// <returns>A task that completes when the start afresh has been applied.</returns>
+    private async Task ApplyFreshStartAsync()
+    {
+        Task? teardown;
+        bool apply;
+        lock (this.gate)
+        {
+            teardown = this.pendingFreshTeardown;
+            apply = this.freshStartPending;
+            this.freshStartPending = false;
+        }
+
+        if (teardown is not null)
+        {
+            // Not bounded by the run token: the teardown does not depend on it, and DisposeAsync must still see it if this is abandoned.
+            await SafeAwaitAsync(teardown).ConfigureAwait(false);
+            lock (this.gate)
+            {
+                if (ReferenceEquals(this.pendingFreshTeardown, teardown))
+                {
+                    this.pendingFreshTeardown = null;
+                }
+            }
+        }
+
+        if (!apply)
+        {
+            return;
+        }
+
+        await this.TearDownAsync().ConfigureAwait(false);
+        this.ForgetStoredState();
+        lock (this.gate)
+        {
+            this.skipResumeOnNextOpen = true;
+            this.freshStartNotePending = true;
+        }
     }
 
     /// <summary>Tells a newly created session that its first ordinary Turn owes a fresh-start note. Called by the pool before the session serves anything.</summary>
@@ -537,20 +664,29 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// this <see cref="RoomSessionState.Closed"/> with no session): the guard below simply no-ops the
     /// teardown while still stamping <see cref="RoomSessionState.Closed"/>.
     /// </summary>
-    private async Task CloseAfterRepeatedFailureAsync()
+    private Task CloseAfterRepeatedFailureAsync() => this.TearDownAsync();
+
+    /// <summary>
+    /// The teardown shared by the repeated-failure close and a start afresh: moves the session to
+    /// <see cref="RoomSessionState.Closed"/> from any state and disposes the open agent session and its reader.
+    /// </summary>
+    private Task TearDownAsync()
     {
-        IAgentSession? closing;
-        CancellationTokenSource? readerCts;
-        Task? readerTask;
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken;
         lock (this.gate)
         {
-            closing = this.session;
-            readerCts = this.eventReaderCts;
-            readerTask = this.eventReaderTask;
-            this.session = null;
-            this.state = RoomSessionState.Closed;
+            taken = this.TakeOpenLocked();
         }
 
+        return DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask);
+    }
+
+    /// <summary>Cancels the reader's own token, awaits it, then disposes the agent session. A no-op when nothing was open.</summary>
+    /// <param name="closing">The session to dispose, or <see langword="null"/>.</param>
+    /// <param name="readerCts">The reader's token source.</param>
+    /// <param name="readerTask">The reader loop.</param>
+    private static async Task DisposeOpenAsync(IAgentSession? closing, CancellationTokenSource? readerCts, Task? readerTask)
+    {
         if (closing is null)
         {
             return;
@@ -575,6 +711,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         await SafeAwaitAsync(this.consumerTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.eventReaderTask).ConfigureAwait(false);
+        await SafeAwaitAsync(this.pendingFreshTeardown).ConfigureAwait(false);
 
         if (this.session is not null)
         {
@@ -697,7 +834,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <returns>The opened session, whether it was resumed, and - only when resumed - the stored <see cref="RoomSessionEntry.LastMessageId"/> the Transcript Catch-up range starts after.</returns>
     private async Task<(IAgentSession Session, bool Resumed, string? ResumedAfterMessageId)> OpenOrResumeAsync(CancellationToken cancellationToken)
     {
-        if (this.RoomId is { } roomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null)
+        bool skipResume;
+        lock (this.gate)
+        {
+            skipResume = this.skipResumeOnNextOpen;
+            this.skipResumeOnNextOpen = false;
+        }
+
+        if (!skipResume && this.RoomId is { } roomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null)
         {
             var entry = this.roomSessionStore.Get(this.owner.PersonaName, roomId);
             if (entry is not null
@@ -806,6 +950,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // comment. This must run even when nothing above was dropped: the very next item
         // after a Stop is exactly the case that races it.
         await this.AwaitPendingStopCancelAsync(ct).ConfigureAwait(false);
+        await this.ApplyFreshStartAsync().ConfigureAwait(false);
 
         if (this.State == RoomSessionState.Closed
             && !await this.TryLazyOpenAsync(head, ct).ConfigureAwait(false))

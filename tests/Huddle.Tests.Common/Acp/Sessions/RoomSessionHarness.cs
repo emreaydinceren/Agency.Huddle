@@ -44,6 +44,12 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>The Session settings the first Turn's catch-up reads, or <see langword="null"/> for none (the <see cref="AcpOptions"/> values apply).</summary>
     public ISessionSettings? SessionSettings { get; init; }
+
+    /// <summary>The store of resumable session entries, or <see langword="null"/> for none (the session then never stores or resumes).</summary>
+    public RoomSessionStore? RoomSessions { get; init; }
+
+    /// <summary>The Persona host the session consults for resume, or <see langword="null"/> for none.</summary>
+    public IPersonaHost? Host { get; init; }
 }
 
 /// <summary>
@@ -102,6 +108,8 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             contextFill: settings.ContextFill,
             libraryDocs: settings.LibraryDocs,
             readsFiles: settings.ReadsFiles,
+            roomSessions: settings.RoomSessions,
+            host: settings.Host,
             sessionSettings: settings.SessionSettings);
         return new RoomSessionHarness(session, runCts);
     }
