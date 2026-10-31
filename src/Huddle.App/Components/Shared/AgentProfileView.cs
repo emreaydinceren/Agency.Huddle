@@ -15,4 +15,7 @@ internal sealed record AgentProfileView(AgentProfile Profile, bool Manager, Prof
 
     /// <summary>Whether this is the Human's own profile, edited on the Settings Profile tab rather than on an Agent card.</summary>
     public bool IsHuman { get; init; }
+
+    /// <summary>The background warm-up filling Model or Effort names the card could not show yet, or <see langword="null"/> when every name was cached. It never faults; once it ends, <see cref="AgentProfiles.RereadRuntime"/> reads the filled names.</summary>
+    public Task? RuntimeWarmUp { get; init; }
 }

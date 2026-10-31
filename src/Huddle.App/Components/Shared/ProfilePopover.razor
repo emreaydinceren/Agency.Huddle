@@ -119,6 +119,38 @@
 
         this.loading = false;
         this.focusPending = true;
+        if (this.view?.RuntimeWarmUp is { } warm)
+        {
+            _ = this.RedrawRuntimeAsync(warm, this.cts.Token);
+        }
+    }
+
+    /// <summary>
+    /// Waits for the warm-up the build started, then swaps in the Model and Effort names it filled, so the
+    /// first open after a restart reads "Opus (default)" without a reopen. Not awaited from
+    /// <c>OnInitializedAsync</c>, which would hold the whole card on the spinner for a probe.
+    /// </summary>
+    /// <param name="warm">The warm-up; it never faults.</param>
+    /// <param name="ct">Cancelled when the popover closes.</param>
+    private async Task RedrawRuntimeAsync(Task warm, CancellationToken ct)
+    {
+        try
+        {
+            await warm.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed before the names arrived; there is nothing left to redraw.
+            return;
+        }
+
+        if (this.view is { } shown
+            && this.Profiles.RereadRuntime(shown.Profile.Name) is { } runtime
+            && runtime != shown.Profile.Runtime)
+        {
+            this.view = shown with { Profile = shown.Profile with { Runtime = runtime } };
+            await this.InvokeAsync(this.StateHasChanged);
+        }
     }
 
     /// <inheritdoc />

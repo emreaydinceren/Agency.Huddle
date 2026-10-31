@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Bunit;
@@ -76,6 +77,35 @@ public sealed class ProfileAvatarTests
         Assert.Equal("Lead", cut.Find(Panel + " .roster-title").TextContent);
         Assert.Equal("true", cut.Find(Button).GetAttribute("aria-expanded"));
         Assert.Single(cut.FindAll(Panel + " button[aria-label='Edit Ada']"));
+    }
+
+    /// <summary>
+    /// The first open after a restart draws the fallback wording, then redraws with the Model and Effort
+    /// names once the background warm-up has filled them, without the Human reopening the card.
+    /// </summary>
+    [Fact]
+    public async Task Open_ColdCache_RedrawsRuntimeNamesWhenWarmUpEnds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.ModelCatalog.ModelsGate = gate;
+        fixture.AddAgent("Ada", "Lead");
+        await using MudBunitContext ctx = fixture.NewContext();
+        var cut = RenderIt(ctx, "Ada");
+
+        await OpenAsync(cut);
+        string before = cut.Find(Panel + " .roster-runtime-model").TextContent;
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Opus 5.5", "High");
+        gate.SetResult();
+
+        Assert.Equal("Agent default", before);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("Opus 5.5 (default)", cut.Find(Panel + " .roster-runtime-model").TextContent);
+            Assert.Equal("High (default)", cut.Find(Panel + " .roster-runtime-effort").TextContent);
+        });
     }
 
     /// <summary>
