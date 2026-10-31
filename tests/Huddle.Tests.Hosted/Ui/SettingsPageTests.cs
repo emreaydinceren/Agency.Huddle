@@ -50,7 +50,7 @@ public sealed class SettingsPageTests
     /// <summary>
     /// Every section is a real link to its own <c>/settings/{section}</c> address, so a section is bookmarkable
     /// and opening it is ordinary navigation rather than local state. This replaces a click test: bUnit does not
-    /// follow an anchor's <c>href</c>, so the address the link carries is what can be pinned.
+    /// follow an anchor's <c>href</c>, so the address the link carries is what can be pinned. The Sessions row sits directly after Library (Spec §5.4, T2).
     /// </summary>
     [Fact]
     public async Task SettingsPage_SectionMenu_LinksEachSectionToItsRoute()
@@ -62,7 +62,7 @@ public sealed class SettingsPageTests
 
         List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
         Assert.Equal(
-            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/remoteaccess"],
+            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/sessions", "/settings/remoteaccess"],
             hrefs);
     }
 
@@ -89,13 +89,14 @@ public sealed class SettingsPageTests
 
     /// <summary>
     /// The open section is titled with its menu label, as an h2 that names the section for assistive technology; an unknown
-    /// segment falls back to Profile's title (side-by-side audit, LL-S01).
+    /// segment falls back to Profile's title (side-by-side audit, LL-S01). The Sessions section is titled "Sessions" (Spec §5.4, T2).
     /// </summary>
     /// <param name="tab">The route segment.</param>
     /// <param name="title">The title the section should carry.</param>
     [Theory]
     [InlineData("prompts", "Prompts")]
     [InlineData("library", "Library")]
+    [InlineData("sessions", "Sessions")]
     [InlineData("nonsense", "Profile")]
     public async Task SettingsPage_OpenSection_IsTitledWithItsMenuLabel(string tab, string title)
     {
@@ -109,7 +110,7 @@ public sealed class SettingsPageTests
         Assert.Equal(heading.Id, cut.Find("section.settings-section").GetAttribute("aria-labelledby"));
     }
 
-    /// <summary>The <c>/settings/remoteaccess</c> route highlights the ninth row, "Remote access", after Library, and renders the Remote access panel (Spec 6.12, E1).</summary>
+    /// <summary>The <c>/settings/remoteaccess</c> route highlights the tenth row, "Remote access", after Sessions, and renders the Remote access panel (Spec 6.12, E1; the Sessions row before it is Spec §5.4, T2).</summary>
     [Fact]
     public async Task SettingsPage_RemoteAccessRoute_RendersRemoteAccessPanelAfterLibrary()
     {
@@ -120,7 +121,7 @@ public sealed class SettingsPageTests
 
         Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.RemoteAccess.RemoteAccessPanel>());
         List<AngleSharp.Dom.IElement> items = cut.FindAll(".settings-nav .mud-nav-item").ToList();
-        Assert.Equal(8, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(9, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
         Assert.Equal("Remote access", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 
@@ -149,6 +150,20 @@ public sealed class SettingsPageTests
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
         Assert.Equal(7, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+    }
+
+    /// <summary>The <c>/settings/sessions</c> route highlights the ninth row, "Sessions", directly after Library, and renders the Sessions panel (Spec §5.4, T2).</summary>
+    [Fact]
+    public async Task SettingsPage_SessionsRoute_RendersSessionsPanel()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "sessions"));
+
+        Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.SessionsPanel>());
+        Assert.Equal(8, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal("Sessions", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 
     /// <summary>The Prompts panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
