@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
 using Agency.Huddle.App.Watching;
@@ -664,7 +665,7 @@ internal sealed partial class AppearanceStore : IDisposable
     private void WriteDocumentToDisk(JsonObject document)
     {
         var json = document.ToJsonString(IndentedJsonOptions);
-        File.WriteAllText(this.path, json);
+        AtomicFile.WriteText(this.path, json);
     }
 
     /// <summary>

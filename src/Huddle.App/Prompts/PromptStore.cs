@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
@@ -416,7 +417,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     private void WriteOverridesToDisk(IReadOnlyDictionary<string, string> overrides)
     {
         var json = JsonSerializer.Serialize(overrides, IndentedJsonOptions);
-        File.WriteAllText(this.path, json);
+        AtomicFile.WriteText(this.path, json);
     }
 
     /// <summary>

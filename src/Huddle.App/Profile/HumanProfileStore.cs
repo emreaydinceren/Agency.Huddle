@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
@@ -131,7 +132,7 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
             SetOrRemove(document, "title", normalised.Title);
             SetOrRemove(document, "description", normalised.Description);
 
-            File.WriteAllText(this.path, document.ToJsonString(IndentedJsonOptions));
+            AtomicFile.WriteText(this.path, document.ToJsonString(IndentedJsonOptions));
             after = new Snapshot(normalised, Saved: true);
             this.current = after;
         }

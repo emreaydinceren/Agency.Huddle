@@ -146,7 +146,7 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
         try
         {
             _ = System.IO.Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory, set.Id + ".json"), JsonSerializer.Serialize(set, JsonOptions));
+            AtomicFile.WriteText(Path.Combine(directory, set.Id + ".json"), JsonSerializer.Serialize(set, JsonOptions));
             return true;
         }
         catch (IOException)

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using MudBlazor.Utilities;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
@@ -473,7 +474,7 @@ internal sealed partial class AvatarStore : IDisposable
     private void WriteDocumentToDisk(JsonObject document)
     {
         var json = document.ToJsonString(IndentedJsonOptions);
-        File.WriteAllText(this.path, json);
+        AtomicFile.WriteText(this.path, json);
     }
 
     /// <summary>
