@@ -751,6 +751,43 @@ Its risks must be specified before it is built: a note is a model summary and ca
 (benchmarks favour raw text, Appendix B), and planted text in the Room can reach it, so it must be
 marked as the Teammate's own note, visible, and never promoted anywhere.
 
+### 9.3 First run (provisional)
+
+Run 2026-10-31 by an agent on a **seeded** Room, not the Chief of Staff's real one: a fresh install
+whose Chief of Staff (on `opus[1m]`) held a real 127-Message conversation about a small company's
+product launch, about 66,400 tokens, with 15 facts planted early and an answer key. The code was
+the build before phases 1 and 2a, so *Start afresh* was a hand edit of `room-sessions/<Name>.json`
+and the 40,000-token reread was an 82-Message cap that kept the Teammate's own Messages (LR-R11
+would have dropped them first). Spend about $35. Full tables and the answer key were kept outside
+the repository; the procedure is [long-running-rooms.md](engineering/manual-tests/long-running-rooms.md).
+
+| Measure | Result |
+| --- | --- |
+| Isolation (V0-1, auto memory only) | Held: the `memory` tool saved the test fact; Claude Code wrote no memory of its own |
+| Recall, default reread (two runs) | 8/10, 10/10 |
+| Recall, about 40,000 tokens (two runs) | 9/10, 9/10 |
+| What was missed | Only conversation facts (an email's status, a vendor choice), never a durable fact |
+| Repeated suggestions out of 9: live / after `/compact` / after a fresh start | 1 / 2 / **7** |
+| Flush A/B: no request / ask to save first (two runs) | 5/5 vs 5/5; 4/5 vs 5/5 (the miss was the one decision not saved). The save Turn cost $0.83 and $1.49 |
+
+**What it shows.** Recall after a fresh start is good: Memory plus a short reread kept the
+decisions. But the fresh start made the rut **worse**: the Teammate re-pitched its earlier
+suggestions as new, because the list of what it had already suggested lived only in older Room
+history, while `/compact` kept it. Of §9.1 step 6's rows, only "as few repeats after `/compact`"
+holds, which points to the single-session mode (§7.3, Q-13) rather than phase 2b's triggers. The
+flush helped once in two runs.
+
+**A finding the decision table does not cover.** In one recall run the Teammate, failing to find
+two facts that were in its Memory, answered "never discussed" and **wrote that false negative into
+a memory file**. A miss after a fresh start can corrupt Memory, and every later session inherits
+it. That is a Memory Prompt question (`systemPrompt.memory`: do not record the absence of a fact)
+whichever way the decision goes.
+
+**Why it is provisional.** One seeded Room and one repeats round; the resumed rounds were not fully
+isolated (Claude Code's session file sat outside the copied data folder, since fixed on the test
+page); and phase 1's own-Messages-first trim was not in play. **Next:** rerun LONGROOMS-04 (the
+repeats) on the real Room with the built *Start afresh*, about $5, before choosing between the
+single-session mode and phase 2b.
 ---
 
 ## 10. Testing
@@ -807,14 +844,14 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-3 | Does isolation hold live (Task 14.3.m)? | **Phase 2** | Unknown; until it does, the experiment cannot separate Huddle's effect from Claude Code's memory |
 | Q-4 | Should a fresh start delete the old session with ACP `session/delete`? | No | Yes eventually; needs `IAgentSession` support from the ACP effort |
 | Q-5 | Are 200,000 tokens, a 50 % fall, and 60 minutes with 50,000 tokens the right thresholds? | No | Starting values. Treat 200,000 as a ceiling: OpenClaw's pruning acts from max(50,000, 30 % of the window) and its compaction keeps 20,000 recent tokens (§7.2). Tune down from the experiment and the records of §6.7 |
-| Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it |
+| Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it. First run (§9.3, provisional): a fresh start gave **more** repeats than `/compact`, 7 to 2 |
 | Q-7 | Should observing compaction use ACP `compaction_update` instead of the `Used` fall? | No | Later; it needs a mapping in `SessionUpdateMapper` (ACP effort) and a client capability Huddle does not advertise yet |
 | Q-8 | Should the Room setting be on by default once the experiment passes? | No | No; keep it the Human's choice (§13) |
 | Q-9 | Does the memory flush earn its Turn? | No | Decided to build it, after OpenClaw (§6.6); the experiment's A/B (§9.1 step 5) decides whether it stays on by default |
 | Q-10 | Does this spec depend on PR #287 merging first? | Phase 2b's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
 | Q-11 | Should a daily reset be offered after all, as OpenClaw does? | No | No (§7.2); revisit only if the experiment shows the idle and size triggers miss stale sessions |
 | Q-12 | Should the flush also run after an observed compaction, when the Adapter's summary has already dropped detail? | No | Yes, as specified: it is cheap and can still save what survived. The records of §6.7 will show how often compaction fires before the Size trigger |
-| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1), as an alternative to phase 2b's trigger set, not in addition to it; if adopted it becomes requirements in phase 2b |
+| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1), as an alternative to phase 2b's trigger set, not in addition to it; if adopted it becomes requirements in phase 2b. First run (§9.3, provisional) points this way; confirm on the real Room |
 
 ### 12.2 ADR candidates
 

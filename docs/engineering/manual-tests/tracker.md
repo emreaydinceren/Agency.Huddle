@@ -1236,8 +1236,8 @@ Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a 
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [LONGROOMS-01](long-running-rooms.md#longrooms-01--claude-codes-own-memory-stays-off-for-the-chief-of-staff) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
-| [LONGROOMS-02](long-running-rooms.md#longrooms-02--recall-after-a-fresh-start-at-the-default-catch-up) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
-| [LONGROOMS-03](long-running-rooms.md#longrooms-03--recall-after-a-fresh-start-with-a-40000-token-catch-up) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
-| [LONGROOMS-04](long-running-rooms.md#longrooms-04--repeats-in-a-live-session-after-compact-and-after-a-fresh-start) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
-| [LONGROOMS-05](long-running-rooms.md#longrooms-05--a-fresh-start-with-and-without-a-save-request-first) | 💰 | Active |  | not yet run; runs on a copy of the everyday data folder |
+| [LONGROOMS-01](long-running-rooms.md#longrooms-01--claude-codes-own-memory-stays-off-for-the-chief-of-staff) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
+| [LONGROOMS-02](long-running-rooms.md#longrooms-02--recall-after-a-fresh-start-at-the-default-catch-up) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
+| [LONGROOMS-03](long-running-rooms.md#longrooms-03--recall-after-a-fresh-start-with-a-40000-token-catch-up) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
+| [LONGROOMS-04](long-running-rooms.md#longrooms-04--repeats-in-a-live-session-after-compact-and-after-a-fresh-start) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
+| [LONGROOMS-05](long-running-rooms.md#longrooms-05--a-fresh-start-with-and-without-a-save-request-first) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
