@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 1.2 and 1.3 are live checks that need the Human; 1.5.t and 1.5.i run only if 1.3 finds a working route.
 
-**Status:** 8 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
+**Status:** 10 of 59 tasks Done · 0 of 3 retrospectives done · last updated 2026-10-30.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -30,16 +30,16 @@ never by hand, so the status line stays true.
 | 2.1.i #10 Add the options [Haiku] | | ✔ | |
 | 2.2.t #11 Settings rules [Haiku] | | | ✔ |
 | 2.2.i #12 Implement the rules [Haiku] | | | ✔ |
-| 2.3.t #13 `SessionSettingsStore` [Sonnet] | | ✔ | |
-| 2.3.i #14 Implement `SessionSettingsStore` [Sonnet] | ✔ | | |
+| 2.3.t #13 `SessionSettingsStore` [Sonnet] | | | ✔ |
+| 2.3.i #14 Implement `SessionSettingsStore` [Sonnet] | | ✔ | |
 | **D3. Phase 1: the Catch-up trim** | | | |
 | 3.1.t #15 Token estimate [Haiku] | | | ✔ |
 | 3.1.i #16 Implement the estimate [Haiku] | | | ✔ |
 | 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
-| 3.2.t #17 The trim [Haiku] | ✔ | | |
+| 3.2.t #17 The trim [Haiku] | | ✔ | |
 | 3.2.i #18 Implement the trim [Haiku] | ✔ | | |
 | 3.3.t #19 The `turn.transcriptOmittedOwn` prompt [Haiku] | | | ✔ |
-| 3.3.i #20 Add the prompt [Haiku] | | ✔ | |
+| 3.3.i #20 Add the prompt [Haiku] | | | ✔ |
 | 3.4.t #21 Render the own-omitted line [Sonnet] | ✔ | | |
 | 3.4.i #22 Render it [Sonnet] | ✔ | | |
 | 3.5.t #23 Catch-up reads the settings and trims [Sonnet] | ✔ | | |
