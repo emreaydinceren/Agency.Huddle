@@ -1,6 +1,7 @@
-# Huddle.PersistentMemory — Requirements and Design Specification
+# Huddle.LongRunningRooms — Requirements and Design Specification
 
-**Date:** 2026-10-16 (rewrite; first draft 2026-10-11) · **Status:** Proposed, not built ·
+**Date:** 2026-10-30 (first draft 2026-10-11 as *Huddle.PersistentMemory*; rewritten after review
+2026-10-16; renamed and extended with OpenClaw's prior art 2026-10-30) · **Status:** Proposed, not built ·
 **Decision record:** none yet (§12 lists the ADR candidates) · **Builds on:**
 [the Room Sessions spec](Huddle.RoomSessions-Specifications.md) (cited as *RS §n*),
 [the Commands spec](Huddle.Commands-Specifications.md),
@@ -28,6 +29,9 @@ The decisions to hold on to while reading:
 - **A fresh start, not a squeeze.** When a session degrades, Huddle replaces it with a fresh session
   briefed from the Room's own record, which the Human can read. It never compacts on its own;
   `@Nova /compact` stays the Human's tool (ADR-0035).
+- **Save before forgetting.** Before a live session is retired, it gets one silent Turn to save what
+  matters through the `memory` tool: a **memory flush**, the technique OpenClaw runs before every
+  compaction (§6.6).
 - **Automatic fresh starts are Off for every Room until the Human turns them on.**
 - **Facts live in Memory; the conversation lives in the Transcript.** Durable facts (a decision, a
   preference, a correction) belong to the `memory` App Tool of the
@@ -65,18 +69,41 @@ Teammate forgetting what you decided or falling into a rut.
 | **The record** | A stenographer's full record | Every Message is kept forever, word for word. Nothing here ever changes it | Exists today |
 | **Keep the notepad longer** | Not shredding last month's notes | Claude Code throws a session away after about 30 days unused. Huddle would keep it for a year, so a quiet Room picks up where it left off | Step 0, after a check that it works |
 | **Reread more** | How many pages of the minutes a colleague rereads before a meeting | When a Teammate does start afresh, it rereads as much of the Room as fits a size you choose, not just 20 Messages. Its own old suggestions are skipped first, so it does not repeat itself | Step 1 |
-| **Fresh start** | A clean notebook page, with the recent pages clipped to the front | When a session has gone stale, Huddle retires it and starts a new one that rereads the Room. You can ask for one in a Room at any time; automatic fresh starts are off until you turn them on for a Room | Step 2 |
+| **Fresh start** | A clean notebook page, with the recent pages clipped to the front | When a session has gone stale, Huddle retires it and starts a new one that rereads the Room. You can ask for one in a Room at any time; automatic fresh starts are off until you turn them on for a Room. Then they happen when the notepad gets too big, when the AI has just squeezed it, or when a big notepad has sat unused for an hour (reopening it would cost as much as starting afresh) | Step 2 |
+| **Save before forgetting** | Writing down what matters before you clear your desk | Just before a Teammate's notepad is retired, it gets a quiet moment to write anything worth keeping into its notebook (the `memory` tool). Nothing is posted in the Room; the Room's note says how many notebook pages it saved | Step 2 |
 | **Squeeze** (`@Nova /compact`) | Asking someone to boil their notes down to one page | Already built. You can tell a Teammate to compress its notepad, even saying what to keep. Huddle never does this on its own, because you cannot read or check the squeezed version | Exists today |
 | **The experiment** | Testing a new routine for a month before buying equipment | Before anything bigger is built, you ask a long-running Teammate ten questions about old decisions, and count repeated suggestions, before and after each step. The scores decide whether more is needed | Step 3 |
-| **Handoff note** (only if the experiment says so) | A colleague's handover note before leave | Just before a fresh start, the Teammate writes a short note: decisions, your preferences, open questions, what it was doing. The new session reads it. You can read and edit it | Step 4, conditional |
+| **Handoff note** (only if the experiment says so) | A colleague's handover note before leave | Decisions and preferences are already saved in step 2. If the experiment shows the Teammate still loses track of its open work, it also writes a short note of what it was doing and what is still open. The new session reads it. You can read and edit it | Step 4, conditional |
 | **Saving lasting facts** (the `memory` tool) | The Teammate's own notebook, and the team noticeboard | Being built separately ([Instructions and Memory](Huddle.InstructionsAndMemory-Specifications.md)). The Teammate writes down decisions, your preferences and corrections as it goes, and every new session starts by reading the notebook's index. So what is written there survives every fresh start | Arriving separately, soon |
 | **House rules** (Instructions) | The rules pinned on the office wall | Also in that separate feature: rules you write once, which every session starts with. A fresh start is also how a Teammate picks up rules you changed for everyone | Arriving separately, soon |
 | **Look it up** | Searching your email for the exact words | A later, separate feature. Not part of this plan | Not planned here |
 
+### Why Claude's own squeeze is not enough
+
+Claude Code already compacts a session by itself when it gets nearly full. That covers only part
+of the problem:
+
+- **It cannot help when the notepad is thrown away.** Compaction works inside a live session. After
+  30 days unused, a Restart or a Persona edit, there is nothing left to compact, and the Teammate
+  starts again from the last 20 Messages. Steps 0 and 1 are for exactly this.
+- **It comes too late.** On current models it happens at about 967,000 tokens, while quality starts
+  to slip at tens of thousands. Every answer in between carries the whole, growing notepad, which
+  costs money and drifts.
+- **You cannot check it.** Claude decides what to keep, nobody sees the summary, and it does not
+  point back to the Messages it came from.
+- **It does not break a rut.** A squeezed session is the same session on the same path. A fresh
+  start, rereading the Room's own words, is what gets a Teammate off it.
+- **It is Claude-only.** A Teammate on a local model has no compaction at all.
+
+If the experiment (step 3) shows that Claude's squeeze plus your own occasional `@Nova /compact`
+is good enough, automatic fresh starts stay off and nothing bigger is built. Steps 0 and 1 are worth doing either way: they fix the lost
+notepad, which compaction can never touch.
+
 ### What it costs, and what can go wrong
 
-- **Money.** Rereading more of a Room makes a fresh session's first answer cost more. A fresh start
-  is rare (at most a few a day) and is shown in the Room.
+- **Money.** Rereading more of a Room makes a fresh session's first answer cost more, and saving
+  before a fresh start costs one extra, quiet answer. A fresh start is rare (at most a few a day)
+  and is shown in the Room.
 - **Losing "how".** A fresh session rereads what was *said*, not the tools the Teammate used or its
   reasoning. That is why Huddle keeps a healthy session for as long as it can and starts fresh only
   when the old one has degraded.
@@ -92,7 +119,14 @@ and a second opinion on 2026-10-16 found that published benchmarks favour reread
 words over summaries at these sizes, that automatic fact-saving opens a door to planted
 instructions, and that the fresh start was the best-supported idea but was scheduled last. This
 version puts the cheap, proven steps first and makes any memory layer earn its place.
-[Appendix A](#appendix-a-what-changed-from-the-first-draft) lists every change and why.
+
+On 2026-10-30 it was compared with OpenClaw, an open-source agent runtime that keeps one session
+going for good and compacts it. Huddle cannot do the same, because Claude Code, not Huddle, owns
+the session and deletes it after 30 days unused. But four of OpenClaw's habits were worth taking,
+and they are now in step 2: saving to memory before it forgets, starting afresh after a long idle
+spell, counting each session's fresh starts, and telling you what to do when it cannot help itself. The page was also renamed from *Persistent Memory* to *Long-Running Rooms*, because "memory"
+now means the Teammate's notebook. [Appendix A](#appendix-a-what-changed-from-the-first-draft) lists
+every change and why.
 
 ---
 
@@ -166,6 +200,7 @@ spec, not before.
 | **Fresh start** | Huddle closing one Room Session on purpose and opening a new one for that Room, whose first Turn carries Catch-up. Automatic or asked for by the Human | rotation (fine in prose about the design), reset, Restart (that is the card's button, which forgets every Room) |
 | **Catch-up budget** | The most of the Room's Transcript, in estimated tokens, a session's first Turn rereads | context size, window |
 | **Degraded** | A Room Session that has met a fresh-start trigger (§6.2) | full, stale, broken |
+| **Memory flush** | One silent Turn, just before a live session is retired, in which the Agent saves anything durable through the `memory` App Tool. Its text is never posted (§6.6). The term is OpenClaw's | handoff (that is phase 4's note), save turn, checkpoint |
 | **Handoff note** | *Phase 4, conditional.* A Markdown note the old session writes just before a Fresh start, read by the new one | summary on its own, digest, memory |
 
 ### 1.5 Non-goals
@@ -186,7 +221,8 @@ spec, not before.
    summary of them.
 2. **Prefer resume while healthy; start fresh when degraded.** A resumed session keeps tool calls
    and reasoning that a reread cannot restore. Huddle starts fresh only on a trigger, never on a
-   clock alone.
+   clock alone: the idle trigger also needs the session to be large (§6.2), and a daily reset is
+   deliberately not offered (§7.2).
 3. **Off until chosen** for anything automatic. A Human-asked fresh start is always available.
 4. **Visible.** Every fresh start is announced in the Room, and the Human can read exactly what the
    new session was given.
@@ -210,50 +246,55 @@ unless a recorded reason says otherwise.
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| PM-R1 | Nothing in this feature MUST edit, reorder or delete a Transcript line. | all |
-| PM-R2 | With every setting at its default, the system prompt and every Turn prompt MUST be byte-identical to today's, and the existing goldens MUST stay unchanged. | all |
-| PM-R3 | Nothing in this feature MUST make a model call other than an Agent's own Turns (and, in phase 4, the handoff Turn). | all |
+| LR-R1 | Nothing in this feature MUST edit, reorder or delete a Transcript line. | all |
+| LR-R2 | With every setting at its default, the system prompt and every Turn prompt MUST be byte-identical to today's, and the existing goldens MUST stay unchanged. | all |
+| LR-R3 | Nothing in this feature MUST make a model call other than an Agent's own Turns, the memory flush of LR-R26 and, in phase 4, the handoff Turn. | all |
 
 ### 3.2 Retention and isolation (phase 0)
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| PM-R4 | Before phase 2 ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). | 0 |
-| PM-R5 | A configured Adapter entry whose `UsesToolNamePrefix` is true and whose `IsolateUserSettings` is false SHOULD log one Warning at start-up naming the entry. | 0 |
-| PM-R6 | If V0-2 (§4.1) shows session retention can be set for an isolated session, Huddle MUST set it to `Team:Acp:SessionRetentionDays` (default 365) for every Claude-profile session. If it cannot, the finding MUST be recorded and nothing else in this spec changes. | 0 |
+| LR-R4 | Before phase 2 ships, the isolation of a Claude-profile session from the Human's `~/.claude` settings and auto memory MUST be verified live (Task 14.3.m), and the result recorded in [known-limits.md](engineering/known-limits.md). | 0 |
+| LR-R5 | A configured Adapter entry whose `UsesToolNamePrefix` is true and whose `IsolateUserSettings` is false SHOULD log one Warning at start-up naming the entry. | 0 |
+| LR-R6 | If V0-2 (§4.1) shows session retention can be set for an isolated session, Huddle MUST set it to `Team:Acp:SessionRetentionDays` (default 365) for every Claude-profile session. If it cannot, the finding MUST be recorded and nothing else in this spec changes. | 0 |
 
 ### 3.3 Catch-up budget (phase 1)
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| PM-R7 | A first Turn's Catch-up MUST be bounded by `Team:Acp:TranscriptCatchUpTokens` (estimated tokens) as well as by `TranscriptCatchUpMessages` (a Message cap). Whichever is reached first ends it. | 1 |
-| PM-R8 | Tokens MUST be estimated at three characters per token, rounding up, and the estimate MUST be called an estimate wherever it is shown. | 1 |
-| PM-R9 | Both values MUST be settable on the Settings page and MUST apply from the next first Turn without restarting the app, a Persona or a session. A Settings value overrides the configuration default. | 1 |
-| PM-R10 | Changing either value MUST NOT forget any Room Session and MUST NOT be part of the `Persona` record, so `PersonaSupervisor.NeedsRestart` never fires on it. | 1 |
-| PM-R11 | When the budget cuts the Catch-up, the receiving Agent's **own** Messages MUST be dropped before anyone else's, oldest first, except its newest `CatchUpKeepOwnMessages` (default 5). Only then are other Messages dropped, oldest first. The kept Messages stay in Transcript order. | 1 |
-| PM-R12 | The existing `turn.transcriptOmitted` line MUST count every dropped Message. When some dropped Messages were the Agent's own, a proposed `turn.transcriptOmittedOwn` line MUST say how many. | 1 |
-| PM-R13 | The Message cap MUST accept 1 to 2000 and the token budget 1000 to 150000. A value outside the range MUST be refused with a message, never clamped silently. (A value of 0 is not offered: `HandleReadTranscriptAsync` refuses `Max < 1`.) | 1 |
-| PM-R14 | The defaults MUST stay `20` Messages and a token budget large enough not to bind at 20 Messages, so PM-R2 holds until the Human changes them. | 1 |
+| LR-R7 | A first Turn's Catch-up MUST be bounded by `Team:Acp:TranscriptCatchUpTokens` (estimated tokens) as well as by `TranscriptCatchUpMessages` (a Message cap). Whichever is reached first ends it. | 1 |
+| LR-R8 | Tokens MUST be estimated at three characters per token, rounding up, and the estimate MUST be called an estimate wherever it is shown. | 1 |
+| LR-R9 | Both values MUST be settable on the Settings page and MUST apply from the next first Turn without restarting the app, a Persona or a session. A Settings value overrides the configuration default. | 1 |
+| LR-R10 | Changing either value MUST NOT forget any Room Session and MUST NOT be part of the `Persona` record, so `PersonaSupervisor.NeedsRestart` never fires on it. | 1 |
+| LR-R11 | When the budget cuts the Catch-up, the receiving Agent's **own** Messages MUST be dropped before anyone else's, oldest first, except its newest `CatchUpKeepOwnMessages` (default 5). Only then are other Messages dropped, oldest first. The kept Messages stay in Transcript order. | 1 |
+| LR-R12 | The existing `turn.transcriptOmitted` line MUST count every dropped Message. When some dropped Messages were the Agent's own, a proposed `turn.transcriptOmittedOwn` line MUST say how many. | 1 |
+| LR-R13 | The Message cap MUST accept 1 to 2000 and the token budget 1000 to 150000. A value outside the range MUST be refused with a message, never clamped silently. (A value of 0 is not offered: `HandleReadTranscriptAsync` refuses `Max < 1`.) | 1 |
+| LR-R14 | The defaults MUST stay `20` Messages and a token budget large enough not to bind at 20 Messages, so LR-R2 holds until the Human changes them. | 1 |
 
 ### 3.4 Fresh starts (phase 2)
 
 | Id | Requirement | Phase |
 | --- | --- | --- |
-| PM-R15 | The Human MUST be able to ask for a fresh start of one Teammate's session in one Room, from the Room, without affecting that Teammate's other Rooms. | 2 |
-| PM-R16 | Automatic fresh starts MUST be a per-Room setting, **Off** for every Room, existing and new, the Chief of Staff's included. Only the Human can turn it on; no App Tool, Persona field, Team type or Agent can. | 2 |
-| PM-R17 | With automatic fresh starts on, a Room Session MUST be marked **degraded** at the end of a Turn when any trigger of §6.2 fires. | 2 |
-| PM-R18 | A fresh start MUST happen only between Turns, immediately before the next item starts, and never while a Question or Form waits in that Room. | 2 |
-| PM-R19 | A fresh start MUST close the old session, forget its `RoomSessionStore` entry, and open a new session through the existing lazy-open path, so its first Turn carries Catch-up at the configured budget. | 2 |
-| PM-R20 | A fresh start MUST NOT count as a Turn failure, touch the failure streak or post a Transcript Message. | 2 |
-| PM-R21 | Every fresh start MUST be shown in the Room as a Room-level note (ADR-0012's slot), naming the Teammate, the reason and what the new session reread, for example *Nova started afresh after its conversation was compacted. It reread the last 38 Messages (about 31,000 tokens).* | 2 |
-| PM-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. | 2 |
-| PM-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room Session per local day. A trigger past the limit is logged and skipped, never queued. | 2 |
-| PM-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2 |
-| PM-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2 |
+| LR-R15 | The Human MUST be able to ask for a fresh start of one Teammate's session in one Room, from the Room, without affecting that Teammate's other Rooms. | 2 |
+| LR-R16 | Automatic fresh starts MUST be a per-Room setting, **Off** for every Room, existing and new, the Chief of Staff's included. Only the Human can turn it on; no App Tool, Persona field, Team type or Agent can. | 2 |
+| LR-R17 | With automatic fresh starts on, a Room Session MUST be marked **degraded** at the end of a Turn when any trigger of §6.2 fires. | 2 |
+| LR-R18 | A fresh start MUST happen only between Turns, immediately before the next item starts, and never while a Question or Form waits in that Room. | 2 |
+| LR-R19 | A fresh start MUST close the old session, forget its `RoomSessionStore` entry, and open a new session through the existing lazy-open path, so its first Turn carries Catch-up at the configured budget. | 2 |
+| LR-R20 | A fresh start MUST NOT count as a Turn failure, touch the failure streak or post a Transcript Message. | 2 |
+| LR-R21 | Every fresh start MUST be shown in the Room as a Room-level note (ADR-0012's slot), naming the Teammate, the reason and what the new session reread, for example *Nova started afresh after its conversation was compacted. It reread the last 38 Messages (about 31,000 tokens).* | 2 |
+| LR-R22 | The text a fresh session's first Turn carried MUST be viewable from that note, as sent. | 2 |
+| LR-R23 | Automatic fresh starts MUST be limited to `FreshStarts:MaxPerDay` (default 3) per Room Session per local day. A trigger past the limit is logged and skipped, never queued. | 2 |
+| LR-R24 | A Turn that is a Human-run Adapter command (`@Nova /compact`) MUST NOT trigger a fresh start: the Human chose compaction. | 2 |
+| LR-R25 | With automatic fresh starts Off, no trigger MUST be evaluated for that Room, so its behaviour is exactly today's. | 2 |
+| LR-R26 | Before a fresh start of a **live** session (the Size, Observed compaction and Turn-count triggers, and *Start afresh*), the session MUST get one memory flush (§6.6) when the `memory` App Tool is offered to the Agent and `FreshStarts:FlushToMemory` is true. At most one flush per fresh start. Its text MUST never be posted, and it MUST NOT count as a Turn failure. | 2 |
+| LR-R27 | A flush that fails, is refused or passes `FreshStarts:FlushTimeoutSeconds` MUST NOT block the fresh start: it is logged, and the Room note says the Teammate could not save first. | 2 |
+| LR-R28 | With automatic fresh starts on, a Room Session MUST be started afresh, not resumed and not flushed, when its next item arrives after `FreshStarts:IdleMinutes` without a Turn **and** its last reported context use was at least `FreshStarts:IdleAboveTokens`. | 2 |
+| LR-R29 | Each Room Session's fresh-start count, last reason, the context use at that moment and its time MUST be recorded (§6.7), and the Room note MUST show the count. | 2 |
+| LR-R30 | When a degraded Room Session cannot be started afresh (the daily limit is reached, or a Question or Form keeps it waiting past one item), the Room MUST say so once per degraded mark and suggest `@Name /compact` or *Start afresh*. | 2 |
 
 ### 3.5 Handoff note (phase 4, conditional)
 
-PM-R26 and onward are written only if the experiment (§9.1) shows phases 0 to 2 fall short. §9.2
+LR-R31 and onward are written only if the experiment (§9.1) shows phases 0 to 2 fall short. §9.2
 sketches the candidate.
 
 ---
@@ -303,7 +344,7 @@ Phase 1 adds a proposed `ISessionSettings` (one implementation, `SessionSettings
 `{DataDir}/session-settings.json`), read at that point per first Turn:
 
 1. Ask the server for up to the **Message cap**, as today (`ReadTranscript.Max`). No wire change.
-2. Trim the returned Messages to the **token budget** in the runner, by PM-R11's order.
+2. Trim the returned Messages to the **token budget** in the runner, by LR-R11's order.
 3. Render with today's header and `Omitted` line, plus `turn.transcriptOmittedOwn` when it applies.
 
 `TranscriptTail` is already capped at half of `JsonLineStream.MaxLineBytes` (512 KB), roughly
@@ -327,7 +368,7 @@ keeps the thread of what it last said.
 
 ### 5.4 Settings
 
-A new **Settings › Memory** tab: *Messages a fresh session rereads* (cap) and *Size of what a fresh
+A new **Settings › Sessions** tab: *Messages a fresh session rereads* (cap) and *Size of what a fresh
 session rereads* (budget, shown as "about N tokens"), each with its default and a Reset. Copy
 follows [language.md](engineering/language.md): "you" for the Human, never "user", "chat" or
 "conversation". Check [agents/MudBlazorDesign.md](../agents/MudBlazorDesign.md) before building.
@@ -340,8 +381,8 @@ follows [language.md](engineering/language.md): "you" for the Human, never "user
 
 | Way | Who | Available |
 | --- | --- | --- |
-| **Start afresh** in the Room menu, per Teammate | The Human | Every Room, always (PM-R15) |
-| Automatic, on a trigger | Huddle | Only in a Room with automatic fresh starts on (PM-R16) |
+| **Start afresh** in the Room menu, per Teammate | The Human | Every Room, always (LR-R15) |
+| Automatic, on a trigger | Huddle | Only in a Room with automatic fresh starts on (LR-R16) |
 
 *Start afresh* is the Room-scoped sibling of the card's Restart: it forgets one Room Session, not
 all of them. It needs a proposed additive Envelope from server to runner, `StartAfresh(RoomId,
@@ -350,14 +391,15 @@ changing it).
 
 ### 6.2 Triggers
 
-Evaluated at the end of each ordinary Turn (never a Command Turn, PM-R24), only with automatic
-fresh starts on:
+Only with automatic fresh starts on. The first three are evaluated at the end of each ordinary Turn
+(never a Command Turn, LR-R24); the idle trigger is evaluated when the next item arrives:
 
 | Trigger | Fires when | Default |
 | --- | --- | --- |
 | **Observed compaction** | `Used` falls by more than `FreshStarts:CompactionDropPercent` between two `UsageUpdated` within one ordinary Turn. The Adapter has just replaced the context with its own summary; Huddle replaces it with the Room's own words instead | 50 % |
 | **Size** | `lastUsed` reaches `FreshStarts:AboveTokens` | 200,000 |
 | **Turn count**, fallback | The session has completed `FreshStarts:AfterTurns` Turns **and** has reported no usage at all | 80 |
+| **Idle and large** | The next item arrives more than `FreshStarts:IdleMinutes` after the session's last Turn, **and** its last reported context use was at least `FreshStarts:IdleAboveTokens` (LR-R28) | 60 minutes, 50,000 tokens |
 
 - The size trigger is absolute, not a percentage of `Size`. `Size` is the model's window (1M on
   current Claude models), not the point where Claude Code compacts (about 967K, or wherever the
@@ -366,6 +408,17 @@ fresh starts on:
   as a fall.
 - The Turn-count fallback exists for an Adapter such as `agency-acp` on a local model, which reports
   no usage and has no compaction to observe.
+- With the Size trigger well below Claude Code's compaction point, it normally fires first, so the
+  flush (§6.6) runs before any detail is lost. The Observed compaction trigger then catches the
+  cases where compaction comes earlier, for example when the Human's `autoCompactWindow` is lower.
+- **Why idle and large.** The prompt cache lasts about an hour on a subscription and five minutes on
+  an API key. Resuming a large session after that reloads its whole context cold, which costs about
+  as much as a fresh start and keeps the stale context. Both conditions are required, so a small
+  session is always resumed, however long it was idle (principle 2). The idle trigger needs the last
+  context use to survive an app restart, so `RoomSessionEntry` gains a trailing optional
+  `LastUsedTokens`, written at Turn end beside `LastTurnUtc`, the same way it gained `WorkMode`.
+  There is no flush: the session is not live, and resuming it only to flush would pay the cold
+  reload this trigger avoids.
 - A degraded mark set by one trigger is cleared by the fresh start; triggers are not re-evaluated
   until the new session's first Turn has finished.
 
@@ -374,17 +427,20 @@ fresh starts on:
 At the next item admitted to a degraded Room Session (or at once, for *Start afresh*, when the
 session is idle):
 
-1. If a Question or Form waits in the Room, wait; the mark stays (PM-R18).
-2. If today's automatic count has reached `MaxPerDay`, clear the mark, log, and run the item on
-   the old session (PM-R23). *Start afresh* is never limited.
-3. Close the session, call `RoomSessionStore.Forget(name, roomId)`, and open fresh through the
-   existing lazy-open path, so `firstTurnPending` is set (PM-R19).
-4. The item's Turn carries Catch-up at the configured budget (§5). The new session's system prompt
+1. If a Question or Form waits in the Room, wait; the mark stays (LR-R18). If it is still waiting
+   when the next item arrives, the Room says so (LR-R30).
+2. If today's automatic count has reached `MaxPerDay`, clear the mark, log, run the item on
+   the old session (LR-R23), and post the fallback note (LR-R30). *Start afresh* is never limited.
+3. Unless the trigger was Idle and large, run the memory flush on the old session (§6.6, LR-R26).
+4. Close the session, call `RoomSessionStore.Forget(name, roomId)`, and open fresh through the
+   existing lazy-open path, so `firstTurnPending` is set (LR-R19). Record the fresh start (§6.7).
+5. The item's Turn carries Catch-up at the configured budget (§5). The new session's system prompt
    is composed afresh, so it also carries the current Instructions and Memory indexes, including
    Huddle-wide Instructions edits that a running session never sees (Instructions and Memory §3.4).
-5. Send the Room note (PM-R21) through a proposed additive Envelope, `FreshStartNote(RoomId,
-   AgentName, Reason, MessageCount, EstimatedTokens)`, and write the first Turn's text to
-   `{DataDir}/room-sessions/last-catch-up/{Name}/{roomId}.md` for PM-R22.
+6. Send the Room note (LR-R21) through a proposed additive Envelope, `FreshStartNote(RoomId,
+   AgentName, Reason, MessageCount, EstimatedTokens, FlushOutcome, FilesSaved, FreshStartCount)`,
+   and write the first Turn's text to
+   `{DataDir}/room-sessions/last-catch-up/{Name}/{roomId}.md` for LR-R22.
 
 The old session is not deleted from the Adapter in v1. ACP's `session/delete` is stable and
 `claude-agent-acp` advertises it, but `IAgentSession` has no delete today and `Huddle.Acp` belongs
@@ -395,6 +451,8 @@ to the ACP effort (Q-4).
 A fresh session's first Turn is a cold start: no prompt cache, the system prompt plus the Catch-up.
 That refill is real spend and is counted against the token Budget like any first Turn. `MaxPerDay`
 bounds it. Rotating rarely, on degradation only, keeps the cost near what one compaction costs.
+The memory flush adds one more Turn on the old session; that session is warm, so the flush is
+mostly cache reads plus the memory writes. The idle trigger skips the flush for exactly this reason.
 
 ### 6.5 The Room setting
 
@@ -404,19 +462,98 @@ known trap (rules.md) and the runner already reads `{DataDir}` stores such as `R
 Shown in the Room menu as *Start afresh automatically when a Teammate's conversation gets too long*,
 with a link to §13's guidance.
 
+### 6.6 The memory flush
+
+Adapted from OpenClaw, which runs a silent turn before every auto-compaction, once per compaction
+cycle, so the agent can write durable state to its memory files before the context is summarised.
+
+| Aspect | Huddle's rule |
+| --- | --- |
+| When | Step 3 of §6.3: on the old, live session, after the trigger and before it is closed. Once per fresh start (LR-R26) |
+| Skipped | When the `memory` App Tool is not offered to the Agent, when `FreshStarts:FlushToMemory` is false, for the Idle and large trigger, and for a shared session (no Room Session to retire) |
+| Shape | A proposed `WorkItemKind.Flush` whose prompt is the proposed Prompt `turn.memoryFlush`, in `Live` timing. Its default: *This conversation is about to be closed and a fresh one started that rereads the Room. Before that happens, save anything durable you have not saved yet (decisions, the Human's preferences, corrections, facts about the people and work) with the {{memoryTool}} tool, following your memory rules. Do not reply to the Room.* The tool name is substituted in code (rules.md) |
+| Silent | Its text is discarded, never posted (OpenClaw's `NO_REPLY`, made structural rather than a magic reply). Its tool calls show in Turn detail like any Turn's |
+| Visible | The memory writes are ordinary `memory` tool writes: attributed to the Agent, listed as File Changes in its other Rooms (Instructions and Memory §6.1), and readable in the Library. The Room note counts them: *Nova saved 2 memory files, then started afresh…* |
+| Bounded | `FreshStarts:FlushTimeoutSeconds` (120). A Stop by the Human cancels the flush and the pending item, as any Stop does; the degraded mark stays. A failed, refused or timed-out flush never blocks the fresh start (LR-R27) |
+| After an observed compaction | The flush still runs, but on the Adapter's compacted context, so it can save only what survived. The Size trigger is set low enough to fire first (§6.2) |
+| Security | The flush writes only through the `memory` tool, so ADR-0071's confinement, read-before-write and manager-only Team Memory apply. It adds no new write path, so no new route for planted text in the Room to reach a shared scope |
+
+### 6.7 Records and the fallback note
+
+Adapted from OpenClaw's per-session `compactionCount` and its "retry, `/compact` or `/new`" advice
+when overflow recovery fails.
+
+- **Records (LR-R29).** `room-fresh-starts.json` keeps, per Room and Agent Name: `count`,
+  `lastReason`, `lastContextTokens` (the context use that triggered it) and `lastUtc`. They feed
+  the Room note (*This is Nova's 3rd fresh start in this Room*) and the tuning of Q-5. A Persona
+  rename moves its key (LR-E11).
+- **Fallback note (LR-R30).** When a degraded session cannot start afresh, the Room says once:
+  *Nova's conversation is getting long, but it cannot start afresh right now (daily limit
+  reached). You can run @Nova /compact or choose Start afresh.* The same Room-level slot as the
+  fresh-start note (ADR-0012).
+
 ---
 
 ## 7. Compaction's place
 
+### 7.1 Compaction and fresh starts
+
+**Why automatic compaction alone does not meet the goal.** Claude Code compacts on its own near
+967K tokens on 1M-window models (`autoCompactWindow` moves it). That leaves four gaps this spec
+exists to fill:
+
+| Gap | Why compaction cannot fill it | Filled by |
+| --- | --- | --- |
+| Session loss (retention, Restart, Persona edit) | Compaction needs a live session; a lost one has nothing to compact | Phase 0 (retention), phase 1 (budgeted Catch-up) |
+| Degradation well before 967K | It fires far past the point where quality slips, and every Turn until then carries the full context | Phase 2's size trigger |
+| An unreviewed, uncited summary | The Adapter writes it, nobody sees it, and it does not cite Messages | Phase 2: a fresh start rereads the Transcript, and the Room note shows what was reread |
+| The rut | The compacted session continues the same trajectory | A fresh start resets it (Laban et al., Appendix B) |
+| Adapters without compaction | `agency-acp` and local models have none | Phase 2's Turn-count trigger |
+
+If the experiment (§9.1) shows automatic compaction plus the Human's `/compact` is enough,
+automatic fresh starts stay off and phase 4 is not built. Phases 0 and 1 stand regardless, because
+session loss is outside compaction's reach.
+
 | Option | Decision | Why |
 | --- | --- | --- |
-| The Human runs `@Nova /compact keep the decisions and open questions` | **Keep, and document it** in the Settings › Memory tab and §13 | Already built, costs nothing new, and the Human can steer what is kept. But the summary is the Adapter's, invisible, Claude-only and not in the Transcript: a tool, not the strategy |
+| The Human runs `@Nova /compact keep the decisions and open questions` | **Keep, and document it** in the Settings › Sessions tab and §13 | Already built, costs nothing new, and the Human can steer what is kept. But the summary is the Adapter's, invisible, Claude-only and not in the Transcript: a tool, not the strategy |
 | Huddle compacts automatically | **No** | It would reverse ADR-0035 ("only the Human") for a worse result than a fresh start: an unreviewable summary with no link back to the Messages, on one Adapter only |
 | An observed compaction triggers a fresh start | **Yes**, the main trigger (§6.2) | The Adapter has already thrown detail away; replacing its summary with the Room's own words costs one cold Turn and makes the trade visible |
 | A fresh start instead of compaction | **Yes**, by default where it is on | Reviewable, adapter-agnostic, and it moves the model off the path it was stuck on, which compaction does not |
 
-A Human who runs `/compact` keeps the compacted session: PM-R24 makes sure Huddle does not undo the
+A Human who runs `/compact` keeps the compacted session: LR-R24 makes sure Huddle does not undo the
 choice by starting afresh straight after.
+
+**Tool-result pruning is out of reach.** Trimming or clearing old tool results inside a live
+context, as OpenClaw's session pruning or Anthropic's context editing does, happens inside the
+Adapter's session, which Huddle does not own. Whatever the Adapter does there is its own business.
+A fresh start clears tool-result bloat as a side effect, because the new session rereads Messages
+only.
+
+### 7.2 Prior art: OpenClaw
+
+OpenClaw (docs.openclaw.ai, read 2026-10-30) is an agent runtime that owns its sessions: it stores
+each transcript in its own SQLite database, keeps one session per key **forever by default**, and
+bounds it by compacting older history into a persisted summary while keeping about 20,000 recent
+tokens. Huddle cannot follow that model: Claude Code owns the session, Huddle cannot keep, read or
+edit its history, and Claude Code deletes it after 30 days unused. So this spec relies on retention
+(phase 0) plus a reread of Huddle's own Transcript (phases 1 and 2) instead.
+
+| OpenClaw technique | Taken? | Where, or why not |
+| --- | --- | --- |
+| Memory flush: a silent turn before auto-compaction that writes durable state to memory, once per cycle, on by default | **Yes** | §6.6, LR-R26 and LR-R27; before a fresh start rather than before a compaction Huddle cannot intercept |
+| Idle reset (`session.reset.mode: "idle"`) | **Yes, with a size condition** | §6.2, LR-R28. Idle alone would discard healthy sessions (principle 2) |
+| Daily reset (`mode: "daily"`, default 04:00) | **No** | A clock alone retires healthy sessions and their tool context; the experiment can revisit it |
+| `compactionCount` and token counters per session | **Yes** | §6.7, LR-R29 |
+| "Retry, `/compact` or `/new`" when recovery fails | **Yes** | §6.7, LR-R30 |
+| `/new` and `/reset` | **Already** | *Start afresh* (§6.1); `/compact` with instructions already exists |
+| `keepRecentTokens` 20,000 after compaction | **Reference only** | A product default, not a measurement. It sits beside the experiment's 40,000 (§9.1) |
+| Pruning thresholds: server-side from max(50,000, 30 % of the window); client-side nothing below about 30 % use, hard clear at about 50 % | **Reference only** | They govern tool results, not the whole context, but they sit far below 200,000 on a 1M window, so 200,000 is treated as a ceiling to tune down from (Q-5) |
+| Session pruning of tool results | **Out of reach** | §7.1 |
+| Compaction quality guard, tool-pair-safe cuts | **Not needed** | Huddle writes no summary; a reread is the Room's own words |
+| "Dreaming": background consolidation into `MEMORY.md` | **No** | Removed after review (Appendix A): benchmarks and injection risk |
+| `memory_search`, `sessions_search` | **Elsewhere** | The `search` App Tool covers the Library; a Transcript `recall` stays a later feature (ADR-0051) |
+| Forks, resident history, store maintenance | **Not applicable** | OpenClaw's own session store and threading; Huddle has no equivalent |
 
 ---
 
@@ -424,20 +561,26 @@ choice by starting afresh straight after.
 
 | # | Case | Behaviour |
 | --- | --- | --- |
-| PM-E1 | Resume answers "not found" (RS E-1) | Unchanged, except the fresh session's Catch-up uses the phase 1 budget |
-| PM-E2 | Resume throws (RS E-2) | Unchanged |
-| PM-E3 | `ReadTranscript` refused or timed out (RS E-3) | Unchanged: the Turn goes ahead without the block. After a fresh start, the Room note says *It could not reread the Room* |
-| PM-E4 | A successful resume | Unchanged: the gap after the stored `LastMessageId`, now also bounded by the budget. No fresh start is triggered by a resume |
-| PM-E5 | `SessionPerRoom: false` (shared session, `RoomSession.RoomId` null) | No Catch-up today and none here; no trigger is evaluated. *Start afresh* is not offered for it |
-| PM-E6 | A Human's `/compact` drops `Used` | Not a trigger (PM-R24) |
-| PM-E7 | Restart, or a Persona edit that forgets every Room Session | Unchanged (`ForgetAll`) |
-| PM-E8 | The Human clicks Stop during a fresh session's first Turn | A Stop like any other; the new session stays |
-| PM-E9 | Several Teammates in one Room | Each Room Session is judged and started afresh on its own |
-| PM-E10 | The Room is archived or deleted | Archiving changes nothing (rules.md: archiving never reaches delivery). Deleting a Room drops its `room-fresh-starts.json` key and its `last-catch-up` files |
-| PM-E11 | A Persona is renamed | `PersonaRenameCascade` moves `last-catch-up/{Name}/`, above the "no Agent row" early return (rules.md) |
-| PM-E12 | `session-settings.json` corrupt | Ignored with a Warning; configuration defaults apply; Settings shows the error |
-| PM-E13 | A Room's Transcript is larger than the budget by far | Only the newest part within the budget is reread; the `Omitted` lines say how much was left out |
-| PM-E14 | Two triggers fire in one Turn | One fresh start; the note names the first in §6.2's order |
+| LR-E1 | Resume answers "not found" (RS E-1) | Unchanged, except the fresh session's Catch-up uses the phase 1 budget |
+| LR-E2 | Resume throws (RS E-2) | Unchanged |
+| LR-E3 | `ReadTranscript` refused or timed out (RS E-3) | Unchanged: the Turn goes ahead without the block. After a fresh start, the Room note says *It could not reread the Room* |
+| LR-E4 | A successful resume | Unchanged: the gap after the stored `LastMessageId`, now also bounded by the budget. No fresh start is triggered by a resume |
+| LR-E5 | `SessionPerRoom: false` (shared session, `RoomSession.RoomId` null) | No Catch-up today and none here; no trigger is evaluated. *Start afresh* is not offered for it |
+| LR-E6 | A Human's `/compact` drops `Used` | Not a trigger (LR-R24) |
+| LR-E7 | Restart, or a Persona edit that forgets every Room Session | Unchanged (`ForgetAll`) |
+| LR-E8 | The Human clicks Stop during a fresh session's first Turn | A Stop like any other; the new session stays |
+| LR-E9 | Several Teammates in one Room | Each Room Session is judged and started afresh on its own |
+| LR-E10 | The Room is archived or deleted | Archiving changes nothing (rules.md: archiving never reaches delivery). Deleting a Room drops its `room-fresh-starts.json` key and its `last-catch-up` files |
+| LR-E11 | A Persona is renamed | `PersonaRenameCascade` moves `last-catch-up/{Name}/`, above the "no Agent row" early return (rules.md) |
+| LR-E12 | `session-settings.json` corrupt | Ignored with a Warning; configuration defaults apply; Settings shows the error |
+| LR-E13 | A Room's Transcript is larger than the budget by far | Only the newest part within the budget is reread; the `Omitted` lines say how much was left out |
+| LR-E14 | Two triggers fire in one Turn | One fresh start; the note names the first in §6.2's order |
+| LR-E15 | The flush times out, fails or is refused | The fresh start goes ahead; the note says *Nova could not save first* (LR-R27) |
+| LR-E16 | The Human clicks Stop during a flush | The flush and the pending item are cancelled as any Stop; the degraded mark stays, so the next item tries again |
+| LR-E17 | The Agent's Adapter does not offer the `memory` tool | No flush; the fresh start runs as before (§6.6) |
+| LR-E18 | The flush writes nothing | Normal: there was nothing new to save. The note omits the count |
+| LR-E19 | The app restarts while a large Room Session is idle | `LastUsedTokens` and `LastTurnUtc` on the stored entry let the idle trigger fire on the next item, opening fresh instead of resuming (LR-R28) |
+| LR-E20 | A stored entry written before this feature has no `LastUsedTokens` | The idle trigger does not fire for it; it resumes as today |
 
 ---
 
@@ -447,9 +590,9 @@ Each phase ships on its own and leaves the app coherent if the next never comes.
 
 | Phase | Ships | Acceptance |
 | --- | --- | --- |
-| **0. Retention and isolation** | Live checks V0-1 and V0-2; `SessionRetentionDays` if V0-2 passes; PM-R5's Warning | PM-R4 to PM-R6. Findings recorded in known-limits.md |
-| **1. Catch-up by budget** | `ISessionSettings`, the token trim, `turn.transcriptOmittedOwn`, Settings › Memory | PM-R7 to PM-R14. Goldens unchanged at the defaults; a changed value reaches the next first Turn, fresh or resumed, without a restart |
-| **2. Fresh starts** | *Start afresh*, the per-Room setting, the three triggers, the Room note, `last-catch-up` | PM-R15 to PM-R25. A Room with the setting Off behaves exactly as phase 1 |
+| **0. Retention and isolation** | Live checks V0-1 and V0-2; `SessionRetentionDays` if V0-2 passes; LR-R5's Warning | LR-R4 to LR-R6. Findings recorded in known-limits.md |
+| **1. Catch-up by budget** | `ISessionSettings`, the token trim, `turn.transcriptOmittedOwn`, Settings › Sessions | LR-R7 to LR-R14. Goldens unchanged at the defaults; a changed value reaches the next first Turn, fresh or resumed, without a restart |
+| **2. Fresh starts** | *Start afresh*, the per-Room setting, the four triggers, the memory flush, the records and the fallback note, the Room note, `last-catch-up`, `LastUsedTokens` on `RoomSessionEntry` | LR-R15 to LR-R30. A Room with the setting Off behaves exactly as phase 1, except that *Start afresh* is offered and flushes |
 | **3. The experiment** | A manual test page and a recorded result (§9.1); no code | A result recorded, with the go or no-go for phase 4 |
 | **4. Handoff note** | Only on a "go" from phase 3; specified then | To be written |
 
@@ -458,7 +601,7 @@ Each phase ships on its own and leaves the app coherent if the next never comes.
 Run on a real long-running Room (the Chief of Staff's is the intended one), with phase 0 V0-1
 passed so Claude Code's own memory is not in play, and with the `memory` App Tool live, because
 that is how the Room will really run. Record everything in
-`engineering/manual-tests/room-memory.md` (written with phase 1, listed in [docs/Index.md](Index.md)
+`engineering/manual-tests/long-running-rooms.md` (written with phase 1, listed in [docs/Index.md](Index.md)
 in the same change).
 
 1. **Recall score.** From the Transcript, pick 10 facts or decisions older than the last 20
@@ -470,7 +613,12 @@ in the same change).
 4. **Rut score.** In a live session, ask "suggest three things we haven't tried yet" five Turns
    apart, three times; count suggestions that repeat. Then run `@Teammate /compact keep the
    decisions and open questions` and repeat the count. Then *Start afresh* and repeat it.
-5. **Decision.**
+5. **The flush, A/B.** Twice, a few days apart so new facts have accrued: *Start afresh* with
+   `FreshStarts:FlushToMemory` false, ask five questions about decisions from the last week, and
+   score; then the same with it true, on fresh questions. Note the files the flush saved and the
+   flush Turn's cost. This settles whether the flush earns its Turn (it replaces the first draft's
+   Q-9).
+6. **Decision.**
    - Recall at 40,000 tokens 7 of 10 or better **and** fewer repeats after a fresh start than after
      compaction: phases 0 to 2 meet the goal; turn automatic fresh starts on where wanted, and do not
      build phase 4.
@@ -479,6 +627,7 @@ in the same change).
    - Recall below 7 of 10, and the missed answers are conversation (what was being worked on, open
      questions, the reasoning behind a choice): build phase 4, then repeat the experiment with it.
    - No difference in repeats: record it; the rut claim is unproven for this Room (Q-6).
+   - The flush scores no better than no flush: set `FlushToMemory` false by default and record why.
 
 ### 9.2 Phase 4 candidate: the handoff note
 
@@ -486,9 +635,10 @@ Sketch only, for the case the experiment calls for it. With the `memory` App Too
 and preferences should already be in Memory, so the note carries only what does **not** belong
 there: what the Teammate was doing, the open questions, and the reasoning behind recent choices.
 
-The cheapest form reuses the memory tool's own habit: just before a fresh start, the old session
-gets one extra Turn with a fixed Prompt (proposed `turn.handoffRequest`) asking it to save anything
-durable to Memory and to write a short note of the open work, each line citing Message ids. The note is stored at
+Phase 2's memory flush already asks the old session to save durable facts. Phase 4 extends that
+same Turn rather than adding another: its Prompt (proposed `turn.handoffRequest`, replacing
+`turn.memoryFlush` when phase 4 is on) also asks for a short note of the open work, each line
+citing Message ids. The note is stored at
 `{DataDir}/room-sessions/handoff/{Name}/{roomId}.md`, editable by the Human, and placed above the
 Catch-up in the new session's first Turn.
 
@@ -511,13 +661,15 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | --- | --- |
 | `SessionSettingsStoreTests` | Absent file means configuration defaults; a save writes overrides only; out-of-range refused with its text; a hand edit is picked up; a corrupt file is ignored with a Warning |
 | `CatchUpBudgetTests` | The first Turn asks for the Message cap and trims to the budget; own Messages dropped first except the newest five; Transcript order kept; both omitted lines exact; applies to fresh and resumed first Turns; no `ForgetAll` |
-| `CatchUpDefaultsTests` | **PM-R2's proof:** at the defaults, `turnPromptTranscript.txt` and `turnPromptTranscriptResumed.txt` are unchanged |
-| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day |
+| `CatchUpDefaultsTests` | **LR-R2's proof:** at the defaults, `turnPromptTranscript.txt` and `turnPromptTranscriptResumed.txt` are unchanged |
+| `FreshStartTriggerTests` | Each trigger fires at its threshold and not below; a resumed session's baseline update is not a fall; a Command Turn never triggers; Off evaluates nothing; `MaxPerDay` per local day; idle fires only when both idle time and size are met, survives an app restart through `LastUsedTokens`, and never fires for an entry without it |
+| `MemoryFlushTests` | The flush runs once before a live fresh start and never for Idle and large; its text is never posted; skipped without the `memory` tool or with `FlushToMemory` false; a timeout, failure or refusal never blocks the fresh start; Stop cancels it and keeps the mark; the Prompt carries no tool-name prefix; files saved are counted in the note |
+| `FreshStartRecordTests` | Count, reason, context use and time recorded per Room and Name; moved on rename; the fallback note posted once per degraded mark, with its exact text |
 | `FreshStartTests` | The old entry is forgotten and the next Turn carries Catch-up; never mid-Turn; waits while a Question waits; not a failure; no Transcript Message; the note Envelope's fields; `last-catch-up` written as sent |
 | `StartAfreshTests` | Forgets one Room's session only; other Rooms of the same Teammate keep theirs |
 | `ProtocolJsonTests` (extended) | Literal JSON of `StartAfresh` and `FreshStartNote`; `ProtocolVersion.Current` unchanged |
 | `PersonaRenameCascadeTests` (extended) | The `last-catch-up` move sits above the early return |
-| bUnit: Settings › Memory, Room menu, Room note | Exact copy; Reset; the setting's label; the note's wording for each reason |
+| bUnit: Settings › Sessions, Room menu, Room note | Exact copy; Reset; the setting's label; the note's wording for each reason |
 
 ---
 
@@ -526,13 +678,17 @@ user-facing text is asserted exactly, and a test that passes on arrival gets a m
 | Key | Default | Note |
 | --- | --- | --- |
 | `Team:Acp:TranscriptCatchUpMessages` | `20` | Exists. Now the Message cap; Settings may override |
-| `Team:Acp:TranscriptCatchUpTokens` | `100000` | Proposed. Does not bind at 20 Messages (PM-R14); the experiment uses 40,000 |
-| `Team:Acp:CatchUpKeepOwnMessages` | `5` | Proposed (PM-R11) |
+| `Team:Acp:TranscriptCatchUpTokens` | `100000` | Proposed. Does not bind at 20 Messages (LR-R14); the experiment uses 40,000 |
+| `Team:Acp:CatchUpKeepOwnMessages` | `5` | Proposed (LR-R11) |
 | `Team:Acp:SessionRetentionDays` | `365` | Proposed; only if V0-2 passes |
 | `Team:Acp:FreshStarts:CompactionDropPercent` | `50` | Proposed |
 | `Team:Acp:FreshStarts:AboveTokens` | `200000` | Proposed. Zero disables |
 | `Team:Acp:FreshStarts:AfterTurns` | `80` | Proposed. Only for a session that reports no usage. Zero disables |
 | `Team:Acp:FreshStarts:MaxPerDay` | `3` | Proposed. Automatic fresh starts per Room Session per local day |
+| `Team:Acp:FreshStarts:IdleMinutes` | `60` | Proposed. Matches the subscription prompt cache's lifetime. Zero disables the idle trigger |
+| `Team:Acp:FreshStarts:IdleAboveTokens` | `50000` | Proposed. A smaller session is always resumed |
+| `Team:Acp:FreshStarts:FlushToMemory` | `true` | Proposed (LR-R26); the experiment's A/B may change the default |
+| `Team:Acp:FreshStarts:FlushTimeoutSeconds` | `120` | Proposed (LR-R27) |
 
 The Engineering Guide's configuration table gains each row in the change that builds it.
 
@@ -548,12 +704,14 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-2 | Can `cleanupPeriodDays` be set for an isolated session, and by which route? | Phase 0 | Unknown; V0-2 decides |
 | Q-3 | Does isolation hold live (Task 14.3.m)? | **Phase 2** | Unknown; until it does, the experiment cannot separate Huddle's effect from Claude Code's memory |
 | Q-4 | Should a fresh start delete the old session with ACP `session/delete`? | No | Yes eventually; needs `IAgentSession` support from the ACP effort |
-| Q-5 | Are 200,000 tokens and a 50 % fall the right thresholds? | No | Starting values; tune from the experiment and the notes' history |
+| Q-5 | Are 200,000 tokens, a 50 % fall, and 60 minutes with 50,000 tokens the right thresholds? | No | Starting values. Treat 200,000 as a ceiling: OpenClaw's pruning acts from max(50,000, 30 % of the window) and its compaction keeps 20,000 recent tokens (§7.2). Tune down from the experiment and the records of §6.7 |
 | Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it |
 | Q-7 | Should observing compaction use ACP `compaction_update` instead of the `Used` fall? | No | Later; it needs a mapping in `SessionUpdateMapper` (ACP effort) and a client capability Huddle does not advertise yet |
 | Q-8 | Should the Room setting be on by default once the experiment passes? | No | No; keep it the Human's choice (§13) |
-| Q-9 | Should every fresh start, not only phase 4's, first ask the old session to save anything durable to Memory? | No | Not in phase 2: it costs a Turn per fresh start, and an observed compaction has already lost detail. Revisit with the experiment's memory-versus-reread split |
-| Q-10 | Does this spec depend on PR #287 merging first? | No | No for phases 0 to 2. The experiment (§9.1) should run after it, so it measures the Room as it will really run |
+| Q-9 | Does the memory flush earn its Turn? | No | Decided to build it, after OpenClaw (§6.6); the experiment's A/B (§9.1 step 5) decides whether it stays on by default |
+| Q-10 | Does this spec depend on PR #287 merging first? | Phase 2's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
+| Q-11 | Should a daily reset be offered after all, as OpenClaw does? | No | No (§7.2); revisit only if the experiment shows the idle and size triggers miss stale sessions |
+| Q-12 | Should the flush also run after an observed compaction, when the Adapter's summary has already dropped detail? | No | Yes, as specified: it is cheap and can still save what survived. The records of §6.7 will show how often compaction fires before the Size trigger |
 
 ### 12.2 ADR candidates
 
@@ -561,6 +719,8 @@ The Engineering Guide's configuration table gains each row in the change that bu
    by Huddle.** Extends ADR-0024; keeps ADR-0035.
 2. **Catch-up is bounded by a token budget, and an Agent's own Messages are dropped first.**
 3. **Memory layers are built only after a recorded experiment shows the cheap levers fall short.**
+4. **A live session saves to Memory in one silent Turn before it is retired** (the memory flush).
+   Builds on ADR-0071's `memory` tool; prior art OpenClaw.
 
 ---
 
@@ -586,9 +746,16 @@ it repeating itself or losing track of what you decided.
   squeezes its notes while keeping what you name, and *Start afresh* gives a clean page when you
   choose.
 
-**What a fresh start does:** the Teammate starts a new session and rereads the Room, up to the size
-set in Settings, skipping most of its own older suggestions. The Room shows a note each time, and
-you can open it to see exactly what was reread. Nothing about you is stored.
+**What a fresh start does:** first the Teammate gets a quiet moment to write anything worth keeping
+into its notebook (nothing is posted in the Room). Then it starts a new session and rereads the
+Room, up to the size set in Settings, skipping most of its own older suggestions. The Room shows a
+note each time, saying why, how many notebook pages were saved and how many fresh starts there have
+been, and you can open it to see exactly what was reread. If a big conversation has sat unused for
+an hour, it starts afresh without the quiet moment, because reopening the old one would cost about
+as much.
+
+If a Teammate needs a fresh start but cannot have one (it has had three today, for example), the
+Room tells you, and suggests `@Teammate /compact` or *Start afresh*.
 
 ---
 
@@ -608,16 +775,29 @@ you can open it to see exactly what was reread. Nothing about you is stored.
 | Compaction mentioned only as the problem | §7 decides its role | `/compact` already exists; compaction is observable through `Used` |
 | Auto memory "not used" | Phase 0 verifies isolation | Auto memory loads unless switched off; isolation is built but unverified |
 | No retention lever | Phase 0 checks `cleanupPeriodDays` | The commonest cause of lost sessions may be one setting |
-| 59 requirements | 25 | Scope cut to what the goal needs |
+| 59 requirements | 30 (25 after review, then 5 from OpenClaw's prior art) | Scope cut to what the goal needs |
 
 The first draft is in git history (commit `139d3696`) for anyone who builds phase 4 or a later
 memory feature.
+
+**Added 2026-10-30, after comparing with OpenClaw (§7.2):**
+
+| Change | Why |
+| --- | --- |
+| Renamed from *Huddle.PersistentMemory* to *Huddle.LongRunningRooms*; requirement ids from `PM-` to `LR-` | Since ADR-0071 "Memory" means the `memory` tool; OpenClaw also keeps "context" and "memory" apart |
+| Memory flush before a live fresh start (LR-R26, LR-R27, §6.6) | OpenClaw's best technique: save durable state before forgetting. It replaces Q-9's "lean no" with a build plus an A/B in the experiment |
+| Idle-and-large trigger (LR-R28) | OpenClaw's idle reset, made safe for healthy sessions by a size condition; it also avoids a cold reload of a large session after the prompt cache has expired |
+| Per-session records (LR-R29, §6.7) | OpenClaw's `compactionCount`; feeds Q-5's tuning |
+| Fallback note (LR-R30, §6.7) | OpenClaw's "retry, `/compact` or `/new`" advice |
+| Settings tab renamed from *Memory* to *Sessions* | Avoids the clash with the `memory` tool |
+| Daily reset considered and not taken (Q-11) | A clock alone retires healthy sessions |
 
 ---
 
 ## Appendix B: sources
 
-Checked during the 2026-10-16 reviews. Third-party measurements are weighted below primary
+Checked during the 2026-10-16 reviews; the OpenClaw rows were read on 2026-10-30, and their
+defaults may change between versions. Third-party measurements are weighted below primary
 documentation.
 
 | Claim | Source |
@@ -637,3 +817,8 @@ documentation.
 | Context degrades as it grows | Chroma, "Context Rot"; NoLiMa, arXiv 2502.05167; Lost in the Middle, arXiv 2307.03172 |
 | Memory injection attacks | MINJA, arXiv 2503.03704; AgentPoison, arXiv 2407.12784; OWASP Agentic AI threats (T1) |
 | Users want to review and edit AI memory | arXiv 2508.07664; arXiv 2410.14931 |
+| OpenClaw sessions: one session per key by default, daily and idle resets, `/new` and `/reset` | docs.openclaw.ai/concepts/session (read 2026-10-30) |
+| OpenClaw compaction: `keepRecentTokens` 20,000, reserve, overflow recovery, quality guard | docs.openclaw.ai/concepts/compaction; /reference/session-management-compaction/compaction |
+| OpenClaw memory flush: silent turn before auto-compaction, once per cycle, `softThresholdTokens` 4,000 | docs.openclaw.ai/concepts/memory; /reference/session-management-compaction |
+| OpenClaw session pruning thresholds and cache-TTL behaviour | docs.openclaw.ai/concepts/session-pruning |
+| OpenClaw session store: `compactionCount`, token counters, append-only transcript | /reference/session-management-compaction/store and /schema |
