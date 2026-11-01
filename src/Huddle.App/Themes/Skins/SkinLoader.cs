@@ -310,28 +310,10 @@ internal static partial class SkinLoader
 
     private static Dictionary<string, string> ReadEmbedded()
     {
-        Assembly assembly = typeof(SkinLoader).Assembly;
-        Dictionary<string, string> files = new(StringComparer.Ordinal);
-        foreach (string resource in assembly.GetManifestResourceNames())
-        {
-            if (!resource.StartsWith(ResourcePrefix, StringComparison.Ordinal) || !resource.EndsWith(".json", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            string name = resource[ResourcePrefix.Length..];
-            if (string.Equals(name, SchemaFileName, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            using Stream stream = assembly.GetManifestResourceStream(resource)
-                ?? throw new SkinException($"{name}: the embedded resource could not be opened.");
-            using StreamReader reader = new(stream);
-            files[name] = reader.ReadToEnd();
-        }
-
-        return files;
+        return EmbeddedResources.ReadFolder(
+            typeof(SkinLoader).Assembly,
+            ResourcePrefix,
+            static name => name.EndsWith(".json", StringComparison.Ordinal) && !string.Equals(name, SchemaFileName, StringComparison.Ordinal));
     }
 
     private static Draft Resolve(string file, Dictionary<string, Draft> parsed, List<string> chain)

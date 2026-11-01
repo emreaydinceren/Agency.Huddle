@@ -3,7 +3,6 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using System.Reflection;
 using System.Text.Json;
 
 namespace Agency.Huddle.App.TeamTypes;
@@ -195,33 +194,10 @@ internal sealed class TeamTypeCatalog
     /// <returns>Path, such as <c>development/team-type.json</c>, to its text with <c>\n</c> line endings.</returns>
     private static Dictionary<string, string> ReadEmbedded()
     {
-        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
-        Dictionary<string, string> files = new(StringComparer.Ordinal);
-        foreach (string resourceName in assembly.GetManifestResourceNames())
-        {
-            string name = resourceName.Replace('\\', '/');
-            if (!name.StartsWith(ResourcePrefix, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            string relative = name[ResourcePrefix.Length..];
-            if (relative.StartsWith(SkillPacksFolder, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream is null)
-            {
-                continue;
-            }
-
-            using StreamReader reader = new(stream);
-            files[relative] = reader.ReadToEnd().ReplaceLineEndings("\n");
-        }
-
-        return files;
+        return EmbeddedResources.ReadFolder(
+            typeof(TeamTypeCatalog).Assembly,
+            ResourcePrefix,
+            static relative => !relative.StartsWith(SkillPacksFolder, StringComparison.Ordinal));
     }
 
     /// <summary>Lists the ids of the built-in types and the user folders, without duplicates.</summary>

@@ -1,4 +1,3 @@
-using System.Reflection;
 
 namespace Agency.Huddle.App.Agents;
 
@@ -34,14 +33,6 @@ internal static class BuiltinAgent
     /// <exception cref="InvalidOperationException">The embedded resource is missing from the assembly.</exception>
     private static string ReadDefaultText()
     {
-        Assembly assembly = typeof(BuiltinAgent).Assembly;
-        using Stream? stream = assembly.GetManifestResourceStream(ResourceName);
-        if (stream is null)
-        {
-            throw new InvalidOperationException($"Embedded resource '{ResourceName}' was not found in the assembly.");
-        }
-
-        using StreamReader reader = new(stream);
-        return reader.ReadToEnd().ReplaceLineEndings("\n");
+        return EmbeddedResources.ReadText(typeof(BuiltinAgent).Assembly, ResourceName);
     }
 }

@@ -2,7 +2,6 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Options;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -117,27 +116,7 @@ internal sealed partial class HiringPoolCatalog
     /// <returns>Path, such as <c>personas/tutor.md</c>, to its text with <c>\n</c> line endings.</returns>
     private static Dictionary<string, string> ReadEmbedded()
     {
-        Assembly assembly = typeof(HiringPoolCatalog).Assembly;
-        Dictionary<string, string> files = new(StringComparer.Ordinal);
-        foreach (string resourceName in assembly.GetManifestResourceNames())
-        {
-            string name = resourceName.Replace('\\', '/');
-            if (!name.StartsWith(ResourcePrefix, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream is null)
-            {
-                continue;
-            }
-
-            using StreamReader reader = new(stream);
-            files[name[ResourcePrefix.Length..]] = reader.ReadToEnd().ReplaceLineEndings("\n");
-        }
-
-        return files;
+        return EmbeddedResources.ReadFolder(typeof(HiringPoolCatalog).Assembly, ResourcePrefix);
     }
 
     /// <summary>Matches a valid job id.</summary>
