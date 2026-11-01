@@ -58,7 +58,7 @@ public sealed class PersonaSpendStore
 
         lock (WriteGate)
         {
-            using SqliteConnection connection = this.OpenConnection();
+            using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
             using SqliteTransaction transaction = connection.BeginTransaction();
             AddRow(connection, transaction, personaName, taskId ?? string.Empty, currency, amount);
             transaction.Commit();
@@ -119,7 +119,7 @@ public sealed class PersonaSpendStore
 
         lock (WriteGate)
         {
-            using SqliteConnection connection = this.OpenConnection();
+            using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
             using SqliteTransaction transaction = connection.BeginTransaction();
 
             List<(string TaskId, string Currency, decimal Amount)> moved = [];
@@ -153,7 +153,7 @@ public sealed class PersonaSpendStore
 
         lock (WriteGate)
         {
-            using SqliteConnection connection = this.OpenConnection();
+            using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
             using SqliteTransaction transaction = connection.BeginTransaction();
             DeleteRows(connection, transaction, personaName);
             transaction.Commit();
@@ -202,7 +202,7 @@ public sealed class PersonaSpendStore
 
     private List<StoredSpend> Query(string sql, string key)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = sql;
         command.Parameters.AddWithValue("$key", key);
@@ -216,13 +216,6 @@ public sealed class PersonaSpendStore
         }
 
         return [.. totals.Select(static pair => new StoredSpend(pair.Key, pair.Value))];
-    }
-
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
     }
 
     /// <summary>Compares names the way SQLite <c>NOCASE</c> does: only the ASCII letters A-Z fold, every other character is compared ordinally.</summary>

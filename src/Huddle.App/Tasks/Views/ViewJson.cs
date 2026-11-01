@@ -1,5 +1,4 @@
-using Agency.Huddle.Contracts;
-using System.Text.Encodings.Web;
+using Agency.Huddle.App.Library;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -22,11 +21,7 @@ internal static class ViewJson
     /// <summary>Builds <see cref="Options"/>.</summary>
     private static JsonSerializerOptions CreateOptions()
     {
-        JsonSerializerOptions options = new(ProtocolJson.Options)
-        {
-            WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        };
+        JsonSerializerOptions options = new(StoreJson.Indented);
         options.Converters.Insert(0, new TaskPriorityJsonConverter());
         options.Converters.Insert(0, new TaskStateJsonConverter());
         options.Converters.Insert(0, new ViewKindJsonConverter());

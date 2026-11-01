@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -359,7 +360,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             entry = this.ValidateCandidate(path, text, excludingPath: null);
 
             Directory.CreateDirectory(this.Paths.AgentFolder(identity.Name));
-            File.WriteAllText(path, text);
+            AtomicFile.WriteText(path, text);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
             this.workModes.Set(entry.Name, workMode);
@@ -419,7 +420,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             entry = this.ValidateCandidate(current.Path, text, excludingPath: current.Path);
 
-            File.WriteAllText(current.Path, text);
+            AtomicFile.WriteText(current.Path, text);
 
             if (!string.Equals(current.Name, entry.Name, StringComparison.OrdinalIgnoreCase))
             {

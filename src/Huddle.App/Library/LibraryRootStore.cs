@@ -1,10 +1,8 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.SkillSources;
-using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -41,15 +39,6 @@ internal sealed class LibraryRootStore
     private const string AgentsRootId = "agents";
     private const string UploadsRootId = "uploads";
     private const int MaxSlugLength = 64;
-
-    // Same reasoning as PromptStore.IndentedJsonOptions: this file only ever round-trips through
-    // JsonSerializer/JsonNode, never through HTML or script, and a Human hand-edits it, so relaxed
-    // escaping keeps em-dashes and angle brackets in pinned root names readable on disk.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     private readonly IOptions<TeamOptions> options;
     private readonly AgentPaths paths;
@@ -478,7 +467,7 @@ internal sealed class LibraryRootStore
             document["hidden"] = hiddenArray;
         }
 
-        string json = document.ToJsonString(IndentedJsonOptions);
+        string json = document.ToJsonString(StoreJson.Indented);
         string filePath = this.FilePath;
         AtomicFile.WriteText(filePath, json);
     }

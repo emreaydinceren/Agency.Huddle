@@ -1,7 +1,5 @@
 using Agency.Huddle.App.Library;
-using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace Agency.Huddle.App.FileChanges;
@@ -13,18 +11,6 @@ namespace Agency.Huddle.App.FileChanges;
 /// </summary>
 internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<FileStateStore> logger)
 {
-    /// <summary>
-    /// Derived from <see cref="ProtocolJson.Options"/>, matching <see cref="Prompts.PromptStore.IndentedJsonOptions"/>'s
-    /// reasoning: this file is written to disk and hand-editable, so it is indented, and
-    /// <see cref="JavaScriptEncoder.UnsafeRelaxedJsonEscaping"/> keeps a Room id or path with an
-    /// em-dash readable instead of escaped to <c>\uXXXX</c>.
-    /// </summary>
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly Lock gate = new();
 
     /// <summary>The folder holding every Agent's file, <c>{DataDir}/file-state/</c>. Created on first save.</summary>
@@ -155,7 +141,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         try
         {
             string json = File.ReadAllText(path);
-            FileStateDocument? document = JsonSerializer.Deserialize<FileStateDocument>(json, IndentedJsonOptions);
+            FileStateDocument? document = JsonSerializer.Deserialize<FileStateDocument>(json, StoreJson.Indented);
             return document is null ? null : ToFileState(document);
         }
         catch (Exception ex) when (ex is JsonException or IOException)
@@ -171,7 +157,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         Directory.CreateDirectory(this.Folder);
 
         string path = this.PathFor(name);
-        string json = JsonSerializer.Serialize(ToDocument(state), IndentedJsonOptions);
+        string json = JsonSerializer.Serialize(ToDocument(state), StoreJson.Indented);
         AtomicFile.WriteText(path, json);
     }
 
@@ -189,7 +175,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         try
         {
             string json = File.ReadAllText(filePath);
-            FileStateDocument? document = JsonSerializer.Deserialize<FileStateDocument>(json, IndentedJsonOptions);
+            FileStateDocument? document = JsonSerializer.Deserialize<FileStateDocument>(json, StoreJson.Indented);
             state = document is null ? null : ToFileState(document);
         }
         catch (Exception ex) when (ex is JsonException or IOException)
@@ -239,7 +225,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
             }
         }
 
-        string outputJson = JsonSerializer.Serialize(ToDocument(new FileState(subscribed, rooms, writers)), IndentedJsonOptions);
+        string outputJson = JsonSerializer.Serialize(ToDocument(new FileState(subscribed, rooms, writers)), StoreJson.Indented);
         AtomicFile.WriteText(filePath, outputJson);
     }
 

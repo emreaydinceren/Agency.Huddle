@@ -36,7 +36,7 @@ internal sealed class HelperSettingsStore
     /// <param name="id">The Helper.</param>
     public HelperSettingsRow? Get(HelperId id)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT enabled, adapter, model, effort, daily_cap FROM helper_settings WHERE helper_id = $id;";
         command.Parameters.AddWithValue("$id", id.Value);
@@ -60,7 +60,7 @@ internal sealed class HelperSettingsStore
     public void Save(HelperId id, HelperSettingsRow row)
     {
         ArgumentNullException.ThrowIfNull(row);
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO helper_settings(helper_id, enabled, adapter, model, effort, daily_cap) VALUES($id, $enabled, $adapter, $model, $effort, $cap)
@@ -82,7 +82,7 @@ internal sealed class HelperSettingsStore
     /// <param name="id">The Helper.</param>
     public void Delete(HelperId id)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "DELETE FROM helper_settings WHERE helper_id = $id;";
         command.Parameters.AddWithValue("$id", id.Value);
@@ -91,12 +91,4 @@ internal sealed class HelperSettingsStore
 
     /// <summary>A blank value is stored as <see langword="null"/>, meaning "the default".</summary>
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
-
-    /// <summary>Opens a connection to <c>team.db</c>.</summary>
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
-    }
 }

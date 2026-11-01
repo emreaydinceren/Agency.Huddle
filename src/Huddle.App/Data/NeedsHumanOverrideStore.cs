@@ -33,7 +33,7 @@ internal sealed class NeedsHumanOverrideStore
         this.timeProvider = timeProvider;
         this.connectionString = SqliteTable.Open(options.Value, DdlCreate);
 
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT task_id FROM needs_human_overrides;";
         using SqliteDataReader reader = command.ExecuteReader();
@@ -66,7 +66,7 @@ internal sealed class NeedsHumanOverrideStore
             }
 
             // Written first: if the INSERT throws, the id is not remembered in memory either, so a retry is not skipped.
-            using SqliteConnection connection = this.OpenConnection();
+            using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText = "INSERT OR IGNORE INTO needs_human_overrides(task_id, at) VALUES($id, $at);";
             command.Parameters.AddWithValue("$id", taskId);
@@ -74,13 +74,5 @@ internal sealed class NeedsHumanOverrideStore
             command.ExecuteNonQuery();
             _ = this.ids.Add(taskId);
         }
-    }
-
-    /// <summary>Opens a connection to <c>team.db</c>.</summary>
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
     }
 }

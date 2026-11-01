@@ -1,7 +1,5 @@
 using Agency.Huddle.App.Library;
-using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -17,19 +15,6 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// </summary>
 internal sealed class RoomSessionStore(IOptions<TeamOptions> options, ILogger<RoomSessionStore> logger)
 {
-    /// <summary>
-    /// Derived from <see cref="ProtocolJson.Options"/> (correction item 18: that base already sets
-    /// <c>DefaultIgnoreCondition = WhenWritingNull</c>, so a <see langword="null"/> <see cref="RoomSessionEntry.Model"/>
-    /// or <see cref="RoomSessionEntry.Effort"/> is omitted rather than written <c>null</c>), indented
-    /// and with an unsafe-relaxed encoder because this file is hand-editable, matching
-    /// <see cref="Agency.Huddle.App.FileChanges.FileStateStore"/>'s own reasoning.
-    /// </summary>
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly Lock gate = new();
 
     /// <summary>The folder holding every Agent's file, <c>{DataDir}/room-sessions/</c>. Created on first write.</summary>
@@ -185,7 +170,7 @@ internal sealed class RoomSessionStore(IOptions<TeamOptions> options, ILogger<Ro
         try
         {
             string json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<RoomSessionDocument>(json, RoomSessionStore.IndentedJsonOptions);
+            return JsonSerializer.Deserialize<RoomSessionDocument>(json, StoreJson.Indented);
         }
         catch (Exception ex) when (ex is JsonException or IOException)
         {
@@ -200,7 +185,7 @@ internal sealed class RoomSessionStore(IOptions<TeamOptions> options, ILogger<Ro
         Directory.CreateDirectory(this.Folder);
 
         string path = this.PathFor(name);
-        string json = JsonSerializer.Serialize(document, RoomSessionStore.IndentedJsonOptions);
+        string json = JsonSerializer.Serialize(document, StoreJson.Indented);
         AtomicFile.WriteText(path, json);
     }
 
