@@ -195,14 +195,16 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
         await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
-        _ = cut.InvokeAsync(() => editor.OnSaveRequested());
+        Task save = cut.InvokeAsync(() => editor.OnSaveRequested());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
             .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal(edited, File.ReadAllText(filePath)));
+        // Await the save itself: polling the file while it is written holds it open and makes the atomic move fail.
+        await save.WaitAsync(TimeSpan.FromSeconds(30), Xunit.TestContext.Current.CancellationToken);
+        Assert.Equal(edited, File.ReadAllText(filePath));
     }
 
     /// <summary>Switching to a different document while dirty offers Save, Discard or Cancel (Spec §6.7); Cancel keeps the current document and writes nothing.</summary>
@@ -376,13 +378,15 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         Assert.Equal("someone else's content", File.ReadAllText(filePath));
 
-        _ = cut.InvokeAsync(() => editor.OnSaveRequested());
+        Task save = cut.InvokeAsync(() => editor.OnSaveRequested());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
             .Single(b => string.Equals(b.TextContent.Trim(), "Overwrite", StringComparison.Ordinal)).ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("mine", File.ReadAllText(filePath)));
+        // Await the save itself: polling the file while it is written holds it open and makes the atomic move fail.
+        await save.WaitAsync(TimeSpan.FromSeconds(30), Xunit.TestContext.Current.CancellationToken);
+        Assert.Equal("mine", File.ReadAllText(filePath));
     }
 
     /// <summary>[T17.1, UX-026, UX-R12] The overwrite question is the shared <see cref="ConfirmDialog"/>: its title, one-sentence
