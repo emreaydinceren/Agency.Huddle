@@ -76,17 +76,6 @@ public sealed class PersonaSpendStore
         return this.Query(Sql, personaName);
     }
 
-    /// <summary>Returns the Task's total per currency across all Personas.</summary>
-    /// <param name="taskId">The Task id.</param>
-    /// <returns>One entry per currency; empty when nothing is stored.</returns>
-    public IReadOnlyList<StoredSpend> ForTask(string taskId)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(taskId);
-
-        const string Sql = "SELECT currency, amount FROM persona_spend WHERE task_id = $key;";
-        return this.Query(Sql, taskId);
-    }
-
     /// <summary>Returns the combined total per currency of the given Personas.</summary>
     /// <param name="personaNames">The Persona names; duplicates (ignoring ASCII case, as SQLite NOCASE does) count once.</param>
     /// <returns>One entry per currency; empty when nothing is stored.</returns>

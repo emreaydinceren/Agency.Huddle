@@ -20,9 +20,9 @@ public sealed class PersonaSpendStoreTests
         Assert.Equal(3.75m, spend.Amount);
     }
 
-    /// <summary>Spend on different Tasks is split by ForTask but summed by ForPersona.</summary>
+    /// <summary>Spend on different Tasks, kept as separate rows under the table's key, is summed by ForPersona.</summary>
     [Fact]
-    public void Add_DifferentTasks_SplitsPerTaskAndSumsPerPersona()
+    public void Add_DifferentTasks_SumsPerPersona()
     {
         using TempDataDir dir = new();
         PersonaSpendStore store = new(dir.Options());
@@ -31,8 +31,6 @@ public sealed class PersonaSpendStoreTests
         store.Add("Maya", "T-2", "USD", 2m);
         store.Add("Maya", null, "USD", 4m);
 
-        Assert.Equal(1m, Assert.Single(store.ForTask("T-1")).Amount);
-        Assert.Equal(2m, Assert.Single(store.ForTask("T-2")).Amount);
         Assert.Equal(7m, Assert.Single(store.ForPersona("Maya")).Amount);
     }
 
@@ -79,7 +77,6 @@ public sealed class PersonaSpendStoreTests
 
         Assert.Empty(store.ForPersona("Maya"));
         Assert.Equal(3m, Assert.Single(store.ForPersona("Mia")).Amount);
-        Assert.Equal(1m, Assert.Single(store.ForTask("T-1")).Amount);
     }
 
     /// <summary>Rename onto a name that already has spend merges the amounts instead of failing.</summary>
@@ -109,7 +106,7 @@ public sealed class PersonaSpendStoreTests
         store.Remove("MAYA");
 
         Assert.Empty(store.ForPersona("Maya"));
-        Assert.Equal(5m, Assert.Single(store.ForTask("T-1")).Amount);
+        Assert.Equal(5m, Assert.Single(store.ForPersona("Noor")).Amount);
     }
 
     /// <summary>A second store over the same data folder sees the earlier data (survives a restart).</summary>
@@ -123,7 +120,6 @@ public sealed class PersonaSpendStoreTests
         PersonaSpendStore second = new(dir.Options());
 
         Assert.Equal(1.25m, Assert.Single(second.ForPersona("Maya")).Amount);
-        Assert.Equal(1.25m, Assert.Single(second.ForTask("T-1")).Amount);
     }
 
     /// <summary>Decimal amounts add exactly, with no binary floating-point drift.</summary>
@@ -157,7 +153,7 @@ public sealed class PersonaSpendStoreTests
         Assert.Equal(4m, Assert.Single(total, s => s.Currency == "EUR").Amount);
     }
 
-    /// <summary>Lookups for an unknown Persona or Task return an empty list.</summary>
+    /// <summary>Lookups for an unknown Persona, or for no Personas, return an empty list.</summary>
     [Fact]
     public void Lookups_Unknown_ReturnEmpty()
     {
@@ -165,7 +161,6 @@ public sealed class PersonaSpendStoreTests
         PersonaSpendStore store = new(dir.Options());
 
         Assert.Empty(store.ForPersona("nobody"));
-        Assert.Empty(store.ForTask("T-9"));
         Assert.Empty(store.ForPersonas([]));
     }
 
@@ -180,7 +175,6 @@ public sealed class PersonaSpendStoreTests
         Assert.Throws<ArgumentException>(() => store.Add("Maya", null, "", 1m));
         Assert.Throws<ArgumentNullException>(() => store.ForPersona(null!));
         Assert.Throws<ArgumentNullException>(() => store.ForPersonas(null!));
-        Assert.Throws<ArgumentException>(() => store.ForTask(""));
         Assert.Throws<ArgumentException>(() => store.Rename("Maya", ""));
         Assert.Throws<ArgumentException>(() => store.Remove(""));
     }
