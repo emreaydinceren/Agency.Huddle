@@ -11,7 +11,6 @@ public sealed class TeamFileTests
         + "manager: 'Joe'\n"
         + "workspace: 'E:\\Repos\\WebApp'\n"
         + "owns: '/web, the React front end, the design system'\n"
-        + "process: 'Process.md'\n"
         + "---\n";
 
     /// <summary>The Spec example parses to its fields and composes back to the same text.</summary>
@@ -26,7 +25,6 @@ public sealed class TeamFileTests
         Assert.Equal("Joe", file.Manager);
         Assert.Equal("E:\\Repos\\WebApp", file.Workspace);
         Assert.Equal("/web, the React front end, the design system", file.Owns);
-        Assert.Equal("Process.md", file.Process);
         Assert.Equal(string.Empty, file.Notes);
         Assert.Equal(SpecExample, file.Compose());
     }
@@ -35,7 +33,7 @@ public sealed class TeamFileTests
     [Fact]
     public void Workspace_WindowsPath_KeepsBackslashes()
     {
-        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, "C:\\a\\b c\\d", null, "Process.md", string.Empty);
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, "C:\\a\\b c\\d", null, string.Empty);
 
         bool ok = TeamFile.TryParse(file.Compose(), out TeamFile? parsed);
 
@@ -49,12 +47,12 @@ public sealed class TeamFileTests
     [Fact]
     public void Owns_Apostrophe_IsDoubledAndRestored()
     {
-        TeamFile file = new(new VersionedRef("development", "1.0.0"), "Joe", null, "the team's front end", "Process.md", string.Empty);
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), "Joe", null, "the team's front end", string.Empty);
 
         string text = file.Compose();
         bool ok = TeamFile.TryParse(text, out TeamFile? parsed);
 
-        Assert.Equal("---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nowns: 'the team''s front end'\nprocess: 'Process.md'\n---\n", text);
+        Assert.Equal("---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nowns: 'the team''s front end'\n---\n", text);
         Assert.True(ok);
         Assert.NotNull(parsed);
         Assert.Equal("the team's front end", parsed.Owns);
@@ -86,28 +84,46 @@ public sealed class TeamFileTests
         Assert.NotNull(file);
         Assert.Equal("Hand-written notes.\n", file.Notes);
         Assert.Equal(
-            "---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nprocess: 'Process.md'\nreviewer: 'Ann'\nlabel: 'x: y'\n---\nHand-written notes.\n",
+            "---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nreviewer: 'Ann'\nlabel: 'x: y'\n---\nHand-written notes.\n",
             file.Compose());
     }
 
-    /// <summary>CRLF text parses, and a missing process key defaults to Process.md.</summary>
+    /// <summary>CRLF text parses, and the composed text is LF-only.</summary>
     [Fact]
-    public void TryParse_CrlfAndNoProcess_DefaultsProcess()
+    public void TryParse_Crlf_ComposesLfOnly()
     {
         bool ok = TeamFile.TryParse("---\r\nteamType: development@1.0.0\r\n---\r\nBody\r\n", out TeamFile? file);
 
         Assert.True(ok);
         Assert.NotNull(file);
-        Assert.Equal("Process.md", file.Process);
         Assert.Equal("Body\n", file.Notes);
         Assert.DoesNotContain('\r', file.Compose());
     }
 
-    /// <summary>The three avatar keys round-trip: composed after the process key, parsed back into the same <c>Avatar</c>.</summary>
+    /// <summary>
+    /// A <c>process:</c> line from a file written before issue #312 is read as a known key and dropped, so a rewrite
+    /// removes it rather than keeping a setting nothing reads, whatever file it named.
+    /// </summary>
+    [Theory]
+    [InlineData("Process.md")]
+    [InlineData("OurWay.md")]
+    public void TryParse_RetiredProcessKey_IsDroppedOnRewrite(string named)
+    {
+        string text = $"---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nprocess: '{named}'\n---\nNotes.\n";
+
+        bool ok = TeamFile.TryParse(text, out TeamFile? file);
+
+        Assert.True(ok);
+        Assert.NotNull(file);
+        Assert.Empty(file.UnknownLines);
+        Assert.Equal("---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\n---\nNotes.\n", file.Compose());
+    }
+
+    /// <summary>The three avatar keys round-trip: composed after the other known keys, parsed back into the same <c>Avatar</c>.</summary>
     [Fact]
     public void Avatar_AllThreeKeys_RoundTrip()
     {
-        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, null, null, "Process.md", string.Empty)
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, null, null, string.Empty)
         {
             Avatar = new Avatar("GR", "0123456789abcdef0123456789abcdef.png", "#1E90FF"),
         };
@@ -116,7 +132,7 @@ public sealed class TeamFileTests
         bool ok = TeamFile.TryParse(text, out TeamFile? parsed);
 
         Assert.Equal(
-            "---\nteamType: 'development@1.0.0'\nprocess: 'Process.md'\navatarLabel: 'GR'\navatarImage: '0123456789abcdef0123456789abcdef.png'\navatarBackground: '#1E90FF'\n---\n",
+            "---\nteamType: 'development@1.0.0'\navatarLabel: 'GR'\navatarImage: '0123456789abcdef0123456789abcdef.png'\navatarBackground: '#1E90FF'\n---\n",
             text);
         Assert.True(ok);
         Assert.NotNull(parsed);
@@ -127,11 +143,11 @@ public sealed class TeamFileTests
     [Fact]
     public void Avatar_None_WritesNoKeys()
     {
-        TeamFile file = new(new VersionedRef("development", "1.0.0"), "Joe", null, null, "Process.md", string.Empty);
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), "Joe", null, null, string.Empty);
 
         string text = file.Compose();
 
-        Assert.Equal("---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nprocess: 'Process.md'\n---\n", text);
+        Assert.Equal("---\nteamType: 'development@1.0.0'\nmanager: 'Joe'\n---\n", text);
         Assert.Equal(Avatar.None, file.Avatar);
     }
 
@@ -150,7 +166,7 @@ public sealed class TeamFileTests
     [Fact]
     public void Avatar_LabelOnly_WritesOnlyTheLabel()
     {
-        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, null, null, "Process.md", string.Empty)
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, null, null, string.Empty)
         {
             Avatar = new Avatar("QA", null, null),
         };
@@ -158,7 +174,7 @@ public sealed class TeamFileTests
         string text = file.Compose();
         bool ok = TeamFile.TryParse(text, out TeamFile? parsed);
 
-        Assert.Equal("---\nteamType: 'development@1.0.0'\nprocess: 'Process.md'\navatarLabel: 'QA'\n---\n", text);
+        Assert.Equal("---\nteamType: 'development@1.0.0'\navatarLabel: 'QA'\n---\n", text);
         Assert.True(ok);
         Assert.NotNull(parsed);
         Assert.Equal(new Avatar("QA", null, null), parsed.Avatar);

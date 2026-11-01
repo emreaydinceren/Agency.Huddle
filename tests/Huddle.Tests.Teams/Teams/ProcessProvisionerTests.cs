@@ -8,9 +8,9 @@ public sealed class ProcessProvisionerTests
 {
     private const string Team = "Web Team";
 
-    /// <summary>The template text is written to <c>Process.md</c>, parses, and <c>_team.md</c> names the file.</summary>
+    /// <summary>The template text is written to <c>Process.md</c> and parses.</summary>
     [Fact]
-    public void Provision_KnownProcess_WritesParsableFileAndSetsTeamFile()
+    public void Provision_KnownProcess_WritesParsableFile()
     {
         using TempDataDir dir = new();
         DiskTeamFolders folders = new(dir.Path);
@@ -23,7 +23,6 @@ public sealed class ProcessProvisionerTests
         Assert.Equal(FlowText, text);
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
         Assert.Equal([GateId.QaEvidenceBeforeDone], document.Gates);
-        Assert.Equal(TeamPaths.ProcessFileName, folders.File?.Process);
     }
 
     /// <summary>The template id and version the file was copied from are recorded in its frontmatter.</summary>
@@ -75,7 +74,6 @@ public sealed class ProcessProvisionerTests
         Assert.Empty(document.MissingSections);
         Assert.Empty(document.Gates);
         Assert.Null(document.Template);
-        Assert.Equal(TeamPaths.ProcessFileName, folders.File?.Process);
     }
 
     /// <summary>An unknown process id fails and writes nothing.</summary>

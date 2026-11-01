@@ -132,13 +132,8 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
             File.Delete(temp);
         }
 
-        _ = folders.UpdateTeamFile(team, static current => current with { Process = TeamPaths.ProcessFileName });
         return ProvisionResult.Created;
     }
 
-    private string? ProcessPath(string team)
-    {
-        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
-        return folder.Value is null ? null : Path.Combine(folder.Value.FullPath, TeamPaths.ProcessFileName);
-    }
+    private string? ProcessPath(string team) => TeamProcessFile.PathOf(folders, team);
 }

@@ -425,7 +425,7 @@ public sealed class TeamMembershipTests
         Assert.Equal(MembershipOutcome.ManagerReplaced, result.Outcome);
         Assert.Equal(["Web Team"], f.Folders.Updated);
         Assert.Equal("Bo", f.Folders.Current.Manager);
-        Assert.Equal("flow", f.Folders.Current.Process);
+        Assert.Equal(new VersionedRef("web", "1.2.0"), f.Folders.Current.TeamType);
     }
 
     /// <summary>A Persona that is not in the Team cannot become its manager, and the team file is not touched.</summary>
@@ -481,7 +481,7 @@ public sealed class TeamMembershipTests
     private sealed class RecordingFolders : ITeamFolders
     {
         /// <summary>The team file the next update maps.</summary>
-        public TeamFile Current { get; set; } = new(new VersionedRef("web", "1.2.0"), null, null, null, "flow", string.Empty);
+        public TeamFile Current { get; set; } = new(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty);
 
         /// <summary>The Team names passed to <see cref="UpdateTeamFile"/>, in order.</summary>
         public List<string> Updated { get; } = [];
@@ -560,7 +560,7 @@ public sealed class TeamMembershipTests
                     Manager = manager,
                 },
             ];
-            this.Folders.Current = new TeamFile(new VersionedRef("web", "1.2.0"), manager, null, null, "flow", string.Empty);
+            this.Folders.Current = new TeamFile(new VersionedRef("web", "1.2.0"), manager, null, null, string.Empty);
         }
 
         /// <summary>The real store the service writes through.</summary>

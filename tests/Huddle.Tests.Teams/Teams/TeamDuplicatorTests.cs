@@ -143,7 +143,7 @@ public sealed class TeamDuplicatorTests
     {
         using Fixture f = new();
         f.SeedSource();
-        TeamFile other = new(new VersionedRef("web", "1.2.0"), null, null, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile other = new(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, f.Folders.CreateTeam(Target, other).Outcome);
 
         DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
@@ -284,7 +284,7 @@ public sealed class TeamDuplicatorTests
         public string SeedSource()
         {
             Directory.CreateDirectory(this.SourceWorkspace);
-            TeamFile file = new(new VersionedRef("web", "1.2.0"), "Ada", this.SourceWorkspace, null, TeamPaths.ProcessFileName, string.Empty);
+            TeamFile file = new(new VersionedRef("web", "1.2.0"), "Ada", this.SourceWorkspace, null, string.Empty);
             TeamCreateResult created = this.Folders.CreateTeam(Source, file);
             Assert.Equal(TeamCreateOutcome.Created, created.Outcome);
             this.HireInto(Source, "lead");
@@ -296,7 +296,7 @@ public sealed class TeamDuplicatorTests
         /// <summary>Creates a Team of the strict type, whose workspace is required.</summary>
         public void SeedStrict(string team)
         {
-            TeamFile file = new(new VersionedRef("strict", "1.0.0"), null, this.SourceWorkspace, null, TeamPaths.ProcessFileName, string.Empty);
+            TeamFile file = new(new VersionedRef("strict", "1.0.0"), null, this.SourceWorkspace, null, string.Empty);
             Assert.Equal(TeamCreateOutcome.Created, this.Folders.CreateTeam(team, file).Outcome);
             this.Catalog.Teams = [.. this.Catalog.Teams, new TeamSummary(team, [], [], HasFolder: true)];
         }

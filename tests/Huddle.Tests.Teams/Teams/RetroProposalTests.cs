@@ -133,7 +133,7 @@ public sealed class RetroProposalTests
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
     }
 
-    /// <summary>The Team file is a valid target.</summary>
+    /// <summary>The Team file is a valid target. The fixture's file predates issue #312, so the rewrite also drops its retired <c>process:</c> line.</summary>
     [Fact]
     public async Task AcceptAsync_TeamFile_IsEdited()
     {
@@ -144,7 +144,7 @@ public sealed class RetroProposalTests
         RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Applied, outcome.Kind);
-        Assert.Equal("---\nteamType: 'web@1.2.0'\nprocess: 'Process.md'\n---\nTeam notes: keep it tiny.\n", fixture.TeamNow);
+        Assert.Equal("---\nteamType: 'web@1.2.0'\n---\nTeam notes: keep it tiny.\n", fixture.TeamNow);
     }
 
     /// <summary>An Agent's file is edited through the Persona store.</summary>

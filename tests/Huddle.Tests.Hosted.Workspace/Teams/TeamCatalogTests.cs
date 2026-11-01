@@ -140,7 +140,7 @@ public sealed class TeamCatalogTests
         using TempDataDir dir = new();
         CreateFolder(dir, "Ops");
         CreateFolder(dir, "Research");
-        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", "work/ops", "Deploys", "Process.md", string.Empty));
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", "work/ops", "Deploys", string.Empty));
         using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
@@ -165,7 +165,7 @@ public sealed class TeamCatalogTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         CreateFolder(dir, "Ops");
-        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", null, "Deploys", "Process.md", string.Empty));
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", null, "Deploys", string.Empty));
         using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
         using TeamCatalog catalog = new(personas, tasks);
@@ -173,7 +173,7 @@ public sealed class TeamCatalogTests
         void Count() => Interlocked.Increment(ref raised);
         catalog.Changed += Count;
 
-        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Nova", null, "Releases", "Process.md", string.Empty));
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Nova", null, "Releases", string.Empty));
 
         await Eventually.UntilAsync(() => Volatile.Read(ref raised) > 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
         catalog.Changed -= Count;

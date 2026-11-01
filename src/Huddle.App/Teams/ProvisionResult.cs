@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>How a <see cref="ProcessProvisioner"/> call ended.</summary>
 internal enum ProvisionResult
 {
-    /// <summary><c>Process.md</c> was written and <c>_team.md</c> names it.</summary>
+    /// <summary><c>Process.md</c> was written.</summary>
     Created,
 
     /// <summary>The Team already has a <c>Process.md</c>; nothing was changed.</summary>

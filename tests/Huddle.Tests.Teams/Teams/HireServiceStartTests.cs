@@ -87,7 +87,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        DiskTeamFolders folders = new(teamFolder.Path) { File = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, TeamPaths.ProcessFileName, string.Empty) };
+        DiskTeamFolders folders = new(teamFolder.Path) { File = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty) };
         HireService service = Create(dir, out _, out _, out _, makeProvisioner: types => new ProcessProvisioner(types, folders));
         string path = Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName);
 

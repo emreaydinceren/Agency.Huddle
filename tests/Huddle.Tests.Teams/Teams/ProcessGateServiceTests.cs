@@ -44,6 +44,23 @@ public sealed class ProcessGateServiceTests
         Assert.Equal([GateId.FailingTestBeforeFix, GateId.QaEvidenceBeforeDone], service.EnabledGates(Team));
     }
 
+    /// <summary>
+    /// A <c>_team.md</c> whose retired <c>process:</c> line names another file does not move the gate off
+    /// Process.md, so the gate reads the same Process as cadence, onboarding, the role block and the Process tab (issue #312).
+    /// </summary>
+    [Fact]
+    public void EnabledGates_TeamFileNamesAnotherProcess_ReadsProcessMd()
+    {
+        using TempDataDir dir = new();
+        File.WriteAllText(Path.Combine(dir.Path, "OurWay.md"), Process("'checks-before-merge'"));
+        ProcessGateService service = Build(
+            dir,
+            Process("'qa-evidence-before-done'"),
+            teamFileText: "---\nteamType: 'web@1.2.0'\nprocess: 'OurWay.md'\n---\n");
+
+        Assert.Equal([GateId.QaEvidenceBeforeDone], service.EnabledGates(Team));
+    }
+
     /// <summary>A Team whose type the catalog does not know has no gates, even with a Process.md.</summary>
     [Fact]
     public void EnabledGates_UnknownTeamType_IsEmpty()
@@ -280,7 +297,7 @@ public sealed class ProcessGateServiceTests
         string? actor = null) =>
         new(Team, new TaskId("TASK", 1), from, to, isBug, parentSpecApproved, evidence ?? [], Covers, actor);
 
-    private static ProcessGateService Build(TempDataDir dir, string? processText, string typeId = "web")
+    private static ProcessGateService Build(TempDataDir dir, string? processText, string typeId = "web", string? teamFileText = null)
     {
         if (processText is not null)
         {
@@ -289,10 +306,13 @@ public sealed class ProcessGateServiceTests
 
         VersionedRef type = new(typeId, "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
+        TeamFile teamFile = teamFileText is not null && TeamFile.TryParse(teamFileText, out TeamFile? parsed)
+            ? parsed
+            : new TeamFile(type, null, null, null, string.Empty);
         FakeTeamFolders folders = new()
         {
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = new TeamFile(type, null, null, null, TeamPaths.ProcessFileName, string.Empty),
+            ReadResult = teamFile,
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         TeamTypeCatalog types = RoleFixtures.Types(dir);

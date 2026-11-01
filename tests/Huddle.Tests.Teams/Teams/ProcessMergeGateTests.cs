@@ -111,7 +111,7 @@ public sealed class ProcessMergeGateTests
         FakeTeamFolders folders = new()
         {
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = new TeamFile(type, null, null, null, TeamPaths.ProcessFileName, string.Empty),
+            ReadResult = new TeamFile(type, null, null, null, string.Empty),
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         ProcessGateService service = new(catalog, folders, RoleFixtures.Types(dir));
