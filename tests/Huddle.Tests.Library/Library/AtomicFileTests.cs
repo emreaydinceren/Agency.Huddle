@@ -50,6 +50,70 @@ public sealed class AtomicFileTests
         Assert.True(Directory.Exists(target));
     }
 
+    /// <summary>
+    /// A target another process holds open for a moment (an indexer, antivirus, an editor reading it) no longer
+    /// refuses the save: the move is retried, so a sharing violation released after 50 ms still writes the file.
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task TryWriteAsync_TargetHeldOpenBriefly_RetriesAndWrites()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string path = Path.Combine(dir.Path, "doc.md");
+        File.WriteAllText(path, "old");
+
+        bool written;
+        using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Task<bool> write = AtomicFile.TryWriteAsync(path, Encoding.UTF8.GetBytes("new"), ct);
+            await Task.Delay(50, ct);
+            reader.Dispose();
+            written = await write;
+        }
+
+        Assert.True(written);
+        Assert.Equal("new", File.ReadAllText(path));
+        Assert.Equal([path], Directory.GetFileSystemEntries(dir.Path));
+    }
+
+    /// <summary>The synchronous overload retries a briefly held target the same way.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task WriteBytes_TargetHeldOpenBriefly_RetriesAndWrites()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string path = Path.Combine(dir.Path, "doc.json");
+        File.WriteAllText(path, "old");
+
+        using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Task write = Task.Run(() => AtomicFile.WriteBytes(path, "new"u8.ToArray()), ct);
+            await Task.Delay(50, ct);
+            reader.Dispose();
+            await write;
+        }
+
+        Assert.Equal("new", File.ReadAllText(path));
+        Assert.Equal([path], Directory.GetFileSystemEntries(dir.Path));
+    }
+
+    /// <summary>A target held open for the whole call is still refused, after the bounded retries, and leaves no temp file.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task TryWriteAsync_TargetHeldOpenThroughout_RefusedAndLeavesNoTemp()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Only Windows refuses a replace over a file held open without FileShare.Delete.");
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string path = Path.Combine(dir.Path, "doc.md");
+        File.WriteAllText(path, "old");
+
+        using FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        bool written = await AtomicFile.TryWriteAsync(path, Encoding.UTF8.GetBytes("new"), ct);
+
+        Assert.False(written);
+        Assert.Equal([path], Directory.GetFileSystemEntries(dir.Path));
+    }
+
     /// <summary>The bytes overload writes its input verbatim (a byte-order mark is not stripped or added) over an existing file.</summary>
     [Fact]
     public void WriteBytes_ExistingFile_OverwritesWithExactBytes()
