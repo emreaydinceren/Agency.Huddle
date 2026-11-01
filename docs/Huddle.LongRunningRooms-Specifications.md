@@ -1,7 +1,7 @@
 # Huddle.LongRunningRooms — Requirements and Design Specification
 
 **Date:** 2026-10-30 (first draft 2026-10-11 as *Huddle.PersistentMemory*; rewritten after review
-2026-10-16; renamed and extended with OpenClaw's prior art 2026-10-30) · **Status:** Phases 1 and 2a built, phase 0's checks and `SessionRetentionDays` not run or built (2026-10-31); experiment next ·
+2026-10-16; renamed and extended with OpenClaw's prior art 2026-10-30) · **Status:** Closed 2026-10-31. Phases 1 and 2a built and the experiment run once (§9.3); phase 2b, the single-session mode and phase 4 not pursued; phase 0's checks and `SessionRetentionDays` not run or built ·
 **Decision record:** none yet (§12 lists the ADR candidates) · **Builds on:**
 [the Room Sessions spec](Huddle.RoomSessions-Specifications.md) (cited as *RS §n*),
 [the Commands spec](Huddle.Commands-Specifications.md),
@@ -785,9 +785,13 @@ whichever way the decision goes.
 
 **Why it is provisional.** One seeded Room and one repeats round; the resumed rounds were not fully
 isolated (Claude Code's session file sat outside the copied data folder, since fixed on the test
-page); and phase 1's own-Messages-first trim was not in play. **Next:** rerun LONGROOMS-04 (the
-repeats) on the real Room with the built *Start afresh*, about $5, before choosing between the
-single-session mode and phase 2b.
+page); and phase 1's own-Messages-first trim was not in play.
+
+**Closed, 2026-10-31.** The Human closed the effort on this result: recall after a fresh start held,
+and the issues it found were fixed in the Memory Prompt (never save that a fact is missing; keep a
+record of proposals and the Human's answers) and the tool-call log (a `memory` call names its file).
+Phase 2b, the single-session mode (Q-13) and phase 4 are not pursued, and the LONGROOMS-04 rerun
+on the real Room was not made. Reopen from here if fresh starts or the rut become a problem again.
 
 ---
 
@@ -845,14 +849,14 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-3 | Does isolation hold live (Task 14.3.m)? | **Phase 2** | Unknown; until it does, the experiment cannot separate Huddle's effect from Claude Code's memory |
 | Q-4 | Should a fresh start delete the old session with ACP `session/delete`? | No | Yes eventually; needs `IAgentSession` support from the ACP effort |
 | Q-5 | Are 200,000 tokens, a 50 % fall, and 60 minutes with 50,000 tokens the right thresholds? | No | Starting values. Treat 200,000 as a ceiling: OpenClaw's pruning acts from max(50,000, 30 % of the window) and its compaction keeps 20,000 recent tokens (§7.2). Tune down from the experiment and the records of §6.7 |
-| Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it. First run (§9.3, provisional): a fresh start gave **more** repeats than `/compact`, 7 to 2 |
+| Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it. First run (§9.3, provisional): a fresh start gave **more** repeats than `/compact`, 7 to 2. Closed 2026-10-31 on that result: no automatic fresh starts (§9.3) |
 | Q-7 | Should observing compaction use ACP `compaction_update` instead of the `Used` fall? | No | Later; it needs a mapping in `SessionUpdateMapper` (ACP effort) and a client capability Huddle does not advertise yet |
 | Q-8 | Should the Room setting be on by default once the experiment passes? | No | No; keep it the Human's choice (§13) |
 | Q-9 | Does the memory flush earn its Turn? | No | Decided to build it, after OpenClaw (§6.6); the experiment's A/B (§9.1 step 5) decides whether it stays on by default |
 | Q-10 | Does this spec depend on PR #287 merging first? | Phase 2b's flush | No for phases 0 and 1, or for fresh starts themselves. The memory flush needs the `memory` tool, and the experiment (§9.1) should run after it, so it measures the Room as it will really run |
 | Q-11 | Should a daily reset be offered after all, as OpenClaw does? | No | No (§7.2); revisit only if the experiment shows the idle and size triggers miss stale sessions |
 | Q-12 | Should the flush also run after an observed compaction, when the Adapter's summary has already dropped detail? | No | Yes, as specified: it is cheap and can still save what survived. The records of §6.7 will show how often compaction fires before the Size trigger |
-| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1), as an alternative to phase 2b's trigger set, not in addition to it; if adopted it becomes requirements in phase 2b. First run (§9.3, provisional) points this way; confirm on the real Room |
+| Q-13 | Should a Room offer a single-session mode (§7.3): Adapter compaction allowed, a threshold-driven memory flush, fresh starts only as an escape hatch? | No | Lean yes for the Chief of Staff, the stated goal. Decide after the experiment's rut score (§9.1), as an alternative to phase 2b's trigger set, not in addition to it; if adopted it becomes requirements in phase 2b. First run (§9.3, provisional) points this way. Closed 2026-10-31: not pursued, and neither is phase 2b (§9.3) |
 
 ### 12.2 ADR candidates
 
