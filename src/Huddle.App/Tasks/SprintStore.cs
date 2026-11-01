@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 using Microsoft.Extensions.Options;
 
@@ -179,7 +180,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
 
         if (raise)
         {
-            this.SprintsChanged?.Invoke();
+            EventRaise.Isolated(this.SprintsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.SprintsChanged)));
         }
 
         return existing is not null
@@ -266,7 +267,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
             }
         }
 
-        this.SprintsChanged?.Invoke();
+        EventRaise.Isolated(this.SprintsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.SprintsChanged)));
         return true;
     }
 

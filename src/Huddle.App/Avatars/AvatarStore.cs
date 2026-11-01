@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.App.Avatars;
@@ -183,7 +184,7 @@ internal sealed partial class AvatarStore : IDisposable
             this.DeleteImage(previousImage);
         }
 
-        this.AvatarsChanged?.Invoke();
+        EventRaise.Isolated(this.AvatarsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AvatarsChanged)));
     }
 
     /// <summary>
@@ -212,7 +213,7 @@ internal sealed partial class AvatarStore : IDisposable
             this.watched.Current = this.BuildAvatars(document);
         }
 
-        this.AvatarsChanged?.Invoke();
+        EventRaise.Isolated(this.AvatarsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AvatarsChanged)));
     }
 
     /// <summary>
@@ -242,7 +243,7 @@ internal sealed partial class AvatarStore : IDisposable
         }
 
         this.DeleteImage(imageFile);
-        this.AvatarsChanged?.Invoke();
+        EventRaise.Isolated(this.AvatarsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AvatarsChanged)));
     }
 
     /// <summary>

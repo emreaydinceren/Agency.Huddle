@@ -2,7 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -22,6 +24,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     private readonly TaskStore tasks;
     private readonly FileSystemWatcher teamFileWatcher;
     private readonly ITimer teamFileTimer;
+    private readonly ILogger<TeamCatalog> logger;
     private volatile bool disposed;
     private volatile IReadOnlyList<TeamSummary> snapshot;
 
@@ -29,11 +32,13 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <param name="personas">The Persona store: Team labels and each Persona's Teams.</param>
     /// <param name="tasks">The Task store: the Team and Project folders on disk, and the Teams root the team files live under.</param>
     /// <param name="timeProvider">Clock for the team-file debounce; defaults to the system clock.</param>
-    public TeamCatalog(PersonaStore personas, TaskStore tasks, TimeProvider? timeProvider = null)
+    /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public TeamCatalog(PersonaStore personas, TaskStore tasks, TimeProvider? timeProvider = null, ILogger<TeamCatalog>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(tasks);
 
+        this.logger = logger ?? NullLogger<TeamCatalog>.Instance;
         this.personas = personas;
         this.tasks = tasks;
         this.teamFileTimer = (timeProvider ?? TimeProvider.System).CreateTimer(this.OnTeamFileTimer, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
@@ -144,7 +149,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     private void OnSourceChanged()
     {
         this.snapshot = this.Rebuild();
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>

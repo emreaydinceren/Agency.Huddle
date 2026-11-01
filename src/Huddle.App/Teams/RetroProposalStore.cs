@@ -1,4 +1,6 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 
 namespace Agency.Huddle.App.Teams;
@@ -9,8 +11,11 @@ namespace Agency.Huddle.App.Teams;
 /// time the Team is asked about.
 /// </summary>
 /// <param name="folders">Finds the Team folder.</param>
-internal sealed class RetroProposalStore(ITeamFolders folders)
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class RetroProposalStore(ITeamFolders folders, ILogger<RetroProposalStore>? logger = null)
 {
+    private readonly ILogger<RetroProposalStore> logger = logger ?? NullLogger<RetroProposalStore>.Instance;
+
     private const string ProposalsFolder = "_proposals";
 
     private const string RetroFolder = "retro";
@@ -68,7 +73,7 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
             this.byId[set.Id] = set;
         }
 
-        this.Changed?.Invoke(set.Team);
+        EventRaise.Isolated(this.Changed, set.Team, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 
@@ -104,7 +109,7 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
             }
         }
 
-        this.Changed?.Invoke(team);
+        EventRaise.Isolated(this.Changed, team, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 
@@ -125,7 +130,7 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
             this.Delete(removed);
         }
 
-        this.Changed?.Invoke(removed.Team);
+        EventRaise.Isolated(this.Changed, removed.Team, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.SkillPacks.Folders;
 using System.Collections.Frozen;
 using Microsoft.Extensions.Options;
@@ -192,7 +193,7 @@ internal sealed class SkillStore : IDisposable
             changed = this.SkillsChanged;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.SkillsChanged)));
     }
 
     /// <summary>Resolves a list of Skill names against the current snapshot.</summary>

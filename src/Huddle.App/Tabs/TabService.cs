@@ -1,4 +1,6 @@
 using System.Globalization;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Tabs;
 
@@ -20,6 +22,7 @@ internal sealed class TabService
     private readonly List<GroupState> groups = [];
     private readonly Dictionary<string, IReadOnlyList<TrailCrumb>> trails = new(StringComparer.Ordinal);
     private readonly HashSet<string> dirtyKeys = new(StringComparer.Ordinal);
+    private readonly ILogger<TabService> logger;
     private IReadOnlyList<TabGroup> groupSnapshot = [];
     private IReadOnlyList<Tab> tabSnapshot = [];
     private string focusedId;
@@ -27,8 +30,10 @@ internal sealed class TabService
     private int lastGroupId;
 
     /// <summary>Starts with one empty group, which has focus.</summary>
-    public TabService()
+    /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public TabService(ILogger<TabService>? logger = null)
     {
+        this.logger = logger ?? NullLogger<TabService>.Instance;
         GroupState first = this.NewGroup();
         this.groups.Add(first);
         this.focusedId = first.Id;
@@ -622,7 +627,7 @@ internal sealed class TabService
     private void Publish()
     {
         this.RefreshSnapshots();
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>The mutable state of one group; every outside view is an immutable <see cref="TabGroup"/>.</summary>

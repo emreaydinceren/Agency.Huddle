@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.SkillSources;
 using Microsoft.Extensions.Options;
 using System.Globalization;
@@ -98,7 +99,7 @@ internal sealed class LibraryRootStore
             this.current = this.BuildSnapshot(pinned, snapshot.Hidden, loadError: null);
         }
 
-        this.RootsChanged?.Invoke();
+        EventRaise.Isolated(this.RootsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RootsChanged)));
     }
 
     /// <summary>The trust warning every surface that pins a folder shows beside it.</summary>
@@ -136,7 +137,7 @@ internal sealed class LibraryRootStore
             this.current = this.BuildSnapshot(snapshot.PinnedFromFile, snapshot.Hidden, snapshot.LoadError);
         }
 
-        this.RootsChanged?.Invoke();
+        EventRaise.Isolated(this.RootsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RootsChanged)));
     }
 
     /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"agents"</c>, <c>"uploads"</c> or <c>"skill-sources"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
@@ -177,7 +178,7 @@ internal sealed class LibraryRootStore
             this.current = this.BuildSnapshot(snapshot.PinnedFromFile, newHidden, loadError: null);
         }
 
-        this.RootsChanged?.Invoke();
+        EventRaise.Isolated(this.RootsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RootsChanged)));
     }
 
     /// <summary>Deletes <c>library-roots.json</c> (if any) and reverts to the configured pinned roots, with nothing hidden.</summary>
@@ -194,7 +195,7 @@ internal sealed class LibraryRootStore
             this.current = this.BuildSnapshot(pinnedFromFile: null, hidden: new HashSet<string>(StringComparer.Ordinal), loadError: null);
         }
 
-        this.RootsChanged?.Invoke();
+        EventRaise.Isolated(this.RootsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RootsChanged)));
     }
 
     /// <summary>

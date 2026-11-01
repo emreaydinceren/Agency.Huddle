@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Options;
@@ -109,7 +110,7 @@ internal sealed partial class HiringPoolCatalog
         List<PoolJob> jobs = [.. valid.Values.OrderBy(static j => j.Title, StringComparer.Ordinal).ThenBy(static j => j.Id, StringComparer.Ordinal)];
         List<PoolTeamType> typeList = [.. types.Values.OrderBy(static t => t.Name, StringComparer.Ordinal)];
         this.snapshot = new Snapshot(jobs, typeList, problems, valid);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Reads every embedded built-in pool file, keyed by path below the pool prefix.</summary>

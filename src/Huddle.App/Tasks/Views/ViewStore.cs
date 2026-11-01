@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -176,7 +177,7 @@ internal sealed partial class ViewStore : IDisposable
             this.watched.Current = BuildSnapshot(entries);
         }
 
-        this.ViewsChanged?.Invoke();
+        EventRaise.Isolated(this.ViewsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ViewsChanged)));
         return new ViewSaveResult(true, []);
     }
 
@@ -219,7 +220,7 @@ internal sealed partial class ViewStore : IDisposable
             this.watched.Current = BuildSnapshot(entries);
         }
 
-        this.ViewsChanged?.Invoke();
+        EventRaise.Isolated(this.ViewsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ViewsChanged)));
         return new ViewSaveResult(true, []);
     }
 
@@ -283,7 +284,7 @@ internal sealed partial class ViewStore : IDisposable
             this.watched.Current = BuildSnapshot(entries);
         }
 
-        this.ViewsChanged?.Invoke();
+        EventRaise.Isolated(this.ViewsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ViewsChanged)));
     }
 
     /// <summary>Whether <paramref name="id"/> names one of the two built-in Views.</summary>

@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
@@ -163,7 +164,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             this.watched.Current = this.ApplyResolved(overrides);
         }
 
-        this.PromptsChanged?.Invoke();
+        EventRaise.Isolated(this.PromptsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.PromptsChanged)));
     }
 
     /// <summary>
@@ -205,7 +206,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             this.watched.Current = this.ApplyResolved(overrides);
         }
 
-        this.PromptsChanged?.Invoke();
+        EventRaise.Isolated(this.PromptsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.PromptsChanged)));
     }
 
     /// <summary>
@@ -254,7 +255,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             this.watched.Current = this.ApplyResolved(overrides);
         }
 
-        this.PromptsChanged?.Invoke();
+        EventRaise.Isolated(this.PromptsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.PromptsChanged)));
     }
 
     /// <summary>

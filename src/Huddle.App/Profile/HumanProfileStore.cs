@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
@@ -289,10 +290,10 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
         {
             if (nameChanged)
             {
-                renamed?.Invoke(new HumanRenamed(before.Profile.Name, after.Profile.Name));
+                EventRaise.Isolated(renamed, new HumanRenamed(before.Profile.Name, after.Profile.Name), ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.HumanRenamed)));
             }
 
-            changed?.Invoke();
+            EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ProfileChanged)));
         };
     }
     /// <summary>The resolved profile and whether it came from a saved file.</summary>

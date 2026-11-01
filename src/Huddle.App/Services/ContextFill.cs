@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Agency.Huddle.App.Services;
 
 /// <summary>
@@ -9,8 +11,10 @@ namespace Agency.Huddle.App.Services;
 /// the latest reading per (Agent, Room) and never adds values together. A <see langword="null"/> room
 /// id is the Agent's shared entry, the one reading of a shared-mode session that serves every Room.
 /// </remarks>
-internal sealed class ContextFill
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class ContextFill(ILogger<ContextFill>? logger = null)
 {
+    private readonly ILogger<ContextFill> logger = logger ?? NullLogger<ContextFill>.Instance;
     private readonly Dictionary<string, Dictionary<string, ContextFillReading>> byAgent = new(StringComparer.Ordinal);
     private readonly Lock gate = new();
 
@@ -52,7 +56,7 @@ internal sealed class ContextFill
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 
@@ -82,7 +86,7 @@ internal sealed class ContextFill
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 
@@ -103,7 +107,7 @@ internal sealed class ContextFill
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 

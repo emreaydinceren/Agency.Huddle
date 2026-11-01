@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Helpers;
@@ -325,7 +326,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             _ = this.concurrency.Release();
         }
 
-        this.StatusChanged?.Invoke();
+        EventRaise.Isolated(this.StatusChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged)));
     }
 
     /// <summary>Stores a failure without letting a store error escape the fire path.</summary>
@@ -339,7 +340,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
                 this.feed.Ran(invoker.Helper, HelperRunKind.Failed, failed);
             }
 
-            this.StatusChanged?.Invoke();
+            EventRaise.Isolated(this.StatusChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged)));
         }
         catch (Exception ex)
         {

@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.DocHistory;
 
@@ -116,7 +117,7 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
             }
         }
 
-        this.Changed?.Invoke(file);
+        EventRaise.Isolated(this.Changed, file, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         PostToFeed(file, entry);
     }
 
@@ -168,8 +169,8 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
 
         if (moved)
         {
-            this.Changed?.Invoke(from);
-            this.Changed?.Invoke(to);
+            EventRaise.Isolated(this.Changed, from, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
+            EventRaise.Isolated(this.Changed, to, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 

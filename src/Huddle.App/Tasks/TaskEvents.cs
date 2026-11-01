@@ -1,3 +1,6 @@
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
@@ -8,8 +11,11 @@ namespace Agency.Huddle.App.Tasks;
 /// change came through <see cref="TaskService"/> or the watcher. Internal (Settled corrections-B2
 /// D6 item 12).
 /// </summary>
-internal sealed class TaskEvents
+/// <param name="logger">Reports a subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class TaskEvents(ILogger<TaskEvents>? logger = null)
 {
+    private readonly ILogger<TaskEvents> logger = logger ?? NullLogger<TaskEvents>.Instance;
+
     /// <summary>Raised after a Task is created, updated, closed or reopened.</summary>
     public event Action<TaskChange>? TaskChanged;
 
@@ -17,17 +23,17 @@ internal sealed class TaskEvents
     public event Action? TasksReloaded;
 
     /// <summary>
-    /// Invokes every <see cref="TaskChanged"/> subscriber in turn, logging nothing itself - a
-    /// handler that throws propagates, following the plain-hub design; callers that need
-    /// throw-and-skip semantics (Spec §9.5) wrap their own subscription.
+    /// Invokes every <see cref="TaskChanged"/> subscriber in turn. A handler that throws is logged
+    /// at Error and skipped, so it neither stops the subscribers after it nor reaches the caller.
     /// </summary>
     /// <param name="change">The change to publish.</param>
     internal void RaiseTaskChanged(TaskChange change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        this.TaskChanged?.Invoke(change);
+        EventRaise.Isolated(this.TaskChanged, change, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.TaskChanged)));
     }
 
     /// <summary>Invokes every <see cref="TasksReloaded"/> subscriber in turn (Settled corrections-B2 item 15, for D11/D14 bUnit tests to drive it directly).</summary>
-    internal void RaiseTasksReloaded() => this.TasksReloaded?.Invoke();
+    internal void RaiseTasksReloaded() =>
+        EventRaise.Isolated(this.TasksReloaded, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.TasksReloaded)));
 }

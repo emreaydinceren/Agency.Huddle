@@ -1,4 +1,6 @@
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Sidebar;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Tabs;
 
@@ -9,8 +11,10 @@ namespace Agency.Huddle.App.Tabs;
 /// two pages at once, and the sidebar must follow the focused pane's Tab. Scoped per circuit, and touched
 /// only on the renderer's thread.
 /// </summary>
-internal sealed class RightSidebarService
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class RightSidebarService(ILogger<RightSidebarService>? logger = null)
 {
+    private readonly ILogger<RightSidebarService> logger = logger ?? NullLogger<RightSidebarService>.Instance;
     private readonly Dictionary<long, (string TabId, PageSubject Subject, long Seq)> entries = [];
     private long lastId;
     private long lastSeq;
@@ -29,7 +33,7 @@ internal sealed class RightSidebarService
     {
         this.IsOpen = !this.IsOpen;
         this.Mode = RightSidebarMode.Subject;
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Opens the sidebar on the active Tab's Subject, whatever it showed before: a page calls this when the Human asks for something the sidebar draws, such as a Task's details. Does nothing when it already shows a Subject.</summary>
@@ -42,7 +46,7 @@ internal sealed class RightSidebarService
 
         this.IsOpen = true;
         this.Mode = RightSidebarMode.Subject;
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>
@@ -54,7 +58,7 @@ internal sealed class RightSidebarService
         bool showing = this.IsOpen && this.Mode == RightSidebarMode.Notifications;
         this.IsOpen = !showing;
         this.Mode = showing ? RightSidebarMode.Subject : RightSidebarMode.Notifications;
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>A new handle for one source, to pass to <see cref="Set"/> and <see cref="Remove"/>.</summary>
@@ -74,7 +78,7 @@ internal sealed class RightSidebarService
         }
 
         this.entries[id] = (tabId, subject, ++this.lastSeq);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Removes the source with handle <paramref name="id"/>; does nothing when there is none.</summary>
@@ -83,7 +87,7 @@ internal sealed class RightSidebarService
     {
         if (this.entries.Remove(id))
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 

@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Profile;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
@@ -222,7 +223,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             changed = this.IndexChanged;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
     }
 
@@ -280,7 +281,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             changed = this.IndexChanged;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
     }
 
@@ -353,7 +354,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             changed = this.IndexChanged;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
     }
 
@@ -470,7 +471,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             }
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return results;
     }
 
@@ -523,7 +524,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             changed = this.IndexChanged;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
     }
 
@@ -741,10 +742,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
         foreach (OutsideEdit edit in edits)
         {
-            this.OutsideEditDetected?.Invoke(edit);
+            EventRaise.Isolated(this.OutsideEditDetected, edit, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.OutsideEditDetected)));
         }
 
-        indexChanged?.Invoke();
+        EventRaise.Isolated(indexChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
     }
 
     /// <summary>
@@ -1261,7 +1262,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             changed = teamsChanged ? this.IndexChanged : null;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
     }
 
     /// <summary>An immutable published snapshot of the scan: every valid Task, the rejected files, and the Team folders.</summary>

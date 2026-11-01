@@ -1,5 +1,7 @@
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.HumanGate;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.NeedsYou;
 
@@ -13,12 +15,14 @@ internal sealed class NeedsYouTaskSource : IDisposable
     private readonly TaskStore store;
     private readonly IProofSource proofs;
     private readonly TaskEvents events;
+    private readonly ILogger<NeedsYouTaskSource> logger;
 
     /// <summary>Creates the source and subscribes it to the Task events.</summary>
     /// <param name="store">Where the Tasks are read from.</param>
     /// <param name="proofs">Evaluates each listed Task's Proof.</param>
     /// <param name="events">The hub whose Task events raise <see cref="Changed"/>.</param>
-    public NeedsYouTaskSource(TaskStore store, IProofSource proofs, TaskEvents events)
+    /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public NeedsYouTaskSource(TaskStore store, IProofSource proofs, TaskEvents events, ILogger<NeedsYouTaskSource>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(proofs);
@@ -27,6 +31,7 @@ internal sealed class NeedsYouTaskSource : IDisposable
         this.store = store;
         this.proofs = proofs;
         this.events = events;
+        this.logger = logger ?? NullLogger<NeedsYouTaskSource>.Instance;
         events.TaskChanged += this.OnTaskChanged;
         events.TasksReloaded += this.OnTasksReloaded;
     }
@@ -64,12 +69,12 @@ internal sealed class NeedsYouTaskSource : IDisposable
     /// <param name="change">The change; not inspected.</param>
     private void OnTaskChanged(TaskChange change)
     {
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Raises <see cref="Changed"/> for one reload.</summary>
     private void OnTasksReloaded()
     {
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 }

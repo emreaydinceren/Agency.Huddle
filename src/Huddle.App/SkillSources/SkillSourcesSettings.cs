@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text.Encodings.Web;
@@ -117,7 +118,7 @@ internal sealed class SkillSourcesSettings
             this.Write();
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return new SetDirResult(true, null);
     }
 
