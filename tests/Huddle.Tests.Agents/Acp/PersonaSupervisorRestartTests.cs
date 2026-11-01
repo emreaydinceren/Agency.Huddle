@@ -4,9 +4,11 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Fakes;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -51,6 +53,53 @@ public sealed class PersonaSupervisorRestartTests
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
 
         Assert.Equal(1, supervisor.RunningHostCount);
+        Assert.Equal(PersonaState.Online, health.Get("nova")?.State);
+
+        await supervisor.StopAsync(ct);
+    }
+
+    /// <summary>
+    /// A Restart pressed the moment a failed start reports Offline still starts the Persona. Offline is reported while
+    /// the failed start still holds the Persona as starting, and a Restart in that window used to be refused silently,
+    /// so the Restart button did nothing. Pressing it from inside the Offline report forces that window every time.
+    /// </summary>
+    [Fact]
+    public async Task RestartAsync_PressedAsAFailedStartReportsOffline_StillStartsThePersona()
+    {
+        using CancellationTokenSource fixtureCts = new(TestBudgets.Slowest);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, fixtureCts.Token);
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+        IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options, "nova");
+
+        PersonaStore personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        FakeAgentHostFactory inner = new();
+        ScriptedAgentHostFactory factory = ScriptedAgentHostFactory.FailOnceFor(
+            inner, "nova", new InvalidOperationException("Simulated failure starting Persona 'nova'."));
+        PersonaHealth health = NewHealth();
+        AdapterProfileResolver resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using SkillStore skillStore = NewSkillStore(options);
+        using PersonaSupervisor supervisor = new(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        int pressed = 0;
+        Task? restart = null;
+        void PressRestartOnOffline()
+        {
+            if (health.Get("nova") is { State: PersonaState.Offline } && Interlocked.Exchange(ref pressed, 1) == 0)
+            {
+                restart = supervisor.RestartAsync("nova", ct);
+            }
+        }
+
+        health.Changed += PressRestartOnOffline;
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => Volatile.Read(ref pressed) == 1, ct);
+        await (restart ?? Task.CompletedTask);
+        health.Changed -= PressRestartOnOffline;
+
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
         Assert.Equal(PersonaState.Online, health.Get("nova")?.State);
 
         await supervisor.StopAsync(ct);
