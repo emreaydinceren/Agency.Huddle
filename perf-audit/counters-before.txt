@@ -1,0 +1,1 @@
+before: alloc 17.7 MB/s, gen0 0.26 GC/s, GC pause 3.5 ms/s over 89 samples
