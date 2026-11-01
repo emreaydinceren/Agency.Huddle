@@ -60,16 +60,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <summary>Serialises every fire (corrections-B3 D9 item 9).</summary>
     private readonly SemaphoreSlim fireGate = new(1, 1);
 
-    /// <summary>Cancelled by <see cref="StopAsync"/>; every fire's awaited calls take its token.</summary>
-    private readonly CancellationTokenSource lifetime = new();
-
     /// <summary>
-    /// Serialises cancelling <see cref="lifetime"/> against disposing it, and guards <see cref="lifetimeDisposed"/>. The host
-    /// can stop this service on one thread while it disposes it on another: under <c>WebApplicationFactory</c> the factory's
-    /// stop releases <c>Program</c>'s <c>RunAsync</c>, which stops and disposes the host as well.
+    /// Cancelled by <see cref="StopAsync"/>; every fire's awaited calls take its token. The host can stop this service on
+    /// one thread while it disposes it on another (under <c>WebApplicationFactory</c> the factory's stop releases
+    /// <c>Program</c>'s <c>RunAsync</c>, which stops and disposes the host as well), which <see cref="StopSignal"/> survives.
     /// </summary>
-    private readonly Lock lifetimeGate = new();
-    private bool lifetimeDisposed;
+    private readonly StopSignal lifetime = new();
 
     private readonly Dictionary<BatchKey, Batch> batches = [];
 
@@ -245,14 +241,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         this.Halt();
-        lock (this.lifetimeGate)
-        {
-            // Halt returns early when a concurrent StopAsync has already marked the service stopped but not yet cancelled.
-            this.lifetime.Cancel();
-            this.lifetime.Dispose();
-            this.lifetimeDisposed = true;
-        }
 
+        // Halt returns early when a concurrent StopAsync has already marked the service stopped but not yet cancelled;
+        // Dispose cancels before it disposes, so the token is never left uncancelled.
+        this.lifetime.Dispose();
         this.fireGate.Dispose();
     }
 
@@ -318,13 +310,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             timer.Dispose();
         }
 
-        lock (this.lifetimeGate)
-        {
-            if (!this.lifetimeDisposed)
-            {
-                this.lifetime.Cancel();
-            }
-        }
+        this.lifetime.Stop();
     }
 
     /// <summary>

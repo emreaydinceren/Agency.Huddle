@@ -367,6 +367,40 @@ first candidates to promote. `MA0009` (regex timeout) is a real denial-of-servic
 fails when the repository path contains a backslash followed by punctuation, because
 `SkillSourcesMove.CodeSpanIfNeeded` then wraps the path in a code span. It fails on an unmodified tree at such a
 path, so it says nothing about a change made there.
+
+## Huddle.Analyzers
+
+`src/Huddle.Analyzers` holds this repo's own rules, `HUD####`. Each one encodes a shape that CI has
+already gone red on, and points at the helper that fixes it. `Huddle.App` references the project as
+an analyzer (`OutputItemType="Analyzer"`, `PrivateAssets="all"`), so no other project loads it.
+
+**Scope.** A rule switches itself on only in an assembly that declares, in its own source, the helper
+its fix uses (`OwnHelper.IsDeclared`). That keeps the ACP effort's projects and the test projects
+silent without any per-path `.editorconfig` entry: they cannot reach the helper, so they are not told
+to use it.
+
+**Severity.** Each rule is a `Warning`, which `TreatWarningsAsErrors` turns into a failed build. A
+genuine exception takes a scoped `#pragma` with its reason, like any other rule.
+
+| Rule | Reports | Fix | Why |
+| --- | --- | --- | --- |
+| `HUD0001` | An event raised with `?.Invoke`, `.Invoke` or a direct call. A delegate that is not an event (a `Func`, a callback) is not reported. A raise through a local copy is not tracked. Razor's generated code is analysed. | `EventRaise.Isolated` | `b87afb35` moved 90 raises; a throwing subscriber had skipped the rest and failed the raiser after its state change. Zero hits after that sweep. |
+| `HUD0002` | An instance field or property of type `CancellationTokenSource` (or a subclass) on a type that implements `IHostedService`, which includes `BackgroundService` and `IHostedLifecycleService`. A `using` local is not reported. | `StopSignal` | Four hosted services went red in CI between 30 Oct and 1 Nov (runs 1240, 1260 and two more) with `ObjectDisposedException`: under `WebApplicationFactory` the host is stopped and disposed on two threads. All four moved onto `StopSignal` when the rule landed. |
+
+**Proof.** `tests/Huddle.Analyzers.Tests` compiles a source string per case against the framework's
+own assemblies and asserts what each analyzer reports, including the cases it must leave alone and
+the silence when the helper is not declared. Mutating each analyzer (losing the `?.` case; reporting
+non-hosted types) failed those tests. A throwaway file with one violation of each, built inside
+`Huddle.App`, failed the real build with both IDs, so the project reference is live.
+
+**Adding a rule.** Put the descriptor in `HuddleDiagnostics`, list it in
+`AnalyzerReleases.Unshipped.md` (`RS2008` fails the build otherwise), gate it on the helper with
+`OwnHelper.IsDeclared`, test both the hits and the near misses, and add a row here and in
+[CSharpPrinciples.md](../../agents/CSharpPrinciples.md)'s enforced table. Prefer a line in
+`BannedSymbols.txt` when a symbol ban says it; write an analyzer only for a shape a ban cannot express.
+`Microsoft.CodeAnalysis.CSharp` stays on the 4.x line, because an analyzer must not reference a newer
+Roslyn than the SDK compiler that loads it.
+
 ## Non-Sonar settings
 
 | Setting | Where | Decision and reason |

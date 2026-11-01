@@ -8,6 +8,7 @@
     <Project Path="src/Huddle.App/Huddle.App.csproj" />
     <Project Path="src/Huddle.Console/Huddle.Console.csproj" />
     <Project Path="src/Huddle.Acp/Huddle.Acp.csproj" />
+    <Project Path="src/Huddle.Analyzers/Huddle.Analyzers.csproj" />
     <Project Path="src/Huddle.Contracts/Huddle.Contracts.csproj" />
     <Project Path="src/Huddle.MockAdapter/Huddle.MockAdapter.csproj" />
     <Project Path="src/Huddle.Packs/Huddle.Packs.csproj" />
@@ -16,6 +17,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />
+    <Project Path="tests/Huddle.Analyzers.Tests/Huddle.Analyzers.Tests.csproj" />
     <Project Path="tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj" />
     <Project Path="tests/Huddle.Tests.Common/Huddle.Tests.Common.csproj" />
     <Project Path="tests/Huddle.Tests.SkillPacks/Huddle.Tests.SkillPacks.csproj" />

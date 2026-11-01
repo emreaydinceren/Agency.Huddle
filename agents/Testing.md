@@ -99,6 +99,11 @@ the assembly setup test, the line in `Huddle.slnx` and the `InternalsVisibleTo` 
 `agents/scripts/test-split-map.psd1`. `TestProjectLayoutTests` (in `Huddle.Tests.Shell`) fails if a
 step is missed.
 
+Moving test folders between projects has one more step that nothing local checks: `.gitleaks.toml`
+allowlists fixture folders (Gateway, RemoteAccess, DesktopHandOff) **by project path**. Add the new
+path beside the old one, and keep the old one, which the mirror sync's history scan still needs. A
+split that skipped this failed CI's secret scan (`19695f68`).
+
 ### Parallelism by project
 
 Each project's `xunit.runner.json` sets `maxParallelThreads` from this table, and a test pins the value.
@@ -187,7 +192,31 @@ Causes found, all fixed at the root:
 | A count off by one in server-rendered HTML, ~1 run in 100 | A bare word matched inside the prerender marker's random base64 — count the element |
 | A rename not visible right after `Update` returns | A real product bug: the watcher's debounce rescan ran inside `Update` and raised the rename from its timer thread (`PersonaStore`, fixed by lock order) |
 | "Hosting failed to start" with `cannot change into wal mode from within a transaction` in `SqliteTeamDirectory.InitializeAsync` | Not our code: `Microsoft.Data.Sqlite` up to 10.0.12 could lend one pooled native handle to two connections opened at once (dotnet/efcore#39008), and the other owner's running statement blocked the `PRAGMA`. Fixed by 10.0.13; `SqliteConnectionPoolTests` pins it, so do not downgrade the package |
-| `ObjectDisposedException` from a `CancellationTokenSource` in a hosted service's `StoppingAsync` during `WebApplicationFactory` teardown | The stopping step ran after the singleton had already been disposed. A service that owns a token source makes `Dispose` and stopping safe in either order (`TailscaleRuntime`, pinned by `TailscaleRuntimeTests`) |
+| `ObjectDisposedException` from a `CancellationTokenSource` in a hosted service's `StopAsync`, `StoppingAsync` or `Halt` during `WebApplicationFactory` teardown | A real product bug, fixed four times in two days (`TailscaleRuntime`, `TaskTriggerService`, `TeamRoomReconciler`, `HelperDispatcher`): the factory stops the host on one thread while `Program`'s `RunAsync` disposes it on another, so the cancel landed on a disposed source. A hosted service holds its lifetime in a `StopSignal`, never a bare `CancellationTokenSource` field; analyzer `HUD0002` enforces it |
+| A fake-clock test times out waiting for the second firing | The test called `Advance` before the code under test had armed its next timer (it arms in a `finally`, on its own thread). The timer then counted from the new time and was never due. Wait for `FiringTimeProvider.ScheduledTimerCount` before advancing, or advance on every poll until the call arrives (`HelperDispatcherTests`, `CreateRacesAnotherWrite_IsJudgedAgainAndUpdates`) |
+| A test assumes `await Task.Delay(100)` resumes well inside a 500 ms window | On a starved runner it resumed ~400 ms late. Drive the step from a state the product reports, not a wall-clock pause; if the assertion only holds inside a window, measure the window and assert only when it was met (`DebouncedFileWatcherTests`, `TailscaleRuntimeTests` backoff) |
+| Two items compare in the wrong order, only in CI | Ids made in the same millisecond share their time prefix and differ only in the random tail, so creation order is a coin toss. Compare as a set (`GetMembersByRoomAsync_MatchesEachRoomsOwnRead`) |
+| A save "times out" while the test polls the file it replaces | Each `File.ReadAllText` holds the file open, and on Windows that refuses `AtomicFile`'s move. Await the save, then read once |
+| A `PipeHostFixture` test times out at exactly its budget, only when it runs first in a cold process | The fixture's start (6-8 s of JIT under load) spent the test's token. Pass a `BehaviourBudget`, which pauses while the fixture boots |
+
+**When the cause is a shape, fix every instance in the same PR.** The token-source row above went red
+four times because each fix touched one class; the fixture-budget fix went red again until all 186
+call sites moved. After finding a root cause, grep for the same shape, fix the siblings or list them
+in the PR, and ask whether a rule can stop the next one (`BannedSymbols.txt`, or `src/Huddle.Analyzers`).
+
+### Passing on Linux CI
+
+CI runs on Linux; you verify on Windows. Every Linux-only red in late October was one of these, and
+none needs Docker to avoid:
+
+| Assumption that holds only on Windows | What to write instead |
+| --- | --- |
+| `\` separates folders | `Path.GetFileName` and `Path.GetDirectoryName` keep a `\`-separated path whole on Linux. A path stored by Windows and read back (a memory index, a registry key) needs both separators handled (`MemoryEntry.FileName`) |
+| The file system ignores case | `dev/Apollo` and `dev/apollo` are two folders. A guard that **allows** a path follows the file system; a guard that **refuses** a name (Uploads) ignores case on every OS. `Path.GetRelativePath` is case-sensitive on Linux, so slice through `PathContainment.Below` with an explicit comparison |
+| The temp folder looks like `C:\Users\…` | On Linux it is `/tmp/…`. A golden or mask that matches the data folder's spelling must match both, including any upper-cased or `\`-escaped row-key form |
+| The checkout path is plain | A worktree under `.claude` puts `\.` in the path, and Markdown quoting changes. Copy a fixture repository into the test's own temp folder before running it |
+| The environment is empty | The SDK container sets `ASPNETCORE_HTTP_PORTS`; read only addresses Kestrel really bound |
+| A Windows-only quirk holds everywhere | Move a case that depends on one OS into its own test with `Skip` on the other, rather than deleting it |
 | The run ends red with `failed: 0` and "Foreground threads were left running" | Pooled SQLite connections kept every temp `team.db` open until exit — `TempDataDir.Dispose` clears them |
 
 A failure in an **unrelated** test: capture its name, rerun it alone five times, and report it —

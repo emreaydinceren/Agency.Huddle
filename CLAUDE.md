@@ -36,8 +36,8 @@ subtree, and root files are shared — announce changes before making them.
 
 | | ACP effort | Chat surface |
 | --- | --- | --- |
-| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, `src/Huddle.SkillPacks`, `src/Huddle.Packs` |
-| Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests.*` |
+| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, `src/Huddle.SkillPacks`, `src/Huddle.Packs`, `src/Huddle.Analyzers` |
+| Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests.*`, `tests/Huddle.Analyzers.Tests` |
 | Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md`, `docs/Huddle.SkillPacks*.md` |
 
 `src/Huddle.MockAdapter` (assembly `mock-acp`) is the one place the two subtrees touch by
@@ -80,6 +80,14 @@ minutes and a lot of tokens, and CI already runs the same restore, build and tes
 check-in. Verify on Windows (build, tests, the `Check-*` scripts) and let CI catch a
 Linux-only failure. Run the repro only to debug a red CI run, and only when the CI log is not
 enough.
+
+Most red runs are avoidable without the repro. In the last week of October about 25 fixes went
+in for red CI, in four recurring groups: tests that assumed timing under load, product races that
+only load exposed, paths that assumed Windows (`\`, case-insensitivity), and fixtures moved outside
+`.gitleaks.toml`'s path allowlist. Before pushing a test, read the flaky-test table and
+[Passing on Linux CI](agents/Testing.md#passing-on-linux-ci) in `agents/Testing.md`. When you
+fix a root cause, grep for the same shape and fix every instance in the same PR: four classes
+went red one after another with the same `Dispose`-vs-`StopAsync` race.
 
 Read `agents/CIPipeline.md` before debugging a red run. It carries the local Docker
 repro and the environmental failure modes, including the two that look like code
