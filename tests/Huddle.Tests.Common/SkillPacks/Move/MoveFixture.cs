@@ -38,6 +38,25 @@ internal sealed class MoveFixture : IDisposable
     /// <summary>The fixture copy of the skills repository, in the test output.</summary>
     public static string FixtureRepository => Path.Combine(AppContext.BaseDirectory, "SkillPacks", "Fixtures", "skills-repo");
 
+    /// <summary>
+    /// Copies <see cref="FixtureRepository"/> into the data folder and returns the copy's path. SKILLS.md quotes a path holding a
+    /// Markdown-significant character, so a test comparing rendered text must not depend on where the checkout lives: a worktree
+    /// under <c>.claude</c> puts a <c>\.</c> in the test output's path and quotes every repository row.
+    /// </summary>
+    /// <returns>The full path of the copy, under the data folder.</returns>
+    public string CopyOfFixtureRepository()
+    {
+        string copy = Path.Combine(this.dir.Path, "skills-repo");
+        foreach (string file in Directory.EnumerateFiles(FixtureRepository, "*", SearchOption.AllDirectories))
+        {
+            string target = Path.Combine(copy, Path.GetRelativePath(FixtureRepository, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target) ?? copy);
+            File.Copy(file, target);
+        }
+
+        return copy;
+    }
+
     /// <summary>Points <c>Team:SkillsRepositoryDir</c> at a folder.</summary>
     public MoveFixture WithRepository(string folder)
     {
