@@ -12,6 +12,9 @@ implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for t
 and its `.i` partner ends **green**. Chore, docs, manual and verification tasks have no test partner.
 
 > [!NOTE]
+> **Closed, 2026-10-31.** The experiment ran once (spec §9.3) and the Human closed the effort:
+> phase 2b, the single-session mode and phase 4 are not pursued, so this plan ends at phase 2a.
+>
 > **Delivery status, 2026-10-31.** Tasks 1–3, 6 and 9–59 are **done** on `feat/long-running-rooms`;
 > [the tracker](Huddle.LongRunningRooms-Tracker.md) holds each one's state. Tasks 4 and 5 (1.2 and
 > 1.3, the live checks V0-1 and V0-2) are **deferred to user acceptance**: the Human chose that on
