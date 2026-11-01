@@ -2033,15 +2033,15 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
             this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-            this.RecordMemoryToolPath(started.Kind, started.Title, started.RawInputJson);
-            await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, ct).ConfigureAwait(false);
+            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.RawInputJson);
+            await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
             this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
             this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-            this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.RawInputJson);
-            await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, ct).ConfigureAwait(false);
+            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.RawInputJson);
+            await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
         {
@@ -2203,6 +2203,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="status">The call's current lifecycle state, already mapped to the wire enum.</param>
     /// <param name="location">The call's first location, or <see langword="null"/> when this notification has none.</param>
     /// <param name="diff">The call's first change, or <see langword="null"/> when this notification has none.</param>
+    /// <param name="memoryFile">The file a <c>memory</c> App Tool call names, used when the call has no location or change: the Adapter reports neither for an App Tool.</param>
     /// <param name="ct">Cancels the write.</param>
     private async Task WriteToolActivityAsync(
         string toolCallId,
@@ -2210,6 +2211,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ToolActivityStatus status,
         ToolCallLocationInfo? location,
         ToolCallDiffInfo? diff,
+        string? memoryFile,
         CancellationToken ct)
     {
         ActiveTurn? turn;
@@ -2223,7 +2225,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             return;
         }
 
-        string? path = location?.Path ?? diff?.Path;
+        string? path = location?.Path ?? diff?.Path ?? memoryFile;
         EditChange? edit = BuildEditChange(diff);
         if (edit is not null)
         {
@@ -2349,7 +2351,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
     /// <summary>
     /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="ActiveTurn.Touched"/> set, so File
-    /// Changes counts a save through the tool as the Agent's own, like an <see cref="ToolKind.Edit"/> (Instructions spec §6.1).
+    /// Changes counts a save through the tool as the Agent's own, like an <see cref="ToolKind.Edit"/> (Instructions spec §6.1), and
+    /// returns the file any <c>memory</c> call names, which is the only argument the tool-call log would otherwise lose.
     /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
     /// <c>claude-agent-acp</c> 0.75.1 has no case for an MCP tool in <c>toolInfoFromToolUse</c> (<c>dist/tools.js</c>), so it
     /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>;
@@ -2362,22 +2365,31 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="kind">The tool call's category, as ACP reported it.</param>
     /// <param name="title">The tool call's title, which carries the tool's name for an App Tool.</param>
     /// <param name="rawInputJson">The tool call's raw input, if any.</param>
-    private void RecordMemoryToolPath(ToolKind kind, string? title, string? rawInputJson)
+    /// <returns>
+    /// The file the call names, for every command that names one (a <c>read</c> as well as a <c>write</c>), so the tool-call log
+    /// and the tool-activity line say which memory file was used; <see langword="null"/> for any other call.
+    /// </returns>
+    private string? RecordMemoryToolPath(ToolKind kind, string? title, string? rawInputJson)
     {
         if (kind != ToolKind.Other
             || title is null
             || !MemoryTool.IsToolName(title)
             || this.fileChanges?.MemoryPaths is not { } memoryPaths
-            || MemoryRequest.FromJson(rawInputJson) is not { Mutates: true } request
+            || MemoryRequest.FromJson(rawInputJson) is not { } request
             || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
         {
-            return;
+            return null;
         }
 
-        lock (this.gate)
+        if (request.Mutates)
         {
-            this.activeTurn?.Touched.Add(path);
+            lock (this.gate)
+            {
+                this.activeTurn?.Touched.Add(path);
+            }
         }
+
+        return path;
     }
 
     /// <summary>

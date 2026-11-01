@@ -45,6 +45,20 @@ public sealed class MemoryPromptComposerTests
         Assert.DoesNotContain(Path.Combine(MemoryDir, "dentist.md"), actual, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The protocol forbids saving a fact's absence and asks for a record of proposals and the Human's answers: a first run of the
+    /// Long-running Rooms experiment saw an Agent write "never discussed" into memory, and re-pitch earlier proposals after a fresh
+    /// start (LRR spec §9.3).
+    /// </summary>
+    [Fact]
+    public void Memory_ForbidsSavingAGap_AndKeepsAProposalRecord()
+    {
+        string actual = Compose(["mcp__team__get_help", "mcp__team__memory"], SessionScope.Shared, memoryChangesListed: true).ReplaceLineEndings(" ");
+
+        Assert.Contains("Never save that something is missing, unknown or was never discussed", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("note the proposal and their answer in one topic file, and read that file before you propose anything", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+    }
+
     /// <summary>For an Adapter without the prefix the bare name is used, and a session that lists no memory tool still names it.</summary>
     /// <param name="tool">The tool name as offered, or null when not offered.</param>
     [Theory]
