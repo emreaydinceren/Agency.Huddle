@@ -487,6 +487,52 @@ public sealed class DotAcpAgentHostEffortTests
         }
     }
 
+    /// <summary>A model set answered without <c>configOptions</c> leaves the earlier snapshot in force, so a requested effort the initial options offer is still sent and no warning is logged.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task StartSessionAsync_ModelSetAnsweredWithoutConfigOptions_EffortStillResolvesAgainstTheEarlierSnapshot()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        launcher.Agent.OnNewSession = _ => Task.FromResult(new JsonObject
+        {
+            ["sessionId"] = "sess-1",
+            ["configOptions"] = DotAcpAgentHostEffortTests.CreateModelAndEffortConfigOptions(["default", "low", "high"]),
+        });
+
+        // The default OnSetConfigOption answers every set with an empty result: no configOptions at all.
+        ListLoggerFactory loggerFactory = new ListLoggerFactory();
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            loggerFactory);
+        IAgentSession? session = null;
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+            session = await host.StartSessionAsync(
+                DotAcpAgentHostEffortTests.CreateSessionOptions(Path.GetTempPath(), model: "opus", effort: "low"), cancellationToken);
+
+            List<JsonObject> effortCalls = launcher.Agent.Received.FindAll(
+                message => string.Equals((string?)message["method"], "session/set_config_option", StringComparison.Ordinal)
+                    && string.Equals((string?)message["params"]?["configId"], "thinking", StringComparison.Ordinal));
+
+            Assert.Single(effortCalls);
+            Assert.Equal("low", (string?)effortCalls[0]["params"]!["value"]);
+            Assert.DoesNotContain(loggerFactory.Logger.Entries, entry => entry.Level == LogLevel.Warning);
+        }
+        finally
+        {
+            if (session is not null)
+            {
+                await session.DisposeAsync();
+            }
+
+            await host.DisposeAsync();
+        }
+    }
+
     /// <summary>The model's set_config_option call must be sent strictly before the effort's.</summary>
     [Fact(Timeout = 10000)]
     public async Task StartSessionAsync_SetsTheModelBeforeTheEffort()
