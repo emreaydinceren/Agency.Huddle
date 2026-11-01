@@ -37,9 +37,9 @@ public sealed class MemoryFileRulesTests
     [InlineData("---\ndescription: Echoed\n---\n", "")]
     [InlineData("---\nretries: 3\n---\nThe client's default.\n", "---\nretries: 3\n---\nThe client's default.\n")]
     [InlineData("\uFEFFThe body.", "The body.")]
-    public void WithoutFrontmatter_RemovesOnlyALeadingBlock(string text, string expected)
+    public void SplitEcho_RemovesOnlyALeadingBlock(string text, string expected)
     {
-        Assert.Equal(expected, MemoryFileRules.WithoutFrontmatter(text));
+        Assert.Equal(expected, MemoryFileRules.SplitEcho(text, out _));
     }
 
     /// <summary>The description is read from the frontmatter when it is a non-blank single value; a body line is never a description.</summary>

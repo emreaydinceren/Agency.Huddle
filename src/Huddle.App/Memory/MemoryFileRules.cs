@@ -223,13 +223,6 @@ internal static partial class MemoryFileRules
         return merged.Count == 0 ? null : string.Concat(merged.Select(static entry => entry.Lines));
     }
 
-    /// <summary>
-    /// <paramref name="text"/> without an echoed header (see <see cref="SplitEcho"/>), and without the blank lines after it.
-    /// </summary>
-    /// <param name="text">A body as given.</param>
-    /// <returns>The body; empty when the text was nothing but the header.</returns>
-    public static string WithoutFrontmatter(string text) => SplitEcho(text, out _);
-
     /// <summary>The lines of a <c>---</c> block other than its <c>description</c> key and that key's continuation lines.</summary>
     /// <param name="blockText">The block's text, between its marker lines.</param>
     /// <returns>The kept lines, each ending in a line feed, or <see langword="null"/> when there are none.</returns>
