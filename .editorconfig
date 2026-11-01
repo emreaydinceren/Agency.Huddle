@@ -271,6 +271,15 @@ dotnet_diagnostic.CA1062.severity = warning
 # At suggestion until the hits are fixed; promote to warning afterwards.
 dotnet_diagnostic.CA2007.severity = warning
 
+# String-allocation rules the latest-recommended set leaves off (perf-audit, 2026-10-31). Zero hits when
+# enabled; they guard new code. See docs/engineering/analyzer-decisions.md.
+dotnet_diagnostic.CA1830.severity = warning  # Prefer a typed StringBuilder.Append overload to Append(x.ToString())
+dotnet_diagnostic.CA1834.severity = warning  # StringBuilder.Append(char) for a one-character string
+dotnet_diagnostic.CA1845.severity = warning  # Span-based string.Concat instead of concatenating Substring results
+dotnet_diagnostic.CA1846.severity = warning  # AsSpan instead of Substring when a span overload exists
+dotnet_diagnostic.CA1858.severity = warning  # StartsWith instead of IndexOf(...) == 0
+dotnet_diagnostic.CA1870.severity = warning  # A cached SearchValues instance for IndexOfAny
+
 #### SonarAnalyzer.CSharp: narrow adoption — only these three rules; the rest of the default
 #### rule set is denylisted by ID in Directory.Build.props (see the comment there) ####
 
