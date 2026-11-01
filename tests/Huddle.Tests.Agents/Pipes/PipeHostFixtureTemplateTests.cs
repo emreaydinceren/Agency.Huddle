@@ -47,13 +47,20 @@ public sealed partial class PipeHostFixtureTemplateTests
 
     /// <summary>
     /// Every file under <paramref name="dataDir"/> by relative path, decoded byte for byte (a byte order mark survives as a
-    /// character), with the folder's own path masked in each spelling (JSON-escaped, plain, forward slashes, any case: the
-    /// Skills panel's <c>seen</c> keys are upper-cased paths) and every timestamp masked. SQLite files are left out: the same
-    /// code writes them in both hosts, and they are not text.
+    /// character), with the folder's own path masked in each spelling (JSON-escaped, plain, forward slashes, any case) and
+    /// every timestamp masked. The Skills panel's <c>seen</c> keys are upper-cased paths with <c>\</c> separators even on
+    /// Linux (<c>ResolvedRegistry.RowKeyOf</c>), so the backslashed, JSON-escaped spelling is masked first. SQLite files are
+    /// left out: the same code writes them in both hosts, and they are not text.
     /// </summary>
     private static SortedDictionary<string, string> Normalised(string dataDir)
     {
-        string[] spellings = [dataDir.Replace("\\", "\\\\", StringComparison.Ordinal), dataDir, dataDir.Replace('\\', '/')];
+        string[] spellings =
+        [
+            dataDir.Replace('/', '\\').Replace("\\", "\\\\", StringComparison.Ordinal),
+            dataDir.Replace("\\", "\\\\", StringComparison.Ordinal),
+            dataDir,
+            dataDir.Replace('\\', '/'),
+        ];
         SortedDictionary<string, string> normalised = new(StringComparer.Ordinal);
         foreach (string file in Directory.GetFiles(dataDir, "*", SearchOption.AllDirectories))
         {
