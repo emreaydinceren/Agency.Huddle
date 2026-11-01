@@ -46,13 +46,6 @@
         }
 
         this.scrolled = true;
-        try
-        {
-            _ = await this.Js.InvokeAsync<bool>("teamScroll.intoView", fragment);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone before the scroll; there is nothing left to scroll.
-        }
+        _ = await BrowserCall.TryAsync(() => this.Js.InvokeAsync<bool>("teamScroll.intoView", fragment));
     }
 }

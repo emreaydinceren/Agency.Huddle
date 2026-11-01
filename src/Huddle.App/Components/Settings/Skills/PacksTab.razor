@@ -79,13 +79,6 @@ else
         }
 
         this.scrolled = true;
-        try
-        {
-            _ = await this.JS.InvokeAsync<bool>("teamScroll.intoView", $"pack-card-{this.highlight}");
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone before the scroll; there is nothing left to scroll.
-        }
+        _ = await BrowserCall.TryAsync(() => this.JS.InvokeAsync<bool>("teamScroll.intoView", $"pack-card-{this.highlight}"));
     }
 }

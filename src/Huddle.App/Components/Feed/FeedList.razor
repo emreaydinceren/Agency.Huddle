@@ -202,14 +202,7 @@
 
     private async Task ScrollToTopAsync()
     {
-        try
-        {
-            await this.Js.InvokeVoidAsync("huddleFeed.scrollToTop", this.root);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone, so there is nothing left to scroll.
-        }
+        _ = await BrowserCall.TryAsync(() => this.Js.InvokeVoidAsync("huddleFeed.scrollToTop", this.root));
     }
 
     /// <summary>Items drawn at once come first, newest first, minus any the parent has since loaded itself.</summary>

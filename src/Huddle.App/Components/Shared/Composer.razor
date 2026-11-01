@@ -559,11 +559,7 @@
     {
         try
         {
-            await this.JS.InvokeVoidAsync("teamComposer.detach", this.textarea);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is already gone, and its page with it: there is no observer left to disconnect.
+            _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("teamComposer.detach", this.textarea));
         }
         catch (InvalidOperationException)
         {

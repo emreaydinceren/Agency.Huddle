@@ -74,14 +74,7 @@
         }
 
         this.self = DotNetObjectReference.Create(this);
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, this.MinPx, this.MaxPx, this.DefaultPx, this.BarPx, this.Side);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the handlers were wired; there is nothing left to resize.
-        }
+        _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, this.MinPx, this.MaxPx, this.DefaultPx, this.BarPx, this.Side));
     }
 
     /// <summary>Called from the browser with the width a drag or key press settled on.</summary>
