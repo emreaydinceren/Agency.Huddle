@@ -85,6 +85,26 @@ internal static class NoteYamlScalars
         return text;
     }
 
+    /// <summary>Whether the line's indentation holds a tab, which YAML forbids.</summary>
+    /// <param name="line">One line of a frontmatter block.</param>
+    internal static bool HasTabIndent(string line)
+    {
+        foreach (char c in line)
+        {
+            if (c == '\t')
+            {
+                return true;
+            }
+
+            if (c != ' ')
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Whether <paramref name="text"/> holds a map key: a colon followed by a space or the end.</summary>
     /// <param name="text">A plain scalar's text.</param>
     internal static bool HasKeyColon(string text)

@@ -20,7 +20,7 @@ internal static partial class NoteYamlValue
         }
 
         List<string> significant = [.. entry.Tail.Where(static line => line.Trim().Length > 0 && line.TrimStart()[0] != '#')];
-        if (significant.Exists(HasTabIndent))
+        if (significant.Exists(NoteYamlScalars.HasTabIndent))
         {
             return Unsupported(entry);
         }
@@ -232,24 +232,5 @@ internal static partial class NoteYamlValue
         }
 
         return count;
-    }
-
-    /// <summary>Whether the line's indentation holds a tab, which YAML forbids.</summary>
-    private static bool HasTabIndent(string line)
-    {
-        foreach (char c in line)
-        {
-            if (c == '\t')
-            {
-                return true;
-            }
-
-            if (c != ' ')
-            {
-                return false;
-            }
-        }
-
-        return false;
     }
 }
