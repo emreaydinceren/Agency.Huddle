@@ -252,12 +252,12 @@ public sealed class TeamFileTests
     [InlineData("\uFEFF  ---  ", "  ...  ")]
     public void Compose_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
     {
-        string text = opening + "\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nprocess: 'Process.md'\nextra: keep me\n" + closing + "\nNotes.\n";
+        string text = opening + "\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nextra: keep me\n" + closing + "\nNotes.\n";
         Assert.True(TeamFile.TryParse(text, out TeamFile? file));
         Assert.NotNull(file);
 
         string composed = (file with { Manager = "Ann" }).Compose();
 
-        Assert.Equal(opening + "\nteamType: 'development@1.0.0'\nmanager: 'Ann'\nprocess: 'Process.md'\nextra: keep me\n" + closing + "\nNotes.\n", composed);
+        Assert.Equal(opening + "\nteamType: 'development@1.0.0'\nmanager: 'Ann'\nextra: keep me\n" + closing + "\nNotes.\n", composed);
     }
 }
