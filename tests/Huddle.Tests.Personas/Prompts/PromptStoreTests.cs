@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Waiting;
 using Agency.Huddle.Tests.Elicitation;
@@ -428,6 +429,41 @@ public sealed class PromptStoreTests
         await Eventually.UntilAsync(() => raised, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.True(raised);
+    }
+
+    /// <summary>The store's own save raises <see cref="PromptStore.PromptsChanged"/> once, and the watcher's later re-read of that same write raises nothing more.</summary>
+    [Fact]
+    public async Task Save_RaisesPromptsChangedOnce_EvenAfterTheWatcherRereadsTheWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PromptStore store = new(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        int raised = 0;
+        store.PromptsChanged += () => Interlocked.Increment(ref raised);
+
+        store.Save("getHelp.intro", "Saved by the store.");
+
+        Assert.Equal(1, Volatile.Read(ref raised));
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+        Assert.Equal(1, Volatile.Read(ref raised));
+    }
+
+    /// <summary>A hand edit that rewrites <c>prompts.json</c> with the same content raises nothing.</summary>
+    [Fact]
+    public async Task PromptsChanged_ExternalEditWithIdenticalContent_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
+        using PromptStore store = new(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        int raised = 0;
+        store.PromptsChanged += () => Interlocked.Increment(ref raised);
+
+        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+
+        Assert.Equal(0, Volatile.Read(ref raised));
+        Assert.Equal("Hand written text.", store.Raw("getHelp.intro"));
     }
 
     /// <summary>Deleting the override file reverts every key to its catalog default - "no overrides" is a legitimate, not an error, state.</summary>

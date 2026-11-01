@@ -27,7 +27,8 @@ namespace Agency.Huddle.App.Skills;
 /// Skill folders exist on disk, per file (Spec §6.2), including the Overridden-invalid-<c>SKILL.md</c>
 /// fallback and the flat-files constraint (Spec §8.1). A <see cref="FileSystemWatcher"/> then
 /// rebuilds on every filesystem change under a 500 ms debounce, raising <see cref="SkillsChanged"/>
-/// once the new snapshot is published (Spec §6.2, §9, §12 F-6).
+/// once the new snapshot is published, unless the rebuild produced the same content as before
+/// (Spec §6.2, §9, §12 F-6).
 /// </para>
 /// </remarks>
 internal sealed class SkillStore : IDisposable
@@ -72,7 +73,7 @@ internal sealed class SkillStore : IDisposable
             "*",
             this.Rebuild(),
             _ => this.TryRebuildWithRetries(),
-            (_, _) => this.SkillsChanged,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.SkillsChanged,
             this.logger,
             nameof(SkillStore),
             includeSubdirectories: true,
@@ -81,7 +82,11 @@ internal sealed class SkillStore : IDisposable
 
     /// <summary>
     /// Raised after a filesystem change under <see cref="skillsDir"/> has settled through the
-    /// debounce and a rebuilt snapshot has already been published — never before, and never from
+    /// debounce and a rebuilt snapshot that differs in content from the one it replaced (a Skill, a
+    /// file's text or an Issue) has already been published, and after <see cref="RestoreDefault(string)"/>.
+    /// A settled change that rebuilds the same snapshot (the watcher's re-read of this store's own
+    /// restore, a file rewritten with the same text, or a file no subscriber can see) raises nothing.
+    /// It is raised after the publish — never before, and never from
     /// inside <see cref="WatchedFileStore{TSnapshot}.Gate"/>, so a subscriber that reads this store from inside its own
     /// handler sees the state the change just produced, and a subscriber that takes a lock of its
     /// own cannot deadlock against a concurrent rebuild.
@@ -158,7 +163,7 @@ internal sealed class SkillStore : IDisposable
     /// deleting anything outside <see cref="skillsDir"/> (Spec §6.7 Constraints). The rebuild happens
     /// synchronously, under the same lock, before this method returns, so a caller that immediately
     /// calls <see cref="Get(string)"/> afterwards already sees the Default Skill; the watcher's own
-    /// debounced rebuild that follows this delete is redundant but harmless.
+    /// debounced rebuild that follows this delete finds the same content and raises nothing.
     /// </remarks>
     /// <param name="name">The Skill's name.</param>
     /// <exception cref="InvalidOperationException"><paramref name="name"/> names a <see cref="SkillSource.Yours"/> Skill, which has no shipped default to restore.</exception>
@@ -301,6 +306,59 @@ internal sealed class SkillStore : IDisposable
         this.LogIssues(issues);
 
         return new SkillSnapshot(all, byName, resolvedFiles.ToFrozenDictionary(StringComparer.Ordinal), issues);
+    }
+
+    /// <summary>
+    /// Whether two snapshots show a subscriber the same thing: every Skill field (the lists element by element, as a record
+    /// compares them by reference), every Skill's resolved files by count and then name and text, and the Issues in order.
+    /// <see cref="SkillSnapshot.ByName"/> is built from <see cref="SkillSnapshot.All"/> and is not compared on its own.
+    /// </summary>
+    /// <param name="previous">The snapshot being replaced.</param>
+    /// <param name="rebuilt">The snapshot the watcher just published.</param>
+    private static bool SameContent(SkillSnapshot previous, SkillSnapshot rebuilt)
+    {
+        return previous.All.Count == rebuilt.All.Count
+            && previous.Issues.Count == rebuilt.Issues.Count
+            && previous.ResolvedFiles.Count == rebuilt.ResolvedFiles.Count
+            && previous.All.Zip(rebuilt.All).All(static pair => SameSkill(pair.First, pair.Second))
+            && previous.Issues.SequenceEqual(rebuilt.Issues)
+            && SameResolvedFiles(previous.ResolvedFiles, rebuilt.ResolvedFiles);
+    }
+
+    /// <summary>Whether two Skills are equal field by field, comparing <see cref="Skill.Tools"/> and <see cref="Skill.Files"/> element by element.</summary>
+    /// <param name="a">One Skill.</param>
+    /// <param name="b">The other.</param>
+    private static bool SameSkill(Skill a, Skill b)
+    {
+        return a with { Tools = [], Files = [] } == b with { Tools = [], Files = [] }
+            && a.Tools.SequenceEqual(b.Tools, StringComparer.Ordinal)
+            && a.Files.SequenceEqual(b.Files, StringComparer.Ordinal);
+    }
+
+    /// <summary>Whether two per-Skill file maps hold the same Skills, with the same file names and the same text.</summary>
+    /// <param name="a">One map.</param>
+    /// <param name="b">The other.</param>
+    private static bool SameResolvedFiles(
+        FrozenDictionary<string, FrozenDictionary<string, string>> a,
+        FrozenDictionary<string, FrozenDictionary<string, string>> b)
+    {
+        foreach (KeyValuePair<string, FrozenDictionary<string, string>> skill in a)
+        {
+            if (!b.TryGetValue(skill.Key, out FrozenDictionary<string, string>? other) || skill.Value.Count != other.Count)
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<string, string> file in skill.Value)
+            {
+                if (!other.TryGetValue(file.Key, out string? text) || !string.Equals(file.Value, text, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Where a Skill comes from, given whether a shipped default and a disk folder exist for it.</summary>

@@ -1,6 +1,7 @@
 using Agency.Huddle.SkillPacks.Folders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.Tests.Skills;
 
@@ -274,6 +275,83 @@ public sealed class SkillStoreTests
         Assert.Equal(SkillSource.Default, skill.Source);
         Assert.Null(skill.FolderPath);
         Assert.Equal(SkillCatalog.All["team-building"]["roles.md"], store.ReadFile("team-building", "roles.md"));
+    }
+
+    /// <summary>The store's own <see cref="SkillStore.RestoreDefault(string)"/> raises <see cref="SkillStore.SkillsChanged"/> once, and the watcher's later rebuild of the same deletion raises nothing more.</summary>
+    [Fact]
+    public async Task RestoreDefault_RaisesSkillsChangedOnce_EvenAfterTheWatcherRebuilds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string skillFolder = Path.Combine(dataDir.Path, "Skills", "team-building");
+        Directory.CreateDirectory(skillFolder);
+        File.WriteAllText(Path.Combine(skillFolder, "roles.md"), "# Roles\n\nOverridden roles text.\n");
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+        int raised = 0;
+        store.SkillsChanged += () => Interlocked.Increment(ref raised);
+
+        store.RestoreDefault("team-building");
+
+        Assert.Equal(1, Volatile.Read(ref raised));
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+        Assert.Equal(1, Volatile.Read(ref raised));
+    }
+
+    /// <summary>A rewrite of a Skill file with the same text raises nothing, because the rebuilt snapshot is identical.</summary>
+    [Fact]
+    public async Task SkillsChanged_RewriteWithIdenticalContent_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string skillFolder = Path.Combine(dataDir.Path, "Skills", "team-building");
+        Directory.CreateDirectory(skillFolder);
+        string rolesPath = Path.Combine(skillFolder, "roles.md");
+        const string text = "# Roles\n\nOverridden roles text.\n";
+        File.WriteAllText(rolesPath, text);
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+        int raised = 0;
+        store.SkillsChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(rolesPath, text);
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+
+        Assert.Equal(0, Volatile.Read(ref raised));
+        Assert.Equal(text, store.ReadFile("team-building", "roles.md"));
+    }
+
+    /// <summary>An edit that changes only the text of one Skill file raises <see cref="SkillStore.SkillsChanged"/>.</summary>
+    [Fact]
+    public async Task SkillsChanged_EditToOneFilesText_IsRaised()
+    {
+        using TempDataDir dataDir = new();
+        string skillFolder = Path.Combine(dataDir.Path, "Skills", "team-building");
+        Directory.CreateDirectory(skillFolder);
+        string rolesPath = Path.Combine(skillFolder, "roles.md");
+        File.WriteAllText(rolesPath, "# Roles\n\nFirst text.\n");
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+
+        await EditAndWaitAsync(store, rolesPath, "# Roles\n\nSecond text.\n");
+
+        Assert.Equal("# Roles\n\nSecond text.\n", store.ReadFile("team-building", "roles.md"));
+    }
+
+    /// <summary>An edit that changes only the Issues (a sub-folder appears, so one Info Issue is added and no Skill or file differs) still raises, because Settings shows the Issues.</summary>
+    [Fact]
+    public async Task SkillsChanged_EditThatOnlyAddsAnIssue_StillRaises()
+    {
+        using TempDataDir dataDir = new();
+        string skillFolder = Path.Combine(dataDir.Path, "Skills", "team-building");
+        Directory.CreateDirectory(skillFolder);
+        File.WriteAllText(Path.Combine(skillFolder, "roles.md"), "# Roles\n\nOverridden roles text.\n");
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+        Assert.DoesNotContain(store.Issues, issue => issue.Severity == SkillIssueSeverity.Info);
+        TaskCompletionSource changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.SkillsChanged += () => changed.TrySetResult();
+
+        Directory.CreateDirectory(Path.Combine(skillFolder, "nested"));
+
+        await changed.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Contains(store.Issues, issue => issue.Skill == "team-building" && issue.Severity == SkillIssueSeverity.Info);
     }
 
     /// <summary>

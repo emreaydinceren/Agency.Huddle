@@ -87,17 +87,18 @@ internal sealed partial class AppearanceStore : IDisposable
             "appearance.json",
             this.BuildSettings(document),
             _ => this.ReadDocumentForWatcherRebuild() is { } rebuilt ? this.BuildSettings(rebuilt) : null,
-            (_, _) => this.AppearanceChanged,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.AppearanceChanged,
             this.logger,
             nameof(AppearanceStore));
     }
 
     /// <summary>
     /// Raised after <see cref="Save"/> has written the file and rebuilt the resolved snapshot, and
-    /// after an external edit to <see cref="FilePath"/> is picked up by the filesystem watcher and
-    /// its debounce settles. Raised outside the write lock, for the same reason
+    /// after an external edit to <see cref="FilePath"/> that changes the resolved appearance is picked up by
+    /// the filesystem watcher and its debounce settles. Raised outside the write lock, for the same reason
     /// <see cref="Prompts.PromptStore.PromptsChanged"/> is: a future subscriber that takes a lock of its
-    /// own cannot deadlock against a concurrent write or watcher rebuild.
+    /// own cannot deadlock against a concurrent write or watcher rebuild. The watcher's re-read of the
+    /// store's own write, or a rewrite of the file that resolves to the same appearance, raises nothing.
     /// </summary>
     public event Action? AppearanceChanged;
 
@@ -236,6 +237,34 @@ internal sealed partial class AppearanceStore : IDisposable
         }
 
         this.AppearanceChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Whether two snapshots resolve to the same appearance: the three ids by value, and the customizations by count and then
+    /// each Theme's <see cref="SkinCustomization.CacheKey"/>, because a record holding dictionaries compares them by reference.
+    /// </summary>
+    /// <param name="previous">The snapshot being replaced.</param>
+    /// <param name="rebuilt">The snapshot the watcher just published.</param>
+    private static bool SameContent(AppearanceSettings previous, AppearanceSettings rebuilt)
+    {
+        if (!string.Equals(previous.ThemeId, rebuilt.ThemeId, StringComparison.Ordinal)
+            || !string.Equals(previous.LightThemeId, rebuilt.LightThemeId, StringComparison.Ordinal)
+            || !string.Equals(previous.DarkThemeId, rebuilt.DarkThemeId, StringComparison.Ordinal)
+            || previous.Customizations.Count != rebuilt.Customizations.Count)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<string, SkinCustomization> entry in previous.Customizations)
+        {
+            if (!rebuilt.Customizations.TryGetValue(entry.Key, out SkinCustomization? other)
+                || !string.Equals(entry.Value.CacheKey, other.CacheKey, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>The object at <paramref name="key"/> of <paramref name="parent"/>, created and attached when it is missing or not an object.</summary>

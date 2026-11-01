@@ -96,28 +96,25 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             "prompts.json",
             this.ApplyResolved(this.ReadOverridesFromDisk()),
             _ => this.ReadOverridesForWatcherRebuild() is { } overrides ? this.ApplyResolved(overrides) : null,
-            (_, _) => this.PromptsChanged,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.PromptsChanged,
             this.logger,
             nameof(PromptStore));
     }
 
     /// <summary>
     /// Raised after <see cref="Save"/> or <see cref="Reset"/> has written the file and rebuilt the
-    /// resolved snapshot, never before, and after an external edit to <see cref="path"/> is picked
-    /// up by the filesystem watcher and its debounce settles. Raised outside <see cref="WatchedFileStore{TSnapshot}.Gate"/>
+    /// resolved snapshot, never before, and after an external edit to <see cref="path"/> that changes a
+    /// resolved prompt is picked up by the filesystem watcher and its debounce settles. Raised outside <see cref="WatchedFileStore{TSnapshot}.Gate"/>
     /// so a future subscriber that takes a lock of its own cannot deadlock against a concurrent
     /// write or watcher rebuild.
     /// </summary>
     /// <remarks>
-    /// An external edit made while <see cref="Save"/>/<see cref="SaveMany"/>/<see cref="Reset"/> is
-    /// also writing will make the watcher fire a second time roughly
-    /// <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> later, raising this event again for what looks
-    /// like the same change. That second raise is deliberately NOT suppressed: a rebuild is
-    /// idempotent (it reads the same bytes just written) and the Settings page rebuilds its view
-    /// from this store plus its own pending edits, so the redundant raise costs nothing. A
-    /// "was that my own write?" flag would instead risk swallowing a genuine external edit that
-    /// happens to land inside the suppression window - a much worse failure than one extra,
-    /// harmless notification.
+    /// The watcher re-reads <see cref="Save"/>/<see cref="SaveMany"/>/<see cref="Reset"/>'s own write roughly
+    /// <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> after it. That re-read raises nothing: the
+    /// event is raised only when the rebuilt snapshot differs in content from the one it replaces, so a
+    /// re-read of bytes the store just wrote, or a rewrite of the file with the same overrides, is silent.
+    /// There is no "was that my own write?" flag, so a genuine external edit that lands inside the
+    /// debounce window still differs from the published snapshot and still raises.
     /// </remarks>
     public event Action? PromptsChanged;
 
@@ -297,6 +294,27 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         }
 
         return BuildResolved(overrides);
+    }
+
+    /// <summary>Whether two snapshots resolve every prompt to the same text: count plus every key and value ordinally, because a <see cref="FrozenDictionary{TKey, TValue}"/> has no value equality of its own.</summary>
+    /// <param name="previous">The snapshot being replaced.</param>
+    /// <param name="rebuilt">The snapshot the watcher just published.</param>
+    private static bool SameContent(FrozenDictionary<string, string> previous, FrozenDictionary<string, string> rebuilt)
+    {
+        if (previous.Count != rebuilt.Count)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<string, string> entry in previous)
+        {
+            if (!rebuilt.TryGetValue(entry.Key, out string? other) || !string.Equals(entry.Value, other, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Whether <paramref name="key"/> names a prompt in <see cref="PromptCatalog"/>.</summary>

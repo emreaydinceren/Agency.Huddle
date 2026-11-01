@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Waiting;
 
@@ -230,6 +231,77 @@ public sealed class AppearanceStoreTests
         store.Save("lumen-light");
 
         Assert.True(raised);
+    }
+
+    /// <summary>The store's own save raises <see cref="AppearanceStore.AppearanceChanged"/> once, and the watcher's later re-read of that same write raises nothing more.</summary>
+    [Fact]
+    public async Task Save_RaisesAppearanceChangedOnce_EvenAfterTheWatcherRereadsTheWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using AppearanceStore store = new(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        int raised = 0;
+        store.AppearanceChanged += () => Interlocked.Increment(ref raised);
+
+        store.Save("lumen-light");
+
+        Assert.Equal(1, Volatile.Read(ref raised));
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+        Assert.Equal(1, Volatile.Read(ref raised));
+    }
+
+    /// <summary>A hand edit that rewrites the file with the same content raises nothing.</summary>
+    [Fact]
+    public async Task AppearanceChanged_ExternalEditWithIdenticalContent_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "appearance.json");
+        const string text = """{ "theme": "lumen-light", "customizations": { "lumen-light": { "palette": { "primary": "#00b294" } } } }""";
+        File.WriteAllText(path, text);
+        using AppearanceStore store = new(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        int raised = 0;
+        store.AppearanceChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(path, text);
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+
+        Assert.Equal(0, Volatile.Read(ref raised));
+        Assert.Equal("lumen-light", store.Current.ThemeId);
+    }
+
+    /// <summary>A hand edit that changes the theme raises <see cref="AppearanceStore.AppearanceChanged"/>.</summary>
+    [Fact]
+    public async Task AppearanceChanged_ExternalEditToTheTheme_IsRaised()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, """{ "theme": "lumen-light" }""");
+        using AppearanceStore store = new(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        int raised = 0;
+        store.AppearanceChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(path, """{ "theme": "lumen-dark" }""");
+
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) >= 1, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        Assert.Equal("lumen-dark", store.Current.ThemeId);
+    }
+
+    /// <summary>A hand edit that changes only the value inside a customization (same Theme, same key) still raises, so the comparison looks inside the nested maps.</summary>
+    [Fact]
+    public async Task AppearanceChanged_ExternalEditToOnlyACustomizationValue_IsRaised()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, """{ "theme": "lumen-light", "customizations": { "lumen-light": { "palette": { "primary": "#00b294" } } } }""");
+        using AppearanceStore store = new(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        int raised = 0;
+        store.AppearanceChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(path, """{ "theme": "lumen-light", "customizations": { "lumen-light": { "palette": { "primary": "#ff0000" } } } }""");
+
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) >= 1, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        Assert.Equal("#ff0000", store.Current.CustomizationFor("lumen-light")?.Palette["primary"]);
     }
 
     /// <summary>

@@ -1,7 +1,9 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Avatars;
 
@@ -211,6 +213,60 @@ public sealed class AvatarStoreTests
         using var store = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         Assert.Equal("#4a154b", store.Get("Jarvis").Background);
+    }
+
+    /// <summary>The store's own save raises <see cref="AvatarStore.AvatarsChanged"/> once, and the watcher's later re-read of that same write raises nothing more.</summary>
+    [Fact]
+    public async Task Save_RaisesAvatarsChangedOnce_EvenAfterTheWatcherRereadsTheWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using AvatarStore store = new(dataDir.Options(), NullLogger<AvatarStore>.Instance);
+        int raised = 0;
+        store.AvatarsChanged += () => Interlocked.Increment(ref raised);
+
+        store.Save("Jarvis", new Avatar(Label: "JA", Image: null, Background: null));
+
+        Assert.Equal(1, Volatile.Read(ref raised));
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+        Assert.Equal(1, Volatile.Read(ref raised));
+    }
+
+    /// <summary>A hand edit that rewrites the file with the same content raises nothing.</summary>
+    [Fact]
+    public async Task AvatarsChanged_ExternalEditWithIdenticalContent_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "avatars.json");
+        const string text = """{ "Jarvis": { "label": "JA", "background": "#4a154b" } }""";
+        File.WriteAllText(path, text);
+        using AvatarStore store = new(dataDir.Options(), NullLogger<AvatarStore>.Instance);
+        int raised = 0;
+        store.AvatarsChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(path, text);
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+
+        Assert.Equal(0, Volatile.Read(ref raised));
+        Assert.Equal("JA", store.Get("Jarvis").Label);
+    }
+
+    /// <summary>A hand edit that changes one field of one avatar raises <see cref="AvatarStore.AvatarsChanged"/>.</summary>
+    [Fact]
+    public async Task AvatarsChanged_ExternalEditToOneField_IsRaised()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "avatars.json");
+        File.WriteAllText(path, """{ "Jarvis": { "label": "JA" } }""");
+        using AvatarStore store = new(dataDir.Options(), NullLogger<AvatarStore>.Instance);
+        int raised = 0;
+        store.AvatarsChanged += () => Interlocked.Increment(ref raised);
+
+        File.WriteAllText(path, """{ "Jarvis": { "label": "JB" } }""");
+
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) >= 1, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        Assert.Equal("JB", store.Get("Jarvis").Label);
     }
 
     /// <summary>

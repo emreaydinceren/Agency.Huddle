@@ -50,12 +50,16 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
             FileName,
             this.LoadAtConstruction(),
             _ => this.ReloadForWatcher(),
-            (_, _) => this.Changed,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.Changed,
             this.logger,
             nameof(SessionSettingsStore));
     }
 
-    /// <summary>Raised after a save and after a hand edit is picked up; outside the write lock, so a subscriber cannot deadlock against a write.</summary>
+    /// <summary>
+    /// Raised after a save and after a hand edit that changes what the store reports (the settings, either override or the
+    /// <see cref="LoadError"/>) is picked up; outside the write lock, so a subscriber cannot deadlock against a write.
+    /// The watcher's re-read of the store's own write, or a rewrite of the file with the same content, raises nothing.
+    /// </summary>
     public event Action? Changed;
 
     /// <summary>The absolute path of the settings file, whether or not it exists.</summary>
@@ -90,6 +94,11 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
     {
         this.watched.Dispose();
     }
+
+    /// <summary>Whether two snapshots show a subscriber the same thing; <see cref="State"/> and <see cref="SessionSettings"/> hold only scalars, so record equality is value equality and it covers the load error too.</summary>
+    /// <param name="previous">The snapshot being replaced.</param>
+    /// <param name="rebuilt">The snapshot the watcher just published.</param>
+    private static bool SameContent(State previous, State rebuilt) => previous == rebuilt;
 
     private static JsonObject ParseDocumentFile(string path)
     {

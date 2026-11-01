@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Waiting;
 using Store = Agency.Huddle.App.Acp.Sessions.SessionSettingsStore;
@@ -140,6 +141,59 @@ public sealed class SessionSettingsStoreTests
         Assert.True(Volatile.Read(ref changed) >= 1);
     }
 #pragma warning restore S2699
+
+    /// <summary>The store's own save raises <c>Changed</c> once, and the watcher's later re-read of that same write raises nothing more.</summary>
+    [Fact]
+    public async Task SaveMessages_RaisesChangedOnce_EvenAfterTheWatcherRereadsTheWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using Store store = Create(dataDir);
+        int changed = 0;
+        store.Changed += () => Interlocked.Increment(ref changed);
+
+        _ = store.SaveMessages(400);
+
+        Assert.Equal(1, Volatile.Read(ref changed));
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+        Assert.Equal(1, Volatile.Read(ref changed));
+    }
+
+    /// <summary>A hand edit that rewrites the file with the same content raises nothing, because no subscriber could see a difference.</summary>
+    [Fact]
+    public async Task Current_ExternalEditWithIdenticalContent_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string text = "{\"" + MessagesKey + "\":123}";
+        File.WriteAllText(Path.Combine(dataDir.Path, "session-settings.json"), text);
+        using Store store = Create(dataDir);
+        int changed = 0;
+        store.Changed += () => Interlocked.Increment(ref changed);
+
+        File.WriteAllText(store.FilePath, text);
+        await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
+
+        Assert.Equal(0, Volatile.Read(ref changed));
+        Assert.Equal(123, store.Current.CatchUpMessages);
+    }
+
+    /// <summary>A hand edit that changes only the load error (an ignored out-of-range value leaves every setting as it was) still raises, because the Sessions tab shows that error.</summary>
+    [Fact]
+    public async Task Current_ExternalEditThatOnlyAddsALoadError_StillRaisesChanged()
+    {
+        using TempDataDir dataDir = new();
+        using Store store = Create(dataDir);
+        int changed = 0;
+        store.Changed += () => Interlocked.Increment(ref changed);
+        Assert.Null(store.LoadError);
+
+        File.WriteAllText(store.FilePath, "{\"" + MessagesKey + "\":0}");
+
+        await Eventually.UntilAsync(() => Volatile.Read(ref changed) >= 1, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        Assert.NotNull(store.LoadError);
+        Assert.Equal(30, store.Current.CatchUpMessages);
+    }
 
     /// <summary>A corrupt file falls back to the configured values, sets <c>LoadError</c> and logs exactly one Warning.</summary>
     [Fact]

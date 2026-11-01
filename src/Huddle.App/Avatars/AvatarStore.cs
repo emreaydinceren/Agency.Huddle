@@ -95,7 +95,7 @@ internal sealed partial class AvatarStore : IDisposable
             "avatars.json",
             this.BuildAvatars(this.ReadDocumentFromDisk()),
             _ => this.ReadDocumentForWatcherRebuild() is { } document ? this.BuildAvatars(document) : null,
-            (_, _) => this.AvatarsChanged,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.AvatarsChanged,
             this.logger,
             nameof(AvatarStore));
     }
@@ -103,10 +103,12 @@ internal sealed partial class AvatarStore : IDisposable
     /// <summary>
     /// Raised after <see cref="Save"/>, <see cref="Rename"/> or <see cref="Remove"/> has written the
     /// file and rebuilt the resolved snapshot, and after an external edit to <see cref="FilePath"/> is
-    /// picked up by the filesystem watcher and its debounce settles. Raised outside the write lock,
+    /// picked up by the filesystem watcher and its debounce settles, provided it changes some Name's
+    /// resolved <see cref="Avatar"/>. Raised outside the write lock,
     /// for the same reason <see cref="Appearance.AppearanceStore.AppearanceChanged"/> is: a future
     /// subscriber that takes a lock of its own cannot deadlock against a concurrent write or watcher
-    /// rebuild.
+    /// rebuild. The watcher's re-read of the store's own write, or a rewrite of the file that resolves to the same
+    /// avatars, raises nothing.
     /// </summary>
     public event Action? AvatarsChanged;
 
@@ -312,6 +314,27 @@ internal sealed partial class AvatarStore : IDisposable
         {
             File.Delete(filePath);
         }
+    }
+
+    /// <summary>Whether two snapshots resolve every Name to the same <see cref="Avatar"/>: count plus every key and value under the map's own comparer, because <see cref="Avatar"/> is a record of strings and so compares by value.</summary>
+    /// <param name="previous">The snapshot being replaced.</param>
+    /// <param name="rebuilt">The snapshot the watcher just published.</param>
+    private static bool SameContent(Dictionary<string, Avatar> previous, Dictionary<string, Avatar> rebuilt)
+    {
+        if (previous.Count != rebuilt.Count)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<string, Avatar> entry in previous)
+        {
+            if (!rebuilt.TryGetValue(entry.Key, out Avatar? other) || entry.Value != other)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
