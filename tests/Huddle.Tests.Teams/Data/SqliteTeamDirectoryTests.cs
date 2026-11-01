@@ -224,7 +224,9 @@ public sealed class SqliteTeamDirectoryTests
 
         var byRoom = await directory.GetMembersByRoomAsync(ct);
 
-        Assert.Equal([direct.Id, group.Id], byRoom.Keys.Order(StringComparer.Ordinal));
+        // Two Rooms made in the same millisecond share an id's time prefix and differ only in its random tail, so
+        // compare the keys as a set rather than assuming creation order sorts first.
+        Assert.Equal(new[] { direct.Id, group.Id }.Order(StringComparer.Ordinal), byRoom.Keys.Order(StringComparer.Ordinal));
         Assert.Equal([alpha.Id, KnownIds.Human, echo.Id], byRoom[group.Id].Select(static user => user.Id));
         Assert.Equal((await directory.GetRoomMembersAsync(direct.Id, ct)).Select(static user => user.Id), byRoom[direct.Id].Select(static user => user.Id));
         Assert.Equal((await directory.GetRoomMembersAsync(group.Id, ct)).Select(static user => user.Id), byRoom[group.Id].Select(static user => user.Id));
