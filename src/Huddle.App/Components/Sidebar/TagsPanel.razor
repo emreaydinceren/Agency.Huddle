@@ -104,7 +104,7 @@ else if (this.loaded)
     private bool resultsReady;
     private string? shownKey;
     private bool subscribed;
-    private CancellationTokenSource? cts;
+    private readonly LatestLoad load = new();
 
     /// <summary>Starts listening for index changes.</summary>
     protected override void OnInitialized()
@@ -118,7 +118,7 @@ else if (this.loaded)
     {
         if (this.Subject is not DocumentSubject doc)
         {
-            this.CancelLoad();
+            this.load.Cancel();
             this.shownKey = null;
             this.selectedTag = null;
             this.ownTags = [];
@@ -203,19 +203,9 @@ else if (this.loaded)
         }
     }
 
-    private void CancelLoad()
-    {
-        this.cts?.Cancel();
-        this.cts?.Dispose();
-        this.cts = null;
-    }
-
     private async Task LoadAsync(DocumentSubject doc)
     {
-        this.CancelLoad();
-        CancellationTokenSource source = new();
-        this.cts = source;
-        CancellationToken ct = source.Token;
+        CancellationToken ct = this.load.Next();
         string key = doc.Key;
         string? tag = this.selectedTag;
 
@@ -307,6 +297,6 @@ else if (this.loaded)
             this.subscribed = false;
         }
 
-        this.CancelLoad();
+        this.load.Dispose();
     }
 }

@@ -57,7 +57,7 @@
 }
 
 @code {
-    private CancellationTokenSource? loadCts;
+    private readonly LatestLoad load = new();
     private IReadOnlyList<User>? members;
     private string? team;
     private string? loadedKey;
@@ -103,24 +103,20 @@
         this.Gateway.PresenceChanged -= this.OnLiveChanged;
         this.Avatars.AvatarsChanged -= this.OnLiveChanged;
         this.ContextFill.Changed -= this.OnLiveChanged;
-        this.loadCts?.Cancel();
-        this.loadCts?.Dispose();
+        this.load.Dispose();
     }
 
     /// <summary>Loads the Room and its members; a load for an older Subject never overwrites a newer one.</summary>
     /// <param name="room">The Room to load.</param>
     private async Task LoadAsync(RoomSubject room)
     {
-        this.loadCts?.Cancel();
-        this.loadCts?.Dispose();
-        CancellationTokenSource cts = new();
-        this.loadCts = cts;
+        CancellationToken ct = this.load.Next();
         string key = room.Key;
         try
         {
-            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId, cts.Token);
-            IReadOnlyList<User> loaded = await this.TeamDirectory.GetRoomMembersAsync(room.RoomId, cts.Token);
-            if (cts.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId, ct);
+            IReadOnlyList<User> loaded = await this.TeamDirectory.GetRoomMembersAsync(room.RoomId, ct);
+            if (ct.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
             {
                 return;
             }
