@@ -1,5 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp.Sessions.Fakes;
 
@@ -54,16 +55,11 @@ internal sealed class FakeElicitationBridge : IElicitationBridge
     /// <returns>The requests received so far.</returns>
     public async Task<IReadOnlyList<BridgeCall>> WaitForCallsAsync(int count, CancellationToken cancellationToken)
     {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (this.Calls.Count < count)
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("The bridge did not receive the expected number of requests before the test's timeout.");
-            }
-
-            await Task.Delay(10, cancellationToken);
-        }
+        await Eventually.UntilAsync(
+            () => this.Calls.Count >= count,
+            cancellationToken,
+            TestBudgets.Standard,
+            describe: () => $"The bridge has received {this.Calls.Count} of the {count} expected requests");
 
         return this.Calls;
     }

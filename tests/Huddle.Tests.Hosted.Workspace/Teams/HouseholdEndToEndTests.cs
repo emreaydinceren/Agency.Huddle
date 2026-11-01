@@ -11,6 +11,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Ui;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -64,12 +65,12 @@ public sealed class HouseholdEndToEndTests
         Assert.True(started.Ok, started.Error);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
-        while (catalog.Find(TeamName) is not { Manager: not null } current || current.Members.Count != 2)
-        {
-            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the Team catalog to list both Agents.");
-            await Task.Delay(50, ct);
-        }
+        await Eventually.UntilAsync(
+            () => catalog.Find(TeamName) is { Manager: not null } current && current.Members.Count == 2,
+            ct,
+            TestBudgets.Slowest,
+            TimeSpan.FromMilliseconds(50),
+            describe: () => "The Team catalog never listed both Agents and a Manager");
 
         TeamSummary team = catalog.Find(TeamName) ?? throw new InvalidOperationException("The Team is not in the catalog.");
         Assert.Equal(manager.Name, team.Manager);

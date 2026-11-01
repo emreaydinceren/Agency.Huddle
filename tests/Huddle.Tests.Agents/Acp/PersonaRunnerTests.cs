@@ -1388,18 +1388,15 @@ public sealed class PersonaRunnerTests
         /// <param name="count">How many posts to wait for, counting from the start of the rig.</param>
         /// <param name="ct">Bounds the wait.</param>
         /// <returns>The text of every post so far.</returns>
-        public async Task<IReadOnlyList<string>> WaitForPostsAsync(int count, CancellationToken ct)
+        public Task<IReadOnlyList<string>> WaitForPostsAsync(int count, CancellationToken ct)
         {
-            while (true)
-            {
-                IReadOnlyList<string> posted = this.PostedTexts;
-                if (posted.Count >= count)
-                {
-                    return posted;
-                }
-
-                await Task.Delay(5, ct);
-            }
+            return Eventually.ValueAsync(
+                _ => Task.FromResult(this.PostedTexts),
+                posted => posted.Count >= count,
+                ct,
+                TestBudgets.Slowest,
+                TimeSpan.FromMilliseconds(5),
+                what: $"runner posted at least {count} Messages");
         }
 
         /// <summary>Stops the runner, then the server.</summary>
@@ -3367,19 +3364,16 @@ public sealed class PersonaRunnerTests
     /// <param name="senderId">The Agent whose first Message is awaited.</param>
     /// <param name="ct">Bounds the poll.</param>
     /// <returns>The Room's Messages once <paramref name="senderId"/> has posted one.</returns>
-    private static async Task<IReadOnlyList<ChatMessage>> WaitForMessageFromAsync(
+    private static Task<IReadOnlyList<ChatMessage>> WaitForMessageFromAsync(
         IChatStore store, string roomId, string senderId, CancellationToken ct)
     {
-        while (true)
-        {
-            var history = await store.ReadAllAsync(roomId, ct);
-            if (history.Any(m => string.Equals(m.SenderId, senderId, StringComparison.Ordinal)))
-            {
-                return history;
-            }
-
-            await Task.Delay(5, ct);
-        }
+        return Eventually.ValueAsync(
+            probeCt => store.ReadAllAsync(roomId, probeCt),
+            history => history.Any(m => string.Equals(m.SenderId, senderId, StringComparison.Ordinal)),
+            ct,
+            TestBudgets.Slowest,
+            TimeSpan.FromMilliseconds(5),
+            what: $"a Message from {senderId} in room {roomId}");
     }
 
     /// <summary>
@@ -3395,18 +3389,15 @@ public sealed class PersonaRunnerTests
     /// <param name="count">How many prompts to wait for.</param>
     /// <param name="ct">Bounds the poll.</param>
     /// <returns>The recorded prompts, once at least <paramref name="count"/> have arrived.</returns>
-    private static async Task<IReadOnlyList<string>> WaitForPromptCountAsync(FakeAgentSession session, int count, CancellationToken ct)
+    private static Task<IReadOnlyList<string>> WaitForPromptCountAsync(FakeAgentSession session, int count, CancellationToken ct)
     {
-        while (true)
-        {
-            var prompts = session.Prompts;
-            if (prompts.Count >= count)
-            {
-                return prompts;
-            }
-
-            await Task.Delay(5, ct);
-        }
+        return Eventually.ValueAsync(
+            _ => Task.FromResult(session.Prompts),
+            prompts => prompts.Count >= count,
+            ct,
+            TestBudgets.Slowest,
+            TimeSpan.FromMilliseconds(5),
+            what: $"at least {count} recorded prompts");
     }
 
     /// <summary>
