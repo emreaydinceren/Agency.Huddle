@@ -370,10 +370,10 @@ public sealed class RoomSessionResumeTests
     [Fact]
     public async Task Start_PrunesEntriesForRoomsNotInWelcome()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         roomSessions.Put("nova", "stale-room-id", new RoomSessionEntry("s1", "claude", null, null, null, DateTimeOffset.UtcNow));
 
@@ -394,10 +394,10 @@ public sealed class RoomSessionResumeTests
     [Fact]
     public async Task Start_SeedsTheContextMeterFromAResumableEntry()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
@@ -441,10 +441,10 @@ public sealed class RoomSessionResumeTests
     [Fact]
     public async Task SharedMode_StoreUntouched()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var factory = new FakeAgentHostFactory();

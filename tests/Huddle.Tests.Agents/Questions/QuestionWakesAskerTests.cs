@@ -28,10 +28,10 @@ public sealed class QuestionWakesAskerTests
     [Fact]
     public async Task Answer_InGroupRoom_ReplyGateWakesOnlyAsker()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         QuestionStore questions = fixture.Services.GetRequiredService<QuestionStore>();
         QuestionService service = fixture.Services.GetRequiredService<QuestionService>();

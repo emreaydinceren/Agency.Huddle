@@ -21,9 +21,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_FromAMember_IsStoredUnderTheAgentName_AndRaisesTheEventOnce()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         List<string> raised = [];
@@ -48,9 +48,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_SecondFromTheSameAgent_ReplacesTheFirst()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         var notes = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.FreshStartNotes>();
@@ -69,9 +69,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_AfterARestart_IsStillReturned()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         var notes = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.FreshStartNotes>();
@@ -89,9 +89,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Dismiss_RemovesTheNote_ForTheNextInstanceToo()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         var notes = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.FreshStartNotes>();
@@ -108,9 +108,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_FromANonMember_IsRefusedAndNothingIsStored()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (echo, echoRoomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = echo;
         await using var alpha = await fixture.ConnectClientAsync(ct);
@@ -132,9 +132,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_WithAnInvalidRoomId_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, _) = await ConnectEchoAsync(fixture, ct);
         await using var __ = client;
 
@@ -149,9 +149,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_WithNegativeCounts_IsClampedToZero()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         var notes = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.FreshStartNotes>();
@@ -168,9 +168,9 @@ public sealed class FreshStartNoteHandlingTests
     [Fact]
     public async Task Note_FromAMember_IsNotAnswered_WithBadMessage()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         var notes = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.FreshStartNotes>();

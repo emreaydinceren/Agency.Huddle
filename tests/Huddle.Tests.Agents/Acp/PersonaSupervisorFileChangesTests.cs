@@ -31,11 +31,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_FileChangesEnabled_TurnWritesFileState()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -65,11 +65,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_FileChangesDisabled_TurnWritesNoFileState()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:FileChanges:Enabled"] = "false" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:FileChanges:Enabled"] = "false" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -104,7 +104,7 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_ReadsFilesFalse_TurnWritesNoFileState()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -115,7 +115,7 @@ public sealed class PersonaSupervisorFileChangesTests
                 ["Team:Acp:Adapters:0:Command"] = "agency-acp",
                 ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
             },
-            ct);
+            cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -179,11 +179,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_PassesRoomSessionStore()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory { SessionPerRoom = true };
@@ -218,11 +218,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_PassesOwnPosts()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -264,11 +264,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_PassesTurnActivity()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -306,11 +306,11 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_LibraryDisabled_PassesNoCollector()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:Library:Enabled"] = "false" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:Library:Enabled"] = "false" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -351,7 +351,7 @@ public sealed class PersonaSupervisorFileChangesTests
     [Fact]
     public async Task Supervisor_ReadsFilesFalse_ReachesTurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -362,7 +362,7 @@ public sealed class PersonaSupervisorFileChangesTests
                 ["Team:Acp:Adapters:0:Command"] = "agency-acp",
                 ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
             },
-            ct);
+            cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();

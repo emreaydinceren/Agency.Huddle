@@ -31,10 +31,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task FirstTurn_NoBlock_PromptByteIdenticalToToday()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("ok");
         var persona = TestPersonas.Nova;
@@ -63,10 +63,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task SecondTurn_FileChangedBetween_BlockIsFirstInPrompt()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -110,10 +110,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task CommandTurn_DoesNotConsumeFileChanges_TheNextOrdinaryTurnListsThem()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -164,10 +164,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task EditToolCallInRoomA_FileUnlistedInA_ListedInB()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -233,10 +233,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task ExecuteToolCall_NotAttributed_ListedBackInSameRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -285,10 +285,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task PromptFailsImmediately_NotCommitted_ListRepeatsNextTurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -330,10 +330,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task StoppedTurnAfterActivity_Committed()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);
@@ -398,10 +398,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task CommitFails_TurnStillPostsAndConsumerLives()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
 
         // Every save under FileStateStore starts with Directory.CreateDirectory(Folder), which throws
@@ -449,10 +449,10 @@ public sealed class PersonaRunnerFileChangesTests
     [Fact]
     public async Task NullTracker_ChangesNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var workDir = OwnWorkDir(options.Value, "nova");
         Directory.CreateDirectory(workDir);

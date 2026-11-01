@@ -32,10 +32,10 @@ public sealed class ProposalWakesProposerTests
     [Fact]
     public async Task Approve_InGroupRoom_ProposerDeliveryIsMentioned()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var proposals = fixture.Services.GetRequiredService<ProposalStore>();
         var service = fixture.Services.GetRequiredService<ProposalService>();

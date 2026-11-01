@@ -214,10 +214,10 @@ public sealed class TranscriptCatchUpTests
     [Fact]
     public async Task Panellist_QueuedBehindOthers_TranscriptEndsBeforeTrigger()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
@@ -274,10 +274,10 @@ public sealed class TranscriptCatchUpTests
     [Fact]
     public async Task FirstMention_InRoomWith30Messages_PromptCarriesThe20Before()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
@@ -328,10 +328,10 @@ public sealed class TranscriptCatchUpTests
     [Fact]
     public async Task InvitedToRoom_FirstMention_SeesWhatWasSaidBeforeItJoined()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();

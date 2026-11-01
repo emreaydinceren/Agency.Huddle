@@ -34,9 +34,9 @@ public sealed class ElicitationWiringTests
     [Fact]
     public async Task Container_WiresBridgeServiceAndChatServiceToOneStore()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         IServiceProvider services = fixture.Services;
         ITeamDirectory directory = services.GetRequiredService<ITeamDirectory>();
         User? coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
@@ -67,10 +67,10 @@ public sealed class ElicitationWiringTests
     [Fact]
     public async Task Supervisor_PassesTheElicitationBridge()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         PersonaStore personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         ITeamDirectory directory = fixture.Services.GetRequiredService<ITeamDirectory>();

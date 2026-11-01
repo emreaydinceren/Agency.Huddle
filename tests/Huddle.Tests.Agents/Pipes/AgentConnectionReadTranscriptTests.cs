@@ -17,9 +17,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_AfterNullBeforeM5_ReturnsM1ToM4()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", null, "m5", 20, ct);
 
@@ -31,9 +31,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_AfterM2BeforeM5_ReturnsM3M4()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", "m2", "m5", 20, ct);
 
@@ -45,9 +45,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_Max2_ReturnsLatestTwoAndOmitted()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", null, "m5", 2, ct);
 
@@ -59,9 +59,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_BeforeIdNotInTranscript_ReadsToTheEnd()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", null, "not-a-real-id", 20, ct);
 
@@ -73,9 +73,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_AfterIdNotInTranscript_TreatedAsNull()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", "not-a-real-id", "m5", 20, ct);
 
@@ -86,9 +86,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_NotMember_ProtocolErrorNotMemberWithRelatedIdRequestId()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
         await using JsonLineStream outsider = await scenario.Fixture.ConnectClientAsync(ct);
         await outsider.WriteAsync(new Hello("Outsider", null), ct);
         _ = Assert.IsType<Welcome>(await outsider.ReadAsync(ct));
@@ -104,9 +104,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_UnknownRoom_ProtocolErrorUnknownRoom()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         await scenario.Asker.WriteAsync(new ReadTranscript("r1", "no-such-room", null, "m5", 20), ct);
         ProtocolError error = Assert.IsType<ProtocolError>(await scenario.Asker.ReadAsync(ct));
@@ -118,9 +118,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_MaxBelowOne_BadMessage()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         await scenario.Asker.WriteAsync(new ReadTranscript("r1", scenario.RoomId, null, "m5", 0), ct);
         ProtocolError error = Assert.IsType<ProtocolError>(await scenario.Asker.ReadAsync(ct));
@@ -136,12 +136,12 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_LongMessages_TrimmedOldestFirstToFitTheLineLimit()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         ChatService chat;
         JsonLineStream asker;
         string roomId;
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         chat = fixture.Services.GetRequiredService<ChatService>();
         await using (asker = await fixture.ConnectClientAsync(ct))
         {
@@ -169,9 +169,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_AnswerGoesOnlyToTheAsker()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
 
         await using JsonLineStream asker = await fixture.ConnectClientAsync(ct);
@@ -202,9 +202,9 @@ public sealed class AgentConnectionReadTranscriptTests
     [Fact]
     public async Task Read_IncludesTheAskersOwnMessagesUnderItsName()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
-        await using Scenario scenario = await Scenario.StartAsync(ct);
+        await using Scenario scenario = await Scenario.StartAsync(cts);
 
         TranscriptTail tail = await scenario.ReadAsync("r1", null, "not-the-trigger", 20, ct);
 
@@ -235,9 +235,12 @@ public sealed class AgentConnectionReadTranscriptTests
 
         internal string AskerId { get; }
 
-        internal static async Task<Scenario> StartAsync(CancellationToken ct)
+        /// <summary>Starts the fixture, connects Nova and posts the six Messages.</summary>
+        /// <param name="budget">The test's behaviour budget, paused while the fixture starts.</param>
+        internal static async Task<Scenario> StartAsync(BehaviourBudget budget)
         {
-            PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+            PipeHostFixture fixture = await PipeHostFixture.StartAsync(budget);
+            CancellationToken ct = budget.Token;
             ChatService chat = fixture.Services.GetRequiredService<ChatService>();
 
             JsonLineStream asker = await fixture.ConnectClientAsync(ct);

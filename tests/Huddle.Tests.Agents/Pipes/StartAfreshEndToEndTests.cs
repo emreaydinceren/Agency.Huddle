@@ -32,10 +32,10 @@ public sealed class StartAfreshEndToEndTests
     [Fact]
     public async Task StartAfresh_ForgetsOneRoomsSession_NextMessageIsFresh_OtherRoomStillResumes()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         CancellationToken ct = cts.Token;
 
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         RoomSessionStore roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
         IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         ILogger<PersonaRunner> logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();

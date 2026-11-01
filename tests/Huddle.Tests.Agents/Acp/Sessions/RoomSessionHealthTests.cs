@@ -211,11 +211,11 @@ public sealed class RoomSessionHealthTests
     [Fact]
     public async Task UsageRisesInTwoSessions_Sum()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
         var acp = new AcpOptions { TokenBudget = 1200 };
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var novaFactory = new FakeAgentHostFactory { SessionPerRoom = true };
 
         // Queued for Nova's own direct Room Session (session[0]) but never spent: this test never
@@ -252,14 +252,14 @@ public sealed class RoomSessionHealthTests
     [Fact]
     public async Task CompactionInOneSession_NotCountedAgainstAnother()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
         // Naive (wrong) summing of every Used value would read 1000 + 5000 + 800 = 6800 - over this
         // budget. The correct sum, dropping the compaction, is 6000 - under it, so a third Room P
         // Turn must still be admitted.
         var acp = new AcpOptions { TokenBudget = 6500 };
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var novaFactory = new FakeAgentHostFactory { SessionPerRoom = true };
         novaFactory.Session.EnqueueReply("hello!");
 
@@ -297,11 +297,11 @@ public sealed class RoomSessionHealthTests
     [Fact]
     public async Task BudgetSpent_BlocksTurnsInEveryRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
         var acp = new AcpOptions { TokenBudget = 1000 };
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var novaFactory = new FakeAgentHostFactory { SessionPerRoom = true };
         novaFactory.Session.EnqueueReply("hello!");
 
@@ -332,11 +332,11 @@ public sealed class RoomSessionHealthTests
     [Fact]
     public async Task HumanMessageInAnyRoom_ResetsBudget()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
 
         var acp = new AcpOptions { TokenBudget = 1000 };
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var novaFactory = new FakeAgentHostFactory { SessionPerRoom = true };
 
         // "nova" is not the built-in Chief of Staff, so this runner queues no Greeting (Spec §6.14

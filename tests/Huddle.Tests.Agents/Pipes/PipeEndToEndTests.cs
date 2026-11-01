@@ -15,10 +15,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Agent_Hello_Post_Reply_RoundTrip()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var events = fixture.Services.GetRequiredService<RoomEvents>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
@@ -72,10 +72,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task TwoAgents_OnlyMentionedOneGetsFlag_AndRoomIsRenamed()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await using var alpha = await fixture.ConnectClientAsync(ct);
@@ -104,10 +104,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task FirstMessageNotHello_GetsError_AndDisconnect()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new PostMessage("room", null, "hi"), ct);
@@ -121,10 +121,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task InvalidAgentName_GetsError_AndDisconnect()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         // A path separator, not a space: a Name may contain spaces, but it is still the filename
@@ -140,10 +140,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task NameWithSpaces_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("Emily Lee", null), ct);
@@ -155,10 +155,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task HumanName_GetsNameReserved()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("You", null), ct);
@@ -172,10 +172,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Post_ToUnknownRoom_GetsErrorWithRelatedId_ConnectionStaysOpen()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var events = fixture.Services.GetRequiredService<RoomEvents>();
 
         await using var client = await fixture.ConnectClientAsync(ct);
@@ -208,10 +208,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_FromAMember_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var events = fixture.Services.GetRequiredService<RoomEvents>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
 
@@ -237,10 +237,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_FromANonMember_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var drafts = fixture.Services.GetRequiredService<Drafts>();
 
         await using var echo = await fixture.ConnectClientAsync(ct);
@@ -268,10 +268,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_ReusingAMessageIdInAnotherRoom_IsStillRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var drafts = fixture.Services.GetRequiredService<Drafts>();
 
         await using var echo = await fixture.ConnectClientAsync(ct);
@@ -306,10 +306,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_WithAnInvalidMessageId_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("echo", null), ct);
@@ -326,10 +326,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Drafts_AreNeverDeliveredToAnotherAgent()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await using var alpha = await fixture.ConnectClientAsync(ct);
@@ -353,10 +353,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task BadJsonLine_GetsBadMessage_ConnectionStaysOpen()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await pipe.ConnectAsync(ct);
@@ -380,10 +380,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Reconnect_SameName_ReplacesConnection_KeepsAgentId()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var first = await fixture.ConnectClientAsync(ct);
         await first.WriteAsync(new Hello("echo", null), ct);
@@ -401,10 +401,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Welcome_NewAgentRoom_IsEmptyTrue()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("echo", null), ct);
@@ -422,10 +422,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Welcome_AfterOneMessage_ReconnectIsEmptyFalse()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await using var first = await fixture.ConnectClientAsync(ct);
@@ -447,10 +447,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_UnregistersAgent()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         var client = await fixture.ConnectClientAsync(ct);
@@ -469,10 +469,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_ClearsTheAgentsDrafts()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
         var events = fixture.Services.GetRequiredService<RoomEvents>();
@@ -502,10 +502,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessagePosted_CarriesEveryRoomMember()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
         await using var echo = await fixture.ConnectClientAsync(ct);
@@ -537,11 +537,11 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task AgentPostOverBudget_ReturnsABudgetExhaustedError()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("echo", null), ct);
@@ -570,11 +570,11 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task AgentKeepsWritingAfterARefusedPost_ConnectionStaysAlive()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new Hello("echo", null), ct);
@@ -602,10 +602,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task TwoClients_ConnectConcurrently()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var first = await fixture.ConnectClientAsync(ct);
         await using var second = await fixture.ConnectClientAsync(ct);
@@ -626,10 +626,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task PostMessage_CompletesTheDraftWithTheSameId()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var drafts = fixture.Services.GetRequiredService<Drafts>();
         var events = fixture.Services.GetRequiredService<RoomEvents>();
 
@@ -657,10 +657,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StopTurnAsync_ReachesTheAgentsConnection()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await using var client = await fixture.ConnectClientAsync(ct);
@@ -686,10 +686,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StopTurnAsync_ForAnOfflineAgent_IsHarmless()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await gateway.StopTurnAsync("no-such-agent", "no-such-room", ct);
@@ -704,10 +704,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StartAfreshAsync_ReachesOnlyTheNamedAgentsConnection()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await using var alpha = await fixture.ConnectClientAsync(ct);
@@ -740,10 +740,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StartAfreshAsync_ForAnOfflineAgent_IsHarmless()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await gateway.StartAfreshAsync("no-such-agent", "no-such-room", ct);
@@ -757,10 +757,10 @@ public sealed class PipeEndToEndTests
     [InlineData(" ")]
     public async Task StartAfreshAsync_BlankAgentId_Throws(string agentId)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await Assert.ThrowsAsync<ArgumentException>(() => gateway.StartAfreshAsync(agentId, "some-room", ct));
@@ -772,10 +772,10 @@ public sealed class PipeEndToEndTests
     [InlineData(" ")]
     public async Task StartAfreshAsync_BlankRoomId_Throws(string roomId)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         await Assert.ThrowsAsync<ArgumentException>(() => gateway.StartAfreshAsync("some-agent", roomId, ct));
@@ -785,10 +785,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_FromAMember_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var events = fixture.Services.GetRequiredService<RoomEvents>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
 
@@ -813,10 +813,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_WithEdit_ReachesTheDraft()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -830,10 +830,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_FromANonMember_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var drafts = fixture.Services.GetRequiredService<Drafts>();
         var (echo, echoRoomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = echo;
@@ -853,10 +853,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OversizeEdit_IsClipped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
         string huge = new('x', ToolActivityLimits.MaxEditSideLength + 10);
@@ -873,10 +873,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_InvalidLine_IsDropped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -890,10 +890,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OverlongPath_IsDropped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -907,10 +907,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OverlongTitle_IsClipped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -923,10 +923,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_RunnerMarkedTruncated_StaysTruncated()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -939,10 +939,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_NegativeOmittedChanges_IsSetToZero()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var (client, roomId) = await ConnectEchoAsync(fixture, ct);
         await using var _ = client;
 
@@ -993,10 +993,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_CleanClose_LogsExactlyOneInformationLine()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
 
         var client = await fixture.ConnectClientAsync(ct);
@@ -1034,10 +1034,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_AbruptClose_StillLogsTheFaultedConnectionWarning()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await pipe.ConnectAsync(ct);
@@ -1068,10 +1068,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_BeforeHello_LogsOneWarningWithTheStepAndReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         var client = await fixture.ConnectClientAsync(ct);
         await client.DisposeAsync();
@@ -1088,10 +1088,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task FirstMessageNotHello_LogsWhichMessageArrived()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         await using var client = await fixture.ConnectClientAsync(ct);
         await client.WriteAsync(new PostMessage("room", null, "hi"), ct);
@@ -1126,10 +1126,10 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ScopedRoom_CarriesItsTeamOnWelcomeAndDelivery()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         User agent = await directory.UpsertAgentUserAsync("echo", null, ct) ?? throw new InvalidOperationException("No agent user.");

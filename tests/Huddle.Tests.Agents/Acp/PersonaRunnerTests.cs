@@ -44,10 +44,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_RegistersAgentAndCreatesDirectRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = TestPersonas.Nova;
 
@@ -69,10 +69,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_PersonaWithFrontmatter_RegistersDescriptionFromTheBodyNotTheDelimiter()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "---\nrole: 'Router'\n---\nYou are Nova, the router.");
 
@@ -95,10 +95,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_BuiltinWithEmptyHumanRoom_RunsOneGreetingTurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
@@ -130,10 +130,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_NotBuiltin_NoGreeting()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = TestPersonas.Nova;
 
@@ -168,10 +168,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_HumanRoomNotEmpty_NoGreeting()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         var firstFactory = new FakeAgentHostFactory();
@@ -214,10 +214,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_EmptyGroupRoomOnly_NoGreeting()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
 
         var firstFactory = new FakeAgentHostFactory();
@@ -260,10 +260,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_FactoryThrows_NoGreetingQueued()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.FailNextCreateWith(new InvalidOperationException("Session creation failed."));
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
@@ -285,10 +285,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Greeting_FakeSessionReplies_PostedAsChiefOfStaffInHumanRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("Welcome aboard! What would you like to get done first?");
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
@@ -316,10 +316,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Greeting_TurnFails_NothingPostedRoomStillEmpty()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         var persona = new Persona("Chief of Staff", BuiltinAgent.DefaultText);
@@ -352,10 +352,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Greeting_HumanMessageArrivesDuring_QueuedAndAnsweredNext()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "greeting reply");
         factory.Session.EnqueueReply("pong");
@@ -394,10 +394,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task DirectRoom_RepliesWithoutMention()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("pong");
         var persona = TestPersonas.Nova;
@@ -420,10 +420,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task GroupRoom_DoesNotReplyWithoutMention()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
         var persona = TestPersonas.Nova;
@@ -458,10 +458,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task GroupRoom_RepliesWhenMentioned()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("mentioned reply");
         var persona = TestPersonas.Nova;
@@ -496,10 +496,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TwoRoomsSameName_PromptLabelsDiffer()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("group reply");
         var persona = TestPersonas.Nova;
@@ -532,10 +532,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Turn_InTeamScopedRoom_LabelNamesTheTeam()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("scoped reply");
         factory.Session.EnqueueReply("root reply");
@@ -565,10 +565,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Start_TeamScopedHumanRoomListedFirst_OpensTheRootRoomAtStart()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var nova = await directory.UpsertAgentUserAsync("nova", null, ct);
         Assert.NotNull(nova);
@@ -586,10 +586,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Greeting_TeamScopedEmptyRoomListedFirst_IsQueuedInTheRootRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var chief = await directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
         Assert.NotNull(chief);
@@ -642,10 +642,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task RoomRenamed_NextLabelUsesNewName()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first reply");
         factory.Session.EnqueueReply("second reply");
@@ -670,10 +670,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Reply_IsTheConcatenationOfMessageChunks()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("Hello, ", "world!");
         var persona = TestPersonas.Nova;
@@ -695,10 +695,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task ConcurrentMessages_AreProcessedOneAtATime()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         TrackedFakeTimeProvider clock = new();
         var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "first");
@@ -734,10 +734,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task PromptFailure_DoesNotKillTheReadLoop()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
@@ -770,10 +770,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task EventStreamFaulting_UnblocksTheInFlightTurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
         var persona = TestPersonas.Nova;
@@ -810,10 +810,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task EventStreamFaulting_IsLogged()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
         var persona = TestPersonas.Nova;
@@ -1776,10 +1776,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TurnEndingInRefusal_PostsNoMessage()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(StopReason.Refusal, "I can't help with that.");
         factory.Session.EnqueueReply("probe reply");
@@ -1812,10 +1812,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task BlankReply_PostsNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("   ");
         factory.Session.EnqueueReply("probe reply");
@@ -1848,10 +1848,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Untagged_MessagesAreNeverSubmitted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
         var persona = TestPersonas.Nova;
@@ -1886,10 +1886,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Tagged_PromptIncludesMissedMessages()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("caught up");
         var persona = TestPersonas.Nova;
@@ -1924,10 +1924,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task CatchUp_IsClearedAfterUse()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("first catch up");
         factory.Session.EnqueueReply("second catch up");
@@ -1962,10 +1962,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task CatchUp_IsPerRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("reply for room b");
         var persona = TestPersonas.Nova;
@@ -1997,14 +1997,14 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task CatchUp_IsBoundedToTheConfiguredCount()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         var additionalConfig = new Dictionary<string, string?>
         {
             ["Team:Acp:CatchUpMessages"] = "2",
         };
-        await using var fixture = await PipeHostFixture.StartAsync(additionalConfig, ct);
+        await using var fixture = await PipeHostFixture.StartAsync(additionalConfig, cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("bounded reply");
         var persona = TestPersonas.Nova;
@@ -2037,10 +2037,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task DirectRoom_HasNoCatchUp()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("pong");
         var persona = TestPersonas.Nova;
@@ -2123,11 +2123,11 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task GroupRoom_AtBudget_MentionedAgentTakesNoTurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("probe reply");
         var persona = TestPersonas.Nova;
@@ -2158,11 +2158,11 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task BudgetExhausted_DoesNotBufferAsCatchUp()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("woken by the human");
         var persona = TestPersonas.Nova;
@@ -2187,11 +2187,11 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Redelivery_AfterExtend_ProducesATurn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("resumed");
         factory.Session.EnqueueReply("probe reply");
@@ -2226,7 +2226,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TokenBudget_WhenExhausted_StopsTakingTurns()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         // The message Budget is off so only the token Budget can stop anything.
@@ -2236,7 +2236,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "100",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("second reply");
@@ -2279,7 +2279,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TokenBudget_IgnoresDropsInUsed()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -2288,7 +2288,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "200",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([100, 150, 20, 60], "first reply");
         factory.Session.EnqueueReply("second reply");
@@ -2311,7 +2311,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TokenBudget_ResetsOnAHumanMessage()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -2320,7 +2320,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "100",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("after the human spoke");
@@ -2343,7 +2343,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task TokenBudget_ZeroDisablesTheCap()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -2352,7 +2352,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "0",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([999_999], "first reply");
         factory.Session.EnqueueReply("second reply");
@@ -2380,10 +2380,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task StoredModelNotInTheCatalog_ReportsDegraded()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.Models = [new AgentModelOption("claude-3", "Claude 3", null)];
         var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
@@ -2408,10 +2408,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task EmptyModelCatalog_ReportsNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
         StatusRecorder statuses = new();
@@ -2432,10 +2432,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task AFailedTurn_ReportsDegraded()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         var persona = TestPersonas.Nova;
@@ -2463,10 +2463,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task ThreeConsecutiveFailures_EscalateTheReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("one"));
         factory.Session.EnqueueFailure(new InvalidOperationException("two"));
@@ -2497,10 +2497,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task ASuccessfulTurn_ClearsADegradedState()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
@@ -2533,10 +2533,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task Disconnected_ReportsOffline()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new AgentDisconnectedException());
         var persona = TestPersonas.Nova;
@@ -2559,10 +2559,10 @@ public sealed class PersonaRunnerTests
     [MemberData(nameof(IncompleteStopReasons))]
     public async Task EachStopReason_ReportsDegraded(StopReason reason)
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(reason, "partial");
         var persona = TestPersonas.Nova;
@@ -2673,7 +2673,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task SpentTokenBudget_ReportsDegraded()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -2682,7 +2682,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "100",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         var persona = TestPersonas.Nova;
@@ -2708,7 +2708,7 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task AHumanMessage_ClearsTheDegradedTokenBudget()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -2717,7 +2717,7 @@ public sealed class PersonaRunnerTests
                 ["Team:AgentMessageBudget"] = "0",
                 ["Team:Acp:TokenBudget"] = "100",
             },
-            ct);
+            cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("after the human spoke");
@@ -3147,10 +3147,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task EventReaderEnding_ReportsOffline()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
         var persona = TestPersonas.Nova;
@@ -3174,10 +3174,10 @@ public sealed class PersonaRunnerTests
     [Fact]
     public async Task NormalShutdown_ReportsNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
         var factory = new FakeAgentHostFactory();
         var persona = TestPersonas.Nova;
         StatusRecorder statuses = new();

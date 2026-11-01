@@ -153,8 +153,12 @@ test to run first in a cold process never shows under `-class`. Put it first wit
 one other class for load. `PersonaSupervisorLifecycleTests.Enabled_StartsOneHostPerPersonaFile`
 was this. With the test first, 24 processes and 4 CPUs, `PipeHostFixture.StartAsync` took 6-8 s
 of its shared 10 s token, and 3 of 120 runs failed at 10.0 s. The Persona files had already been
-found and both hosts were a few milliseconds from running. The test now starts its 10 s after the
-fixture is up, and bounds the start with `TestBudgets.Slowest`.
+found and both hosts were a few milliseconds from running. Every `PipeHostFixture` test now takes a
+`BehaviourBudget`: its clock starts once the fixture is up, and the start has its own
+`TestBudgets.Slowest` bound. Before that change, 21 of 72 such runs failed with one of three Restart
+tests first; after it, 216 runs passed. Most of the cold start is JIT across the whole composition
+root. The Skill Sources move each fixture used to repeat is now copied from a per-process template
+(`SkillSourcesTemplate`), but that removed only about 1 s of the 6-8 s.
 
 Delete a `--filter-not-method` line as its race is diagnosed. Do not add one without a
 matching `known-limits.md` entry — the filter is where flakes go to be forgotten, and the

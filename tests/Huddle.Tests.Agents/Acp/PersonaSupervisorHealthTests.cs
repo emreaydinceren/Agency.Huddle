@@ -30,11 +30,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task UnknownAdapter_IsRecordedAsDegradedAndStillStartsAHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -80,11 +80,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task Start_UnknownSkill_ReportsDegradedWithReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -121,11 +121,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task Start_UnresolvableWatchesEntry_ReportsDegradedWithWarning()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -155,11 +155,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task Start_WarningsJoinAdapterSkillAndWatches()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -202,7 +202,7 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task Start_ProfileReadsFilesFalse_WarnsWatchesIgnored()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -213,7 +213,7 @@ public sealed class PersonaSupervisorHealthTests
                 ["Team:Acp:Adapters:0:Command"] = "agency-acp",
                 ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
             },
-            ct);
+            cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -239,11 +239,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task MissingAdapter_IsRecordedAsOfflineWithItsReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -271,11 +271,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task WaitUntilRunningAsync_HostFailedToStart_ReturnsFalseBeforeTheTimeout()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -300,11 +300,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task AuthenticationRequired_IsRecordedAsOfflineAndNamesTheAuthMethods()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -330,11 +330,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task AdapterProcessFailingToStart_IsRecordedAsOfflineWithItsReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -360,11 +360,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task SessionNewFailing_IsRecordedAsOfflineWithItsReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -390,11 +390,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task AnUnanticipatedException_StillProducesAReason()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -420,11 +420,11 @@ public sealed class PersonaSupervisorHealthTests
     [Fact]
     public async Task StoppingAHost_RemovesItsHealthEntry()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
