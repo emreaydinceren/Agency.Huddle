@@ -5,9 +5,6 @@
 // undo step, and nothing outside the selection or the touched lines is ever read back or rewritten. Being
 // pure, the logic runs under Node in the test suite (tests/Huddle.Tests/Ui/Library).
 
-/** The commands `planCommand` understands, in toolbar order. */
-export const commandNames = ["bold", "italic", "heading", "code", "bulletList", "taskList", "wikilink"];
-
 const headingPrefix = /^#{1,6} /;
 
 /**

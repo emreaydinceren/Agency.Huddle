@@ -43,7 +43,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
 
-    // Guards sessionsByRoom and startupSession. Never held across an await, and never acquired from
+    // Guards sessionsByRoom. Never held across an await, and never acquired from
     // inside a RoomSession's own gate (lock order: pool -> session -> gate; D23 correction 12).
     private readonly Lock poolLock = new();
     private readonly Dictionary<string, RoomSession> sessionsByRoom = new(StringComparer.Ordinal);
@@ -51,7 +51,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
     private readonly RoomSession? sharedSession;
     private readonly ITimer? sweepTimer;
-    private RoomSession? startupSession;
     private bool disposed;
 
     /// <summary>Initializes a new instance of the <see cref="RoomSessionPool"/> class.</summary>
@@ -177,8 +176,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
         return effective;
     }
-    /// <summary>The models the session opened at start advertises, or empty when nothing opened yet.</summary>
-    internal IReadOnlyList<AgentModelOption> Models => this.startupSession?.Models ?? [];
 
     /// <summary>Queues a Turn: routed to the shared session, or lazily created/looked-up per <see cref="WorkItem.RoomId"/>.</summary>
     /// <param name="item">The Turn to run, with its sequence number.</param>
@@ -198,7 +195,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         if (!this.sessionPerRoom)
         {
             await this.sharedSession!.OpenAsync(cancellationToken).ConfigureAwait(false);
-            this.startupSession = this.sharedSession;
             return;
         }
 
@@ -215,7 +211,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         // it and before the read loop's consumers can offer one, so it bypasses the gate entirely -
         // safe only because it completes before anything else could contend for a slot.
         await session.OpenAsync(cancellationToken).ConfigureAwait(false);
-        this.startupSession = session;
     }
 
     /// <summary>Routes a Stop to that Room's session (per-Room), or the shared one; a Room with no session yet is a no-op.</summary>

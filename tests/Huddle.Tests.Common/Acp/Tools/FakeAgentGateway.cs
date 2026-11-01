@@ -24,9 +24,6 @@ internal sealed class FakeAgentGateway : IAgentGateway
         return this.onlineAgentIds.Contains(agentId);
     }
 
-    /// <inheritdoc />
-    public IReadOnlyCollection<string> OnlineAgentIds => this.onlineAgentIds.ToArray();
-
     /// <summary>Records that <paramref name="agentId"/> is online, for a test to arrange against.</summary>
     public void SetOnline(string agentId)
     {

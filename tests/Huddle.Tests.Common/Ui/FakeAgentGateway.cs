@@ -22,9 +22,6 @@ internal sealed class FakeAgentGateway : IAgentGateway
     /// <inheritdoc />
     public bool IsOnline(string agentId) => this.onlineAgentIds.Contains(agentId);
 
-    /// <inheritdoc />
-    public IReadOnlyCollection<string> OnlineAgentIds => this.onlineAgentIds.ToArray();
-
     /// <summary>Not needed by the tests this fake serves; returns immediately.</summary>
     public Task StopTurnAsync(string agentId, string roomId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 

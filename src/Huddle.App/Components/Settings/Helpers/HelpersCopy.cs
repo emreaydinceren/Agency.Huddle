@@ -5,9 +5,6 @@ namespace Agency.Huddle.App.Components.Settings.Helpers;
 /// <summary>Every user-facing string of Settings › Helpers and the Task panel's Helper line, in one place (Helpers Spec §7).</summary>
 internal static class HelpersCopy
 {
-    /// <summary>The Settings section name.</summary>
-    public const string Section = "Helpers";
-
     /// <summary>The panel intro.</summary>
     public const string Intro = "Helpers are small background agents that make one judgement and let Huddle act on it. They don't chat, keep memory or use tools.";
 

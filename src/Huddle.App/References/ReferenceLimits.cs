@@ -18,9 +18,6 @@ internal static class ReferenceLimits
     /// <summary>The most Agent names listed for a Team in an Agent's header (spec §9.1).</summary>
     public const int MaxTeamMemberNames = 8;
 
-    /// <summary>The longest token a reference may carry (spec §5.1).</summary>
-    public const int MaxTokenChars = 64;
-
     /// <summary>The most Library files one Message carries; the default of <c>Library:MaxReferencedDocuments</c> (D-19).</summary>
     public const int MaxLibraryFiles = 10;
 }
