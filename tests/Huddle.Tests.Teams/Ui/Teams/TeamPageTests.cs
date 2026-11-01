@@ -658,9 +658,9 @@ public sealed class TeamPageTests
         Assert.Equal("Business has no team file, so its avatar could not be saved.", Assert.Single(snackbar.ShownSnackbars).Message);
     }
 
-    /// <summary>A bare team file for the avatar tests: no process, so the page adds no Process tab.</summary>
+    /// <summary>A bare team file for the avatar tests.</summary>
     private static TeamFile NewTeamFile(Avatar avatar) =>
-        new(TeamFileType, null, null, null, string.Empty, string.Empty) { Avatar = avatar };
+        new(TeamFileType, null, null, null, string.Empty) { Avatar = avatar };
 
     /// <summary>The team type of a Team that has a <c>_team.md</c>; the page offers the avatar editor only to such a Team.</summary>
     private static readonly VersionedRef TeamFileType = new("development", "1");

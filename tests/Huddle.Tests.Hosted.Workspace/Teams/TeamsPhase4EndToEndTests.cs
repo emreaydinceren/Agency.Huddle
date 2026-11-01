@@ -428,7 +428,7 @@ public sealed class TeamsPhase4EndToEndTests
         HireService hiring = services.GetRequiredService<HireService>();
         IHireContext context = services.GetRequiredService<IHireContext>();
         PersonaStore personas = services.GetRequiredService<PersonaStore>();
-        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(teamName, file).Outcome);
 
         List<string> used = [.. personas.ListNames()];

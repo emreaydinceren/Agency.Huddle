@@ -267,11 +267,11 @@
 
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
 
-    /// <summary>The installation's features plus whether this Team has a process (its <c>_team.md</c> names one), which adds the Process tab.</summary>
+    /// <summary>The installation's features plus whether this Team has a process (it has a readable <c>_team.md</c>), which adds the Process tab.</summary>
     private TeamPageFeatures Features() => new(
         this.TeamConfig.Value.Library.Enabled,
         this.TeamConfig.Value.Tasks.Enabled,
-        this.Services.GetService<ITeamFolders>()?.ReadTeamFile(this.Team) is { Process.Length: > 0 });
+        this.Services.GetService<ITeamFolders>()?.ReadTeamFile(this.Team) is not null);
 
     /// <summary>The catalog's own spelling of the route's Project, or <see langword="null"/> when the Team has no such Project.</summary>
     private string? FindProject(TeamSummary summary) =>

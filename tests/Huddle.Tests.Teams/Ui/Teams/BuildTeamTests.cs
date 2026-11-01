@@ -1174,7 +1174,7 @@ public sealed class BuildTeamTests
             this.Personas.Add(new PersonaIdentity("Bo", "Developer", "bo", Teams: ["Garden"], Skills: ["ext-skill"], Role: new RoleRef("t01", "dev", "1.0.0")), "You build things.");
             this.Catalog.Teams = [new TeamSummary("Garden", [], ["Ada", "Bo"], true) { TeamType = new VersionedRef("t01", "1.0.0"), Manager = "Ada", Owns = "Grows things." }];
             this.Folders.UpdateResult = true;
-            this.Folders.ReadResult = new TeamFile(new VersionedRef("t01", "1.0.0"), "Ada", null, "Grows things.", "Process.md", string.Empty);
+            this.Folders.ReadResult = new TeamFile(new VersionedRef("t01", "1.0.0"), "Ada", null, "Grows things.", string.Empty);
         }
 
         public string DirPath => this.dir.Path;

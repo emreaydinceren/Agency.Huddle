@@ -136,24 +136,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             return null;
         }
 
-        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
-        if (folder.Value is null)
-        {
-            return null;
-        }
-
-        string path = Path.Combine(folder.Value.FullPath, Path.GetFileName(file.Process));
-        try
-        {
-            return File.Exists(path) && ProcessDocument.TryParse(File.ReadAllText(path), out ProcessDocument? document) ? document : null;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
+        string? text = TeamProcessFile.Read(folders, team);
+        return text is not null && ProcessDocument.TryParse(text, out ProcessDocument? document) ? document : null;
     }
 }

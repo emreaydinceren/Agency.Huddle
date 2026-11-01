@@ -40,7 +40,7 @@ internal static class TeamFileWriter
     /// colour. It is always <c>onboarded: true</c>, so a seeded manager is never sent the onboarding prompt.
     /// </summary>
     private static string Compose(SeedTeam team, VersionedRef type, string colour) =>
-        new TeamFile(type, team.Manager, Workspace: null, team.Owns, TeamPaths.ProcessFileName, Notes: string.Empty)
+        new TeamFile(type, team.Manager, Workspace: null, team.Owns, Notes: string.Empty)
         {
             Onboarded = true,
             Avatar = new Avatar(Label: null, Image: null, Background: colour),

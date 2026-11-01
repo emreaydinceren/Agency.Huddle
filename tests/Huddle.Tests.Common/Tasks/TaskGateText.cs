@@ -39,7 +39,7 @@ internal static class TaskGateText
         FakeTeamFolders folders = new()
         {
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = new TeamFile(type, null, null, null, TeamPaths.ProcessFileName, string.Empty),
+            ReadResult = new TeamFile(type, null, null, null, string.Empty),
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)

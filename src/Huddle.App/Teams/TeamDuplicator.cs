@@ -74,7 +74,7 @@ internal sealed class TeamDuplicator(
             return TeamDuplicator.Refuse(workspaceProblem);
         }
 
-        TeamFile file = new(sourceFile.TeamType, null, workspace, null, TeamPaths.ProcessFileName, string.Empty)
+        TeamFile file = new(sourceFile.TeamType, null, workspace, null, string.Empty)
         {
             Avatar = this.CopyAvatar(sourceFile.Avatar),
         };

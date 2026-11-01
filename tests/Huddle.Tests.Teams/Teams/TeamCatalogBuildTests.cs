@@ -194,7 +194,7 @@ public sealed class TeamCatalogBuildTests
         IReadOnlyList<TeamFolder> folders = [new("Business", (IReadOnlyList<string>)[], false)];
         Dictionary<string, TeamFile> teamFiles = new(StringComparer.Ordinal)
         {
-            ["business"] = new TeamFile(new VersionedRef("development", "1"), "Ada", "work/biz", "Invoices", "Process.md", string.Empty)
+            ["business"] = new TeamFile(new VersionedRef("development", "1"), "Ada", "work/biz", "Invoices", string.Empty)
         };
 
         IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
@@ -213,7 +213,7 @@ public sealed class TeamCatalogBuildTests
         IReadOnlyList<TeamFolder> folders = [new("Business", (IReadOnlyList<string>)[], false), new("Ops", (IReadOnlyList<string>)[], false)];
         Dictionary<string, TeamFile> teamFiles = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty)
+            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, string.Empty)
         };
 
         IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
@@ -248,8 +248,8 @@ public sealed class TeamCatalogBuildTests
         Avatar avatar = new("BZ", "0123456789abcdef0123456789abcdef.png", "#1E90FF");
         Dictionary<string, TeamFile> teamFiles = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["business"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty) { Avatar = avatar },
-            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty),
+            ["business"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, string.Empty) { Avatar = avatar },
+            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, string.Empty),
         };
 
         IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
