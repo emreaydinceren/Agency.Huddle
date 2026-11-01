@@ -480,7 +480,8 @@ public sealed class SkillsMdGoldenTests
     public async Task SkillsMd_ForFixture_MatchesGolden()
     {
         using MoveFixture fixture = new();
-        fixture.WithRepository(MoveFixture.FixtureRepository);
+        string repository = fixture.CopyOfFixtureRepository();
+        fixture.WithRepository(repository);
         fixture.Imported("target-authoring", "https://github.com/dotnet/skills", "plugins/dotnet-msbuild/skills/target-authoring", "a660de83c2f9cad071a5d568f7d77041ccd07059", "Microsoft dotnet");
         fixture.Imported("code-review-and-quality", "https://github.com/addyosmani/agent-skills", "skills/code-review-and-quality", "1401c8b8030e023baeebb31781a6653fe8e93026", "Addy Osmani");
         fixture.UserPack("my-pack.json", """{ "id": "my-pack", "version": "1", "title": "Mine", "skills": [] }""");
@@ -488,7 +489,7 @@ public sealed class SkillsMdGoldenTests
         await fixture.RunAsync();
 
         string actual = File.ReadAllText(Path.Combine(fixture.Dir, "SKILLS.md"))
-            .Replace(MoveFixture.FixtureRepository, "{{skillsRepo}}", StringComparison.Ordinal)
+            .Replace(repository, "{{skillsRepo}}", StringComparison.Ordinal)
             .Replace($"{{{{skillsRepo}}}}{Path.DirectorySeparatorChar}packs{Path.DirectorySeparatorChar}", "{{skillsRepo}}\\packs\\", StringComparison.Ordinal);
         string golden = GoldenPath();
         if (!File.Exists(golden))
