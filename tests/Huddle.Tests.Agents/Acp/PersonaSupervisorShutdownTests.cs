@@ -28,7 +28,7 @@ public sealed class PersonaSupervisorShutdownTests
     [Fact]
     public async Task StopAsync_ManyHosts_StopsThemConcurrently()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
         TaskCompletionSource allStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int startedCount = 0;
@@ -44,7 +44,7 @@ public sealed class PersonaSupervisorShutdownTests
             };
             host.DisposeGate = allStarted.Task;
             hosts.Add(host);
-        }, ct);
+        }, cts);
 
         await WaitUntilAsync(() => started.Supervisor.RunningHostCount == PersonaCount && hosts.Count == PersonaCount, ct);
 
@@ -62,14 +62,14 @@ public sealed class PersonaSupervisorShutdownTests
     [Fact]
     public async Task StopAsync_OneHostThrows_StillStopsEveryOtherHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
         ConcurrentBag<FakePersonaHost> hosts = [];
         await using var started = await StartSupervisorAsync(host =>
         {
             host.DisposeFailure = hosts.IsEmpty ? new InvalidOperationException("adapter would not stop") : null;
             hosts.Add(host);
-        }, ct);
+        }, cts);
 
         await WaitUntilAsync(() => started.Supervisor.RunningHostCount == PersonaCount && hosts.Count == PersonaCount, ct);
 
@@ -79,10 +79,14 @@ public sealed class PersonaSupervisorShutdownTests
         Assert.Equal(0, started.Supervisor.RunningHostCount);
     }
 
-    private static async Task<StartedSupervisor> StartSupervisorAsync(Action<FakePersonaHost> onHostStarted, CancellationToken ct)
+    /// <summary>Starts a fixture, then a supervisor over <see cref="PersonaCount"/> Personas whose hosts report to <paramref name="onHostStarted"/>.</summary>
+    /// <param name="onHostStarted">Called with each host as it starts.</param>
+    /// <param name="budget">The test's behaviour budget, paused while the fixture starts.</param>
+    private static async Task<StartedSupervisor> StartSupervisorAsync(Action<FakePersonaHost> onHostStarted, BehaviourBudget budget)
     {
         var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, budget);
+        CancellationToken ct = budget.Token;
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();

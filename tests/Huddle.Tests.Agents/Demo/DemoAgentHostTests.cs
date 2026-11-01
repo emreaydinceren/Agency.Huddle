@@ -17,7 +17,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgentsEnabled_RegisterAndCreateRooms()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -27,7 +27,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Names:0"] = "echo",
                 ["Team:DemoAgent:Names:1"] = "alpha",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -56,12 +56,12 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgentsDisabled_NoRoomsCreated()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:DemoAgent:Enabled"] = "false" },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
 
@@ -76,7 +76,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_RepliesWhenMentioned()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -86,7 +86,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Names:0"] = "echo",
                 ["Team:DemoAgent:Names:1"] = "alpha",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -130,7 +130,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_DoesNotLoopWhenTwoAgentsAreMentioned()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -140,7 +140,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Names:0"] = "echo",
                 ["Team:DemoAgent:Names:1"] = "alpha",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -187,7 +187,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_RepliesWhenNotMentioned_InTwoMemberRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -196,7 +196,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Enabled"] = "true",
                 ["Team:DemoAgent:Names:0"] = "echo",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -244,7 +244,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_DoesNotReply_WhenNotMentioned_InThreeMemberRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -254,7 +254,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Names:0"] = "echo",
                 ["Team:DemoAgent:Names:1"] = "alpha",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -297,7 +297,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_RepliesWhenMentioned_InThreeMemberRoom()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -307,7 +307,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Names:0"] = "echo",
                 ["Team:DemoAgent:Names:1"] = "alpha",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
@@ -367,7 +367,7 @@ public sealed class DemoAgentHostTests
     [Fact]
     public async Task DemoAgent_DoesNotReply_WhenBudgetExhausted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -376,7 +376,7 @@ public sealed class DemoAgentHostTests
                 ["Team:DemoAgent:Enabled"] = "true",
                 ["Team:DemoAgent:Names:0"] = "echo",
             },
-            ct);
+            cts);
 
         var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<IAgentGateway>();

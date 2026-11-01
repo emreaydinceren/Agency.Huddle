@@ -31,10 +31,9 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
     [Fact]
     public async Task MemoryWriteInRoomA_RecordsTheResolvedFileAsWrittenFromRoomA()
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
 
-        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts.Token);
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
         await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput("write"), mutate: scenario.RewriteNotes, cts.Token);
         await scenario.NextTurnInRoomAAsync(cts.Token);
 
@@ -52,10 +51,9 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
     [Fact]
     public async Task MemoryWriteInRoomA_UnlistedInA_ListedInBAsByYou()
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
 
-        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: true, cts.Token);
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: true, cts);
         await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput("write"), mutate: scenario.RewriteNotes, cts.Token);
         string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
         string nextInB = await scenario.NextTurnInRoomBAsync(cts.Token);
@@ -89,10 +87,9 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
     [InlineData(PrefixedName, """{"command":"write","folder":"me","file":"notes.md",""", false)]
     public async Task MemoryToolCall_RecordsOnlyAMutationOfTheMemoryTool(string title, string rawInput, bool recorded)
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
 
-        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts.Token);
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
         await scenario.RunMemoryTurnInRoomAAsync(title, rawInput, mutate: scenario.RewriteNotes, cts.Token);
         string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
 
@@ -104,10 +101,9 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
     [Fact]
     public async Task MemoryDeleteInRoomA_RecordsThePath_DeletionNotListedBack()
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
 
-        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts.Token);
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
         await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput("delete"), mutate: () => File.Delete(scenario.NotesPath), cts.Token);
         string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
 
@@ -125,10 +121,9 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
     [InlineData("write")]
     public async Task MemoryToolCall_LogsTheFileItNames(string command)
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
 
-        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts.Token);
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
         await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput(command), mutate: static () => { }, cts.Token);
 
         Assert.NotNull(scenario.Services.GetRequiredService<ToolCallLogWriter>().FindLatest("nova", scenario.NotesPath));
@@ -176,10 +171,11 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
 
         /// <summary>Starts the app and Nova, writes <c>notes.md</c>, and seeds each Room's baseline with one Turn.</summary>
         /// <param name="alsoRoomB">Whether to create and seed Room B.</param>
-        /// <param name="ct">Cancels the start.</param>
-        public static async Task<Scenario> StartAsync(bool alsoRoomB, CancellationToken ct)
+        /// <param name="budget">The test's behaviour budget, paused while the fixture starts and then bounding the rest of the start.</param>
+        public static async Task<Scenario> StartAsync(bool alsoRoomB, BehaviourBudget budget)
         {
-            PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+            PipeHostFixture fixture = await PipeHostFixture.StartAsync(budget);
+            CancellationToken ct = budget.Token;
             IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
             string memoryDir = Path.Combine(new AgentPaths(options).WorkDir("nova"), "memory");
             Directory.CreateDirectory(memoryDir);

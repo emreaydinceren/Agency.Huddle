@@ -248,6 +248,7 @@ not fit, so the private copy stayed.
 | `Eventually.HistoryCountAsync` | `Waiting/Eventually.cs` | Waiting for a room's history in an `IChatStore` to reach a count. |
 | `Eventually.DirectRoomAsync` | `Waiting/Eventually.cs` | Waiting for an agent's direct room to exist. It has an `ITeamDirectory` overload. |
 | `TestBudgets` | `Waiting/TestBudgets.cs` | Naming a timeout: `Short` 2 s, `Standard` 5 s, `Slow` 10 s, `Slowest` 30 s. A migrated call keeps its own value, written as the budget of the same length. A value with no named budget stays literal. |
+| `BehaviourBudget` | `Pipes/BehaviourBudget.cs` | Bounding a test that starts a `PipeHostFixture`. Write `using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));` and pass `cts`, not `cts.Token`, to `PipeHostFixture.StartAsync`. The fixture pauses the budget, starts under its own `Slowest` bound and then restarts the budget in full. A plain `CancellationTokenSource` shared by the start and the behaviour fails under load: a cold start took 6-8 s in a 4-CPU container. It is a `CancellationTokenSource` and is also cancelled with the test. |
 
 Not for: quiet-period `Task.Delay` pauses (they sleep, they do not poll), bUnit waits (use
 `WaitForAssertion`), and event-driven waits that already exist (`StatusRecorder.WaitForAsync`,

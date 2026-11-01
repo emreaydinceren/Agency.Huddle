@@ -2,13 +2,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.IO.Pipes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Pipes;
 
@@ -51,8 +54,44 @@ public sealed class PipeHostFixture : IAsyncDisposable
 
     public static Task<PipeHostFixture> StartAsync(CancellationToken ct = default) => StartAsync(null, ct);
 
-    public static async Task<PipeHostFixture> StartAsync(
-        IReadOnlyDictionary<string, string?>? additionalConfig, CancellationToken ct = default)
+    /// <summary>Starts the fixture with no extra configuration; see <see cref="StartAsync(IReadOnlyDictionary{string, string?}?, BehaviourBudget)"/>.</summary>
+    /// <param name="budget">The test's behaviour budget, paused while the fixture starts.</param>
+    public static Task<PipeHostFixture> StartAsync(BehaviourBudget budget) => StartAsync(null, budget);
+
+    /// <summary>
+    /// Starts the fixture under its own <see cref="TestBudgets.Slowest"/> bound while <paramref name="budget"/> is paused, then
+    /// restarts <paramref name="budget"/> in full, so the time a cold, CPU-loaded process spends booting the host is never taken
+    /// from the behaviour the test checks.
+    /// </summary>
+    /// <param name="additionalConfig">Configuration pairs applied after the fixture's own; <see langword="null"/> for none.</param>
+    /// <param name="budget">The test's behaviour budget.</param>
+    public static async Task<PipeHostFixture> StartAsync(IReadOnlyDictionary<string, string?>? additionalConfig, BehaviourBudget budget)
+    {
+        ArgumentNullException.ThrowIfNull(budget);
+        budget.Pause();
+        using CancellationTokenSource boot = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
+        boot.CancelAfter(TestBudgets.Slowest);
+        PipeHostFixture fixture = await StartAsync(additionalConfig, boot.Token);
+        budget.Restart();
+        return fixture;
+    }
+
+    /// <summary>
+    /// Starts the fixture under <paramref name="ct"/>. A test whose token also bounds the behaviour it checks passes a
+    /// <see cref="BehaviourBudget"/> instead, so a slow start cannot spend that budget.
+    /// </summary>
+    /// <param name="additionalConfig">Configuration pairs applied after the fixture's own; <see langword="null"/> for none.</param>
+    /// <param name="ct">Cancels the start.</param>
+    public static Task<PipeHostFixture> StartAsync(
+        IReadOnlyDictionary<string, string?>? additionalConfig, CancellationToken ct = default) =>
+        StartAsync(additionalConfig, useSkillSourcesTemplate: true, ct);
+
+    /// <summary>Starts the fixture, optionally without <see cref="SkillSourcesTemplate"/>, so a test can compare the two folders.</summary>
+    /// <param name="additionalConfig">Configuration pairs applied after the fixture's own; <see langword="null"/> for none.</param>
+    /// <param name="useSkillSourcesTemplate"><see langword="false"/> to let the host's own first-start move write the Skill Sources folder.</param>
+    /// <param name="ct">Cancels the start.</param>
+    internal static async Task<PipeHostFixture> StartAsync(
+        IReadOnlyDictionary<string, string?>? additionalConfig, bool useSkillSourcesTemplate, CancellationToken ct)
     {
         var dataDir = new TempDataDir();
         var pipeName = "team-test-" + Guid.NewGuid().ToString("N");
@@ -84,6 +123,12 @@ public sealed class PipeHostFixture : IAsyncDisposable
         builder.Logging.AddProvider(loggerProvider);
 
         var host = builder.Build();
+        if (useSkillSourcesTemplate
+            && SkillSourcesTemplate.Applies(host.Services.GetRequiredService<IOptions<TeamOptions>>().Value, host.Services.GetRequiredService<SkillSourcesSettings>(), dataDir.Path))
+        {
+            await SkillSourcesTemplate.CopyIntoAsync(dataDir.Path, ct);
+        }
+
         await host.StartAsync(ct);
 
         return new PipeHostFixture(host, pipeName, dataDir, loggerProvider);

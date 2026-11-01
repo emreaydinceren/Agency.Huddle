@@ -49,21 +49,17 @@ public sealed class PersonaSupervisorLifecycleTests
 
     /// <summary>
     /// With Agents switched on, the supervisor starts one host for each Persona file written to disk. The
-    /// supervisor's 10-second budget starts once the fixture is up, and the fixture's start has a bound of its
-    /// own: a first test in a cold process under CPU load spent 6-8 s of a shared budget booting the host, and
-    /// failed at 10 s with both Personas found and both hosts a few milliseconds from running.
+    /// supervisor's 10-second <see cref="BehaviourBudget"/> starts once the fixture is up, and the fixture's start
+    /// has a bound of its own: a first test in a cold process under CPU load spent 6-8 s of a shared budget booting
+    /// the host, and failed at 10 s with both Personas found and both hosts a few milliseconds from running.
     /// </summary>
     [Fact]
     public async Task Enabled_StartsOneHostPerPersonaFile()
     {
-        using CancellationTokenSource boot = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        boot.CancelAfter(TestBudgets.Slowest);
-        await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, boot.Token);
-
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TestBudgets.Slow);
+        using BehaviourBudget cts = new(TestBudgets.Slow);
         CancellationToken ct = cts.Token;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
 
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
@@ -87,11 +83,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaAddedAtRuntime_StartsAHostImmediately()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -114,11 +110,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task Enabled_PassesThePersonaModelToTheFactory()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -147,11 +143,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task Enabled_PassesThePersonaEffortToTheFactory()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -171,11 +167,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task Shutdown_DisposesEveryHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -201,11 +197,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task OnePersonaFailingToStart_DoesNotStopTheOthers()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
 
@@ -238,11 +234,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaRemoved_StopsItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -283,11 +279,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaTextChanged_RestartsItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -315,11 +311,11 @@ public sealed class PersonaSupervisorLifecycleTests
         // This is the test that proves a database-only change (the text never changes) still
         // reaches the runner: PersonaStore.Get joins the model in, and PersonaSupervisor compares
         // the whole Persona, not just its text.
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -344,11 +340,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaUnchanged_DoesNotRestartItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         WritePersonaFile(options, "zeta");
@@ -375,11 +371,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaModelUnchanged_DoesNotRestartItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -418,11 +414,11 @@ public sealed class PersonaSupervisorLifecycleTests
     {
         // Mirrors PersonaModelChanged_RestartsItsHost: text and Model are identical, only Effort
         // changes, and that alone must still be enough for NeedsRestart's record comparison to fire.
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -454,11 +450,10 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaEditedWhileStarting_IsAppliedOnceTheStartFinishes()
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -490,11 +485,10 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaEditedWhileRestarting_IsAppliedOnceTheRestartFinishes()
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         FakeAgentHostFactory factory = new();
@@ -526,11 +520,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaEffortUnchanged_DoesNotRestartItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -565,11 +559,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task Enabled_PassesThePersonaWorkModeToTheFactory()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -594,11 +588,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaWorkModeChanged_RestartsItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -625,11 +619,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task PersonaWorkModeUnchanged_DoesNotRestartItsHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -675,11 +669,11 @@ public sealed class PersonaSupervisorLifecycleTests
     [Fact]
     public async Task OnPersonasChanged_UnrelatedFileEvent_DoesNotRestartPersonaWithSkills()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var paths = new AgentPaths(options);

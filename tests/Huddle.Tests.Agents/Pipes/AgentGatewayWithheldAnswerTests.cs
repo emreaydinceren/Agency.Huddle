@@ -29,9 +29,9 @@ public sealed class AgentGatewayWithheldAnswerTests
     [Fact]
     public async Task Answer_NotDeliveredToAsker_Direct()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         await using JsonLineStream coach = await fixture.ConnectClientAsync(ct);
         Welcome coachWelcome = await HelloAsync(coach, "Coach", ct);
@@ -58,9 +58,9 @@ public sealed class AgentGatewayWithheldAnswerTests
     [Fact]
     public async Task Answer_Group_AskerWithheld_OthersStillDelivered_MentionedFalse()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(ct);
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(cts);
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         await using JsonLineStream coach = await fixture.ConnectClientAsync(ct);
         Welcome coachWelcome = await HelloAsync(coach, "Coach", ct);
@@ -99,11 +99,11 @@ public sealed class AgentGatewayWithheldAnswerTests
     [Fact]
     public async Task Answer_ExtendBudget_DoesNotRedeliverToAsker()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" },
-            ct);
+            cts);
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         await using JsonLineStream coach = await fixture.ConnectClientAsync(ct);
         Welcome coachWelcome = await HelloAsync(coach, "Coach", ct);

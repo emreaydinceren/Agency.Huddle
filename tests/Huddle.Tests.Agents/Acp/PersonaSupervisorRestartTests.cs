@@ -8,7 +8,6 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Fakes;
 using Agency.Huddle.Tests.Pipes;
-using Agency.Huddle.Tests.Waiting;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -28,11 +27,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task RestartAsync_StartsAPersonaThatFailedToStart()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -66,11 +65,10 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task RestartAsync_PressedAsAFailedStartReportsOffline_StillStartsThePersona()
     {
-        using CancellationTokenSource fixtureCts = new(TestBudgets.Slowest);
-        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, fixtureCts.Token);
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
+        await using PipeHostFixture fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
 
@@ -109,11 +107,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task RestartAsync_ReplacesARunningHost()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -146,11 +144,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task RestartAsync_IsSafeWhenCalledTwiceConcurrently()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -187,11 +185,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task RestartButton_ForgetsEveryRoomSession()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -231,11 +229,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task PersonaEdit_ForgetsEveryRoomSession()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -266,11 +264,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task ModelChange_Forgets()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -302,11 +300,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task SupervisorStop_KeepsEntries()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -334,11 +332,11 @@ public sealed class PersonaSupervisorRestartTests
     [Fact]
     public async Task SharedModeStart_ForgetsAll()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory(); // SessionPerRoom defaults false - shared mode.
