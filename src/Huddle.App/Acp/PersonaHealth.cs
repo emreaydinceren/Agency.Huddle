@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Services;
+
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
@@ -142,21 +144,6 @@ internal sealed class PersonaHealth
     /// </summary>
     private void RaiseChanged()
     {
-        if (this.Changed is not { } handlers)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action)handler).Invoke();
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed));
-            }
-        }
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 }

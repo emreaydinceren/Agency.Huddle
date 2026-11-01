@@ -900,22 +900,12 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
 
         var status = new PersonaStatus(state, reason, this.timeProvider.GetUtcNow());
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action<PersonaStatus>)handler).Invoke(status);
-            }
-            catch (Exception ex)
-            {
-                // Reporting health must never be able to kill the Agent it is reporting on. Every
-                // one of this runner's loops raises this, some of them from a finally, so an
-                // unguarded subscriber could both end the loop and mask the exception that ended it
-                // - turning a diagnostic into the outage it exists to describe. Same reasoning, and
-                // the same shape, as RoomEvents.Publish.
-                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged));
-            }
-        }
+        // Reporting health must never be able to kill the Agent it is reporting on. Every
+        // one of this runner's loops raises this, some of them from a finally, so an
+        // unguarded subscriber could both end the loop and mask the exception that ended it
+        // - turning a diagnostic into the outage it exists to describe. Same reasoning, and
+        // the same shape, as RoomEvents.Publish.
+        EventRaise.Isolated(handlers, status, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged)));
     }
 
     /// <summary>

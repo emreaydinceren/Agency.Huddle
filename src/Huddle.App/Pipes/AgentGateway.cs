@@ -195,22 +195,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
 
     private void RaisePresenceChanged()
     {
-        if (this.PresenceChanged is not { } handlers)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action)handler).Invoke();
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogWarning(ex, "A PresenceChanged handler threw and was skipped.");
-            }
-        }
+        EventRaise.Isolated(this.PresenceChanged, ex => this.logger.LogWarning(ex, "A PresenceChanged handler threw and was skipped."));
     }
 
     private static MemberInfo ToMemberInfo(User user) => new(user.Id, user.Name, user.Kind);

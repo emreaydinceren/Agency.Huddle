@@ -79,42 +79,12 @@ public sealed class RoomEvents
 
     private void Publish(Action<MessagePostedEvent>? handlers, MessagePostedEvent e, string eventName)
     {
-        if (handlers is null)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action<MessagePostedEvent>)handler).Invoke(e);
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", eventName);
-            }
-        }
+        EventRaise.Isolated(handlers, e, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", eventName));
     }
 
     public void PublishRoomsChanged()
     {
-        if (this.RoomsChanged is not { } handlers)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action)handler).Invoke();
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RoomsChanged));
-            }
-        }
+        EventRaise.Isolated(this.RoomsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RoomsChanged)));
     }
 
     /// <summary>Publishes <see cref="DraftChanged"/> for <paramref name="roomId"/>.</summary>
@@ -163,21 +133,6 @@ public sealed class RoomEvents
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)
     {
-        if (handlers is null)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action<string>)handler).Invoke(roomId);
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", eventName);
-            }
-        }
+        EventRaise.Isolated(handlers, roomId, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", eventName));
     }
 }

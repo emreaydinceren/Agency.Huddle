@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Services;
+
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
@@ -116,23 +118,7 @@ internal sealed class PersonaCommands(ILogger<PersonaCommands> logger)
 
     private void RaiseCommandsChanged(string personaName)
     {
-        Action<string>? handlers = this.CommandsChanged;
-        if (handlers is null)
-        {
-            return;
-        }
-
-        foreach (Action<string> handler in handlers.GetInvocationList().Cast<Action<string>>())
-        {
-            try
-            {
-                handler(personaName);
-            }
-            catch (Exception ex)
-            {
-                // One broken subscriber, typically a card that was disposed mid-event, must not stop the others.
-                logger.LogWarning(ex, "A commands-changed subscriber threw for persona '{PersonaName}'.", personaName);
-            }
-        }
+        // One broken subscriber, typically a card that was disposed mid-event, must not stop the others.
+        EventRaise.Isolated(this.CommandsChanged, personaName, ex => logger.LogWarning(ex, "A commands-changed subscriber threw for persona '{PersonaName}'.", personaName));
     }
 }

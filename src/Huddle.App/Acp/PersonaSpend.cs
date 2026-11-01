@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -150,24 +151,8 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
 
     private void RaiseSpendChanged(string personaName)
     {
-        Action<string>? handlers = this.SpendChanged;
-        if (handlers is null)
-        {
-            return;
-        }
-
-        foreach (Action<string> handler in handlers.GetInvocationList().Cast<Action<string>>())
-        {
-            try
-            {
-                handler(personaName);
-            }
-            catch (Exception ex)
-            {
-                // One broken subscriber, typically a card that was disposed mid-event, must not stop the others.
-                logger.LogWarning(ex, "A spend-changed subscriber threw for persona '{PersonaName}'.", personaName);
-            }
-        }
+        // One broken subscriber, typically a card that was disposed mid-event, must not stop the others.
+        EventRaise.Isolated(this.SpendChanged, personaName, ex => logger.LogWarning(ex, "A spend-changed subscriber threw for persona '{PersonaName}'.", personaName));
     }
 
     /// <summary>The mutable state one Persona accumulates behind <see cref="gate"/>; never handed out.</summary>
