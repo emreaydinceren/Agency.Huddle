@@ -61,13 +61,10 @@ internal sealed partial class ViewStore : IDisposable
 
     private readonly string path;
     private readonly ILogger<ViewStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference so a reader never takes a
     // lock - see AvatarStore's remarks for why this matters for a store read from Razor renders.
-    private volatile Snapshot snapshot;
+    private readonly WatchedFileStore<Snapshot> watched;
 
     /// <summary>Loads (or defaults) the override file at <c>{DataDir}/views.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
@@ -91,9 +88,14 @@ internal sealed partial class ViewStore : IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.snapshot = LoadInitialSnapshot(this.path);
-
-        this.watcher = new DebouncedFileWatcher(directory, "views.json", this.OnWatcherSettled, this.logger, nameof(ViewStore));
+        this.watched = new WatchedFileStore<Snapshot>(
+            directory,
+            "views.json",
+            LoadInitialSnapshot(this.path),
+            _ => this.ReadForWatcherRebuild(),
+            (_, _) => this.ViewsChanged,
+            this.logger,
+            nameof(ViewStore));
     }
 
     /// <summary>
@@ -111,19 +113,19 @@ internal sealed partial class ViewStore : IDisposable
     public string FilePath => this.path;
 
     /// <summary>The resolved Views: the two built-ins first, then the file's own Views in file order.</summary>
-    public IReadOnlyList<TaskView> Views => this.snapshot.Views;
+    public IReadOnlyList<TaskView> Views => this.watched.Current.Views;
 
     /// <summary>Every View entry that failed to parse or failed <see cref="ViewValidator"/>, kept rather than dropped.</summary>
-    public IReadOnlyList<InvalidView> InvalidViews => this.snapshot.InvalidViews;
+    public IReadOnlyList<InvalidView> InvalidViews => this.watched.Current.InvalidViews;
 
     /// <summary>The current parse failure for <c>views.json</c>, or <see langword="null"/> when the file last parsed cleanly (or does not exist).</summary>
-    public ViewLoadError? LoadError => this.snapshot.LoadError;
+    public ViewLoadError? LoadError => this.watched.Current.LoadError;
 
     /// <summary>The View with <paramref name="id"/>, or <see langword="null"/> when there is none.</summary>
     /// <param name="id">The View's id, matched <see cref="StringComparison.Ordinal"/>.</param>
     public TaskView? Get(string id)
     {
-        foreach (TaskView view in this.snapshot.Views)
+        foreach (TaskView view in this.watched.Current.Views)
         {
             if (string.Equals(view.Id, id, StringComparison.Ordinal))
             {
@@ -147,14 +149,14 @@ internal sealed partial class ViewStore : IDisposable
     {
         ArgumentNullException.ThrowIfNull(view);
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            if (this.snapshot.LoadError is { } loadError)
+            if (this.watched.Current.LoadError is { } loadError)
             {
                 return new ViewSaveResult(false, [$"'{this.path}' has a parse error ({loadError.Message}) and must be fixed by hand before a View can be saved."]);
             }
 
-            IReadOnlyList<string> problems = ViewValidator.Validate(view, this.snapshot.Views);
+            IReadOnlyList<string> problems = ViewValidator.Validate(view, this.watched.Current.Views);
             if (problems.Count > 0)
             {
                 return new ViewSaveResult(false, problems);
@@ -171,7 +173,7 @@ internal sealed partial class ViewStore : IDisposable
             entries.Add(JsonSerializer.SerializeToNode(view, ViewJson.Options));
 
             WriteDocumentToDisk(this.path, entries);
-            this.snapshot = BuildSnapshot(entries);
+            this.watched.Current = BuildSnapshot(entries);
         }
 
         this.ViewsChanged?.Invoke();
@@ -194,9 +196,9 @@ internal sealed partial class ViewStore : IDisposable
             return new ViewSaveResult(false, ["A built-in View cannot be deleted."]);
         }
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            if (this.snapshot.LoadError is { } loadError)
+            if (this.watched.Current.LoadError is { } loadError)
             {
                 return new ViewSaveResult(false, [$"'{this.path}' has a parse error ({loadError.Message}) and must be fixed by hand before a View can be deleted."]);
             }
@@ -214,7 +216,7 @@ internal sealed partial class ViewStore : IDisposable
             }
 
             WriteDocumentToDisk(this.path, entries);
-            this.snapshot = BuildSnapshot(entries);
+            this.watched.Current = BuildSnapshot(entries);
         }
 
         this.ViewsChanged?.Invoke();
@@ -235,15 +237,15 @@ internal sealed partial class ViewStore : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
         ArgumentException.ThrowIfNullOrWhiteSpace(newName);
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            if (this.snapshot.LoadError is not null)
+            if (this.watched.Current.LoadError is not null)
             {
                 return;
             }
 
             List<TaskView> changed = [];
-            foreach (TaskView view in this.snapshot.Views)
+            foreach (TaskView view in this.watched.Current.Views)
             {
                 if (!view.Filter.Assignees.Any(assignee => string.Equals(assignee, oldName, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -278,7 +280,7 @@ internal sealed partial class ViewStore : IDisposable
             }
 
             WriteDocumentToDisk(this.path, entries);
-            this.snapshot = BuildSnapshot(entries);
+            this.watched.Current = BuildSnapshot(entries);
         }
 
         this.ViewsChanged?.Invoke();
@@ -548,50 +550,8 @@ internal sealed partial class ViewStore : IDisposable
         return null;
     }
 
-    /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
-    /// snapshot and raises <see cref="ViewsChanged"/>. The lock and ordering rules this follows (rebuild
-    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
-    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            var rebuilt = this.ReadForWatcherRebuild();
-            if (rebuilt is null)
-            {
-                return;
-            }
-
-            this.snapshot = rebuilt;
-            changed = this.ViewsChanged;
-        }
-
-        changed?.Invoke();
-    }
-
     /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
-    public void Dispose()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
-    }
+    public void Dispose() => this.watched.Dispose();
 
     /// <summary>The result of one attempt to read and parse <c>views.json</c>'s <c>views</c> array.</summary>
     /// <param name="Entries">The parsed array; empty when the file is missing or a parse error occurred.</param>

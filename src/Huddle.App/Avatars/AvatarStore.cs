@@ -83,16 +83,13 @@ internal sealed partial class AvatarStore : IDisposable
     private readonly string path;
     private readonly string imageDirectory;
     private readonly ILogger<AvatarStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference. Readers never take a lock -
     // see the class remarks' state-model paragraph. Dictionary rather than IReadOnlyDictionary: this
     // field is private, and every value it is ever assigned is a Dictionary built fresh by
     // BuildAvatars, so CA1859 asks for the concrete type - see CSharpPrinciples.md's collections
     // guidance. Nothing outside this class ever sees the field itself; Get is the only reader.
-    private volatile Dictionary<string, Avatar> avatars;
+    private readonly WatchedFileStore<Dictionary<string, Avatar>> watched;
 
     /// <summary>Loads (or defaults) the override file at <c>{DataDir}/avatars.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
@@ -117,9 +114,14 @@ internal sealed partial class AvatarStore : IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.avatars = this.BuildAvatars(this.ReadDocumentFromDisk());
-
-        this.watcher = new DebouncedFileWatcher(directory, "avatars.json", this.OnWatcherSettled, this.logger, nameof(AvatarStore));
+        this.watched = new WatchedFileStore<Dictionary<string, Avatar>>(
+            directory,
+            "avatars.json",
+            this.BuildAvatars(this.ReadDocumentFromDisk()),
+            _ => this.ReadDocumentForWatcherRebuild() is { } document ? this.BuildAvatars(document) : null,
+            (_, _) => this.AvatarsChanged,
+            this.logger,
+            nameof(AvatarStore));
     }
 
     /// <summary>
@@ -152,7 +154,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// <param name="name">A Persona's or the Human's Name, matched <see cref="StringComparison.OrdinalIgnoreCase"/>.</param>
     public Avatar Get(string name)
     {
-        return this.avatars.TryGetValue(name, out var avatar) ? avatar : Avatar.None;
+        return this.watched.Current.TryGetValue(name, out var avatar) ? avatar : Avatar.None;
     }
 
     /// <summary>
@@ -174,7 +176,7 @@ internal sealed partial class AvatarStore : IDisposable
 
         string? previousImage = null;
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
 
@@ -193,7 +195,7 @@ internal sealed partial class AvatarStore : IDisposable
             }
 
             this.WriteDocumentToDisk(document);
-            this.avatars = this.BuildAvatars(document);
+            this.watched.Current = this.BuildAvatars(document);
         }
 
         // A replaced (or cleared) image must not orphan its predecessor - see WriteImage's remarks
@@ -216,7 +218,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// <param name="newName">The Name the entry moves to.</param>
     public void Rename(string oldName, string newName)
     {
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
 
@@ -229,7 +231,7 @@ internal sealed partial class AvatarStore : IDisposable
             document[newName] = existingEntry;
 
             this.WriteDocumentToDisk(document);
-            this.avatars = this.BuildAvatars(document);
+            this.watched.Current = this.BuildAvatars(document);
         }
 
         this.AvatarsChanged?.Invoke();
@@ -245,7 +247,7 @@ internal sealed partial class AvatarStore : IDisposable
     {
         string? imageFile;
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
 
@@ -258,7 +260,7 @@ internal sealed partial class AvatarStore : IDisposable
             document.Remove(name);
 
             this.WriteDocumentToDisk(document);
-            this.avatars = this.BuildAvatars(document);
+            this.watched.Current = this.BuildAvatars(document);
         }
 
         this.DeleteImage(imageFile);
@@ -504,48 +506,6 @@ internal sealed partial class AvatarStore : IDisposable
     private JsonObject? ReadDocumentForWatcherRebuild() =>
         RetryingFileRead.RereadKeepingPrevious(this.path, static () => new JsonObject(CaseInsensitiveNodeOptions), () => ParseDocumentFile(this.path), this.logger, "avatar overrides file", "avatars");
 
-    /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
-    /// snapshot and raises <see cref="AvatarsChanged"/>. The lock and ordering rules this follows (rebuild
-    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
-    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            var document = this.ReadDocumentForWatcherRebuild();
-            if (document is null)
-            {
-                return;
-            }
-
-            this.avatars = this.BuildAvatars(document);
-            changed = this.AvatarsChanged;
-        }
-
-        changed?.Invoke();
-    }
-
     /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
-    public void Dispose()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
-    }
+    public void Dispose() => this.watched.Dispose();
 }

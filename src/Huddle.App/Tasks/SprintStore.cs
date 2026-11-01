@@ -34,12 +34,9 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     private readonly TaskStore tasks;
     private readonly TaskEvents events;
     private readonly ILogger<SprintStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole parsed file, swapped in as one immutable reference so a reader never takes a lock.
-    private volatile SprintFile snapshot;
+    private readonly WatchedFileStore<SprintFile> watched;
 
     /// <summary>Loads <c>{DataDir}/sprints.md</c> (an absent file is an empty catalogue), starts watching it and subscribes to <see cref="TaskEvents.TaskChanged"/>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
@@ -66,9 +63,14 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.snapshot = this.LoadInitialSnapshot();
-
-        this.watcher = new DebouncedFileWatcher(directory, FileName, this.OnWatcherSettled, this.logger, nameof(SprintStore));
+        this.watched = new WatchedFileStore<SprintFile>(
+            directory,
+            FileName,
+            this.LoadInitialSnapshot(),
+            _ => this.ReadForWatcherRebuild(),
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.SprintsChanged,
+            this.logger,
+            nameof(SprintStore));
 
         this.events.TaskChanged += this.OnTaskChanged;
     }
@@ -77,20 +79,20 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     public event Action? SprintsChanged;
 
     /// <inheritdoc/>
-    public IReadOnlyList<Sprint> All => this.snapshot.Sprints;
+    public IReadOnlyList<Sprint> All => this.watched.Current.Sprints;
 
     /// <inheritdoc/>
     public Sprint? Current
     {
         get
         {
-            IReadOnlyList<Sprint> sprints = this.snapshot.Sprints;
+            IReadOnlyList<Sprint> sprints = this.watched.Current.Sprints;
             return sprints.Count == 0 ? null : sprints[^1];
         }
     }
 
     /// <summary>Every line that looks like a Sprint and is invalid, with its 1-based line number.</summary>
-    public IReadOnlyList<SprintProblem> Problems => this.snapshot.Problems;
+    public IReadOnlyList<SprintProblem> Problems => this.watched.Current.Problems;
 
     /// <summary>The absolute path of <c>sprints.md</c>, whether or not it exists.</summary>
     public string Path => this.path;
@@ -98,7 +100,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     /// <inheritdoc/>
     public Sprint? Get(SprintId id)
     {
-        foreach (Sprint sprint in this.snapshot.Sprints)
+        foreach (Sprint sprint in this.watched.Current.Sprints)
         {
             if (sprint.Id == id)
             {
@@ -115,7 +117,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         ArgumentNullException.ThrowIfNull(name);
 
         string trimmed = name.Trim();
-        foreach (Sprint sprint in this.snapshot.Sprints)
+        foreach (Sprint sprint in this.watched.Current.Sprints)
         {
             if (string.Equals(sprint.Name, trimmed, StringComparison.OrdinalIgnoreCase))
             {
@@ -145,7 +147,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         Sprint created = new(new SprintId(1), trimmed);
         Sprint? existing;
         bool raise;
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             try
             {
@@ -164,7 +166,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
                     created = new Sprint(new SprintId(next), trimmed);
                     string newText = SprintFileFormat.AppendLine(text, created.Id, trimmed);
                     AtomicFile.WriteText(this.path, newText);
-                    this.snapshot = SprintFileFormat.ParseFile(newText);
+                    this.watched.Current = SprintFileFormat.ParseFile(newText);
                     raise = true;
                 }
             }
@@ -197,10 +199,10 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
             {
                 // The Sprint came from a write the watcher has not reported yet: adopt it now, so the Task
                 // save that follows can find it.
-                bool stale = this.snapshot.Sprints.All(known => known.Id != sprint.Id);
+                bool stale = this.watched.Current.Sprints.All(known => known.Id != sprint.Id);
                 if (stale)
                 {
-                    this.snapshot = file;
+                    this.watched.Current = file;
                 }
 
                 return (sprint, stale);
@@ -218,9 +220,9 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     /// <param name="id">The Sprint to remove.</param>
     internal bool RemoveIfUnused(SprintId id)
     {
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            if (this.disposed || this.Get(id) is null)
+            if (this.watched.IsDisposed || this.Get(id) is null)
             {
                 return false;
             }
@@ -253,7 +255,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
                 }
 
                 AtomicFile.WriteText(this.path, newText);
-                this.snapshot = SprintFileFormat.ParseFile(newText);
+                this.watched.Current = SprintFileFormat.ParseFile(newText);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -271,18 +273,8 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     /// <summary>Stops watching, unsubscribes from <see cref="TaskEvents.TaskChanged"/> and releases the debounce timer.</summary>
     public void Dispose()
     {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
         this.events.TaskChanged -= this.OnTaskChanged;
-        this.watcher.Dispose();
+        this.watched.Dispose();
     }
 
     /// <summary>Whether two parses of the file are the same Sprints and the same problems.</summary>
@@ -334,37 +326,6 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         catch (Exception ex)
         {
             this.logger.LogWarning(ex, "Removing a vacated sprint failed; the sprint stays.");
-        }
-    }
-
-    /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: re-parses the file and
-    /// raises <see cref="SprintsChanged"/> when the content differs. The lock and ordering rules this
-    /// follows are the callback contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        bool changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            SprintFile? rebuilt = this.ReadForWatcherRebuild();
-            if (rebuilt is null)
-            {
-                return;
-            }
-
-            changed = !SameContent(this.snapshot, rebuilt);
-            this.snapshot = rebuilt;
-        }
-
-        if (changed)
-        {
-            this.SprintsChanged?.Invoke();
         }
     }
 

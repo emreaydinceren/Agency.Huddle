@@ -45,12 +45,9 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
     private readonly string path;
     private readonly string defaultName;
     private readonly ILogger<HumanProfileStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference so readers never lock.
-    private volatile Snapshot current;
+    private readonly WatchedFileStore<Snapshot> watched;
 
     /// <summary>Loads (or defaults) the profile file at <c>{DataDir}/profile.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and the first-run default <see cref="TeamOptions.HumanName"/>.</param>
@@ -73,9 +70,14 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
         Directory.CreateDirectory(directory);
 
         var initial = new Snapshot(new HumanProfile(this.defaultName, null, null, null), Saved: false);
-        this.current = this.BuildSnapshot(this.ReadDocumentFromDisk(), initial);
-
-        this.watcher = new DebouncedFileWatcher(directory, FileName, this.OnWatcherSettled, this.logger, nameof(HumanProfileStore));
+        this.watched = new WatchedFileStore<Snapshot>(
+            directory,
+            FileName,
+            this.BuildSnapshot(this.ReadDocumentFromDisk(), initial),
+            this.ReloadForWatcher,
+            (before, after) => after == before ? null : this.CaptureRaise(before, after),
+            this.logger,
+            nameof(HumanProfileStore));
     }
 
     /// <summary>Raised when the Human's Name changes, before <see cref="ProfileChanged"/>, outside the write lock.</summary>
@@ -88,13 +90,13 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
     public string FilePath => this.path;
 
     /// <inheritdoc />
-    public HumanProfile Current => this.current.Profile;
+    public HumanProfile Current => this.watched.Current.Profile;
 
     /// <inheritdoc />
-    public string Name => this.current.Profile.Name;
+    public string Name => this.watched.Current.Profile.Name;
 
     /// <inheritdoc />
-    public bool IsSaved => this.current.Saved;
+    public bool IsSaved => this.watched.Current.Saved;
 
     /// <inheritdoc />
     public bool Matches(string? nameOrAlias)
@@ -104,7 +106,7 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
             return false;
         }
 
-        var profile = this.current.Profile;
+        var profile = this.watched.Current.Profile;
         return string.Equals(nameOrAlias, profile.Name, StringComparison.OrdinalIgnoreCase)
             || string.Equals(nameOrAlias, profile.Alias, StringComparison.OrdinalIgnoreCase);
     }
@@ -123,9 +125,9 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
         var normalised = Normalise(profile);
         Snapshot before;
         Snapshot after;
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            before = this.current;
+            before = this.watched.Current;
             var document = this.ReadDocumentFromDisk() ?? new JsonObject();
             document["name"] = normalised.Name;
             SetOrRemove(document, "alias", normalised.Alias);
@@ -134,26 +136,16 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
 
             AtomicFile.WriteText(this.path, document.ToJsonString(IndentedJsonOptions));
             after = new Snapshot(normalised, Saved: true);
-            this.current = after;
+            this.watched.Current = after;
         }
 
-        this.Raise(before, after);
+        this.CaptureRaise(before, after)();
     }
 
     /// <summary>Stops watching the file and releases the debounce timer.</summary>
     public void Dispose()
     {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
+        this.watched.Dispose();
     }
 
     /// <summary>Trims every field and turns a blank optional field into <see langword="null"/>.</summary>
@@ -262,42 +254,25 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
     /// <summary>
     /// Rebuilds the snapshot for an outside edit once the watcher settles, retrying through
     /// <see cref="RetryingFileRead"/> so a mid-save read does not flicker. Keeps the previous snapshot
-    /// when every attempt fails, and ignores the echo of this store's own <see cref="Save"/>.
+    /// when every attempt fails; an unchanged result is dropped by the caller, which ignores the echo of
+    /// this store's own <see cref="Save"/>.
     /// </summary>
-    private void OnWatcherSettled()
+    /// <param name="before">The snapshot currently published.</param>
+    /// <returns>The rebuilt snapshot, or <see langword="null"/> to keep <paramref name="before"/>.</returns>
+    private Snapshot? ReloadForWatcher(Snapshot before)
     {
-        Snapshot before;
-        Snapshot after;
-        lock (this.writeGate)
+        JsonObject? document = null;
+        if (File.Exists(this.path))
         {
-            if (this.disposed)
+            document = RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
+            if (document is null)
             {
-                return;
+                return null;
             }
-
-            JsonObject? document = null;
-            if (File.Exists(this.path))
-            {
-                document = RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
-                if (document is null)
-                {
-                    return;
-                }
-            }
-
-            before = this.current;
-            after = this.BuildSnapshot(document, before);
-            if (after == before)
-            {
-                return;
-            }
-
-            this.current = after;
         }
 
-        this.Raise(before, after);
+        return this.BuildSnapshot(document, before);
     }
-
     /// <summary>Logs why an outside edit could not be read and keeps the previous snapshot.</summary>
     /// <param name="ex">The last failure.</param>
     private JsonObject? OnReadGaveUp(Exception ex)
@@ -306,19 +281,29 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
         return null;
     }
 
-    /// <summary>Raises <see cref="HumanRenamed"/> when the Name changed, then <see cref="ProfileChanged"/>.</summary>
+    /// <summary>
+    /// Captures <see cref="HumanRenamed"/> (when the Name changed) and then <see cref="ProfileChanged"/>
+    /// and returns the action that raises them in that order. Call it while the lock is held when the
+    /// delegates must be captured under it, and invoke the result only after releasing it.
+    /// </summary>
     /// <param name="before">The snapshot before the change.</param>
     /// <param name="after">The snapshot after it.</param>
-    private void Raise(Snapshot before, Snapshot after)
+    /// <returns>The action that raises the events.</returns>
+    private Action CaptureRaise(Snapshot before, Snapshot after)
     {
-        if (!string.Equals(before.Profile.Name, after.Profile.Name, StringComparison.Ordinal))
+        Action<HumanRenamed>? renamed = this.HumanRenamed;
+        Action? changed = this.ProfileChanged;
+        bool nameChanged = !string.Equals(before.Profile.Name, after.Profile.Name, StringComparison.Ordinal);
+        return () =>
         {
-            this.HumanRenamed?.Invoke(new HumanRenamed(before.Profile.Name, after.Profile.Name));
-        }
+            if (nameChanged)
+            {
+                renamed?.Invoke(new HumanRenamed(before.Profile.Name, after.Profile.Name));
+            }
 
-        this.ProfileChanged?.Invoke();
+            changed?.Invoke();
+        };
     }
-
     /// <summary>The resolved profile and whether it came from a saved file.</summary>
     /// <param name="Profile">The resolved profile.</param>
     /// <param name="Saved">Whether <c>profile.json</c> exists.</param>

@@ -63,13 +63,10 @@ internal sealed partial class AppearanceStore : IDisposable
 
     private readonly string path;
     private readonly ILogger<AppearanceStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference. Readers never take a lock -
     // see the class remarks' state-model paragraph.
-    private volatile AppearanceSettings current;
+    private readonly WatchedFileStore<AppearanceSettings> watched;
 
     /// <summary>Loads (or defaults) the selection file at <c>{DataDir}/appearance.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
@@ -99,9 +96,14 @@ internal sealed partial class AppearanceStore : IDisposable
             this.WriteDocumentToDisk(document);
         }
 
-        this.current = this.BuildSettings(document);
-
-        this.watcher = new DebouncedFileWatcher(directory, "appearance.json", this.OnWatcherSettled, this.logger, nameof(AppearanceStore));
+        this.watched = new WatchedFileStore<AppearanceSettings>(
+            directory,
+            "appearance.json",
+            this.BuildSettings(document),
+            _ => this.ReadDocumentForWatcherRebuild() is { } rebuilt ? this.BuildSettings(rebuilt) : null,
+            (_, _) => this.AppearanceChanged,
+            this.logger,
+            nameof(AppearanceStore));
     }
 
     /// <summary>
@@ -122,7 +124,7 @@ internal sealed partial class AppearanceStore : IDisposable
     public string FilePath => this.path;
 
     /// <summary>The current resolved theme id. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
-    public AppearanceSettings Current => this.current;
+    public AppearanceSettings Current => this.watched.Current;
 
     /// <summary>
     /// Selects (or clears) the theme id, under the write lock: re-reads the file so a concurrent
@@ -133,7 +135,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// <param name="themeId">The theme id to store, or <see langword="null"/> to clear the selection and remove the <c>theme</c> key entirely.</param>
     public void Save(string? themeId)
     {
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
 
@@ -147,7 +149,7 @@ internal sealed partial class AppearanceStore : IDisposable
             }
 
             this.WriteDocumentToDisk(document);
-            this.current = this.BuildSettings(document);
+            this.watched.Current = this.BuildSettings(document);
         }
 
         this.AppearanceChanged?.Invoke();
@@ -235,7 +237,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// <param name="edit">Edits the document in place and returns whether it changed anything.</param>
     private void Mutate(Func<JsonObject, bool> edit)
     {
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
             if (!edit(document))
@@ -244,7 +246,7 @@ internal sealed partial class AppearanceStore : IDisposable
             }
 
             this.WriteDocumentToDisk(document);
-            this.current = this.BuildSettings(document);
+            this.watched.Current = this.BuildSettings(document);
         }
 
         this.AppearanceChanged?.Invoke();
@@ -306,7 +308,7 @@ internal sealed partial class AppearanceStore : IDisposable
             return;
         }
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
             var shownMode = (FindTheme(this.BuildSettings(document).ThemeId) ?? ThemeCatalog.BuiltIn[0]).Mode;
@@ -318,7 +320,7 @@ internal sealed partial class AppearanceStore : IDisposable
             }
 
             this.WriteDocumentToDisk(document);
-            this.current = this.BuildSettings(document);
+            this.watched.Current = this.BuildSettings(document);
         }
 
         this.AppearanceChanged?.Invoke();
@@ -331,7 +333,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// </summary>
     public void ToggleMode()
     {
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var document = this.ReadDocumentFromDisk();
             var settings = this.BuildSettings(document);
@@ -343,7 +345,7 @@ internal sealed partial class AppearanceStore : IDisposable
             document["theme"] = shown.Mode == ThemeMode.Dark ? settings.PreferredLightId : settings.PreferredDarkId;
 
             this.WriteDocumentToDisk(document);
-            this.current = this.BuildSettings(document);
+            this.watched.Current = this.BuildSettings(document);
         }
 
         this.AppearanceChanged?.Invoke();
@@ -695,48 +697,6 @@ internal sealed partial class AppearanceStore : IDisposable
     private JsonObject? ReadDocumentForWatcherRebuild() =>
         RetryingFileRead.RereadKeepingPrevious(this.path, static () => new JsonObject(), () => ParseDocumentFile(this.path), this.logger, "appearance file", "appearance");
 
-    /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
-    /// snapshot and raises <see cref="AppearanceChanged"/>. The lock and ordering rules this follows (rebuild
-    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
-    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            var document = this.ReadDocumentForWatcherRebuild();
-            if (document is null)
-            {
-                return;
-            }
-
-            this.current = this.BuildSettings(document);
-            changed = this.AppearanceChanged;
-        }
-
-        changed?.Invoke();
-    }
-
     /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
-    public void Dispose()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
-    }
+    public void Dispose() => this.watched.Dispose();
 }

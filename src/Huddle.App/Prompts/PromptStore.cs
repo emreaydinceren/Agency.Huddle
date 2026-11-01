@@ -70,9 +70,6 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
     private readonly string path;
     private readonly ILogger<PromptStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     /// <summary>
     /// The absolute path to the override file, <c>prompts.json</c> under <see cref="TeamOptions.DataDir"/>,
@@ -88,7 +85,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     // FrozenDictionary is optimised for, and its immutability is compiler-enforced rather than merely
     // conventional - there is no indexer setter or Add to accidentally call on the published snapshot.
     // Readers never take a lock: see the state-model remarks above.
-    private volatile FrozenDictionary<string, string> resolved;
+    private readonly WatchedFileStore<FrozenDictionary<string, string>> watched;
 
     /// <summary>Loads (or defaults) the override file at <c>{DataDir}/prompts.json</c> and resolves every catalog key.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
@@ -113,20 +110,25 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.resolved = this.ApplyResolved(this.ReadOverridesFromDisk());
-
         // FileSystemWatcher cannot watch a single file directly - it watches a directory and
         // matches Filter against the names inside it. A rename-over save (a temp file written
         // then File.Move'd/File.Replace'd into place - common in editors) arrives as a Renamed
         // event whose Filter match is against the NEW name, which is "prompts.json" again, so the
         // plain filter below is enough to catch it - there are no subdirectories here to worry about.
-        this.watcher = new DebouncedFileWatcher(directory, "prompts.json", this.OnWatcherSettled, this.logger, nameof(PromptStore));
+        this.watched = new WatchedFileStore<FrozenDictionary<string, string>>(
+            directory,
+            "prompts.json",
+            this.ApplyResolved(this.ReadOverridesFromDisk()),
+            _ => this.ReadOverridesForWatcherRebuild() is { } overrides ? this.ApplyResolved(overrides) : null,
+            (_, _) => this.PromptsChanged,
+            this.logger,
+            nameof(PromptStore));
     }
 
     /// <summary>
     /// Raised after <see cref="Save"/> or <see cref="Reset"/> has written the file and rebuilt the
     /// resolved snapshot, never before, and after an external edit to <see cref="path"/> is picked
-    /// up by the filesystem watcher and its debounce settles. Raised outside <see cref="writeGate"/>
+    /// up by the filesystem watcher and its debounce settles. Raised outside <see cref="WatchedFileStore{TSnapshot}.Gate"/>
     /// so a future subscriber that takes a lock of its own cannot deadlock against a concurrent
     /// write or watcher rebuild.
     /// </summary>
@@ -160,7 +162,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         // programming error, not user data.
         var definition = PromptCatalog.Get(key);
 
-        return this.resolved.TryGetValue(key, out var text) ? text : definition.Default;
+        return this.watched.Current.TryGetValue(key, out var text) ? text : definition.Default;
     }
 
     /// <summary>
@@ -179,13 +181,13 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
         var definition = PromptCatalog.Get(key);
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var overrides = this.ReadOverridesFromDisk();
             ApplyEdit(overrides, definition, text);
             DropIgnoredOverrides(overrides);
             this.WriteOverridesToDisk(overrides);
-            this.resolved = this.ApplyResolved(overrides);
+            this.watched.Current = this.ApplyResolved(overrides);
         }
 
         this.PromptsChanged?.Invoke();
@@ -215,7 +217,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             return;
         }
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var overrides = this.ReadOverridesFromDisk();
 
@@ -227,7 +229,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
             DropIgnoredOverrides(overrides);
             this.WriteOverridesToDisk(overrides);
-            this.resolved = this.ApplyResolved(overrides);
+            this.watched.Current = this.ApplyResolved(overrides);
         }
 
         this.PromptsChanged?.Invoke();
@@ -269,14 +271,14 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     {
         PromptCatalog.Get(key);
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             var overrides = this.ReadOverridesFromDisk();
             overrides.Remove(key);
             DropIgnoredOverrides(overrides);
 
             this.WriteOverridesToDisk(overrides);
-            this.resolved = this.ApplyResolved(overrides);
+            this.watched.Current = this.ApplyResolved(overrides);
         }
 
         this.PromptsChanged?.Invoke();
@@ -458,7 +460,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// So this retries a few times with a short pause first (see <see cref="RetryingFileRead.Attempts"/>),
     /// which is enough for an in-place write to settle in practice. If the file still will not parse
     /// after every attempt, this returns <see langword="null"/> rather than an empty dictionary: the
-    /// caller (<see cref="OnWatcherSettled"/>) then keeps the PREVIOUS resolved snapshot untouched
+    /// caller (<see cref="WatchedFileStore{TSnapshot}"/>) then keeps the PREVIOUS resolved snapshot untouched
     /// instead of wiping every override - a genuinely malformed hand-edit is a real possibility, but the
     /// user's last-good overrides staying live until they fix it (or until a later event, such as the
     /// file finally settling, retries this again) is a far better failure mode than an editing session's
@@ -473,48 +475,6 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     private Dictionary<string, string>? ReadOverridesForWatcherRebuild() =>
         RetryingFileRead.RereadKeepingPrevious(this.path, static () => new Dictionary<string, string>(StringComparer.Ordinal), () => ParseOverridesFile(this.path), this.logger, "prompt overrides file", "prompt text");
 
-    /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
-    /// snapshot and raises <see cref="PromptsChanged"/>. The lock and ordering rules this follows (rebuild
-    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
-    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            var overrides = this.ReadOverridesForWatcherRebuild();
-            if (overrides is null)
-            {
-                return;
-            }
-
-            this.resolved = this.ApplyResolved(overrides);
-            changed = this.PromptsChanged;
-        }
-
-        changed?.Invoke();
-    }
-
     /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
-    public void Dispose()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
-    }
+    public void Dispose() => this.watched.Dispose();
 }
