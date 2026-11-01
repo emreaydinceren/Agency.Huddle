@@ -330,7 +330,7 @@ public sealed class PersonaSpendTests : IDisposable
         Assert.Empty(second.Get("nova"));
     }
 
-    /// <summary>Spend added for a Task is attributed to it in the store and reported by <see cref="PersonaSpend.GetPersistedForTask"/>.</summary>
+    /// <summary>Spend added for a Task is attributed to it in the store and reported by <see cref="PersonaSpendStore.ForTask"/>.</summary>
     [Fact]
     public void Add_WithTaskId_IsAttributedToTheTask()
     {
@@ -339,7 +339,7 @@ public sealed class PersonaSpendTests : IDisposable
         spend.Add("nova", "s1", 0.20m, "USD", "T-1");
         spend.Add("nova", "s2", 0.05m, "USD");
 
-        Assert.Equal([new SpendAmount(0.20m, "USD")], spend.GetPersistedForTask("T-1"));
+        Assert.Equal([new StoredSpend("USD", 0.20m)], this.store.ForTask("T-1"));
         Assert.Equal([new SpendAmount(0.25m, "USD")], spend.GetPersisted("nova"));
     }
 }

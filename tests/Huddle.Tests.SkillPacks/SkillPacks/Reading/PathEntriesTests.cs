@@ -47,7 +47,7 @@ public sealed class PathEntriesTests
         PathEntry entry = Assert.Single(entries.Entries);
         Assert.Null(entry.Computer);
         Assert.Equal("E: some path.json", entry.Path);
-        Assert.True(PathEntries.IsOneLetterComputerLine(entry.Path));
+        Assert.Matches(@"\A[A-Za-z0-9]: \S", entry.Path);
     }
 
     /// <summary>The JSON <c>"*"</c> key is the plain entry; other keys are computers.</summary>

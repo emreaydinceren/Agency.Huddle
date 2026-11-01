@@ -141,11 +141,6 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
     /// <returns>A snapshot; empty when nothing is stored.</returns>
     internal IReadOnlyList<SpendAmount> GetPersisted(string personaName) => ToAmounts(store.ForPersona(personaName));
 
-    /// <summary>The Spend persisted for <paramref name="taskId"/> across all Personas, one entry per currency.</summary>
-    /// <param name="taskId">The Task id.</param>
-    /// <returns>A snapshot; empty when nothing is stored.</returns>
-    internal IReadOnlyList<SpendAmount> GetPersistedForTask(string taskId) => ToAmounts(store.ForTask(taskId));
-
     private static List<SpendAmount> ToAmounts(IReadOnlyList<StoredSpend> stored) =>
         [.. stored.OrderBy(static spend => spend.Currency, StringComparer.Ordinal).Select(static spend => new SpendAmount(spend.Amount, spend.Currency))];
 

@@ -11,7 +11,7 @@
        it a serif, as Nordic gives it Literata. */
     --font-read: var(--mud-typography-body1-family);
 
-    /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.RenderDefaults writes (a test pins it). This is
+    /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.Render writes with no overrides (a test pins it). This is
        the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
     --hu-ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
     --hu-ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));

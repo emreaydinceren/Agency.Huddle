@@ -22,7 +22,6 @@ TaskFilter
 ProjectRef
 SortKey
 BoardColumn
-ViewsDocument
 InvalidView
 ViewSaveResult
 ViewLoadError

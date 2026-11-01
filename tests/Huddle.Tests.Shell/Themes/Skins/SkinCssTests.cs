@@ -13,7 +13,7 @@ public sealed partial class SkinCssTests
     [Fact]
     public void Render_DeclaresEveryToken()
     {
-        string css = SkinCss.RenderDefaults(ThemeMode.Light);
+        string css = RenderDefaults(ThemeMode.Light);
 
         Assert.Equal(":root{", css[..6]);
         Assert.Equal('}', css[^1]);
@@ -95,14 +95,14 @@ public sealed partial class SkinCssTests
     [Fact]
     public void RenderDefaults_LightAndDarkMatch()
     {
-        Assert.Equal(SkinCss.RenderDefaults(ThemeMode.Light), SkinCss.RenderDefaults(ThemeMode.Dark));
+        Assert.Equal(RenderDefaults(ThemeMode.Light), RenderDefaults(ThemeMode.Dark));
     }
 
     /// <summary><c>app-vars.css</c> declares every token's rendered default, value for value, and no other <c>--hu-*</c> token.</summary>
     [Fact]
     public void AppVars_DeclaresRenderDefaults()
     {
-        Dictionary<string, string> expected = Declarations(SkinCss.RenderDefaults(ThemeMode.Light));
+        Dictionary<string, string> expected = Declarations(RenderDefaults(ThemeMode.Light));
         Dictionary<string, string> actual = Declarations(File.ReadAllText(AppVarsPath));
         Dictionary<string, string> huActual = actual
             .Where(pair => pair.Key.StartsWith("--hu-", StringComparison.Ordinal))
@@ -139,6 +139,11 @@ public sealed partial class SkinCssTests
         Assert.True(actual.ContainsKey("--font-mono"));
         Assert.True(actual.ContainsKey("--font-read"));
     }
+
+    /// <summary>The registry defaults for <paramref name="mode"/>: <see cref="SkinCss.Render"/> with no overrides and no faces.</summary>
+    /// <param name="mode">Whether the light or dark default of each token is used.</param>
+    private static string RenderDefaults(ThemeMode mode) =>
+        SkinCss.Render(new Dictionary<string, string>(StringComparer.Ordinal), mode, "defaults", null);
 
     /// <summary>Every <c>--name: value;</c> declaration in <paramref name="css"/>, comments removed, whitespace collapsed.</summary>
     /// <param name="css">A stylesheet or a rendered block.</param>
