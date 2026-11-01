@@ -44,9 +44,10 @@ namespace Agency.Huddle.App.Tasks.Views;
 /// <para>
 /// Everything else mirrors <see cref="Agency.Huddle.App.Avatars.AvatarStore"/>: a
 /// <see cref="Lock"/> around writes, a <see langword="volatile"/> snapshot, a debounced
-/// <see cref="FileSystemWatcher"/> with no own-write suppression (a <see cref="Save(TaskView)"/>
-/// raises <see cref="ViewsChanged"/> once synchronously, and the watcher's redundant refresh of the
-/// same write raises it again roughly <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> later), and a
+/// <see cref="FileSystemWatcher"/> (a <see cref="Save(TaskView)"/> raises <see cref="ViewsChanged"/> once
+/// synchronously; the watcher's re-read of that same write, roughly
+/// <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> later, resolves to the same content and raises
+/// nothing, as <see cref="SprintStore"/>'s does), and a
 /// 3&#215;20&#160;ms retry on <see cref="IOException"/> when a watcher-triggered rebuild races an
 /// editor mid-save.
 /// </para>
@@ -93,7 +94,7 @@ internal sealed partial class ViewStore : IDisposable
             "views.json",
             LoadInitialSnapshot(this.path),
             _ => this.ReadForWatcherRebuild(),
-            (_, _) => this.ViewsChanged,
+            (previous, rebuilt) => SameContent(previous, rebuilt) ? null : this.ViewsChanged,
             this.logger,
             nameof(ViewStore));
     }
@@ -102,10 +103,9 @@ internal sealed partial class ViewStore : IDisposable
     /// Raised after <see cref="Save(TaskView)"/>, <see cref="Delete(string)"/> or
     /// <see cref="RenameAgent(string, string)"/> has written the file and rebuilt the resolved
     /// snapshot, and after an external edit to <see cref="FilePath"/> is picked up by the
-    /// filesystem watcher and its debounce settles. There is no own-write suppression - see the
-    /// class remarks - so one call to <see cref="Save(TaskView)"/> raises this event twice: once
-    /// synchronously before it returns, and once more roughly <see cref="DebouncedFileWatcher.DebounceMilliseconds"/>
-    /// later from the watcher's own, redundant rebuild of the same write.
+    /// filesystem watcher and its debounce settles and the file says something new. One call to
+    /// <see cref="Save(TaskView)"/> raises it once, synchronously before it returns: the watcher's
+    /// later re-read of that write resolves to the same content, so it raises nothing.
     /// </summary>
     public event Action? ViewsChanged;
 
@@ -557,6 +557,17 @@ internal sealed partial class ViewStore : IDisposable
     /// <param name="Entries">The parsed array; empty when the file is missing or a parse error occurred.</param>
     /// <param name="LoadError">The parse failure, or <see langword="null"/> on success.</param>
     private sealed record ReadResult(JsonArray Entries, ViewLoadError? LoadError);
+
+    /// <summary>
+    /// Whether two snapshots resolve to the same Views, invalid entries and load error. The watcher's re-read of the
+    /// store's own write is the common case, and raising <see cref="ViewsChanged"/> for it re-rendered every subscriber
+    /// for nothing. <see cref="TaskView"/> holds lists, so a record comparison would compare them by reference; the
+    /// serialised form compares what the file says.
+    /// </summary>
+    private static bool SameContent(Snapshot left, Snapshot right) =>
+        left.LoadError == right.LoadError
+        && string.Equals(JsonSerializer.Serialize(left.Views, ViewJson.Options), JsonSerializer.Serialize(right.Views, ViewJson.Options), StringComparison.Ordinal)
+        && string.Equals(JsonSerializer.Serialize(left.InvalidViews, ViewJson.Options), JsonSerializer.Serialize(right.InvalidViews, ViewJson.Options), StringComparison.Ordinal);
 
     /// <summary>The whole resolved state, swapped in as one immutable reference.</summary>
     /// <param name="Views">The built-ins first, then the file's own Views in file order.</param>

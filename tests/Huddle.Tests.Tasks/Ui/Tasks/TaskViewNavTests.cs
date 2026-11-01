@@ -178,7 +178,7 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        _ = await ViewStoreEcho.SaveAndSettleAsync(harness.Views, new TaskView { Id = "custom2", Name = "Later View", Kind = ViewKind.List }, ct);
+        _ = harness.Views.Save(new TaskView { Id = "custom2", Name = "Later View", Kind = ViewKind.List });
         cut.WaitForAssertion(() => Assert.NotNull(RowFor(cut, "Later View")));
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());

@@ -213,12 +213,12 @@ public sealed class TaskSprintViewsTests
         Assert.Equal(0, HandlerCount(harness.Sprints));
     }
 
-    /// <summary>Saves a List View <c>v1</c> with <paramref name="filter"/> into the harness's store and waits for the store's watcher echo (see <see cref="ViewStoreEcho"/>).</summary>
-    private static async Task<TaskView> SaveViewAsync(TaskToolHarness harness, TaskFilter filter)
+    /// <summary>Saves a List View <c>v1</c> with <paramref name="filter"/> into the harness's store.</summary>
+    private static Task<TaskView> SaveViewAsync(TaskToolHarness harness, TaskFilter filter)
     {
         TaskView view = new() { Id = "v1", Name = "Sprint view", Kind = ViewKind.List, Fields = ["status"], Filter = filter };
-        Assert.True((await ViewStoreEcho.SaveAndSettleAsync(harness.Views, view, Xunit.TestContext.Current.CancellationToken)).Saved);
-        return harness.Views.Get("v1") ?? throw new InvalidOperationException("The View was just saved.");
+        Assert.True(harness.Views.Save(view).Saved);
+        return Task.FromResult(harness.Views.Get("v1") ?? throw new InvalidOperationException("The View was just saved."));
     }
 
     /// <summary>A List View with the given fields and grouping.</summary>
