@@ -656,7 +656,11 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         return false;
     }
 
-    /// <summary>Claims <paramref name="name"/> as starting, unless shutdown has begun, it already runs or a start is in flight.</summary>
+    /// <summary>
+    /// Claims <paramref name="name"/> as starting, unless shutdown has begun, it already runs or a start is in flight.
+    /// A start refused because another is in flight is not dropped: it is marked as a pending change, so whichever
+    /// start or restart ends last settles it and starts the Persona if the in-flight start failed.
+    /// </summary>
     /// <param name="name">The Persona being started.</param>
     /// <returns><see langword="true"/> when this caller now owns the start.</returns>
     private bool TryClaimStart(string name)
@@ -667,7 +671,21 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             // OnPersonasChanged invocation that read `stopping == false` just before StopAsync set
             // it, then reached this check after `hosts` was already cleared, would otherwise see no
             // "nova" host and start a second one under the same agent id.
-            return !(this.stopping || this.hosts.ContainsKey(name) || !this.starting.Add(name));
+            if (this.stopping || this.hosts.ContainsKey(name))
+            {
+                return false;
+            }
+
+            if (!this.starting.Add(name))
+            {
+                // A failed start reports Offline before its finally releases the name, so a Restart pressed
+                // on that Offline arrives here and used to be refused silently: the button did nothing.
+                // SettlePendingChange, run as the in-flight start ends, starts it again if it is not running.
+                this.pendingChange.Add(name);
+                return false;
+            }
+
+            return true;
         }
     }
 
