@@ -1478,7 +1478,7 @@ emoji-picker {
     display: none;
 }
 
-/* A strip along the Sidebar's right (workspace-facing) edge, the mirror of .resizable-drawer-handle: the 8px width is
+/* A strip along the Sidebar's right (workspace-facing) edge: the 8px width is
    the pointer target and the 2px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
    while the Sidebar is collapsed. While a drag runs the cursor stays ew-resize over whatever the pointer crosses, and
    text is not selected. It sits inside the edge, not across it: the drawer scrolls (overflow auto), so a strip reaching
@@ -4618,124 +4618,6 @@ body.sidebar-resizing {
    specific, and a two-class override here would lose the cascade to it regardless of load order. */
 .task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
     border-radius: var(--mud-default-borderradius);
-}
-
-/* ---- ResizableEndDrawer: the Task detail panel and the View editor (UX-R05, UX-V10) -----------
-   MudBlazor's own compiled CSS (Drawer.min.css, package 9.10.0) reads a Temporary drawer's width
-   from "var(--mud-drawer-width, var(--mud-drawer-width-right))" - an instance-level override this
-   rule declares a default for, and huddleResize.attachDrawer (app.js) then reassigns directly on
-   drag or arrow key, restoring a saved width from localStorage with no round trip to the server.
-   huddleResize finds the drawer itself via ".mud-drawer", so the handle only needs to sit inside it. */
-.resizable-drawer {
-    --mud-drawer-width: 420px;
-}
-
-/* The drawer never covers the Right sidebar (audit B11 "With a drawer"): while the sidebar is open its 280px is
-   kept clear, so the drawer opens beside it, and the scrim stops at the sidebar's edge and under the Top bar, so
-   the sidebar and its toggle stay visible and pressable. ClipMode Always already starts the drawer under the Top bar.
-   :root:has() reads the sidebar's open state from MudBlazor's own class; --right-sidebar-width is the width the Human
-   dragged it to (huddleResize.attachSidebar publishes it on <html>), 280px until then (RightSidebar.razor's default). */
-.mud-overlay.mud-overlay-drawer {
-    top: var(--mud-appbar-height);
-}
-
-:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open {
-    right: var(--right-sidebar-width, 280px);
-}
-
-:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-overlay.mud-overlay-drawer {
-    right: var(--right-sidebar-width, 280px);
-}
-
-/* The content scrolls and the footer sticks to the bottom of what shows. */
-.resizable-drawer .mud-drawer-content {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-}
-
-.resizable-drawer-body {
-    flex: 1 0 auto;
-}
-
-/* The body takes focus only so Escape reaches it (it is not a control the Human tabs to), so it draws no ring. */
-.resizable-drawer-body:focus {
-    outline: none;
-}
-
-/* Actions as a sticky footer (audit B4k): a Chrome line on top, right-aligned, over the drawer's surface. */
-.resizable-drawer-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 12px 16px;
-    background-color: var(--hu-ground-page);
-    border-top: 1px solid var(--hu-line-region);
-}
-
-/* S6 header: a 12px secondary line (the id and its Team or Project) over the name at 16px/600, up to three lines; the close button stays on the right. */
-.resizable-drawer-heading {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.resizable-drawer-eyebrow {
-    display: block;
-    color: var(--mud-palette-text-secondary);
-}
-
-.resizable-drawer-title {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-}
-
-/* The Task detail's own panel padding would double the drawer's pa-4 around its content. */
-.resizable-drawer .task-detail {
-    padding: 0;
-}
-
-/* A strip straddling the drawer's left (content-facing) edge - Anchor.End puts the drawer on the
-   right, so dragging this leftward is what grows it. The 8px width is the pointer target, wider
-   than the visible line it carries; the line itself (::before) is what makes the strip read as
-   draggable at rest. The handle takes keyboard focus (tabindex 0), where the arrow keys resize. */
-.resizable-drawer-handle {
-    position: absolute;
-    top: 0;
-    left: -4px;
-    z-index: 1;
-    width: 8px;
-    height: 100%;
-    cursor: ew-resize;
-    touch-action: none;
-}
-
-.resizable-drawer-handle::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 3px;
-    width: 3px;
-    height: 100%;
-    background-color: var(--mud-palette-action-default);
-}
-
-.resizable-drawer-handle:hover::before,
-.resizable-drawer-handle:active::before,
-.resizable-drawer-handle:focus-visible::before {
-    left: 2px;
-    width: 5px;
-    background-color: var(--mud-palette-primary);
-}
-
-.resizable-drawer-handle:focus-visible {
-    outline: none;
 }
 
 /* ---- The View editor: single-line Fields rows -------------------------------------------------- */
@@ -9355,28 +9237,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-surface="paper"]) .task-list-grid .task-list-id-cell {
     font-family: var(--font-mono);
     color: var(--mud-palette-text-secondary);
-}
-
-/* -- surface=paper: end drawers, a sheet on the ground, not paper (12.4) ----------------------------------------- */
-:root:has([data-hu-surface="paper"]) .resizable-drawer.mud-drawer {
-    background: var(--hu-ground-page);
-    border-inline-start: 1px solid var(--hu-line-control);
-    box-shadow: var(--hu-shadow-panel);
-}
-
-:root:has([data-hu-surface="paper"]) .resizable-drawer-eyebrow,
-:root:has([data-hu-surface="paper"]) .resizable-drawer-heading .mud-typography-caption {
-    font-family: var(--font-mono);
-    color: var(--mud-palette-text-secondary);
-}
-
-:root:has([data-hu-surface="paper"]) .resizable-drawer-title.mud-typography-h6 {
-    font-size: var(--mud-typography-h6-size);
-    line-height: 1.3;
-}
-
-:root:has([data-hu-surface="paper"]) .resizable-drawer-handle::before {
-    background: var(--hu-line-control);
 }
 
 /* -- surface=paper: Agents, cards (13) ------------------------------------------------------------------------- */

@@ -193,7 +193,7 @@ else if (this.loaded is { } task)
     @* Two columns put the title and the Description on the left and the grouped fields on the right; one column stacks them in this order. *@
     RenderFragment titleEditor = @<text>
             @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
-               title is edited, and a draft opens here with the field focused (design-system "Drawer anatomy"; audit B4j, B4p). *@
+               title is edited, and a draft opens here with the field focused (design-system "Task form anatomy"; audit B4j, B4p). *@
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
                           Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
         </text>;
@@ -584,8 +584,8 @@ else if (this.loaded is { } task)
         <MudItem xs="12" md="7" Class="task-detail-col-log">@logContent</MudItem>
     </MudGrid>
 
-    @* Cancel, then the one filled primary action (Save, always here, never in the alert above). In the Tasks drawer the host draws
-       them in the drawer's sticky footer instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
+    @* Cancel, then the one filled primary action (Save, always here, never in the alert above). On the Task edit page the host draws
+       them in its page header instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
        live in the title row's Actions menu, and Expand beside it. *@
     @if (!this.ExternalFooter)
     {
@@ -706,7 +706,7 @@ else if (this.loaded is { } task)
     public TaskDraft? Draft { get; set; }
 
     /// <summary>
-    /// True when the host draws Cancel and Save itself, in <see cref="ResizableEndDrawer"/>'s sticky footer (the Tasks page, audit B4k), so this component draws
+    /// True when the host draws Cancel and Save itself, in its page header (<c>TaskEditPage</c>, audit B4k), so this component draws
     /// no action row of its own. The host reads <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> and <see cref="FooterSaveDisabled"/>, calls
     /// <see cref="SaveAsync"/> and <see cref="CancelAsync"/>, and re-renders on <see cref="FooterStateChanged"/>. False (the default) keeps the row inline.
     /// </summary>
