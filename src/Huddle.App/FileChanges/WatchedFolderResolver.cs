@@ -60,7 +60,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
             return false;
         }
 
-        if (!PathContainment.IsInside(fullPath, dataDir, includeRoot: false))
+        if (!PathContainment.IsInside(fullPath, dataDir, includeRoot: false, PathContainment.Comparison))
         {
             reason = $"'{fullPath}' is outside {Path.GetFileName(dataDir)}. Only folders inside it can be watched.";
             return false;
@@ -76,7 +76,8 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
 
         string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
         string teamsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir));
-        if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true)
+        // Spec 6.8 refuses Uploads whichever case it is typed in, so these refusals ignore case on every platform.
+        if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true, StringComparison.OrdinalIgnoreCase)
             || WatchedFolderResolver.IsTeamUploads(fullPath, teamsRoot))
         {
             reason = "Uploads are announced in the chat, not watched.";
@@ -93,12 +94,12 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
     /// <returns><see langword="true"/> for a Team's Uploads folder or anything under it.</returns>
     private static bool IsTeamUploads(string fullPath, string teamsRoot)
     {
-        if (!PathContainment.IsInside(fullPath, teamsRoot, includeRoot: false))
+        if (PathContainment.Below(fullPath, teamsRoot, StringComparison.OrdinalIgnoreCase) is not { Length: > 0 } below)
         {
             return false;
         }
 
-        string[] segments = Path.GetRelativePath(teamsRoot, fullPath).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        string[] segments = below.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         return segments.Length >= 2 && string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -516,7 +516,7 @@ internal sealed class FileChangeTracker(
     /// with <see cref="PathContainment"/>.
     /// </summary>
     private static bool IsUnderTeamsRoot(string fullPath, string teamsRoot) =>
-        PathContainment.IsInside(fullPath, teamsRoot, includeRoot: true);
+        PathContainment.IsInside(fullPath, teamsRoot, includeRoot: true, PathContainment.Comparison);
 
     /// <summary>
     /// Removes any entry under a <c>_</c>-prefixed path segment from <paramref name="snapshot"/>,
@@ -561,17 +561,12 @@ internal sealed class FileChangeTracker(
     /// </summary>
     private static string[] SegmentsBelowTeamsRoot(string folderFullPath, string teamsRoot)
     {
-        if (PathContainment.IsInside(folderFullPath, teamsRoot, includeRoot: false))
+        return PathContainment.Below(folderFullPath, teamsRoot, PathContainment.Comparison) switch
         {
-            return Path.GetRelativePath(teamsRoot, folderFullPath).Split(Path.DirectorySeparatorChar);
-        }
-
-        if (PathContainment.IsInside(folderFullPath, teamsRoot, includeRoot: true))
-        {
-            return [];
-        }
-
-        return ["", ""];
+            null => ["", ""],
+            { Length: 0 } => [],
+            { } below => below.Split(Path.DirectorySeparatorChar),
+        };
     }
 
     /// <summary>
@@ -604,7 +599,7 @@ internal sealed class FileChangeTracker(
     {
         foreach (string touchedPath in touched)
         {
-            if (!PathContainment.IsInside(touchedPath, folder.FullPath, includeRoot: false))
+            if (!PathContainment.IsInside(touchedPath, folder.FullPath, includeRoot: false, PathContainment.Comparison))
             {
                 continue;
             }

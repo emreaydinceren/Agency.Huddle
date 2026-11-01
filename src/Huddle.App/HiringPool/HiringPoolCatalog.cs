@@ -302,7 +302,7 @@ internal sealed partial class HiringPoolCatalog
     {
         string root = Path.GetFullPath(this.userDir);
         string full = Path.GetFullPath(Path.Combine(root, relativePath));
-        if (!PathContainment.IsInside(full, root, includeRoot: false) || !File.Exists(full) || TeamTypeCatalog.LeavesTypeFolder(root, full))
+        if (!PathContainment.IsInside(full, root, includeRoot: false, PathContainment.Comparison) || !File.Exists(full) || TeamTypeCatalog.LeavesTypeFolder(root, full))
         {
             return null;
         }

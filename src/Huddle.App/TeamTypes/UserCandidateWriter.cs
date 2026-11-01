@@ -65,7 +65,7 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
             string candidateDir = Path.Combine(typeDir, CandidatesFolder);
             string candidatePath = Path.GetFullPath(Path.Combine(candidateDir, roleId + ".md"));
-            if (!PathContainment.IsInside(candidatePath, candidateDir, includeRoot: false)
+            if (!PathContainment.IsInside(candidatePath, candidateDir, includeRoot: false, PathContainment.Comparison)
                 || type.Roles.Any(r => string.Equals(r.Id, roleId, StringComparison.Ordinal))
                 || File.Exists(candidatePath))
             {

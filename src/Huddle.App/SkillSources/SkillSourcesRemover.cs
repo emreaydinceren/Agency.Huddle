@@ -31,7 +31,7 @@ internal sealed partial class SkillSourcesRemover(
     public const string NotesNotDeleted = "The rows are gone, but the Source's notes could not be deleted: ";
 
     /// <summary>Whether <paramref name="path"/>, made full, lies inside <paramref name="folder"/> (§6.12.1 rule 2).</summary>
-    public static bool IsInside(string path, string folder) => PathContainment.IsInside(path, folder, includeRoot: false);
+    public static bool IsInside(string path, string folder) => PathContainment.IsInside(path, folder, includeRoot: false, PathContainment.Comparison);
 
     /// <summary>Removes a Pack: its holders first (as <paramref name="choice"/> says), then its SKILLS.md row, then its file
     /// when it is inside the folder, then its <c>hidden.json</c> entry, then the log line.</summary>

@@ -429,7 +429,7 @@ internal sealed class TeamTypeCatalog
 
         string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
         string full = Path.GetFullPath(Path.Combine(typeDir, relativePath));
-        if (PathContainment.IsInside(full, typeDir, includeRoot: false) && File.Exists(full) && !LeavesTypeFolder(typeDir, full))
+        if (PathContainment.IsInside(full, typeDir, includeRoot: false, PathContainment.Comparison) && File.Exists(full) && !LeavesTypeFolder(typeDir, full))
         {
             try
             {
@@ -464,7 +464,7 @@ internal sealed class TeamTypeCatalog
                 if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
                 {
                     FileSystemInfo? target = info.ResolveLinkTarget(returnFinalTarget: true);
-                    if (target is null || !PathContainment.IsInside(target.FullName, typeDir, includeRoot: true))
+                    if (target is null || !PathContainment.IsInside(target.FullName, typeDir, includeRoot: true, PathContainment.Comparison))
                     {
                         return true;
                     }

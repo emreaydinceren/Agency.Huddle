@@ -67,7 +67,7 @@ internal static class ToolCallPaths
     /// <param name="fullPath">A full path.</param>
     /// <param name="root">A full path to a folder.</param>
     /// <returns><see langword="true"/> when the path is the folder or below it.</returns>
-    public static bool IsInside(string fullPath, string root) => PathContainment.IsInside(fullPath, root, includeRoot: true);
+    public static bool IsInside(string fullPath, string root) => PathContainment.IsInside(fullPath, root, includeRoot: true, PathContainment.Comparison);
 
     /// <summary>Whether <paramref name="ancestor"/> is <paramref name="fullPath"/> itself or a folder above it: deleting or moving the ancestor takes the path with it.</summary>
     /// <param name="fullPath">A full path.</param>
