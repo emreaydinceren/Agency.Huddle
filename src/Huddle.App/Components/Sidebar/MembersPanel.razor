@@ -4,6 +4,7 @@
 @using Agency.Huddle.App.Services
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.Contracts
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
@@ -17,7 +18,8 @@
     A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent's avatar also wears its
     presence badge on the rim, resolved from pipe liveness and then reported health, as TeamRoster draws it.
     An Agent's row also carries a context meter: the percentage of its context window in use in this Room and a thin
-    bar that takes the Warning and Error bands; a Human's row has neither.
+    bar that takes the Warning and Error bands; a Human's row has neither. Only a RoomSubject is drawn; the panel
+    reports its count to the frame's header.
 *@
 
 @if (this.members is { } list)
@@ -60,18 +62,6 @@
     private string? team;
     private string? loadedKey;
     private string? roomId;
-
-    /// <summary>What the page is showing; only a <see cref="RoomSubject"/> is drawn.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab this panel belongs to.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, through which the panel reports its count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()

@@ -2,9 +2,11 @@
     The Right sidebar's Blocks panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
     one row per open Task whose Blocked by names this one - the Tasks waiting on it. It asks TaskStore.BlockedOn, the same
     query TaskTriggerService runs to wake dependants.
+    Anything but a Task Subject renders nothing; the row count goes to the frame.
 *@
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tasks
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject TaskStore Store
 @inject TaskEvents TaskEvents
@@ -16,18 +18,6 @@
 
 @code {
     private IReadOnlyList<TaskItem> rows = [];
-
-    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab the panel's Subject lives in.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, which receives the row count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()

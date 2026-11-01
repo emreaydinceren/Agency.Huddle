@@ -2,6 +2,7 @@
     "Documents in this chat" (Spec): the distinct Library files a Room's Messages mention, newest mention
     first, each resolved for existence. A file that is gone is listed as gone. Reloads when a Message is
     posted in this Room; re-resolves (no reload) when the Library's link index is invalidated for any root.
+    Anything but a Room Subject is ignored; the jump button navigates the Tab showing the Room; the count goes to the host.
 *@
 @namespace Agency.Huddle.App.Components.Sidebar
 @using Agency.Huddle.App.Data
@@ -10,6 +11,7 @@
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tabs
 @using Agency.Huddle.Contracts
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject IChatStore Store
 @inject RoomEvents Events
@@ -52,18 +54,6 @@ else
     private string? roomId;
     private bool loaded;
     private bool subscribed;
-
-    /// <summary>The page's Subject; anything but a Room is ignored.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab showing the Room; the jump button navigates it.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The host's count context.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()

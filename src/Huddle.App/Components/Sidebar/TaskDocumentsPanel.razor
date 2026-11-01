@@ -2,11 +2,12 @@
     The Right sidebar's Linked documents panel for a Task open in its edit page (docs/Huddle.TaskReadView-Specifications.md, D-8):
     one row per Library file the saved Description links to, found the way the Description preview finds them
     (LibraryPathPatterns, then ILibraryReferenceResolver). A link to a file that is gone is a row in Quiet ink, "Not found".
-    Not registered while the Library is off.
+    Not registered while the Library is off. Anything but a Task Subject renders nothing; the row count goes to the frame.
 *@
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tasks
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject TaskStore Store
 @inject TaskEvents TaskEvents
@@ -40,18 +41,6 @@ else if (this.loaded)
 
     private List<DocumentRow> rows = [];
     private bool loaded;
-
-    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab the panel's Subject lives in.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, which receives the row count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()

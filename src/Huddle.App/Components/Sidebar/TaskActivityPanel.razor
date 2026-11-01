@@ -3,10 +3,12 @@
     what the app works out about the Task's wakes - the last Room it woke an Agent in, how much of the wake budget is
     spent, and whether an Agent is working on it now. It reads TaskActivity and TurnActivity only, so it shows the Task
     as stored and never an unsaved edit in the form. It has no count: a row is not a thing to tally.
+    Anything but a Task Subject renders nothing.
 *@
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tasks
 @using Agency.Huddle.App.Components.Tasks
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject TaskActivity Activity
 @inject TurnActivity Turns
@@ -50,18 +52,6 @@
 }
 
 @code {
-    /// <summary>The page's Subject; anything but a Task renders nothing.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab the panel's Subject lives in.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context; this panel reports no count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
-
     /// <inheritdoc />
     protected override void OnInitialized()
     {

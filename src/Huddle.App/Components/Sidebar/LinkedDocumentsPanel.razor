@@ -1,11 +1,12 @@
 @*
     The Right sidebar's Linked documents panel (Spec: Linked documents): the open note's outgoing
     wikilinks, resolved or not. Reloads on a new DocumentSubject and when WikiLinkIndex reports its
-    root changed.
+    root changed. Only a document is listed; its count goes to the frame's header.
 *@
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @using MudBlazor
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject LibraryPathResolver PathResolver
 @inject WikiLinkIndex WikiLinks
@@ -45,18 +46,6 @@ else if (this.loaded)
     private string? shownText;
     private bool subscribed;
     private CancellationTokenSource? cts;
-
-    /// <summary>What the page shows; only a document is listed.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab this panel belongs to.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, for the header count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <summary>Starts listening for index changes.</summary>
     protected override void OnInitialized()

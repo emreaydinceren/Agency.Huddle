@@ -4,10 +4,12 @@
     control; the drill-in is panel state, so no tag text goes into a URL. Tag text comes from files, so it is rendered as
     Razor text only. Reloads on a new DocumentSubject and when WikiLinkIndex reports its root changed; Refresh rebuilds the
     root, because a tag added outside Huddle is not seen until then.
+    Only a document has tags; the count goes to the frame's header.
 *@
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @using MudBlazor
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject LibraryPathResolver PathResolver
 @inject WikiLinkIndex WikiLinks
@@ -103,18 +105,6 @@ else if (this.loaded)
     private string? shownKey;
     private bool subscribed;
     private CancellationTokenSource? cts;
-
-    /// <summary>What the page shows; only a document has tags.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab this panel belongs to.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, for the header count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <summary>Starts listening for index changes.</summary>
     protected override void OnInitialized()
