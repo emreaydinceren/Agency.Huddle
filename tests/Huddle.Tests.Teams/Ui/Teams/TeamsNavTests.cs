@@ -18,6 +18,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
 
@@ -201,6 +202,34 @@ public sealed class TeamsNavTests
             Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
             Assert.Empty(cut.FindAll(".teams-nav-subfolder"));
             Assert.Equal("New chat", Folder(cut, "Rooms").QuerySelectorAll(".mud-collapse-container .mud-nav-link-text")[^1].TextContent.Trim());
+        });
+    }
+
+    /// <summary>
+    /// Every Room row takes its Members from the one batched read the list makes with its Rooms, never a query per row (the
+    /// scripted directory refuses <c>GetRoomMembersAsync</c>): the 1:1 Room shows its Agent's avatar, the group Room does not.
+    /// </summary>
+    [Fact]
+    public async Task Team_RoomRows_TakeMembersFromOneBatchedRead()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        User human = new("human", "You", UserKind.Human, null);
+        User ada = new("ada-id", "Ada", UserKind.Agent, null);
+        User ben = new("ben-id", "Ben", UserKind.Agent, null);
+        script.Members["teamroom"] = [human, ada, ben];
+        script.Members["chat"] = [human, ada];
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("a[href='/rooms/chat'] .room-row-avatar"));
+            Assert.Empty(cut.FindAll("a[href='/rooms/teamroom'] .room-row-avatar"));
+            Assert.Equal(script.RoomReads, script.MemberReads);
         });
     }
 

@@ -57,10 +57,7 @@ internal sealed class ProofContextBuilder(
         Dictionary<string, string> covers = new(StringComparer.Ordinal);
         foreach (string name in names.Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
         {
-            if (personas.Get(name) is { } persona
-                && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
-                && identity.Role is { } role
-                && gates.CoverageOf(role) is { } coverage)
+            if (personas.RoleOf(name) is { } role && gates.CoverageOf(role) is { } coverage)
             {
                 covers[name] = coverage;
             }

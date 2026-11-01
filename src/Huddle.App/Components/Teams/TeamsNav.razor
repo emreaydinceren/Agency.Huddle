@@ -107,14 +107,14 @@
                                          Expanded="this.IsFolderOpen(needsYouKey)" ExpandedChanged="@(open => this.SetFolderOpen(needsYouKey, open))">
                                 @foreach (Room room in waiting)
                                 {
-                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                    <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" Class="nav-team-room-link" OnError="this.OnRoomError" />
                                 }
                             </MudNavGroup>
                             <MudNavGroup Class="teams-nav-subfolder teams-nav-all" Title="All" Icon="@Icons.Material.Outlined.Folder"
                                          Expanded="this.IsFolderOpen(allKey)" ExpandedChanged="@(open => this.SetFolderOpen(allKey, open))">
                                 @foreach (Room room in teamRooms.Where(room => !this.IsWaiting(room)))
                                 {
-                                    <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                    <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" Class="nav-team-room-link" OnError="this.OnRoomError" />
                                 }
                                 @this.NewChatRow(team.Name)
                             </MudNavGroup>
@@ -123,7 +123,7 @@
                         {
                             @foreach (Room room in teamRooms)
                             {
-                                <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                                <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" Class="nav-team-room-link" OnError="this.OnRoomError" />
                             }
                             @this.NewChatRow(team.Name)
                         }
@@ -136,7 +136,7 @@
                                  Expanded="this.IsFolderOpen(roomsKey)" ExpandedChanged="@(open => this.SetFolderOpen(roomsKey, open))">
                         @foreach (Room room in SidebarRows.Visible(teamRooms, this.showAllRows.Contains(roomsKey), this.IsActiveRoom))
                         {
-                            <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                            <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" Class="nav-team-room-link" OnError="this.OnRoomError" />
                         }
                         <ShowAllRow Total="teamRooms.Count" Expanded="this.showAllRows.Contains(roomsKey)" OnToggle="@(() => this.ToggleShowAllRows(roomsKey))" />
                     </MudNavGroup>
@@ -236,6 +236,7 @@
 
     /// <summary>Each Team's Rooms to list under it: its Team Room first (when not archived), then its other unarchived scoped Rooms, oldest first. Keyed by Team name ignoring case.</summary>
     private readonly Dictionary<string, IReadOnlyList<Room>> roomsByTeam = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, IReadOnlyList<User>> membersByRoom = new Dictionary<string, IReadOnlyList<User>>(StringComparer.Ordinal);
 
     /// <summary>The Team whose New chat panel is open, or <see langword="null"/>.</summary>
     private string? newChatTeam;
@@ -343,6 +344,10 @@
     /// <summary>The Rooms listed in the Team's Rooms folder (see <see cref="roomsByTeam"/>), or none before they load.</summary>
     private IReadOnlyList<Room> RoomsOf(TeamSummary team) =>
         this.roomsByTeam.TryGetValue(team.Name, out IReadOnlyList<Room>? teamRooms) ? teamRooms : [];
+
+    /// <summary>The Room's Members from the last load, or none for a Room created since.</summary>
+    private IReadOnlyList<User> MembersOf(Room room) =>
+        this.membersByRoom.TryGetValue(room.Id, out IReadOnlyList<User>? members) ? members : [];
 
     /// <summary>The key of one folder under one Team: the Team's name followed by <paramref name="folder"/>.</summary>
     private static string FolderKey(string team, string folder) => team + folder;
@@ -471,6 +476,7 @@
     {
         int version = Interlocked.Increment(ref this.loadVersion);
         IReadOnlyList<Room> all = await this.TeamDirectory.GetRoomsAsync();
+        IReadOnlyDictionary<string, IReadOnlyList<User>> members = await this.TeamDirectory.GetMembersByRoomAsync();
         if (version != Volatile.Read(ref this.loadVersion))
         {
             // A newer refresh started while this one was reading; it owns the result.
@@ -489,6 +495,7 @@
         }
 
         this.ReadWaiting();
+        this.membersByRoom = members;
         this.roomsByTeam.Clear();
         foreach ((string name, IReadOnlyList<Room> rooms) in loaded)
         {

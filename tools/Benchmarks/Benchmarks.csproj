@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- BenchmarkDotNet proofs for the perf-audit string-allocation fixes: each class pits a copy of the old
+       code (Baseline) against the shipped code. Not in Huddle.slnx; see perf-audit/README.md. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- BenchmarkDotNet requires public, unsealed benchmark classes and instance methods. -->
+    <NoWarn>$(NoWarn);CA1822;CA1852;CA1515</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <ProjectReference Include="..\..\src\Huddle.App\Huddle.App.csproj" />
+  </ItemGroup>
+
+</Project>
