@@ -122,6 +122,31 @@ public sealed class ProofContextBuilderTests
         Assert.DoesNotContain("Ghost", covers.Keys);
     }
 
+    /// <summary>Coverage matches a Persona's Name only: an Alias is not looked up, and a Persona with no role has no coverage.</summary>
+    [Fact]
+    public void CoverageFor_AliasOrRolelessPersona_IsLeftOut()
+    {
+        using Rig rig = new();
+        rig.AddAgent(new PersonaIdentity("Vera", "QA Engineer", "vee", [Rig.Team], Role: new RoleRef("web", "qa", "1.2.0")));
+        rig.AddAgent(new PersonaIdentity("Rory", "Writer", "rory", [Rig.Team]));
+
+        IReadOnlyDictionary<string, string> covers = rig.Builder.CoverageFor(["vee", "Rory"]);
+
+        Assert.Empty(covers);
+    }
+
+    /// <summary>Coverage reads the live Persona index, so an Agent hired after the builder was made is covered by its role.</summary>
+    [Fact]
+    public void CoverageFor_PersonaAddedLater_IsCovered()
+    {
+        using Rig rig = new();
+        rig.AddAgent(new PersonaIdentity("Vera", "QA Engineer", "vera", [Rig.Team], Role: new RoleRef("web", "qa", "1.2.0")));
+
+        IReadOnlyDictionary<string, string> covers = rig.Builder.CoverageFor(["Vera"]);
+
+        Assert.Equal("verify", covers["Vera"]);
+    }
+
     /// <summary>The Team's Process is reachable through the gate service so the context sees its Definition of Done.</summary>
     [Fact]
     public void ProcessOf_TeamWithDefinition_ReturnsItsDocument()
@@ -188,6 +213,10 @@ public sealed class ProofContextBuilderTests
 
         /// <summary>The builder under test.</summary>
         public ProofContextBuilder Builder { get; }
+
+        /// <summary>Adds a Persona after the builder was made.</summary>
+        /// <param name="identity">Its identity.</param>
+        public void AddAgent(PersonaIdentity identity) => _ = this.harness.Personas.Add(identity, "You work.");
 
         /// <summary>Writes a file in the Library root and returns the description line that attaches it.</summary>
         /// <param name="fileName">The file name.</param>

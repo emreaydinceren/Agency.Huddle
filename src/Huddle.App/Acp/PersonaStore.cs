@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -275,6 +276,10 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <summary>Resolves a Persona by Name first, then by Alias, both case-insensitively. Identity only - no Model/Effort join; see <see cref="Get"/> for that.</summary>
     /// <param name="nameOrAlias">The Name or Alias to resolve.</param>
     public PersonaEntry? ResolveByNameOrAlias(string nameOrAlias) => this.index.ByNameOrAlias(nameOrAlias);
+
+    /// <summary>The team-type role of the Persona with this front-matter Name, as parsed when the index was built; <see langword="null"/> when no Persona has that Name or it has no role. Matches the Name only, never an Alias, like <see cref="Get(string)"/>.</summary>
+    /// <param name="name">The Persona's Name.</param>
+    public RoleRef? RoleOf(string name) => this.index.ByName(name)?.Role;
 
     /// <summary>Looks up a Persona by its front-matter Name, joining in its stored Model and Effort. Returns <see langword="null"/>, never throws, when no Persona has that Name.</summary>
     /// <param name="name">The Persona's Name.</param>

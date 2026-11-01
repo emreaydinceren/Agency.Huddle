@@ -19,6 +19,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="Adapter">See <see cref="PersonaIdentity.Adapter"/>. Carried through unchanged from the parsed identity so <see cref="PersonaStore.Get(string)"/> can join it onto <see cref="Persona.Adapter"/> without re-parsing the file.</param>
 /// <param name="Skills">See <see cref="PersonaIdentity.Skills"/>. Carried through unchanged from the parsed identity, never <see langword="null"/> once populated by <see cref="PersonaIndex.Build"/>.</param>
 /// <param name="Builtin">See <see cref="PersonaIdentity.Builtin"/>. Carried through unchanged from the parsed identity.</param>
+/// <param name="Role">See <see cref="PersonaIdentity.Role"/>. Carried through unchanged from the parsed identity so a reader that needs only the role, such as a Task's role coverage on every render, does not re-parse <see cref="Text"/>.</param>
 public sealed record PersonaEntry(
     string Name,
     string Title,
@@ -28,4 +29,5 @@ public sealed record PersonaEntry(
     string Text,
     string? Adapter = null,
     IReadOnlyList<string>? Skills = null,
-    string? Builtin = null);
+    string? Builtin = null,
+    Agency.Huddle.App.Teams.RoleRef? Role = null);

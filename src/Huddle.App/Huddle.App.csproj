@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="huddle-seed" />
+    <!-- tools/Benchmarks measures internal code paths directly (perf-audit). -->
+    <InternalsVisibleTo Include="Benchmarks" />
   </ItemGroup>
 
   <ItemGroup>
