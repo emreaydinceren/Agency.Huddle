@@ -6,25 +6,32 @@
 @using Agency.Huddle.App.Sidebar
 @implements IDisposable
 @inject IJSRuntime Js
+@inject ILogger<SidebarPanelContext> ContextLogger
 
 <section class="sidebar-panel" aria-label="@this.Title">
     <button type="button" class="sidebar-panel-header" aria-expanded="@(this.collapsed ? "false" : "true")" @onclick="this.ToggleAsync">
         <MudIcon Icon="@this.Icon" Size="Size.Small" />
         <span class="sidebar-panel-title">@this.Title</span>
-        @if (this.context.Count is { } count)
+        @if (this.Context.Count is { } count)
         {
             <span class="sidebar-panel-count">@count</span>
         }
         <MudIcon Icon="@(this.collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
     </button>
     <div class="sidebar-panel-body" hidden="@this.collapsed">
-        <CascadingValue Value="this.context" IsFixed="true">@this.ChildContent</CascadingValue>
+        <CascadingValue Value="this.Context" IsFixed="true">@this.ChildContent</CascadingValue>
     </div>
 </section>
 
 @code {
-    private readonly SidebarPanelContext context = new();
+    private SidebarPanelContext? panelContext;
     private bool collapsed;
+
+    /// <summary>
+    /// The context cascaded to the panel, made on first use: injection runs after field initialisers, so a field
+    /// initialiser could not hand it <see cref="ContextLogger"/>.
+    /// </summary>
+    private SidebarPanelContext Context => this.panelContext ??= new(this.ContextLogger);
 
     /// <summary>The panel's stable id; keys the remembered collapsed state.</summary>
     [Parameter]
@@ -45,13 +52,13 @@
     /// <summary>Redraws the header when the panel reports a new count.</summary>
     protected override void OnInitialized()
     {
-        this.context.Changed += this.OnCountChanged;
+        this.Context.Changed += this.OnCountChanged;
     }
 
     /// <summary>Unsubscribes from the context.</summary>
     public void Dispose()
     {
-        this.context.Changed -= this.OnCountChanged;
+        this.Context.Changed -= this.OnCountChanged;
     }
 
     /// <summary>On first render, collapses the panel when the viewer collapsed it before.</summary>

@@ -1,6 +1,10 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using Agency.Huddle.App.Components.Sidebar;
+using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -82,5 +86,27 @@ public sealed class SidebarPanelFrameTests
 
         frame.WaitForAssertion(() => Assert.Equal("false", frame.Find("button.sidebar-panel-header").GetAttribute("aria-expanded")));
         Assert.True(frame.Find(".sidebar-panel-body").HasAttribute("hidden"));
+    }
+
+    /// <summary>
+    /// A <see cref="SidebarPanelContext.Changed"/> subscriber that throws is logged at Error through the injected logger,
+    /// and the header still draws the new count: the frame hands its context the logger rather than leaving it silent.
+    /// </summary>
+    [Fact]
+    public async Task Frame_ThrowingCountSubscriber_IsLoggedAndCountStillDrawn()
+    {
+        await using MudBunitContext ctx = new();
+        RecordingLogger<SidebarPanelContext> logger = new();
+        ctx.Services.AddSingleton<ILogger<SidebarPanelContext>>(logger);
+        IRenderedComponent<SidebarPanelFrame> frame = RenderFrame(ctx, 3);
+        SidebarPanelContext? context = frame.FindComponent<ProbePanel>().Instance.Panel;
+        Assert.NotNull(context);
+        context.Changed += static () => throw new InvalidOperationException("subscriber failed");
+
+        await frame.Find(".probe-set").ClickAsync(new());
+
+        frame.WaitForAssertion(() => Assert.Equal("3", frame.Find(".sidebar-panel-count").TextContent.Trim()));
+        LogEntry error = Assert.Single(logger.AtExactly(LogLevel.Error));
+        Assert.IsType<InvalidOperationException>(error.Exception);
     }
 }
