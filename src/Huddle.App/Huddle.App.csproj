@@ -28,6 +28,8 @@
     <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
     <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
     <ProjectReference Include="..\Huddle.Packs\Huddle.Packs.csproj" />
+    <!-- This repo's own rules (HUD####), run on this project's code only: not a runtime dependency, and not passed on. -->
+    <ProjectReference Include="..\Huddle.Analyzers\Huddle.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
