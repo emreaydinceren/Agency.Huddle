@@ -6,7 +6,7 @@ against the pinned package, with the facts already checked. Choosing components 
 spec and the plan — see [MudBlazorDesign.md](MudBlazorDesign.md). For bUnit technique, see
 [BlazorTesting.md](BlazorTesting.md).
 
-Applies to **MudBlazor 9.11.0**, the version pinned in
+Applies to **MudBlazor 9.12.0**, the version pinned in
 [`Directory.Packages.props`](../Directory.Packages.props).
 
 ## Components Huddle already uses
@@ -49,7 +49,7 @@ MudBlazor example will lead you to break:
   Tests fail the build otherwise. Pass `Color="Color.Primary"` rather than a hex.
   A Theme is a `MudTheme` — see [ADR-0010](../docs/adr/0010-a-theme-is-a-mudblazor-theme.md).
 - **`Disabled`, not `ReadOnly`, on an input that must look inert.** MudBlazor
-  9.11.0 styles only the disabled state.
+  9.12.0 styles only the disabled state.
 - **A `string` parameter needs a leading `@`.** `Label="this.name"` passes the
   literal text; the compiler cannot catch it.
 - **No `MaxLength` on a `MudTextField` whose limit is counted in characters
@@ -84,7 +84,7 @@ differ from the pinned package. Two local checks settle it, with no build.
 docs that ship in the package:
 
 ```powershell
-$xml = "$env:USERPROFILE\.nuget\packages\mudblazor\9.11.0\lib\net10.0\MudBlazor.xml"
+$xml = "$env:USERPROFILE\.nuget\packages\mudblazor\9.12.0\lib\net10.0\MudBlazor.xml"
 Select-String -Path $xml -Pattern 'name="P:MudBlazor\.MudDataGrid`1\.(\w+)"' |
     ForEach-Object { $_.Matches[0].Groups[1].Value } | Sort-Object -Unique
 ```
@@ -99,7 +99,7 @@ reflection, and resolve its dependencies from the ASP.NET Core shared framework:
 ```powershell
 $fw  = Get-ChildItem "C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App" -Directory |
        Sort-Object Name -Descending | Select-Object -First 1
-$dll = "$env:USERPROFILE\.nuget\packages\mudblazor\9.11.0\lib\net10.0\MudBlazor.dll"
+$dll = "$env:USERPROFILE\.nuget\packages\mudblazor\9.12.0\lib\net10.0\MudBlazor.dll"
 $dirs = @($fw.FullName, (Split-Path $dll))
 [AppDomain]::CurrentDomain.add_AssemblyResolve({ param($s, $e)
     $n = (New-Object Reflection.AssemblyName($e.Name)).Name
@@ -129,6 +129,18 @@ constructors and render overrides, and none is named here. `MudDrawer`, `MudGlob
 `MudHotkey` and `JsKeyModifier` are unchanged. `MudBlazor.min.css` gained one rule (the
 required asterisk in an outlined input's notch), so the `Disabled`/`ReadOnly` styling is
 unchanged too.
+
+**Rechecked for 9.12.0 on 2026-10-31**, the same way. Between the XML docs, 28 members were
+added and one removed: an internal chart interpolator overload, named nowhere here.
+`MudDrawer`, `MudGlobal`, `MudHotkey` and `JsKeyModifier` are unchanged, and no CSS rule
+for the disabled or read-only state changed. One markup change broke two tests: **a
+`MudSelect`'s `<input>` is now `type="hidden"` and only holds the value.** The element a
+screen reader lands on is a sibling `<div role="combobox" tabindex="0">`, and the
+attributes you pass the select (`aria-label`, `aria-busy`) render there. In a bUnit test,
+read the value off the `input` and ARIA off `[role=combobox]`
+(`AgentProfileCardTestSupport.FindSelectCombobox`). A test that skips `type="hidden"`
+inputs no longer sees any `MudSelect`. `MudAutocomplete` is unchanged: its `<input>` is
+still the combobox.
 
 | Component | Fact |
 | --- | --- |

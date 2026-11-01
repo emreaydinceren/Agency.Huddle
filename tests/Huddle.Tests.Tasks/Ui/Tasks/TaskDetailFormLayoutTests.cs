@@ -55,7 +55,7 @@ public sealed class TaskDetailFormLayoutTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id);
 
-        IReadOnlyList<IElement> inputs = [.. cut.FindAll(".task-detail-prop-value input, .task-detail-prop-value textarea").Where(i => !string.Equals(i.GetAttribute("type"), "hidden", StringComparison.Ordinal))];
+        IReadOnlyList<IElement> inputs = [.. cut.FindAll(".task-detail-prop-value input, .task-detail-prop-value textarea, .task-detail-prop-value div[role=combobox]").Where(i => !string.Equals(i.GetAttribute("type"), "hidden", StringComparison.Ordinal))];
         Assert.NotEmpty(inputs);
         foreach (IElement input in inputs)
         {
