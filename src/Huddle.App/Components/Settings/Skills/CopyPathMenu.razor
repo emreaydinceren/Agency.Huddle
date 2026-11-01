@@ -59,7 +59,7 @@
     {
         this.PathChoice.Format = format;
         await this.FormatChanged.InvokeAsync(format);
-        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", CancellationToken.None, new object?[] { this.Prompts.InstallFilePath(format) });
-        this.Snackbar.Add(copied ? "Path copied." : "Couldn't copy the path. Select it and press Ctrl+C.", copied ? Severity.Success : Severity.Warning, configure: null, key: "skill-path-copied");
+        _ = await ClipboardCopier.CopyAsync(
+            this.JS, this.Snackbar, this.Prompts.InstallFilePath(format), "Path copied.", "Couldn't copy the path. Select it and press Ctrl+C.", "skill-path-copied", CancellationToken.None);
     }
 }

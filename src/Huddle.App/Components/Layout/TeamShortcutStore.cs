@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Teams;
 using Microsoft.JSInterop;
 
@@ -55,7 +56,7 @@ internal sealed class TeamShortcutStore(IJSRuntime js)
 
         try
         {
-            string? stored = await js.InvokeAsync<string?>("huddleStorage.get", StorageKey).ConfigureAwait(false);
+            string? stored = await BrowserStorage.TryGetAsync(js, StorageKey).ConfigureAwait(false);
             if (stored is not null && JsonSerializer.Deserialize<Choice>(stored) is { } choice)
             {
                 this.off = choice.Off;
@@ -67,15 +68,6 @@ internal sealed class TeamShortcutStore(IJSRuntime js)
                     }
                 }
             }
-        }
-        catch (JSException)
-        {
-            // Storage may be blocked (private mode, policy): every Team keeps its default shortcut.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the read finished; there is nothing left to draw.
-            return;
         }
         catch (JsonException)
         {
@@ -127,19 +119,10 @@ internal sealed class TeamShortcutStore(IJSRuntime js)
     private async Task SaveAsync()
     {
         this.Changed?.Invoke();
-        try
-        {
-            string json = JsonSerializer.Serialize(new Choice(this.off, [.. this.removed.Order(StringComparer.OrdinalIgnoreCase)]));
-            await js.InvokeVoidAsync("huddleStorage.set", StorageKey, json).ConfigureAwait(false);
-        }
-        catch (JSException)
-        {
-            // Storage may be blocked: the choice still holds for this circuit, it is just not remembered.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the write finished; nothing to remember it for.
-        }
+        string json = JsonSerializer.Serialize(new Choice(this.off, [.. this.removed.Order(StringComparer.OrdinalIgnoreCase)]));
+
+        // A blocked storage or a gone circuit keeps the choice for this circuit only.
+        _ = await BrowserStorage.TrySetAsync(js, StorageKey, json).ConfigureAwait(false);
     }
 
     /// <summary>The stored shape: whether every shortcut is off, and the Teams removed one by one.</summary>

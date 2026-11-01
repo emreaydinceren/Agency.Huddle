@@ -446,7 +446,7 @@
         {
             if (this.currentPath is null)
             {
-                string? storedOpen = await this.JS.InvokeAsync<string?>("huddleStorage.get", OpenKey(this.StateKey));
+                string? storedOpen = await BrowserStorage.TryGetAsync(this.JS, OpenKey(this.StateKey));
                 if (TryResolveStoredPath(storedOpen, out LibraryPath? resolved))
                 {
                     this.currentPath = resolved;
@@ -456,7 +456,7 @@
 
             if (this.splitPanel is not null)
             {
-                string? storedDivider = await this.JS.InvokeAsync<string?>("huddleStorage.get", DividerKey(this.StateKey, this.Layout));
+                string? storedDivider = await BrowserStorage.TryGetAsync(this.JS, DividerKey(this.StateKey, this.Layout));
                 if (int.TryParse(storedDivider, NumberStyles.Integer, CultureInfo.InvariantCulture, out int position))
                 {
                     await SetDividerWhenReadyAsync(this.splitPanel, position);
@@ -465,7 +465,7 @@
         }
         catch (JSDisconnectedException)
         {
-            // The circuit is gone before the restore finished; nothing left to restore into.
+            // The circuit is gone before the divider could be restored; nothing left to restore into.
         }
     }
 
@@ -704,10 +704,11 @@
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
-        _ = this.InvokeAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.TryOpenFromQuery(e.Location);
             this.StateHasChanged();
+            return Task.CompletedTask;
         });
 
     private void TryOpenFromQuery(string uri)
@@ -770,14 +771,7 @@
         }
 
         string value = string.Create(CultureInfo.InvariantCulture, $"{path.Root.Id}/{path.RelativePath}");
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleStorage.set", OpenKey(this.StateKey), value);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone before the write finished; nothing left to persist to.
-        }
+        _ = await BrowserStorage.TrySetAsync(this.JS, OpenKey(this.StateKey), value);
     }
 
     private async Task OnTreeActionAsync(LibraryTreeAction action)
@@ -858,12 +852,12 @@
         try
         {
             int position = await this.splitPanel.GetDividerPositionAsync();
-            await this.JS.InvokeVoidAsync(
-                "huddleStorage.set", DividerKey(this.StateKey, this.Layout), position.ToString(CultureInfo.InvariantCulture));
+            _ = await BrowserStorage.TrySetAsync(
+                this.JS, DividerKey(this.StateKey, this.Layout), position.ToString(CultureInfo.InvariantCulture));
         }
         catch (JSDisconnectedException)
         {
-            // The circuit is gone before the write finished; nothing left to persist to.
+            // The circuit is gone before the divider position could be read; nothing left to persist to.
         }
     }
 

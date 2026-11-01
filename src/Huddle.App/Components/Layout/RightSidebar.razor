@@ -106,19 +106,7 @@
             return;
         }
 
-        string? remembered = null;
-        try
-        {
-            remembered = await this.Js.InvokeAsync<string?>("huddleStorage.get", OpenKey);
-        }
-        catch (JSException)
-        {
-            // Storage is unavailable: the default applies.
-        }
-        catch (InvalidOperationException)
-        {
-            // Prerendering has no JS: the default applies.
-        }
+        string? remembered = await BrowserStorage.TryGetAsync(this.Js, OpenKey);
 
         if (!string.Equals(remembered, "false", StringComparison.Ordinal))
         {
@@ -140,18 +128,7 @@
             return;
         }
 
-        try
-        {
-            await this.Js.InvokeVoidAsync("huddleStorage.set", OpenKey, open ? "true" : "false");
-        }
-        catch (JSException)
-        {
-            // Storage is unavailable: the choice is not kept.
-        }
-        catch (InvalidOperationException)
-        {
-            // Prerendering has no JS: the choice is not kept.
-        }
+        _ = await BrowserStorage.TrySetAsync(this.Js, OpenKey, open ? "true" : "false");
     }
 
     private void OnChanged()

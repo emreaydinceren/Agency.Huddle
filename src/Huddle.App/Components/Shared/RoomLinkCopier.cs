@@ -11,9 +11,6 @@ namespace Agency.Huddle.App.Components.Shared;
 /// </summary>
 internal static class RoomLinkCopier
 {
-    /// <summary>The clipboard helper the copy calls.</summary>
-    private const string CopyHelper = "huddleClipboard.copy";
-
     /// <summary>
     /// Puts the Room's reference on the clipboard and shows the spec's wording through the snackbar,
     /// under the <c>copy</c> key so a second copy replaces the first message.
@@ -29,14 +26,7 @@ internal static class RoomLinkCopier
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentNullException.ThrowIfNull(room);
 
-        bool copied = await js.InvokeAsync<bool>(RoomLinkCopier.CopyHelper, ct, new object?[] { RoomLinkText.For(room) });
-        if (copied)
-        {
-            snackbar.Add($"Copied link to {room.Name}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
-        }
+        _ = await ClipboardCopier.CopyAsync(
+            js, snackbar, RoomLinkText.For(room), $"Copied link to {room.Name}", "Couldn't copy the link.", "copy", ct);
     }
 }

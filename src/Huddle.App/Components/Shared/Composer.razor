@@ -220,7 +220,7 @@
     }
 
     /// <summary>Re-renders when a chip is added, finishes or is removed; the event can arrive on any thread.</summary>
-    private void OnPendingChanged() => _ = this.InvokeAsync(this.StateHasChanged);
+    private void OnPendingChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>
     /// Saves every picked file as a chip, three at a time (ChatUploads spec 6.5), then resets the picker so the

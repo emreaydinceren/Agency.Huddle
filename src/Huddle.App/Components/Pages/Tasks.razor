@@ -583,21 +583,7 @@
 
     private async Task TryNavigateToLastViewAsync()
     {
-        string? lastViewId;
-        try
-        {
-            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit gone; nothing to navigate.
-            return;
-        }
-        catch (JSException)
-        {
-            // Storage inaccessible (e.g. a private window); stay on All Tasks.
-            return;
-        }
+        string? lastViewId = await BrowserStorage.TryGetAsync(this.JS, "huddle.tasks.lastView");
 
         if (lastViewId is not null && this.Views.Get(lastViewId) is not null)
         {
@@ -612,21 +598,7 @@
     /// </summary>
     private async Task TryLoadLastViewForItemRouteAsync()
     {
-        string? lastViewId;
-        try
-        {
-            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit gone; nothing to render.
-            return;
-        }
-        catch (JSException)
-        {
-            // Storage inaccessible (e.g. a private window); stay on All Tasks.
-            return;
-        }
+        string? lastViewId = await BrowserStorage.TryGetAsync(this.JS, "huddle.tasks.lastView");
 
         if (lastViewId is not null && this.Views.Get(lastViewId) is { } view)
         {
@@ -649,17 +621,6 @@
 
     private async Task TryStoreLastViewAsync(string viewId)
     {
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleStorage.set", "huddle.tasks.lastView", viewId);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit gone; nothing to persist.
-        }
-        catch (JSException)
-        {
-            // Storage inaccessible; the key is the only thing lost.
-        }
+        _ = await BrowserStorage.TrySetAsync(this.JS, "huddle.tasks.lastView", viewId);
     }
 }

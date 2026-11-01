@@ -130,18 +130,9 @@
     private async Task SetFolderOpenAsync(string groupKey, bool open)
     {
         _ = open ? this.closedFolders.Remove(groupKey) : this.closedFolders.Add(groupKey);
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleStorage.set", FoldersKey, JsonSerializer.Serialize(this.closedFolders.Order(StringComparer.Ordinal)));
-        }
-        catch (JSException)
-        {
-            // Storage may be blocked: the choice still holds for this session, it is just not remembered.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the write finished; nothing to remember it for.
-        }
+
+        // A blocked storage or a gone circuit keeps the choice for this session only.
+        _ = await BrowserStorage.TrySetAsync(this.JS, FoldersKey, JsonSerializer.Serialize(this.closedFolders.Order(StringComparer.Ordinal)));
     }
 
     /// <summary>Opens the folder holding the current page's Room, so the page the Human is on is never folded away.</summary>
@@ -203,13 +194,13 @@
 
         try
         {
-            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", GroupingKey);
+            string? stored = await BrowserStorage.TryGetAsync(this.JS, GroupingKey);
             if (Enum.TryParse(stored, out RoomGrouping remembered) && remembered != this.grouping)
             {
                 this.grouping = remembered;
             }
 
-            string? closed = await this.JS.InvokeAsync<string?>("huddleStorage.get", FoldersKey);
+            string? closed = await BrowserStorage.TryGetAsync(this.JS, FoldersKey);
             if (closed is not null && JsonSerializer.Deserialize<string?[]>(closed) is { } names)
             {
                 this.closedFolders.UnionWith(names.OfType<string>());
@@ -220,14 +211,6 @@
             }
 
             this.StateHasChanged();
-        }
-        catch (JSException)
-        {
-            // Storage may be blocked (private mode, policy): the list stays on All with every folder open.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the read finished; nothing to render.
         }
         catch (JsonException)
         {
@@ -240,18 +223,9 @@
     private async Task OnGroupingChangedAsync(RoomGrouping value)
     {
         this.grouping = value;
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleStorage.set", GroupingKey, value.ToString());
-        }
-        catch (JSException)
-        {
-            // Storage may be blocked: the choice still holds for this session, it is just not remembered.
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit went away before the write finished; nothing to remember it for.
-        }
+
+        // A blocked storage or a gone circuit keeps the choice for this session only.
+        _ = await BrowserStorage.TrySetAsync(this.JS, GroupingKey, value.ToString());
     }
 
     /// <summary>Opens the group when navigation lands on one of its Rooms; it never closes it.</summary>

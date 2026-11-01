@@ -127,6 +127,8 @@ component here, move it onto the component rather than writing another copy.
 | A label, button text or message | The verb table and casing rules, and [language.md](language.md) | [Interface copy](design-system.md#interface-copy) |
 | A date or time in the Transcript | `MessageDisplay.DayLabel`, `LocalDay`, `StartsNewDay` | [Catalog: helpers](#helpers) |
 | To update UI from a background event | `RendererDispatch.RunAsync(this.InvokeAsync, …)` | [Catalog: helpers](#helpers) |
+| To copy text to the clipboard | `ClipboardCopier.CopyAsync` (with a snackbar) or `TryCopyAsync` (your own notice) | [Catalog: helpers](#helpers) |
+| To remember a small view choice in the browser | `BrowserStorage.TryGetAsync` / `TrySetAsync` | [Catalog: helpers](#helpers) |
 | To check a MudBlazor parameter or default | The "Facts already checked" table, then the local check | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md#checking-an-api-against-the-pinned-package) |
 
 ## Reusable parts catalog
@@ -264,8 +266,10 @@ id or a snapshot: an open dialog ignores new parameters.
 | `Plural` | `Components/Shared/Plural.cs` | `Of(count, one, many)`: the word for a count, so "1 member" and "2 members" |
 | `ByteSize` | `Components/Shared/ByteSize.cs` | `Format(bytes)`: a file size in the unit it falls in |
 | `MessageDisplay.TimeLabel`, `FileName` | `Components/Shared/MessageDisplay.cs` | The time of a Message (the day only when it is not today) and the last segment of a path |
-| `RoomLinkCopier` | `Components/Shared/RoomLinkCopier.cs` | `CopyAsync`: copies a Room's link and reports the outcome in a snackbar |
-| `TaskClipboard` | `Components/Tasks/TaskClipboard.cs` | Copying a Task's id or link and the snackbar that follows |
+| `ClipboardCopier` | `Components/Shared/ClipboardCopier.cs` | The one `huddleClipboard.copy` call. `CopyAsync(js, snackbar, text, copiedMessage, failedMessage, key, ct)` copies and reports in a snackbar; `TryCopyAsync(js, text, ct)` copies and returns whether it worked, for a surface with its own notice. A gone circuit counts as not copied and shows nothing. A component never calls `huddleClipboard.copy` itself |
+| `RoomLinkCopier` | `Components/Shared/RoomLinkCopier.cs` | `CopyAsync`: copies a Room's link; `ClipboardCopier` with the Room wording |
+| `TaskClipboard` | `Components/Tasks/TaskClipboard.cs` | Copying a Task's id or link; `ClipboardCopier` with the Task wording |
+| `BrowserStorage` | `Components/Shared/BrowserStorage.cs` | `TryGetAsync(js, key)` returns the stored text or `null`; `TrySetAsync(js, key, value)` returns whether it was written. Both swallow a gone circuit, blocked storage and prerendering, so a remembered choice is never a fault. A component never calls `huddleStorage.get` or `set` itself |
 | `TaskDates` | `Tasks/TaskDates.cs` | `IsOverdue` and the Task date labels, in the local zone |
 | `HuddleDialogOptions`, `ConfirmAsync` | `Components/Shared/Dialogs/` | See [Dialogs](#dialogs-o1) |
 | `RoomDeleteCopy` | `Components/Shared/RoomDeleteCopy.cs` | `Prompt(roomName, uploadCount)`: the words of a Room's delete confirmation |

@@ -89,5 +89,5 @@
         _ = this.Settings.SaveTokens(null);
     }
 
-    private void OnChanged() => _ = this.InvokeAsync(this.StateHasChanged);
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 }

@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Tasks;
 using Microsoft.JSInterop;
 using MudBlazor;
@@ -10,9 +11,6 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// </summary>
 internal static class TaskClipboard
 {
-    /// <summary>The clipboard helper the copy calls.</summary>
-    private const string CopyHelper = "huddleClipboard.copy";
-
     /// <summary>Copies <paramref name="id"/> as text and says "Copied {id}", or the Ctrl+C warning when the clipboard refuses.</summary>
     /// <param name="js">The JavaScript runtime that owns the clipboard helper.</param>
     /// <param name="snackbar">Where the outcome is reported.</param>
@@ -24,15 +22,8 @@ internal static class TaskClipboard
         ArgumentNullException.ThrowIfNull(js);
         ArgumentNullException.ThrowIfNull(snackbar);
 
-        bool copied = await js.InvokeAsync<bool>(TaskClipboard.CopyHelper, ct, new object?[] { id.ToString() });
-        if (copied)
-        {
-            snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
-        }
+        _ = await ClipboardCopier.CopyAsync(
+            js, snackbar, id.ToString(), $"Copied {id}", "Couldn't copy. The id is selected; press Ctrl+C.", "copy", ct);
     }
 
     /// <summary>Copies the link that opens <paramref name="id"/> and says "Copied link to {id}", or that the link could not be copied.</summary>
@@ -48,14 +39,7 @@ internal static class TaskClipboard
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentNullException.ThrowIfNull(baseUri);
 
-        bool copied = await js.InvokeAsync<bool>(TaskClipboard.CopyHelper, ct, new object?[] { $"{baseUri}tasks/item/{id}" });
-        if (copied)
-        {
-            snackbar.Add($"Copied link to {id}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
-        }
+        _ = await ClipboardCopier.CopyAsync(
+            js, snackbar, $"{baseUri}tasks/item/{id}", $"Copied link to {id}", "Couldn't copy the link.", "copy", ct);
     }
 }

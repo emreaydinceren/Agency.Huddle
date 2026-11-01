@@ -445,15 +445,9 @@
     private async Task CopyLink(string url)
     {
         // No ConfigureAwait(false): the continuation sets component state (rules.md).
-        try
-        {
-            _ = await this.Js.InvokeAsync<bool>("huddleClipboard.copy", url);
-            this.notice = RemoteAccessCopy.LinkCopied;
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; there is nothing to tell.
-        }
+        // A gone circuit also reads as not copied; there is no page left to show the notice on.
+        bool copied = await ClipboardCopier.TryCopyAsync(this.Js, url, CancellationToken.None);
+        this.notice = copied ? RemoteAccessCopy.LinkCopied : RemoteAccessCopy.LinkNotCopied;
     }
 
     private void Approve(string requestId, IReadOnlyList<string> scopes) => this.Run(() => this.Admin.Approve(this.user, requestId, scopes));
