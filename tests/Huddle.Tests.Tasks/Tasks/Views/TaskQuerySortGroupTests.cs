@@ -75,6 +75,60 @@ public sealed class TaskQuerySortGroupTests
         Assert.Equal(["PLAT-0003", "PLAT-0002", "PLAT-0001"], result.Select(t => t.Id.ToString()));
     }
 
+    /// <summary>Every nullable sort key puts a Task with no value last, whether the key is ascending or descending.</summary>
+    /// <param name="field">The sort field under test.</param>
+    /// <param name="direction">The direction under test.</param>
+    [Theory]
+    [InlineData("parent", SortDirection.Ascending)]
+    [InlineData("parent", SortDirection.Descending)]
+    [InlineData("assignee", SortDirection.Ascending)]
+    [InlineData("assignee", SortDirection.Descending)]
+    [InlineData("project", SortDirection.Ascending)]
+    [InlineData("project", SortDirection.Descending)]
+    [InlineData("origin", SortDirection.Ascending)]
+    [InlineData("origin", SortDirection.Descending)]
+    [InlineData("start_date", SortDirection.Ascending)]
+    [InlineData("start_date", SortDirection.Descending)]
+    [InlineData("created", SortDirection.Ascending)]
+    [InlineData("created", SortDirection.Descending)]
+    [InlineData("updated", SortDirection.Ascending)]
+    [InlineData("updated", SortDirection.Descending)]
+    [InlineData("closed", SortDirection.Ascending)]
+    [InlineData("closed", SortDirection.Descending)]
+    public void Sort_NullableKey_NullsLastInBothDirections(string field, SortDirection direction)
+    {
+        TaskItem none = TestTasks.Make(id: "PLAT-0001");
+        TaskItem low = WithValue("PLAT-0002", field, 1);
+        TaskItem high = WithValue("PLAT-0003", field, 2);
+
+        IReadOnlyList<TaskItem> result = TaskQuery.Sort([high, none, low], [new SortKey(field, direction)]);
+
+        string[] expected = direction == SortDirection.Ascending
+            ? ["PLAT-0002", "PLAT-0003", "PLAT-0001"]
+            : ["PLAT-0003", "PLAT-0002", "PLAT-0001"];
+        Assert.Equal(expected, result.Select(t => t.Id.ToString()));
+    }
+
+    /// <summary>Builds a Task whose value for <paramref name="field"/> orders by <paramref name="rank"/>.</summary>
+    /// <param name="id">The Task id.</param>
+    /// <param name="field">The sort field to populate.</param>
+    /// <param name="rank">The ordering rank, 1 or 2.</param>
+    private static TaskItem WithValue(string id, string field, int rank)
+    {
+        DateTimeOffset stamp = new(2026, 1, rank, 0, 0, 0, TimeSpan.Zero);
+        return field switch
+        {
+            "parent" => TestTasks.Make(id: id, parent: new TaskId("ROOT", rank)),
+            "assignee" => TestTasks.Make(id: id, assignee: "agent" + rank),
+            "project" => TestTasks.Make(id: id, location: new("Platform", "proj" + rank, false)),
+            "origin" => TestTasks.Make(id: id, originRoomId: "room" + rank),
+            "start_date" => TestTasks.Make(id: id, startDate: new DateOnly(2026, 1, rank)),
+            "created" or "updated" => TestTasks.Make(id: id, changeLog: [new ChangeLogEntry(stamp, "Human", "x")]),
+            "closed" => TestTasks.Make(id: id, closedAt: stamp),
+            _ => throw new NotSupportedException(field),
+        };
+    }
+
     /// <summary>GroupLabel labels a null Assignee as "Unassigned".</summary>
     [Fact]
     public void GroupLabel_AssigneeNull_ReturnsUnassigned()
