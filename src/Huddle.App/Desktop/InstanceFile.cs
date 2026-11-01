@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Desktop;
 
@@ -51,7 +52,7 @@ internal static class InstanceFile
         {
             try
             {
-                Publish(temp, final);
+                AtomicFile.Publish(temp, final);
                 return;
             }
             catch (IOException) when (attempt < MoveAttempts)
@@ -64,26 +65,6 @@ internal static class InstanceFile
                 // Runs once at startup, so blocking the calling thread briefly is acceptable here.
                 Thread.Sleep(MoveRetryDelay);
             }
-        }
-    }
-
-    /// <summary>
-    /// Moves <paramref name="temp"/> over <paramref name="final"/>. When <paramref name="final"/> exists it is
-    /// replaced with <see cref="File.Replace(string, string, string?)"/> rather than
-    /// <c>File.Move(..., overwrite: true)</c>, because on Windows the move is refused with "access denied" while a
-    /// reader holds the destination open, even a reader that shares delete; the replace API is not.
-    /// </summary>
-    /// <param name="temp">The fully written temporary file.</param>
-    /// <param name="final">The published file.</param>
-    private static void Publish(string temp, string final)
-    {
-        if (File.Exists(final))
-        {
-            File.Replace(temp, final, destinationBackupFileName: null);
-        }
-        else
-        {
-            File.Move(temp, final);
         }
     }
 
