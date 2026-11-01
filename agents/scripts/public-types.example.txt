@@ -45,6 +45,7 @@ TaskReference
 ITaskReferenceResolver
 NewTaskDefaults
 TaskDetailMode
+TaskDetailHeaderParts
 ConflictChoice
 ViewEditorSection
 TeamSummary
