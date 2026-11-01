@@ -359,17 +359,17 @@
     private async Task ReloadAsync()
     {
         this.reloading = true;
+        int problems;
         try
         {
-            await this.Registry.ReloadAsync(CancellationToken.None);
+            problems = await SkillsReload.RunAsync(this.Registry, this.Store, CancellationToken.None);
         }
         finally
         {
             this.reloading = false;
         }
 
-        int problems = SkillProblemCount.Of(this.Registry, this.Store);
-        this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
+        this.Snackbar.Add(SkillsReload.Message(problems), Severity.Success, configure: null, key: SkillsReload.SnackbarKey);
     }
 
     /// <summary>Opens the prompt dialog on Add from a link or folder (it replaced the old import dialog, §6.9.3).</summary>

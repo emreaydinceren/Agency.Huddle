@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 
 
@@ -30,7 +29,7 @@ internal static class NoteTagReader
         int keyLine = -1;
         for (int i = 0; i < lines.Length; i++)
         {
-            if (HasTabIndent(lines[i]))
+            if (NoteYamlScalars.HasTabIndent(lines[i]))
             {
                 return [];
             }
@@ -128,24 +127,6 @@ internal static class NoteTagReader
             .Where(static value => value.Length > 0)];
     }
 
-    private static bool HasTabIndent(string line)
-    {
-        foreach (char c in line)
-        {
-            if (c == '\t')
-            {
-                return true;
-            }
-
-            if (c != ' ')
-            {
-                return false;
-            }
-        }
-
-        return false;
-    }
-
     /// <summary>Collects the raw values of the <c>tags</c> entry; <see langword="false"/> when the entry is malformed.</summary>
     private static bool TryReadValues(string[] lines, int keyLine, List<string> values)
     {
@@ -167,10 +148,10 @@ internal static class NoteTagReader
 
         if (rest[0] is '"' or '\'')
         {
-            return TryReadQuoted(rest, 0, out string value, out _) && Add(values, value, quoted: true);
+            return NoteYamlScalars.TryReadQuoted(rest, 0, out string value, out _) && Add(values, value, quoted: true);
         }
 
-        foreach (string piece in StripComment(rest).Split(','))
+        foreach (string piece in NoteYamlScalars.StripComment(rest).Split(','))
         {
             _ = Add(values, piece.Trim(), quoted: false);
         }
@@ -239,7 +220,7 @@ internal static class NoteTagReader
 
             if (item[0] is '"' or '\'')
             {
-                if (!TryReadQuoted(item, 0, out string quoted, out _))
+                if (!NoteYamlScalars.TryReadQuoted(item, 0, out string quoted, out _))
                 {
                     return false;
                 }
@@ -248,7 +229,7 @@ internal static class NoteTagReader
             }
             else
             {
-                _ = Add(values, StripComment(item).Trim(), quoted: false);
+                _ = Add(values, NoteYamlScalars.StripComment(item).Trim(), quoted: false);
             }
         }
 
@@ -294,7 +275,7 @@ internal static class NoteTagReader
     {
         if (rest[index] is '"' or '\'')
         {
-            if (!TryReadQuoted(rest, index, out string quoted, out int end))
+            if (!NoteYamlScalars.TryReadQuoted(rest, index, out string quoted, out int end))
             {
                 return false;
             }
@@ -334,58 +315,5 @@ internal static class NoteTagReader
         }
 
         return true;
-    }
-
-    /// <summary>Reads a quoted scalar starting at <paramref name="start"/>; <see langword="false"/> when its closing quote is missing.</summary>
-    private static bool TryReadQuoted(string text, int start, out string value, out int endExclusive)
-    {
-        char quote = text[start];
-        StringBuilder builder = new();
-        int i = start + 1;
-        while (i < text.Length)
-        {
-            char c = text[i];
-            if (quote == '"' && c == '\\' && i + 1 < text.Length)
-            {
-                _ = builder.Append(text[i + 1]);
-                i += 2;
-                continue;
-            }
-
-            if (c == quote)
-            {
-                if (quote == '\'' && i + 1 < text.Length && text[i + 1] == '\'')
-                {
-                    _ = builder.Append('\'');
-                    i += 2;
-                    continue;
-                }
-
-                value = builder.ToString();
-                endExclusive = i + 1;
-                return true;
-            }
-
-            _ = builder.Append(c);
-            i++;
-        }
-
-        value = string.Empty;
-        endExclusive = text.Length;
-        return false;
-    }
-
-    /// <summary>Drops a YAML comment: an unquoted <c>#</c> that follows whitespace.</summary>
-    private static string StripComment(string text)
-    {
-        for (int i = 1; i < text.Length; i++)
-        {
-            if (text[i] == '#' && text[i - 1] is ' ' or '\t')
-            {
-                return text[..i];
-            }
-        }
-
-        return text;
     }
 }

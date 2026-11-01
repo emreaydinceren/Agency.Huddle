@@ -37,6 +37,20 @@ public sealed class NoteTagReaderTests
     [InlineData("tags: [#a]")]
     public void Read_UnquotedHash_GivesNothing(string block) => Assert.Equal(string.Empty, Read(block));
 
+    /// <summary>A double-quoted tag decodes <c>\uXXXX</c> as the property parser does, in the scalar, flow and block forms alike.</summary>
+    [Theory]
+    [InlineData("tags: \"caf\\u00e9\"", "café")]
+    [InlineData("tags: [\"caf\\u00e9\", b]", "café|b")]
+    [InlineData("tags:\n- \"caf\\u00e9\"", "café")]
+    public void Read_DoubleQuotedUnicodeEscape_IsDecoded(string block, string expected) => Assert.Equal(expected, Read(block));
+
+    /// <summary>A double-quoted <c>\t</c> is a tab, which is not a tag character, so the value is skipped rather than read as <c>atb</c>.</summary>
+    [Theory]
+    [InlineData("tags: \"a\\tb\"")]
+    [InlineData("tags: [\"a\\tb\"]")]
+    [InlineData("tags:\n- \"a\\tb\"")]
+    public void Read_DoubleQuotedTabEscape_IsNotATag(string block) => Assert.Equal(string.Empty, Read(block));
+
     /// <summary>A key that is not exactly <c>tags</c>, a malformed entry or a map gives no tags.</summary>
     [Theory]
     [InlineData("tag: a")]

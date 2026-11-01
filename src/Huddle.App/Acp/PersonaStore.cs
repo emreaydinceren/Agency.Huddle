@@ -968,22 +968,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="renamed">The old and the new Name to publish.</param>
     private void PublishRenamed(PersonaRenamed renamed)
     {
-        if (this.PersonaRenamed is not { } handlers)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action<PersonaRenamed>)handler).Invoke(renamed);
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A PersonaRenamed handler threw for '{OldName}' -> '{NewName}' and was skipped.", renamed.OldName, renamed.NewName);
-            }
-        }
+        EventRaise.Isolated(this.PersonaRenamed, renamed, ex => this.logger.LogError(ex, "A PersonaRenamed handler threw for '{OldName}' -> '{NewName}' and was skipped.", renamed.OldName, renamed.NewName));
     }
 
     /// <summary>
@@ -1027,22 +1012,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="removed">The Name to publish.</param>
     private void PublishRemoved(PersonaRemoved removed)
     {
-        if (this.PersonaRemoved is not { } handlers)
-        {
-            return;
-        }
-
-        foreach (var handler in handlers.GetInvocationList())
-        {
-            try
-            {
-                ((Action<PersonaRemoved>)handler).Invoke(removed);
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "A PersonaRemoved handler threw for '{Name}' and was skipped.", removed.Name);
-            }
-        }
+        EventRaise.Isolated(this.PersonaRemoved, removed, ex => this.logger.LogError(ex, "A PersonaRemoved handler threw for '{Name}' and was skipped.", removed.Name));
     }
 
     private void OnWatcherEvent(object sender, FileSystemEventArgs e)

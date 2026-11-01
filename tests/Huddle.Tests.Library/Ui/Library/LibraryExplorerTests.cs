@@ -16,6 +16,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
+using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -1257,15 +1258,6 @@ public sealed class LibraryExplorerTests : IDisposable
                 this.filter = value;
             }
         }
-    }
-
-    private static void SetupEditorModule(MudBunitContext ctx, string text)
-    {
-        BunitJSModuleInterop module = ctx.JSInterop.SetupModule("./library-editor.js");
-        BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
-        handle.Setup<string>("getText", _ => true).SetResult(text);
-        handle.SetupVoid("setText", _ => true).SetVoidResult();
-        handle.SetupVoid("dispose", _ => true).SetVoidResult();
     }
 
     /// <summary>Sets up the remembered-state JS calls an explorer makes when a document opens.</summary>

@@ -191,7 +191,7 @@ public sealed class TaskPanelsTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         for (int count = 0; count < harness.TaskActivity.Budget(task.Id).Granted; count++)
         {
-            harness.TaskActivity.CountAgentWake(task.Id);
+            _ = harness.TaskActivity.TryConsumeAgentWake(task.Id);
         }
 
         IRenderedComponent<ContainerFragment> cut = Render<TaskActivityPanel>(ctx, new SidebarPanelContext(), task.Id);

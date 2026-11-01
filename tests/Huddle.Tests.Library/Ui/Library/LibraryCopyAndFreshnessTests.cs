@@ -5,6 +5,7 @@ using MudBlazor;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
+using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -375,37 +376,6 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Equal("Updated on disk", cut.Find(".library-rendered h1").TextContent.Trim()));
     }
-
-    /// <summary>Switches the document's Read/Edit/Split mode through the toggle group's <c>ValueChanged</c>,
-    /// as <see cref="LibraryDocumentEditTests"/> does for its own toggle groups.</summary>
-    private static async Task SwitchModeAsync(IRenderedComponent<ContainerFragment> cut, LibraryMode mode)
-    {
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
-        MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
-        await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(mode));
-    }
-
-    /// <summary>Stubs the <c>library-editor.js</c> module and its <c>create</c> handle, with <c>getText</c>
-    /// defaulting to <paramref name="text"/> (as <see cref="LibraryDocumentEditTests"/> does).</summary>
-    private static void SetupEditorModule(MudBunitContext ctx, string text)
-    {
-        BunitJSModuleInterop module = ctx.JSInterop.SetupModule("./library-editor.js");
-        BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
-        handle.Setup<string>("getText", _ => true).SetResult(text);
-        handle.SetupVoid("setText", _ => true).SetVoidResult();
-        handle.SetupVoid("dispose", _ => true).SetVoidResult();
-    }
-
-    private static IRenderedComponent<ContainerFragment> RenderDoc(
-        MudBunitContext ctx,
-        LibraryPath path,
-        LibraryPath? scope = null) => ctx.RenderWithPopovers(builder =>
-    {
-        builder.OpenComponent<LibraryDocument>(0);
-        builder.AddAttribute(1, nameof(LibraryDocument.Path), path);
-        builder.AddAttribute(2, nameof(LibraryDocument.Scope), scope);
-        builder.CloseComponent();
-    });
 
     private static IRenderedComponent<ContainerFragment> RenderOps(MudBunitContext ctx) => ctx.RenderWithPopovers(builder =>
     {

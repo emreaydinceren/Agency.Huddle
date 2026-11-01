@@ -1,6 +1,5 @@
 using Bunit;
 using Bunit.Rendering;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
@@ -11,6 +10,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Ui.Library;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -33,7 +33,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHeading("doc-h-a", 3)));
@@ -57,7 +57,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         handle.SetupVoid("revealLine", _ => true).SetVoidResult();
         handle.SetupVoid("dispose", _ => true).SetVoidResult();
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
         MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
         await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(LibraryMode.Edit));
@@ -78,7 +78,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync("t2", new ScrollToHeading("doc-h-a", 3)));
@@ -99,7 +99,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         RightSidebarService sidebar = new();
         ctx.Services.AddSingleton(sidebar);
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".doc-byline-time")));
 
         await cut.Find(".doc-byline-time").ClickAsync(new());
@@ -118,7 +118,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         LibraryPath path = this.library.Resolve(root, "n.md");
         await using MudBunitContext ctx = this.NewContext();
         this.SeedHistory(ctx, path);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered .doc-byline")));
 
@@ -139,7 +139,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         LibraryPath path = this.library.Resolve(root, "plain.md");
         await using MudBunitContext ctx = this.NewContext();
         this.SeedHistory(ctx, path);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered .doc-byline")));
 
@@ -168,26 +168,12 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         DocHistoryStore store = new(Microsoft.Extensions.Options.Options.Create(off), NullLogger<DocHistoryStore>.Instance);
         store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow, "Mira", DocActorKind.Agent, DocChangeKind.Created, "Drafted"));
         ctx.Services.AddSingleton(store);
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentScrollTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
         Assert.Empty(cut.FindAll(".doc-byline"));
         Assert.Empty(cut.FindAll(".doc-history"));
     }
-
-    private static IRenderedComponent<ContainerFragment> RenderDoc(MudBunitContext ctx, LibraryPath path) =>
-        ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<CascadingValue<TabPageContext>>(0);
-            builder.AddAttribute(1, nameof(CascadingValue<TabPageContext>.Value), new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
-            builder.AddAttribute(2, nameof(CascadingValue<TabPageContext>.ChildContent), (RenderFragment)(content =>
-            {
-                content.OpenComponent<LibraryDocument>(0);
-                content.AddAttribute(1, nameof(LibraryDocument.Path), path);
-                content.CloseComponent();
-            }));
-            builder.CloseComponent();
-        });
 
     private LibraryPath NewDoc()
     {

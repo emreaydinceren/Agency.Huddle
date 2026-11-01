@@ -384,18 +384,18 @@ internal static class TaskQuery
             "title" => (left, right) => sign * string.Compare(left.Title, right.Title, StringComparison.OrdinalIgnoreCase),
             "status" => (left, right) => sign * CompareStates(left.Status, right.Status),
             "priority" => (left, right) => sign * ((int)left.Priority).CompareTo((int)right.Priority),
-            "assignee" => (left, right) => CompareNullableStrings(left.Assignee, right.Assignee, sign),
+            "assignee" => (left, right) => CompareNullsLast(left.Assignee, right.Assignee, sign),
             "creator" => (left, right) => sign * string.Compare(left.Creator, right.Creator, StringComparison.OrdinalIgnoreCase),
             "team" => (left, right) => sign * string.Compare(left.Location.Team, right.Location.Team, StringComparison.OrdinalIgnoreCase),
-            "project" => (left, right) => CompareNullableStrings(left.Location.Project, right.Location.Project, sign),
-            "parent" => (left, right) => CompareNullableIds(left.Parent, right.Parent, sign),
-            "start_date" => (left, right) => CompareNullableDates(left.StartDate, right.StartDate, sign),
-            "due_date" => (left, right) => CompareNullableDates(left.DueDate, right.DueDate, sign),
-            "created" => (left, right) => CompareNullableTimestamps(left.Created, right.Created, sign),
-            "updated" => (left, right) => CompareNullableTimestamps(left.Updated, right.Updated, sign),
-            "closed" => (left, right) => CompareNullableTimestamps(left.ClosedAt, right.ClosedAt, sign),
-            "origin" => (left, right) => CompareNullableStrings(left.OriginRoomId, right.OriginRoomId, sign),
-            "sprint" => (left, right) => CompareNullableSprints(left.Sprint, right.Sprint, sign),
+            "project" => (left, right) => CompareNullsLast(left.Location.Project, right.Location.Project, sign),
+            "parent" => (left, right) => CompareNullsLast(left.Parent, right.Parent, sign, CompareIds),
+            "start_date" => (left, right) => CompareNullsLast(left.StartDate, right.StartDate, sign, static (a, b) => a.CompareTo(b)),
+            "due_date" => (left, right) => CompareNullsLast(left.DueDate, right.DueDate, sign, static (a, b) => a.CompareTo(b)),
+            "created" => (left, right) => CompareNullsLast(left.Created, right.Created, sign, static (a, b) => a.CompareTo(b)),
+            "updated" => (left, right) => CompareNullsLast(left.Updated, right.Updated, sign, static (a, b) => a.CompareTo(b)),
+            "closed" => (left, right) => CompareNullsLast(left.ClosedAt, right.ClosedAt, sign, static (a, b) => a.CompareTo(b)),
+            "origin" => (left, right) => CompareNullsLast(left.OriginRoomId, right.OriginRoomId, sign),
+            "sprint" => (left, right) => CompareNullsLast(left.Sprint, right.Sprint, sign, static (a, b) => a.Number.CompareTo(b.Number)),
             _ => throw new NotSupportedException($"The field '{field}' cannot be sorted on."),
         };
     }
@@ -407,114 +407,30 @@ internal static class TaskQuery
         return prefixResult != 0 ? prefixResult : left.Number.CompareTo(right.Number);
     }
 
-    /// <summary>Compares two optional Task ids, with a null sorting last regardless of <paramref name="sign"/>.</summary>
-    private static int CompareNullableIds(TaskId? left, TaskId? right, int sign)
-    {
-        if (left is null && right is null)
-        {
-            return 0;
-        }
-
-        if (left is null)
-        {
-            return 1;
-        }
-
-        if (right is null)
-        {
-            return -1;
-        }
-
-        return sign * CompareIds(left.Value, right.Value);
-    }
-
-    /// <summary>Compares two optional Sprints by number, with a null sorting last regardless of <paramref name="sign"/>.</summary>
-    private static int CompareNullableSprints(SprintId? left, SprintId? right, int sign)
-    {
-        if (left is null && right is null)
-        {
-            return 0;
-        }
-
-        if (left is null)
-        {
-            return 1;
-        }
-
-        if (right is null)
-        {
-            return -1;
-        }
-
-        return sign * left.Value.Number.CompareTo(right.Value.Number);
-    }
-
     /// <summary>Compares two Task states by declaration order.</summary>
     private static int CompareStates(TaskState left, TaskState right) =>
         StateOrder[left].CompareTo(StateOrder[right]);
 
+    /// <summary>Compares two optional values with <paramref name="compare"/>, with a null sorting last regardless of <paramref name="sign"/>.</summary>
+    private static int CompareNullsLast<T>(T? left, T? right, int sign, Comparison<T> compare)
+        where T : struct =>
+        (left, right) switch
+        {
+            (null, null) => 0,
+            (null, _) => 1,
+            (_, null) => -1,
+            ({ } l, { } r) => sign * compare(l, r),
+        };
+
     /// <summary>Compares two optional strings ordinally and case-insensitively, with a null sorting last regardless of <paramref name="sign"/>.</summary>
-    private static int CompareNullableStrings(string? left, string? right, int sign)
-    {
-        if (left is null && right is null)
+    private static int CompareNullsLast(string? left, string? right, int sign) =>
+        (left, right) switch
         {
-            return 0;
-        }
-
-        if (left is null)
-        {
-            return 1;
-        }
-
-        if (right is null)
-        {
-            return -1;
-        }
-
-        return sign * string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Compares two optional dates, with a null sorting last regardless of <paramref name="sign"/>.</summary>
-    private static int CompareNullableDates(DateOnly? left, DateOnly? right, int sign)
-    {
-        if (left is null && right is null)
-        {
-            return 0;
-        }
-
-        if (left is null)
-        {
-            return 1;
-        }
-
-        if (right is null)
-        {
-            return -1;
-        }
-
-        return sign * left.Value.CompareTo(right.Value);
-    }
-
-    /// <summary>Compares two optional timestamps, with a null sorting last regardless of <paramref name="sign"/>.</summary>
-    private static int CompareNullableTimestamps(DateTimeOffset? left, DateTimeOffset? right, int sign)
-    {
-        if (left is null && right is null)
-        {
-            return 0;
-        }
-
-        if (left is null)
-        {
-            return 1;
-        }
-
-        if (right is null)
-        {
-            return -1;
-        }
-
-        return sign * left.Value.CompareTo(right.Value);
-    }
+            (null, null) => 0,
+            (null, _) => 1,
+            (_, null) => -1,
+            ({ } l, { } r) => sign * string.Compare(l, r, StringComparison.OrdinalIgnoreCase),
+        };
 
     /// <summary>
     /// The <c>#</c> Task picker's search (Spec §13.13.4). An empty query returns the most recently updated Active

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.SkillPacks.Checking;
@@ -557,18 +558,8 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
         }
 
         RegistryChange change = new(snapshot, appeared, changed);
-        foreach (Action<RegistryChange> handler in handlers.GetInvocationList().Cast<Action<RegistryChange>>())
-        {
-            try
-            {
-                handler(change);
-            }
-            catch (Exception exception)
-            {
-                // A subscriber is UI or a writer that must not stop the others or the rebuild thread (§6.5 step 6).
-                this.logger.LogError(exception, "A SkillRegistry.Changed subscriber threw; the others still run.");
-            }
-        }
+        // A subscriber is UI or a writer that must not stop the others or the rebuild thread (§6.5 step 6).
+        EventRaise.Isolated(handlers, change, exception => this.logger.LogError(exception, "A SkillRegistry.Changed subscriber threw; the others still run."));
     }
 
     /// <summary>Appends <c>row-appeared</c>, <c>row-broken</c> and <c>row-recovered</c> lines to the Sources' logs.</summary>
