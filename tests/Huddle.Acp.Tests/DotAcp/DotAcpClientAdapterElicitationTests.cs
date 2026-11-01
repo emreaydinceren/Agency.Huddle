@@ -485,14 +485,14 @@ public sealed class DotAcpClientAdapterElicitationTests
     private static dotacp.client.Connection CreateConnection()
     {
         (Stream clientEnd, _) = FullDuplexStream.CreatePair();
-        return dotacp.client.Connection.RunClient(new DotAcpClientAdapter(new ListLogger<DotAcpClientAdapter>()), clientEnd, clientEnd, null)
+        return dotacp.client.Connection.RunClient(new DotAcpClientAdapter(new ListLogger<DotAcpClientAdapter>(), new WireOrderLedger()), clientEnd, clientEnd, null)
             ?? throw new InvalidOperationException("Failed to create connection.");
     }
 
     private static Fixture CreateFixture(IElicitationScope? scope)
     {
         ListLogger<DotAcpClientAdapter> logger = new();
-        DotAcpClientAdapter adapter = new(logger);
+        DotAcpClientAdapter adapter = new(logger, new WireOrderLedger());
         FakeSessionSink sink = new(DotAcpClientAdapterElicitationTests.SessionId) { ElicitationScope = scope };
         adapter.Register(sink);
         return new Fixture(adapter, logger, sink);

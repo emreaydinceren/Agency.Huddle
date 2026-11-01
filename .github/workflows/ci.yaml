@@ -84,14 +84,12 @@ jobs:
         run: dotnet build Huddle.slnx --configuration Release --no-restore
 
       # The trailing `--` is required: without it this SDK's Microsoft Testing Platform CLI
-      # exits 5 with "Zero tests ran", which reads as a no-op rather than a failure. The two
-      # --filter-not-method lines are the same quarantine ci-pr-local.yaml carries; the reason lives
-      # in docs/engineering/known-limits.md. Do not add one here without adding it there.
+      # exits 5 with "Zero tests ran", which reads as a no-op rather than a failure. Like
+      # ci-pr-local.yaml, this quarantines nothing; a --filter-not-method line needs an entry in
+      # docs/engineering/known-limits.md and the same line in both Gitea workflows.
       - name: 🧪 Run tests
         run: |
-          dotnet test Huddle.slnx --configuration Release --no-build -- \
-            --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" \
-            --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
+          dotnet test Huddle.slnx --configuration Release --no-build --
 
       # Starts the Release build as a real child process, GETs /health over a real socket and
       # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests.Hosted hosts

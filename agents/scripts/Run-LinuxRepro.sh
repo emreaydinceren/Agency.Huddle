@@ -21,4 +21,4 @@ docker run --rm \
     -v huddle-nuget:/root/.nuget/packages \
     -e TEAM_E2E=0 \
     mcr.microsoft.com/dotnet/sdk:10.0.401 \
-    bash -c 'set -uo pipefail; apt-get update -qq && apt-get install -y -qq nodejs >/dev/null; cp -r /src /work && cd /work && rm -rf */*/bin */*/obj; dotnet restore Huddle.slnx -v q && dotnet build Huddle.slnx --configuration Release --no-restore -v q && dotnet test Huddle.slnx --configuration Release --no-build -- --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished" 2>&1 | tail -40'
+    bash -c 'set -uo pipefail; apt-get update -qq && apt-get install -y -qq nodejs >/dev/null; cp -r /src /work && cd /work && rm -rf */*/bin */*/obj; dotnet restore Huddle.slnx -v q && dotnet build Huddle.slnx --configuration Release --no-restore -v q && dotnet test Huddle.slnx --configuration Release --no-build -- 2>&1 | tail -40'

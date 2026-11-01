@@ -159,7 +159,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     public async Task Rewrite_EveryReadOverload_DeliversTheRewrittenBytes(string overload)
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 7));
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 7), new WireOrderLedger(), rewriteElicitation: true);
         using MemoryStream sink = new();
         byte[] array = new byte[5];
 
@@ -206,7 +206,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         ChunkedReadStream inner = ChunkedReadStream.FromText(Request + "\n", 4);
-        using NdjsonMethodRewriteStream stream = new(inner);
+        using NdjsonMethodRewriteStream stream = new(inner, new WireOrderLedger(), rewriteElicitation: true);
 
         int empty = await stream.ReadAsync(Memory<byte>.Empty, cancellationToken);
         int innerReadsAfterEmpty = inner.ReadCount;
@@ -224,7 +224,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     {
         using CancellationTokenSource cancelled = new();
         await cancelled.CancelAsync();
-        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 4));
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 4), new WireOrderLedger(), rewriteElicitation: true);
         byte[] buffer = new byte[16];
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => _ = await stream.ReadAsync(buffer.AsMemory(), cancelled.Token));
@@ -235,7 +235,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     public void Rewrite_Dispose_ForwardsToTheInnerStream()
     {
         ChunkedReadStream inner = ChunkedReadStream.FromText(Request, 4);
-        NdjsonMethodRewriteStream stream = new(inner);
+        NdjsonMethodRewriteStream stream = new(inner, new WireOrderLedger(), rewriteElicitation: true);
 
         stream.Dispose();
 
@@ -247,7 +247,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     public async Task Rewrite_DisposeAsync_ForwardsToTheInnerStream()
     {
         ChunkedReadStream inner = ChunkedReadStream.FromText(Request, 4);
-        NdjsonMethodRewriteStream stream = new(inner);
+        NdjsonMethodRewriteStream stream = new(inner, new WireOrderLedger(), rewriteElicitation: true);
 
         await stream.DisposeAsync();
 
@@ -259,7 +259,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     public async Task Rewrite_ReadAfterDispose_ThrowsObjectDisposed()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 4));
+        NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request + "\n", 4), new WireOrderLedger(), rewriteElicitation: true);
         int first = stream.ReadByte();
         stream.Dispose();
         Assert.Equal((int)'{', first);
@@ -274,7 +274,7 @@ public sealed class NdjsonMethodRewriteStreamTests
     [Fact]
     public void Rewrite_Capabilities_ReadableNotSeekableNotWritable()
     {
-        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request, 4));
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(Request, 4), new WireOrderLedger(), rewriteElicitation: true);
 
         Assert.True(stream.CanRead);
         Assert.False(stream.CanSeek);
@@ -292,13 +292,108 @@ public sealed class NdjsonMethodRewriteStreamTests
         Assert.Throws<NotSupportedException>(position);
     }
 
+    /// <summary>A <c>session/update</c> notification line is counted against its session id, and its bytes still pass through unchanged.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Ledger_SessionUpdateNotification_CountedForItsSession()
+    {
+        WireOrderLedger ledger = new();
+
+        string output = await NdjsonMethodRewriteStreamTests.RewriteAsync(SessionUpdate("s1", "hi") + "\n" + SessionUpdate("s1", "again") + "\n" + SessionUpdate("s2", "x") + "\n", int.MaxValue, TestContext.Current.CancellationToken, ledger);
+
+        Assert.Equal(2, ledger.ReadCount("s1"));
+        Assert.Equal(1, ledger.ReadCount("s2"));
+        Assert.Equal(SessionUpdate("s1", "hi") + "\n" + SessionUpdate("s1", "again") + "\n" + SessionUpdate("s2", "x") + "\n", output);
+    }
+
+    /// <summary>Lines that merely mention <c>session/update</c> are not counted: a text chunk inside another method, a request with an id, a response, a prefixed or longer method, and a notification with no string session id.</summary>
+    [Theory(Timeout = 10000)]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/other","params":{"sessionId":"s1","note":"session/update"}}""")]
+    [InlineData("""{"jsonrpc":"2.0","id":4,"method":"session/update","params":{"sessionId":"s1"}}""")]
+    [InlineData("""{"jsonrpc":"2.0","id":4,"result":{"method":"session/update","sessionId":"s1"}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update2","params":{"sessionId":"s1"}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"_session/update","params":{"sessionId":"s1"}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":7}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update","params":{}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update","params":{"update":{"sessionId":"s1"}}}""")]
+    [InlineData("""session/update not json""")]
+    public async Task Ledger_NotASessionUpdateNotification_NotCounted(string line)
+    {
+        WireOrderLedger ledger = new();
+
+        string output = await NdjsonMethodRewriteStreamTests.RewriteAsync(line + "\n", int.MaxValue, TestContext.Current.CancellationToken, ledger);
+
+        Assert.Equal(0, ledger.ReadCount("s1"));
+        Assert.Equal(line + "\n", output);
+    }
+
+    /// <summary>A text chunk carrying the literal <c>session/update</c> inside a real update is one update, not two.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Ledger_ChunkTextContainingTheMethodName_CountedOnce()
+    {
+        WireOrderLedger ledger = new();
+
+        _ = await NdjsonMethodRewriteStreamTests.RewriteAsync(SessionUpdate("s1", "a session/update b") + "\n", int.MaxValue, TestContext.Current.CancellationToken, ledger);
+
+        Assert.Equal(1, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>A line split across many reads is counted once, and an unterminated final line is counted when it is flushed.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Ledger_LineSplitAcrossReads_CountedOnce()
+    {
+        WireOrderLedger ledger = new();
+
+        _ = await NdjsonMethodRewriteStreamTests.RewriteAsync(SessionUpdate("s1", "hi") + "\n" + SessionUpdate("s1", "tail"), 1, TestContext.Current.CancellationToken, ledger);
+
+        Assert.Equal(2, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>A line is counted the moment it is queued, before the reader has asked for any of its bytes: that is what makes the count cover every update ahead of a response.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Ledger_CountedBeforeTheLineIsConsumed()
+    {
+        WireOrderLedger ledger = new();
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(SessionUpdate("s1", "hi") + "\n", int.MaxValue), ledger, rewriteElicitation: true);
+        byte[] one = new byte[1];
+
+        int read = await stream.ReadAsync(one.AsMemory(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, read);
+        Assert.Equal(1, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>With the elicitation rewrite off, an <c>elicitation/create</c> request passes through unchanged while updates are still counted.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Ledger_RewriteDisabled_BytesUnchangedAndStillCounted()
+    {
+        WireOrderLedger ledger = new();
+        string input = Request + "\n" + SessionUpdate("s1", "hi") + "\n";
+
+        string output = await RewriteAsync(input, 5, TestContext.Current.CancellationToken, ledger, rewriteElicitation: false);
+
+        Assert.Equal(input, output);
+        Assert.Equal(1, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>Builds one agent_message_chunk <c>session/update</c> notification line.</summary>
+    /// <param name="sessionId">The session id.</param>
+    /// <param name="text">The chunk text.</param>
+    private static string SessionUpdate(string sessionId, string text)
+    {
+        return """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"SID","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"TXT"}}}}"""
+            .Replace("SID", sessionId, StringComparison.Ordinal)
+            .Replace("TXT", text, StringComparison.Ordinal);
+    }
+
     /// <summary>Pushes <paramref name="input"/> through the rewrite stream, served <paramref name="maxChunk"/> bytes per inner read, and returns every byte that comes out.</summary>
     /// <param name="input">The text the "agent" writes.</param>
     /// <param name="maxChunk">The most bytes any inner read returns.</param>
     /// <param name="cancellationToken">The test's token.</param>
-    private static async Task<string> RewriteAsync(string input, int maxChunk, CancellationToken cancellationToken)
+    /// <param name="ledger">The ledger the stream counts into, or null for a throwaway one.</param>
+    /// <param name="rewriteElicitation">Whether the elicitation rewrite is on.</param>
+    private static async Task<string> RewriteAsync(string input, int maxChunk, CancellationToken cancellationToken, WireOrderLedger? ledger = null, bool rewriteElicitation = true)
     {
-        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(input, maxChunk));
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(input, maxChunk), ledger ?? new WireOrderLedger(), rewriteElicitation);
         using MemoryStream sink = new();
 
         await stream.CopyToAsync(sink, cancellationToken);

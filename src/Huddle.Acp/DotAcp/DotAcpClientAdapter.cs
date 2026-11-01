@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Agency.Huddle.Acp.Abstractions;
 
 /// <summary>Implements the ACP client contract on behalf of Team.Console, routing agent-originated calls to the session they belong to.</summary>
-internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> logger) : dotacp.client.IAcpClient, IDisposable
+internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> logger, WireOrderLedger ledger) : dotacp.client.IAcpClient, IDisposable
 {
     private const string ElicitationCreateMethod = "elicitation/create";
 
@@ -49,6 +49,7 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
     internal bool Unregister(string sessionId)
     {
         bool removed = this.sinks.TryRemove(sessionId, out _);
+        ledger.Forget(sessionId);
         if (this.sessionLifetimes.TryRemove(sessionId, out CancellationLifetime? lifetime))
         {
             lifetime.Dispose();
@@ -69,14 +70,25 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 #pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
         string sessionId = (string)notification.SessionId;
 #pragma warning restore HAA0601
-        if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
+
+        // The ledger must see every update dispatched, whatever becomes of it: a Turn's barrier waits
+        // for the count the wire stream recorded, so a throwing sink or an unknown session that did
+        // not count here would stall that Turn until the safety cap.
+        try
         {
-            DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
+            if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
+            {
+                DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
+                return Task.CompletedTask;
+            }
+
+            sink.TryPublish(SessionUpdateMapper.Map(sessionId, notification.Update));
             return Task.CompletedTask;
         }
-
-        sink.TryPublish(SessionUpdateMapper.Map(sessionId, notification.Update));
-        return Task.CompletedTask;
+        finally
+        {
+            ledger.NoteDispatched(sessionId);
+        }
     }
 
     public async Task<dotacp.protocol.RequestPermissionResponse> RequestPermissionAsync(dotacp.protocol.RequestPermissionRequest request, CancellationToken cancellationToken = default)

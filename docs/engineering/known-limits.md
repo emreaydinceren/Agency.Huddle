@@ -553,12 +553,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   unloaded until some unrelated edit happened to trigger a rescan. The folder's Created event
   now schedules the rescan. `PersonaStoreTests.ExternalFileCreated_InANewlyCreatedTeamSubFolder_…`
   failed 12 of 80 runs under load before the fix. The quarantine is lifted.
-- **Second known flake, pre-existing — DIAGNOSED 2026-09-16, and it is not only a
-  flake.** A timing race in event ordering over the fake transport in
+- **Second known flake, pre-existing — DIAGNOSED 2026-09-16, FIXED 2026-11-01, and it was not
+  only a flake.** A timing race in event ordering over the fake transport in
   `Huddle.Acp.Tests`, roughly one run in five, passing on rerun. **Three tests were
   known to show it**, which was the argument that the race is in the transport rather
   than in any one test: `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
-  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` (both quarantined by name in CI),
+  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` (both quarantined by name in CI until the fix),
   and `DotAcpConcurrentHostTests.TwoHosts_ConcurrentPrompts_EachSessionOnlySeesItsOwnAgentsUpdates`,
   seen on 2026-09-15 in CI run 607 and **not quarantined**. All three fail the same way:
   a `TurnCompleted` arrives where a `MessageChunk` or a tool-call notification was
@@ -586,21 +586,30 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   flake: cold and quiet it does not race. A real adapter's process-pipe latency widens
   the gaps and makes it rarer than it is in-proc, but not impossible.
 
-  **Mitigated 2026-09-23, not proven fixed.** Room Sessions made it frequent: two Room
-  Sessions prompting at once on one Adapter process lost a second Room's whole reply in
-  the conformance suite. A true barrier needs StreamJsonRpc's non-concurrent
-  `SynchronizationContext`, but dotacp's `Connection` starts listening inside its
-  constructor, which locks that setting before any caller can reach it. So
-  `DotAcpAgentSession.PromptAsync` now waits, after the response and before it publishes
-  `TurnCompleted`, until 100 ms have passed with no further update for the session
-  (capped at 2 s, with a Warning; skipped at once on Stop). Every Turn pays about 100 ms
-  more before it ends. The observed skew is a fraction of a millisecond, and the three
-  tests above now pass twenty runs in a row, but this is a timing margin, not an ordering
-  guarantee. The real fix is to build the `JsonRpc` ourselves with that context. The
-  Tier 3 quarantine (`ChunkedReplyFirstOrderer`) is gone. The two CI filter lines for
-  `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
-  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` in `.gitea/workflows/ci-main-local.yaml` and
-  `ci-pr-local.yaml` can now be dropped. They are shared root files and were left for their owner.
+  **Mitigated 2026-09-23.** Room Sessions made it frequent: two Room Sessions prompting at
+  once on one Adapter process lost a second Room's whole reply in the conformance suite. A
+  barrier inside StreamJsonRpc needs its non-concurrent `SynchronizationContext`, but
+  dotacp's `Connection` starts listening inside its constructor, which locks that setting
+  first. So `PromptAsync` waited for 100 ms with no further update before publishing
+  `TurnCompleted`. That was a timing margin, and CI run 1233 (2026-11-01) beat it on a PR
+  that touched only the Gateway.
+
+  **Fixed 2026-11-01 with a dispatch barrier that does not depend on timing.** Every inbound
+  line already passes through our own line-buffered reader, `NdjsonMethodRewriteStream`, in
+  wire order; the host now wraps the agent's output in it always, not only when it
+  advertises elicitation. `WireOrderLedger` counts per session the `session/update`
+  notifications that reader has queued and the ones `DotAcpClientAdapter.SessionUpdateAsync`
+  has dispatched. After the response, `PromptAsync` waits until the dispatched count reaches
+  the read count, and only then publishes `TurnCompleted`. The response line can only have
+  been read after every update the peer wrote before it, so the wait covers all of them. It
+  is woken by each dispatch, not polled, so a Turn no longer pays the 100 ms. A 2 s cap
+  remains as a safety net against an accounting gap, for example an update counted but never
+  deserialised. When the cap fires, it logs a Warning and settles the counts, so the gap is
+  not owed again by every later Turn. `WireOrderBarrierTests` holds a dispatch back
+  deterministically and pins the order. The timing test that the barrier replaces,
+  `PromptAsync_ChunkDispatchedAfterResponse_StillPrecedesTurnCompleted`, is gone; it sent its
+  chunk after the response, which the protocol forbids. The three tests above passed 30 of 30
+  each, and 18 loaded whole-project runs passed. The CI quarantine lines are deleted.
 - **Third known flake, pre-existing — DIAGNOSED 2026-09-17.** A full
   `dotnet test Huddle.slnx --` occasionally crashes the test host *after* every
   assertion has passed, with an `ObjectDisposedException` raised from
@@ -672,8 +681,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     — a `src/` seam, not yet added.
   - `RoomSessionConformanceTests.TwoRooms_TwoSessionNewCalls_OneProcess` failed once with a
     `TimeoutException` and did not reproduce in ~700 loaded runs; if it recurs, capture whether the
-    `session/prompt` response and `MessagePosted` arrived — `DotAcpAgentSession.WaitForQuietDispatchAsync`'s
-    100 ms quiet window is the suspect.
+    `session/prompt` response and `MessagePosted` arrived. The 100 ms quiet window that was the
+    suspect was replaced by the dispatch barrier on 2026-11-01, so look first for the barrier's
+    cap Warning in the log.
 - **`PersonaRunnerTests` runs on a fake clock since 2026-09-29, with two deliberate gaps.**
   `RoomSession`'s idle watchdog and activity stamps now read the session's injected `TimeProvider`,
   so the idle-timeout tests advance a `FakeTimeProvider` instead of waiting out real seconds, and
