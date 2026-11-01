@@ -3,12 +3,14 @@
     note's name and the line that holds the link, with the [[wikilink]] picked out, then the open Tasks that link
     to it (an attached path or a [[wikilink]] in the description), each with its state dot. Reloads on a new
     DocumentSubject, when WikiLinkIndex reports its root changed and when the Task list changes.
+    Only a document has backlinks; the count goes to the frame's header.
 *@
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tasks
 @using MudBlazor
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject LibraryPathResolver PathResolver
 @inject WikiLinkIndex WikiLinks
@@ -83,19 +85,7 @@ else if (this.loaded && this.rows.Count == 0 && this.taskRows.Count == 0)
     private bool loaded;
     private string? shownKey;
     private bool subscribed;
-    private CancellationTokenSource? cts;
-
-    /// <summary>What the page shows; only a document has backlinks.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab this panel belongs to.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, for the header count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
+    private readonly LatestLoad load = new();
 
     /// <summary>Starts listening for index changes.</summary>
     protected override void OnInitialized()
@@ -110,7 +100,7 @@ else if (this.loaded && this.rows.Count == 0 && this.taskRows.Count == 0)
     {
         if (this.Subject is not DocumentSubject doc)
         {
-            this.CancelLoad();
+            this.load.Cancel();
             this.shownKey = null;
             this.rows = [];
             this.taskRows = [];
@@ -187,19 +177,9 @@ else if (this.loaded && this.rows.Count == 0 && this.taskRows.Count == 0)
         });
     }
 
-    private void CancelLoad()
-    {
-        this.cts?.Cancel();
-        this.cts?.Dispose();
-        this.cts = null;
-    }
-
     private async Task LoadAsync(DocumentSubject doc)
     {
-        this.CancelLoad();
-        CancellationTokenSource source = new();
-        this.cts = source;
-        CancellationToken ct = source.Token;
+        CancellationToken ct = this.load.Next();
         string key = doc.Key;
 
         List<BacklinkRow> loadedRows = [];
@@ -257,6 +237,6 @@ else if (this.loaded && this.rows.Count == 0 && this.taskRows.Count == 0)
             this.subscribed = false;
         }
 
-        this.CancelLoad();
+        this.load.Dispose();
     }
 }

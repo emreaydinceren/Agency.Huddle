@@ -466,14 +466,7 @@ else
             return;
         }
 
-        try
-        {
-            await this.labelField.FocusAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-            // The browser is gone, and with it the focus there was to restore.
-        }
+        _ = await BrowserCall.TryAsync(() => this.labelField.FocusAsync());
     }
 
     /// <summary>The counter under the Label field: the label's length in Unicode text elements, the unit <see cref="Avatar.MaxLabelTextElements"/> is enforced in, over the limit.</summary>

@@ -64,6 +64,19 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     private const string DdlCreateRoomTeamsTeamRoomIndex =
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_room_teams_team_room ON room_teams(team) WHERE team_room = 1;";
 
+    /// <summary>
+    /// The Room projection and its two LEFT JOINs, ending in a newline so a <c>WHERE</c>, extra
+    /// <c>JOIN</c> or <c>ORDER BY</c> can be appended directly. <see cref="ReadRoom"/> reads these
+    /// seven columns by ordinal, so the column order here and there must change together.
+    /// </summary>
+    private const string RoomSelect = """
+        SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
+        FROM rooms r
+        LEFT JOIN archived_rooms a ON a.room_id = r.id
+        LEFT JOIN room_teams t ON t.room_id = r.id
+
+        """;
+
     private readonly string connectionString;
     private readonly TimeProvider timeProvider;
 
@@ -171,30 +184,21 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return command.ExecuteNonQuery() == 1;
     }
 
-    public async Task<User?> UpsertAgentUserAsync(string name, string? description, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
+    public Task<User?> UpsertAgentUserAsync(string name, string? description, CancellationToken ct = default) =>
+        this.QuerySingleAsync(
+            """
             INSERT INTO users(id, name, kind, description) VALUES($id, $name, 'agent', $desc)
             ON CONFLICT(name) DO UPDATE SET description = excluded.description WHERE users.kind = 'agent'
             RETURNING id, name, kind, description;
-            """;
-        command.Parameters.AddWithValue("$id", Guid.CreateVersion7().ToString("N"));
-        command.Parameters.AddWithValue("$name", name);
-        command.Parameters.AddWithValue("$desc", (object?)description ?? DBNull.Value);
-
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        if (!await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            return null;
-        }
-
-        return ReadUser(reader);
-    }
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$id", Guid.CreateVersion7().ToString("N"));
+                command.Parameters.AddWithValue("$name", name);
+                command.Parameters.AddWithValue("$desc", (object?)description ?? DBNull.Value);
+            },
+            ReadUser,
+            ct);
 
     /// <summary>
     /// Renames the <c>users</c> row with id <paramref name="userId"/> to <paramref name="newName"/>,
@@ -253,33 +257,19 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return rowsAffected == 1;
     }
 
-    public async Task<User?> GetUserAsync(string id, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = "SELECT id, name, kind, description FROM users WHERE id = $id;";
-        command.Parameters.AddWithValue("$id", id);
+    public Task<User?> GetUserAsync(string id, CancellationToken ct = default) =>
+        this.QuerySingleAsync(
+            "SELECT id, name, kind, description FROM users WHERE id = $id;",
+            command => command.Parameters.AddWithValue("$id", id),
+            ReadUser,
+            ct);
 
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadUser(reader) : null;
-    }
-
-    public async Task<User?> FindUserByNameAsync(string name, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = "SELECT id, name, kind, description FROM users WHERE name = $name COLLATE NOCASE;";
-        command.Parameters.AddWithValue("$name", name);
-
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadUser(reader) : null;
-    }
+    public Task<User?> FindUserByNameAsync(string name, CancellationToken ct = default) =>
+        this.QuerySingleAsync(
+            "SELECT id, name, kind, description FROM users WHERE name = $name COLLATE NOCASE;",
+            command => command.Parameters.AddWithValue("$name", name),
+            ReadUser,
+            ct);
 
     /// <summary>
     /// Finds the <c>users</c> row with the given Name, case-insensitively — the synchronous twin of
@@ -305,123 +295,50 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return reader.Read() ? ReadUser(reader) : null;
     }
 
-    public async Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = "SELECT id, name, kind, description FROM users ORDER BY rowid;";
+    public async Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken ct = default) =>
+        await this.QueryAsync(
+            "SELECT id, name, kind, description FROM users ORDER BY rowid;",
+            null,
+            ReadUser,
+            ct).ConfigureAwait(false);
 
-        var users = new List<User>();
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        while (await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            users.Add(ReadUser(reader));
-        }
+    public async Task<IReadOnlyList<Room>> GetRoomsAsync(CancellationToken ct = default) =>
+        await this.QueryAsync(
+            RoomSelect + "ORDER BY r.created, r.id;",
+            null,
+            ReadRoom,
+            ct).ConfigureAwait(false);
 
-        return users;
-    }
-
-    public async Task<IReadOnlyList<Room>> GetRoomsAsync(CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            LEFT JOIN room_teams t ON t.room_id = r.id
-            ORDER BY r.created, r.id;
-            """;
-
-        var rooms = new List<Room>();
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        while (await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            rooms.Add(ReadRoom(reader));
-        }
-
-        return rooms;
-    }
-
-    public async Task<IReadOnlyList<Room>> GetRoomsForUserAsync(string userId, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
+    public async Task<IReadOnlyList<Room>> GetRoomsForUserAsync(string userId, CancellationToken ct = default) =>
+        await this.QueryAsync(
+            RoomSelect + """
             JOIN room_members m ON m.room_id = r.id
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            LEFT JOIN room_teams t ON t.room_id = r.id
             WHERE m.user_id = $u
             ORDER BY r.created, r.id;
-            """;
-        command.Parameters.AddWithValue("$u", userId);
+            """,
+            command => command.Parameters.AddWithValue("$u", userId),
+            ReadRoom,
+            ct).ConfigureAwait(false);
 
-        var rooms = new List<Room>();
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        while (await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            rooms.Add(ReadRoom(reader));
-        }
+    public Task<Room?> GetRoomAsync(string roomId, CancellationToken ct = default) =>
+        this.QuerySingleAsync(
+            RoomSelect + "WHERE r.id = $id;",
+            command => command.Parameters.AddWithValue("$id", roomId),
+            ReadRoom,
+            ct);
 
-        return rooms;
-    }
-
-    public async Task<Room?> GetRoomAsync(string roomId, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            LEFT JOIN room_teams t ON t.room_id = r.id
-            WHERE r.id = $id;
-            """;
-        command.Parameters.AddWithValue("$id", roomId);
-
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadRoom(reader) : null;
-    }
-
-    public async Task<IReadOnlyList<User>> GetRoomMembersAsync(string roomId, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
+    public async Task<IReadOnlyList<User>> GetRoomMembersAsync(string roomId, CancellationToken ct = default) =>
+        await this.QueryAsync(
+            """
             SELECT u.id, u.name, u.kind, u.description
             FROM room_members m
             JOIN users u ON u.id = m.user_id
             WHERE m.room_id = $r
             ORDER BY m.rowid;
-            """;
-        command.Parameters.AddWithValue("$r", roomId);
-
-        var members = new List<User>();
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        while (await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            members.Add(ReadUser(reader));
-        }
-
-        return members;
-    }
+            """,
+            command => command.Parameters.AddWithValue("$r", roomId),
+            ReadUser,
+            ct).ConfigureAwait(false);
 
     public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default) =>
         this.CreateRoomAsync(name, memberIds, null, false, ct);
@@ -485,96 +402,61 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            JOIN room_teams t ON t.room_id = r.id
+        return await this.QueryAsync(
+            RoomSelect + """
             WHERE t.team = $team
             ORDER BY r.created, r.id;
-            """;
-        command.Parameters.AddWithValue("$team", team);
-
-        var rooms = new List<Room>();
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        while (await reader.ReadAsync(ct).ConfigureAwait(false))
-        {
-            rooms.Add(ReadRoom(reader));
-        }
-
-        return rooms;
+            """,
+            command => command.Parameters.AddWithValue("$team", team),
+            ReadRoom,
+            ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default)
+    public Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            JOIN room_teams t ON t.room_id = r.id
+        return this.QuerySingleAsync(
+            RoomSelect + """
             WHERE t.team = $team AND t.team_room = 1
             LIMIT 1;
-            """;
-        command.Parameters.AddWithValue("$team", team);
-
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadRoom(reader) : null;
+            """,
+            command => command.Parameters.AddWithValue("$team", team),
+            ReadRoom,
+            ct);
     }
 
     public async Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
     {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES($r, $u);";
-        command.Parameters.AddWithValue("$r", roomId);
-        command.Parameters.AddWithValue("$u", userId);
-
-        var rowsAffected = await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        var rowsAffected = await this.ExecuteAsync(
+            "INSERT OR IGNORE INTO room_members(room_id, user_id) VALUES($r, $u);",
+            command =>
+            {
+                command.Parameters.AddWithValue("$r", roomId);
+                command.Parameters.AddWithValue("$u", userId);
+            },
+            ct).ConfigureAwait(false);
         return rowsAffected == 1;
     }
 
-    public async Task RenameRoomAsync(string roomId, string name, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = "UPDATE rooms SET name = $name WHERE id = $id;";
-        command.Parameters.AddWithValue("$name", name);
-        command.Parameters.AddWithValue("$id", roomId);
-        await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
-    }
+    public async Task RenameRoomAsync(string roomId, string name, CancellationToken ct = default) =>
+        _ = await this.ExecuteAsync(
+            "UPDATE rooms SET name = $name WHERE id = $id;",
+            command =>
+            {
+                command.Parameters.AddWithValue("$name", name);
+                command.Parameters.AddWithValue("$id", roomId);
+            },
+            ct).ConfigureAwait(false);
 
     public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default) =>
         this.FindRoomWithExactMembersAsync(humanId, agentId, null, ct);
 
     /// <inheritdoc />
-    public async Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default)
-    {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            LEFT JOIN room_teams t ON t.room_id = r.id
+    public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default) =>
+        this.QuerySingleAsync(
+            RoomSelect + """
             WHERE EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $h)
               AND EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $ag)
               AND (SELECT COUNT(*) FROM room_members WHERE room_id = r.id) = 2
@@ -582,15 +464,15 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
               AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
-            """;
-        command.Parameters.AddWithValue("$h", humanId);
-        command.Parameters.AddWithValue("$ag", agentId);
-        command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
-
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadRoom(reader) : null;
-    }
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$h", humanId);
+                command.Parameters.AddWithValue("$ag", agentId);
+                command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
+            },
+            ReadRoom,
+            ct);
 
     /// <inheritdoc />
     public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default) =>
@@ -607,40 +489,38 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             return null;
         }
 
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-
         var placeholders = new List<string>(distinctIds.Count);
         for (var i = 0; i < distinctIds.Count; i++)
         {
-            var name = string.Create(CultureInfo.InvariantCulture, $"$p{i}");
-            placeholders.Add(name);
-            command.Parameters.AddWithValue(name, distinctIds[i]);
+            placeholders.Add(string.Create(CultureInfo.InvariantCulture, $"$p{i}"));
         }
 
         var inClause = string.Join(", ", placeholders);
-        command.CommandText = string.Create(CultureInfo.InvariantCulture, $"""
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
-            FROM rooms r
-            LEFT JOIN archived_rooms a ON a.room_id = r.id
-            LEFT JOIN room_teams t ON t.room_id = r.id
-            WHERE (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) = $count
+        var sql = string.Create(CultureInfo.InvariantCulture, $"""
+            {RoomSelect}WHERE (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) = $count
               AND (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id AND m.user_id IN ({inClause})) = $count
               AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
               AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
             """);
-#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
-        command.Parameters.AddWithValue("$count", distinctIds.Count);
-#pragma warning restore HAA0601
-        command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
 
-        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
-        await using var readerScope = reader.ConfigureAwait(false);
-        return await reader.ReadAsync(ct).ConfigureAwait(false) ? ReadRoom(reader) : null;
+        return await this.QuerySingleAsync(
+            sql,
+            command =>
+            {
+                for (var i = 0; i < distinctIds.Count; i++)
+                {
+                    command.Parameters.AddWithValue(placeholders[i], distinctIds[i]);
+                }
+
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
+                command.Parameters.AddWithValue("$count", distinctIds.Count);
+#pragma warning restore HAA0601
+                command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
+            },
+            ReadRoom,
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -656,23 +536,20 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     /// <param name="ct">Cancels the write.</param>
     public async Task SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default)
     {
-        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var connectionScope = connection.ConfigureAwait(false);
-        var command = connection.CreateCommand();
-        await using var commandScope = command.ConfigureAwait(false);
-        if (archived)
-        {
-            command.CommandText = "INSERT OR REPLACE INTO archived_rooms(room_id, archived) VALUES($id, $at);";
-            command.Parameters.AddWithValue("$id", roomId);
-            command.Parameters.AddWithValue("$at", this.timeProvider.GetUtcNow().ToString("o", CultureInfo.InvariantCulture));
-        }
-        else
-        {
-            command.CommandText = "DELETE FROM archived_rooms WHERE room_id = $id;";
-            command.Parameters.AddWithValue("$id", roomId);
-        }
-
-        await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        var sql = archived
+            ? "INSERT OR REPLACE INTO archived_rooms(room_id, archived) VALUES($id, $at);"
+            : "DELETE FROM archived_rooms WHERE room_id = $id;";
+        _ = await this.ExecuteAsync(
+            sql,
+            command =>
+            {
+                command.Parameters.AddWithValue("$id", roomId);
+                if (archived)
+                {
+                    command.Parameters.AddWithValue("$at", this.timeProvider.GetUtcNow().ToString("o", CultureInfo.InvariantCulture));
+                }
+            },
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -778,6 +655,61 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var commandScope = command.ConfigureAwait(false);
         command.CommandText = sql;
         await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Runs a query on a fresh connection and reads every row with <paramref name="read"/>.</summary>
+    /// <param name="sql">The statement.</param>
+    /// <param name="bind">Adds the statement's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="read">Maps the reader's current row to a value.</param>
+    /// <param name="ct">Cancels the query.</param>
+    private async Task<List<T>> QueryAsync<T>(string sql, Action<SqliteCommand>? bind, Func<SqliteDataReader, T> read, CancellationToken ct)
+    {
+        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
+        command.CommandText = sql;
+        bind?.Invoke(command);
+
+        var rows = new List<T>();
+        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        await using var readerScope = reader.ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            rows.Add(read(reader));
+        }
+
+        return rows;
+    }
+
+    /// <summary>Runs a query on a fresh connection and reads only its first row.</summary>
+    /// <returns>The first row mapped by <paramref name="read"/>, or <see langword="null"/> if there is none.</returns>
+    private async Task<T?> QuerySingleAsync<T>(string sql, Action<SqliteCommand>? bind, Func<SqliteDataReader, T> read, CancellationToken ct)
+        where T : class
+    {
+        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
+        command.CommandText = sql;
+        bind?.Invoke(command);
+
+        var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        await using var readerScope = reader.ConfigureAwait(false);
+        return await reader.ReadAsync(ct).ConfigureAwait(false) ? read(reader) : null;
+    }
+
+    /// <summary>Runs a non-query statement on a fresh connection.</summary>
+    /// <returns>The number of rows the statement affected.</returns>
+    private async Task<int> ExecuteAsync(string sql, Action<SqliteCommand>? bind, CancellationToken ct)
+    {
+        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
+        command.CommandText = sql;
+        bind?.Invoke(command);
+        return await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
     }
 
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken ct)

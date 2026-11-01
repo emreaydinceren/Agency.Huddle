@@ -4,6 +4,7 @@
 @using Agency.Huddle.App.Services
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.Contracts
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
@@ -17,7 +18,8 @@
     A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent's avatar also wears its
     presence badge on the rim, resolved from pipe liveness and then reported health, as TeamRoster draws it.
     An Agent's row also carries a context meter: the percentage of its context window in use in this Room and a thin
-    bar that takes the Warning and Error bands; a Human's row has neither.
+    bar that takes the Warning and Error bands; a Human's row has neither. Only a RoomSubject is drawn; the panel
+    reports its count to the frame's header.
 *@
 
 @if (this.members is { } list)
@@ -55,23 +57,11 @@
 }
 
 @code {
-    private CancellationTokenSource? loadCts;
+    private readonly LatestLoad load = new();
     private IReadOnlyList<User>? members;
     private string? team;
     private string? loadedKey;
     private string? roomId;
-
-    /// <summary>What the page is showing; only a <see cref="RoomSubject"/> is drawn.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab this panel belongs to.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, through which the panel reports its count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()
@@ -113,24 +103,20 @@
         this.Gateway.PresenceChanged -= this.OnLiveChanged;
         this.Avatars.AvatarsChanged -= this.OnLiveChanged;
         this.ContextFill.Changed -= this.OnLiveChanged;
-        this.loadCts?.Cancel();
-        this.loadCts?.Dispose();
+        this.load.Dispose();
     }
 
     /// <summary>Loads the Room and its members; a load for an older Subject never overwrites a newer one.</summary>
     /// <param name="room">The Room to load.</param>
     private async Task LoadAsync(RoomSubject room)
     {
-        this.loadCts?.Cancel();
-        this.loadCts?.Dispose();
-        CancellationTokenSource cts = new();
-        this.loadCts = cts;
+        CancellationToken ct = this.load.Next();
         string key = room.Key;
         try
         {
-            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId, cts.Token);
-            IReadOnlyList<User> loaded = await this.TeamDirectory.GetRoomMembersAsync(room.RoomId, cts.Token);
-            if (cts.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId, ct);
+            IReadOnlyList<User> loaded = await this.TeamDirectory.GetRoomMembersAsync(room.RoomId, ct);
+            if (ct.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
             {
                 return;
             }

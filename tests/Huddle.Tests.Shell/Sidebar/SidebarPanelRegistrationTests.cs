@@ -1,7 +1,10 @@
+using System.Reflection;
 using Agency.Huddle.App;
+using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tasks;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -160,6 +163,36 @@ public sealed class SidebarPanelRegistrationTests
         _ = TaskId.TryParse("PLAT-0013", out TaskId id);
 
         Assert.Empty(catalog.For(new TaskDetailSubject(id)));
+    }
+
+    /// <summary>Every registered panel's component takes the Subject and Tab id by the names <c>RightSidebar</c> passes, so a renamed parameter fails here and not at run time.</summary>
+    [Fact]
+    public void EveryPanel_DeclaresTheSubjectAndTabIdParametersTheHostPasses()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildProvider(dataDir, new Dictionary<string, string?>());
+        List<SidebarPanel> panels = provider.GetServices<SidebarPanel>().ToList();
+
+        Assert.NotEmpty(panels);
+        foreach (SidebarPanel panel in panels)
+        {
+            AssertIsParameter(panel, nameof(SidebarPanelBase.Subject), typeof(PageSubject));
+            AssertIsParameter(panel, nameof(SidebarPanelBase.TabId), typeof(string));
+        }
+    }
+
+    /// <summary>Asserts that the panel's component has a public settable <c>[Parameter]</c> property of the given name and type.</summary>
+    /// <param name="panel">The registered panel whose component is checked.</param>
+    /// <param name="name">The parameter name the host passes.</param>
+    /// <param name="type">The type the parameter must have.</param>
+    private static void AssertIsParameter(SidebarPanel panel, string name, Type type)
+    {
+        PropertyInfo? property = panel.Component.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+
+        Assert.True(property is not null, $"Panel '{panel.Id}' ({panel.Component.Name}) has no public instance property '{name}'.");
+        Assert.True(property.GetCustomAttribute<ParameterAttribute>() is not null, $"'{panel.Component.Name}.{name}' is not a [Parameter].");
+        Assert.True(property.SetMethod?.IsPublic == true, $"'{panel.Component.Name}.{name}' has no public setter.");
+        Assert.Equal(type, property.PropertyType);
     }
 
     /// <summary>Builds the real container with the Team data directory and the given feature switches.</summary>

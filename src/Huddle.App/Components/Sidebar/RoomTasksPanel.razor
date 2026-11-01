@@ -2,6 +2,7 @@
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Tabs
 @using Agency.Huddle.App.Tasks
+@inherits SidebarPanelBase
 @implements IDisposable
 @inject IChatStore ChatStore
 @inject RoomEvents Events
@@ -13,6 +14,7 @@
     The "Tasks in this chat" panel (Spec D-8): every Task the Room's Messages mention, newest mention first, each
     re-resolved for its current title and state. The Transcript is reloaded when a Message is posted in this Room;
     a Task change only re-resolves, because no Message changed.
+    Anything but a Room Subject renders nothing; the jump navigates the Tab the panel lives in; the row count goes to the frame.
 *@
 
 @if (this.rows.Count == 0)
@@ -56,18 +58,6 @@ else
     private string? loadedKey;
     private bool loaded;
     private bool disposed;
-
-    /// <summary>The page's Subject; anything but a Room renders nothing.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab the panel's Subject lives in; the jump navigates it.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The frame's context, which receives the row count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <inheritdoc />
     protected override void OnInitialized()

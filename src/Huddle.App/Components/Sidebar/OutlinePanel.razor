@@ -1,10 +1,12 @@
 @*
     The Outline panel (Spec Outline): the headings of the open Markdown document, indented by level;
-    a click asks the page to scroll to the heading (Spec D-6). It ignores any other Subject.
+    a click asks the page to scroll to the heading (Spec D-6). It ignores any other Subject. The scroll command goes to the page of the
+    Tab whose id the panel was given; the count goes to the host's context.
 *@
 @namespace Agency.Huddle.App.Components.Sidebar
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
+@inherits SidebarPanelBase
 @implements IAsyncDisposable
 @inject PageCommandBus Bus
 @inject IJSRuntime Js
@@ -41,18 +43,6 @@ else
     private string? watchedKey;
     private DotNetObjectReference<OutlinePanel>? self;
     private bool rendered;
-
-    /// <summary>What the page shows; only a Markdown <see cref="DocumentSubject"/> has an outline.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab whose page receives the scroll command.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
-    /// <summary>The host's context, where the panel reports its count.</summary>
-    [CascadingParameter]
-    public SidebarPanelContext? Panel { get; set; }
 
     /// <summary>Recomputes the headings when the document or its text changed.</summary>
     protected override void OnParametersSet()

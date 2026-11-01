@@ -47,7 +47,7 @@
             foreach (SidebarPanel panel in panels)
             {
                 <SidebarPanelFrame @key="@(panel.Id + "|" + subject.Key)" PanelId="@panel.Id" Title="@panel.Title" Icon="@panel.Icon">
-                    <DynamicComponent Type="@panel.Component" Parameters="@(new Dictionary<string, object?> { ["Subject"] = subject, ["TabId"] = tab.Id })" />
+                    <DynamicComponent Type="@panel.Component" Parameters="@(new Dictionary<string, object?> { [nameof(SidebarPanelBase.Subject)] = subject, [nameof(SidebarPanelBase.TabId)] = tab.Id })" />
                 </SidebarPanelFrame>
             }
         }

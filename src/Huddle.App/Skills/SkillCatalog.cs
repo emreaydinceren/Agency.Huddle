@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Reflection;
 
 namespace Agency.Huddle.App.Skills;
 
@@ -28,27 +27,17 @@ internal static class SkillCatalog
     /// <returns>An immutable Skill name → (file name → text) map, ordinal at both levels.</returns>
     private static FrozenDictionary<string, IReadOnlyDictionary<string, string>> BuildAll()
     {
-        Assembly assembly = typeof(SkillCatalog).Assembly;
         Dictionary<string, Dictionary<string, string>> bySkill = new(StringComparer.Ordinal);
 
-        foreach (string resourceName in assembly.GetManifestResourceNames())
+        Dictionary<string, string> resources = EmbeddedResources.ReadFolder(
+            typeof(SkillCatalog).Assembly,
+            ResourcePrefix,
+            static remainder => remainder.Contains('/'));
+        foreach ((string remainder, string text) in resources)
         {
-            string normalizedName = resourceName.Replace('\\', '/');
-            if (!normalizedName.StartsWith(ResourcePrefix, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            string remainder = normalizedName[ResourcePrefix.Length..];
             int separatorIndex = remainder.IndexOf('/');
-            if (separatorIndex < 0)
-            {
-                continue;
-            }
-
             string skillName = remainder[..separatorIndex];
             string fileName = remainder[(separatorIndex + 1)..];
-            string text = ReadResourceText(assembly, resourceName);
 
             if (!bySkill.TryGetValue(skillName, out Dictionary<string, string>? files))
             {
@@ -63,22 +52,5 @@ internal static class SkillCatalog
             pair => pair.Key,
             pair => (IReadOnlyDictionary<string, string>)pair.Value.ToFrozenDictionary(StringComparer.Ordinal),
             StringComparer.Ordinal);
-    }
-
-    /// <summary>Reads one embedded resource's full text as UTF-8, with line endings normalised to <c>\n</c>.</summary>
-    /// <param name="assembly">The assembly the resource is embedded in.</param>
-    /// <param name="resourceName">The resource's manifest name.</param>
-    /// <returns>The resource's text.</returns>
-    /// <exception cref="InvalidOperationException">The named resource is not embedded in <paramref name="assembly"/>.</exception>
-    private static string ReadResourceText(Assembly assembly, string resourceName)
-    {
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
-        {
-            throw new InvalidOperationException($"Embedded resource '{resourceName}' was enumerated but could not be opened.");
-        }
-
-        using StreamReader reader = new(stream);
-        return reader.ReadToEnd().ReplaceLineEndings("\n");
     }
 }

@@ -280,14 +280,7 @@
 
     private async Task RestoreFocusAsync()
     {
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleSearch.restoreFocus", this.disposed.Token);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; there is no focus to restore.
-        }
+        _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("huddleSearch.restoreFocus", this.disposed.Token));
     }
 
     private Task CloseAsync()

@@ -3,10 +3,12 @@
     hold. The Tasks page publishes a TaskDetailSubject when a row or card is opened, and this panel draws TaskReadView for it, so
     the Task's details sit in the one side panel the app has instead of a second drawer over the page. The header (id, Project or
     Team, title) is drawn by the read view; Edit opens the edit page's own Tab, as before.
+    Anything but a selected Task (a TaskDetailSubject) renders nothing.
 *@
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tabs
+@inherits SidebarPanelBase
 @inject RightSidebarService Sidebar
 
 @if (this.Subject is TaskDetailSubject subject)
@@ -15,14 +17,6 @@
 }
 
 @code {
-    /// <summary>The page's Subject; anything but a selected Task renders nothing.</summary>
-    [Parameter, EditorRequired]
-    public required PageSubject Subject { get; set; }
-
-    /// <summary>The Tab the panel's Subject lives in.</summary>
-    [Parameter, EditorRequired]
-    public required string TabId { get; set; }
-
     /// <summary>The Close button of the read view's "This Task was deleted" alert: there is nothing left to show, so the sidebar closes.</summary>
     private void OnClose()
     {

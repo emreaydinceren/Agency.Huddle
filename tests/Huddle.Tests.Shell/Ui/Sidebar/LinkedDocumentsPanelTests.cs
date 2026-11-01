@@ -2,6 +2,7 @@ using System.Reflection;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
@@ -148,21 +149,25 @@ public sealed class LinkedDocumentsPanelTests
         cut.WaitForAssertion(() => Assert.Equal(["b"], cut.FindAll(".linked-row").Select(static r => r.TextContent.Trim())));
 
         IRenderedComponent<LinkedDocumentsPanel> panel = cut.FindComponent<LinkedDocumentsPanel>();
-        FieldInfo? loadSource = typeof(LinkedDocumentsPanel).GetField("cts", BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo? loadField = typeof(LinkedDocumentsPanel).GetField("load", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(loadField);
+        object? latestLoad = loadField.GetValue(panel.Instance);
+        Assert.NotNull(latestLoad);
+        FieldInfo? loadSource = typeof(LatestLoad).GetField("source", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(loadSource);
-        object? sourceBefore = loadSource.GetValue(panel.Instance);
+        object? sourceBefore = loadSource.GetValue(latestLoad);
 
         // Any load, however short, replaces the panel's cancellation source, and the dispatcher runs the
         // handler's work in order, so after this flush a reload for "other" would already have started.
         fixture.Index.Invalidate("other");
         await panel.InvokeAsync(static () => { });
-        Assert.Same(sourceBefore, loadSource.GetValue(panel.Instance));
+        Assert.Same(sourceBefore, loadSource.GetValue(latestLoad));
 
         File.WriteAllText(Path.Combine(root, "a.md"), "[[b]] [[c]]\n");
         fixture.Index.Invalidate(note.Root.Id);
 
         cut.WaitForAssertion(() => Assert.Equal(["b", "c"], cut.FindAll(".linked-row").Select(static r => r.TextContent.Trim())));
-        Assert.NotSame(sourceBefore, loadSource.GetValue(panel.Instance));
+        Assert.NotSame(sourceBefore, loadSource.GetValue(latestLoad));
     }
 
     /// <summary>Disposing the panel takes its handler off <c>WikiLinkIndex.Invalidated</c>.</summary>

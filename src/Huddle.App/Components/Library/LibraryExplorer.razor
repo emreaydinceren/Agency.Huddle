@@ -181,7 +181,7 @@
     private string? resultTerm;
     private IReadOnlyList<SearchRow> hits = [];
     private bool truncated;
-    private CancellationTokenSource? searchCts;
+    private readonly LatestLoad search = new();
 
     /// <summary>One result row: the entry and its folder path relative to its scope.</summary>
     private sealed record SearchRow(LibraryEntry Entry, string FolderPath);
@@ -293,24 +293,20 @@
 
     private async Task SearchAsync(string term)
     {
-        this.searchCts?.Cancel();
-        this.searchCts?.Dispose();
-        this.searchCts = null;
-
         if (term.Length == 0)
         {
+            this.search.Cancel();
             this.resultTerm = null;
             this.hits = [];
             this.truncated = false;
             return;
         }
 
-        CancellationTokenSource cts = new();
-        this.searchCts = cts;
+        CancellationToken ct = this.search.Next();
         try
         {
-            (List<SearchRow> found, bool isTruncated) = await this.FindAcrossScopesAsync(term, cts.Token);
-            cts.Token.ThrowIfCancellationRequested();
+            (List<SearchRow> found, bool isTruncated) = await this.FindAcrossScopesAsync(term, ct);
+            ct.ThrowIfCancellationRequested();
             this.hits = found;
             this.truncated = isTruncated;
             this.resultTerm = term;
@@ -899,7 +895,6 @@
     public void Dispose()
     {
         this.Navigation.LocationChanged -= this.OnLocationChanged;
-        this.searchCts?.Cancel();
-        this.searchCts?.Dispose();
+        this.search.Dispose();
     }
 }

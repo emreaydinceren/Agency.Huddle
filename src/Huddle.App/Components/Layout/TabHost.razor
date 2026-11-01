@@ -43,14 +43,7 @@
         }
 
         this.self = DotNetObjectReference.Create(this);
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleTabs.attach", this.self);
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; there is nothing to register shortcuts on.
-        }
+        _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("huddleTabs.attach", this.self));
     }
 
     /// <summary>

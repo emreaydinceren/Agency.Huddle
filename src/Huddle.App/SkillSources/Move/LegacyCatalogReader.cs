@@ -21,10 +21,8 @@ internal static class LegacyCatalogReader
     /// <exception cref="InvalidOperationException">The resource is missing or malformed: a build defect.</exception>
     public static IReadOnlyList<LegacyCatalogEntry> ReadEmbedded()
     {
-        using Stream? stream = typeof(LegacyCatalogReader).Assembly.GetManifestResourceStream(ResourceName)
-            ?? throw new InvalidOperationException($"Embedded resource '{ResourceName}' is missing.");
-        using StreamReader reader = new(stream);
-        return Parse(reader.ReadToEnd()) ?? throw new InvalidOperationException($"Embedded resource '{ResourceName}' is malformed.");
+        string json = EmbeddedResources.ReadText(typeof(LegacyCatalogReader).Assembly, ResourceName);
+        return Parse(json) ?? throw new InvalidOperationException($"Embedded resource '{ResourceName}' is malformed.");
     }
 
     /// <summary>Parses catalog JSON: a list of complete entries, or null.</summary>

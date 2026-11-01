@@ -55,8 +55,7 @@ internal static class AgentNamePool
     /// <exception cref="InvalidOperationException">The resource is missing or does not parse.</exception>
     private static List<string> ReadBuiltIn()
     {
-        using Stream stream = typeof(AgentNamePool).Assembly.GetManifestResourceStream(AgentNamePool.ResourceName)
-            ?? throw new InvalidOperationException($"Embedded resource '{AgentNamePool.ResourceName}' is missing.");
+        using Stream stream = EmbeddedResources.Open(typeof(AgentNamePool).Assembly, AgentNamePool.ResourceName);
         return JsonSerializer.Deserialize<List<string>>(stream)
             ?? throw new InvalidOperationException($"Embedded resource '{AgentNamePool.ResourceName}' is malformed.");
     }
