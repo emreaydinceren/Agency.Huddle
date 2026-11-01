@@ -152,7 +152,7 @@ public sealed class R3TeamsCardTests
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
 
-        Assert.True(FindSelectInput(cut, "Model").HasAttribute("aria-busy"));
+        Assert.True(FindSelectCombobox(cut, "Model").HasAttribute("aria-busy"));
         Assert.Contains("agent-profile-card-probing", FindInputControl(cut, "Model").ClassList);
         Assert.NotEmpty(cut.FindAll(".agent-profile-card-probe[aria-label='Reading the models this agent offers']"));
     }

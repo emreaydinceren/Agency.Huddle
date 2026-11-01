@@ -344,9 +344,13 @@ internal static class AgentProfileCardTestSupport
         return new AdapterCatalog(TestOptions.Create(opts => opts.Acp = acp));
     }
 
-    /// <summary>The <c>&lt;input&gt;</c> under a <c>MudSelect</c> labelled <paramref name="label"/> - its closed-state value is the currently selected item's own display text, which is how a "preselected" assertion can be made without opening the popover at all.</summary>
+    /// <summary>The <c>&lt;input&gt;</c> under a <c>MudSelect</c> labelled <paramref name="label"/> - its closed-state value is the currently selected item's own display text, which is how a "preselected" assertion can be made without opening the popover at all. Since MudBlazor 9.12 it is <c>type="hidden"</c> and carries no ARIA attributes: read those off <see cref="FindSelectCombobox"/>.</summary>
     internal static IElement FindSelectInput(IRenderedComponent<ContainerFragment> cut, string label) =>
         FindInputControl(cut, label).QuerySelector("input") ?? throw new InvalidOperationException($"No input under the '{label}' select.");
+
+    /// <summary>The focusable <c>role="combobox"</c> element under a <c>MudSelect</c> labelled <paramref name="label"/> - since MudBlazor 9.12 the element a screen reader lands on, so the one that carries <c>aria-label</c>, <c>aria-busy</c> and the other attributes passed to the select.</summary>
+    internal static IElement FindSelectCombobox(IRenderedComponent<ContainerFragment> cut, string label) =>
+        FindInputControl(cut, label).QuerySelector("[role=combobox]") ?? throw new InvalidOperationException($"No combobox under the '{label}' select.");
 
     /// <summary>
     /// Mouses down on the <c>MudSelect</c> labelled <paramref name="label"/> and awaits its handler -
@@ -372,12 +376,9 @@ internal static class AgentProfileCardTestSupport
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="label">The select's label text.</param>
-    /// <returns><see langword="true"/> when the select's input is disabled or marked busy.</returns>
-    internal static bool IsSelectInert(IRenderedComponent<ContainerFragment> cut, string label)
-    {
-        IElement input = FindSelectInput(cut, label);
-        return input.HasAttribute("disabled") || input.HasAttribute("aria-busy");
-    }
+    /// <returns><see langword="true"/> when the select's input is disabled or its combobox is marked busy.</returns>
+    internal static bool IsSelectInert(IRenderedComponent<ContainerFragment> cut, string label) =>
+        FindSelectInput(cut, label).HasAttribute("disabled") || FindSelectCombobox(cut, label).HasAttribute("aria-busy");
 
     /// <summary>
     /// Clicks the <c>MudSelect</c> labelled <paramref name="label"/> and returns the options that

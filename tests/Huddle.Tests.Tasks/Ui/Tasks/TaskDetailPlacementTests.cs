@@ -61,8 +61,8 @@ public sealed class TaskDetailPlacementTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id);
 
-        Assert.Equal("Team", cut.Find(".task-detail-team input").GetAttribute("aria-label"));
-        Assert.Equal("Project", cut.Find(".task-detail-project input").GetAttribute("aria-label"));
+        Assert.Equal("Team", cut.Find(".task-detail-team [role=combobox]").GetAttribute("aria-label"));
+        Assert.Equal("Project", cut.Find(".task-detail-project [role=combobox]").GetAttribute("aria-label"));
     }
 
     /// <summary>Typing a new Project name (<c>CoerceValue</c>) and saving creates that Project's folder (Spec §13.6).</summary>
