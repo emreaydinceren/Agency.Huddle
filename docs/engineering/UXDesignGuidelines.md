@@ -251,7 +251,7 @@ id or a snapshot: an open dialog ignores new parameters.
 | Helper | Path | Gives you |
 | --- | --- | --- |
 | `TeamTypeStyles` | `Components/Teams/TeamTypeStyles.cs` | `For(typeId)`: a team type's icon only (`TeamTypeStyle` carries no colour; every tile is the same quiet grey); `Tagline(description)`: the first sentence |
-| `TaskColors` | `Components/Tasks/TaskColors.cs` | `For(TaskState)`, `For(TaskPriority)`, `For(PresenceState)` (the mapping is in [Colour](design-system.md#colour)) and `ForDue` as a `Color`; `Icon(TaskState)` and `Icon(TaskPriority)`. Add new status mappings here or beside it |
+| `TaskColors` | `Components/Tasks/TaskColors.cs` | `For(TaskState)`, `For(TaskPriority)`, `For(PresenceState)` (the mapping is in [Colour](design-system.md#colour)); `Icon(TaskState)` and `Icon(TaskPriority)`. Add new status mappings here or beside it |
 | `HumanDate` | `Tasks/HumanDate.cs` | `Format(date, today)`: "Today", "Tomorrow", "Yesterday", "Fri", "Oct 27" or "Oct 27, 2025"; `Full(date)`: "Tue, Oct 27, 2026" for the tooltip. `TaskDates.Human` and `TaskDates.Tooltip` wrap it with a `TimeProvider` for the Tasks surfaces |
 | `TabIcons` | `Tabs/TabIcons.cs` | `For(name)`: the entity icon for `chat`, `team`, `project`, `tasks`, `agents`, `settings`, `library` |
 | `MaterialSymbols` | `Tabs/MaterialSymbols.cs` | Icons MudBlazor lacks |

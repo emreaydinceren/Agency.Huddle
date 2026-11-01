@@ -1,14 +1,11 @@
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
-using MudBlazor;
 
 namespace Agency.Huddle.Tests.Tasks;
 
 /// <summary>
 /// Pins U13 T13.3 (UX-R08, UX-043): <c>TaskDates.IsOverdue</c> compares the due date with "today" in the
-/// clock's LOCAL time zone (the Change log is local too), a terminal Task is never overdue, and
-/// <c>TaskColors.ForDue</c> turns overdue into <see cref="Color.Error"/>.
+/// clock's LOCAL time zone (the Change log is local too) and a terminal Task is never overdue.
 /// </summary>
 public sealed class TaskDatesOverdueTests
 {
@@ -76,25 +73,5 @@ public sealed class TaskDatesOverdueTests
         TaskItem task = TestTasks.Make(status: status, dueDate: new DateOnly(2026, 9, 23));
 
         Assert.True(TaskDates.IsOverdue(task, clock));
-    }
-
-    /// <summary>The due-date colour is Error for an overdue Task (UX-043).</summary>
-    [Fact]
-    public void ForDue_Overdue_IsError()
-    {
-        ManualTimeProvider clock = ClockAt(new DateTimeOffset(2026, 9, 24, 12, 0, 0, TimeSpan.Zero), 0);
-        TaskItem task = TestTasks.Make(status: TaskState.ToDo, dueDate: new DateOnly(2026, 9, 1));
-
-        Assert.Equal(Color.Error, TaskColors.ForDue(task, clock));
-    }
-
-    /// <summary>The due-date colour is Default when the Task is not overdue.</summary>
-    [Fact]
-    public void ForDue_NotOverdue_IsDefault()
-    {
-        ManualTimeProvider clock = ClockAt(new DateTimeOffset(2026, 9, 24, 12, 0, 0, TimeSpan.Zero), 0);
-        TaskItem task = TestTasks.Make(status: TaskState.ToDo, dueDate: new DateOnly(2026, 9, 24));
-
-        Assert.Equal(Color.Default, TaskColors.ForDue(task, clock));
     }
 }

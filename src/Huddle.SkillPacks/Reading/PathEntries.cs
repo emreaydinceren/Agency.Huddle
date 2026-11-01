@@ -85,13 +85,6 @@ public sealed partial record PathEntries(IReadOnlyList<PathEntry> Entries)
         }
     }
 
-    /// <summary>Whether a SKILLS.md line looks like a computer entry whose name is one character (R003 message).</summary>
-    public static bool IsOneLetterComputerLine(string line)
-    {
-        ArgumentNullException.ThrowIfNull(line);
-        return OneLetterComputerLine().IsMatch(line.Trim());
-    }
-
     /// <summary>The entry that applies to <paramref name="computer"/>: its own entry, else the plain entry, else null.</summary>
     public PathEntry? EntryFor(string computer)
     {
@@ -147,7 +140,4 @@ public sealed partial record PathEntries(IReadOnlyList<PathEntry> Entries)
 
     [GeneratedRegex(@"\A(?<computer>[A-Za-z0-9][A-Za-z0-9-]{1,14}): (?<path>.+)\z", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex ComputerLine();
-
-    [GeneratedRegex(@"\A[A-Za-z0-9]: \S", RegexOptions.CultureInvariant, 1000)]
-    private static partial Regex OneLetterComputerLine();
 }

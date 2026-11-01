@@ -34,11 +34,17 @@ public sealed class ViewJsonTests
     [Fact]
     public void Deserialize_SpecExample_ReadsEveryField()
     {
-        ViewsDocument? document = JsonSerializer.Deserialize<ViewsDocument>(SpecExampleJson, ViewJson.Options);
+        // The shape ViewStore reads: a JSON object with a version and a "views" array whose entries each deserialise as a TaskView.
+        JsonObject? document = JsonNode.Parse(SpecExampleJson)?.AsObject();
 
         Assert.NotNull(document);
-        Assert.Equal(1, document.Version);
-        TaskView view = Assert.Single(document.Views);
+        Assert.Equal(1, document["version"]?.GetValue<int>());
+        JsonArray? entries = document["views"]?.AsArray();
+        Assert.NotNull(entries);
+        JsonNode? entry = Assert.Single(entries);
+        Assert.NotNull(entry);
+        TaskView? view = entry.Deserialize<TaskView>(ViewJson.Options);
+        Assert.NotNull(view);
 
         Assert.Equal("3f2a9c…", view.Id);
         Assert.Equal("Platform board", view.Name);

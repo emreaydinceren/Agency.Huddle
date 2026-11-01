@@ -314,10 +314,11 @@ public sealed partial class DotAcpAgentHost(
     /// <param name="newSessionConfigOptions">The configOptions snapshot from the <c>session/new</c> response.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     /// <returns>
-    /// The successful set's <c>ConfigOptions</c> (taken even when null/empty: an adapter answering
-    /// with no options is saying the new model advertises none, and the pre-switch list would be a
-    /// lie about a model that is no longer current); <paramref name="newSessionConfigOptions"/> on
-    /// every other path (no model requested, not in the catalog, or the adapter rejected the set).
+    /// The successful set's <c>ConfigOptions</c> when it carried any; <paramref name="newSessionConfigOptions"/>
+    /// on every other path (no model requested, not in the catalog, the adapter rejected the set, or
+    /// its answer carried no options). Like <see cref="ApplyEffortAsync"/>, an answer without options
+    /// is not read as "the new model advertises none": handing the next step a null snapshot made
+    /// effort log "not in catalog" and skip a level the adapter does offer.
     /// </returns>
     private async Task<dotacp.protocol.SessionConfigOption[]?> ApplyModelAsync(
         dotacp.client.Connection activeConnection,
@@ -341,23 +342,48 @@ public sealed partial class DotAcpAgentHost(
 
         try
         {
-            dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
-                new dotacp.protocol.SetSessionConfigOptionRequest
-                {
-                    SessionId = sessionId,
-                    ConfigId = configId,
-                    Type = "select",
-                    Value = value,
-                },
-                cancellationToken).ConfigureAwait(false);
+            dotacp.protocol.SessionConfigOption[]? setOptions = await DotAcpAgentHost.SetSelectAsync(
+                activeConnection, sessionId, configId, value, cancellationToken).ConfigureAwait(false);
 
-            return setResponse.ConfigOptions;
+            return setOptions ?? newSessionConfigOptions;
         }
         catch (RemoteInvocationException ex)
         {
             DotAcpAgentHost.LogModelConfigFailed(this.logger, model, ex.Message);
             return newSessionConfigOptions;
         }
+    }
+
+    /// <summary>
+    /// Sends <c>session/set_config_option</c> for one select option and returns the options the
+    /// response carries. Each caller keeps its own catch and log, because the warnings differ, and
+    /// falls back to its own previous snapshot when the response carries none.
+    /// </summary>
+    /// <param name="activeConnection">The connection to send the request on.</param>
+    /// <param name="sessionId">The session id the option belongs to.</param>
+    /// <param name="configId">The adapter-defined id of the option to set.</param>
+    /// <param name="value">The value to select.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The response's <c>ConfigOptions</c>, or null when the adapter sent none.</returns>
+    /// <exception cref="RemoteInvocationException">The adapter rejected the set.</exception>
+    private static async Task<dotacp.protocol.SessionConfigOption[]?> SetSelectAsync(
+        dotacp.client.Connection activeConnection,
+        string sessionId,
+        dotacp.protocol.SessionConfigId configId,
+        dotacp.protocol.SessionConfigValueId value,
+        CancellationToken cancellationToken)
+    {
+        dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
+            new dotacp.protocol.SetSessionConfigOptionRequest
+            {
+                SessionId = sessionId,
+                ConfigId = configId,
+                Type = "select",
+                Value = value,
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return setResponse.ConfigOptions;
     }
 
     /// <summary>
@@ -397,17 +423,10 @@ public sealed partial class DotAcpAgentHost(
 
         try
         {
-            dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
-                new dotacp.protocol.SetSessionConfigOptionRequest
-                {
-                    SessionId = sessionId,
-                    ConfigId = configId,
-                    Type = "select",
-                    Value = value,
-                },
-                cancellationToken).ConfigureAwait(false);
+            dotacp.protocol.SessionConfigOption[]? setOptions = await DotAcpAgentHost.SetSelectAsync(
+                activeConnection, sessionId, configId, value, cancellationToken).ConfigureAwait(false);
 
-            return setResponse.ConfigOptions ?? configOptions;
+            return setOptions ?? configOptions;
         }
         catch (RemoteInvocationException ex)
         {
@@ -461,17 +480,10 @@ public sealed partial class DotAcpAgentHost(
 
         try
         {
-            dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
-                new dotacp.protocol.SetSessionConfigOptionRequest
-                {
-                    SessionId = sessionId,
-                    ConfigId = configId,
-                    Type = "select",
-                    Value = value,
-                },
-                cancellationToken).ConfigureAwait(false);
+            dotacp.protocol.SessionConfigOption[]? setOptions = await DotAcpAgentHost.SetSelectAsync(
+                activeConnection, sessionId, configId, value, cancellationToken).ConfigureAwait(false);
 
-            string? effective = ModeConfigOptions.CurrentValue(setResponse.ConfigOptions);
+            string? effective = ModeConfigOptions.CurrentValue(setOptions);
             if (effective is null)
             {
                 // No mode option came back: the request cannot be verified, so report it as applied.

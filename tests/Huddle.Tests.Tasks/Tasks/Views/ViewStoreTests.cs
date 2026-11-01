@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Tasks.Views;
@@ -337,6 +338,26 @@ public sealed class ViewStoreTests
         Assert.False(result.Saved);
         Assert.Equal(["A built-in View cannot be deleted."], result.Problems);
         Assert.Contains(store.Views, v => v.Id == "all-tasks");
+    }
+
+    /// <summary>
+    /// The watcher's re-read of the store's own write changes nothing, so it raises no second
+    /// <see cref="ViewStore.ViewsChanged"/>. A subscribed component used to re-render about half a second after
+    /// every save, retiring the event-handler ids of elements it had already rendered.
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task Save_WatcherRereadOfOwnWrite_RaisesNoSecondViewsChanged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
+        int changedCount = 0;
+        store.ViewsChanged += () => Interlocked.Increment(ref changedCount);
+
+        Assert.True(store.Save(ListView("custom-1", "Custom View")).Saved);
+        await Task.Delay(TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds * 3), ct);
+
+        Assert.Equal(1, Volatile.Read(ref changedCount));
     }
 
     /// <summary>An external edit to <c>views.json</c> is picked up by the watcher and reflected in <see cref="ViewStore.Views"/>.</summary>

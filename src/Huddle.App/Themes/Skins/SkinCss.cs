@@ -12,12 +12,6 @@ internal static class SkinCss
 {
     private static readonly SearchValues<char> UnsafeFaceCharacters = SearchValues.Create("<>&@;{}\\");
 
-    /// <summary>Renders the registry defaults for <paramref name="mode"/>.</summary>
-    /// <param name="mode">Whether the light or dark default of each token is used.</param>
-    /// <returns>A <c>:root</c> block declaring every token.</returns>
-    public static string RenderDefaults(ThemeMode mode) =>
-        Render(new Dictionary<string, string>(StringComparer.Ordinal), mode, "defaults", null);
-
     /// <summary>Renders the registry defaults for <paramref name="mode"/> with <paramref name="overrides"/> applied.</summary>
     /// <param name="overrides">Token key to skin expression: the tokens the skin sets.</param>
     /// <param name="mode">Whether the light or dark default of each unset token is used.</param>
