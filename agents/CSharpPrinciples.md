@@ -24,7 +24,7 @@ When adding or updating a dependency:
 
 ## What the build enforces
 
-Six analyzer layers run on every `dotnet build`, and anything at `warning` or above
+Seven analyzer layers run on every `dotnet build`, and anything at `warning` or above
 fails it. Knowing which layer a diagnostic comes from tells you where its rule lives.
 
 | Prefix | Source | Where the severity is set |
@@ -35,6 +35,7 @@ fails it. Knowing which layer a diagnostic comes from tells you where its rule l
 | `S` | SonarAnalyzer.CSharp, a curated subset | Opted in by ID in `.editorconfig`; everything else denylisted in `Directory.Build.props` |
 | `MA` | Meziantou.Analyzer, product code under `src/` only (`tests/**` is switched off) | `.editorconfig`; see [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#meziantouanalyzer) |
 | `xUnit` | xunit.v3 analyzers, test projects only | Package defaults |
+| `HUD` | This repo's own rules, `src/Huddle.Analyzers`, referenced by `Huddle.App` | Warning (so a failed build) by default; each rule applies only in an assembly that declares the helper its fix uses. See [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#huddleanalyzers) |
 
 Rules that used to be prose-only and are now enforced, so a violation is a failed build rather
 than a review comment:
@@ -52,6 +53,13 @@ than a review comment:
 | A method is at most 60 lines and 40 statements: extract a private helper | `MA0051` |
 | No parameterless `new Random()` | `RS0030`, listed in `BannedSymbols.txt`. Add a line there to ban another API. |
 | Every test you add has a `///` summary | `agents/scripts/Check-TestDocs.ps1`, run by `Check-All.ps1`. Added lines only; older tests are not rechecked. |
+| An event is raised through `EventRaise.Isolated`, never `?.Invoke` or a direct call, so a throwing subscriber neither skips the others nor fails the raiser | `HUD0001` |
+| A hosted service keeps its lifetime in a `StopSignal`, never a `CancellationTokenSource` field: the host can stop it on one thread while disposing it on another | `HUD0002` |
+
+Two more habits that CI on Linux has punished, and no rule catches yet: a guard that **refuses** a
+path name (Uploads) compares ignoring case on every OS, while one that **allows** a path follows the
+file system; and a path stored by Windows and read back may hold `\`, which `Path.GetFileName` does
+not split on Linux. [Testing.md](Testing.md#passing-on-linux-ci) has the full list.
 
 Per-project exceptions you can rely on: `Huddle.App` and `Huddle.Contracts` suppress
 `CA1848` (LoggerMessage) and `CA1031`; the test projects suppress `CA1707` (underscores
