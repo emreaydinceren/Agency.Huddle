@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -6,19 +7,30 @@ using System.Text.Json.Nodes;
 namespace Agency.Huddle.Acp.DotAcp;
 
 /// <summary>
-/// A read-only <see cref="Stream"/> wrapper over an agent's newline-delimited JSON-RPC output that
-/// rewrites one thing: an inbound <em>request</em> whose top-level <c>method</c> is exactly
-/// <c>elicitation/create</c> (and that carries an <c>id</c>) comes out as <c>_elicitation/create</c>.
-/// Stable dotacp routes only methods that start with an underscore to
-/// <c>IAcpClient.ExtMethodAsync</c> and answers a bare <c>elicitation/create</c> with -32601, so this
-/// is how the host receives the request at all.
+/// A read-only <see cref="Stream"/> wrapper over an agent's newline-delimited JSON-RPC output. It
+/// does two things per line and otherwise forwards every byte unchanged:
+/// it counts each <c>session/update</c> notification into a <see cref="WireOrderLedger"/>, and, when
+/// <c>rewriteElicitation</c> is set, it renames an inbound <em>request</em> whose top-level
+/// <c>method</c> is exactly <c>elicitation/create</c> (and that carries an <c>id</c>) to
+/// <c>_elicitation/create</c>. Stable dotacp routes only methods that start with an underscore to
+/// <c>IAcpClient.ExtMethodAsync</c> and answers a bare <c>elicitation/create</c> with -32601, so the
+/// rename is how the host receives the request at all.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The wrapper buffers up to a newline and decides per line. A cheap byte search filters out almost
-/// every line; only a line that contains the method name is parsed, and only a request with exactly
-/// that method is re-serialised. Every other line is forwarded byte for byte - a
-/// <c>session/update</c> text chunk may legitimately contain the string, so a byte replace is never
-/// safe. A final line with no trailing newline is flushed at end of stream.
+/// every line; only a line that contains a method name is parsed. Every other line is forwarded byte
+/// for byte - a <c>session/update</c> text chunk may legitimately contain either string, so a byte
+/// match or replace is never safe. A final line with no trailing newline is flushed at end of stream.
+/// </para>
+/// <para>
+/// <b>Counting is the wire-order barrier's half of the bargain.</b> A line is counted when it is
+/// queued for the reader, before any later line can be consumed, so by the time StreamJsonRpc sees a
+/// <c>session/prompt</c> response every update the agent wrote ahead of it is already in the ledger.
+/// Only a notification (no <c>id</c>) whose top-level <c>method</c> is exactly <c>session/update</c>
+/// and whose <c>params.sessionId</c> is a string is counted. Those lines are read with
+/// <see cref="Utf8JsonReader"/> and never materialised, since every streamed chunk is one.
+/// </para>
 /// </remarks>
 internal sealed class NdjsonMethodRewriteStream : Stream
 {
@@ -31,6 +43,10 @@ internal sealed class NdjsonMethodRewriteStream : Stream
     private static readonly JsonSerializerOptions WriteOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     private readonly Stream inner;
+
+    private readonly WireOrderLedger ledger;
+
+    private readonly bool rewriteElicitation;
 
     private readonly byte[] readBuffer = new byte[NdjsonMethodRewriteStream.ReadBufferSize];
 
@@ -46,10 +62,15 @@ internal sealed class NdjsonMethodRewriteStream : Stream
 
     /// <summary>Wraps <paramref name="inner"/>, which this stream then owns and disposes with itself.</summary>
     /// <param name="inner">The agent process's standard output.</param>
-    internal NdjsonMethodRewriteStream(Stream inner)
+    /// <param name="ledger">Receives one <see cref="WireOrderLedger.NoteRead"/> per <c>session/update</c> notification line.</param>
+    /// <param name="rewriteElicitation">True to rename inbound <c>elicitation/create</c> requests; false to forward them unchanged.</param>
+    internal NdjsonMethodRewriteStream(Stream inner, WireOrderLedger ledger, bool rewriteElicitation)
     {
         ArgumentNullException.ThrowIfNull(inner);
+        ArgumentNullException.ThrowIfNull(ledger);
         this.inner = inner;
+        this.ledger = ledger;
+        this.rewriteElicitation = rewriteElicitation;
     }
 
     public override bool CanRead => this.inner.CanRead;
@@ -200,6 +221,93 @@ internal sealed class NdjsonMethodRewriteStream : Stream
         return true;
     }
 
+    /// <summary>Reads the session id of a line that is a <c>session/update</c> notification.</summary>
+    /// <param name="body">One line without its terminator.</param>
+    /// <param name="sessionId">The line's <c>params.sessionId</c> when this returns true.</param>
+    /// <returns>True when the line is a JSON-RPC notification (no <c>id</c>) whose top-level <c>method</c> is exactly <c>session/update</c> and whose <c>params.sessionId</c> is a string.</returns>
+    private static bool TryReadSessionUpdate(ReadOnlySpan<byte> body, [NotNullWhen(true)] out string? sessionId)
+    {
+        sessionId = null;
+        if (body.IndexOf("session/update"u8) < 0)
+        {
+            return false;
+        }
+
+        bool isUpdateMethod = false;
+        bool hasId = false;
+        string? found = null;
+        try
+        {
+            Utf8JsonReader reader = new(body);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return false;
+            }
+
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                if (reader.ValueTextEquals("method"u8))
+                {
+                    _ = reader.Read();
+                    isUpdateMethod = reader.TokenType == JsonTokenType.String && reader.ValueTextEquals("session/update"u8);
+                }
+                else if (reader.ValueTextEquals("id"u8))
+                {
+                    hasId = true;
+                    _ = reader.Read();
+                    reader.Skip();
+                }
+                else if (reader.ValueTextEquals("params"u8))
+                {
+                    _ = reader.Read();
+                    found = NdjsonMethodRewriteStream.ReadSessionId(ref reader);
+                }
+                else
+                {
+                    _ = reader.Read();
+                    reader.Skip();
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON (or cut short): an uncounted line is forwarded untouched like any other.
+            return false;
+        }
+
+        sessionId = found;
+        return isUpdateMethod && !hasId && found is not null;
+    }
+
+    /// <summary>Reads the <c>sessionId</c> string out of a <c>params</c> value, leaving the reader on the value's last token.</summary>
+    /// <param name="reader">A reader positioned on the first token of the <c>params</c> value.</param>
+    /// <returns>The session id, or null when <c>params</c> is not an object or has no string <c>sessionId</c>.</returns>
+    private static string? ReadSessionId(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            reader.Skip();
+            return null;
+        }
+
+        string? found = null;
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            bool isSessionId = reader.ValueTextEquals("sessionId"u8);
+            _ = reader.Read();
+            if (isSessionId && reader.TokenType == JsonTokenType.String)
+            {
+                found = reader.GetString();
+            }
+            else
+            {
+                reader.Skip();
+            }
+        }
+
+        return found;
+    }
+
     /// <summary>Takes the result of one inner read: end of stream flushes the unfinished line, anything else is split into lines.</summary>
     /// <param name="read">The count of bytes now in the read buffer, or 0 at end of stream.</param>
     private void Absorb(int read)
@@ -248,7 +356,12 @@ internal sealed class NdjsonMethodRewriteStream : Stream
             body = body[..^1];
         }
 
-        if (NdjsonMethodRewriteStream.TryRewrite(body, out byte[] rewritten))
+        if (NdjsonMethodRewriteStream.TryReadSessionUpdate(body, out string? sessionId))
+        {
+            this.ledger.NoteRead(sessionId);
+        }
+
+        if (this.rewriteElicitation && NdjsonMethodRewriteStream.TryRewrite(body, out byte[] rewritten))
         {
             this.ready.Write(rewritten);
             this.ready.Write(line[body.Length..]);

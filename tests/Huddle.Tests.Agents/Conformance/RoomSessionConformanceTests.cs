@@ -36,9 +36,10 @@ namespace Agency.Huddle.Tests.Conformance;
 /// inbound notification's target method) — a race a single-session Turn rarely exercises enough to
 /// surface. Traced with temporary instrumentation (since reverted); see
 /// <c>Conversation/red-D30-30.1.i-fix.txt</c> for that capture and
-/// <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s remarks for the root cause writeup and the
-/// bounded quiet-window mitigation now in place there (Huddle.Acp, per root <c>CLAUDE.md</c>'s "Two
-/// owners" table, the repo owner authorised this edit).
+/// <c>DotAcpAgentSession.WaitForDispatchBarrierAsync</c>'s remarks for the root cause and the fix:
+/// since 2026-11-01 a dispatch barrier (<c>WireOrderLedger</c>) holds <c>TurnCompleted</c> until
+/// every update read off the wire before the response has been dispatched, replacing the earlier
+/// 100 ms quiet-window mitigation.
 /// </remarks>
 public sealed class RoomSessionConformanceTests
 {

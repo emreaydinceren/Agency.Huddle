@@ -269,7 +269,7 @@ public sealed class DotAcpClientAdapterTests
     public void OnDisconnected_FaultsAllSinksWithAgentDisconnectedException()
     {
         ListLogger<DotAcpClientAdapter> logger = new ListLogger<DotAcpClientAdapter>();
-        DotAcpClientAdapter adapter = new DotAcpClientAdapter(logger);
+        DotAcpClientAdapter adapter = new DotAcpClientAdapter(logger, new WireOrderLedger());
         FakeSessionSink sinkOne = new FakeSessionSink("sess-1");
         FakeSessionSink sinkTwo = new FakeSessionSink("sess-2");
         adapter.Register(sinkOne);
@@ -299,7 +299,7 @@ public sealed class DotAcpClientAdapterTests
     private static Fixture CreateFixture()
     {
         ListLogger<DotAcpClientAdapter> logger = new ListLogger<DotAcpClientAdapter>();
-        DotAcpClientAdapter adapter = new DotAcpClientAdapter(logger);
+        DotAcpClientAdapter adapter = new DotAcpClientAdapter(logger, new WireOrderLedger());
         FakeSessionSink sink = new FakeSessionSink(DotAcpClientAdapterTests.SessionId);
         adapter.Register(sink);
         return new Fixture(adapter, logger, sink);

@@ -32,11 +32,11 @@ namespace Agency.Huddle.Tests.Conformance;
 /// streamed reply was silently truncated to just its first chunk. This class carried a
 /// <c>ChunkedReplyFirstOrderer</c> to force
 /// <see cref="PostAsync_ChunkedReply_DeliversSeveralDraftUpdatesThenPersistsTheMessage"/> ahead of the
-/// Stop test for exactly that reason. <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s remarks
-/// document the root cause and the mitigation now in place (a bounded quiet-window wait before
-/// publishing <c>TurnCompleted</c>, since the underlying dispatch race cannot be closed with a hard
-/// barrier - see those remarks for why); with it, this class's own natural (unordered) test order
-/// passes reliably, proved 10/10 before the orderer was removed, so it no longer carries one.
+/// Stop test for exactly that reason. The root cause was the ACP client dispatching a
+/// <c>session/prompt</c> response ahead of updates the peer wrote before it. A quiet-window wait
+/// first mitigated it, and this class's natural test order passed 10/10 before the orderer was
+/// removed. Since 2026-11-01 a dispatch barrier (<c>WireOrderLedger</c>, see
+/// <c>DotAcpAgentSession.WaitForDispatchBarrierAsync</c>) closes it exactly.
 /// </para>
 /// </remarks>
 public sealed class TurnLifecycleTests

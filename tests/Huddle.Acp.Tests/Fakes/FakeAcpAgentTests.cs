@@ -228,7 +228,7 @@ public sealed class FakeAcpAgentTests
         FakeAcpAgent agent = new FakeAcpAgent(agentEnd);
         _ = agent.RunAsync(CancellationToken.None);
 
-        DotAcpClientAdapter clientAdapter = new DotAcpClientAdapter(new ListLoggerFactory().CreateLogger<DotAcpClientAdapter>());
+        DotAcpClientAdapter clientAdapter = new DotAcpClientAdapter(new ListLoggerFactory().CreateLogger<DotAcpClientAdapter>(), new WireOrderLedger());
         dotacp.client.Connection connection = dotacp.client.Connection.RunClient(clientAdapter, clientEnd, clientEnd, null)
             ?? throw new InvalidOperationException("Failed to create connection.");
 

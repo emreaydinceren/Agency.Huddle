@@ -97,9 +97,8 @@ Two of those steps exist for reasons specific to this repo:
   them on by accident. Expect all eight to report as skipped in every run.
 - **No retry loop.** The sibling Agency repo wraps its test steps in three attempts because
   its functional suite talks to a live model. Nothing here talks to anything, so every test
-  gets exactly one attempt and a failure is a failure. The known race that would otherwise
-  justify retries is quarantined by name instead (below), which keeps the rest of
-  the suite strict — a blanket retry would also have masked a genuine regression.
+  gets exactly one attempt and a failure is a failure. A blanket retry would also mask a
+  genuine regression; a race is fixed at its cause instead (see Quarantined tests below).
 - **No `actions/checkout`, and no other JavaScript action.** Actions of that kind need Node
   in the container, and Node only arrives partway through `validate`. Both jobs clone by hand
   with a token-injected URL and then check out `$GITHUB_SHA`, so every run starts from a
@@ -107,27 +106,16 @@ Two of those steps exist for reasons specific to this repo:
 
 ### Quarantined tests
 
-Two tests are excluded by name in the test step. They are **quarantined, not fixed**, and
-the underlying race is recorded in
-[known-limits.md](../docs/engineering/known-limits.md) as pre-existing.
+None, since 2026-11-01. Two `DotAcpAgentSessionTests` cases were excluded by name for an
+event-ordering race: `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` (about 1 run in 5) and
+`PromptAsync_ThoughtAndToolCallEvents_ArePublished`. A third, in `DotAcpConcurrentHostTests`, showed
+the same race unquarantined. The race was a real content-loss bug in the ACP client, not a test
+flake. The fix is the `WireOrderLedger` dispatch barrier, and
+[known-limits.md](../docs/engineering/known-limits.md) has the history.
 
-> [!IMPORTANT]
-> **A fourth test shows the same race and is not quarantined.** On 2026-09-15, run 607 failed on
-> `DotAcpConcurrentHostTests.TwoHosts_ConcurrentPrompts_EachSessionOnlySeesItsOwnAgentsUpdates`
-> with `Expected: MessageChunk … Actual: TurnCompleted` — event ordering over the fake transport,
-> the same shape as the two `DotAcpAgentSessionTests` entries below. It passed on a re-run of the
-> single job. The change under test touched no file under `src/Huddle.Acp` or
-> `tests/Huddle.Acp.Tests`, and that test file is unchanged since the initial commit, so it is not
-> attributable to the work it failed against. It is left unquarantined on purpose: the race is the
-> ACP effort's to diagnose, and a third filter line would make it easier to forget than to fix.
-
-| Test | Rate | Race |
-| --- | --- | --- |
-| `DotAcpAgentSessionTests.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` | ~1 run in 5 | Event ordering over the fake transport. Passes on rerun. |
-| `DotAcpAgentSessionTests.PromptAsync_ThoughtAndToolCallEvents_ArePublished` | seen once | Same class, same fake transport. Run 582 received `TurnCompleted` where `ToolCallStarted` was expected — the two tool-call notifications never arrived. |
-
-Left unquarantined, a rate like that turns a meaningful share of runs red for reasons
-unrelated to the change under test, which is how a team learns to ignore CI.
+A quarantine line still needs a known-limits entry, the same line in both Gitea workflows and in
+`.github/workflows/ci.yaml`, and a plan to delete it. Treat a red run as a bug to fix at its cause,
+whichever subtree it sits in, never as a reason to add a filter.
 
 > [!NOTE]
 > **Lifted 2026-09-27: `PersonaSupervisorLifecycleTests.Shutdown_DisposesEveryHost`.** It was recorded as
@@ -183,9 +171,7 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
     apt-get update -qq && apt-get install -y -qq nodejs
     dotnet restore Huddle.slnx
     dotnet build   Huddle.slnx --configuration Release --no-restore
-    dotnet test    Huddle.slnx --configuration Release --no-build -- \
-      --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" \
-      --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
+    dotnet test    Huddle.slnx --configuration Release --no-build --
     pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
   '
 ```

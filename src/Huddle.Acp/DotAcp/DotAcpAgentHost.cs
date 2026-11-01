@@ -21,6 +21,8 @@ public sealed partial class DotAcpAgentHost(
 
     private readonly ILogger logger = loggerFactory.CreateLogger<DotAcpAgentHost>();
 
+    private readonly WireOrderLedger ledger = new();
+
     private IAgentProcess? process;
 
     private dotacp.client.Connection? connection;
@@ -52,7 +54,7 @@ public sealed partial class DotAcpAgentHost(
         IAgentProcess launchedProcess = launcher.Launch(processOptions);
         this.process = launchedProcess;
 
-        DotAcpClientAdapter clientAdapter = new DotAcpClientAdapter(loggerFactory.CreateLogger<DotAcpClientAdapter>());
+        DotAcpClientAdapter clientAdapter = new DotAcpClientAdapter(loggerFactory.CreateLogger<DotAcpClientAdapter>(), this.ledger);
         this.adapter = clientAdapter;
 
         TraceSource? trace = null;
@@ -63,17 +65,13 @@ public sealed partial class DotAcpAgentHost(
             trace.Listeners.Add(new LoggerTraceListener(loggerFactory.CreateLogger("Agency.Huddle.Acp.Wire")));
         }
 
-        // Only a host that advertises elicitation can receive elicitation/create, so only that host
-        // reads through the rewrite stream (a host that never advertised sees no change at all).
-        // The connection does not dispose the streams it was given, so DisposeAsync releases the
-        // wrapper itself (the process pipe underneath is released by the process).
-        Stream agentOutput = launchedProcess.StandardOutput;
-        if (options.AdvertiseElicitationForm)
-        {
-            NdjsonMethodRewriteStream rewriter = new(agentOutput);
-            this.rewriteStream = rewriter;
-            agentOutput = rewriter;
-        }
+        // Every host reads through the line stream: it counts each session/update into the ledger in
+        // wire order (the Turn-completion barrier), and renames elicitation/create only for a host
+        // that advertised it (a host that never advertised sees its bytes unchanged). The connection
+        // does not dispose the streams it was given, so DisposeAsync releases the wrapper itself (the
+        // process pipe underneath is released by the process).
+        NdjsonMethodRewriteStream agentOutput = new(launchedProcess.StandardOutput, this.ledger, options.AdvertiseElicitationForm);
+        this.rewriteStream = agentOutput;
 
         dotacp.client.Connection establishedConnection = dotacp.client.Connection.RunClient(
             clientAdapter,
@@ -225,7 +223,8 @@ public sealed partial class DotAcpAgentHost(
             options.PermissionHandler,
             id => activeAdapter.Unregister(id),
             this.logger,
-            models);
+            models,
+            this.ledger);
 
         activeAdapter.Register(session);
 
