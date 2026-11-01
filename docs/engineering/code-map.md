@@ -319,7 +319,6 @@ order decides per Token, independently.
 | `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles that name a hiring-pool job, coverage, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
 | `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
 | `TeamTypes/CandidateTemplate.cs` | One Candidate: an Agent template read from a type's `candidates/*.md`. |
-| `TeamTypes/UserCandidateWriter.cs` | Writes a custom role the Human chose to keep ("Save for next time") into `{DataDir}/TeamTypes/`. |
 | `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each). No Skill packs ship any more: they come from `SKILLS.md`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
 | `Teams/HireService.cs` | Writes one hire as an Agent of a Team, enforces the hire limits, copies its Skills through `ISkillCopier` (`EnsureSkillsAsync`) and starts it; `StartTeamAsync` starts the hired members in order. |
 | `Teams/ISkillAvailability.cs` | What the hire path asks of the registry: a Pack's contents, a Skill's state, and the setup item for one that is not ready. `SkillRegistry` implements it; tests use `FakeSkillAvailability`. |
