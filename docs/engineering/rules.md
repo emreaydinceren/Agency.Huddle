@@ -27,7 +27,7 @@ testing it. This table is binding.
 | **`Team:DataDir` must not be `data`.** | Windows paths are case-insensitive, so it collides with the `src/Huddle.App/Data/` source folder, and the ignore rule then hides the storage layer from git. |
 | **Collection options need no initialiser.** | `ConfigurationBinder` *appends* to a pre-populated collection instead of replacing it, silently doubling the value. Declare nullable, default inside the consumer. |
 | **Both test fixtures must set `Team:DemoAgent:Enabled=false`.** | The demo agents use the names `echo` and `alpha`, which collide with the names the pipe tests register, and one test asserts the sidebar is empty. |
-| **Create the next pipe server instance before any I/O on the accepted one.** | Otherwise the next client fails with "all pipe instances are busy". |
+| **Create the next pipe server instance before any I/O on the accepted one.** | Otherwise the next client fails with "all pipe instances are busy" on Windows, and on Linux is reset outright: the instances share one listening socket, closed with its last instance. `PipeAcceptLoop` enforces it; a handler's synchronous start counts as I/O. |
 | **Every component subscribing to `RoomEvents` must unsubscribe in `Dispose`.** | The hub is a singleton; a leaked component throws on disconnect and never dies. |
 | **An Agent never receives its own Message.** | Structural, in `AgentGateway.DeliverAsync`. It is what stops naive clients echo-looping. |
 | **ACP is off by default and spends real money.** | `Team:Acp:Enabled` defaults to `false`, and both test fixtures pin it `false` explicitly. Turning it on starts real `node` adapter processes that bill the user's Claude subscription. |

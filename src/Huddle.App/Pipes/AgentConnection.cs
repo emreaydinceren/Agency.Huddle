@@ -145,7 +145,7 @@ internal sealed class AgentConnection
     /// <returns><see langword="true"/> when the agent is registered and welcomed; <see langword="false"/> when the connection must end.</returns>
     private async Task<bool> HandshakeAsync(JsonLineStream lineStream, CancellationToken ct)
     {
-        var hello = await ReadHelloAsync(lineStream, ct).ConfigureAwait(false);
+        var hello = await this.ReadHelloAsync(lineStream, ct).ConfigureAwait(false);
         if (hello is null)
         {
             return false;
@@ -205,7 +205,16 @@ internal sealed class AgentConnection
         }
     }
 
-    private static async Task<Hello?> ReadHelloAsync(JsonLineStream lineStream, CancellationToken ct)
+    /// <summary>
+    /// Reads the connection's first envelope and returns it when it is a <see cref="Hello"/>. Every
+    /// other outcome ends the connection before registration, and each one is logged at Warning with
+    /// its reason: a peer that dialled the pipe and never introduced itself is either broken or was
+    /// cut off, and a client that sees only "connection reset" has no other way to learn which.
+    /// </summary>
+    /// <param name="lineStream">The connection's line stream.</param>
+    /// <param name="ct">Cancels the read; the <see cref="HelloTimeout"/> is applied on top of it.</param>
+    /// <returns>The Hello, or <see langword="null"/> when the connection must end.</returns>
+    private async Task<Hello?> ReadHelloAsync(JsonLineStream lineStream, CancellationToken ct)
     {
         using var helloCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         helloCts.CancelAfter(HelloTimeout);
@@ -215,25 +224,46 @@ internal sealed class AgentConnection
         {
             first = await lineStream.ReadAsync(helloCts.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
+            this.LogEndedBeforeHello(null, "no envelope arrived within the Hello timeout");
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Timed out waiting for 'hello'."), ct).ConfigureAwait(false);
             return null;
         }
         catch (JsonException ex)
         {
+            this.LogEndedBeforeHello(ex, "the first line was not a valid envelope");
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, ex.Message), ct).ConfigureAwait(false);
+            return null;
+        }
+        catch (IOException ex)
+        {
+            this.LogEndedBeforeHello(ex, "reading the pipe failed");
+            return null;
+        }
+        catch (ObjectDisposedException ex)
+        {
+            this.LogEndedBeforeHello(ex, "this server closed the pipe");
             return null;
         }
 
         if (first is not Hello hello)
         {
+            this.LogEndedBeforeHello(
+                null,
+                first is null ? "the peer closed the pipe without sending anything" : "the first envelope was " + first.GetType().Name);
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Expected 'hello' as the first message."), ct).ConfigureAwait(false);
             return null;
         }
 
         return hello;
     }
+
+    /// <summary>Logs, at Warning, that this connection ended before its Hello and why.</summary>
+    /// <param name="exception">The failure behind it, or <see langword="null"/> when there was none.</param>
+    /// <param name="reason">A short plain-language reason.</param>
+    private void LogEndedBeforeHello(Exception? exception, string reason) =>
+        this.logger.LogWarning(exception, "Agent connection {ConnectionId} ended before its Hello: {Reason}.", this.ConnectionId, reason);
 
     private async Task<Welcome> BuildWelcomeAsync(User user, CancellationToken ct)
     {
