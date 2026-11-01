@@ -1,12 +1,12 @@
 using Bunit;
 using Bunit.Rendering;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
+using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -21,8 +21,6 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// </summary>
 public sealed class LibraryDocumentEditTests : IDisposable
 {
-    private const string ModulePath = "./library-editor.js";
-
     private readonly DocFixture fixture = DocFixture.Build();
 
     /// <summary>Disposes the underlying temp <c>DataDir</c> and stores.</summary>
@@ -668,42 +666,6 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         Assert.Equal(["plan"], names);
     }
-
-    /// <summary>Switches the document's Read/Edit/Split mode through the toggle group's <c>ValueChanged</c>, as <c>ViewEditorDrawerTests</c> does for its own toggle groups.</summary>
-    private static async Task SwitchModeAsync(IRenderedComponent<ContainerFragment> cut, LibraryMode mode)
-    {
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
-        MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
-        await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(mode));
-    }
-
-    /// <summary>Stubs the <c>library-editor.js</c> module and its <c>create</c> handle (as <see cref="LibraryEditorTests"/> does), with <c>getText</c> defaulting to <paramref name="text"/>.</summary>
-    private static (BunitJSModuleInterop Module, BunitJSModuleInterop Handle) SetupEditorModule(MudBunitContext ctx, string text)
-    {
-        BunitJSModuleInterop module = ctx.JSInterop.SetupModule(ModulePath);
-        BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
-        handle.Setup<string>("getText", _ => true).SetResult(text);
-        handle.SetupVoid("setText", _ => true).SetVoidResult();
-        handle.SetupVoid("dispose", _ => true).SetVoidResult();
-        return (module, handle);
-    }
-
-    private static IRenderedComponent<ContainerFragment> RenderDoc(
-        MudBunitContext ctx,
-        LibraryPath path,
-        LibraryPath? scope = null,
-        EventCallback<LibraryPath> onNavigate = default,
-        EventCallback<LibraryPath> onOpenInLibrary = default,
-        EventCallback<LibraryTreeAction> onAction = default) => ctx.RenderWithPopovers(builder =>
-    {
-        builder.OpenComponent<LibraryDocument>(0);
-        builder.AddAttribute(1, nameof(LibraryDocument.Path), path);
-        builder.AddAttribute(2, nameof(LibraryDocument.Scope), scope);
-        builder.AddAttribute(3, nameof(LibraryDocument.OnNavigate), onNavigate);
-        builder.AddAttribute(4, nameof(LibraryDocument.OnOpenInLibrary), onOpenInLibrary);
-        builder.AddAttribute(5, nameof(LibraryDocument.OnAction), onAction);
-        builder.CloseComponent();
-    });
 
     /// <summary>An isolated fixture pairing a real <see cref="LibraryFileService"/> stack with a <see cref="FakeLibraryNoteResolver"/> and <see cref="FakeTaskReferenceResolver"/> registered for DI.</summary>
     private sealed class DocFixture : IDisposable

@@ -6,6 +6,7 @@ using MudBlazor.Extensions;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
+using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -612,29 +613,6 @@ public sealed class LibraryDocumentReadTests : IDisposable
             || cut.FindComponents<LibraryEditor>().Count > 0));
         Assert.Empty(cut.FindComponents<MudBlazor.MudToggleGroup<LibraryMode>>());
     }
-
-    private static IRenderedComponent<ContainerFragment> RenderDoc(
-        MudBunitContext ctx,
-        LibraryPath path,
-        LibraryPath? scope = null,
-        EventCallback<LibraryPath> onNavigate = default,
-        EventCallback<LibraryPath> onOpenInLibrary = default,
-        EventCallback<LibraryTreeAction> onAction = default,
-        EventCallback onClose = default) => ctx.RenderWithPopovers(builder =>
-    {
-        builder.OpenComponent<LibraryDocument>(0);
-        builder.AddAttribute(1, nameof(LibraryDocument.Path), path);
-        builder.AddAttribute(2, nameof(LibraryDocument.Scope), scope);
-        builder.AddAttribute(3, nameof(LibraryDocument.OnNavigate), onNavigate);
-        builder.AddAttribute(4, nameof(LibraryDocument.OnOpenInLibrary), onOpenInLibrary);
-        builder.AddAttribute(5, nameof(LibraryDocument.OnAction), onAction);
-        if (onClose.HasDelegate)
-        {
-            builder.AddAttribute(6, nameof(LibraryDocument.OnClose), onClose);
-        }
-
-        builder.CloseComponent();
-    });
 
     /// <summary>An isolated fixture pairing a real <see cref="LibraryFileService"/> stack with a <see cref="FakeLibraryNoteResolver"/> and <see cref="FakeTaskReferenceResolver"/> registered for DI.</summary>
     private sealed class DocFixture : IDisposable

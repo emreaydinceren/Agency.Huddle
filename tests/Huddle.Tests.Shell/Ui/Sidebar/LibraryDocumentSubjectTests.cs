@@ -1,6 +1,5 @@
 using Bunit;
 using Bunit.Rendering;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Library;
@@ -8,6 +7,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Ui.Library;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -31,7 +31,7 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
         LibraryPath path = this.library.Resolve(root, "a.md");
         await using MudBunitContext ctx = this.NewContext();
 
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentSubjectTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentSubjectTests.TabId));
 
         cut.WaitForAssertion(() => Assert.Equal(new DocumentSubject(path, LibraryFileKind.Markdown, "# Hello"), LibraryDocumentSubjectTests.Subject(ctx)));
     }
@@ -49,7 +49,7 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
         handle.Setup<string>("getText", _ => true).SetResult("# Hello");
         handle.SetupVoid("setText", _ => true).SetVoidResult();
         handle.SetupVoid("dispose", _ => true).SetVoidResult();
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentSubjectTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentSubjectTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
         MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
         await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(LibraryMode.Split));
@@ -74,7 +74,7 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
         File.Delete(filePath);
         await using MudBunitContext ctx = this.NewContext();
 
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentSubjectTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentSubjectTests.TabId));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-banner")));
         Assert.Null(LibraryDocumentSubjectTests.Subject(ctx));
@@ -90,7 +90,7 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
         LibraryPath path = this.library.ResolveTeams("Marketing/x.png");
         await using MudBunitContext ctx = this.NewContext();
 
-        IRenderedComponent<ContainerFragment> cut = LibraryDocumentSubjectTests.RenderDoc(ctx, path);
+        IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentSubjectTests.TabId));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("img.library-document-image")));
         DocumentSubject subject = Assert.IsType<DocumentSubject>(LibraryDocumentSubjectTests.Subject(ctx));
@@ -100,20 +100,6 @@ public sealed class LibraryDocumentSubjectTests : IDisposable
 
     private static PageSubject? Subject(MudBunitContext ctx) =>
         ctx.Services.GetRequiredService<RightSidebarService>().SubjectFor(LibraryDocumentSubjectTests.TabId);
-
-    private static IRenderedComponent<ContainerFragment> RenderDoc(MudBunitContext ctx, LibraryPath path) =>
-        ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<CascadingValue<TabPageContext>>(0);
-            builder.AddAttribute(1, nameof(CascadingValue<TabPageContext>.Value), new TabPageContext("/library", LibraryDocumentSubjectTests.TabId));
-            builder.AddAttribute(2, nameof(CascadingValue<TabPageContext>.ChildContent), (RenderFragment)(content =>
-            {
-                content.OpenComponent<LibraryDocument>(0);
-                content.AddAttribute(1, nameof(LibraryDocument.Path), path);
-                content.CloseComponent();
-            }));
-            builder.CloseComponent();
-        });
 
     private MudBunitContext NewContext()
     {
