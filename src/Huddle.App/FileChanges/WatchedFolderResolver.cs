@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.CodeAnalysis;
@@ -59,14 +60,13 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
             return false;
         }
 
-        string prefix = dataDir + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        if (!PathContainment.IsInside(fullPath, dataDir, includeRoot: false))
         {
             reason = $"'{fullPath}' is outside {Path.GetFileName(dataDir)}. Only folders inside it can be watched.";
             return false;
         }
 
-        string relativeToDataDir = fullPath[prefix.Length..];
+        string relativeToDataDir = Path.GetRelativePath(dataDir, fullPath);
         string firstSegment = relativeToDataDir.Split(Path.DirectorySeparatorChar, 2)[0];
         if (ReservedFolders.Contains(firstSegment, StringComparer.OrdinalIgnoreCase))
         {
@@ -76,8 +76,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
 
         string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
         string teamsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir));
-        if (string.Equals(fullPath, uploadsRoot, StringComparison.OrdinalIgnoreCase)
-            || fullPath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+        if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true)
             || WatchedFolderResolver.IsTeamUploads(fullPath, teamsRoot))
         {
             reason = "Uploads are announced in the chat, not watched.";
@@ -94,13 +93,12 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
     /// <returns><see langword="true"/> for a Team's Uploads folder or anything under it.</returns>
     private static bool IsTeamUploads(string fullPath, string teamsRoot)
     {
-        string prefix = teamsRoot + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        if (!PathContainment.IsInside(fullPath, teamsRoot, includeRoot: false))
         {
             return false;
         }
 
-        string[] segments = fullPath[prefix.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        string[] segments = Path.GetRelativePath(teamsRoot, fullPath).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         return segments.Length >= 2 && string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
     }
 

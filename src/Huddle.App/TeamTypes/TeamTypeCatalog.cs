@@ -1,4 +1,5 @@
 using Agency.Huddle.App.HiringPool;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -428,7 +429,7 @@ internal sealed class TeamTypeCatalog
 
         string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
         string full = Path.GetFullPath(Path.Combine(typeDir, relativePath));
-        if (full.StartsWith(typeDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(full) && !LeavesTypeFolder(typeDir, full))
+        if (PathContainment.IsInside(full, typeDir, includeRoot: false) && File.Exists(full) && !LeavesTypeFolder(typeDir, full))
         {
             try
             {
@@ -454,7 +455,6 @@ internal sealed class TeamTypeCatalog
     /// <returns><see langword="true"/> when the file must not be read.</returns>
     internal static bool LeavesTypeFolder(string typeDir, string full)
     {
-        string prefix = typeDir + Path.DirectorySeparatorChar;
         string? current = full;
         try
         {
@@ -464,7 +464,7 @@ internal sealed class TeamTypeCatalog
                 if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
                 {
                     FileSystemInfo? target = info.ResolveLinkTarget(returnFinalTarget: true);
-                    if (target is null || !(target.FullName + Path.DirectorySeparatorChar).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    if (target is null || !PathContainment.IsInside(target.FullName, typeDir, includeRoot: true))
                     {
                         return true;
                     }

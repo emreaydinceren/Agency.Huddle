@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.SkillPacks.Reading;
@@ -29,18 +30,8 @@ internal sealed partial class SkillSourcesRemover(
     /// <summary>The start of the outcome when the Source's notes folder could not be deleted; the system's reason follows.</summary>
     public const string NotesNotDeleted = "The rows are gone, but the Source's notes could not be deleted: ";
 
-    /// <summary>The comparer for paths on this machine.</summary>
-    private static StringComparison PathComparison => OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
     /// <summary>Whether <paramref name="path"/>, made full, lies inside <paramref name="folder"/> (§6.12.1 rule 2).</summary>
-    public static bool IsInside(string path, string folder)
-    {
-        ArgumentNullException.ThrowIfNull(path);
-        ArgumentNullException.ThrowIfNull(folder);
-        string full = Path.GetFullPath(path);
-        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)) + Path.DirectorySeparatorChar;
-        return full.StartsWith(root, PathComparison);
-    }
+    public static bool IsInside(string path, string folder) => PathContainment.IsInside(path, folder, includeRoot: false);
 
     /// <summary>Removes a Pack: its holders first (as <paramref name="choice"/> says), then its SKILLS.md row, then its file
     /// when it is inside the folder, then its <c>hidden.json</c> entry, then the log line.</summary>
@@ -324,6 +315,6 @@ internal sealed partial class SkillSourcesRemover(
     /// <summary>The file's path relative to the folder, with <c>/</c>, or the full path when it is outside.</summary>
     private string Relative(string file)
     {
-        return IsInside(file, settings.Dir) ? Path.GetRelativePath(settings.Dir, file).Replace('\\', '/') : file;
+        return IsInside(file, settings.Dir) ? PathContainment.RelativeSlashPath(settings.Dir, file) : file;
     }
 }

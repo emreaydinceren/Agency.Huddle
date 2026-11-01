@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.SkillPacks.Checking;
 using Agency.Huddle.SkillPacks.Resolving;
@@ -81,7 +82,7 @@ internal sealed record PackView(
                     return SkillStateText.For(ItemState.Broken).Sentence;
                 }
 
-                string file = Path.GetRelativePath(registry.SkillSourcesDir, first.File).Replace('\\', '/');
+                string file = PathContainment.RelativeSlashPath(registry.SkillSourcesDir, first.File);
                 return $"{file}: {SkillProblemText.Compose(first, NoEntryFor(snapshot, pack, registry.ComputerName))}";
             case ItemState.NotDownloaded:
                 List<string> missing = [.. pack.SkillNames.Where(name => snapshot.Resolved.FindSkill(name) is not { PathState: SkillPathState.Present })];

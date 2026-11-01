@@ -492,10 +492,9 @@ internal sealed class FileChangeTracker(
             }
         }
 
-        string teamsRootPrefix = teamsRoot + Path.DirectorySeparatorChar;
         for (int index = 0; index < folders.Count; index++)
         {
-            if (!folders[index].PruneUnderscore && FileChangeTracker.IsUnderTeamsRoot(folders[index].FullPath, teamsRoot, teamsRootPrefix))
+            if (!folders[index].PruneUnderscore && FileChangeTracker.IsUnderTeamsRoot(folders[index].FullPath, teamsRoot))
             {
                 folders[index] = folders[index] with { PruneUnderscore = true };
             }
@@ -514,12 +513,10 @@ internal sealed class FileChangeTracker(
 
     /// <summary>
     /// True when <paramref name="fullPath"/> is the Teams root itself or lies inside it, compared
-    /// with <see cref="FolderSnapshot.PathComparer"/> on a separator-terminated prefix, matching
-    /// <see cref="Agency.Huddle.App.Library.LayoutGuard"/>'s own prefix check.
+    /// with <see cref="PathContainment"/>.
     /// </summary>
-    private static bool IsUnderTeamsRoot(string fullPath, string teamsRoot, string teamsRootPrefix) =>
-        FolderSnapshot.PathComparer.Equals(fullPath, teamsRoot)
-        || (fullPath.Length > teamsRootPrefix.Length && FolderSnapshot.PathComparer.Equals(fullPath[..teamsRootPrefix.Length], teamsRootPrefix));
+    private static bool IsUnderTeamsRoot(string fullPath, string teamsRoot) =>
+        PathContainment.IsInside(fullPath, teamsRoot, includeRoot: true);
 
     /// <summary>
     /// Removes any entry under a <c>_</c>-prefixed path segment from <paramref name="snapshot"/>,
@@ -564,15 +561,14 @@ internal sealed class FileChangeTracker(
     /// </summary>
     private static string[] SegmentsBelowTeamsRoot(string folderFullPath, string teamsRoot)
     {
-        string teamsRootPrefix = teamsRoot + Path.DirectorySeparatorChar;
-        if (FolderSnapshot.PathComparer.Equals(folderFullPath, teamsRoot))
+        if (PathContainment.IsInside(folderFullPath, teamsRoot, includeRoot: false))
         {
-            return [];
+            return Path.GetRelativePath(teamsRoot, folderFullPath).Split(Path.DirectorySeparatorChar);
         }
 
-        if (folderFullPath.Length > teamsRootPrefix.Length && FolderSnapshot.PathComparer.Equals(folderFullPath[..teamsRootPrefix.Length], teamsRootPrefix))
+        if (PathContainment.IsInside(folderFullPath, teamsRoot, includeRoot: true))
         {
-            return folderFullPath[teamsRootPrefix.Length..].Split(Path.DirectorySeparatorChar);
+            return [];
         }
 
         return ["", ""];
@@ -606,11 +602,9 @@ internal sealed class FileChangeTracker(
         Dictionary<string, FileEntry> files,
         Dictionary<string, Dictionary<string, FileWriter>> newWriters)
     {
-        string prefix = folder.FullPath + Path.DirectorySeparatorChar;
-
         foreach (string touchedPath in touched)
         {
-            if (!touchedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (!PathContainment.IsInside(touchedPath, folder.FullPath, includeRoot: false))
             {
                 continue;
             }
