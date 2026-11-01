@@ -142,15 +142,45 @@ internal sealed class SessionRegistry
         DateTimeOffset now = this.timeProvider.GetUtcNow();
         lock (this.gate)
         {
-            foreach (string key in this.sessions.Where(pair => now - pair.Value.IssuedAt >= Lifetime).Select(pair => pair.Key).ToList())
-            {
-                _ = this.sessions.Remove(key);
-            }
-
+            _ = this.RemoveExpiredLocked(now);
             this.sessions[Hash(cookie)] = new Session(deviceId, scopes, ingress, tailscaleLogin, now);
         }
 
         return cookie;
+    }
+
+    /// <summary>
+    /// Removes every session older than <see cref="Lifetime"/>, which <see cref="Issue"/> otherwise does only when the next session is issued,
+    /// and forgets the last-seen write times that are past the once-a-minute throttle (they no longer change what <see cref="NoteSeen"/> does).
+    /// </summary>
+    /// <returns>How many sessions were removed.</returns>
+    internal int PruneExpired()
+    {
+        DateTimeOffset now = this.timeProvider.GetUtcNow();
+        lock (this.gate)
+        {
+            int removed = this.RemoveExpiredLocked(now);
+            foreach (string deviceId in this.lastSeenWritten.Where(pair => now - pair.Value >= SeenWriteInterval).Select(pair => pair.Key).ToList())
+            {
+                _ = this.lastSeenWritten.Remove(deviceId);
+            }
+
+            return removed;
+        }
+    }
+
+    /// <summary>Removes the sessions older than <see cref="Lifetime"/>. Called under the lock.</summary>
+    /// <param name="now">The current time.</param>
+    /// <returns>How many were removed.</returns>
+    private int RemoveExpiredLocked(DateTimeOffset now)
+    {
+        List<string> expired = [.. this.sessions.Where(pair => now - pair.Value.IssuedAt >= Lifetime).Select(pair => pair.Key)];
+        foreach (string key in expired)
+        {
+            _ = this.sessions.Remove(key);
+        }
+
+        return expired.Count;
     }
 
     /// <summary>Whether the cookie value names a live session.</summary>

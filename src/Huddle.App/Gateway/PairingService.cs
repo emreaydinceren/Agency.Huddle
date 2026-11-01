@@ -123,6 +123,20 @@ internal sealed class PairingService
         }
     }
 
+    /// <summary>
+    /// Resolves the Feed item of every request that lapsed unanswered and forgets old ones, without waiting for the next caller:
+    /// the housekeeping worker calls it, so a request's card resolves when it expires even if nobody looks at the queue.
+    /// </summary>
+    internal void Sweep()
+    {
+        DateTimeOffset now = this.timeProvider.GetUtcNow();
+        lock (this.gate)
+        {
+            this.AnnounceExpired(now);
+            this.Forget(now);
+        }
+    }
+
     /// <summary>The state of a request id.</summary>
     /// <param name="requestId">The request id.</param>
     public State StateOf(string requestId)
