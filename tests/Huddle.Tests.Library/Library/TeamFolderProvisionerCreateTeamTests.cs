@@ -20,7 +20,7 @@ namespace Agency.Huddle.Tests.Library;
 public sealed class TeamFolderProvisionerCreateTeamTests
 {
     private static TeamFile Sample(string? manager = "Ada") =>
-        new(new VersionedRef("development", "1"), manager, "C:\\Work\\Alpha", "The alpha product", "Process.md", "\nSome notes.\n")
+        new(new VersionedRef("development", "1"), manager, "C:\\Work\\Alpha", "The alpha product", "\nSome notes.\n")
         {
             UnknownLines = ["custom: 'kept'"],
         };

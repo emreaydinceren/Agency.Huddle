@@ -1292,7 +1292,7 @@
 
         string workspaceFolder = this.workspace.Trim();
         string purposeLine = this.PurposeLine;
-        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspaceFolder.Length == 0 ? null : workspaceFolder, purposeLine.Length == 0 ? null : purposeLine, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspaceFolder.Length == 0 ? null : workspaceFolder, purposeLine.Length == 0 ? null : purposeLine, string.Empty);
         TeamCreateResult created = this.Folders.CreateTeam(team, file);
         if (created.Outcome != TeamCreateOutcome.Created)
         {

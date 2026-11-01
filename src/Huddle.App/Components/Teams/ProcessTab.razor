@@ -66,12 +66,12 @@
 
     private LibraryPath? Folder => this.Folders.FindTeam(this.Team).Value;
 
-    private string? FilePath => this.Folder is { } folder ? Path.Combine(folder.FullPath, TeamPaths.ProcessFileName) : null;
+    private string? FilePath => TeamProcessFile.PathOf(this.Folders, this.Team);
 
     private void Load()
     {
         string? path = this.FilePath;
-        this.text = path is not null && File.Exists(path) ? File.ReadAllText(path) : null;
+        this.text = path is not null ? TeamProcessFile.ReadText(path) : null;
         this.document = this.text is not null && ProcessDocument.TryParse(this.text, out ProcessDocument? parsed) ? parsed : null;
     }
 

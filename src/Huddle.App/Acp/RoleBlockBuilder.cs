@@ -84,26 +84,15 @@ internal static class RoleBlockBuilder
             return null;
         }
 
-        string path = Path.Combine(teamsRoot, team, TeamPaths.ProcessFileName);
-        try
+        string? text = TeamProcessFile.ReadText(Path.Combine(teamsRoot, team, TeamPaths.ProcessFileName));
+        if (text is null)
         {
-            if (!File.Exists(path))
-            {
-                return null;
-            }
+            return null;
+        }
 
-            return isManager
-                ? new ProcessBlockInput(true, File.ReadAllText(path))
-                : new ProcessBlockInput(false, $"Teams/{team}/{TeamPaths.ProcessFileName}");
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
+        return isManager
+            ? new ProcessBlockInput(true, text)
+            : new ProcessBlockInput(false, $"Teams/{team}/{TeamPaths.ProcessFileName}");
     }
 
     /// <summary>Reads the <c>consult_when</c> line out of a colleague's public job description.</summary>

@@ -14,16 +14,20 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="Manager">The manager Agent's name, or <see langword="null"/> when none is set.</param>
 /// <param name="Workspace">The workspace folder the Team works in, or <see langword="null"/>.</param>
 /// <param name="Owns">The one-line statement of what the Team owns, or <see langword="null"/>.</param>
-/// <param name="Process">The process document file name, normally <c>Process.md</c>.</param>
 /// <param name="Notes">The text after the frontmatter, LF-only, kept verbatim.</param>
-internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? Workspace, string? Owns, string Process, string Notes)
+/// <remarks>
+/// The Process document is always <see cref="TeamPaths.ProcessFileName"/> (see <see cref="TeamProcessFile"/>). Files
+/// written before issue #312 carry a <c>process:</c> line; it is read as a known key and dropped, so the next rewrite
+/// removes it rather than keeping a setting nothing reads.
+/// </remarks>
+internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? Workspace, string? Owns, string Notes)
 {
     private const string Delimiter = "---";
     private const string TeamTypeKey = "teamType";
     private const string ManagerKey = "manager";
     private const string WorkspaceKey = "workspace";
     private const string OwnsKey = "owns";
-    private const string ProcessKey = "process";
+    private const string RetiredProcessKey = "process";
     private const string OnboardedKey = "onboarded";
     private const string AvatarLabelKey = "avatarLabel";
     private const string AvatarImageKey = "avatarImage";
@@ -80,14 +84,12 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             return false;
         }
 
-        string process = values.GetValueOrDefault(ProcessKey, string.Empty);
         string notes = string.Join('\n', lines[(closing + 1)..]);
         file = new TeamFile(
             teamType,
             NullIfBlank(values.GetValueOrDefault(ManagerKey)),
             NullIfBlank(values.GetValueOrDefault(WorkspaceKey)),
             NullIfBlank(values.GetValueOrDefault(OwnsKey)),
-            string.IsNullOrWhiteSpace(process) ? TeamPaths.ProcessFileName : process,
             notes)
         {
             UnknownLines = unknown,
@@ -210,7 +212,6 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             AppendScalar(builder, OwnsKey, this.Owns);
         }
 
-        AppendScalar(builder, ProcessKey, this.Process);
         if (this.Onboarded)
         {
             builder.Append(OnboardedKey).Append(": true\n");
@@ -235,7 +236,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, ManagerKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, WorkspaceKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, OwnsKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(key, ProcessKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, RetiredProcessKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarLabelKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarImageKey, StringComparison.OrdinalIgnoreCase)

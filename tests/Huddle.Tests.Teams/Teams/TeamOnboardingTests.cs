@@ -29,12 +29,12 @@ public sealed class TeamOnboardingTests
     [Fact]
     public void TeamFile_Onboarded_RoundTrips()
     {
-        TeamFile file = new(new VersionedRef("web", "1.0.0"), "Lee", null, null, TeamPaths.ProcessFileName, string.Empty) { Onboarded = true };
+        TeamFile file = new(new VersionedRef("web", "1.0.0"), "Lee", null, null, string.Empty) { Onboarded = true };
 
         string text = file.Compose();
 
         Assert.True(TeamFile.TryParse(text, out TeamFile? parsed));
-        Assert.Equal("---\nteamType: 'web@1.0.0'\nmanager: 'Lee'\nprocess: 'Process.md'\nonboarded: true\n---\n", text);
+        Assert.Equal("---\nteamType: 'web@1.0.0'\nmanager: 'Lee'\nonboarded: true\n---\n", text);
         Assert.True(parsed.Onboarded);
     }
 
@@ -42,7 +42,7 @@ public sealed class TeamOnboardingTests
     [Fact]
     public void TeamFile_NoMarker_NotOnboarded()
     {
-        TeamFile file = new(new VersionedRef("web", "1.0.0"), null, null, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(new VersionedRef("web", "1.0.0"), null, null, null, string.Empty);
 
         Assert.DoesNotContain("onboarded", file.Compose());
         Assert.False(file.Onboarded);

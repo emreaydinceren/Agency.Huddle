@@ -44,26 +44,6 @@ internal sealed class TeamOnboarding(ITeamFolders folders, IPromptSource prompts
         return folders.UpdateTeamFile(team, static current => current with { Onboarded = true });
     }
 
-    private string? ReadSteps(string team)
-    {
-        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
-        if (folder.Value is null)
-        {
-            return null;
-        }
-
-        string path = Path.Combine(folder.Value.FullPath, TeamPaths.ProcessFileName);
-        try
-        {
-            return File.Exists(path) ? ProcessDocument.OnboardingSteps(File.ReadAllText(path)) : null;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
+    private string? ReadSteps(string team) =>
+        TeamProcessFile.Read(folders, team) is { } text ? ProcessDocument.OnboardingSteps(text) : null;
 }

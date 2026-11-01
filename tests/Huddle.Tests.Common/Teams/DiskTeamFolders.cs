@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Teams;
 internal sealed class DiskTeamFolders(string folder) : ITeamFolders
 {
     /// <summary>Gets or sets the Team file; <see langword="null"/> means the Team has none.</summary>
-    public TeamFile? File { get; set; } = new(new VersionedRef("web", "1.2.0"), null, null, null, TeamPaths.ProcessFileName, string.Empty);
+    public TeamFile? File { get; set; } = new(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty);
 
     /// <inheritdoc />
     public LibraryResult<LibraryPath> EnsureTeam(string name)

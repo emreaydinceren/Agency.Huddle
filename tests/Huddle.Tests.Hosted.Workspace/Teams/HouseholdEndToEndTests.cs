@@ -43,7 +43,7 @@ public sealed class HouseholdEndToEndTests
         IServiceProvider services = host.Services;
         TeamTypeManifest type = services.GetRequiredService<TeamTypeCatalog>().Find(TypeId) ?? throw new InvalidOperationException("The household type is not in the catalog.");
         ITeamFolders folders = services.GetRequiredService<ITeamFolders>();
-        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, null, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, null, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(TeamName, file).Outcome);
         Assert.Equal(ProvisionResult.Created, services.GetRequiredService<ProcessProvisioner>().ProvisionDefault(TeamName));
 
