@@ -117,17 +117,13 @@ public sealed class ChatServiceReferenceSnapshotTests
     /// <summary>A Team catalog whose lookup fails, standing in for a store that throws.</summary>
     private sealed class ThrowingCatalog : ITeamCatalog
     {
-        private Action? changed;
-
         /// <inheritdoc />
         public IReadOnlyList<TeamSummary> Teams => [];
 
+#pragma warning disable CS0067 // Changed is part of ITeamCatalog; this stand-in never changes, so it never raises it.
         /// <inheritdoc />
-        public event Action? Changed
-        {
-            add => this.changed += value;
-            remove => this.changed -= value;
-        }
+        public event Action? Changed;
+#pragma warning restore CS0067
 
         /// <inheritdoc />
         public TeamSummary? Find(string team) => throw new InvalidOperationException("catalog down");
