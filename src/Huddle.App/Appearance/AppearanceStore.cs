@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -7,7 +6,6 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
 using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Appearance;
 
@@ -49,18 +47,6 @@ namespace Agency.Huddle.App.Appearance;
 /// </remarks>
 internal sealed partial class AppearanceStore : IDisposable
 {
-    // See PromptStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
-    // rather than using it directly: that instance has no Encoder set, so it inherits
-    // JavaScriptEncoder.Default, which escapes every quote and em-dash as a \uXXXX sequence - exactly
-    // wrong for a file a Human hand-edits (traps.md: "ProtocolJson.Options escapes anything unsafe
-    // for HTML, which ruins a file a human edits."). WriteIndented makes the file readable in the
-    // first place.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly string path;
     private readonly ILogger<AppearanceStore> logger;
 
@@ -666,7 +652,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// <param name="document">The document to write, unknown top-level keys and all - see the class remarks.</param>
     private void WriteDocumentToDisk(JsonObject document)
     {
-        var json = document.ToJsonString(IndentedJsonOptions);
+        var json = document.ToJsonString(StoreJson.Indented);
         AtomicFile.WriteText(this.path, json);
     }
 

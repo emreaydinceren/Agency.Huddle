@@ -1,10 +1,8 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
 
@@ -19,13 +17,6 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
     private const string MessagesKey = "transcriptCatchUpMessages";
     private const string TokensKey = "transcriptCatchUpTokens";
     private const string FileName = "session-settings.json";
-
-    // Derives from ProtocolJson.Options as AppearanceStore does, but with a relaxed encoder: the file is hand-edited.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     private readonly string path;
     private readonly int defaultMessages;
@@ -187,7 +178,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
             return;
         }
 
-        AtomicFile.WriteText(this.path, document.ToJsonString(IndentedJsonOptions));
+        AtomicFile.WriteText(this.path, document.ToJsonString(StoreJson.Indented));
     }
 
     private State BuildState(JsonObject document, string? baseError)

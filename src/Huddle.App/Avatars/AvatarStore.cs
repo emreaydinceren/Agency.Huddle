@@ -1,11 +1,9 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Avatars;
 
@@ -53,28 +51,6 @@ namespace Agency.Huddle.App.Avatars;
 /// </remarks>
 internal sealed partial class AvatarStore : IDisposable
 {
-    // See AppearanceStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
-    // rather than using it directly - and it matters MORE here than it does for themes. ProtocolJson.Options
-    // sets no Encoder, so it inherits JavaScriptEncoder.Default, which escapes every non-ASCII character
-    // as a \uXXXX sequence. A theme id is ASCII, so that default was merely noisy; an avatar label is
-    // free text a Human typed - an accented name, a symbol, a single-codepoint emoji such as U+2615 -
-    // and JavaScriptEncoder.Default would turn every one of those into an unreadable \uXXXX escape in a
-    // file a Human is meant to open and hand-edit. UnsafeRelaxedJsonEscaping leaves all of that alone.
-    //
-    // It does NOT reach a label built from a UTF-16 surrogate pair - most full-colour emoji, including
-    // the very one a picker would suggest first. System.Text.Json always writes a character outside the
-    // Basic Multilingual Plane as a \uXXXX\uXXXX pair, for every built-in and custom JavaScriptEncoder
-    // alike (verified directly: even JavaScriptEncoder.Create(UnicodeRanges.All) still escapes one).
-    // There is no Encoder setting that reaches further than the BMP, so a label that needs a surrogate
-    // pair is accepted, stored and rendered correctly, but is NOT spared this one cosmetic escape on
-    // disk - a System.Text.Json ceiling this store cannot raise, not a defect in it. WriteIndented makes
-    // everything this Encoder does reach readable in the first place.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     // Gives every JsonObject this store builds or parses OrdinalIgnoreCase lookups - see the class
     // remarks' paragraph on case-insensitivity for why this is enough on its own, with no separate
     // case-folding lookup of this store's own.
@@ -475,7 +451,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// <param name="document">The document to write, every other Name's entry included - see the class remarks.</param>
     private void WriteDocumentToDisk(JsonObject document)
     {
-        var json = document.ToJsonString(IndentedJsonOptions);
+        var json = document.ToJsonString(StoreJson.Indented);
         AtomicFile.WriteText(this.path, json);
     }
 

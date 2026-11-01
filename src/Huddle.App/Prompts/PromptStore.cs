@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
@@ -45,29 +44,6 @@ namespace Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class PromptStore : IPromptSource, IDisposable
 {
-    // ProtocolJson.Options writes compact (non-indented) JSON, appropriate for the line-delimited wire
-    // protocol it was built for. prompts.json is a file a human is expected to hand-edit, so writing
-    // through it here (rather than an unrelated fresh JsonSerializerOptions) keeps every other
-    // setting - camelCase, case-insensitive reads - in step with the rest of the app while adding only
-    // the indentation this file specifically needs.
-    //
-    // ProtocolJson.Options also sets no Encoder, so it inherits JavaScriptEncoder.Default, which escapes
-    // anything unsafe to drop into HTML or script - every em-dash, apostrophe, quote and angle bracket
-    // becomes a \uXXXX sequence. That is the right call for wire JSON that might be interpolated
-    // somewhere unknown, and the wrong one here: this file is written to disk and read back by this
-    // same serializer, never embedded in HTML or script, so JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    // is not unsafe in this use - "unsafe" names the HTML/script-injection risk this encoder accepts,
-    // and no such context exists for a file that only ever round-trips through JsonSerializer. The
-    // reason to choose it is simply that a human hand-edits this file, and escaped em-dashes and angle
-    // brackets make it unreadable - worse, a user who types a literal "<name>" into prompts.json would see
-    // the app rewrite it as "\u003Cname\u003E" on the very next save, which reads as corruption rather
-    // than as a JSON encoding detail.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly string path;
     private readonly ILogger<PromptStore> logger;
 
@@ -418,7 +394,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// <param name="overrides">The overrides to write, keyed by <see cref="PromptDefinition.Key"/> (an unknown key included, so a user's data is never dropped).</param>
     private void WriteOverridesToDisk(IReadOnlyDictionary<string, string> overrides)
     {
-        var json = JsonSerializer.Serialize(overrides, IndentedJsonOptions);
+        var json = JsonSerializer.Serialize(overrides, StoreJson.Indented);
         AtomicFile.WriteText(this.path, json);
     }
 

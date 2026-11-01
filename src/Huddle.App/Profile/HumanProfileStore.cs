@@ -2,7 +2,6 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -33,14 +32,6 @@ namespace Agency.Huddle.App.Profile;
 internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
 {
     private const string FileName = "profile.json";
-
-    // Relaxed escaping so a Human's hand-edited file keeps its quotes and accents readable - see
-    // AppearanceStore.IndentedJsonOptions.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     private readonly string path;
     private readonly string defaultName;
@@ -134,7 +125,7 @@ internal sealed class HumanProfileStore : IHumanIdentity, IDisposable
             SetOrRemove(document, "title", normalised.Title);
             SetOrRemove(document, "description", normalised.Description);
 
-            AtomicFile.WriteText(this.path, document.ToJsonString(IndentedJsonOptions));
+            AtomicFile.WriteText(this.path, document.ToJsonString(StoreJson.Indented));
             after = new Snapshot(normalised, Saved: true);
             this.watched.Current = after;
         }
