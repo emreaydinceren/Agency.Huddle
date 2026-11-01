@@ -12,6 +12,11 @@
 
     The row performs the Archive and Delete itself through ChatService and reports a refusal through
     OnError (null clears it); the parent list refreshes on RoomEvents.RoomsChanged, which both publish.
+
+    The parent passes the Room's Members, read for every row in one ITeamDirectory.GetMembersByRoomAsync
+    alongside its Rooms. Every write that changes a Room's Members or a Member's Name publishes
+    RoomsChanged, so they are as fresh as the Rooms; a row that queried its own Members ran one query per
+    row on every parameter set.
 *@
 
 @using Agency.Huddle.App.Avatars
@@ -19,7 +24,6 @@
 @inject ChatService ChatService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
-@inject ITeamDirectory TeamDirectory
 @inject AvatarStore Avatars
 
 <div class="hover-reveal-row"
@@ -85,6 +89,10 @@
     [Parameter, EditorRequired]
     public required Room Room { get; set; }
 
+    /// <summary>The Room's Members, from the parent's one <see cref="ITeamDirectory.GetMembersByRoomAsync"/> read.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<User> Members { get; set; }
+
     /// <summary>The Team to show muted in brackets after the name (an orphaned scoped Room), or <see langword="null"/> for none.</summary>
     [Parameter]
     public string? TeamLabel { get; set; }
@@ -98,10 +106,9 @@
     public EventCallback<string?> OnError { get; set; }
 
     /// <summary>Finds the Room's one Agent when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        IReadOnlyList<User> members = await this.TeamDirectory.GetRoomMembersAsync(this.Room.Id);
-        List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
+        List<User> agents = [.. this.Members.Where(static member => member.Kind == UserKind.Agent)];
         this.oneToOneAgent = agents.Count == 1 ? agents[0] : null;
     }
 

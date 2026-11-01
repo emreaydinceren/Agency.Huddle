@@ -208,6 +208,28 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal("echo", stillEcho.Name);
     }
 
+    /// <summary>The batched read gives every Room exactly what <c>GetRoomMembersAsync</c> gives it, in the same order, keyed by Room id.</summary>
+    [Fact]
+    public async Task GetMembersByRoomAsync_MatchesEachRoomsOwnRead()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(echo);
+        Assert.NotNull(alpha);
+        var direct = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var group = await directory.CreateRoomAsync("group", [alpha.Id, KnownIds.Human, echo.Id], ct);
+
+        var byRoom = await directory.GetMembersByRoomAsync(ct);
+
+        Assert.Equal([direct.Id, group.Id], byRoom.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal([alpha.Id, KnownIds.Human, echo.Id], byRoom[group.Id].Select(static user => user.Id));
+        Assert.Equal((await directory.GetRoomMembersAsync(direct.Id, ct)).Select(static user => user.Id), byRoom[direct.Id].Select(static user => user.Id));
+        Assert.Equal((await directory.GetRoomMembersAsync(group.Id, ct)).Select(static user => user.Id), byRoom[group.Id].Select(static user => user.Id));
+    }
+
     /// <summary>Renaming an Agent leaves its Room memberships intact under the same id.</summary>
     [Fact]
     public async Task RenameUser_Agent_PreservesRoomMembershipAndRoomsForUser()

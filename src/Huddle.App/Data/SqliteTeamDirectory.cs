@@ -340,6 +340,30 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             ReadUser,
             ct).ConfigureAwait(false);
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<User>>> GetMembersByRoomAsync(CancellationToken ct = default)
+    {
+        // ReadUser reads columns 0-3 positionally, so the Room id goes last.
+        List<(string RoomId, User Member)> rows = await this.QueryAsync(
+            """
+            SELECT u.id, u.name, u.kind, u.description, m.room_id
+            FROM room_members m
+            JOIN users u ON u.id = m.user_id
+            ORDER BY m.rowid;
+            """,
+            null,
+            static reader => (reader.GetString(4), ReadUser(reader)),
+            ct).ConfigureAwait(false);
+
+        Dictionary<string, IReadOnlyList<User>> byRoom = new(StringComparer.Ordinal);
+        foreach (IGrouping<string, (string RoomId, User Member)> room in rows.GroupBy(static row => row.RoomId, StringComparer.Ordinal))
+        {
+            byRoom[room.Key] = [.. room.Select(static row => row.Member)];
+        }
+
+        return byRoom;
+    }
+
     public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default) =>
         this.CreateRoomAsync(name, memberIds, null, false, ct);
 

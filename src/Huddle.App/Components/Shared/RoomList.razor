@@ -52,7 +52,7 @@
                              Expanded="this.IsFolderOpen(groupKey)" ExpandedChanged="@(open => this.SetFolderOpenAsync(groupKey, open))">
                     @foreach (var room in SidebarRows.Visible(group.Rooms, this.showAllGroups.Contains(groupKey), this.IsActiveRoom))
                     {
-                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" />
+                        <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" OnError="this.OnRowError" />
                     }
                     <ShowAllRow Total="group.Rooms.Count" Expanded="this.showAllGroups.Contains(groupKey)" OnToggle="@(() => this.ToggleShowAllGroup(groupKey))" />
                 </MudNavGroup>
@@ -68,7 +68,7 @@
                              Expanded="this.IsFolderOpen(NeedsYouFolder)" ExpandedChanged="@(open => this.SetFolderOpenAsync(NeedsYouFolder, open))">
                     @foreach (var room in this.WaitingRooms)
                     {
-                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
+                        <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
                     }
                 </MudNavGroup>
             }
@@ -82,7 +82,7 @@
                 {
                     @foreach (var room in this.RestRooms)
                     {
-                        <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
+                        <RoomNavRow @key="room.Id" Room="room" Members="this.MembersOf(room)" OnError="this.OnRowError" TeamLabel="@(room.Team)" />
                     }
                 }
                 <NewChat />
@@ -93,6 +93,7 @@
 
 @code {
     private IReadOnlyList<Room> rooms = [];
+    private IReadOnlyDictionary<string, IReadOnlyList<User>> membersByRoom = new Dictionary<string, IReadOnlyList<User>>(StringComparer.Ordinal);
     private string? error;
 
     /// <summary>Folder keys of the All grouping; a control character keeps them apart from every Team name.</summary>
@@ -257,10 +258,15 @@
     private async Task LoadAsync()
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
+        this.membersByRoom = await this.TeamDirectory.GetMembersByRoomAsync();
         this.rooms = [.. all.Where(room => !room.Archived && (room.Team is null || this.Catalog.Find(room.Team) is null))];
         this.groups = RoomGroups.ByTeam([.. all.Where(static room => !room.Archived)]);
         this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
     }
+
+    /// <summary>The Room's Members from the last load, or none for a Room created since.</summary>
+    private IReadOnlyList<User> MembersOf(Room room) =>
+        this.membersByRoom.TryGetValue(room.Id, out IReadOnlyList<User>? members) ? members : [];
 
     private void OnRowError(string? message)
     {
