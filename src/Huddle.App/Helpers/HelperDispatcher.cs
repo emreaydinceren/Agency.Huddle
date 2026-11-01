@@ -24,7 +24,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     private readonly TimeProvider clock;
     private readonly HelperFeed? feed;
     private readonly SemaphoreSlim concurrency;
-    private readonly CancellationTokenSource stopping = new();
+    private readonly StopSignal stopping = new();
     private bool stopped;
     private bool disposed;
     private readonly HashSet<Task> running = [];
@@ -135,7 +135,9 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             inFlight = [.. this.running];
         }
 
-        this.CancelUnlessDisposed();
+        // A Dispose on the host's other thread can land after the check above (the TeamRoomReconciler race of CI run
+        // 1260); StopSignal makes this Stop safe either way.
+        this.stopping.Stop();
         try
         {
             await Task.WhenAll(inFlight).WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -163,29 +165,10 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
                 entry.Timer?.Dispose();
             }
 
-            // Cancelled before it is disposed, and under the gate CancelUnlessDisposed takes, so a StopAsync racing
-            // this Dispose finds either a live source to cancel or one this has already cancelled.
-            this.stopping.Cancel();
             this.stopping.Dispose();
         }
 
         this.concurrency.Dispose();
-    }
-
-    /// <summary>
-    /// Cancels the dispatcher's runs under <see cref="gate"/>. Under WebApplicationFactory the factory's stop and the
-    /// host's Dispose run on two threads, so a Dispose can land after StopAsync's own check; it cancels the source
-    /// before disposing it, so there is nothing left to do then (the TeamRoomReconciler race of CI run 1260).
-    /// </summary>
-    private void CancelUnlessDisposed()
-    {
-        lock (this.gate)
-        {
-            if (!this.disposed)
-            {
-                this.stopping.Cancel();
-            }
-        }
     }
 
     /// <summary>Starts or restarts the key's wait, never past <see cref="MaxWaitMultiple"/> times the Helper's wait from the first save. Called with the gate held.</summary>
@@ -258,7 +241,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         {
             await this.JudgeAsync(entry, input).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (this.stopping.IsCancellationRequested)
+        catch (OperationCanceledException) when (this.stopping.IsStopped)
         {
             // Shutdown cancelled the run; the pending input is dropped on purpose.
         }
@@ -274,7 +257,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             lock (this.gate)
             {
                 entry.Running = false;
-                if (entry.Next is not null && !this.stopping.IsCancellationRequested)
+                if (entry.Next is not null && !this.stopping.IsStopped)
                 {
                     entry.Input = entry.Next;
                     entry.Next = null;

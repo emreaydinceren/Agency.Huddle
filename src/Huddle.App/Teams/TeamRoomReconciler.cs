@@ -22,7 +22,7 @@ internal sealed partial class TeamRoomReconciler(
     IFeedPublisher? feed = null) : IHostedService, IDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
-    private readonly CancellationTokenSource stopping = new();
+    private readonly StopSignal stopping = new();
     private readonly Lock sync = new();
     private readonly HashSet<string> lastSeenTeams = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> archivedByReconciler = new(StringComparer.Ordinal);
@@ -73,7 +73,9 @@ internal sealed partial class TeamRoomReconciler(
 
         catalog.Changed -= this.OnSignal;
         events.RoomsChanged -= this.OnSignal;
-        this.CancelUnlessDisposed();
+        // Under WebApplicationFactory the factory's stop and the host's Dispose run on two threads, so Dispose can land
+        // after the check above (CI run 1260); StopSignal makes this Stop safe either way.
+        this.stopping.Stop();
         await loop.ConfigureAwait(false);
     }
 
@@ -93,7 +95,7 @@ internal sealed partial class TeamRoomReconciler(
             this.disposed = true;
             catalog.Changed -= this.OnSignal;
             events.RoomsChanged -= this.OnSignal;
-            this.stopping.Cancel();
+            this.stopping.Stop();
             if (!this.running)
             {
                 this.ReleaseResources();
@@ -101,23 +103,7 @@ internal sealed partial class TeamRoomReconciler(
         }
     }
 
-    /// <summary>Disposes the gate and the stop token source. Called once, with <see cref="sync"/> held, when no run is active.</summary>
-    /// <summary>
-    /// Cancels the loop's token under the same lock <see cref="Dispose"/> takes. Under WebApplicationFactory the
-    /// factory's stop and the host's Dispose run on two threads, so Dispose can land after StopAsync's own check and
-    /// dispose the token source (CI run 1260). Dispose cancels it first, so there is nothing left to do then.
-    /// </summary>
-    private void CancelUnlessDisposed()
-    {
-        lock (this.sync)
-        {
-            if (!this.disposed)
-            {
-                this.stopping.Cancel();
-            }
-        }
-    }
-
+    /// <summary>Disposes the gate and the stop signal. Called once, with <see cref="sync"/> held, when no run is active.</summary>
     private void ReleaseResources()
     {
         this.gate.Dispose();
