@@ -147,6 +147,15 @@ Copying to `/src` keeps the Linux `bin`/`obj` out of your Windows checkout. A fa
 exactly the full timeout on every run is an event that never came, not a slow run. Raising the
 budget only makes those failures slower.
 
+Check that claim before acting on it: a budget that also covers the fixture's start fails at its
+timeout too. A process runs its tests in the same order every time, so a failure that needs the
+test to run first in a cold process never shows under `-class`. Put it first with `-method`, beside
+one other class for load. `PersonaSupervisorLifecycleTests.Enabled_StartsOneHostPerPersonaFile`
+was this. With the test first, 24 processes and 4 CPUs, `PipeHostFixture.StartAsync` took 6-8 s
+of its shared 10 s token, and 3 of 120 runs failed at 10.0 s. The Persona files had already been
+found and both hosts were a few milliseconds from running. The test now starts its 10 s after the
+fixture is up, and bounds the start with `TestBudgets.Slowest`.
+
 Delete a `--filter-not-method` line as its race is diagnosed. Do not add one without a
 matching `known-limits.md` entry — the filter is where flakes go to be forgotten, and the
 entry is what stops that.
