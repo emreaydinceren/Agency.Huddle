@@ -307,7 +307,7 @@ public sealed class TaskDetailActionsTests
         TaskItem task = CreateTask(harness);
         for (int i = 0; i < harness.Options.Value.Tasks.AgentWakeBudget; i++)
         {
-            harness.TaskActivity.CountAgentWake(task.Id);
+            _ = harness.TaskActivity.TryConsumeAgentWake(task.Id);
         }
 
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);

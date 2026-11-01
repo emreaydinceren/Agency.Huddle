@@ -445,7 +445,7 @@ public sealed class TaskDetailTests
     {
         for (int i = 0; i < harness.Options.Value.Tasks.AgentWakeBudget; i++)
         {
-            harness.TaskActivity.CountAgentWake(id);
+            _ = harness.TaskActivity.TryConsumeAgentWake(id);
         }
     }
 

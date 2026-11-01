@@ -30,19 +30,6 @@ public sealed class TaskActivityTests
         Assert.Equal(record, raised);
     }
 
-    /// <summary>CountAgentWake increments the Used count of the Task's budget.</summary>
-    [Fact]
-    public void CountAgentWake_IncrementsUsed()
-    {
-        TaskActivity activity = Make();
-        TaskId id = new("PLAT", 2);
-
-        activity.CountAgentWake(id);
-        activity.CountAgentWake(id);
-
-        Assert.Equal(2, activity.Budget(id).Used);
-    }
-
     /// <summary>A Task's budget is Exhausted once Used reaches Granted (default AgentWakeBudget).</summary>
     [Fact]
     public void Budget_ExhaustedAtGranted()
@@ -50,10 +37,10 @@ public sealed class TaskActivityTests
         TaskActivity activity = Make(agentWakeBudget: 2);
         TaskId id = new("PLAT", 3);
 
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         Assert.False(activity.Budget(id).Exhausted);
 
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         Assert.True(activity.Budget(id).Exhausted);
     }
 
@@ -63,8 +50,8 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make(agentWakeBudget: 2);
         TaskId id = new("PLAT", 4);
-        activity.CountAgentWake(id);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         Assert.True(activity.Budget(id).Exhausted);
 
         activity.Grant(id);
@@ -80,7 +67,7 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make();
         TaskId id = new("PLAT", 5);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
 
         activity.ResetForHuman(id);
 
@@ -94,8 +81,8 @@ public sealed class TaskActivityTests
         TaskActivity activity = Make(agentWakeBudget: 0);
         TaskId id = new("PLAT", 6);
 
-        activity.CountAgentWake(id);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
 
         Assert.False(activity.Budget(id).Exhausted);
     }
@@ -106,8 +93,8 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make(agentWakeBudget: 2);
         TaskId id = new("PLAT", 7);
-        activity.CountAgentWake(id);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         activity.Grant(id);
         Assert.Equal(4, activity.Budget(id).Granted);
 
@@ -124,7 +111,7 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make(agentWakeBudget: 2);
         TaskId id = new("PLAT", 8);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         WakeBudget before = activity.Budget(id);
 
         activity.Grant(id);
@@ -219,7 +206,7 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make(agentWakeBudget: 2);
         TaskId id = new("PLAT", 13);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
 
         activity.RefundAgentWake(id);
         Assert.Equal(0, activity.Budget(id).Used);
@@ -234,7 +221,7 @@ public sealed class TaskActivityTests
     {
         TaskActivity activity = Make(agentWakeBudget: 1);
         TaskId id = new("PLAT", 14);
-        activity.CountAgentWake(id);
+        _ = activity.TryConsumeAgentWake(id);
         int changedCount = 0;
         activity.Changed += () => changedCount++;
 

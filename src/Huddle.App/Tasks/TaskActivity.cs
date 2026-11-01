@@ -62,19 +62,6 @@ internal sealed class TaskActivity
         this.Woken?.Invoke(record);
     }
 
-    /// <summary>Counts one Agent-made wake against <paramref name="id"/>'s budget.</summary>
-    /// <param name="id">The Task the wake was for.</param>
-    public void CountAgentWake(TaskId id)
-    {
-        lock (this.gate)
-        {
-            WakeBudget current = this.GetOrCreate(id);
-            this.budgets[id] = current with { Used = current.Used + 1 };
-        }
-
-        this.Changed?.Invoke();
-    }
-
     /// <summary>
     /// Atomically checks and, if the budget is not exhausted, counts one Agent-made wake against
     /// <paramref name="id"/>'s budget in a single locked step.

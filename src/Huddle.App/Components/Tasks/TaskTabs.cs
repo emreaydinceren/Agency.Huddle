@@ -38,13 +38,6 @@ internal static class TaskTabs
     public static void OpenCopy(TabService tabs, Microsoft.AspNetCore.Components.NavigationManager navigation, TaskId id) =>
         Open(tabs, navigation, $"/tasks/item/{Uri.EscapeDataString(id.ToString())}/copy");
 
-    /// <summary>Opens the Task <paramref name="id"/> in its edit page.</summary>
-    /// <param name="tabs">The circuit's Tabs.</param>
-    /// <param name="navigation">The navigation manager the router follows.</param>
-    /// <param name="id">The Task to edit.</param>
-    public static void OpenEdit(TabService tabs, Microsoft.AspNetCore.Components.NavigationManager navigation, TaskId id) =>
-        Open(tabs, navigation, $"/tasks/item/{Uri.EscapeDataString(id.ToString())}/edit");
-
     /// <summary>The draft a copy of <paramref name="task"/> starts from: "Copy of" its title, in Backlog, with the rest of its fields; never its id, Change log or duplicate link.</summary>
     /// <param name="task">The Task to copy.</param>
     public static TaskDraft CopyOf(TaskItem task)

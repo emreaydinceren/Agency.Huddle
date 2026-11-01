@@ -123,10 +123,6 @@ internal static class HumanGateCopy
     /// <param name="id">The Task id.</param>
     public static string DeclineTitle(string id) => $"Decline {id}";
 
-    /// <summary>The text of the Done rule chip.</summary>
-    /// <param name="human">The Human's display name.</param>
-    public static string DoneRuleChip(string human) => $"{human} only";
-
     /// <summary>The Proof heading of an ordinary Task (row 9).</summary>
     public const string ProofHeadingUngated = "Definition of Done (for information)";
 
@@ -157,12 +153,6 @@ internal static class HumanGateCopy
     /// <summary>The snackbar after an Ask that could not be posted (row 13).</summary>
     /// <param name="owner">The owner who could not be reached.</param>
     public static string AskFailedSnackbar(string owner) => $"Couldn't reach {owner}.";
-
-    /// <summary>The explanation of a gated Task that names an Action.</summary>
-    /// <param name="assignee">The assignee's name, or <see cref="UnassignedAssignee"/>.</param>
-    /// <param name="action">The Action text.</param>
-    public static string Explanation(string assignee, string action) =>
-        $"Agents draft, check and track: you decide. Accepting lets {assignee} {action}. Done also needs the team's Proof to be complete.";
 
     // --- Needs You on screen (P12, UI copy rows 35-38) ---
 

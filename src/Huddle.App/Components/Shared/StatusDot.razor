@@ -23,16 +23,6 @@
     [Parameter]
     public string? Detail { get; set; }
 
-    /// <summary>The CSS class - and this dot's own tooltip text - for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
-    /// <param name="state">The state to classify.</param>
-    internal static string StatusClass(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "starting",
-        PersonaState.Online => "online",
-        PersonaState.Degraded => "degraded",
-        _ => "offline",
-    };
-
     /// <summary>The words for <paramref name="state"/>: this dot's accessible name and its title (UX-V08). U6 T6.1 red placeholder.</summary>
     /// <param name="state">The state to label.</param>
     internal static string Label(PersonaState state) => state switch
