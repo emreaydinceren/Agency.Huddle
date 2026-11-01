@@ -285,6 +285,29 @@ public sealed class TeamRoomReconcilerTests
         Assert.Equal(0, f.Catalog.ChangedSubscriberCount);
     }
 
+    /// <summary>
+    /// A Dispose that lands while StopAsync is stopping, as WebApplicationFactory's stop and the host's dispose do on two
+    /// threads, does not make StopAsync throw. StopAsync used to check <c>disposed</c>, unsubscribe, and only then cancel
+    /// its token outside the lock, by which time Dispose had disposed it (CI run 1260). The catalog runs Dispose from
+    /// inside that unsubscribe, which forces the window every time.
+    /// </summary>
+    [Fact]
+    public async Task StopAsync_DisposedMidStop_DoesNotThrow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(["Nova"], ct);
+        f.Catalog.Teams = [Team("Marketing", "Nova")];
+        UnsubscribeHookCatalog catalog = new(f.Catalog);
+        TeamRoomReconciler reconciler = f.NewReconciler(catalog, new RecordingLogger<TeamRoomReconciler>());
+        await reconciler.StartAsync(ct);
+        await reconciler.LastRun;
+        catalog.OnUnsubscribe = reconciler.Dispose;
+
+        Exception? thrown = await Record.ExceptionAsync(() => reconciler.StopAsync(ct));
+
+        Assert.Null(thrown);
+    }
+
     /// <summary>A Room the Human unarchives after its Team left the catalog stays unarchived on the next reconcile (T12).</summary>
     [Fact]
     public async Task Reconcile_HumanUnarchivesRoomOfVanishedTeam_StaysUnarchived()
@@ -544,6 +567,35 @@ public sealed class TeamRoomReconcilerTests
 
         /// <inheritdoc />
         public void Dispose() => this.dir.Dispose();
+    }
+
+    /// <summary>Wraps a catalog and runs <see cref="OnUnsubscribe"/> when a handler leaves <see cref="Changed"/>, so a test can act inside StopAsync.</summary>
+    private sealed class UnsubscribeHookCatalog(FakeTeamCatalog inner) : ITeamCatalog
+    {
+        /// <summary>Run once, then cleared, when a handler is removed from <see cref="Changed"/>.</summary>
+        public Action? OnUnsubscribe { get; set; }
+
+        /// <inheritdoc />
+        public IReadOnlyList<TeamSummary> Teams => inner.Teams;
+
+        /// <inheritdoc />
+        public event Action? Changed
+        {
+            add => inner.Changed += value;
+            remove
+            {
+                inner.Changed -= value;
+                Action? hook = this.OnUnsubscribe;
+                this.OnUnsubscribe = null;
+                hook?.Invoke();
+            }
+        }
+
+        /// <inheritdoc />
+        public TeamSummary? Find(string team) => inner.Find(team);
+
+        /// <inheritdoc />
+        public bool ProjectExists(string team, string project) => inner.ProjectExists(team, project);
     }
 
     /// <summary>Wraps a catalog so a read of <see cref="Teams"/> can be held shut, and counts the reads (one per run).</summary>

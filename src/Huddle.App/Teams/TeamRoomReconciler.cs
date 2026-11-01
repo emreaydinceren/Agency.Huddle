@@ -73,7 +73,7 @@ internal sealed partial class TeamRoomReconciler(
 
         catalog.Changed -= this.OnSignal;
         events.RoomsChanged -= this.OnSignal;
-        await this.stopping.CancelAsync().ConfigureAwait(false);
+        this.CancelUnlessDisposed();
         await loop.ConfigureAwait(false);
     }
 
@@ -102,6 +102,22 @@ internal sealed partial class TeamRoomReconciler(
     }
 
     /// <summary>Disposes the gate and the stop token source. Called once, with <see cref="sync"/> held, when no run is active.</summary>
+    /// <summary>
+    /// Cancels the loop's token under the same lock <see cref="Dispose"/> takes. Under WebApplicationFactory the
+    /// factory's stop and the host's Dispose run on two threads, so Dispose can land after StopAsync's own check and
+    /// dispose the token source (CI run 1260). Dispose cancels it first, so there is nothing left to do then.
+    /// </summary>
+    private void CancelUnlessDisposed()
+    {
+        lock (this.sync)
+        {
+            if (!this.disposed)
+            {
+                this.stopping.Cancel();
+            }
+        }
+    }
+
     private void ReleaseResources()
     {
         this.gate.Dispose();
