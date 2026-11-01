@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -7,8 +9,12 @@ namespace Agency.Huddle.App.Tasks;
 /// Holds the Sprints managers have proposed (PL-4): in memory for reading, and one JSON file per proposal under
 /// <c>_proposals/</c> in the Team's folder so a restart keeps them. It never creates a Sprint (ADR-0037).
 /// </summary>
-internal sealed class SprintProposalStore(ITeamFolders folders)
+/// <param name="folders">Finds the Team folder.</param>
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class SprintProposalStore(ITeamFolders folders, ILogger<SprintProposalStore>? logger = null)
 {
+    private readonly ILogger<SprintProposalStore> logger = logger ?? NullLogger<SprintProposalStore>.Instance;
+
     private const string ProposalsFolder = "_proposals";
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -79,7 +85,7 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
             this.byId[proposal.Id] = proposal;
         }
 
-        this.Changed?.Invoke(proposal.Team);
+        EventRaise.Isolated(this.Changed, proposal.Team, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 
@@ -119,7 +125,7 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
             }
         }
 
-        this.Changed?.Invoke(removed.Team);
+        EventRaise.Isolated(this.Changed, removed.Team, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 

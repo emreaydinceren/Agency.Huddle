@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Tasks;
@@ -13,12 +15,15 @@ internal sealed class TaskActivity
     private readonly Dictionary<TaskId, WakeRecord> lastWakes = [];
     private readonly Lock gate = new();
     private readonly int baseBudget;
+    private readonly ILogger<TaskActivity> logger;
 
     /// <summary>Creates a <see cref="TaskActivity"/> using <c>Team:Tasks:AgentWakeBudget</c> as the base budget.</summary>
     /// <param name="options">The Team options, for <see cref="TasksOptions.AgentWakeBudget"/>.</param>
-    public TaskActivity(IOptions<TeamOptions> options)
+    /// <param name="logger">Reports a <see cref="Woken"/> or <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public TaskActivity(IOptions<TeamOptions> options, ILogger<TaskActivity>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        this.logger = logger ?? NullLogger<TaskActivity>.Instance;
         this.baseBudget = options.Value.Tasks.AgentWakeBudget;
     }
 
@@ -59,7 +64,7 @@ internal sealed class TaskActivity
             this.lastWakes[record.TaskId] = record;
         }
 
-        this.Woken?.Invoke(record);
+        EventRaise.Isolated(this.Woken, record, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Woken)));
     }
 
     /// <summary>
@@ -83,7 +88,7 @@ internal sealed class TaskActivity
 
         if (consumed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
 
         return consumed;
@@ -111,7 +116,7 @@ internal sealed class TaskActivity
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 
@@ -124,7 +129,7 @@ internal sealed class TaskActivity
             this.budgets[id] = new WakeBudget(0, this.baseBudget);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Adds another base budget to <paramref name="id"/>'s Granted count, if it is exhausted.</summary>
@@ -144,7 +149,7 @@ internal sealed class TaskActivity
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 

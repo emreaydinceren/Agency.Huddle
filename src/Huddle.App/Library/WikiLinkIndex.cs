@@ -1,4 +1,6 @@
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Library;
@@ -19,6 +21,7 @@ internal sealed class WikiLinkIndex : IDisposable
     private readonly IOptions<TeamOptions> options;
     private readonly Action? afterWalkForTests;
     private readonly Action? afterFileForTests;
+    private readonly ILogger<WikiLinkIndex> logger;
     private readonly Lock gate = new();
     private readonly Dictionary<string, RootIndex> cache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> generations = new(StringComparer.Ordinal);
@@ -34,8 +37,9 @@ internal sealed class WikiLinkIndex : IDisposable
     /// <param name="roots">Every configured Library Root.</param>
     /// <param name="resolver">Resolves and walks paths inside each root.</param>
     /// <param name="options">The bound <see cref="TeamOptions"/>, for <see cref="LibraryOptions.MaxIndexedFiles"/> and the ignore list.</param>
-    public WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options)
-        : this(roots, resolver, options, afterWalkForTests: null)
+    /// <param name="logger">Reports an <see cref="Invalidated"/> subscriber that threw; defaults to a logger that discards.</param>
+    public WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options, ILogger<WikiLinkIndex>? logger = null)
+        : this(roots, resolver, options, afterWalkForTests: null, logger: logger)
     {
     }
 
@@ -43,7 +47,7 @@ internal sealed class WikiLinkIndex : IDisposable
     /// finishes walking disk but before the generation check that decides whether to cache it, so a test can
     /// call <see cref="Invalidate"/> deterministically inside that window to prove the race fix without a
     /// sleep. <paramref name="afterFileForTests"/> runs after each file the walk indexes, so a test can cancel the build between two files.</summary>
-    internal WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options, Action? afterWalkForTests, Action? afterFileForTests = null)
+    internal WikiLinkIndex(LibraryRootStore roots, LibraryPathResolver resolver, IOptions<TeamOptions> options, Action? afterWalkForTests, Action? afterFileForTests = null, ILogger<WikiLinkIndex>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -54,6 +58,7 @@ internal sealed class WikiLinkIndex : IDisposable
         this.options = options;
         this.afterWalkForTests = afterWalkForTests;
         this.afterFileForTests = afterFileForTests;
+        this.logger = logger ?? NullLogger<WikiLinkIndex>.Instance;
         this.roots.RootsChanged += this.OnRootsChanged;
     }
 
@@ -399,7 +404,7 @@ internal sealed class WikiLinkIndex : IDisposable
             _ = this.cache.Remove(rootId);
         }
 
-        this.Invalidated?.Invoke(rootId);
+        EventRaise.Isolated(this.Invalidated, rootId, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Invalidated)));
     }
 
     /// <summary>Drops every cached root and bumps every known root's generation: a re-pin, a hide/show or a
@@ -430,7 +435,7 @@ internal sealed class WikiLinkIndex : IDisposable
 
         foreach (string rootId in rootIds)
         {
-            this.Invalidated?.Invoke(rootId);
+            EventRaise.Isolated(this.Invalidated, rootId, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Invalidated)));
         }
     }
 

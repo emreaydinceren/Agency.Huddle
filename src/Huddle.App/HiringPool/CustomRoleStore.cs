@@ -1,5 +1,7 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.TeamTypes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -26,14 +28,17 @@ internal sealed class CustomRoleStore
 
     private readonly string filePath;
     private readonly Lock gate = new();
+    private readonly ILogger<CustomRoleStore> logger;
     private IReadOnlyList<CustomRole> roles = [];
     private string? loadError;
 
     /// <summary>Reads the file, if there is one.</summary>
     /// <param name="options">Where the data folder is.</param>
-    public CustomRoleStore(IOptions<TeamOptions> options)
+    /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public CustomRoleStore(IOptions<TeamOptions> options, ILogger<CustomRoleStore>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        this.logger = logger ?? NullLogger<CustomRoleStore>.Instance;
         this.filePath = Path.Combine(options.Value.DataDir, FileName);
         this.Load();
     }
@@ -72,7 +77,7 @@ internal sealed class CustomRoleStore
             this.Write([.. this.roles, role]);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return role;
     }
 
@@ -95,7 +100,7 @@ internal sealed class CustomRoleStore
             this.Write([.. this.roles.Select(existing => string.Equals(existing.Id, clean.Id, StringComparison.Ordinal) ? clean : existing)]);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 
@@ -116,7 +121,7 @@ internal sealed class CustomRoleStore
             this.Write([.. this.roles.Where(existing => !string.Equals(existing.Id, id, StringComparison.Ordinal))]);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return true;
     }
 

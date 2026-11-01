@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -115,7 +116,7 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     internal void Rename(string oldName, string newName)
     {
         this.RenameCore(oldName, newName);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     private void RenameCore(string oldName, string newName)
@@ -154,7 +155,7 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     internal void Remove(string name)
     {
         this.RemoveCore(name);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     private void RemoveCore(string name)
@@ -176,7 +177,7 @@ internal sealed class LastCatchUpStore(IOptions<TeamOptions> options, ILogger<La
     internal void RemoveRoom(string roomId)
     {
         this.RemoveRoomCore(roomId);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     private void RemoveRoomCore(string roomId)

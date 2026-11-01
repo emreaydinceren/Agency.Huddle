@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -157,7 +158,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
             changed = this.Changed;
         }
 
-        changed?.Invoke();
+        EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return null;
     }
 

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Agency.Huddle.App.Services;
 
 /// <summary>
@@ -11,8 +13,10 @@ namespace Agency.Huddle.App.Services;
 /// is still holding: the pair stays busy until every outstanding <see cref="Begin"/> has a matching
 /// <see cref="End"/>.
 /// </remarks>
-internal sealed class TurnActivity
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class TurnActivity(ILogger<TurnActivity>? logger = null)
 {
+    private readonly ILogger<TurnActivity> logger = logger ?? NullLogger<TurnActivity>.Instance;
     private readonly Dictionary<string, Dictionary<string, int>> countsByAgent = new(StringComparer.Ordinal);
     private readonly Lock gate = new();
 
@@ -43,7 +47,7 @@ internal sealed class TurnActivity
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 
@@ -84,7 +88,7 @@ internal sealed class TurnActivity
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 
@@ -133,7 +137,7 @@ internal sealed class TurnActivity
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
     }
 }

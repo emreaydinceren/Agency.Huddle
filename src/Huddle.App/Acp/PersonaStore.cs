@@ -900,7 +900,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // Exactly one PersonasChanged per operation: three writes raising three events would cause
         // three restarts (PersonaSupervisor spawning three "node" adapter processes) for what the
         // caller sees as a single save.
-        this.PersonasChanged?.Invoke();
+        EventRaise.Isolated(this.PersonasChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.PersonasChanged)));
     }
 
     /// <summary>
@@ -1226,7 +1226,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // RaiseRenames is: the ~500 ms debounce that follows an in-app Remove compares two indexes
         // that already agree the path is gone, so nothing fires a second time.
         this.RaiseRemovals(swap.Previous, swap.Updated);
-        swap.Changed?.Invoke();
+        EventRaise.Isolated(swap.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.PersonasChanged)));
     }
 
     /// <summary>What <see cref="TryRebuildAndSwap"/> captured under the locks, to raise the events outside them.</summary>

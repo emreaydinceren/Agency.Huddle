@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 
 namespace Agency.Huddle.App.Components.Layout;
@@ -18,8 +20,11 @@ namespace Agency.Huddle.App.Components.Layout;
 /// on a reload; JavaScript is unreachable while prerendering, so the first caller is an <c>OnAfterRenderAsync</c>.
 /// </remarks>
 /// <param name="js">Reaches <c>huddleStorage</c> in <c>app.js</c>.</param>
-internal sealed class TeamShortcutStore(IJSRuntime js)
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class TeamShortcutStore(IJSRuntime js, ILogger<TeamShortcutStore>? logger = null)
 {
+    private readonly ILogger<TeamShortcutStore> logger = logger ?? NullLogger<TeamShortcutStore>.Instance;
+
     /// <summary>The <c>localStorage</c> key the Human's choice is remembered under.</summary>
     public const string StorageKey = "shell:teamShortcuts";
 
@@ -75,7 +80,7 @@ internal sealed class TeamShortcutStore(IJSRuntime js)
         }
 
         this.IsLoaded = true;
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>
@@ -118,7 +123,7 @@ internal sealed class TeamShortcutStore(IJSRuntime js)
     /// <summary>Raises <see cref="Changed"/> and remembers the choice; a blocked storage keeps it for this circuit only.</summary>
     private async Task SaveAsync()
     {
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         string json = JsonSerializer.Serialize(new Choice(this.off, [.. this.removed.Order(StringComparer.OrdinalIgnoreCase)]));
 
         // A blocked storage or a gone circuit keeps the choice for this circuit only.

@@ -246,7 +246,7 @@ internal sealed class NeedsYouTracker
 
             if (gone.Length > 0)
             {
-                this.Changed?.Invoke();
+                EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
                 this.ResolveAll(gone);
             }
         }
@@ -306,7 +306,7 @@ internal sealed class NeedsYouTracker
 
         if (changed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
 
         this.PublishFeed(roomId, arrived, left);

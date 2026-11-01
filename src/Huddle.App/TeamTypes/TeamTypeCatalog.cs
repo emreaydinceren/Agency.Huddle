@@ -1,5 +1,6 @@
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -174,7 +175,7 @@ internal sealed class TeamTypeCatalog
 
         List<TeamTypeManifest> types = [.. byId.Values.OrderBy(static t => t.Order).ThenBy(static t => t.DisplayName, StringComparer.Ordinal)];
         this.snapshot = new Snapshot(types, problems, byId, userIds);
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>Tells whether a type-relative path is a plain relative path with no parent segments.</summary>

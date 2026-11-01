@@ -1,4 +1,6 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -7,8 +9,12 @@ namespace Agency.Huddle.App.SkillSources;
 
 /// <summary><c>SkillSources/hidden.json</c> (§6.12.4, §7.2): items hidden from lists, shared by every Huddle on the folder.
 /// The hide and unhide commands are its only writers; a malformed file is read as empty and never overwritten.</summary>
-internal sealed class HiddenStore(SkillSourcesSettings settings)
+/// <param name="settings">Where the Skill Sources folder is.</param>
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class HiddenStore(SkillSourcesSettings settings, ILogger<HiddenStore>? logger = null)
 {
+    private readonly ILogger<HiddenStore> logger = logger ?? NullLogger<HiddenStore>.Instance;
+
     /// <summary>The file's name in the Skill Sources folder.</summary>
     public const string FileName = "hidden.json";
 
@@ -98,7 +104,7 @@ internal sealed class HiddenStore(SkillSourcesSettings settings)
             result = HiddenWriteResult.Written;
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return result;
     }
 

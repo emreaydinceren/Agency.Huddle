@@ -1,4 +1,6 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -11,8 +13,10 @@ namespace Agency.Huddle.App.Uploads;
 /// </summary>
 /// <param name="uploads">Saves each file.</param>
 /// <param name="options">Supplies <see cref="LibraryOptions.MaxUploadsPerMessage"/>.</param>
-internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOptions> options)
+/// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOptions> options, ILogger<PendingUploads>? logger = null)
 {
+    private readonly ILogger<PendingUploads> logger = logger ?? NullLogger<PendingUploads>.Instance;
     private readonly Lock gate = new();
     private readonly Dictionary<string, List<Entry>> byRoom = new(StringComparer.Ordinal);
 
@@ -64,7 +68,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
             list.Add(entry);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         try
         {
             Stream stream = openStream(entry.Cancellation.Token);
@@ -123,7 +127,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
             await uploads.DeleteUnsentAsync(file, ct).ConfigureAwait(false);
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
     }
 
     /// <summary>
@@ -160,7 +164,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
             done = [.. taken.Where(static e => e.Chip.State == UploadState.Done).Select(static e => e.Chip)];
         }
 
-        this.Changed?.Invoke();
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         return done;
     }
 
@@ -187,7 +191,7 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
 
         if (stillListed)
         {
-            this.Changed?.Invoke();
+            EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
         }
         else if (settled.File is { } orphan)
         {

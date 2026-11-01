@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
 using Agency.Huddle.App.Watching;
@@ -139,7 +140,7 @@ internal sealed partial class AppearanceStore : IDisposable
             this.watched.Current = this.BuildSettings(document);
         }
 
-        this.AppearanceChanged?.Invoke();
+        EventRaise.Isolated(this.AppearanceChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AppearanceChanged)));
     }
 
     /// <summary>
@@ -236,7 +237,7 @@ internal sealed partial class AppearanceStore : IDisposable
             this.watched.Current = this.BuildSettings(document);
         }
 
-        this.AppearanceChanged?.Invoke();
+        EventRaise.Isolated(this.AppearanceChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AppearanceChanged)));
     }
 
     /// <summary>
@@ -338,7 +339,7 @@ internal sealed partial class AppearanceStore : IDisposable
             this.watched.Current = this.BuildSettings(document);
         }
 
-        this.AppearanceChanged?.Invoke();
+        EventRaise.Isolated(this.AppearanceChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AppearanceChanged)));
     }
 
     /// <summary>
@@ -363,7 +364,7 @@ internal sealed partial class AppearanceStore : IDisposable
             this.watched.Current = this.BuildSettings(document);
         }
 
-        this.AppearanceChanged?.Invoke();
+        EventRaise.Isolated(this.AppearanceChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.AppearanceChanged)));
     }
 
     /// <summary>The catalog entry named <paramref name="themeId"/>, or <see langword="null"/> when it is <see langword="null"/> or names none.</summary>

@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -17,13 +19,15 @@ internal sealed class TaskBacklinkSource : ITaskBacklinkSource, IDisposable
     private readonly TaskStore store;
     private readonly LibraryPathResolver resolver;
     private readonly WikiLinkIndex wikiLinks;
+    private readonly ILogger<TaskBacklinkSource> logger;
     private bool disposed;
 
     /// <summary>Creates the source over <paramref name="store"/>, forwarding its <see cref="TaskStore.IndexChanged"/>.</summary>
     /// <param name="store">Every Task.</param>
     /// <param name="resolver">Maps an attached absolute path, and a Task's own file, into the Library.</param>
     /// <param name="wikiLinks">Resolves a wikilink written in a description.</param>
-    public TaskBacklinkSource(TaskStore store, LibraryPathResolver resolver, WikiLinkIndex wikiLinks)
+    /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
+    public TaskBacklinkSource(TaskStore store, LibraryPathResolver resolver, WikiLinkIndex wikiLinks, ILogger<TaskBacklinkSource>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -32,6 +36,7 @@ internal sealed class TaskBacklinkSource : ITaskBacklinkSource, IDisposable
         this.store = store;
         this.resolver = resolver;
         this.wikiLinks = wikiLinks;
+        this.logger = logger ?? NullLogger<TaskBacklinkSource>.Instance;
         this.store.IndexChanged += this.OnIndexChanged;
     }
 
@@ -84,7 +89,8 @@ internal sealed class TaskBacklinkSource : ITaskBacklinkSource, IDisposable
         return results;
     }
 
-    private void OnIndexChanged() => this.Changed?.Invoke();
+    private void OnIndexChanged() =>
+        EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
 
     /// <summary>The first description line of <paramref name="task"/> that links to <paramref name="document"/>, or <see langword="null"/>.</summary>
     private static string? FirstLinkingLine(TaskItem task, LibraryPath document, LibraryPathResolver resolver, WikiLinkIndex wikiLinks)

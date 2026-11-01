@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Services;
+
 namespace Agency.Huddle.App.Search;
 
 /// <summary>
@@ -166,16 +168,7 @@ internal sealed class SearchOrchestrator(
 
     private void Raise(SearchGroupUpdate update)
     {
-        try
-        {
-            this.GroupUpdated?.Invoke(update);
-        }
-        catch (Exception ex)
-        {
-            // A subscriber's failure must not end the search or hide the other groups.
-#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
-            logger.LogWarning(ex, "A search update subscriber failed for {Group}.", update.Group);
-#pragma warning restore HAA0601
-        }
+        // A subscriber's failure must not end the search, hide the other groups or stop the subscribers after it.
+        EventRaise.Isolated(this.GroupUpdated, update, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.GroupUpdated)));
     }
 }
