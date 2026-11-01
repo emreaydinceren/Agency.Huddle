@@ -103,4 +103,57 @@ public sealed class NoteTagReaderTests
     [InlineData("---\ntags: a\n\tx: y\n---\n#b", "b")]
     [InlineData("---\n    ```\n---\n#b", "b")]
     public void Of_MergesBothSources(string text, string expected) => Assert.Equal(expected, string.Join("|", NoteTags.Of(text)));
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give the block, and the body starts after the closing line.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void Split_LenientFences_FindTheBlock(string opening, string closing)
+    {
+        string text = opening + "\ntags: a\n" + closing + "\nbody\n";
+
+        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
+
+        Assert.Equal("tags: a\n", block);
+        Assert.Equal("body\n", text[bodyStart..]);
+    }
+
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <param name="text">The note.</param>
+    [Theory]
+    [InlineData("\uFEFF---\ntags: a\n")]
+    [InlineData("  ---  \ntags: a\n")]
+    [InlineData("---\ntags: a\n--- x\n")]
+    [InlineData("----\ntags: a\n---\n")]
+    [InlineData("---\ntags: a\n....\n")]
+    public void Split_UnclosedOrNearMiss_IsNotABlock(string text)
+    {
+        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
+
+        Assert.Null(block);
+        Assert.Equal(0, bodyStart);
+    }
+
+    /// <summary>A fence line in the body, after the closing line, does not extend the block or start another.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    public void Split_FenceInBodyAfterTheClose_IsBody(string opening, string closing)
+    {
+        string text = opening + "\ntags: a\n" + closing + "\nbody\n---\nlater: x\n...\n";
+
+        (string? block, int bodyStart) = NoteFrontmatter.Split(text);
+
+        Assert.Equal("tags: a\n", block);
+        Assert.Equal("body\n---\nlater: x\n...\n", text[bodyStart..]);
+    }
 }

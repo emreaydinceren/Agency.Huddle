@@ -201,6 +201,39 @@ public sealed class MemoryIndexDescriptionTests
         Assert.Equal(2 + MemoryWarnings.MaxRemembered, before);
         Assert.Equal(before + 1, logger.AtExactly(LogLevel.Warning).Count);
     }
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all give the description its block.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void Build_LenientFences_ReadTheDescription(string opening, string closing)
+    {
+        using TempDataDir dataDir = new();
+
+        MemoryEntry entry = IndexOne(dataDir, opening + "\ndescription: The real description here.\n" + closing + "\n\nBody line.");
+
+        Assert.Equal("The real description here.", entry.Summary);
+    }
+
+    /// <summary>A block that never closes gives no description, and a fence line in the body after the close does not start another block.</summary>
+    [Fact]
+    public void Build_UnclosedBlock_GivesNoDescription_AndABodyFenceIsBody()
+    {
+        using TempDataDir dataDir = new();
+
+        MemoryEntry unclosed = IndexOne(dataDir, "  ---  \ndescription: Never closed here.\nBody line.");
+        MemoryEntry bodyFence = IndexOne(dataDir, "---\ndescription: The real one.\n---\nBody line.\n---\ndescription: The fake one.\n...\n");
+
+        Assert.Equal("description: Never closed here.", unclosed.Summary);
+        Assert.Equal("The real one.", bodyFence.Summary);
+    }
+
     /// <summary>An entry knows its file name, which the index line shows.</summary>
     [Fact]
     public void Entry_FileName_IsTheNameWithItsExtension()

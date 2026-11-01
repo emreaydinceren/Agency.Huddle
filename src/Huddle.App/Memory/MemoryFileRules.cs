@@ -30,9 +30,6 @@ internal static partial class MemoryFileRules
     /// <summary>The frontmatter key that holds the index line.</summary>
     private const string DescriptionKey = "description";
 
-    /// <summary>The byte-order mark a Windows editor may put at the start of a file.</summary>
-    private const char ByteOrderMark = (char)0xFEFF;
-
     /// <summary>The Windows device names, which are reserved however many extensions follow.</summary>
     private static readonly string[] DeviceNames =
     [
@@ -188,7 +185,7 @@ internal static partial class MemoryFileRules
         NoteFrontmatterBlock block = NoteFrontmatter.Locate(text);
         if (block.Text is null || block.Form != NoteFrontmatterForm.Yaml || !HasDescriptionLine(block.Text))
         {
-            return text.TrimStart(ByteOrderMark);
+            return text.TrimStart(FrontmatterFence.ByteOrderMark);
         }
 
         echoedKeys = OtherKeysOf(block.Text);

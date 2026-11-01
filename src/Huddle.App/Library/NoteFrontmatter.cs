@@ -3,9 +3,11 @@ using System.Text.Json;
 namespace Agency.Huddle.App.Library;
 
 /// <summary>
-/// The one place that decides what a Library note's frontmatter is (Spec §6.17): a first line of exactly
-/// <c>---</c> (after an optional BOM), closed by the next line that is exactly <c>---</c> or <c>...</c>, or a JSON object that
-/// starts the note (front matter properties spec D-9). A block that never closes is not frontmatter. The tag pass,
+/// The one place that decides what a Library note's frontmatter is (Spec §6.17): a first line that is <c>---</c> (after an
+/// optional BOM, ignoring surrounding whitespace), closed by the next line that is <c>---</c> or <c>...</c>, by the shared
+/// <see cref="FrontmatterFence"/> rule, or a JSON object that starts the note (front matter properties spec D-9). The JSON
+/// form is this type's alone: Persona, Task, Team and Process files have no such form. A block that never closes is not
+/// frontmatter. The tag pass,
 /// <see cref="NoteTagReader"/> and the Properties block all split here, so they
 /// always agree on where the block ends.
 /// </summary>
@@ -39,11 +41,11 @@ internal static class NoteFrontmatter
         return LocateYaml(text, start);
     }
 
-    /// <summary>The <c>---</c> form: a first line of exactly <c>---</c>, closed by the next marker line.</summary>
+    /// <summary>The <c>---</c> form: a first line that opens by <see cref="FrontmatterFence.IsOpening(ReadOnlySpan{char})"/>, closed by the next line that <see cref="FrontmatterFence.IsClosing(ReadOnlySpan{char})"/> accepts.</summary>
     private static NoteFrontmatterBlock LocateYaml(string text, int start)
     {
         NoteFrontmatterBlock none = new(null, 0, NoteFrontmatterForm.Yaml);
-        if (!TryReadLine(text, start, out int firstEnd, out int cursor) || !IsMarker(text, start, firstEnd, "---"))
+        if (!TryReadLine(text, start, out int firstEnd, out int cursor) || !FrontmatterFence.IsOpening(text.AsSpan(start, firstEnd - start)))
         {
             return none;
         }
@@ -51,7 +53,7 @@ internal static class NoteFrontmatter
         int blockStart = cursor;
         while (TryReadLine(text, cursor, out int lineEnd, out int next))
         {
-            if (IsMarker(text, cursor, lineEnd, "---") || IsMarker(text, cursor, lineEnd, "..."))
+            if (FrontmatterFence.IsClosing(text.AsSpan(cursor, lineEnd - cursor)))
             {
                 return new NoteFrontmatterBlock(text[blockStart..cursor], next, NoteFrontmatterForm.Yaml);
             }
@@ -148,9 +150,6 @@ internal static class NoteFrontmatter
 
         return -1;
     }
-
-    private static bool IsMarker(string text, int start, int end, string marker) =>
-        text.AsSpan(start, end - start).Equals(marker, StringComparison.Ordinal);
 
     /// <summary>Reads one line starting at <paramref name="position"/>; a line break is <c>\r\n</c>, <c>\n</c> or a lone <c>\r</c>.</summary>
     private static bool TryReadLine(string text, int position, out int contentEnd, out int next)

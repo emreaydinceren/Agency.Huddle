@@ -215,4 +215,62 @@ public sealed class ProcessDocumentTests
         Assert.Equal("Spec approved before build", ProcessDocument.DisplayName(GateId.SpecApprovedBeforeBuild));
         Assert.Equal("Failing test before fix", ProcessDocument.DisplayName(GateId.FailingTestBeforeFix));
     }
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give a document, and a fence line in the body does not end anything.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void TryParse_LenientFences_ReadTheFrontmatter(string opening, string closing)
+    {
+        string text = opening + "\ntitle: 'Flow'\nwip: 3\n" + closing + "\n# Flow\n## Stages\n---\nwip: 9\n...\n";
+
+        ProcessDocument document = Parse(text);
+
+        Assert.Equal("Flow", document.Title);
+        Assert.Equal(3, document.WipLimit);
+        Assert.DoesNotContain("Stages", document.MissingSections);
+        Assert.Equal(text, document.Text);
+    }
+
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <param name="text">The Process file.</param>
+    [Theory]
+    [InlineData("\uFEFF---\ntitle: 'Flow'\n")]
+    [InlineData("  ---  \ntitle: 'Flow'\n")]
+    [InlineData("---\ntitle: 'Flow'\n--- x\n")]
+    [InlineData("----\ntitle: 'Flow'\n---\n")]
+    [InlineData("---\ntitle: 'Flow'\n....\n")]
+    public void TryParse_UnclosedOrNearMiss_IsNotADocument(string text)
+    {
+        bool ok = ProcessDocument.TryParse(text, out ProcessDocument? document);
+
+        Assert.False(ok);
+        Assert.Null(document);
+    }
+
+    /// <summary>Rewriting the gates of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines byte for byte and changes only the gates line.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void WithGates_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
+    {
+        string text = opening + "\ntitle: 'Flow'\ngates: ['qa-evidence-before-done']\nwip: 2\n" + closing + "\n# Flow\n";
+        string noGatesLine = opening + "\ntitle: 'Flow'\n" + closing + "\n# Flow\n";
+
+        string replaced = ProcessDocument.WithGates(text, [GateId.ChecksBeforeMerge]);
+        string added = ProcessDocument.WithGates(noGatesLine, [GateId.ChecksBeforeMerge]);
+
+        Assert.Equal(opening + "\ntitle: 'Flow'\ngates: ['checks-before-merge']\nwip: 2\n" + closing + "\n# Flow\n", replaced);
+        Assert.Equal(opening + "\ntitle: 'Flow'\ngates: ['checks-before-merge']\n" + closing + "\n# Flow\n", added);
+    }
 }
