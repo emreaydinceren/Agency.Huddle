@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Elicitation;
 
@@ -100,6 +101,29 @@ public sealed class PipeHostFixture : IAsyncDisposable
         await this.host.StopAsync();
         this.host.Dispose();
         this.dataDir.Dispose();
+        this.WriteConnectionWarningsToTestOutput();
+    }
+
+    /// <summary>
+    /// Copies every <see cref="AgentConnection"/> Warning to the current test's output, which xUnit prints under a failed
+    /// test. A server-side reason is otherwise only in memory, so a CI failure on the client side of the pipe (the
+    /// RoomSessionResumeTests broken pipe and connection reset in agents/CIPipeline.md) would show no trace of why the
+    /// server ended the connection.
+    /// </summary>
+    private void WriteConnectionWarningsToTestOutput()
+    {
+        if (TestContext.Current.TestOutputHelper is not { } output)
+        {
+            return;
+        }
+
+        foreach (LogEntry entry in this.loggerProvider.Entries)
+        {
+            if (entry.Level >= LogLevel.Warning && string.Equals(entry.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
+            {
+                output.WriteLine($"[{entry.Level}] {entry.Category}: {entry.Message}{(entry.Exception is { } ex ? Environment.NewLine + ex : string.Empty)}");
+            }
+        }
     }
 
     /// <summary>

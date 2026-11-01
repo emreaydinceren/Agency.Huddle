@@ -1061,6 +1061,65 @@ public sealed class PipeEndToEndTests
     }
 
     /// <summary>
+    /// A client that connects and leaves before sending anything ends the connection before its Welcome, and the server
+    /// logs exactly one Warning naming the handshake step and the reason, so a client-side broken pipe in CI
+    /// (agents/CIPipeline.md, RoomSessionResumeTests) can be matched to why the server let the connection go.
+    /// </summary>
+    [Fact]
+    public async Task Disconnect_BeforeHello_LogsOneWarningWithTheStepAndReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+
+        var client = await fixture.ConnectClientAsync(ct);
+        await client.DisposeAsync();
+
+        List<CapturedLogEntry> warnings = await ConnectionWarningsAsync(fixture, ct);
+
+        var warning = Assert.Single(warnings);
+        Assert.Matches(
+            @"^Agent connection [0-9a-f]{32} ended before its Welcome was sent, \d+ ms after it opened, while waiting for 'hello': the client closed its end before sending anything\.$",
+            warning.Message);
+    }
+
+    /// <summary>A first message that is not a Hello is refused, and the one handshake Warning names the message that arrived instead.</summary>
+    [Fact]
+    public async Task FirstMessageNotHello_LogsWhichMessageArrived()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new PostMessage("room", null, "hi"), ct);
+        _ = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+
+        List<CapturedLogEntry> warnings = await ConnectionWarningsAsync(fixture, ct);
+
+        var warning = Assert.Single(warnings);
+        Assert.Matches(
+            @"^Agent connection [0-9a-f]{32} ended before its Welcome was sent, \d+ ms after it opened, while waiting for 'hello': the first message is a PostMessage, not a Hello\.$",
+            warning.Message);
+    }
+
+    /// <summary>Waits for <see cref="AgentConnection"/> to log a Warning, then returns every Warning it has logged.</summary>
+    /// <param name="fixture">The pipe host.</param>
+    /// <param name="ct">Bounds the wait.</param>
+    /// <returns>The connection's Warnings, in the order logged.</returns>
+    private static async Task<List<CapturedLogEntry>> ConnectionWarningsAsync(PipeHostFixture fixture, CancellationToken ct)
+    {
+        List<CapturedLogEntry> Warnings() => fixture.LogEntries
+            .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
+            .ToList();
+
+        await Eventually.UntilAsync(() => Warnings().Count != 0, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
+        return Warnings();
+    }
+
+    /// <summary>
     /// A Team-scoped Room reaches the Agent with its Team on both the Welcome and a delivered Message
     /// (Team chats §6.6), and the Agent's root Room carries none.
     /// </summary>
