@@ -4,28 +4,24 @@ namespace Agency.Huddle.App.Questions;
 
 /// <summary>
 /// Holds at most one waiting <see cref="PendingQuestions"/> card per Room, in memory (Questions
-/// spec §6.3). Every operation is O(1) under one <see cref="Lock"/>, and
-/// <see cref="RoomEvents.QuestionsChanged"/> is raised only after that lock is released. The class
-/// is public only so <see cref="ChatService"/>'s public constructor can take one (CS0051); every
-/// member stays <see langword="internal"/>. A leaf singleton: it depends only on
-/// <see cref="RoomEvents"/>, so <see cref="ChatService"/> can call it without a cycle.
+/// spec §6.3), on a <see cref="PendingByRoom{T}"/>. <see cref="RoomEvents.QuestionsChanged"/> is raised
+/// only after that core's lock is released. The class is public only so <see cref="ChatService"/>'s
+/// public constructor can take one (CS0051); every member stays <see langword="internal"/>. A leaf
+/// singleton: it depends only on <see cref="RoomEvents"/>, so <see cref="ChatService"/> can call it
+/// without a cycle.
 /// </summary>
 /// <param name="events">The hub <see cref="RoomEvents.QuestionsChanged"/> is raised on.</param>
 public sealed class QuestionStore(RoomEvents events)
 {
-    private readonly Lock gate = new();
-    private readonly Dictionary<string, PendingQuestions> cards = new(StringComparer.Ordinal);
+    private readonly PendingByRoom<PendingQuestions> cards = new(
+        static card => card.RoomId,
+        static card => card.Id,
+        static card => card.AskerAgentId);
 
     /// <summary>Returns the card waiting in <paramref name="roomId"/>, or <see langword="null"/> when none is.</summary>
     /// <param name="roomId">The Room to look up.</param>
     /// <returns>The waiting card, or <see langword="null"/>.</returns>
-    internal PendingQuestions? Get(string roomId)
-    {
-        lock (this.gate)
-        {
-            return this.cards.GetValueOrDefault(roomId);
-        }
-    }
+    internal PendingQuestions? Get(string roomId) => this.cards.Get(roomId);
 
     /// <summary>
     /// Stores <paramref name="pending"/> under Questions spec §8.1: an empty Room stores it, the
@@ -34,36 +30,16 @@ public sealed class QuestionStore(RoomEvents events)
     /// </summary>
     /// <param name="pending">The card to store.</param>
     /// <returns>What happened, and, only when refused, the card that was already waiting.</returns>
-    internal QuestionPut TryPut(PendingQuestions pending)
+    internal PendingPut<PendingQuestions> TryPut(PendingQuestions pending)
     {
-        QuestionPutResult result;
-        PendingQuestions? existing;
+        PendingPut<PendingQuestions> put = this.cards.TryPut(pending);
 
-        lock (this.gate)
-        {
-            if (!this.cards.TryGetValue(pending.RoomId, out existing))
-            {
-                this.cards[pending.RoomId] = pending;
-                result = QuestionPutResult.Stored;
-            }
-            else if (string.Equals(existing.AskerAgentId, pending.AskerAgentId, StringComparison.Ordinal))
-            {
-                this.cards[pending.RoomId] = pending;
-                result = QuestionPutResult.Replaced;
-                existing = null;
-            }
-            else
-            {
-                result = QuestionPutResult.Refused;
-            }
-        }
-
-        if (result is QuestionPutResult.Stored or QuestionPutResult.Replaced)
+        if (put.Result is not PendingPutResult.Refused)
         {
             events.PublishQuestionsChanged(pending.RoomId);
         }
 
-        return new QuestionPut(result, result == QuestionPutResult.Refused ? existing : null);
+        return put;
     }
 
     /// <summary>
@@ -77,17 +53,7 @@ public sealed class QuestionStore(RoomEvents events)
     /// <returns>The removed card, or <see langword="null"/> when nothing matched.</returns>
     internal PendingQuestions? TryTake(string roomId, string id)
     {
-        PendingQuestions? taken = null;
-
-        lock (this.gate)
-        {
-            if (this.cards.TryGetValue(roomId, out var current) &&
-                string.Equals(current.Id, id, StringComparison.Ordinal))
-            {
-                _ = this.cards.Remove(roomId);
-                taken = current;
-            }
-        }
+        PendingQuestions? taken = this.cards.TryTake(roomId, id);
 
         if (taken is not null)
         {
@@ -105,12 +71,7 @@ public sealed class QuestionStore(RoomEvents events)
     /// <returns><see langword="true"/> when a card was removed.</returns>
     internal bool Drop(string roomId)
     {
-        bool removed;
-
-        lock (this.gate)
-        {
-            removed = this.cards.Remove(roomId);
-        }
+        bool removed = this.cards.Drop(roomId);
 
         if (removed)
         {

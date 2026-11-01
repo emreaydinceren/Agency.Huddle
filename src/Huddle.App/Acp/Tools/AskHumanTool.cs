@@ -116,8 +116,8 @@ internal sealed class AskHumanTool(
             parsed,
             clock.GetUtcNow());
 
-        QuestionPut put = questions.TryPut(pending);
-        if (put.Result == QuestionPutResult.Refused)
+        PendingPut<PendingQuestions> put = questions.TryPut(pending);
+        if (put.Result == PendingPutResult.Refused)
         {
             string askerName = put.Existing?.AskerName ?? "another Agent";
             return $"Questions from {askerName} are already waiting in this Room. Wait for the Human to answer them.";
@@ -129,7 +129,7 @@ internal sealed class AskHumanTool(
             "the answers. The answer will arrive later as a Message from the Human in that Room, quoting each " +
             "question. If they write their own reply instead, that reply is the answer.";
 
-        return put.Result == QuestionPutResult.Replaced ? $"Replaced your waiting questions. {asked}" : asked;
+        return put.Result == PendingPutResult.Replaced ? $"Replaced your waiting questions. {asked}" : asked;
     }
 
     /// <summary>

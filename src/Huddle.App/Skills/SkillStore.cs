@@ -41,9 +41,6 @@ internal sealed class SkillStore : IDisposable
 
     private readonly string skillsDir;
     private readonly ILogger<SkillStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
 
     // The whole resolved state - every Skill plus every Issue found building it - swapped in as one
     // immutable reference. Bundled into a single record rather than two separate fields so a reader
@@ -51,7 +48,7 @@ internal sealed class SkillStore : IDisposable
     // same reasoning PromptStore's remarks give for publishing one snapshot at a time. volatile: the
     // watcher's debounced rebuild is a second writer, on a different (timer) thread, so a reader must
     // never observe a torn or reordered write - see the State model remarks above.
-    private volatile SkillSnapshot snapshot;
+    private readonly WatchedFileStore<SkillSnapshot> watched;
 
     /// <summary>Builds and creates the Skills directory, resolves every Skill against it, and starts watching it.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="Acp.AcpOptions.SkillsDir"/>.</param>
@@ -69,12 +66,12 @@ internal sealed class SkillStore : IDisposable
         // eagerly for AvatarStore.
         Directory.CreateDirectory(this.skillsDir);
 
-        this.snapshot = this.Rebuild();
-
-        this.watcher = new DebouncedFileWatcher(
+        this.watched = new WatchedFileStore<SkillSnapshot>(
             this.skillsDir,
             "*",
-            this.OnWatcherSettled,
+            this.Rebuild(),
+            _ => this.TryRebuildWithRetries(),
+            (_, _) => this.SkillsChanged,
             this.logger,
             nameof(SkillStore),
             includeSubdirectories: true,
@@ -84,14 +81,14 @@ internal sealed class SkillStore : IDisposable
     /// <summary>
     /// Raised after a filesystem change under <see cref="skillsDir"/> has settled through the
     /// debounce and a rebuilt snapshot has already been published — never before, and never from
-    /// inside <see cref="writeGate"/>, so a subscriber that reads this store from inside its own
+    /// inside <see cref="WatchedFileStore{TSnapshot}.Gate"/>, so a subscriber that reads this store from inside its own
     /// handler sees the state the change just produced, and a subscriber that takes a lock of its
     /// own cannot deadlock against a concurrent rebuild.
     /// </summary>
     internal event Action? SkillsChanged;
 
     /// <summary>Every currently resolved Skill, ordered ordinally by <see cref="Skill.Name"/>.</summary>
-    public IReadOnlyList<Skill> All => this.snapshot.All;
+    public IReadOnlyList<Skill> All => this.watched.Current.All;
 
     /// <summary>
     /// The Skills directory this store resolves and watches - <c>{DataDir}/{Acp:SkillsDir}</c> - the
@@ -102,7 +99,7 @@ internal sealed class SkillStore : IDisposable
     internal string SkillsDirectory => this.skillsDir;
 
     /// <summary>Every problem found while resolving the current set of Skills.</summary>
-    public IReadOnlyList<SkillIssue> Issues => this.snapshot.Issues;
+    public IReadOnlyList<SkillIssue> Issues => this.watched.Current.Issues;
 
     /// <summary>Looks up one Skill by name in the current snapshot.</summary>
     /// <param name="name">The Skill's name (its folder name).</param>
@@ -111,7 +108,7 @@ internal sealed class SkillStore : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return this.snapshot.ByName.TryGetValue(name, out Skill? skill) ? skill : null;
+        return this.watched.Current.ByName.TryGetValue(name, out Skill? skill) ? skill : null;
     }
 
     /// <summary>Returns one Skill's file text, or <see langword="null"/> when the Skill or the file does not exist.</summary>
@@ -143,7 +140,7 @@ internal sealed class SkillStore : IDisposable
             return null;
         }
 
-        return this.snapshot.ResolvedFiles.TryGetValue(skill, out FrozenDictionary<string, string>? files)
+        return this.watched.Current.ResolvedFiles.TryGetValue(skill, out FrozenDictionary<string, string>? files)
             && files.TryGetValue(file, out string? text)
             ? text
             : null;
@@ -168,7 +165,7 @@ internal sealed class SkillStore : IDisposable
     {
         Action? changed;
 
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
             Skill? skill = this.Get(name);
             if (skill is null || skill.FolderPath is null)
@@ -185,7 +182,7 @@ internal sealed class SkillStore : IDisposable
             }
 
             Directory.Delete(skill.FolderPath, recursive: true);
-            this.snapshot = this.Rebuild();
+            this.watched.Current = this.Rebuild();
             changed = this.SkillsChanged;
         }
 
@@ -195,7 +192,7 @@ internal sealed class SkillStore : IDisposable
     /// <summary>Resolves a list of Skill names against the current snapshot.</summary>
     /// <remarks>
     /// Pure over the snapshot: no lock, no rebuild, no change to any state. Reads
-    /// <see cref="snapshot"/> into a local exactly once, at the top, so every name in
+    /// <see cref="watched"/> into a local exactly once, at the top, so every name in
     /// <paramref name="names"/> is resolved against the same snapshot — reading the
     /// <see langword="volatile"/> field again per name could otherwise let a concurrent watcher
     /// rebuild publish a new snapshot midway through this call, resolving part of the list
@@ -208,7 +205,7 @@ internal sealed class SkillStore : IDisposable
     {
         ArgumentNullException.ThrowIfNull(names);
 
-        SkillSnapshot current = this.snapshot;
+        SkillSnapshot current = this.watched.Current;
         HashSet<string> seen = new(StringComparer.Ordinal);
         List<Skill> skills = [];
         List<string> warnings = [];
@@ -516,52 +513,12 @@ internal sealed class SkillStore : IDisposable
     }
 
     /// <summary>
-    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: does a full rescan of
-    /// <see cref="skillsDir"/> (never an incremental delta, so which path or change fired is irrelevant) and
-    /// raises <see cref="SkillsChanged"/>. The lock and ordering rules this follows are the callback
-    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
-    /// </summary>
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-
-        lock (this.writeGate)
-        {
-            // Checked and captured under the same lock Dispose() takes, so a Dispose() racing this
-            // callback either finishes first (this returns without doing anything) or this finishes
-            // its rebuild and capture before Dispose() can flip the flag - never both, and never a
-            // rebuild that runs after the watcher has been torn down.
-            if (this.disposed)
-            {
-                return;
-            }
-
-            SkillSnapshot? rebuilt = this.TryRebuildWithRetries();
-            if (rebuilt is null)
-            {
-                // Every retry failed; TryRebuildWithRetries already logged why. The previous snapshot
-                // is left exactly as it was, and there is nothing new to tell a subscriber about.
-                return;
-            }
-
-            // Published BEFORE the delegate capture below: a subscriber reading this store from
-            // inside its own SkillsChanged handler must see the state this rebuild just produced, not
-            // whatever was true before it - the ordering DebouncedFileWatcher's remarks document
-            // and depends on.
-            this.snapshot = rebuilt;
-            changed = this.SkillsChanged;
-        }
-
-        changed?.Invoke();
-    }
-
-    /// <summary>
     /// Attempts <see cref="Rebuild"/> up to <see cref="RebuildRetryAttempts"/> times, pausing
     /// <see cref="RebuildRetryDelayMilliseconds"/> between attempts on <see cref="IOException"/> - a
     /// watcher event can fire while a file is still mid-write, which surfaces as a transient sharing
     /// violation or a directory enumerated mid-rename. If every attempt fails, this logs a Warning and
     /// returns <see langword="null"/> rather than letting the exception propagate onto the timer
-    /// thread, so <see cref="OnWatcherSettled"/> can leave the previous snapshot in place.
+    /// thread, so <see cref="WatchedFileStore{TSnapshot}"/> can leave the previous snapshot in place.
     /// </summary>
     /// <returns>The freshly built snapshot, or <see langword="null"/> if every attempt failed.</returns>
     internal SkillSnapshot? TryRebuildWithRetries()
@@ -593,25 +550,12 @@ internal sealed class SkillStore : IDisposable
     }
 
     /// <summary>Stops watching <see cref="skillsDir"/> and releases the debounce timer. Idempotent.</summary>
-    public void Dispose()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
-    }
+    public void Dispose() => this.watched.Dispose();
 
     /// <summary>
     /// One immutable, fully resolved snapshot: every Skill (in both list and by-name-lookup form),
     /// every Skill's merged file texts, and every Issue found while building it. Swapped in as a
-    /// whole by <see cref="snapshot"/> so readers never see one part of a rebuild without the rest.
+    /// whole by <see cref="watched"/> so readers never see one part of a rebuild without the rest.
     /// </summary>
     /// <param name="All">Every resolved Skill, already ordered ordinally by <see cref="Skill.Name"/>.</param>
     /// <param name="ByName">The same Skills, keyed by <see cref="Skill.Name"/> for <see cref="Get(string)"/>.</param>

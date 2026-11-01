@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Services;
 
 /// <summary>
 /// Asks the Human to approve a roster of new Agents (Spec §6.9). Creates nothing itself - a
@@ -115,7 +116,7 @@ internal sealed class ProposeAgentsTool(
             clock.GetUtcNow());
 
         var put = proposals.TryPut(proposal);
-        if (put.Result == ProposalPutResult.Refused)
+        if (put.Result == PendingPutResult.Refused)
         {
             var existingProposerName = put.Existing?.ProposerName ?? "another Agent";
             return $"A Proposal from {existingProposerName} is already waiting in this Room.";

@@ -1,9 +1,8 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
 
@@ -19,21 +18,11 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
     private const string TokensKey = "transcriptCatchUpTokens";
     private const string FileName = "session-settings.json";
 
-    // Derives from ProtocolJson.Options as AppearanceStore does, but with a relaxed encoder: the file is hand-edited.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly string path;
     private readonly int defaultMessages;
     private readonly int defaultTokens;
     private readonly ILogger<SessionSettingsStore> logger;
-    private readonly Lock writeGate = new();
-    private readonly DebouncedFileWatcher watcher;
-    private bool disposed;
-    private volatile State state;
+    private readonly WatchedFileStore<State> watched;
 
     /// <summary>Loads (or defaults) the file at <c>{DataDir}/session-settings.json</c> and starts watching it.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and the configured defaults in <see cref="TeamOptions.Acp"/>.</param>
@@ -56,8 +45,14 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
 
         Directory.CreateDirectory(directory);
 
-        this.state = this.LoadAtConstruction();
-        this.watcher = new DebouncedFileWatcher(directory, FileName, this.OnWatcherSettled, this.logger, nameof(SessionSettingsStore));
+        this.watched = new WatchedFileStore<State>(
+            directory,
+            FileName,
+            this.LoadAtConstruction(),
+            _ => this.ReloadForWatcher(),
+            (_, _) => this.Changed,
+            this.logger,
+            nameof(SessionSettingsStore));
     }
 
     /// <summary>Raised after a save and after a hand edit is picked up; outside the write lock, so a subscriber cannot deadlock against a write.</summary>
@@ -67,16 +62,16 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
     public string FilePath => this.path;
 
     /// <inheritdoc />
-    public SessionSettings Current => this.state.Settings;
+    public SessionSettings Current => this.watched.Current.Settings;
 
     /// <summary>Why the file could not be used in full (unreadable, or a key ignored), or <see langword="null"/> when it was read cleanly.</summary>
-    public string? LoadError => this.state.Error;
+    public string? LoadError => this.watched.Current.Error;
 
     /// <summary>The Message cap the user has saved, or <see langword="null"/> when none is in force.</summary>
-    public int? MessagesOverride => this.state.Messages;
+    public int? MessagesOverride => this.watched.Current.Messages;
 
     /// <summary>The token budget the user has saved, or <see langword="null"/> when none is in force.</summary>
-    public int? TokensOverride => this.state.Tokens;
+    public int? TokensOverride => this.watched.Current.Tokens;
 
     /// <summary>Saves the Message cap, or resets it when <paramref name="value"/> is <see langword="null"/>.</summary>
     /// <param name="value">The new cap, or <see langword="null"/> to remove the override.</param>
@@ -93,17 +88,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
     /// <summary>Stops watching the file.</summary>
     public void Dispose()
     {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.disposed = true;
-        }
-
-        this.watcher.Dispose();
+        this.watched.Dispose();
     }
 
     private static JsonObject ParseDocumentFile(string path)
@@ -144,9 +129,9 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
         }
 
         Action? changed;
-        lock (this.writeGate)
+        lock (this.watched.Gate)
         {
-            ObjectDisposedException.ThrowIf(this.disposed, this);
+            ObjectDisposedException.ThrowIf(this.watched.IsDisposed, this);
 
             JsonObject document = this.ReadDocumentTolerantly();
             if (value is int accepted)
@@ -159,7 +144,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
             }
 
             this.WriteOrDelete(document);
-            this.state = this.BuildState(document, null);
+            this.watched.Current = this.BuildState(document, null);
             changed = this.Changed;
         }
 
@@ -193,7 +178,7 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
             return;
         }
 
-        File.WriteAllText(this.path, document.ToJsonString(IndentedJsonOptions));
+        AtomicFile.WriteText(this.path, document.ToJsonString(StoreJson.Indented));
     }
 
     private State BuildState(JsonObject document, string? baseError)
@@ -249,29 +234,6 @@ internal sealed class SessionSettingsStore : ISessionSettings, IDisposable
                 this.logger.LogWarning(ex, "Could not read session settings file '{Path}'; keeping the previously resolved settings.", this.path);
                 return null;
             });
-    }
-
-    private void OnWatcherSettled()
-    {
-        Action? changed;
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            State? reloaded = this.ReloadForWatcher();
-            if (reloaded is null)
-            {
-                return;
-            }
-
-            this.state = reloaded;
-            changed = this.Changed;
-        }
-
-        changed?.Invoke();
     }
 
     private sealed record State(SessionSettings Settings, int? Messages, int? Tokens, string? Error);

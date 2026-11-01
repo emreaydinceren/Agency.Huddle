@@ -63,7 +63,7 @@ internal sealed class HelperUsageStore
     /// <param name="day">The local day, <c>yyyy-MM-dd</c>.</param>
     public HelperUsage Get(HelperId id, string day)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT calls, granted, skipped, cost, currency FROM helper_usage WHERE helper_id = $id AND day = $day;";
         command.Parameters.AddWithValue("$id", id.Value);
@@ -101,7 +101,7 @@ internal sealed class HelperUsageStore
     /// <param name="currency">Its currency.</param>
     public void AddCost(HelperId id, string day, decimal amount, string currency)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = AddCostSql;
         command.Parameters.AddWithValue("$id", id.Value);
@@ -120,7 +120,7 @@ internal sealed class HelperUsageStore
     /// <param name="amount">How much to add.</param>
     private void Add(string sql, HelperId id, string day, int amount)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = sql;
         command.Parameters.AddWithValue("$id", id.Value);
@@ -129,13 +129,5 @@ internal sealed class HelperUsageStore
         command.Parameters.AddWithValue("$amount", amount);
 #pragma warning restore HAA0601
         command.ExecuteNonQuery();
-    }
-
-    /// <summary>Opens a connection to <c>team.db</c>.</summary>
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
     }
 }

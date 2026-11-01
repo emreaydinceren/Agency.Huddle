@@ -22,7 +22,7 @@ public sealed class ProposalStoreTests
 
         var result = store.TryPut(proposal);
 
-        Assert.Equal(ProposalPutResult.Stored, result.Result);
+        Assert.Equal(PendingPutResult.Stored, result.Result);
         Assert.Equal(proposal, store.Get("room-1"));
     }
 
@@ -41,7 +41,7 @@ public sealed class ProposalStoreTests
 
         var result = store.TryPut(second);
 
-        Assert.Equal(ProposalPutResult.Replaced, result.Result);
+        Assert.Equal(PendingPutResult.Replaced, result.Result);
         Assert.Equal(second, store.Get("room-1"));
     }
 
@@ -61,7 +61,7 @@ public sealed class ProposalStoreTests
 
         var result = store.TryPut(second);
 
-        Assert.Equal(ProposalPutResult.Refused, result.Result);
+        Assert.Equal(PendingPutResult.Refused, result.Result);
         Assert.Equal(first, result.Existing);
         Assert.Equal(first, store.Get("room-1"));
     }

@@ -54,7 +54,7 @@ internal sealed class FeedStore
     /// <returns>The items, newest first.</returns>
     public IReadOnlyList<FeedItem> Page(FeedQuery query)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         StringBuilder sql = new($"SELECT {Columns} FROM feed_events WHERE 1 = 1");
         if (query.BeforeId is { } before)
@@ -81,7 +81,7 @@ internal sealed class FeedStore
     /// <returns>The Notifications.</returns>
     public IReadOnlyList<FeedItem> Notifications(int limit)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = $"SELECT {Columns} FROM feed_events WHERE notify = 1 AND dismissed_at IS NULL ORDER BY id DESC LIMIT CAST($limit AS INTEGER);";
         _ = command.Parameters.AddWithValue("$limit", Text(limit));
@@ -92,7 +92,7 @@ internal sealed class FeedStore
     /// <returns>The count.</returns>
     public int UnseenCount()
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM feed_events WHERE notify = 1 AND seen_at IS NULL AND dismissed_at IS NULL AND resolved_at IS NULL;";
         return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
@@ -103,7 +103,7 @@ internal sealed class FeedStore
     /// <returns>The unresolved Notifications, newest first.</returns>
     public IReadOnlyList<FeedItem> Unresolved(FeedSourceType type)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = $"SELECT {Columns} FROM feed_events WHERE notify = 1 AND resolved_at IS NULL AND source_type = $type ORDER BY id DESC;";
         _ = command.Parameters.AddWithValue("$type", FeedSourceTypes.ToWire(type));
@@ -117,7 +117,7 @@ internal sealed class FeedStore
     /// <returns>The related items.</returns>
     public IReadOnlyList<FeedItem> Related(FeedItem item, IReadOnlyList<string> extraTargets, int limit)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         List<string> targets = [item.TargetKey, .. extraTargets];
         string[] names = [.. targets.Select(static (_, index) => "$t" + index.ToString(CultureInfo.InvariantCulture))];
@@ -137,7 +137,7 @@ internal sealed class FeedStore
     /// <returns>The highest Feed item id the Tab has shown.</returns>
     public long TabSeenUpTo()
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT value FROM feed_state WHERE key = $key;";
         _ = command.Parameters.AddWithValue("$key", TabSeenKey);
@@ -150,7 +150,7 @@ internal sealed class FeedStore
     /// <returns>The seven counts.</returns>
     public FeedCounts Counts(string? agent, string? team)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         StringBuilder sql = new("SELECT ");
         for (int i = 0; i < FeedCategories.Order.Count; i++)
@@ -173,7 +173,7 @@ internal sealed class FeedStore
     /// <returns>The inserted rows, and whether an update touched a row.</returns>
     internal FeedApplyResult Apply(IReadOnlyList<FeedCommand> commands)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteTransaction transaction = connection.BeginTransaction();
         List<FeedItem> added = [];
         bool changed = false;
@@ -199,7 +199,7 @@ internal sealed class FeedStore
     /// <returns>How many rows were deleted.</returns>
     internal int DeleteExpired(DateTimeOffset? dismissedCutoff, DateTimeOffset? activityCutoff)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteTransaction transaction = connection.BeginTransaction();
         int deleted = 0;
         if (dismissedCutoff is { } dismissed)
@@ -367,11 +367,4 @@ internal sealed class FeedStore
 
     private static DateTimeOffset ParseTime(string text) =>
         DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
-    }
 }

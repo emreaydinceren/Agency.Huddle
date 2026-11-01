@@ -27,7 +27,7 @@ internal sealed class PersonaOverrideTable
     /// <returns>The value, or <c>null</c>.</returns>
     public string? Get(string personaName)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = this.sql.Select;
         command.Parameters.AddWithValue("$name", personaName);
@@ -46,7 +46,7 @@ internal sealed class PersonaOverrideTable
             return;
         }
 
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = this.sql.Upsert;
         command.Parameters.AddWithValue("$name", personaName);
@@ -58,17 +58,10 @@ internal sealed class PersonaOverrideTable
     /// <param name="personaName">The Persona's name.</param>
     public void Remove(string personaName)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = this.sql.Delete;
         command.Parameters.AddWithValue("$name", personaName);
         command.ExecuteNonQuery();
-    }
-
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
     }
 }

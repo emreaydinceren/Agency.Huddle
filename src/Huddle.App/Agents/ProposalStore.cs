@@ -3,10 +3,10 @@ using Agency.Huddle.App.Services;
 namespace Agency.Huddle.App.Agents;
 
 /// <summary>
-/// Holds at most one pending <see cref="Proposal"/> per Room, in memory (Spec §6.9). Every
-/// operation is O(1) under a single <see cref="Lock"/>; <see cref="RoomEvents.ProposalChanged"/>
-/// is always raised after that lock is released, for <see cref="TryPut"/> (Stored or Replaced),
-/// a successful <see cref="TryTake"/>, and a <see cref="Drop"/> that actually removed something.
+/// Holds at most one pending <see cref="Proposal"/> per Room, in memory (Spec §6.9), on a
+/// <see cref="PendingByRoom{T}"/>. <see cref="RoomEvents.ProposalChanged"/> is always raised after that
+/// core's lock is released, for <see cref="TryPut"/> (Stored or Replaced), a successful
+/// <see cref="TryTake"/>, and a <see cref="Drop"/> that actually removed something.
 /// The class itself is public only so <see cref="Agency.Huddle.App.Services.ChatService"/>'s public
 /// constructor can take one (CS0051); every member below stays <see langword="internal"/> - nothing
 /// outside this assembly is meant to call any of them.
@@ -14,19 +14,15 @@ namespace Agency.Huddle.App.Agents;
 /// <param name="events">The hub <see cref="RoomEvents.ProposalChanged"/> is raised on.</param>
 public sealed class ProposalStore(RoomEvents events)
 {
-    private readonly Lock gate = new();
-    private readonly Dictionary<string, Proposal> proposals = new(StringComparer.Ordinal);
+    private readonly PendingByRoom<Proposal> proposals = new(
+        static proposal => proposal.RoomId,
+        static proposal => proposal.Id,
+        static proposal => proposal.ProposerAgentId);
 
     /// <summary>Returns the Proposal currently pending in <paramref name="roomId"/>, or <see langword="null"/> when none is.</summary>
     /// <param name="roomId">The Room to look up.</param>
     /// <returns>The pending Proposal, or <see langword="null"/>.</returns>
-    internal Proposal? Get(string roomId)
-    {
-        lock (this.gate)
-        {
-            return this.proposals.GetValueOrDefault(roomId);
-        }
-    }
+    internal Proposal? Get(string roomId) => this.proposals.Get(roomId);
 
     /// <summary>
     /// Stores <paramref name="proposal"/> under Spec §8.4's replacement rules: an empty Room
@@ -35,37 +31,16 @@ public sealed class ProposalStore(RoomEvents events)
     /// </summary>
     /// <param name="proposal">The Proposal to store.</param>
     /// <returns>What happened, and, only when refused, the Proposal that was already pending.</returns>
-    internal ProposalPut TryPut(Proposal proposal)
+    internal PendingPut<Proposal> TryPut(Proposal proposal)
     {
-        ProposalPutResult result;
-        Proposal? existing;
+        PendingPut<Proposal> put = this.proposals.TryPut(proposal);
 
-        lock (this.gate)
-        {
-            if (!this.proposals.TryGetValue(proposal.RoomId, out existing))
-            {
-                this.proposals[proposal.RoomId] = proposal;
-                result = ProposalPutResult.Stored;
-                existing = null;
-            }
-            else if (string.Equals(existing.ProposerAgentId, proposal.ProposerAgentId, StringComparison.Ordinal))
-            {
-                this.proposals[proposal.RoomId] = proposal;
-                result = ProposalPutResult.Replaced;
-                existing = null;
-            }
-            else
-            {
-                result = ProposalPutResult.Refused;
-            }
-        }
-
-        if (result is ProposalPutResult.Stored or ProposalPutResult.Replaced)
+        if (put.Result is not PendingPutResult.Refused)
         {
             events.PublishProposalChanged(proposal.RoomId);
         }
 
-        return new ProposalPut(result, existing);
+        return put;
     }
 
     /// <summary>
@@ -79,21 +54,7 @@ public sealed class ProposalStore(RoomEvents events)
     /// <returns>The removed Proposal, or <see langword="null"/> when nothing matched.</returns>
     internal Proposal? TryTake(string roomId, string proposalId)
     {
-        Proposal? taken;
-
-        lock (this.gate)
-        {
-            if (this.proposals.TryGetValue(roomId, out var current) &&
-                string.Equals(current.Id, proposalId, StringComparison.Ordinal))
-            {
-                _ = this.proposals.Remove(roomId);
-                taken = current;
-            }
-            else
-            {
-                taken = null;
-            }
-        }
+        Proposal? taken = this.proposals.TryTake(roomId, proposalId);
 
         if (taken is not null)
         {
@@ -107,14 +68,7 @@ public sealed class ProposalStore(RoomEvents events)
     /// <param name="roomId">The Room to clear - called when it is archived, deleted, or restarted.</param>
     internal void Drop(string roomId)
     {
-        bool removed;
-
-        lock (this.gate)
-        {
-            removed = this.proposals.Remove(roomId);
-        }
-
-        if (removed)
+        if (this.proposals.Drop(roomId))
         {
             events.PublishProposalChanged(roomId);
         }

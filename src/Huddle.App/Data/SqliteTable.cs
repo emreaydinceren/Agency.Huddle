@@ -20,11 +20,20 @@ internal static class SqliteTable
             Directory.CreateDirectory(directory);
         }
 
-        using SqliteConnection connection = new(connectionString);
-        connection.Open();
+        using SqliteConnection connection = Connect(connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = createDdl;
         command.ExecuteNonQuery();
         return connectionString;
+    }
+
+    /// <summary>Opens a new connection; the caller owns and disposes it.</summary>
+    /// <param name="connectionString">The connection string <see cref="Open"/> returned.</param>
+    /// <returns>The open connection.</returns>
+    public static SqliteConnection Connect(string connectionString)
+    {
+        SqliteConnection connection = new(connectionString);
+        connection.Open();
+        return connection;
     }
 }

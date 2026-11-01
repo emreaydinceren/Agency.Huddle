@@ -19,9 +19,9 @@ public sealed class QuestionStoreTests
         QuestionStore store = new(events);
         PendingQuestions card = MakeCard("room-1", "agent-coach", "card-1");
 
-        QuestionPut put = store.TryPut(card);
+        PendingPut<PendingQuestions> put = store.TryPut(card);
 
-        Assert.Equal(QuestionPutResult.Stored, put.Result);
+        Assert.Equal(PendingPutResult.Stored, put.Result);
         Assert.Null(put.Existing);
         Assert.Equal(card, store.Get("room-1"));
     }
@@ -35,9 +35,9 @@ public sealed class QuestionStoreTests
         _ = store.TryPut(MakeCard("room-1", "agent-coach", "card-1"));
         PendingQuestions second = MakeCard("room-1", "agent-coach", "card-2");
 
-        QuestionPut put = store.TryPut(second);
+        PendingPut<PendingQuestions> put = store.TryPut(second);
 
-        Assert.Equal(QuestionPutResult.Replaced, put.Result);
+        Assert.Equal(PendingPutResult.Replaced, put.Result);
         Assert.Equal(second, store.Get("room-1"));
     }
 
@@ -50,9 +50,9 @@ public sealed class QuestionStoreTests
         PendingQuestions first = MakeCard("room-1", "agent-coach", "card-1");
         _ = store.TryPut(first);
 
-        QuestionPut put = store.TryPut(MakeCard("room-1", "agent-nova", "card-2"));
+        PendingPut<PendingQuestions> put = store.TryPut(MakeCard("room-1", "agent-nova", "card-2"));
 
-        Assert.Equal(QuestionPutResult.Refused, put.Result);
+        Assert.Equal(PendingPutResult.Refused, put.Result);
         Assert.Equal(first, put.Existing);
         Assert.Equal(first, store.Get("room-1"));
     }
@@ -65,9 +65,9 @@ public sealed class QuestionStoreTests
         QuestionStore store = new(events);
         _ = store.TryPut(MakeCard("room-1", "agent-coach", "card-1"));
 
-        QuestionPut put = store.TryPut(MakeCard("room-2", "agent-nova", "card-2"));
+        PendingPut<PendingQuestions> put = store.TryPut(MakeCard("room-2", "agent-nova", "card-2"));
 
-        Assert.Equal(QuestionPutResult.Stored, put.Result);
+        Assert.Equal(PendingPutResult.Stored, put.Result);
         Assert.NotNull(store.Get("room-1"));
         Assert.NotNull(store.Get("room-2"));
     }

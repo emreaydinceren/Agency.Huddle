@@ -36,7 +36,7 @@ public sealed class CadenceStateStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
 
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT last_digest_utc, last_retro_utc, done_at_last_retro FROM cadence_state WHERE team = $team;";
         _ = command.Parameters.AddWithValue("$team", team);
@@ -60,7 +60,7 @@ public sealed class CadenceStateStore
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO cadence_state(team, last_digest_utc, last_retro_utc, done_at_last_retro)
@@ -84,11 +84,4 @@ public sealed class CadenceStateStore
 
     private static DateTimeOffset ParseTime(string text) =>
         DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
-    }
 }

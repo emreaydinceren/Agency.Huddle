@@ -33,7 +33,7 @@ internal sealed class HelperStatusStore
     /// <param name="id">The Helper.</param>
     public HelperStatus Get(HelperId id)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = "SELECT last_run_at, last_result, last_error, last_error_at, consecutive_failures FROM helper_status WHERE helper_id = $id;";
         command.Parameters.AddWithValue("$id", id.Value);
@@ -52,7 +52,7 @@ internal sealed class HelperStatusStore
     /// <param name="result">What it did.</param>
     public void RecordSuccess(HelperId id, DateTimeOffset at, string result)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO helper_status(helper_id, last_run_at, last_result, consecutive_failures) VALUES($id, $at, $result, 0)
@@ -76,7 +76,7 @@ internal sealed class HelperStatusStore
     /// </remarks>
     public HelperStatus RecordFailure(HelperId id, DateTimeOffset at, string error)
     {
-        using SqliteConnection connection = this.OpenConnection();
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteTransaction transaction = connection.BeginTransaction();
         using (SqliteCommand write = connection.CreateCommand())
         {
@@ -120,12 +120,4 @@ internal sealed class HelperStatusStore
     /// <summary>A nullable instant column.</summary>
     private static DateTimeOffset? ReadTime(SqliteDataReader reader, int ordinal) =>
         reader.IsDBNull(ordinal) ? null : DateTimeOffset.Parse(reader.GetString(ordinal), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-
-    /// <summary>Opens a connection to <c>team.db</c>.</summary>
-    private SqliteConnection OpenConnection()
-    {
-        SqliteConnection connection = new(this.connectionString);
-        connection.Open();
-        return connection;
-    }
 }
