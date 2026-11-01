@@ -24,9 +24,9 @@ its hot paths**:
 - GC costs about 0.4% of wall time (3.5 to 3.9 ms per second).
 - Strings are 17% of what is allocated, and about 71% of those come from Blazor rendering MudBlazor
   components, which is third-party code.
-- The larger app-owned costs are repeated work, not string handling: loading every Room twice per page,
-  N+1 member queries, and re-parsing Persona files on each Task render. Each is a design decision, listed
-  in section 5.
+- The larger app-owned costs are repeated work, not string handling: one member query per sidebar row
+  (R2, fixed), re-parsing Persona files on each Task render (P1, fixed), and every Room loaded by three
+  components (R1, declined on purpose; see section 5).
 
 The static pass agrees. With the recipe's analyzer rules raised to warning, the solution has zero hits, and
 the 435 grep hits in `candidates.md` sit on cold paths.
@@ -36,10 +36,18 @@ the 435 grep hits in `candidates.md` sit on cold paths.
 | ID | Location | Fix | Allocated | Mean | Commit |
 | --- | --- | --- | --- | --- | --- |
 | S1 | `src/Huddle.App/SkillSources/SkillRegistry.cs` `DisplayState(SkillEntry)` | Read the computed `SkillEntry.StateKey` once instead of twice per Skill | 10.94 KB → 5.47 KB (−50%) per 100 Skills | 3.727 µs → 2.559 µs (−31%) | `5c5da737` |
+| P1 | `src/Huddle.App/Tasks/HumanGate/ProofContextBuilder.cs` `CoverageFor` | Read each Agent's role from `PersonaIndex` (new optional `PersonaEntry.Role`, `PersonaStore.RoleOf`) instead of re-parsing the Persona's frontmatter on every Task render | 6,848 B → 0 B per name | 1,577 ns → 7 ns | `260b7436` |
+| R2 | `src/Huddle.App/Components/Shared/RoomNavRow.razor`, `RoomList.razor`, `Teams/TeamsNav.razor` | One `GetMembersByRoomAsync` per list load, passed to each row, instead of one `GetRoomMembersAsync` per row per parameter set | 43.57 KB → 25.27 KB (−42%) per load of 16 Rooms | 159.6 µs → 43.2 µs (−73%) | `7f530e32` |
+
+P1 and R2 are not string fixes. They remove repeated work that the trace exposed through its string allocations.
+Neither changes freshness: the Persona index rebuilds on every Persona file change, and every write that
+changes a Room's Members or a Member's Name publishes `RoomsChanged`, which both lists already reload on. Each
+adds tests that a deliberate mutation made fail. R2 was also checked in the running app on the software-co seed:
+1:1 Rooms show their Agent's avatar and group Rooms the Chat icon, in both sidebar lists.
 
 S1 adds the characterization test `SkillDisplayState_NewThenAvailableThenInUse`. A deliberate mutation made it
-fail: looking up the New overlay by the bare name gave `[Available, Available, InUse]`. The solution builds with
-0 warnings, and all 14,131 tests pass (35 skipped).
+fail: looking up the New overlay by the bare name gave `[Available, Available, InUse]`. After all three fixes the
+solution builds with 0 warnings, all 14,135 tests pass (35 skipped), and `Check-All` is clean.
 
 The other commits on the branch:
 
@@ -71,21 +79,19 @@ The other commits on the branch:
 
 ## 5. Needs my decision
 
-1. **R1: two full Room loads per page render.** `TeamsNav.LoadRoomsAsync` and `TabSync.ReconcileAsync` each
-   call `SqliteTeamDirectory.GetRoomsAsync` on every page render. Together that is 5.4% of string allocations,
-   plus a SQLite round trip each. A per-circuit or short-lived Rooms cache would remove one or both, but it
-   changes how fresh the sidebar is. That is a behaviour decision.
-2. **R2: N+1 member queries.** `RoomNavRow.OnParametersSetAsync` runs `GetRoomMembersAsync` once per row,
-   which is 1.8% and one query per Room per render. One batched query in the parent would fix it, but it
-   changes the component's contract.
-3. **P1: Persona re-parse on each Task render.** `ProofContextBuilder.CoverageFor` calls
-   `PersonaFrontmatter.TryReadIdentity` for each name, on each `TaskReadView.Refresh` (1.3%). Keeping the parsed
-   role in `PersonaIndex`/`PersonaEntry` fixes it, but `PersonaEntry` is a public positional record used across
-   the app and its tests.
-4. **ACP subtree.** I did not edit it, per your scope choice. No `Huddle.Acp` or `Huddle.Console` frame
+1. **R1: Rooms loaded by three components. Decided: not doing it.** `TeamsNav`, `RoomList` and `TabSync` each
+   load every Room when they initialize and again on `RoomsChanged` (5.4% of string allocations in this
+   workload). The workload overstated it: it loaded a fresh page four times a second, while in real use these
+   layout components live as long as the browser tab and reload only on events. A cache scoped to one tab
+   would turn 3 queries into 1 without changing freshness. An app-wide cache would also need an audit
+   confirming every Room write publishes `RoomsChanged`, or a missed event would leave the sidebar stale until
+   restart. At one Human and a few dozen Rooms, the gain does not pay for the moving parts. Revisit if the Room
+   count or the number of open tabs grows by an order of magnitude.
+2. **R2 and P1** were decision items in the first version of this report. Both are now fixed (section 2).
+3. **ACP subtree.** I did not edit it, per your scope choice. No `Huddle.Acp` or `Huddle.Console` frame
    appears in the trace's top string sites under this workload. It sees one prompt every 15 s, so that is
    not evidence that it is clean under heavy streaming.
-5. **Tooling is not in the solution.** `tools/*` is kept out of `Huddle.slnx`, so CI does not build it and it
+4. **Tooling is not in the solution.** `tools/*` is kept out of `Huddle.slnx`, so CI does not build it and it
    can rot. Adding it costs a BenchmarkDotNet restore on every CI run.
 
 ## Costs
