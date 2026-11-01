@@ -6169,26 +6169,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-tone-warning-ink);
 }
 
-/* ---- Team page toolbar -----------------------------------------------------------------------
-   The Team page toolbar (action button and search box) sits in a column that the persistent 240px
-   drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box
-   shrink, so neither is clipped by the column. */
-.team-tab-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 16px;
-}
-
-.team-tab-toolbar-action {
-    max-width: 100%;
-}
-
-.team-tab-toolbar-search {
-    flex: 1 1 160px;
-    min-width: 0;
-}
-
 @media (max-width: 600px) {
     .team-page-wide .team-roster,
     .team-page-wide .team-details,
