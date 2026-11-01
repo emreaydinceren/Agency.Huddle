@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Library;
 using Agency.Huddle.SkillPacks.Folders;
 using System.Collections.Frozen;
 using Microsoft.Extensions.Options;
@@ -478,7 +479,7 @@ internal sealed class SkillStore : IDisposable
                 // its '/'-separated relative path, and the folder hash decides ModifiedLocally.
                 foreach (string filePath in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
                 {
-                    string relative = Path.GetRelativePath(folder, filePath).Replace('\\', '/');
+                    string relative = PathContainment.RelativeSlashPath(folder, filePath);
                     if (!string.Equals(relative, SkillProvenance.FileName, StringComparison.Ordinal))
                     {
                         files[relative] = File.ReadAllText(filePath).ReplaceLineEndings("\n");

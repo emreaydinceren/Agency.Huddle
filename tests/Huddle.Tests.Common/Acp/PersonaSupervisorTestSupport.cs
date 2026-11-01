@@ -39,19 +39,31 @@ internal static class PersonaSupervisorTestSupport
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias both <paramref name="name"/> too and no Teams - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>
     internal static PersonaIdentity Identity(string name) => new(name, name, name, []);
 
+    /// <summary>
+    /// Polls every 5 ms until <paramref name="agentName"/> is registered and online, and fails naming it after
+    /// <see cref="TestBudgets.Slowest"/> (the wait was unbounded before).
+    /// </summary>
+    /// <param name="directory">The Team Directory to look the Agent up in.</param>
+    /// <param name="gateway">The Agent gateway that reports whether it is online.</param>
+    /// <param name="agentName">The Agent's Name.</param>
+    /// <param name="ct">The test's own deadline.</param>
+    /// <returns>The Agent's user id.</returns>
     internal static async Task<string> WaitForAgentOnlineAsync(
         Agency.Huddle.App.Data.ITeamDirectory directory, Agency.Huddle.App.Pipes.IAgentGateway gateway, string agentName, CancellationToken ct)
     {
-        while (true)
-        {
-            var user = await directory.FindUserByNameAsync(agentName, ct);
-            if (user is not null && gateway.IsOnline(user.Id))
+        string? agentId = await Eventually.ValueAsync<string?>(
+            async probeCt =>
             {
-                return user.Id;
-            }
+                var user = await directory.FindUserByNameAsync(agentName, probeCt);
+                return user is not null && gateway.IsOnline(user.Id) ? user.Id : null;
+            },
+            static id => id is not null,
+            ct,
+            TestBudgets.Slowest,
+            TimeSpan.FromMilliseconds(5),
+            what: $"agent {agentName} registered and online");
 
-            await Task.Delay(5, ct);
-        }
+        return agentId ?? throw new InvalidOperationException("The wait accepted a null agent id.");
     }
 
     /// <summary>

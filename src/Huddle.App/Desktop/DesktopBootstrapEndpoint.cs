@@ -31,7 +31,7 @@ internal static class DesktopBootstrapEndpoint
         if (!context.Request.Headers.TryGetValue(DesktopStopEndpoint.TokenHeader, out StringValues values)
             || values.Count != 1
             || values[0] is not { } presented
-            || !DesktopStopEndpoint.TokensMatch(presented, session.StopToken))
+            || !GatewaySecrets.SecretsEqual(presented, session.StopToken))
         {
             return Results.StatusCode(StatusCodes.Status401Unauthorized);
         }

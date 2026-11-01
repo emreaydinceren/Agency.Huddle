@@ -13,6 +13,8 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Waiting;
+using System.Runtime.CompilerServices;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -879,20 +881,18 @@ public sealed class PersonaRenameCascadeTests
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
 
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-
-        while (teamDirectory.FindUserByName(newName) is null)
-        {
-            linked.Token.ThrowIfCancellationRequested();
-            await Task.Delay(20, linked.Token);
-        }
+        await Eventually.UntilAsync(
+            () => teamDirectory.FindUserByName(newName) is not null,
+            ct,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(20),
+            describe: () => $"The Team Directory never resolved '{newName}' to an Agent");
 
         // The rename itself is synchronous (already true by the time PersonaStore.Update returns),
-        // so this loop exits immediately; the short extra pause below gives the detached task -
+        // so the wait above exits immediately; this deliberate 250 ms pause gives the detached task -
         // which runs the Room step before the Work Dir step this test's scenario skips - room to
-        // finish before the assertions run.
-        await Task.Delay(250, linked.Token);
+        // finish before the assertions run. It is a quiet-period sleep, not a poll, so it stays.
+        await Task.Delay(250, ct);
     }
 
     /// <summary>
@@ -901,20 +901,24 @@ public sealed class PersonaRenameCascadeTests
     /// replacement for a real wall-clock sleep when a test must drive a
     /// <see cref="PersonaRenameCascade"/> retry loop to completion under a <see cref="FiringTimeProvider"/>.
     /// </summary>
-    private static async Task AdvanceUntilAsync(FiringTimeProvider timeProvider, Func<bool> condition, TimeSpan step, CancellationToken ct)
+    private static async Task AdvanceUntilAsync(
+        FiringTimeProvider timeProvider,
+        Func<bool> condition,
+        TimeSpan step,
+        CancellationToken ct,
+        [CallerArgumentExpression(nameof(condition))] string conditionText = "")
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(condition);
 
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-
-        while (!condition())
-        {
-            timeProvider.Advance(step);
-            linked.Token.ThrowIfCancellationRequested();
-            await Task.Delay(20, linked.Token);
-        }
+        _ = await Eventually.ValueAsync(
+            _ => Task.FromResult(condition()),
+            static met => met,
+            ct,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(20),
+            () => timeProvider.Advance(step),
+            conditionText);
     }
 
     /// <summary>
@@ -925,14 +929,12 @@ public sealed class PersonaRenameCascadeTests
     /// </summary>
     private static async Task WaitForExactCasingAsync(string parentDir, string expectedName, CancellationToken ct)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-
-        while (!Directory.Exists(parentDir) || !Directory.GetDirectories(parentDir).Select(Path.GetFileName).Contains(expectedName, StringComparer.Ordinal))
-        {
-            linked.Token.ThrowIfCancellationRequested();
-            await Task.Delay(20, linked.Token);
-        }
+        await Eventually.UntilAsync(
+            () => Directory.Exists(parentDir) && Directory.GetDirectories(parentDir).Select(Path.GetFileName).Contains(expectedName, StringComparer.Ordinal),
+            ct,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(20),
+            describe: () => $"'{parentDir}' never held a directory named exactly '{expectedName}'");
     }
 
     /// <summary>The wired-up components one test needs, bundled so a single <see langword="using"/> disposes both the store and the cascade.</summary>

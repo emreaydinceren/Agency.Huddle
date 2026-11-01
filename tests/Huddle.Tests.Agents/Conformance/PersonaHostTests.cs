@@ -9,6 +9,7 @@ using Agency.Huddle.Acp.Tests.Fakes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.Tests.Pipes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Conformance;
 
@@ -440,20 +441,13 @@ public sealed class PersonaHostTests
         /// </summary>
         internal async Task<JsonObject> SessionNewParamsAsync(int occurrence, CancellationToken cancellationToken)
         {
-            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
-
-            List<JsonObject> sessionNews;
-            while (true)
-            {
-                sessionNews = [.. this.Agent.Received.Where(message => (string?)message["method"] == "session/new")];
-                if (sessionNews.Count >= occurrence)
-                {
-                    break;
-                }
-
-                await Task.Delay(TimeSpan.FromMilliseconds(20), timeout.Token).ConfigureAwait(false);
-            }
+            List<JsonObject> sessionNews = await Eventually.ValueAsync(
+                _ => Task.FromResult<List<JsonObject>>([.. this.Agent.Received.Where(message => (string?)message["method"] == "session/new")]),
+                found => found.Count >= occurrence,
+                cancellationToken,
+                TestBudgets.Standard,
+                TimeSpan.FromMilliseconds(20),
+                what: $"session/new request number {occurrence}").ConfigureAwait(false);
 
             return (JsonObject)sessionNews[occurrence - 1]["params"]!;
         }

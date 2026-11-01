@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.SkillPacks.Folders;
@@ -624,7 +625,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
                     string? sourceFolder = SourceOfStaged(staging, file);
                     if (sourceFolder is not null)
                     {
-                        this.log.Append(sourceFolder, new LogLine("moved", $"file:{Path.GetRelativePath(dir, to).Replace('\\', '/')}", Action: "kept-existing", Detail: "The file existed already, so the move left it as it was."));
+                        this.log.Append(sourceFolder, new LogLine("moved", $"file:{PathContainment.RelativeSlashPath(dir, to)}", Action: "kept-existing", Detail: "The file existed already, so the move left it as it was."));
                     }
 
                     continue;
@@ -649,7 +650,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
     /// <summary>The Source id a staged file under <c>sources/</c> belongs to, or null.</summary>
     private static string? SourceOfStaged(string staging, string file)
     {
-        string relative = Path.GetRelativePath(Path.Combine(staging, "sources"), file).Replace('\\', '/');
+        string relative = PathContainment.RelativeSlashPath(Path.Combine(staging, "sources"), file);
         if (relative.StartsWith("..", StringComparison.Ordinal))
         {
             return null;
@@ -714,7 +715,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
     /// <summary>Whether a relative path is <c>.source.json</c> or in a <c>.git</c> folder.</summary>
     private static bool IsExcluded(string folder, string file)
     {
-        string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
+        string relative = PathContainment.RelativeSlashPath(folder, file);
         return relative == SkillProvenance.FileName || relative.StartsWith(".git/", StringComparison.Ordinal) || relative.Contains("/.git/", StringComparison.Ordinal);
     }
 

@@ -1,6 +1,4 @@
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using Agency.Huddle.App.Gateway;
 using Microsoft.Extensions.Primitives;
 
@@ -35,7 +33,7 @@ internal static class DesktopStopEndpoint
         if (!context.Request.Headers.TryGetValue(TokenHeader, out StringValues values)
             || values.Count != 1
             || values[0] is not { } presented
-            || !TokensMatch(presented, session.StopToken))
+            || !GatewaySecrets.SecretsEqual(presented, session.StopToken))
         {
             return Results.StatusCode(StatusCodes.Status401Unauthorized);
         }
@@ -58,19 +56,5 @@ internal static class DesktopStopEndpoint
 
         IPAddress? remote = context.Connection.RemoteIpAddress;
         return remote is null || IPAddress.IsLoopback(remote);
-    }
-
-    /// <summary>
-    /// Compares two tokens in constant time by hashing both to 32 bytes first, so the inputs are always the
-    /// same length and no length-dependent early exit exists.
-    /// </summary>
-    /// <param name="presented">The token the caller sent.</param>
-    /// <param name="expected">The instance's real token.</param>
-    /// <returns><see langword="true"/> when the tokens are identical.</returns>
-    internal static bool TokensMatch(string presented, string expected)
-    {
-        byte[] presentedHash = SHA256.HashData(Encoding.UTF8.GetBytes(presented));
-        byte[] expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expected));
-        return CryptographicOperations.FixedTimeEquals(presentedHash, expectedHash);
     }
 }

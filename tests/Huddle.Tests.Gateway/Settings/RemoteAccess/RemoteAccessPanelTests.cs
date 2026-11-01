@@ -138,6 +138,32 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         Assert.Equal("https://desktop-a.tail1234.ts.net:5101", this.ctx.JSInterop.Invocations["huddleClipboard.copy"].Single().Arguments[0]);
     }
 
+    /// <summary>A copy the browser accepts says the link was copied.</summary>
+    [Fact]
+    public async Task Gateway_CopyLinkAccepted_SaysLinkCopied()
+    {
+        _ = this.ctx.JSInterop.Setup<bool>("huddleClipboard.copy", _ => true).SetResult(true);
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+
+        await Click(cut, () => Button(Part(cut, "gateway"), "Copy link"));
+
+        Assert.Equal(RemoteAccessCopy.LinkCopied, cut.TextOf("[data-testid=gateway-notice]"));
+    }
+
+    /// <summary>A copy the browser refuses must not claim the link was copied.</summary>
+    [Fact]
+    public async Task Gateway_CopyLinkRefused_DoesNotSayCopied()
+    {
+        _ = this.ctx.JSInterop.Setup<bool>("huddleClipboard.copy", _ => true).SetResult(false);
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+
+        await Click(cut, () => Button(Part(cut, "gateway"), "Copy link"));
+
+        string notice = cut.TextOf("[data-testid=gateway-notice]");
+        Assert.Equal(RemoteAccessCopy.LinkNotCopied, notice);
+        Assert.DoesNotContain("Link copied", notice, StringComparison.Ordinal);
+    }
+
     /// <summary>With no address there is no link and no Copy link.</summary>
     [Fact]
     public void Gateway_NoPublicAddress_HasNoCopyLink()

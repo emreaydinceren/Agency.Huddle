@@ -28,22 +28,15 @@
             return;
         }
 
-        try
+        string? stored = await BrowserStorage.TryGetAsync(this.JS, StorageKey);
+        if (this.Tabs.Restore(TabSnapshot.TryParse(stored)))
         {
-            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", StorageKey);
-            if (this.Tabs.Restore(TabSnapshot.TryParse(stored)))
-            {
-                this.Tabs.Open(this.Navigation.Uri);
-            }
+            this.Tabs.Open(this.Navigation.Uri);
+        }
 
-            this.Tabs.Changed += this.OnTabsChanged;
-            this.subscribed = true;
-            await this.SaveAsync();
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone before storage answered; nothing to restore or save.
-        }
+        this.Tabs.Changed += this.OnTabsChanged;
+        this.subscribed = true;
+        await this.SaveAsync();
     }
 
     /// <summary>Stops saving.</summary>
@@ -62,13 +55,6 @@
 
     private async Task SaveAsync()
     {
-        try
-        {
-            await this.JS.InvokeVoidAsync("huddleStorage.set", StorageKey, this.Tabs.Export().ToJson());
-        }
-        catch (JSDisconnectedException)
-        {
-            // The circuit is gone; the last save before it is what the next load restores.
-        }
+        _ = await BrowserStorage.TrySetAsync(this.JS, StorageKey, this.Tabs.Export().ToJson());
     }
 }

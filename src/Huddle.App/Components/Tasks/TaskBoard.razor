@@ -477,10 +477,11 @@
     /// container - a zone whose own parameters didn't change would otherwise skip re-rendering, and
     /// its cards with it.
     /// </summary>
-    private void OnCardsChanged() => _ = this.InvokeAsync(() =>
+    private void OnCardsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         this.container?.Refresh();
+        return Task.CompletedTask;
     });
 
     /// <summary><c>TransactionStarted</c>: show the ghost buckets.</summary>

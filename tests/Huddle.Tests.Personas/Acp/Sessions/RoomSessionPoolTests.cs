@@ -655,23 +655,22 @@ public sealed class RoomSessionPoolTests
     private static async Task SweepUntilAsync(
         PersonaRunner runner, ManualTimeProvider time, TimeSpan step, Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
     {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            time.Advance(step);
-            await runner.SweepIdleSessionsAsync();
-
-            if (condition())
+        _ = await Eventually.ValueAsync(
+            async _ =>
             {
-                return;
-            }
+                if (condition())
+                {
+                    return true;
+                }
 
-            if (DateTime.UtcNow > deadline)
-            {
-                Assert.Fail("Condition was not met before the sweep's own timeout.");
-            }
-
-            await Task.Delay(20, ct);
-        }
+                time.Advance(step);
+                await runner.SweepIdleSessionsAsync();
+                return condition();
+            },
+            static met => met,
+            ct,
+            timeout ?? TestBudgets.Standard,
+            TimeSpan.FromMilliseconds(20),
+            what: "the idle sweep achieved the expected condition");
     }
 }

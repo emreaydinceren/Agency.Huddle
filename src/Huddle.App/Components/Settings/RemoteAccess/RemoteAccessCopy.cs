@@ -24,6 +24,9 @@ internal static class RemoteAccessCopy
     /// <summary>The notice after Copy link.</summary>
     public const string LinkCopied = "Link copied.";
 
+    /// <summary>The notice when Copy link was refused by the browser.</summary>
+    public const string LinkNotCopied = "Couldn't copy the link. Select it and press Ctrl+C.";
+
     /// <summary>The sentence under the QR code.</summary>
     public const string PairNote = "Scan to pair. Works once, for 10 minutes. You will still approve it.";
 

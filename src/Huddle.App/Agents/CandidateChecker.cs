@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
@@ -281,7 +282,7 @@ internal sealed partial class CandidateChecker(
                 // GetRelativePath is relative to DataDir, so the result already carries the
                 // Agents/<Name>/<Name>.md path a Human can follow from the DataDir root -
                 // no prefix needs adding back here, unlike the old flat Teams/ layout.
-                var relative = Path.GetRelativePath(personas.Paths.DataDir, path).Replace('\\', '/');
+                var relative = PathContainment.RelativeSlashPath(personas.Paths.DataDir, path);
                 return $"'{relative}'";
             }
 

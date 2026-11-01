@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Appearance;
 
@@ -500,12 +501,12 @@ public sealed class AppearanceCustomizationTests
 
         File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), """{"customizations":{"lumen-light":{"palette":{"primary":"#112233"}}}}""");
 
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (store.Current.CustomizationFor("lumen-light") is null)
-        {
-            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the filesystem watcher.");
-            await Task.Delay(TimeSpan.FromMilliseconds(50), TestContext.Current.CancellationToken);
-        }
+        await Eventually.UntilAsync(
+            () => store.Current.CustomizationFor("lumen-light") is not null,
+            TestContext.Current.CancellationToken,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(50),
+            describe: () => "The filesystem watcher never picked up the hand-edited customization");
 
         Assert.Equal("#112233", store.Current.CustomizationFor("lumen-light")?.Palette["primary"]);
     }

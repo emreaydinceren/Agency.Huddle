@@ -167,7 +167,8 @@ public sealed class PersonaSupervisorFileChangesTests
         // File Changes only after the Turn's final MessageDelta, so a slow commit never delays the
         // reply. The siblings above close that gap with supervisor.StopAsync; this fixture owns its
         // supervisor, so the test waits for the file itself, bounded so a real regression still fails.
-        Assert.True(await WaitForFileAsync(stateFile, TimeSpan.FromSeconds(10), ct));
+        await WaitForFileAsync(stateFile, TestBudgets.Slow, ct);
+        Assert.True(File.Exists(stateFile));
     }
 
     /// <summary>
@@ -402,24 +403,18 @@ public sealed class PersonaSupervisorFileChangesTests
 
 
 
-    /// <summary>Waits until <paramref name="path"/> exists, or <paramref name="timeout"/> elapses.</summary>
+    /// <summary>Waits until <paramref name="path"/> exists, and fails naming the file when <paramref name="timeout"/> elapses.</summary>
     /// <param name="path">The file to wait for.</param>
-    /// <param name="timeout">How long to wait before giving up.</param>
+    /// <param name="timeout">How long to wait before failing.</param>
     /// <param name="ct">The test's cancellation token.</param>
-    /// <returns><see langword="true"/> if the file appeared within <paramref name="timeout"/>.</returns>
-    private static async Task<bool> WaitForFileAsync(string path, TimeSpan timeout, CancellationToken ct)
+    /// <returns>A task that completes when the file exists.</returns>
+    private static Task WaitForFileAsync(string path, TimeSpan timeout, CancellationToken ct)
     {
-        var deadline = DateTimeOffset.UtcNow + timeout;
-        while (!File.Exists(path))
-        {
-            if (DateTimeOffset.UtcNow >= deadline)
-            {
-                return false;
-            }
-
-            await Task.Delay(50, ct);
-        }
-
-        return true;
+        return Eventually.UntilAsync(
+            () => File.Exists(path),
+            ct,
+            timeout,
+            TimeSpan.FromMilliseconds(50),
+            describe: () => $"File '{path}' never appeared");
     }
 }

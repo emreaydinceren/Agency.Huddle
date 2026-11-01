@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Options;
 using System.Text;
@@ -64,7 +65,7 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
             string candidateDir = Path.Combine(typeDir, CandidatesFolder);
             string candidatePath = Path.GetFullPath(Path.Combine(candidateDir, roleId + ".md"));
-            if (!candidatePath.StartsWith(candidateDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            if (!PathContainment.IsInside(candidatePath, candidateDir, includeRoot: false, PathContainment.Comparison)
                 || type.Roles.Any(r => string.Equals(r.Id, roleId, StringComparison.Ordinal))
                 || File.Exists(candidatePath))
             {

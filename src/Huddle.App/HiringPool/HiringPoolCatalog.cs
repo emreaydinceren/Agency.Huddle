@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Options;
@@ -301,7 +302,7 @@ internal sealed partial class HiringPoolCatalog
     {
         string root = Path.GetFullPath(this.userDir);
         string full = Path.GetFullPath(Path.Combine(root, relativePath));
-        if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(full) || TeamTypeCatalog.LeavesTypeFolder(root, full))
+        if (!PathContainment.IsInside(full, root, includeRoot: false, PathContainment.Comparison) || !File.Exists(full) || TeamTypeCatalog.LeavesTypeFolder(root, full))
         {
             return null;
         }
