@@ -190,7 +190,6 @@ take over is small:
 | `LibraryDocument`'s viewer for Image, SVG, Text and Other | `MudExFileDisplay` | **Worth reopening.** Ours is a few lines per kind and shows no preview for Other. MudExFileDisplay would add PDF, Office, zip, CSV and email previews off the shelf. This is a feature gain more than a deletion, and the heavy dependencies listed above exist for exactly this component. |
 | `LibraryTree.razor` (606 lines) | `MudExTreeView` | **No.** The lines are scope rules, lazy loading through `LibraryFileService` and a path comparer that keeps selection across refreshes. MudExTreeView adds view modes and filtering, not those. |
 | `LibraryExplorer`, `LibraryFileOps` | `MudExFileManager` | **No.** Ours enforces Library scopes, preview counts and protection of the open document. |
-| `ResizableEndDrawer` + `huddleResize` | `MudExSplitter`, `MudExSplitPanel` | **No, unless the design changes.** Those resize two panes side by side, not a temporary drawer over the page ("Drawer anatomy" in the design system). |
 | `task-list-resize.js` (174 lines) | none | MudEx has no data-grid column resizing. |
 | `MarkdownRenderer` | `MudExMarkdown` | **No.** It wraps MudBlazor.Markdown; see the row above. |
 

@@ -213,7 +213,6 @@ public sealed class AppCssTasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("grid-template-columns: 120px minmax(0, 1fr);", css, StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-detail-footer-meta"), StringComparison.Ordinal);
-        Assert.Contains("line-clamp: 3;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".resizable-drawer-title"), StringComparison.Ordinal);
         Assert.Contains("margin: 0;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-detail-group > .group-label"), StringComparison.Ordinal);
     }
 

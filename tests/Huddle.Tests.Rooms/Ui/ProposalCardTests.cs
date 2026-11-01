@@ -542,6 +542,12 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<IReadOnlyDictionary<string, IReadOnlyList<User>>> GetMembersByRoomAsync(CancellationToken ct = default)
+        {
+            return inner.GetMembersByRoomAsync(ct);
+        }
+
+        /// <inheritdoc />
         public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default)
         {
             return inner.CreateRoomAsync(name, memberIds, ct);

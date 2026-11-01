@@ -39,9 +39,6 @@ internal sealed record AppearanceSettings(
     string? DarkThemeId,
     IReadOnlyDictionary<string, SkinCustomization> Customizations)
 {
-    /// <summary>The state when no <c>appearance.json</c> exists, or nothing in it is valid: no theme selected and nothing customised.</summary>
-    public static AppearanceSettings Empty { get; } = new(null, null, null, new Dictionary<string, SkinCustomization>(StringComparer.Ordinal));
-
     /// <summary>The theme the mode toggle switches to from dark: the stored light choice, or <see cref="ThemeCatalog.DefaultLightId"/> when none is chosen.</summary>
     public string PreferredLightId => this.LightThemeId ?? ThemeCatalog.DefaultLightId;
 

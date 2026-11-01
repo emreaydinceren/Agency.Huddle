@@ -70,6 +70,28 @@ public sealed class SkillRegistryTests
         Assert.Equal(ItemState.Available, host.Registry.DisplayState(sheets));
     }
 
+    /// <summary>A Skill's state reads both its check state and the New overlay by its <c>skill:</c> key: a Skill added after
+    /// the baseline is New, Available once seen, and In use once an Agent holds it.</summary>
+    [Fact]
+    public async Task SkillDisplayState_NewThenAvailableThenInUse()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RegistryHost host = WithPack();
+        await host.Registry.ReloadAsync(ct);
+        host.Pack("sheets", "xlsx", host.CloneSkill("xlsx"));
+        host.SkillsMd(["packs/documents.skillpack.json", "packs/sheets.skillpack.json"]);
+        await host.Registry.RebuildAsync(RebuildScope.All, ct);
+        SkillEntry xlsx = host.Registry.Current.Resolved.FindSkill("xlsx") ?? throw new InvalidOperationException("xlsx is missing");
+
+        ItemState fresh = host.Registry.DisplayState(xlsx);
+        await host.Registry.MarkSeenAsync(["skill:xlsx"], ct);
+        ItemState seen = host.Registry.DisplayState(xlsx);
+        host.Agent("Jane", ["xlsx"], []);
+        ItemState held = host.Registry.DisplayState(xlsx);
+
+        Assert.Equal([ItemState.New, ItemState.Available, ItemState.InUse], [fresh, seen, held]);
+    }
+
     /// <summary>An Agent holding the Pack makes it In use; the republish reuses the resolved registry.</summary>
     [Fact]
     public async Task Holders_RepublishedWithoutReread()

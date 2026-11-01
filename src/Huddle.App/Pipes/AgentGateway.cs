@@ -39,8 +39,6 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
 
     public bool IsOnline(string agentId) => this.connections.ContainsKey(agentId);
 
-    public IReadOnlyCollection<string> OnlineAgentIds => this.connections.Keys.ToArray();
-
     /// <inheritdoc />
     public async Task StopTurnAsync(string agentId, string roomId, CancellationToken cancellationToken = default)
     {

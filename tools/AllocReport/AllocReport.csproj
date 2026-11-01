@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Reads a dotnet-trace gc-verbose .nettrace and ranks sampled allocations by type, app method and stack.
+       Not in Huddle.slnx: a perf-audit helper, run by hand. See perf-audit/README.md. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+  </ItemGroup>
+
+</Project>

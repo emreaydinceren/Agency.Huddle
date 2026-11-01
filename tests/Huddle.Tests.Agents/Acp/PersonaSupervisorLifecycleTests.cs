@@ -8,6 +8,7 @@ using Agency.Huddle.Tests.Pipes;
 using static Agency.Huddle.Tests.Acp.PersonaSupervisorTestSupport;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Fakes;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -46,14 +47,24 @@ public sealed class PersonaSupervisorLifecycleTests
         Assert.Equal(0, supervisor.RunningHostCount);
     }
 
+    /// <summary>
+    /// With Agents switched on, the supervisor starts one host for each Persona file written to disk. The
+    /// supervisor's 10-second budget starts once the fixture is up, and the fixture's start has a bound of its
+    /// own: a first test in a cold process under CPU load spent 6-8 s of a shared budget booting the host, and
+    /// failed at 10 s with both Personas found and both hosts a few milliseconds from running.
+    /// </summary>
     [Fact]
     public async Task Enabled_StartsOneHostPerPersonaFile()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
+        using CancellationTokenSource boot = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        boot.CancelAfter(TestBudgets.Slowest);
         await using var fixture = await PipeHostFixture.StartAsync(
-            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, boot.Token);
+
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TestBudgets.Slow);
+        CancellationToken ct = cts.Token;
+
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         WritePersonaFile(options, "nova");
         WritePersonaFile(options, "zeta");

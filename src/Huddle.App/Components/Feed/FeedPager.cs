@@ -45,9 +45,6 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
     /// <summary>Reads the first page and starts a fresh list.</summary>
     public void Load() => this.Load(pageSize);
 
-    /// <summary>Reads again as many items as are shown, so a reload does not lose the pages the Human has already opened.</summary>
-    public void Reload() => this.Load(Math.Max(pageSize, this.loadedCount));
-
     /// <summary>Reads the next older page and appends it.</summary>
     public void ShowMore()
     {

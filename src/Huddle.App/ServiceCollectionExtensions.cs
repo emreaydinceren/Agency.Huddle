@@ -292,7 +292,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HiringPoolCatalog>();
         services.AddSingleton<CustomRoleStore>();
         services.AddSingleton<TeamTypeCatalog>();
-        services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
         // Shared between PersonaRenameCascade (signals around an Agent-folder move) and

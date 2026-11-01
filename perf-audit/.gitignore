@@ -1,0 +1,5 @@
+# Raw traces are 30-70 MB each; the ranked alloc-*.md reports are what we keep.
+*.nettrace
+*.etlx
+*.log
+BenchmarkDotNet.Artifacts/*.log

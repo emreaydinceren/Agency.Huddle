@@ -1,5 +1,3 @@
-using Bunit;
-using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Components.Teams;
 
@@ -8,8 +6,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>
 /// Pins U20 T20.4 and T20.5 (UX-020, UX-021, UX-024, UX-025, UX-055, UX-R10, UX-R11): the Team
 /// dialogs follow the dialog anatomy (<c>HuddleDialogOptions.SmallForm</c>, Cancel before the Filled
-/// primary, the single-field name dialog is <c>NameDialog</c>) and <c>TeamTabToolbar</c> renders the
-/// shared <c>SearchField</c>.
+/// primary, the single-field name dialog is <c>NameDialog</c>).
 /// </summary>
 public sealed class TeamsDialogConsistencyTests
 {
@@ -49,22 +46,6 @@ public sealed class TeamsDialogConsistencyTests
         Assert.Contains("ShowAsync<NameDialog>", prompt, StringComparison.Ordinal); // contains-ok: haystack is the prompt's C# source
         Assert.Contains("HuddleDialogOptions.SmallForm", prompt, StringComparison.Ordinal); // contains-ok: haystack is the prompt's C# source
         Assert.False(File.Exists(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "NewTeamDialog.razor")));
-    }
-
-    /// <summary>The toolbar's search is the shared <c>SearchField</c> inside the <c>team-tab-toolbar-search</c> slot.</summary>
-    [Fact]
-    public async Task Toolbar_RendersSharedSearchField()
-    {
-        await using MudBunitContext ctx = new();
-
-        IRenderedComponent<TeamTabToolbar> cut = ctx.Render<TeamTabToolbar>(parameters => parameters
-            .Add(t => t.ActionText, "Add member")
-            .Add(t => t.SearchPlaceholder, "Search members"));
-
-        IRenderedComponent<SearchField> field = cut.FindComponent<SearchField>();
-        Assert.Equal("Search members", field.Instance.Placeholder);
-        Assert.Equal("Search members", field.Instance.AriaLabel);
-        Assert.Single(cut.FindAll(".team-tab-toolbar-search input"));
     }
 
     private static string DialogActions(string dialog)

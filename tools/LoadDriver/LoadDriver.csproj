@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A repeatable chat workload for perf measurement: joins the app's named pipe as an Agent and posts
+       Messages that mention every other Agent in one Room at a fixed rate. Not in Huddle.slnx; see perf-audit/README.md. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

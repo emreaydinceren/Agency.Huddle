@@ -34,8 +34,8 @@ namespace Agency.Huddle.App.Appearance;
 /// </para>
 /// <para>
 /// <b>Tolerance.</b> A missing file is the normal first-run case, not an error — every field
-/// resolves to <see cref="AppearanceSettings.Empty"/> and no file is created just to read from. A
-/// malformed file logs a warning naming the path and falls back to <see cref="AppearanceSettings.Empty"/>
+/// resolves to its default (no theme selected, nothing customised) and no file is created just to read from. A
+/// malformed file logs a warning naming the path and falls back to those defaults
 /// wholesale, the same tolerance <see cref="Prompts.PromptStore"/> gives a bad <c>prompts.json</c>. A
 /// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry is a warning, never a failure —
 /// <c>rules.md</c>: "A Model the agent does not advertise is a warning, never a failure." — and the
@@ -656,7 +656,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// everything short of a locked file: a missing file yields an empty object (the normal
     /// first-run case, so this never creates the file just to read it), and malformed JSON — or a
     /// top-level value that is not a JSON object — logs a warning naming <see cref="path"/> and also
-    /// yields an empty object, falling back to <see cref="AppearanceSettings.Empty"/> wholesale
+    /// yields an empty object, falling back to the defaults wholesale
     /// rather than throwing and preventing startup.
     /// </summary>
     private JsonObject ReadDocumentFromDisk()

@@ -32,8 +32,6 @@ public sealed class AppCssTokensCTests
     [InlineData(".mud-table.mud-table-hover .mud-table-body tr.task-row-selected:hover > td", "background-color: var(--hu-selected-background-hover);")]
     [InlineData(".task-card.task-card-selected", "background-color: var(--hu-selected-task-background);")]
     [InlineData(".task-card.task-card-selected", "box-shadow: inset 3px 0 0 var(--hu-selected-task-bar);")]
-    [InlineData(".resizable-drawer-footer", "background-color: var(--hu-ground-page);")]
-    [InlineData(".resizable-drawer-footer", "border-top: 1px solid var(--hu-line-region);")]
     [InlineData(".library-editor .cm-editor", "background-color: var(--hu-ground-page);")]
     [InlineData(".mud-toolbar.toolbar-hairline", "border-bottom: 1px solid var(--hu-line-region);")]
     [InlineData(".library-document-toolbar.mud-toolbar", "border-bottom: 1px solid var(--hu-line-region);")]

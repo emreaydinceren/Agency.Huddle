@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Pipes;
 using System.Text.Json;
 using Agency.Huddle.App.Data;
@@ -25,9 +26,18 @@ internal sealed class AgentConnection
     private readonly RoomEvents roomEvents;
     private readonly FreshStartNotes freshStartNotes;
     private readonly ILogger<AgentConnection> logger;
+    private readonly TimeProvider clock;
 
     private JsonLineStream? stream;
     private int closed;
+
+    // Where the handshake had got to, and why it stopped there. Read only when the connection ends before its
+    // Welcome is written, so a client that loses the handshake (CIPipeline.md: the RoomSessionResumeTests broken
+    // pipe and connection reset) leaves one Warning saying which step the server was on and what ended it.
+    private string handshakeStep = "waiting for 'hello'";
+    private string? handshakeEnd;
+    private Exception? handshakeFault;
+    private bool welcomed;
 
     // Completed once the Welcome is on the wire (or the connection ends without one). RunAsync
     // registers with the gateway BEFORE building the Welcome, so no Message can fall between the
@@ -75,7 +85,8 @@ internal sealed class AgentConnection
         this.drafts = drafts;
         this.roomEvents = roomEvents;
         this.logger = logger;
-        this.ConnectedAt = (timeProvider ?? TimeProvider.System).GetUtcNow();
+        this.clock = timeProvider ?? TimeProvider.System;
+        this.ConnectedAt = this.clock.GetUtcNow();
     }
 
     public string ConnectionId { get; } = Guid.CreateVersion7().ToString("N");
@@ -101,16 +112,25 @@ internal sealed class AgentConnection
         }
         catch (IOException ex)
         {
-            var connectionId = this.ConnectionId;
-            this.logger.LogWarning(ex, "Agent connection {ConnectionId} ended.", connectionId);
+            if (this.welcomed)
+            {
+                var connectionId = this.ConnectionId;
+                this.logger.LogWarning(ex, "Agent connection {ConnectionId} ended.", connectionId);
+            }
+            else
+            {
+                this.RecordHandshakeFault(ex);
+            }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             // Normal shutdown: host stopping or the connection was closed from elsewhere.
+            this.RecordHandshakeFault(ex);
         }
-        catch (ObjectDisposedException)
+        catch (ObjectDisposedException ex)
         {
             // Normal shutdown: the pipe was disposed while an operation was in flight.
+            this.RecordHandshakeFault(ex);
         }
         catch (Exception ex)
         {
@@ -122,20 +142,45 @@ internal sealed class AgentConnection
             // the disposed pipe and fails quietly in SendAsync, instead of waiting forever.
             this.welcomeSent.TrySetResult();
             this.gateway.Unregister(this);
-
-            if (this.logger.IsEnabled(LogLevel.Information))
-            {
-                if (this.Agent is { } agent)
-                {
-                    this.logger.LogInformation("Agent connection {ConnectionId} for agent {AgentName} disconnected.", this.ConnectionId, agent.Name);
-                }
-                else
-                {
-                    this.logger.LogInformation("Agent connection {ConnectionId} disconnected before registration.", this.ConnectionId);
-                }
-            }
+            this.LogDisconnect();
 
             await this.pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Records why the handshake ended, when it ended on an exception before the Welcome was written.</summary>
+    /// <param name="ex">The exception that ended it.</param>
+    private void RecordHandshakeFault(Exception ex)
+    {
+        if (!this.welcomed)
+        {
+            this.handshakeFault = ex;
+            this.handshakeEnd ??= Volatile.Read(ref this.closed) == 1
+                ? $"the app closed the connection ({ex.GetType().Name})"
+                : $"{ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Logs the end of the connection: one Information line once the Agent was welcomed, and one Warning naming the
+    /// handshake step, its reason and the time since the connection opened when it ended before the Welcome was written.
+    /// </summary>
+    private void LogDisconnect()
+    {
+        if (!this.welcomed)
+        {
+            string elapsedMs = (this.clock.GetUtcNow() - this.ConnectedAt).TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture);
+            this.logger.LogWarning(
+                this.handshakeFault,
+                "Agent connection {ConnectionId} ended before its Welcome was sent, {ElapsedMs} ms after it opened, while {HandshakeStep}: {HandshakeEnd}.",
+                this.ConnectionId,
+                elapsedMs,
+                this.handshakeStep,
+                this.handshakeEnd ?? "no reason was recorded");
+        }
+        else if (this.logger.IsEnabled(LogLevel.Information) && this.Agent is { } agent)
+        {
+            this.logger.LogInformation("Agent connection {ConnectionId} for agent {AgentName} disconnected.", this.ConnectionId, agent.Name);
         }
     }
 
@@ -151,8 +196,10 @@ internal sealed class AgentConnection
             return false;
         }
 
+        this.handshakeStep = $"registering '{hello.Name}'";
         if (!NameRules.IsValidAgentName(hello.Name))
         {
+            this.handshakeEnd = "the name is not a valid agent name";
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.InvalidName, $"'{hello.Name}' is not a valid agent name."), ct).ConfigureAwait(false);
             return false;
         }
@@ -160,6 +207,7 @@ internal sealed class AgentConnection
         var user = await this.teamDirectory.UpsertAgentUserAsync(hello.Name, hello.Description, ct).ConfigureAwait(false);
         if (user is null)
         {
+            this.handshakeEnd = "the name is reserved";
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.NameReserved, $"'{hello.Name}' is reserved."), ct).ConfigureAwait(false);
             return false;
         }
@@ -168,8 +216,11 @@ internal sealed class AgentConnection
         await this.chat.EnsureRoomForAsync(user, FeedActor.Huddle, ct).ConfigureAwait(false);
         this.gateway.Register(this);
 
+        this.handshakeStep = $"building the Welcome for '{hello.Name}'";
         var welcome = await this.BuildWelcomeAsync(user, ct).ConfigureAwait(false);
+        this.handshakeStep = $"writing the Welcome for '{hello.Name}'";
         await lineStream.WriteAsync(welcome, ct).ConfigureAwait(false);
+        this.welcomed = true;
         this.welcomeSent.TrySetResult();
         return true;
     }
@@ -205,15 +256,6 @@ internal sealed class AgentConnection
         }
     }
 
-    /// <summary>
-    /// Reads the connection's first envelope and returns it when it is a <see cref="Hello"/>. Every
-    /// other outcome ends the connection before registration, and each one is logged at Warning with
-    /// its reason: a peer that dialled the pipe and never introduced itself is either broken or was
-    /// cut off, and a client that sees only "connection reset" has no other way to learn which.
-    /// </summary>
-    /// <param name="lineStream">The connection's line stream.</param>
-    /// <param name="ct">Cancels the read; the <see cref="HelloTimeout"/> is applied on top of it.</param>
-    /// <returns>The Hello, or <see langword="null"/> when the connection must end.</returns>
     private async Task<Hello?> ReadHelloAsync(JsonLineStream lineStream, CancellationToken ct)
     {
         using var helloCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -224,46 +266,30 @@ internal sealed class AgentConnection
         {
             first = await lineStream.ReadAsync(helloCts.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
-            this.LogEndedBeforeHello(null, "no envelope arrived within the Hello timeout");
+            this.handshakeEnd = ct.IsCancellationRequested ? "the host is stopping" : "no 'hello' arrived within the timeout";
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Timed out waiting for 'hello'."), ct).ConfigureAwait(false);
             return null;
         }
         catch (JsonException ex)
         {
-            this.LogEndedBeforeHello(ex, "the first line was not a valid envelope");
+            this.handshakeEnd = $"the first line is not a message: {ex.Message}";
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, ex.Message), ct).ConfigureAwait(false);
-            return null;
-        }
-        catch (IOException ex)
-        {
-            this.LogEndedBeforeHello(ex, "reading the pipe failed");
-            return null;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            this.LogEndedBeforeHello(ex, "this server closed the pipe");
             return null;
         }
 
         if (first is not Hello hello)
         {
-            this.LogEndedBeforeHello(
-                null,
-                first is null ? "the peer closed the pipe without sending anything" : "the first envelope was " + first.GetType().Name);
+            this.handshakeEnd = first is null
+                ? "the client closed its end before sending anything"
+                : $"the first message is a {first.GetType().Name}, not a Hello";
             await SendBestEffortAsync(lineStream, new ProtocolError(ErrorCodes.ExpectedHello, "Expected 'hello' as the first message."), ct).ConfigureAwait(false);
             return null;
         }
 
         return hello;
     }
-
-    /// <summary>Logs, at Warning, that this connection ended before its Hello and why.</summary>
-    /// <param name="exception">The failure behind it, or <see langword="null"/> when there was none.</param>
-    /// <param name="reason">A short plain-language reason.</param>
-    private void LogEndedBeforeHello(Exception? exception, string reason) =>
-        this.logger.LogWarning(exception, "Agent connection {ConnectionId} ended before its Hello: {Reason}.", this.ConnectionId, reason);
 
     private async Task<Welcome> BuildWelcomeAsync(User user, CancellationToken ct)
     {

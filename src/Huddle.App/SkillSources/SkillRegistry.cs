@@ -95,10 +95,14 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
     {
         ArgumentNullException.ThrowIfNull(skill);
         RegistrySnapshot snapshot = this.Current;
-        ItemCheckState state = snapshot.Checked.StateOf(skill.StateKey) ?? ItemCheckState.Broken;
+
+        // StateKey builds a new string on every read, and every page render runs this once per Skill
+        // (SkillArrivalWatcher), so read it once.
+        string key = skill.StateKey;
+        ItemCheckState state = snapshot.Checked.StateOf(key) ?? ItemCheckState.Broken;
         SourceStatus status = skill.Source is null ? SourceStatus.Active : snapshot.Resolved.FindSource(skill.Source)?.Status ?? SourceStatus.Active;
         bool held = snapshot.SkillHolders.TryGetValue(skill.Name, out IReadOnlyList<string>? holders) && holders.Count > 0;
-        return Display(state, status, skill.HasUpdate, held, snapshot.NewKeys.Contains(skill.StateKey));
+        return Display(state, status, skill.HasUpdate, held, snapshot.NewKeys.Contains(key));
     }
 
     /// <summary>Whether <c>hidden.json</c> hides the Pack.</summary>

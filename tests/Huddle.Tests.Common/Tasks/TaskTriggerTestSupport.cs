@@ -459,6 +459,9 @@ internal static class TaskTriggerTestSupport
         }
 
         /// <inheritdoc />
+        public Task<IReadOnlyDictionary<string, IReadOnlyList<User>>> GetMembersByRoomAsync(CancellationToken ct = default) => inner.GetMembersByRoomAsync(ct);
+
+        /// <inheritdoc />
         public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default) =>
             inner.CreateRoomAsync(name, memberIds, ct);
 

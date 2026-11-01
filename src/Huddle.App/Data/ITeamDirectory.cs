@@ -95,6 +95,14 @@ public interface ITeamDirectory
 
     Task<IReadOnlyList<User>> GetRoomMembersAsync(string roomId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Every Room's Members in one query, keyed by Room id (ordinal), each list in the order
+    /// <see cref="GetRoomMembersAsync"/> gives. A Room with no Members has no key. For a list that shows many Rooms at
+    /// once, so it reads Members once rather than once per Room.
+    /// </summary>
+    /// <param name="ct">Cancels the query.</param>
+    Task<IReadOnlyDictionary<string, IReadOnlyList<User>>> GetMembersByRoomAsync(CancellationToken ct = default);
+
     Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default);
 
     /// <summary>Creates a Room scoped to a Team, or a root Room when <paramref name="team"/> is <see langword="null"/>.</summary>

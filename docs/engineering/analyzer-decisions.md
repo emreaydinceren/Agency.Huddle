@@ -234,6 +234,22 @@ Each was proven by a deliberate violation that failed the build with its ID.
 | `S927` | An override whose parameter names differ from the base declaration |
 | `S1210` | `IComparable` implemented without `Equals` and the comparison operators |
 
+#### String-allocation rules (perf-audit, 2026-10-31)
+
+`latest-recommended` already fails the build on the string rules `CA1847`, `CA1862`, `CA1865`–`CA1867`
+and `CA2249`. These six it leaves off; the string-allocation audit (`perf-audit/report.md`) raised them
+to `warning` in `.editorconfig`. Zero hits on the whole solution, and each failed a deliberate probe
+with its ID.
+
+| Rule | Guards | Probe note |
+| --- | --- | --- |
+| `CA1830` | `StringBuilder.Append(x.ToString())` instead of the typed overload | Fires only on a parameterless `ToString()`, which `CA1305` already refuses |
+| `CA1834` | `StringBuilder.Append(",")` instead of `Append(',')` | |
+| `CA1845` | Concatenating `Substring` results instead of span-based `string.Concat` | |
+| `CA1846` | `Substring` passed where an `AsSpan` overload exists | |
+| `CA1858` | `IndexOf(x) == 0` instead of `StartsWith(x)` | |
+| `CA1870` | `IndexOfAny(new[] { ... })` instead of a cached `SearchValues` | A collection-expression literal does not fire: it compiles to a span and allocates nothing |
+
 ### The rest of the denylist, cleared in one step
 
 Seventy-seven rules were left on the denylist after review and had zero hits on the whole solution,
@@ -275,7 +291,7 @@ is in the ACP effort's subtree (the chat side does not edit it) or the fix is ch
 | `S1135` | `TODO` comment | 2 | 2 | **Reviewed, keep off.** Three of the four hits are false positives: the rule matches `ToDo`, the name of a task status, in `TaskState.cs` and `TestTasks.cs` (`Default: ToDo`). The fourth is a real follow-up note in `GetHelpToolTests.cs`, which a tracker would not want blocked on a build. |
 | `S125` | Commented-out code | 7 | 4 | Not enabled: two of the eleven sites are in `Huddle.Acp` and `Huddle.Console`. Plausibly worth a look, since commented-out code rots. |
 | `S2094` | Empty record or class | 4 | 0 | Not enabled: three of the four sites (`AssemblyMarker`, `AgentPrompt`, `ElicitationResult`) are in `Huddle.Acp`. |
-| `S2365` | Property copies a collection | 4 | 1 | Not enabled: two of the five sites are in `Huddle.Acp` and `Huddle.Acp.Tests`. The others are `Aliases`, `WatchedTaskIds` and `OnlineAgentIds`; not read. |
+| `S2365` | Property copies a collection | 4 | 1 | Not enabled: two of the five sites are in `Huddle.Acp` and `Huddle.Acp.Tests`. The others are `Aliases`, `WatchedTaskIds` and `OnlineAgentIds` (since deleted as dead code); not read. |
 | `S4144` | Method identical to another | 1 | 8 | Not enabled: one site is in `Huddle.Acp.Tests`. The rest are test methods that share a body. |
 | `S1450` | Field should be a local | 1 | 0 | Not enabled: the one site is `ConsoleLineReader` in `src/Huddle.Console`, which the chat side does not edit (`CLAUDE.md`). Revisit with the ACP owner. |
 | `S2743` | Static field in a generic type | 0 | 1 | Not enabled: the one site is `ListLogger` in `tests/Huddle.Acp.Tests`. |
