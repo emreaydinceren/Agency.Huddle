@@ -33,6 +33,12 @@ internal sealed class FiringTimeProvider : TimeProvider
         }
     }
 
+    /// <summary>
+    /// Runs after a timer is disposed, outside <see cref="gate"/>. A test sets it to act at the moment the code under test
+    /// disposes its timer, such as disposing that code while it is still stopping.
+    /// </summary>
+    public Action? TimerDisposed { get; set; }
+
     /// <inheritdoc/>
     public override DateTimeOffset GetUtcNow()
     {
@@ -209,6 +215,8 @@ internal sealed class FiringTimeProvider : TimeProvider
                 this.disposed = true;
                 this.scheduledAt = null;
             }
+
+            this.owner.TimerDisposed?.Invoke();
         }
 
         /// <inheritdoc/>
