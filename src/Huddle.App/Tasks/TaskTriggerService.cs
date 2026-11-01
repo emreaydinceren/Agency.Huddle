@@ -63,6 +63,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <summary>Cancelled by <see cref="StopAsync"/>; every fire's awaited calls take its token.</summary>
     private readonly CancellationTokenSource lifetime = new();
 
+    /// <summary>
+    /// Serialises cancelling <see cref="lifetime"/> against disposing it, and guards <see cref="lifetimeDisposed"/>. The host
+    /// can stop this service on one thread while it disposes it on another: under <c>WebApplicationFactory</c> the factory's
+    /// stop releases <c>Program</c>'s <c>RunAsync</c>, which stops and disposes the host as well.
+    /// </summary>
+    private readonly Lock lifetimeGate = new();
+    private bool lifetimeDisposed;
+
     private readonly Dictionary<BatchKey, Batch> batches = [];
 
     /// <summary>When a Request lifecycle wake last reached a recipient for a Task, keyed by Task and Name; a status-change wake for the same event is then skipped.</summary>
@@ -237,7 +245,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         this.Halt();
-        this.lifetime.Dispose();
+        lock (this.lifetimeGate)
+        {
+            // Halt returns early when a concurrent StopAsync has already marked the service stopped but not yet cancelled.
+            this.lifetime.Cancel();
+            this.lifetime.Dispose();
+            this.lifetimeDisposed = true;
+        }
+
         this.fireGate.Dispose();
     }
 
@@ -303,7 +318,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             timer.Dispose();
         }
 
-        this.lifetime.Cancel();
+        lock (this.lifetimeGate)
+        {
+            if (!this.lifetimeDisposed)
+            {
+                this.lifetime.Cancel();
+            }
+        }
     }
 
     /// <summary>

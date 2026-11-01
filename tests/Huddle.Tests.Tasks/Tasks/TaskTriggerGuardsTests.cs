@@ -333,6 +333,30 @@ public sealed class TaskTriggerGuardsTests
         Assert.Equal("- Before stop", post.Message.Text);
     }
 
+    /// <summary>
+    /// The host can dispose the service while it is still stopping it: under <c>WebApplicationFactory</c> the factory's stop
+    /// releases <c>Program</c>'s <c>RunAsync</c>, which stops and disposes the host on another thread. A
+    /// <see cref="TaskTriggerService.Dispose"/> landing after the stop has disposed the batch timers, and before it cancels
+    /// the lifetime, must not make the stop throw <see cref="ObjectDisposedException"/> (CI run 1240).
+    /// </summary>
+    [Fact]
+    public async Task StopAsync_DisposedMidStop_DoesNotThrow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        harness.Raise(task, HumanActor, "Pending at stop");
+        harness.Clock.TimerDisposed = harness.Trigger.Dispose;
+
+        await harness.Trigger.StopAsync(ct);
+        harness.Clock.TimerDisposed = null;
+        harness.Clock.Advance(DefaultWindow);
+
+        Assert.Empty(harness.Posts);
+    }
+
     /// <summary>Corrections-B3 D9 items 7-8: <see cref="TaskTriggerService.StopAsync"/> awaits a fire that is already in flight - it does not complete while the fire is held open, and does once it is released.</summary>
     [Fact]
     public async Task StopAsync_InFlightFire_AwaitsIt()
