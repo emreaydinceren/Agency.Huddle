@@ -601,15 +601,6 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
   `PromptAsync_ThoughtAndToolCallEvents_ArePublished` in `.gitea/workflows/ci-main-local.yaml` and
   `ci-pr-local.yaml` can now be dropped. They are shared root files and were left for their owner.
-
-  **The margin has been beaten once since (2026-11-01, CI run 1233).** That run was a PR
-  that touched only `Huddle.App/Gateway`. `DotAcpAgentSessionTests.PromptAsync_ChunkDispatchedAfterResponse_StillPrecedesTurnCompleted`
-  sends its late chunk from a `Task.Run` after a 20 ms delay. On that runner the chunk arrived after
-  the 100 ms quiet window had closed, so the events came back as `[TurnCompleted]` instead of
-  `[MessageChunk "late", TurnCompleted]`. The test exercises the window by design, so a loaded
-  runner can make it fail even when the code is unchanged. Treat a single failure as this limit
-  and rerun. Treat a second as a sign the window is too narrow. The test is in the ACP effort's
-  subtree, so it was left unchanged.
 - **Third known flake, pre-existing — DIAGNOSED 2026-09-17.** A full
   `dotnet test Huddle.slnx --` occasionally crashes the test host *after* every
   assertion has passed, with an `ObjectDisposedException` raised from
