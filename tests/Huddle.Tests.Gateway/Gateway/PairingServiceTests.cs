@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Gateway;
+using Agency.Huddle.Tests.Feed;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Agency.Huddle.Tests.Gateway;
@@ -287,5 +288,23 @@ public sealed class PairingServiceTests : IDisposable
         _ = this.service.Reject(request.RequestId, AdminApprover);
 
         Assert.Equal(PairingService.ApprovalOutcome.NotFound, this.service.Approve(request.RequestId, AdminApprover).Outcome);
+    }
+
+    /// <summary>Sweep resolves the Feed card of a lapsed request with no other call into the service, once, and leaves an open request alone.</summary>
+    [Fact]
+    public void Sweep_LapsedRequest_ResolvesItsFeedCardOnce()
+    {
+        RecordingFeedPublisher feed = new();
+        PairingService withFeed = new(this.devices, this.clock, new GatewayFeed(feed));
+        _ = withFeed.Open(Candidate(new TestDevice()));
+        this.clock.Advance(PairingService.RequestLifetime - TimeSpan.FromSeconds(1));
+        _ = withFeed.Open(Candidate(new TestDevice()));
+        this.clock.Advance(TimeSpan.FromSeconds(2));
+
+        withFeed.Sweep();
+        withFeed.Sweep();
+
+        _ = Assert.Single(feed.Resolutions);
+        _ = Assert.Single(withFeed.Pending());
     }
 }

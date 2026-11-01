@@ -845,7 +845,7 @@ OpenClaw's `openclaw security audit` items that apply to Huddle, computed on dem
 | --- | --- | --- |
 | `TailscaleServeClaim` | While Serve or Funnel is chosen | Holds the foreground process; backoff restart; release at shutdown |
 | `TailscaleStatusPoller` | Every 30 s while a Tailscale mode is chosen | Status, MagicDNS name (feeds host filtering), owner login, stray routes |
-| `GatewayHousekeeping` | Every 60 s | Prunes the limiter, expired nonces, requests, bootstrap tokens and sessions; flushes last-seen |
+| `GatewayHousekeeping` | Every 60 s | Prunes stale devices (C-11), limiter entries, expired sessions and expired pairing requests; nonces and bootstrap tokens prune on use, and last-seen is written directly, at most once a minute |
 
 ## 11. Performance
 

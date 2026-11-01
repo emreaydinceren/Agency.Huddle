@@ -160,4 +160,24 @@ public sealed class SessionRegistryTests : IDisposable
         Assert.Null(registry.TryGetByHash(secondHash));
         Assert.Null(registry.TryGetByHash(null));
     }
+
+    /// <summary>PruneExpired removes exactly the sessions older than 12 hours and reports how many; a second call finds none, and a live session stays valid.</summary>
+    [Fact]
+    public void PruneExpired_RemovesOnlyExpiredSessions()
+    {
+        SessionRegistry registry = this.NewRegistry();
+        TestDevice device = this.PairDevice();
+        string old = registry.Issue(device.DeviceId, ReadWrite, "Loopback", null);
+        this.harness.Clock.Advance(SessionRegistry.Lifetime - TimeSpan.FromMinutes(1));
+        string live = registry.Issue(device.DeviceId, ReadWrite, "Loopback", null);
+        this.harness.Clock.Advance(TimeSpan.FromMinutes(1));
+
+        int first = registry.PruneExpired();
+        int second = registry.PruneExpired();
+
+        Assert.Equal(1, first);
+        Assert.Equal(0, second);
+        Assert.False(registry.IsValid(old));
+        Assert.True(registry.IsValid(live));
+    }
 }

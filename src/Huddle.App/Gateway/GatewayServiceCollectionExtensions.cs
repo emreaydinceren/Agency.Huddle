@@ -50,9 +50,8 @@ internal static class GatewayServiceCollectionExtensions
         services.AddSingleton<GatewayConnectionGuard>();
         services.AddSingleton<GatewayListener>();
         services.AddSingleton<IPostConfigureOptions<KestrelServerOptions>, GatewayKestrelConfigurator>();
-        services.AddHostedService<GatewayListenerStartup>();
         services.AddSingleton<TailscaleRuntime>();
-        services.AddHostedService(static provider => provider.GetRequiredService<TailscaleRuntime>());
+        services.AddGatewayWorkers();
         services.AddSingleton(static provider => new GatewaySettingsStore(provider.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
         services.AddSingleton<IQrPngEncoder, QrCoderPngEncoder>();
         services.AddSingleton<IGatewayRuntimeView, GatewayRuntimeView>();
@@ -72,6 +71,15 @@ internal static class GatewayServiceCollectionExtensions
         services.AddAuthorization();
         services.AddCascadingAuthenticationState();
         return services;
+    }
+
+    /// <summary>Registers the gateway's hosted services, in start order: the listener, the Tailscale runtime and the housekeeping worker.</summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddGatewayWorkers(this IServiceCollection services)
+    {
+        services.AddHostedService<GatewayListenerStartup>();
+        services.AddHostedService(static provider => provider.GetRequiredService<TailscaleRuntime>());
+        services.AddHostedService<GatewayHousekeeping>();
     }
 
     /// <summary>
