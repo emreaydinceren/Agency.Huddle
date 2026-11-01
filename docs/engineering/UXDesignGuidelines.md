@@ -78,7 +78,6 @@ component here, move it onto the component rather than writing another copy.
 | A "name this thing" dialog | `NameDialog` | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | A destructive confirmation | `DialogService.ConfirmAsync(title, message, verb, danger)` | [Confirming](design-system.md#confirming) |
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
-| A side panel over a page | `ResizableEndDrawer`, with an `Eyebrow` for the item's ID and place | [Drawer anatomy](design-system.md#drawer-anatomy) |
 | Context for a page beside it, in the Right sidebar | `PageSubjectSource` anywhere in the page's markup, with the page's Subject as `Value`. The Right sidebar draws the panels for that Subject. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
 | A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
@@ -102,7 +101,7 @@ component here, move it onto the component rather than writing another copy.
 | A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip` | [Catalog: actions and input](#actions-and-input) |
 | To save a page's own setup | Save each change as it is made, through `ViewStore` | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
 | Text or an icon on a Primary fill | `Color.Primary`; the Theme's `PrimaryContrastText` (black or white) colours it. Never hard-code the foreground | [Colour](design-system.md#colour) |
-| A property label and value in a drawer form | `.task-detail-prop` inside `.task-detail-props` and `.task-detail-groups` | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| A property label and value in the Task form | `.task-detail-prop` inside `.task-detail-props` and `.task-detail-groups` | [Task form anatomy](design-system.md#task-form-anatomy) |
 | A one-line sidebar list that can grow | `SidebarRows` and `ShowAllRow`, with a `span.sidebar-row-label` | [The sidebar](design-system.md#the-sidebar) |
 | An inline edit of a title | A field with `.title-inline-edit` and an `aria-label`, no floating label | [Component rules](design-system.md#component-rules) |
 | Resizable columns in a List | `task-list-resize.js` on a grid with the `task-list-grid` class; MudDataGrid's own resizing is off because it round-trips per pointer move | [Catalog: browser scripts](#browser-scripts) |
@@ -118,7 +117,6 @@ component here, move it onto the component rather than writing another copy.
 | A search box or select in a toolbar | `SearchField` with `toolbar-compact` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
 | A highlighted search match | Search match in the States table | [Colour](design-system.md#colour) |
 | A file a message mentions | Its name as a `.ref-link`, path in the tooltip | [The Room](design-system.md#the-room) |
-| A drawer's Save and Cancel | The sticky drawer footer | [Drawer anatomy](design-system.md#drawer-anatomy) |
 | A menu of actions | The Menus rule | [Menus](design-system.md#menus) |
 | A picker of folders or files | The tree's look in a 600px dialog | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | A question an Agent asks | `AgentCard` in the 760px column | [The Room](design-system.md#the-room) |
@@ -199,8 +197,6 @@ before you create a component, a helper or a CSS class.
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class`, `Compact` | Any search box: outlined, dense, clearable, one debounce. `Compact="true"` wears `.toolbar-compact` (a 28px box with 13px text) for a toolbar row. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
 | `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3`; the Members tab's team type filter (`B9g`) | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `NoMenu`, `OnClear`, `Class` | One "Label: Value" filter chip: a menu, a clear button, dashed while unset, filled once set; with `NoMenu` the same pill without the caret and menu, for a choice made elsewhere. It owns no state. The Tasks toolbar's second row (`T3`) is the model: a Filter icon menu, then one chip per set filter |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Inside `AvatarEditorDialog` (Agent card, Settings > Profile) | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: a large preview over a `role="radiogroup"` of choice cards (`.avatar-choice-card`, each a small avatar plus its control): Initials of the name; A short label (the Label field, always shown, with an end adornment "Choose an emoji" button that opens a popover with the vendored `<emoji-picker>` and, on a pick, replaces the label and chooses this card; typing chooses it); Image from the library (only when a library is configured; not selectable until it holds a picture, a press on the card does nothing then, and only its button opens the library); Upload an image (the "Upload…" button; selectable empty, Remove image keeps it chosen; a stored image reopens here). The Background, hidden under either image card (`visibility: hidden` and `inert`, so the dialog keeps its height), is a radio group (`role="radiogroup"`) of 32px circles drawn with the avatar recipe, each named by its colour and keyboard-reachable; the chosen one has a ring and a check. Buffered in the dialog; `Immediate` mode has no caller since the Human's avatar moved from Appearance to Profile |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `Eyebrow` (a 12px line above it: ID, then Project or Team; none for a draft), `StorageKey`, `Open`, `OpenChanged`, `Footer` (a `RenderFragment`), `ShowFooter`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px. `Footer` is a sticky footer with a Chrome line on top, right-aligned, shown while `ShowFooter` is true. The drawer opens beside the Right sidebar |
-| `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | none | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId`, `RoomName` | The message input; one per Room. Its box shares the Transcript's 760px column. The placeholder is "Message {RoomName}… (/invite @Agent)", or "Message… (/invite @Agent)" when `RoomName` is empty. Its focus border is the accent plus a 0.5px inset ring |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
 | `NewChat` | `Components/Shared/NewChat.razor` | In `S2b` | `Team`, `OnStarted`, `OnClosed` | Starting a Room, optionally in a Team |
@@ -308,7 +304,6 @@ feature's name. Reuse these before writing a rule:
 | `.nav-row-link` | A top-level sidebar destination (Agents, Library): an ordinary 32px, 13px row with the section header's icon geometry, not a header |
 | `.needs-you-heading` | The Needs You card's title, in the sidebar section-header style |
 | `.chip-cloud-chip` | The Filter-chip pill behind `ChipCloud`; `.is-set` once chosen |
-| `.resizable-drawer` | The handle and width rules of `ResizableEndDrawer` |
 | `.group-label` | The heading of a group of fields in a drawer, dialog or card: 12px at 600 in Quiet ink, 8px above its fields |
 | `.selected-shape` | The chosen row of a list, tree or menu: Accent tint at 14% (20% hovered), Accent ink at 500, inset 4px, rounded to 0.75 of the base radius |
 | `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. `SearchField Compact` wears it |
@@ -328,7 +323,7 @@ feature's name. Reuse these before writing a rule:
 | `.page-header-titles`, `.page-header-subtitle` | `PageHeader`'s title and its stacked 13px subtitle |
 | `.title-inline-edit` | An inline edit of a title at h5 size and weight, outline only |
 | `.task-detail-groups`, `.task-detail-group`, `.task-detail-props`, `.task-detail-prop` | The drawer form: a size container, then groups of label-and-value rows that go two columns at 368px |
-| `.task-detail-footer-meta`, `.resizable-drawer-eyebrow` | The drawer's Created, Updated and Closed line at the bottom (12px secondary), and the eyebrow line above its title |
+| `.task-detail-footer-meta` | The Task form's Created, Updated and Closed line at the bottom (12px secondary) |
 | `.task-card`, `.task-card-header`, `.task-card-title`, `.task-card-id` | A Board card (12px padding, 1px `Divider` border), its ID-and-priority row, its three-line 14px/600 title and its 12px ID |
 | `.task-board-column`, `.task-board-column-header`, `.task-state-dot`, `.task-state-dot-backlog`, `.task-board-column-empty` | A Board lane (`Surface` with a `Divider` border), its header (an 8px state dot, dashed for Backlog, the name, the count) and its centred empty line, which ignores the pointer |
 | `.task-due-overdue`, `.task-row-selected` | An overdue date (a warning icon at the date's size, and weight 600) and the selected List row (the 14% and 20% tints) |

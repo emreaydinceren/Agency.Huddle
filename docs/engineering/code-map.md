@@ -69,7 +69,6 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Shared/RoomNavRow.razor` | One Room row in the sidebar: the `NavTabLink` to `/rooms/{id}` and its Archive and Delete menu, shared by `RoomList` and `TeamsNav` so the two cannot drift (ADR-0052). |
 | `Components/Teams/NewTeamDialog.razor` | The name dialog for creating a new Team or Project (Spec §6.5), behind the TeamsNav's "New team" and "New project" buttons. Copies `Library/AddFolderDialog.razor`'s shape. |
 | `Components/Teams/NewTeamDialogMode.cs` | Enum: whether `NewTeamDialog` is naming a Team or a Project. |
-| `Components/Teams/TeamTabToolbar.razor` | The action button and search field every Team page tab shares (Spec §6.6): owned state for search text, passed back debounced and trimmed-to-null. |
 | `Components/Teams/TeamDetails.razor` | The Details tab of a Team page, always last: `BuildTeam` with only `Team` set, i.e. Build a team's type and details sections for the Team (type and name fixed) with its own Save changes, which writes "What it's for" and the Library folder to `_team.md`. |
 | `Components/Teams/TeamRoster.razor` | The Members tab of a Team page: `BuildTeam` with `MembersOnly` (Build a team's Hire section for the Team, with its own Save changes), plus each member's status dot (pipe liveness, then health, through `PersonaStatusResolver`) and a **Message** that calls `ChatService.EnsureTeamOneToOneAsync` and navigates, so it opens the Team's own one-to-one, not the root one (ADR-0052). |
 | `Components/Teams/TeamFilesTab.razor` | The Files tab of a Team or Project page (Spec §6.8): a `LibraryExplorer` scoped to the Team's or Project's folder, with a shared toolbar for "New note" and "Search files". |
@@ -320,7 +319,6 @@ order decides per Token, independently.
 | `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles that name a hiring-pool job, coverage, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
 | `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
 | `TeamTypes/CandidateTemplate.cs` | One Candidate: an Agent template read from a type's `candidates/*.md`. |
-| `TeamTypes/UserCandidateWriter.cs` | Writes a custom role the Human chose to keep ("Save for next time") into `{DataDir}/TeamTypes/`. |
 | `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each). No Skill packs ship any more: they come from `SKILLS.md`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
 | `Teams/HireService.cs` | Writes one hire as an Agent of a Team, enforces the hire limits, copies its Skills through `ISkillCopier` (`EnsureSkillsAsync`) and starts it; `StartTeamAsync` starts the hired members in order. |
 | `Teams/ISkillAvailability.cs` | What the hire path asks of the registry: a Pack's contents, a Skill's state, and the setup item for one that is not ready. `SkillRegistry` implements it; tests use `FakeSkillAvailability`. |

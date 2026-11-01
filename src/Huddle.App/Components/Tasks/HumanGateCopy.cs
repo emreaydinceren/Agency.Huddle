@@ -30,15 +30,6 @@ internal static class HumanGateCopy
     /// <summary>What the assignee reads as when the Task has none.</summary>
     public const string UnassignedAssignee = "the assignee";
 
-    /// <summary>The explanation of a gated Task that names no Action.</summary>
-    public const string ExplanationNoAction =
-        "Agents draft, check and track: you decide. Accepting marks it Done; nothing is sent or published. Done also needs the team's Proof to be complete.";
-
-    /// <summary>The helper line under the switch.</summary>
-    /// <param name="assignee">The assignee's name, or <see cref="UnassignedAssignee"/>.</param>
-    public static string Helper(string assignee) =>
-        $"{assignee} can move it to Needs you once every line has Proof. Agents can't mark it Done.";
-
     /// <summary>The decision card chip (row 14).</summary>
     public const string DecisionChip = "Your decision";
 

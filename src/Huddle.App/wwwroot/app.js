@@ -649,100 +649,11 @@ window.huddleStorage = {
 };
 
 window.huddleResize = {
-  // The drawer shows different content (another Task, or New task): MudBlazor's .mud-drawer-content is the
-  // scroll container and outlives the keyed body, so its scroll position is reset here.
-  scrollDrawerToTop(body) {
-    const scroller = body?.closest(".mud-drawer-content");
-    if (scroller) {
-      scroller.scrollTop = 0;
-    }
-  },
-
-  // Drag-to-resize for the Task detail panel's End-anchored MudDrawer. Writes straight to the
-  // drawer's own "--mud-drawer-width" instance variable on every pointermove - the same one
-  // MudBlazor's compiled CSS already falls back to var(--mud-drawer-width-right) for - so dragging
-  // never round-trips to the server; only the width huddleStorage remembers does, on release.
-  attachDrawer(handle, storageKey, minPx, maxPx, defaultPx) {
-    const clamp = (px) => Math.min(maxPx, Math.max(minPx, px));
-    const drawer = handle.closest(".mud-drawer");
-    if (!drawer) {
-      return;
-    }
-
-    const stored = window.huddleStorage.get(storageKey);
-    const restored = stored ? parseInt(stored, 10) : NaN;
-    // Sets the width on the drawer and mirrors it into aria-valuenow, so a screen reader hears the new size.
-    const setWidth = (px) => {
-      const width = clamp(px);
-      drawer.style.setProperty("--mud-drawer-width", width + "px");
-      handle.setAttribute("aria-valuenow", String(Math.round(width)));
-      return width;
-    };
-    setWidth(Number.isFinite(restored) ? restored : defaultPx);
-
-    // Keyboard resize (UX-V10): the handle is a focusable separator. Anchor.End puts the drawer on the
-    // right, so ArrowLeft grows it and ArrowRight shrinks it; Shift takes a bigger step, Home and End
-    // jump to the narrowest and widest.
-    handle.addEventListener("keydown", (e) => {
-      const current = drawer.offsetWidth;
-      const step = e.shiftKey ? 64 : 16;
-      let next;
-      switch (e.key) {
-        case "ArrowLeft": next = current + step; break;
-        case "ArrowRight": next = current - step; break;
-        case "Home": next = minPx; break;
-        case "End": next = maxPx; break;
-        default: return;
-      }
-      e.preventDefault();
-      const width = setWidth(next);
-      window.huddleStorage.set(storageKey, String(Math.round(width)));
-    });
-
-    let dragging = false;
-    let startX = 0;
-    let startWidth = 0;
-
-    handle.addEventListener("pointerdown", (e) => {
-      dragging = true;
-      startX = e.clientX;
-      startWidth = drawer.offsetWidth;
-      handle.setPointerCapture(e.pointerId);
-      e.preventDefault();
-    });
-
-    handle.addEventListener("pointermove", (e) => {
-      if (!dragging) {
-        return;
-      }
-      // Anchor.End puts the drawer on the right, so dragging the handle left (clientX decreasing,
-      // startX - e.clientX growing) is what should grow it.
-      // The page is not zoomed (ADR-0056), so the factor is 1. It is still read: offsetWidth is the layout width
-      // (the CSS px that --mud-drawer-width takes), whereas clientX is in visual pixels, which differ only if a
-      // zoom is ever applied to the page again.
-      const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-      setWidth(startWidth + ((startX - e.clientX) / zoom));
-    });
-
-    const endDrag = (e) => {
-      if (!dragging) {
-        return;
-      }
-      dragging = false;
-      handle.releasePointerCapture(e.pointerId);
-      window.huddleStorage.set(storageKey, String(Math.round(drawer.offsetWidth)));
-    };
-
-    handle.addEventListener("pointerup", endDrag);
-    handle.addEventListener("pointercancel", endDrag);
-  },
-
   // Drag-to-resize for the left drawer's Sidebar (the Activity bar is fixed). MudBlazor's layout reads the drawer's
   // width from "--mud-drawer-width-left" on .mud-layout, so a drag sets that variable live; the settled width is then
   // reported to .NET, whose render writes the same value (and so replaces this inline one). barPx is the part of the
   // drawer that is not Sidebar. Anchor.Start puts the drawer on the left, so dragging right (or ArrowRight) grows it.
-  // side is "left" (the default) or "right": the Right sidebar's handle sits on its left edge, so dragging left grows it
-  // and it also publishes --right-sidebar-width on <html>, which the Task drawer's rules use to stay clear of it.
+  // side is "left" (the default) or "right": the Right sidebar's handle sits on its left edge, so dragging left grows it.
   attachSidebar(handle, dotnet, storageKey, minPx, maxPx, defaultPx, barPx, side = "left") {
     const layout = handle.closest(".mud-layout");
     if (!layout) {
@@ -754,9 +665,6 @@ window.huddleResize = {
     const apply = (px) => {
       const width = clamp(px);
       layout.style.setProperty("--mud-drawer-width-" + side, (width + barPx) + "px");
-      if (side === "right") {
-        document.documentElement.style.setProperty("--right-sidebar-width", width + "px");
-      }
       handle.setAttribute("aria-valuenow", String(width));
       return width;
     };

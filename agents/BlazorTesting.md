@@ -99,8 +99,7 @@ await cut.WaitForAssertionAsync(async () =>
     Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
 ```
 
-A read straight after a synchronous `cut.Render(...)` with nothing in flight is safe as it is
-(`ResizableEndDrawerTests`). The `NameDialogTests` focus checks and the `LibraryExplorerTests` divider
+A read straight after a synchronous `cut.Render(...)` with nothing in flight is safe as it is. The `NameDialogTests` focus checks and the `LibraryExplorerTests` divider
 retries are the cases that raced.
 
 Never count a bare word in server-rendered HTML (`client.GetStringAsync(…)`): the Blazor prerender

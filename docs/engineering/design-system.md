@@ -314,7 +314,7 @@ title, section heading, card title and body, rows, meta.
   step above the text in its section, not only heavier. A card title may be the same size
   as its body at weight 600.
 - A drawer or dialog title is the item's name, not its type: "SUPP-0005 · Build the public
-  status page", never "Task". See [Drawer anatomy](#drawer-anatomy).
+  status page", never "Task". See [Task form anatomy](#task-form-anatomy).
 - **In a drawer or dialog, the title is the only 16px text.** Its groups wear the Group label
   (12px/600 in Quiet ink, `.group-label`), which is a label and so the one heading allowed to
   be smaller than what it heads.
@@ -752,7 +752,7 @@ The Room is the Transcript over the Composer in one column.
   `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`), the row
   menu 40px, and Title takes the rest. A group row is Ground, with a 13px/600 label, a 24px
   avatar for an assignee group, and a 12px Quiet-ink count. No wash.
-- **The drawer** is in [Drawer anatomy](#drawer-anatomy).
+- **The Task form** is in [Task form anatomy](#task-form-anatomy).
 
 ### The Library
 
@@ -860,7 +860,6 @@ above the rail or the nav (UX-010).
 | A form or a short flow | `MudDialog` through `IDialogService` | Pass an id or a snapshot, not live objects: an open dialog's parameters are frozen |
 | A destructive yes or no | The shared confirm (see [Confirming](#confirming)) | Not a custom dialog per site |
 | A destructive yes or no on a list row | `InlineConfirm` | Swaps in for the row |
-| A side panel over a page | `ResizableEndDrawer` | Task detail. It wraps a temporary, end-anchored `MudDrawer` |
 | A transient result | `ISnackbar` | Always with a `key` |
 | A menu or picker | `MudMenu`, `MudPopover` | MudBlazor's own sizing; the page is not zoomed |
 
@@ -890,28 +889,27 @@ above the rail or the nav (UX-010).
 | Depth | At most two dialogs deep. A picker opened from a dialog replaces its content, with **Back** |
 | Empty optional field | A Quiet-ink placeholder ("None", "Add tag…"), not a blank outlined box |
 
-### Drawer anatomy
+### Task form anatomy
 
-A side drawer (`T7`, the Task detail) has a header row, content in `pa-4` with
-`MudStack Spacing="4"`, and its actions in the dialog order. A resizable drawer uses one
-shared handle (UX-048, UX-R05).
+The Task form (`TaskDetail`, on the Task edit page `K`) has a header row, content in `pa-4` with
+`MudStack Spacing="4"`, and its actions in the dialog order. There is no side drawer: the Task
+detail (`T7`) moved to the Right sidebar on 2026-10-28, and `ResizableEndDrawer` was deleted.
 
-- **Actions are a sticky footer** with a Chrome line on top, right-aligned, shown while there
-  are changes.
+- **Actions are in the edit page's header** (`K2a`): Cancel, then Save, the one filled button.
 - **A draft opens with the title field focused**, at title size.
 
 - **The title is the item's name** in `Typo.h6` (16px/600, up to three lines): the Task's
   name alone, or "New task" for a draft. The generic type word "Task" is only the fallback.
-- **An eyebrow sits above the title.** `ResizableEndDrawer.Eyebrow` is a 12px `TextSecondary`
+- **An eyebrow sits above the title.** It is a 12px `TextSecondary`
   line: the ID, then the Project or Team ("PLAT-0013 · Platform"). A draft has no eyebrow and
   keeps its in-body "ID: title" row after create.
 - **A close `MudIconButton`** sits at the right of the header. Edit, copy and the menu are
   a right-aligned icon row just under the header, not in it.
-- **A form in a drawer is grouped.** Put the fields under Group labels (`.group-label`,
+- **The form is grouped.** Put the fields under Group labels (`.group-label`,
   12px/600 in Quiet ink): the Task detail uses Status and priority, People, Planning and Dates,
   with a 120px label column at 13px `TextSecondary`. The title stays the only 16px text.
 - **A property is a label and a value.** `.task-detail-groups` is a size container. At 368px
-  of container width or more (a 400px drawer less its padding), `.task-detail-prop` is two
+  of container width or more (a 400px column less its padding), `.task-detail-prop` is two
   columns, label left and value right. Narrower, it stacks. This mirrors the Library
   Properties grid, but shares no class.
 - **Every field has a visible label.** Team and Project are two rows, and Description has
@@ -1055,7 +1053,6 @@ rules that catalog's rows carry out.
   Use `ChipCloud` wherever chips filter a list.
 - **A search box is `SearchField`**; an Agent row is `AgentLabel`; a Task filter is
   `TaskFilterChip`.
-- **A right-hand drawer is `ResizableEndDrawer`** (see [Drawer anatomy](#drawer-anatomy)).
 - **An inline edit of a title keeps the title's size and replaces it.** The field renders at
   the title's size and weight, with no floating label: a Room's rename is `.title-inline-edit` at h5
   size, labelled by `aria-label="Room name"`. It stays `Variant.Outlined` and

@@ -494,7 +494,6 @@ public sealed class R3TasksTests
         await ClickTaskRowAsync(cut, "Alpha");
 
         Assert.IsType<TaskDetailSubject>(cut.FindComponent<PageSubjectSource>().Instance.Value);
-        Assert.Empty(cut.FindAll(".resizable-drawer-footer"));
         Assert.Empty(cut.FindAll(".task-detail-save"));
         Assert.Empty(cut.FindAll(".task-read-view"));
     }

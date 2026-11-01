@@ -1,83 +1,15 @@
 using Bunit;
-using Microsoft.AspNetCore.Components;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Pins the round-3 shared components (audit A6, A7, B4k, B10, B11): the sticky drawer footer, the drawer beside the
-/// Right sidebar, the compact search field, the Cancel-then-verb inline confirm and the stylesheet rules they rest on.
+/// Pins the round-3 shared components (audit A6, A7, B10): the compact search field, the Cancel-then-verb inline
+/// confirm and the stylesheet rules they rest on.
 /// </summary>
 public sealed class R3SharedComponentsTests
 {
-    /// <summary>The drawer's Footer shows while ShowFooter is true, under the content, and carries the caller's actions.</summary>
-    [Fact]
-    public async Task Drawer_Footer_ShowsWhileThereAreChanges()
-    {
-        await using MudBunitContext ctx = new();
-        RenderFragment footer = builder => builder.AddMarkupContent(0, "<button class=\"footer-save\">Save</button>");
-
-        IRenderedComponent<ResizableEndDrawer> cut = ctx.Render<ResizableEndDrawer>(parameters => parameters
-            .Add(p => p.StorageKey, "k").Add(p => p.Title, "Task").Add(p => p.Open, true)
-            .Add(p => p.Footer, footer).Add(p => p.ShowFooter, true));
-
-        Assert.NotNull(cut.Find(".resizable-drawer-footer button.footer-save"));
-    }
-
-    /// <summary>The Footer is not drawn while ShowFooter is false, nor when none was given.</summary>
-    [Fact]
-    public async Task Drawer_Footer_IsHiddenWithoutChangesOrWithoutAFooter()
-    {
-        await using MudBunitContext ctx = new();
-        RenderFragment footer = builder => builder.AddMarkupContent(0, "<button>Save</button>");
-
-        IRenderedComponent<ResizableEndDrawer> hidden = ctx.Render<ResizableEndDrawer>(parameters => parameters
-            .Add(p => p.StorageKey, "k").Add(p => p.Title, "Task").Add(p => p.Open, true)
-            .Add(p => p.Footer, footer).Add(p => p.ShowFooter, false));
-        IRenderedComponent<ResizableEndDrawer> none = ctx.Render<ResizableEndDrawer>(parameters => parameters
-            .Add(p => p.StorageKey, "k").Add(p => p.Title, "Task").Add(p => p.Open, true));
-
-        Assert.Empty(hidden.FindAll(".resizable-drawer-footer"));
-        Assert.Empty(none.FindAll(".resizable-drawer-footer"));
-    }
-
-    /// <summary>The drawer starts under the Top bar (clip mode Always), the first half of leaving the Right sidebar's toggle uncovered.</summary>
-    [Fact]
-    public async Task Drawer_IsClippedUnderTheTopBar()
-    {
-        await using MudBunitContext ctx = new();
-
-        IRenderedComponent<ResizableEndDrawer> cut = ctx.Render<ResizableEndDrawer>(parameters => parameters
-            .Add(p => p.StorageKey, "k").Add(p => p.Title, "Task").Add(p => p.Open, true));
-
-        Assert.Contains("mud-drawer-clipped-always", cut.Find(".resizable-drawer").ClassList);
-    }
-
-    /// <summary>The drawer and its scrim keep the Right sidebar's width (280px until it is dragged) clear while the sidebar is open, and the scrim starts under the Top bar.</summary>
-    [Fact]
-    public void AppCss_DrawerOpensBesideTheRightSidebar()
-    {
-        string css = CssText.AppCss();
-
-        const string sidebarOpen = ":root:has(.mud-drawer.right-sidebar.mud-drawer--open) ";
-        Assert.Contains("right: var(--right-sidebar-width, 280px);", CssText.RuleBody(css, sidebarOpen + ".mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("right: var(--right-sidebar-width, 280px);", CssText.RuleBody(css, sidebarOpen + ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("top: var(--mud-appbar-height);", CssText.RuleBody(css, ".mud-overlay.mud-overlay-drawer"), StringComparison.Ordinal); // contains-ok: stylesheet source text
-    }
-
-    /// <summary>The footer is sticky at the bottom with a Chrome line on top, right-aligned.</summary>
-    [Fact]
-    public void AppCss_DrawerFooterIsStickyWithAChromeLine()
-    {
-        string footer = CssText.RuleBody(CssText.AppCss(), ".resizable-drawer-footer");
-
-        Assert.Contains("position: sticky;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("bottom: 0;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("justify-content: flex-end;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("border-top: 1px solid var(--hu-line-region);", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
-    }
-
     /// <summary>The header row is 32px high, and the intro is body1 in Quiet ink.</summary>
     [Fact]
     public void AppCss_PageHeaderRowIs32px_AndTheIntroIsBody1()
