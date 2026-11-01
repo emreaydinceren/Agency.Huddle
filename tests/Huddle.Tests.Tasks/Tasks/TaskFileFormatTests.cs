@@ -870,6 +870,86 @@ public sealed class TaskFileFormatTests
         Assert.Equal(expectedVersion, task.Version);
     }
 
+    /// <summary>A minimal Task file whose opening and closing frontmatter lines are the given ones, with a fence-like body line after them.</summary>
+    private static string TextWithFences(string opening, string closing) =>
+        string.Join(
+            '\n',
+            [
+                opening,
+                "id: PLAT-0001",
+                "title: Sample",
+                "status: To Do",
+                "priority: Medium",
+                "creator: Human",
+                closing,
+                "Description text.",
+                "---",
+                "more",
+                "",
+                TaskFileFormat.ChangeLogHeading,
+                "- 2026-09-24T11:20:00Z | Emre | created",
+            ]) + "\n";
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give a Task, and a <c>---</c> line in the description does not end anything.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void TryParse_LenientFences_ReadTheTask(string opening, string closing)
+    {
+        bool result = TaskFileFormat.TryParse(TextWithFences(opening, closing), "p.md", DefaultLocation, out TaskItem? task, out string error);
+
+        Assert.True(result, error);
+        Assert.NotNull(task);
+        Assert.Equal("Sample", task.Title);
+        Assert.Equal("Description text.\n---\nmore", task.Description.Trim());
+        Assert.Single(task.ChangeLog);
+    }
+
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <param name="text">The Task file.</param>
+    [Theory]
+    [InlineData("\uFEFF---\nid: PLAT-0001\ntitle: Sample\n")]
+    [InlineData("  ---  \nid: PLAT-0001\ntitle: Sample\n")]
+    [InlineData("---\nid: PLAT-0001\ntitle: Sample\n--- x\n")]
+    [InlineData("----\nid: PLAT-0001\ntitle: Sample\n---\n")]
+    [InlineData("---\nid: PLAT-0001\ntitle: Sample\n....\n")]
+    public void TryParse_UnclosedOrNearMiss_HasNoFrontmatterBlock(string text)
+    {
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out string error);
+
+        Assert.False(result);
+        Assert.Null(task);
+        Assert.Equal("has no frontmatter block between --- lines", error);
+    }
+
+    /// <summary>
+    /// Replacing the head of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines and the body below them,
+    /// and changes only the field lines.
+    /// </summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void ReplaceHead_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
+    {
+        string text = TextWithFences(opening, closing);
+        Assert.True(TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out _));
+        Assert.NotNull(task);
+
+        string result = TaskFileFormat.ReplaceHead(text, task with { Priority = TaskPriority.High });
+
+        Assert.Equal(text.Replace("priority: Medium", "priority: High", StringComparison.Ordinal), result);
+    }
+
     /// <summary>Parses a TaskId from a known-valid string, for building expected values in tests.</summary>
     private static TaskId Id(string text)
     {

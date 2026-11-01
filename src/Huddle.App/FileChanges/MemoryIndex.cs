@@ -20,7 +20,7 @@ internal static class MemoryIndex
     /// <summary>The most characters read from a file to find its summary.</summary>
     private const int MaxScannedCharacters = 16 * 1024;
 
-    /// <summary>The marker line that opens and closes a frontmatter block.</summary>
+    /// <summary>The stray marker line <see cref="FirstLine"/> skips when it falls back to the first line of a file. Where a block opens and closes is <see cref="FrontmatterFence"/>'s rule.</summary>
     private const string FrontmatterMarker = "---";
 
     /// <summary>
@@ -128,14 +128,13 @@ internal static class MemoryIndex
             lineNumber++;
             _ = head.Append(line).Append('\n');
 
-            string marker = line.TrimEnd();
-            if (lineNumber == 1 && string.Equals(marker.TrimStart('﻿'), FrontmatterMarker, StringComparison.Ordinal))
+            if (lineNumber == 1 && FrontmatterFence.IsOpening(line))
             {
                 inFrontmatter = true;
             }
             else if (inFrontmatter && !closed)
             {
-                closed = string.Equals(marker, FrontmatterMarker, StringComparison.Ordinal) || string.Equals(marker, "...", StringComparison.Ordinal);
+                closed = FrontmatterFence.IsClosing(line);
             }
             else if (line.Trim().Length > 0 && (closed || !inFrontmatter) && !line.TrimStart().StartsWith('{'))
             {
@@ -180,10 +179,9 @@ internal static class MemoryIndex
     /// <param name="warnings">The warnings sink, or <see langword="null"/>.</param>
     private static void WarnIfUnclosed(string text, string filePath, MemoryWarnings? warnings)
     {
-        string trimmed = text.TrimStart('﻿');
-        int lineEnd = trimmed.IndexOfAny(['\r', '\n']);
-        string firstLine = lineEnd < 0 ? trimmed : trimmed[..lineEnd];
-        if (string.Equals(firstLine, FrontmatterMarker, StringComparison.Ordinal))
+        int lineEnd = text.IndexOfAny(['\r', '\n']);
+        string firstLine = lineEnd < 0 ? text : text[..lineEnd];
+        if (FrontmatterFence.IsOpening(firstLine))
         {
             warnings?.Malformed(filePath, text, "its frontmatter block never closes");
         }

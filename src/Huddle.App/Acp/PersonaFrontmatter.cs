@@ -2,6 +2,7 @@ namespace Agency.Huddle.App.Acp;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.SkillPacks.Folders;
@@ -385,14 +386,14 @@ internal static class PersonaFrontmatter
     /// <returns>The index of the closing delimiter line, or -1 when there is no opening delimiter or it is never closed.</returns>
     private static int FindClosingDelimiterIndex(List<(string Text, string Terminator)> lines)
     {
-        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
+        if (lines.Count < 2 || !FrontmatterFence.IsOpening(lines[0].Text))
         {
             return -1;
         }
 
         for (var i = 1; i < lines.Count; i++)
         {
-            if (lines[i].Text.Trim() == FrontmatterDelimiter)
+            if (FrontmatterFence.IsClosing(lines[i].Text))
             {
                 return i;
             }
@@ -667,21 +668,12 @@ internal static class PersonaFrontmatter
         var normalized = personaText.Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n');
 
-        if (lines.Length < 2 || lines[0].Trim() != FrontmatterDelimiter)
+        if (lines.Length < 2 || !FrontmatterFence.IsOpening(lines[0]))
         {
             return ([], personaText.TrimStart());
         }
 
-        var closeIndex = -1;
-        for (var i = 1; i < lines.Length; i++)
-        {
-            if (lines[i].Trim() == FrontmatterDelimiter)
-            {
-                closeIndex = i;
-                break;
-            }
-        }
-
+        var closeIndex = FrontmatterFence.FindClosing(lines, 1);
         if (closeIndex < 0)
         {
             return ([], personaText.TrimStart());

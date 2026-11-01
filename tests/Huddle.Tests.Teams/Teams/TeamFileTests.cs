@@ -203,4 +203,61 @@ public sealed class TeamFileTests
         Assert.NotNull(file);
         Assert.Empty(file.UnknownLines);
     }
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give a Team file, and a fence line in the notes does not end anything.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void TryParse_LenientFences_ReadTheFile(string opening, string closing)
+    {
+        string text = opening + "\nteamType: 'development@1.0.0'\nmanager: 'Joe'\n" + closing + "\nNotes.\n---\nmore\n...\n";
+
+        bool ok = TeamFile.TryParse(text, out TeamFile? file);
+
+        Assert.True(ok);
+        Assert.NotNull(file);
+        Assert.Equal("Joe", file.Manager);
+        Assert.Equal("Notes.\n---\nmore\n...\n", file.Notes);
+    }
+
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <param name="text">The Team file.</param>
+    [Theory]
+    [InlineData("\uFEFF---\nteamType: 'development@1.0.0'\n")]
+    [InlineData("  ---  \nteamType: 'development@1.0.0'\n")]
+    [InlineData("---\nteamType: 'development@1.0.0'\n--- x\n")]
+    [InlineData("----\nteamType: 'development@1.0.0'\n---\n")]
+    [InlineData("---\nteamType: 'development@1.0.0'\n....\n")]
+    public void TryParse_UnclosedOrNearMiss_IsNotATeamFile(string text)
+    {
+        bool ok = TeamFile.TryParse(text, out TeamFile? file);
+
+        Assert.False(ok);
+        Assert.Null(file);
+    }
+
+    /// <summary>Composing a file read from a BOM / <c>...</c> / indented-fence text keeps the BOM and both fence lines, changes only the field line, and leaves the other fields and the notes alone.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void Compose_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
+    {
+        string text = opening + "\nteamType: 'development@1.0.0'\nmanager: 'Joe'\nextra: keep me\n" + closing + "\nNotes.\n";
+        Assert.True(TeamFile.TryParse(text, out TeamFile? file));
+        Assert.NotNull(file);
+
+        string composed = (file with { Manager = "Ann" }).Compose();
+
+        Assert.Equal(opening + "\nteamType: 'development@1.0.0'\nmanager: 'Ann'\nextra: keep me\n" + closing + "\nNotes.\n", composed);
+    }
 }

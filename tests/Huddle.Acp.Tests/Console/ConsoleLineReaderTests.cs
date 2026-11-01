@@ -57,8 +57,7 @@ public sealed class ConsoleLineReaderTests
     public async Task ReadLineAsync_CancelledToken_Throws()
     {
         CancellationToken testCancellationToken = TestContext.Current.CancellationToken;
-        using ManualResetEventSlim block = new ManualResetEventSlim(initialState: false);
-        BlockingTextReader blockingReader = new BlockingTextReader(block);
+        BlockingTextReader blockingReader = new BlockingTextReader();
         ConsoleLineReader reader = new ConsoleLineReader(blockingReader);
         try
         {
@@ -70,7 +69,7 @@ public sealed class ConsoleLineReaderTests
         }
         finally
         {
-            block.Set();
+            blockingReader.Release();
             reader.Dispose();
         }
     }
@@ -97,19 +96,42 @@ public sealed class ConsoleLineReaderTests
         }
     }
 
-    /// <summary>A <see cref="TextReader"/> whose <see cref="ReadLine"/> blocks until released.</summary>
+    /// <summary>
+    /// A <see cref="TextReader"/> whose <see cref="ReadLine"/> blocks until <see cref="Release"/>.
+    /// </summary>
+    /// <remarks>
+    /// The gate is a monitor, not a disposable event: <see cref="ConsoleLineReader"/>'s background
+    /// thread may reach <see cref="ReadLine"/> only after the test has finished. A
+    /// <see cref="ManualResetEventSlim"/> the test disposed then threw
+    /// <see cref="ObjectDisposedException"/> on that thread, which nothing catches, and the crash took
+    /// down the whole test process.
+    /// </remarks>
     private sealed class BlockingTextReader : TextReader
     {
-        private readonly ManualResetEventSlim block;
+        private readonly object gate = new();
 
-        internal BlockingTextReader(ManualResetEventSlim block)
+        private bool released;
+
+        /// <summary>Lets every current and future <see cref="ReadLine"/> return end-of-stream.</summary>
+        internal void Release()
         {
-            this.block = block;
+            lock (this.gate)
+            {
+                this.released = true;
+                Monitor.PulseAll(this.gate);
+            }
         }
 
         public override string? ReadLine()
         {
-            this.block.Wait();
+            lock (this.gate)
+            {
+                while (!this.released)
+                {
+                    _ = Monitor.Wait(this.gate);
+                }
+            }
+
             return null;
         }
     }

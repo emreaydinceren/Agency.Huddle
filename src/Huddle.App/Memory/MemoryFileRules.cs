@@ -30,9 +30,6 @@ internal static partial class MemoryFileRules
     /// <summary>The frontmatter key that holds the index line.</summary>
     private const string DescriptionKey = "description";
 
-    /// <summary>The byte-order mark a Windows editor may put at the start of a file.</summary>
-    private const char ByteOrderMark = (char)0xFEFF;
-
     /// <summary>The Windows device names, which are reserved however many extensions follow.</summary>
     private static readonly string[] DeviceNames =
     [
@@ -188,7 +185,7 @@ internal static partial class MemoryFileRules
         NoteFrontmatterBlock block = NoteFrontmatter.Locate(text);
         if (block.Text is null || block.Form != NoteFrontmatterForm.Yaml || !HasDescriptionLine(block.Text))
         {
-            return text.TrimStart(ByteOrderMark);
+            return text.TrimStart(FrontmatterFence.ByteOrderMark);
         }
 
         echoedKeys = OtherKeysOf(block.Text);
@@ -225,13 +222,6 @@ internal static partial class MemoryFileRules
 
         return merged.Count == 0 ? null : string.Concat(merged.Select(static entry => entry.Lines));
     }
-
-    /// <summary>
-    /// <paramref name="text"/> without an echoed header (see <see cref="SplitEcho"/>), and without the blank lines after it.
-    /// </summary>
-    /// <param name="text">A body as given.</param>
-    /// <returns>The body; empty when the text was nothing but the header.</returns>
-    public static string WithoutFrontmatter(string text) => SplitEcho(text, out _);
 
     /// <summary>The lines of a <c>---</c> block other than its <c>description</c> key and that key's continuation lines.</summary>
     /// <param name="blockText">The block's text, between its marker lines.</param>

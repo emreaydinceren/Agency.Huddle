@@ -35,8 +35,6 @@ internal sealed partial class CandidateChecker(
     ITeamCatalog? teams = null,
     IHumanIdentity? humanIdentity = null)
 {
-    private const string FrontmatterDelimiter = "---";
-
     /// <summary>
     /// Checks every Candidate in <paramref name="candidates"/> and returns every problem found,
     /// across all of them, together. Never throws for an invalid Candidate: a
@@ -128,7 +126,7 @@ internal sealed partial class CandidateChecker(
             problems.Add($"{candidate.Name} has a blank Body.");
             sound = false;
         }
-        else if (candidate.Body.StartsWith(FrontmatterDelimiter, StringComparison.Ordinal))
+        else if (FirstLineIsFence(candidate.Body))
         {
             problems.Add($"{candidate.Name}'s Body must not start with '---'; it would read as a second frontmatter block.");
             sound = false;
@@ -142,6 +140,19 @@ internal sealed partial class CandidateChecker(
         }
 
         return sound;
+    }
+
+    /// <summary>
+    /// Whether the first line of <paramref name="body"/> is a line a frontmatter reader would take for an opening fence
+    /// (<see cref="FrontmatterFence.IsOpening(ReadOnlySpan{char})"/>), so that composed after the real frontmatter it would read
+    /// as a second block.
+    /// </summary>
+    /// <param name="body">The Candidate's Body.</param>
+    private static bool FirstLineIsFence(string body)
+    {
+        ReadOnlySpan<char> text = body;
+        int lineEnd = text.IndexOf('\n');
+        return FrontmatterFence.IsOpening(lineEnd < 0 ? text : text[..lineEnd]);
     }
 
     /// <summary>

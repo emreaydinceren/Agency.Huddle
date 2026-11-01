@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -32,8 +33,6 @@ internal sealed record ProcessDocument(
     IReadOnlyList<DoneItem> DefinitionOfDone,
     string Text)
 {
-    private const string Delimiter = "---";
-
     private static readonly string[] OutlineHeadings =
     [
         "When it applies",
@@ -58,12 +57,12 @@ internal sealed record ProcessDocument(
         }
 
         string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        if (!string.Equals(lines[0].TrimEnd(), Delimiter, StringComparison.Ordinal))
+        if (!FrontmatterFence.IsOpening(lines[0]))
         {
             return false;
         }
 
-        int closing = Array.FindIndex(lines, 1, static line => string.Equals(line.TrimEnd(), Delimiter, StringComparison.Ordinal));
+        int closing = FrontmatterFence.FindClosing(lines, 1);
         if (closing < 0)
         {
             return false;
@@ -247,12 +246,12 @@ internal sealed record ProcessDocument(
         ArgumentNullException.ThrowIfNull(gates);
 
         List<string> lines = [.. text.Split('\n')];
-        if (!string.Equals(lines[0].TrimEnd(), Delimiter, StringComparison.Ordinal))
+        if (!FrontmatterFence.IsOpening(lines[0]))
         {
             return text;
         }
 
-        int closing = lines.FindIndex(1, static line => string.Equals(line.TrimEnd(), Delimiter, StringComparison.Ordinal));
+        int closing = FrontmatterFence.FindClosing(lines, 1);
         if (closing < 0)
         {
             return text;

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Library;
 using MudBlazor.Utilities;
 
 namespace Agency.Huddle.App.Teams;
@@ -32,6 +33,18 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private const string AvatarLabelKey = "avatarLabel";
     private const string AvatarImageKey = "avatarImage";
     private const string AvatarBackgroundKey = "avatarBackground";
+
+    /// <summary>
+    /// The file's first line as read: <c>---</c>, or the lenient spelling a hand edit left (a leading byte-order mark, surrounding
+    /// spaces). <see cref="Compose"/> writes it back unchanged so rewriting a hand-edited file touches only its field lines.
+    /// </summary>
+    public string OpeningFence { get; init; } = Delimiter;
+
+    /// <summary>
+    /// The line that closed the frontmatter as read: <c>---</c>, or a spelling a hand edit left (<c>...</c>, surrounding spaces).
+    /// <see cref="Compose"/> writes it back unchanged.
+    /// </summary>
+    public string ClosingFence { get; init; } = Delimiter;
 
     /// <summary>
     /// Frontmatter lines whose key this type does not know, in file order and verbatim. They are
@@ -66,12 +79,12 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
 
         string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal);
         string[] lines = normalized.Split('\n');
-        if (!string.Equals(lines[0].TrimEnd(), Delimiter, StringComparison.Ordinal))
+        if (!FrontmatterFence.IsOpening(lines[0]))
         {
             return false;
         }
 
-        int closing = FindClosingDelimiter(lines);
+        int closing = FrontmatterFence.FindClosing(lines, 1);
         if (closing < 0)
         {
             return false;
@@ -92,6 +105,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             NullIfBlank(values.GetValueOrDefault(OwnsKey)),
             notes)
         {
+            OpeningFence = lines[0],
+            ClosingFence = lines[closing],
             UnknownLines = unknown,
             Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
             Avatar = ReadAvatar(values),
@@ -138,22 +153,6 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         }
     }
 
-    /// <summary>Finds the closing frontmatter delimiter.</summary>
-    /// <param name="lines">The document lines; the first is the opening delimiter.</param>
-    /// <returns>The index of the closing delimiter line, or -1 when there is none.</returns>
-    private static int FindClosingDelimiter(string[] lines)
-    {
-        for (int index = 1; index < lines.Length; index++)
-        {
-            if (string.Equals(lines[index].TrimEnd(), Delimiter, StringComparison.Ordinal))
-            {
-                return index;
-            }
-        }
-
-        return -1;
-    }
-
     /// <summary>Reads the frontmatter lines into the known keys and the lines kept verbatim.</summary>
     /// <param name="lines">The document lines.</param>
     /// <param name="closing">The index of the closing delimiter line.</param>
@@ -195,7 +194,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     public string Compose()
     {
         StringBuilder builder = new();
-        builder.Append(Delimiter).Append('\n');
+        builder.Append(this.OpeningFence).Append('\n');
         AppendScalar(builder, TeamTypeKey, this.TeamType.ToString());
         if (this.Manager is not null)
         {
@@ -226,7 +225,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             builder.Append(line).Append('\n');
         }
 
-        builder.Append(Delimiter).Append('\n');
+        builder.Append(this.ClosingFence).Append('\n');
         builder.Append(this.Notes.Replace("\r\n", "\n", StringComparison.Ordinal));
         return builder.ToString();
     }

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -19,6 +20,9 @@ internal static partial class TaskFileFormat
 
     /// <summary>The Markdown heading, matched case-insensitively, that starts a Task file's append-only Evidence section.</summary>
     public const string EvidenceHeading = "## Evidence";
+
+    /// <summary>The fence line <see cref="Compose"/> writes at both ends of the frontmatter.</summary>
+    private const string DefaultFence = "---";
 
     /// <summary>The Spec §7.2 frontmatter keys this parser recognises, compared case-insensitively.</summary>
     private static readonly HashSet<string> KnownKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -249,17 +253,37 @@ internal static partial class TaskFileFormat
 
         string[] rawLines = currentText.Split('\n');
         int headingIndex = FindChangeLogHeadingLineIndex(rawLines);
-        List<string> headLines = ComposeHeadLines(after);
+        (string opening, string closing) = ExistingFences(rawLines);
+        List<string> headLines = ComposeHeadLines(after, opening, closing);
 
         return headingIndex < 0
             ? string.Join('\n', headLines)
             : string.Join('\n', headLines.Concat(rawLines[headingIndex..]));
     }
 
-    /// <summary>The frontmatter and description lines common to <see cref="Compose"/> and <see cref="ReplaceHead"/>, ending with the blank line before the Change log heading.</summary>
-    private static List<string> ComposeHeadLines(TaskItem task)
+    /// <summary>
+    /// The opening and closing fence lines of an existing Task file, as written: a BOM, surrounding spaces or a <c>...</c> closer
+    /// are kept, so rewriting the head of a hand-edited file changes only its field lines. The line break is dropped.
+    /// </summary>
+    /// <param name="rawLines">The file's lines, split on <c>\n</c>.</param>
+    /// <returns>The two fence lines; <c>---</c> for both when the file has no closed block.</returns>
+    private static (string Opening, string Closing) ExistingFences(string[] rawLines)
     {
-        List<string> lines = ["---", string.Create(CultureInfo.InvariantCulture, $"id: {task.Id}")];
+        if (rawLines.Length < 2 || !FrontmatterFence.IsOpening(rawLines[0]))
+        {
+            return (DefaultFence, DefaultFence);
+        }
+
+        int closingIndex = FrontmatterFence.FindClosing(rawLines, 1);
+        return closingIndex < 0
+            ? (DefaultFence, DefaultFence)
+            : (rawLines[0].TrimEnd('\r'), rawLines[closingIndex].TrimEnd('\r'));
+    }
+
+    /// <summary>The frontmatter and description lines common to <see cref="Compose"/> and <see cref="ReplaceHead"/>, ending with the blank line before the Change log heading.</summary>
+    private static List<string> ComposeHeadLines(TaskItem task, string opening = DefaultFence, string closing = DefaultFence)
+    {
+        List<string> lines = [opening, string.Create(CultureInfo.InvariantCulture, $"id: {task.Id}")];
         lines.Add(ComposeScalarLine("title", task.Title));
         lines.Add(ComposeScalarLine("status", task.Status.ToWire()));
         lines.Add(ComposeScalarLine("priority", task.Priority.ToWire()));
@@ -281,7 +305,7 @@ internal static partial class TaskFileFormat
             lines.Add(ComposeScalarLine(field.Key, field.Value));
         }
 
-        lines.Add("---");
+        lines.Add(closing);
         lines.Add(task.Description);
         lines.Add("");
 
@@ -508,28 +532,16 @@ internal static partial class TaskFileFormat
     }
 
     /// <summary>
-    /// True when <paramref name="text"/>'s first line trims to "---" and some later line also
-    /// trims to "---", closing the frontmatter block. Normalises line endings first, since the
-    /// file may arrive with CRLF.
+    /// True when <paramref name="text"/>'s first line opens a frontmatter block and some later line
+    /// closes it, by the shared <see cref="FrontmatterFence"/> rule (a BOM, surrounding spaces and a
+    /// <c>...</c> closer are all accepted). Normalises line endings first, since the file may arrive
+    /// with CRLF.
     /// </summary>
     private static bool HasFrontmatterBlock(string text)
     {
         string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         string[] lines = normalized.Split('\n');
-        if (lines.Length < 2 || lines[0].Trim() != "---")
-        {
-            return false;
-        }
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            if (lines[i].Trim() == "---")
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return lines.Length >= 2 && FrontmatterFence.IsOpening(lines[0]) && FrontmatterFence.FindClosing(lines, 1) >= 0;
     }
 
     /// <summary>Rejects the file when the same key (case-insensitive) appears more than once.</summary>

@@ -688,8 +688,11 @@ The singular `tag` key is not read (D-31). Every candidate from either source go
 **The frontmatter boundary.** One helper, `NoteFrontmatter.Split(text)`, decides what is
 frontmatter. It is used by the tag pass, by `NoteTagReader` and by `LibraryDocument` (which
 today splits with `PersonaFrontmatter`, so this changes it), so the Properties block and the index
-always agree on where the block is. The block starts with a first line of exactly `---` (after an
-optional BOM) and ends at the next line that is exactly `---` or `...`. A block that never closes
+always agree on where the block is. The block starts with a first line that is `---` (after an
+optional BOM) and ends at the next line that is `---` or `...`; whitespace around a fence is
+ignored. Since 2026-11-01 that rule is `FrontmatterFence`, shared by every frontmatter reader
+(Personas, Tasks, Team and Process files, Memory and the Candidate check, not only notes), so a
+BOM or a `...` closer no longer hides a file's frontmatter from some readers. A block that never closes
 is **not** frontmatter, and its text is scanned as body like any other. A note whose first line
 starts with `{` and whose leading text is one closed JSON object has that object as its
 frontmatter; `NoteFrontmatter.Locate` reports which form it found. The other Properties rows are

@@ -1225,4 +1225,80 @@ public sealed class PersonaFrontmatterTests
         Assert.NotNull(identity);
         Assert.Equal(["team-building"], identity.Skills);
     }
+
+    /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give the fields, and the body starts after the closing line.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("---", "---")]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "---")]
+    [InlineData("---", "  ...  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void Parse_LenientFences_ReadTheFieldsAndTheBody(string opening, string closing)
+    {
+        var text = opening + "\nname: 'Nova'\ntitle: 'Dev'\n" + closing + "\nYou are Nova.\n---\nname: 'Fake'\n...\n";
+
+        var (fields, body) = PersonaFrontmatter.Parse(text);
+
+        Assert.Equal(["name", "title"], fields.Select(static f => f.Key));
+        Assert.Equal("You are Nova.\n---\nname: 'Fake'\n...\n", body);
+    }
+
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <param name="text">The Persona file.</param>
+    [Theory]
+    [InlineData("\uFEFF---\nname: 'Nova'\nYou are Nova.")]
+    [InlineData("  ---  \nname: 'Nova'\nYou are Nova.")]
+    [InlineData("---\nname: 'Nova'\n--- x\nYou are Nova.")]
+    [InlineData("----\nname: 'Nova'\n---\nYou are Nova.")]
+    [InlineData("---\nname: 'Nova'\n....\nYou are Nova.")]
+    public void Parse_UnclosedOrNearMiss_IsNotFrontmatter(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        var (fields, body) = PersonaFrontmatter.Parse(text);
+
+        Assert.Empty(fields);
+        Assert.Equal(text.TrimStart(), body);
+    }
+
+    /// <summary>Rewriting a field of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines byte for byte and changes only the field line.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void WriteScalarField_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
+    {
+        var text = opening + "\r\nname: 'Nova'\r\ntitle: 'Assistant'\r\nalias: 'nov'\r\n" + closing + "\r\nYou are Nova.\r\n";
+
+        var replaced = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+        var inserted = PersonaFrontmatter.WriteScalarField(text, "adapter", "claude");
+
+        Assert.Equal(opening + "\r\nname: 'Nova'\r\ntitle: 'Chief of Staff'\r\nalias: 'nov'\r\n" + closing + "\r\nYou are Nova.\r\n", replaced);
+        Assert.Equal(opening + "\r\nname: 'Nova'\r\ntitle: 'Assistant'\r\nalias: 'nov'\r\nadapter: 'claude'\r\n" + closing + "\r\nYou are Nova.\r\n", inserted);
+    }
+
+    /// <summary>Rewriting a list field of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines byte for byte and changes only the list line.</summary>
+    /// <param name="opening">The first line.</param>
+    /// <param name="closing">The closing line.</param>
+    [Theory]
+    [InlineData("\uFEFF---", "---")]
+    [InlineData("---", "...")]
+    [InlineData("  ---  ", "  ---  ")]
+    [InlineData("\uFEFF  ---  ", "  ...  ")]
+    public void WriteListField_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
+    {
+        var text = opening + "\nname: 'Nova'\nskills: ['a']\nalias: 'nov'\n" + closing + "\nYou are Nova.\n";
+
+        var replaced = PersonaFrontmatter.WriteListField(text, "skills", ["b", "c"]);
+        var inserted = PersonaFrontmatter.WriteListField(text, "teams", ["Core"]);
+
+        Assert.Equal(opening + "\nname: 'Nova'\nskills: ['b', 'c']\nalias: 'nov'\n" + closing + "\nYou are Nova.\n", replaced);
+        Assert.Equal(opening + "\nname: 'Nova'\nskills: ['a']\nalias: 'nov'\nteams: ['Core']\n" + closing + "\nYou are Nova.\n", inserted);
+    }
 }

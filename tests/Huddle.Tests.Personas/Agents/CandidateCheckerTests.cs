@@ -80,6 +80,45 @@ public sealed partial class CandidateCheckerTests
     }
 
     /// <summary>
+    /// A Body whose first line every reader would take for a fence - a BOM before it, spaces around it - is a problem
+    /// too, because the composed file's readers all accept those spellings.
+    /// </summary>
+    /// <param name="body">The Body.</param>
+    [Theory]
+    [InlineData("  ---  \nThis looks like a second frontmatter block.")]
+    [InlineData("\uFEFF---\nThis looks like a second frontmatter block.")]
+    [InlineData("---\r\nThis looks like a second frontmatter block.")]
+    public async Task CheckAsync_BodyFirstLineIsALenientFence_ReportsProblem(string body)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var fixture = await CreateFixtureAsync(ct);
+
+        var candidate = MakeCandidate(body: body);
+
+        var result = await fixture.Checker.CheckAsync([candidate], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Contains($"{candidate.Name}'s Body must not start with '---'; it would read as a second frontmatter block.", result.Problems);
+        AssertProblemsAreModelFacing(result.Problems);
+    }
+
+    /// <summary>A Body line that merely starts with dashes, or opens with a <c>...</c> line, is not a fence and is accepted.</summary>
+    /// <param name="body">The Body.</param>
+    [Theory]
+    [InlineData("--- not a fence\nYou are Vera.")]
+    [InlineData("----\nYou are Vera.")]
+    [InlineData("...\nYou are Vera.")]
+    public async Task CheckAsync_BodyFirstLineIsNotAFence_IsAccepted(string body)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var fixture = await CreateFixtureAsync(ct);
+
+        var result = await fixture.Checker.CheckAsync([MakeCandidate(body: body)], ct);
+
+        Assert.DoesNotContain(result.Problems, p => p.Contains("second frontmatter", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Spec §12 F-24: a Team containing <c>,</c> would silently split into two Teams the next time
     /// the composed frontmatter is read back (the <c>SplitTeams</c> round-trip hazard), so it is
     /// rejected up front instead.
