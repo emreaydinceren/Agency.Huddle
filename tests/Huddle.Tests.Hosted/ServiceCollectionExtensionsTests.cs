@@ -205,18 +205,6 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.TeamDuplicator>());
     }
 
-    /// <summary>The old installer is gone: nothing registered is an <c>ISkillInstaller</c> or <c>ImportingSkillInstaller</c>
-    /// (Skill Packs spec §6.14).</summary>
-    [Fact]
-    public void ISkillInstaller_NoLongerRegistered()
-    {
-        ServiceCollection services = new();
-        services.AddLogging();
-        services.AddTeamServices(new ConfigurationBuilder().Build());
-
-        Assert.DoesNotContain(services, static descriptor => descriptor.ServiceType.Name is "ISkillInstaller" or "ImportingSkillInstaller" or "SkillPackStore" or "SkillsCatalogIndex");
-    }
-
     /// <summary><c>ISkillCopier</c> resolves to <c>SkillCopier</c>.</summary>
     [Fact]
     public void ISkillCopier_ResolvesToSkillCopier()

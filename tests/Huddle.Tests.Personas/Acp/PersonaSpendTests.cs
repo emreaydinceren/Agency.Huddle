@@ -227,14 +227,17 @@ public sealed class PersonaSpendTests : IDisposable
     /// <summary>
     /// Many sessions adding on real threads still sum exactly: every increase lands once, none is
     /// lost and none is counted twice. Repeated so a missing lock is a near-certain failure, not a
-    /// lucky pass.
+    /// lucky pass. Many short rounds rather than a few long ones: without the lock the race shows up
+    /// mostly when a round's threads first create the Persona's state together, and every step after
+    /// that is a write through the on-disk store. 60 rounds of 10 steps failed 10 runs out of 10
+    /// with the lock removed and take under 2 s; 3 rounds of 200 steps failed only 7 out of 10.
     /// </summary>
     [Fact]
     public void ConcurrentAdds_SumExactly()
     {
-        const int Rounds = 30;
+        const int Rounds = 60;
         const int Sessions = 8;
-        const int Steps = 200;
+        const int Steps = 10;
 
         for (int round = 0; round < Rounds; round++)
         {

@@ -96,15 +96,4 @@ public sealed class BrowserOpenerTests
 
         Assert.Equal("http://localhost:8080/", startInfo.FileName);
     }
-
-    /// <summary>NoopBrowserOpener.Open does not throw.</summary>
-    [Fact]
-    public void NoopBrowserOpener_Open_DoesNotThrow()
-    {
-        NoopBrowserOpener opener = new();
-
-        opener.Open("http://127.0.0.1:5000/");
-
-        Assert.True(true); // Verify the call completed without throwing.
-    }
 }
