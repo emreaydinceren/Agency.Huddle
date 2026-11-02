@@ -19,12 +19,14 @@
     row on every parameter set.
 *@
 
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ChatService ChatService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject AvatarStore Avatars
+@inject PersonaStore Personas
 
 <div class="hover-reveal-row"
      @oncontextmenu="this.OnRowContextMenuAsync"
@@ -44,11 +46,22 @@
                     Icon="@(this.oneToOneAgent is null ? Icons.Material.Filled.Chat : null)">
             @if (this.oneToOneAgent is not null)
             {
-                @* A 1:1 Room's leading visual is the Agent's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
-                <AgentAvatar Name="@this.oneToOneAgent.Name" Avatar="this.Avatars.Get(this.oneToOneAgent.Name)" Size="Size.Small" Class="room-row-avatar" />
+                @* A 1:1 Room's leading visual is the Agent's 32px avatar, picture included; a group Room takes the Chat icon (UX-016, OP-5). *@
+                <AgentAvatar Name="@this.oneToOneAgent.Name" Avatar="this.Avatars.Get(this.oneToOneAgent.Name)" Size="Size.Small" Class="room-row-avatar avatar-transcript" />
             }
-            @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
-            <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
+            @if (this.AgentTitle is { } agentTitle)
+            {
+                @* The name, then the Agent's title muted after it; a narrow sidebar wraps the title to a second line. *@
+                <span class="room-row-text">
+                    <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
+                    <span class="room-row-title" title="@agentTitle">@agentTitle</span>
+                </span>
+            }
+            else
+            {
+                @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
+                <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
+            }
             @if (this.TeamLabel is not null)
             {
                 <span class="room-team-label">(@this.TeamLabel)</span>
@@ -111,6 +124,18 @@
         List<User> agents = [.. this.Members.Where(static member => member.Kind == UserKind.Agent)];
         this.oneToOneAgent = agents.Count == 1 ? agents[0] : null;
     }
+
+    /// <summary>
+    /// The 1:1 Room's Agent's title (its Persona's <c>title</c>), or <see langword="null"/> for a group Room, an Agent with no
+    /// Persona, or a title that only repeats the name.
+    /// </summary>
+    private string? AgentTitle =>
+        this.oneToOneAgent is { } agent
+        && this.Personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, agent.Name, StringComparison.OrdinalIgnoreCase))?.Title is { } title
+        && !string.IsNullOrWhiteSpace(title)
+        && !string.Equals(title, agent.Name, StringComparison.OrdinalIgnoreCase)
+            ? title
+            : null;
 
     private string LinkClass => this.Class is null ? "hover-reveal-link" : $"hover-reveal-link {this.Class}";
 

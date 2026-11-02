@@ -670,6 +670,7 @@ public sealed class TeamPageTests
     {
         MudBunitContext ctx = NewContext(new FakeTeamCatalog { Teams = [Team("Business") with { TeamType = TeamFileType }] });
         ctx.Services.AddSingleton(store ?? new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore(dir);
         ctx.Services.AddSingleton<ITeamFolders>(folders);
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         return ctx;
@@ -693,6 +694,7 @@ public sealed class TeamPageTests
         FakeTeamCatalog catalog = new() { Teams = [Team("Business") with { TeamType = new VersionedRef("development", "1") }] };
         await using MudBunitContext ctx = NewContext(catalog);
         ctx.Services.AddSingleton(new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore(dir);
         ctx.Services.AddSingleton<ITeamFolders>(folders);
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);

@@ -226,6 +226,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<TabService>();
         return ctx;
@@ -284,6 +285,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         ctx.Services.AddSingleton<TabService>();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
