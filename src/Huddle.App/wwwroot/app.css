@@ -1818,10 +1818,46 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-primary);
 }
 
-/* A 1:1 Room's avatar fills the leading slot, where an icon would sit, and keeps the gap to the name. */
+/* A 1:1 Room's avatar (32px, .avatar-transcript) fills the leading slot, where an icon would sit, and keeps the gap to
+   the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
 .room-row-avatar {
+    flex: 0 0 auto;
     margin-inline-end: var(--nav-gap);
     vertical-align: middle;
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar) {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding-block: 2px;
+}
+
+/* The name, then the Agent's title muted after it on the same line; when both do not fit, the title wraps below the
+   name. Each truncates with an ellipsis rather than wrapping inside itself. */
+.room-row-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 6px;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.room-row-text > .sidebar-row-label,
+.room-row-title {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-row-title {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Text actions in the sidebar ("New chat", "Build a team", "New view") are neutral: the accent is kept for the
@@ -1952,6 +1988,11 @@ body.sidebar-resizing {
 
 .sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > :not(.sidebar-row-label) {
     flex: 0 0 auto;
+}
+
+/* A 1:1 Room's name-and-title block gives way like the bare name does, so the pill keeps its size. */
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > .room-row-text {
+    flex: 0 1 auto;
 }
 
 /* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete (audit B10 "Inline confirm"). */

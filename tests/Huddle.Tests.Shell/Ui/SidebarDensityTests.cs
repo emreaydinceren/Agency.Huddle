@@ -314,6 +314,7 @@ public sealed class SidebarDensityTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
         ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));

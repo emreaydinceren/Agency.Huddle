@@ -577,6 +577,51 @@ public sealed class RoomListTests
         return copy.TextContent.Trim();
     }
 
+    /// <summary>A 1:1 Room's row shows its Agent's title after the name, beside the Agent's 32px avatar.</summary>
+    [Fact]
+    public async Task Render_OneToOneRoom_ShowsTheAgentsTitle()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using (var personas = dir.CreatePersonaStore())
+        {
+            _ = personas.Add(TestPersonas.Identity("coo", title: "Chief Operating Officer"), "You run operations.");
+        }
+
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        _ = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Equal("Chief Operating Officer", cut.Find(".room-row-text .room-row-title").TextContent);
+        Assert.Contains("avatar-transcript", cut.Find(".room-row-avatar").ClassList);
+    }
+
+    /// <summary>An Agent with no Persona file has no title to show, so its 1:1 row is the name alone.</summary>
+    [Fact]
+    public async Task Render_OneToOneRoom_AgentWithoutPersona_ShowsNoTitle()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        _ = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Empty(cut.FindAll(".room-row-title"));
+        Assert.NotEmpty(cut.FindAll(".sidebar-row-label"));
+    }
+
     private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir? dir = null)
     {
         MudBunitContext ctx = new();
@@ -588,6 +633,7 @@ public sealed class RoomListTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? TestOptions.Create(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore(dir);
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         return ctx;
     }

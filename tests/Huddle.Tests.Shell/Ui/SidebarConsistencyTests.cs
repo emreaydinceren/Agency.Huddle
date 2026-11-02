@@ -174,6 +174,7 @@ public sealed class SidebarConsistencyTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore(dir);
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         return ctx;
     }

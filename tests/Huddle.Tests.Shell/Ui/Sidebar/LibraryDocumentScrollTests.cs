@@ -96,6 +96,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow, "Emre", DocActorKind.Human, DocChangeKind.Edited, string.Empty));
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(this.library.BoundOptions, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         RightSidebarService sidebar = new();
         ctx.Services.AddSingleton(sidebar);
         ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
@@ -155,6 +156,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         store.Append(path, new DocHistoryEntry(DateTimeOffset.UtcNow.AddHours(-1), "Lena", DocActorKind.Agent, DocChangeKind.Reviewed, "Checked"));
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(this.library.BoundOptions, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         ctx.Services.AddSingleton(new RightSidebarService());
     }
 

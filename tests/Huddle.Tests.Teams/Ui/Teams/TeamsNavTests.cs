@@ -1313,6 +1313,7 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton<IAgentGateway>(new Ui.FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(folders ?? new FakeTeamFolders());
         ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
