@@ -394,21 +394,38 @@ public sealed class DotAcpClientAdapterElicitationTests
         Assert.True(scopeToken.IsCancellationRequested);
     }
 
-    /// <summary>Disposing the adapter twice is harmless.</summary>
-    [Fact]
-    public void Dispose_Twice_DoesNotThrow()
+    /// <summary>
+    /// Disposing the adapter twice is harmless, and the host stays ended: a session that registers
+    /// afterwards (racing the host's disposal) gets its request cancelled at once rather than left
+    /// open on a host that will never end it.
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task Dispose_Twice_IsHarmless_AndTheHostStaysEnded()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         Fixture fixture = DotAcpClientAdapterElicitationTests.CreateFixture(scope: null);
+        RecordingElicitationScope lateScope = new() { Script = RecordingElicitationScope.BlockUntilCancelled };
 
         fixture.Adapter.Dispose();
         Exception? exception = Record.Exception(fixture.Adapter.Dispose);
+        fixture.Adapter.Register(new FakeSessionSink("sess-late") { ElicitationScope = lateScope });
+        Task<object> pending = fixture.Adapter.ExtMethodAsync(
+            DotAcpClientAdapterElicitationTests.Method,
+            DotAcpClientAdapterElicitationTests.Args("sess-late"),
+            cancellationToken);
+        object result = await pending.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
 
         Assert.Null(exception);
+        DotAcpClientAdapterElicitationTests.AssertAction("cancel", Assert.IsType<Dictionary<string, object>>(result));
     }
 
-    /// <summary>A disconnect notice that arrives after the adapter was disposed (the host watches the connection on its own task) is harmless.</summary>
+    /// <summary>
+    /// A disconnect notice that arrives after the adapter was disposed (the host watches the
+    /// connection on its own task) is harmless and still does its job: every registered session is
+    /// faulted with <see cref="AgentDisconnectedException"/> and dropped.
+    /// </summary>
     [Fact]
-    public void OnDisconnected_AfterDispose_DoesNotThrow()
+    public void OnDisconnected_AfterDispose_StillFaultsAndDropsTheSessions()
     {
         Fixture fixture = DotAcpClientAdapterElicitationTests.CreateFixture(scope: null);
         using dotacp.client.Connection connection = DotAcpClientAdapterElicitationTests.CreateConnection();
@@ -417,6 +434,8 @@ public sealed class DotAcpClientAdapterElicitationTests
         Exception? exception = Record.Exception(() => fixture.Adapter.OnDisconnected(connection));
 
         Assert.Null(exception);
+        Assert.IsType<AgentDisconnectedException>(fixture.Sink.FaultException);
+        Assert.Empty(fixture.Adapter.Sinks);
     }
 
     /// <summary>Every extension method other than <c>elicitation/create</c> is still unsupported, including near misses of its name.</summary>
