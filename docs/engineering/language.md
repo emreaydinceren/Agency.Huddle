@@ -711,7 +711,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Project**
 : A direct sub-folder of a Team folder; the same Project Tasks files into. A folder
-  whose name starts with `_` or `.`, or is `memory` (Team Memory, proposed in
+  whose name starts with `_` or `.`, or is `memory` (Team Memory,
   ADR-0032), is never a Project.
 
 **Agent folder**
@@ -758,7 +758,7 @@ See
 : *Avoid*: epic, milestone, board, workspace.
 
 **Sprint**
-: A named group of Tasks in time. Proposed, not built. It is an id and a name, listed one per
+: A named group of Tasks in time. It is an id and a name, listed one per
   line in `{DataDir}/sprints.md`, such as `- S2 | Auth hardening`. A Task is in at most one
   Sprint, by writing the id in its `sprint:` key, and a Sprint spans Teams and Projects. It
   has no dates, goal or state. Its order is its id's number, and the **current** Sprint is the
