@@ -45,3 +45,6 @@ BLOCK|pwsh -File from tmp|{"tool_input":{"command":"pwsh -NoProfile -File /tmp/f
 BLOCK|chained pwsh -File from tmp|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb && pwsh -File /tmp/fix.ps1 -Fix"}}
 BLOCK|bash script from tmp|{"tool_input":{"command":"bash /tmp/fix.sh"}}
 allow|pwsh -File repo script|{"tool_input":{"command":"pwsh -NoProfile -File agents/scripts/Check-Eol.ps1 -Fix"}}
+BLOCK|truncate -s src|{"tool_input":{"command":"truncate -s -1 src/Huddle.App/Program.cs"}}
+BLOCK|truncate windows tests path|{"tool_input":{"command":"cd x && truncate -s 0 /e/Repos/Huddle-wt/sb/tests/A/B.cs"}}
+allow|truncate scratchpad|{"tool_input":{"command":"truncate -s 0 /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}

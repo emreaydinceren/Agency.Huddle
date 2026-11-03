@@ -65,6 +65,9 @@ fi
 if matches "(?i)${posc}(?:Set-Content|Add-Content|Out-File)\\b${same}${under}"; then
     deny "Blocked: Set-Content, Add-Content and Out-File into src/ or tests/ skip the Edit hooks. Use the Edit or Write tool."
 fi
+if matches "${pos}truncate\\b${same}${under}"; then
+    deny "Blocked: truncate on a file under src/ or tests/ skips the Edit hooks. Use the Edit or Write tool; to undo stub residue run agents/scripts/Remove-Stubs.ps1."
+fi
 if matches "(?i)${pos}(?:(?:pwsh|powershell)(?:\\.exe)?\\b${same}\\s-File\\s+|(?:bash|sh|source|\\.)\\s+)[\\x22\\x27\\\\]*/tmp/"; then
     deny "Blocked: a script run from /tmp can rewrite src/ or tests/ around the Edit hooks. Use the Edit or Write tool, or keep the script in the repo agents/scripts folder."
 fi

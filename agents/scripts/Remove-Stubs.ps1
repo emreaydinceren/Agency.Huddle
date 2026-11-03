@@ -35,6 +35,45 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Restore-IfOnlyWhitespaceDiffers {
+    # A file that now differs from HEAD only by end-of-line or final-newline bytes (the CRLF hook converts a
+    # LF file when a stub is written) is put back byte for byte from HEAD, so the tree is clean.
+    param([string]$FullName)
+    $dir = Split-Path -Parent $FullName
+    $name = Split-Path -Leaf $FullName
+    $null = git -C $dir ls-files --error-unmatch -- $name 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return
+    }
+
+    git -C $dir diff --quiet -- $name
+    if ($LASTEXITCODE -eq 0) {
+        return
+    }
+
+    git -C $dir diff --ignore-all-space --ignore-cr-at-eol --quiet -- $name
+    if ($LASTEXITCODE -ne 0) {
+        return
+    }
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo 'git'
+    $psi.WorkingDirectory = $dir
+    $psi.RedirectStandardOutput = $true
+    $psi.UseShellExecute = $false
+    $psi.ArgumentList.Add('show')
+    $psi.ArgumentList.Add("HEAD:./$name")
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $buffer = New-Object System.IO.MemoryStream
+    $process.StandardOutput.BaseStream.CopyTo($buffer)
+    $process.WaitForExit()
+    if ($process.ExitCode -ne 0) {
+        return
+    }
+
+    [System.IO.File]::WriteAllBytes($FullName, $buffer.ToArray())
+    Write-Host "restored $FullName from HEAD (only line endings or final newline differed)"
+}
+
 $files = Get-ChildItem -LiteralPath $Root -Recurse -Filter '*.cs' -File |
     Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }
 
@@ -110,6 +149,7 @@ foreach ($file in $files) {
     $total += $removed
     if (-not $WhatIf) {
         [System.IO.File]::WriteAllText($file.FullName, ($kept -join "`n"), (New-Object System.Text.UTF8Encoding($hasBom)))
+        Restore-IfOnlyWhitespaceDiffers -FullName $file.FullName
     }
 }
 
