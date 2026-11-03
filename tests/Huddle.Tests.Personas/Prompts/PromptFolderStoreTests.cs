@@ -23,7 +23,7 @@ public sealed class PromptFolderStoreTests
         using TempDataDir dataDir = new();
         WriteFile(dataDir.Path, Key + ".md", "From the folder.");
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal("From the folder.", store.Raw(Key));
         Assert.Equal(PromptCatalog.Get(OtherKey).Default, store.Raw(OtherKey));
@@ -34,7 +34,7 @@ public sealed class PromptFolderStoreTests
     public void Save_WritesExactlyTheTextToTheKeyFile()
     {
         using TempDataDir dataDir = new();
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
         const string text = "Line one\nLine two {{roomName}}"; // no trailing whitespace: reads trim it
 
         store.Save(Key, text);
@@ -42,7 +42,8 @@ public sealed class PromptFolderStoreTests
         byte[] bytes = File.ReadAllBytes(Path.Combine(PromptsDir(dataDir.Path), Key + ".md"));
         Assert.Equal(new UTF8Encoding(false).GetBytes(text), bytes);
         Assert.Equal(text, store.Raw(Key));
-        Assert.Equal(text, NewStore(dataDir).Raw(Key));
+        using PromptStore reread = NewStore(dataDir);
+        Assert.Equal(text, reread.Raw(Key));
     }
 
     /// <summary>Saving the catalog's default text deletes the override file instead of storing a copy.</summary>
@@ -50,7 +51,7 @@ public sealed class PromptFolderStoreTests
     public void Save_DefaultText_DeletesTheFile()
     {
         using TempDataDir dataDir = new();
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
         store.Save(Key, "An override.");
         string file = Path.Combine(PromptsDir(dataDir.Path), Key + ".md");
         Assert.True(File.Exists(file));
@@ -58,7 +59,8 @@ public sealed class PromptFolderStoreTests
         store.Save(Key, PromptCatalog.Get(Key).Default);
 
         Assert.False(File.Exists(file));
-        Assert.Equal(PromptCatalog.Get(Key).Default, NewStore(dataDir).Raw(Key));
+        using PromptStore reread = NewStore(dataDir);
+        Assert.Equal(PromptCatalog.Get(Key).Default, reread.Raw(Key));
     }
 
     /// <summary><see cref="PromptStore.Reset"/> deletes the key's file, so a new store resolves the default.</summary>
@@ -66,13 +68,14 @@ public sealed class PromptFolderStoreTests
     public void Reset_DeletesTheFile()
     {
         using TempDataDir dataDir = new();
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
         store.Save(Key, "An override.");
 
         store.Reset(Key);
 
         Assert.False(File.Exists(Path.Combine(PromptsDir(dataDir.Path), Key + ".md")));
-        Assert.Equal(PromptCatalog.Get(Key).Default, NewStore(dataDir).Raw(Key));
+        using PromptStore reread = NewStore(dataDir);
+        Assert.Equal(PromptCatalog.Get(Key).Default, reread.Raw(Key));
     }
 
     /// <summary>A file deleted behind the store's back means the default for a store constructed afterwards.</summary>
@@ -80,11 +83,15 @@ public sealed class PromptFolderStoreTests
     public void Constructor_FileDeletedAfterSave_ResolvesDefault()
     {
         using TempDataDir dataDir = new();
-        NewStore(dataDir).Save(Key, "An override.");
+        using (PromptStore first = NewStore(dataDir))
+        {
+            first.Save(Key, "An override.");
+        }
 
         File.Delete(Path.Combine(PromptsDir(dataDir.Path), Key + ".md"));
 
-        Assert.Equal(PromptCatalog.Get(Key).Default, NewStore(dataDir).Raw(Key));
+        using PromptStore reread = NewStore(dataDir);
+        Assert.Equal(PromptCatalog.Get(Key).Default, reread.Raw(Key));
     }
 
     /// <summary><see cref="PromptStore.SaveMany"/> writes one file per key and raises <see cref="PromptStore.PromptsChanged"/> once.</summary>
@@ -92,7 +99,7 @@ public sealed class PromptFolderStoreTests
     public void SaveMany_SeveralKeys_WritesEachFileAndRaisesOnce()
     {
         using TempDataDir dataDir = new();
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
         int raised = 0;
         store.PromptsChanged += () => raised++;
 
@@ -116,7 +123,7 @@ public sealed class PromptFolderStoreTests
         WriteFile(dataDir.Path, Key.ToUpperInvariant() + ".md", "Upper-case name.");
         WriteFile(dataDir.Path, OtherKey + ".MD", "Upper-case extension.");
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal("Upper-case name.", store.Raw(Key));
         Assert.Equal("Upper-case extension.", store.Raw(OtherKey));
@@ -130,7 +137,7 @@ public sealed class PromptFolderStoreTests
         WriteFile(dataDir.Path, Key + ".txt", "Not markdown.");
         WriteFile(dataDir.Path, OtherKey + ".md." + Guid.NewGuid().ToString("N") + ".tmp", "Half written.");
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal(PromptCatalog.Get(Key).Default, store.Raw(Key));
         Assert.Equal(PromptCatalog.Get(OtherKey).Default, store.Raw(OtherKey));
@@ -143,9 +150,73 @@ public sealed class PromptFolderStoreTests
         using TempDataDir dataDir = new();
         WriteFile(dataDir.Path, Key + ".md", "Body text.\n\n   \n");
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal("Body text.", store.Raw(Key));
+    }
+
+    /// <summary>
+    /// A file holding exactly a default that ends in whitespace (<c>getHelp.toolEntry</c> ends in <c>\n\n</c>) is
+    /// not an override: the read trims the file, so it is compared with the trimmed default and the default renders.
+    /// </summary>
+    [Fact]
+    public void Raw_FileHoldingDefaultWithTrailingWhitespace_IsNotOverriddenAndRendersDefault()
+    {
+        using TempDataDir dataDir = new();
+        PromptDefinition definition = PromptCatalog.Get("getHelp.toolEntry");
+        Assert.NotEqual(definition.Default, definition.Default.TrimEnd()); // fixture: the default really ends in whitespace
+        WriteFile(dataDir.Path, definition.Key + ".md", definition.Default);
+
+        using PromptStore store = NewStore(dataDir);
+
+        Assert.Equal(definition.Default, store.Raw(definition.Key));
+        Assert.False(store.IsOverridden(definition.Key));
+    }
+
+    /// <summary>When two files differ only by case, the one named exactly like the key wins (only a case-sensitive file system can hold both).</summary>
+    [Fact]
+    public void Constructor_TwoFilesDifferingByCase_ExactCaseWins()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Needs a case-sensitive file system to hold both files.");
+        using TempDataDir dataDir = new();
+        WriteFile(dataDir.Path, Key.ToUpperInvariant() + ".md", "Upper-case name.");
+        WriteFile(dataDir.Path, Key + ".md", "Exact name.");
+
+        using PromptStore store = NewStore(dataDir);
+
+        Assert.Equal("Exact name.", store.Raw(Key));
+    }
+
+    /// <summary>A <see cref="PromptStore.SaveMany"/> naming an unknown key throws before any file is written, even for the valid keys listed first.</summary>
+    [Fact]
+    public void SaveMany_UnknownKey_ThrowsBeforeWritingAnything()
+    {
+        using TempDataDir dataDir = new();
+        using PromptStore store = NewStore(dataDir);
+
+        Assert.Throws<KeyNotFoundException>(() => store.SaveMany(new Dictionary<string, string>
+        {
+            [Key] = "Valid edit.",
+            ["no.such.key"] = "Bad edit.",
+        }));
+
+        Assert.False(File.Exists(Path.Combine(PromptsDir(dataDir.Path), Key + ".md")));
+        Assert.Equal(PromptCatalog.Get(Key).Default, store.Raw(Key));
+    }
+
+    /// <summary>An editor holding another prompt's file open must not make <see cref="PromptStore.Save"/> throw after it has written its own file.</summary>
+    [Fact]
+    public void Save_OtherFileLockedByEditor_DoesNotThrowAndKeepsTheSavedText()
+    {
+        using TempDataDir dataDir = new();
+        WriteFile(dataDir.Path, OtherKey + ".md", "Being edited.");
+        using PromptStore store = NewStore(dataDir);
+        using FileStream locked = new(Path.Combine(PromptsDir(dataDir.Path), OtherKey + ".md"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        store.Save(Key, "Saved while locked.");
+
+        Assert.Equal("Saved while locked.", store.Raw(Key));
+        Assert.Equal("Being edited.", store.Raw(OtherKey));
     }
 
     /// <summary>A file with a UTF-8 BOM and CRLF line endings reads as LF without the BOM.</summary>
@@ -156,7 +227,7 @@ public sealed class PromptFolderStoreTests
         Directory.CreateDirectory(PromptsDir(dataDir.Path));
         File.WriteAllText(Path.Combine(PromptsDir(dataDir.Path), Key + ".md"), "Line one\r\nLine two", new UTF8Encoding(true));
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal("Line one\nLine two", store.Raw(Key));
     }
@@ -168,7 +239,7 @@ public sealed class PromptFolderStoreTests
         using TempDataDir dataDir = new();
         File.WriteAllText(Path.Combine(dataDir.Path, "prompts.json"), """{ "getHelp.intro": "From the retired file." }""");
 
-        PromptStore store = NewStore(dataDir);
+        using PromptStore store = NewStore(dataDir);
 
         Assert.Equal(PromptCatalog.Get(Key).Default, store.Raw(Key));
     }

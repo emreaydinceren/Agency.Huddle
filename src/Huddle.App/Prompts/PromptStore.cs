@@ -157,11 +157,18 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             return;
         }
 
+        // Look every key up first: an unknown key throws before any file is touched.
+        List<(PromptDefinition Definition, string Text)> resolved = [];
+        foreach (var (key, text) in edits)
+        {
+            resolved.Add((PromptCatalog.Get(key), text));
+        }
+
         lock (this.watched.Gate)
         {
-            foreach (var (key, text) in edits)
+            foreach (var (definition, text) in resolved)
             {
-                this.ApplyEditToDisk(PromptCatalog.Get(key), text);
+                this.ApplyEditToDisk(definition, text);
             }
 
             this.Republish();
@@ -240,11 +247,19 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         return result.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
-    /// <summary>Whether <paramref name="text"/> equals <paramref name="definition"/>'s default once both have their line endings normalised to <c>\n</c>.</summary>
+    /// <summary>
+    /// Whether <paramref name="text"/> equals <paramref name="definition"/>'s default once both have their line
+    /// endings normalised to <c>\n</c> and their trailing whitespace trimmed. The trim matches
+    /// <see cref="ReadOverrideFile"/>, which trims every file it reads: a file holding exactly a default that ends
+    /// in whitespace (<c>getHelp.toolEntry</c>) must still read as the default, not as an override.
+    /// </summary>
     /// <param name="definition">The prompt definition whose default is compared.</param>
     /// <param name="text">The stored override text.</param>
     private static bool EqualsDefaultApartFromLineEndings(PromptDefinition definition, string text) =>
-        string.Equals(text.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal);
+        string.Equals(
+            text.ReplaceLineEndings("\n").TrimEnd(),
+            definition.Default.ReplaceLineEndings("\n").TrimEnd(),
+            StringComparison.Ordinal);
 
     /// <summary>Reads one override file: BOM stripped by the reader, line endings normalised to <c>\n</c>, trailing whitespace trimmed.</summary>
     /// <param name="path">The file to read.</param>
@@ -291,14 +306,29 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     {
         foreach (var (path, prompt) in this.EnumerateOverrideFiles())
         {
-            if (EqualsDefaultApartFromLineEndings(prompt, ReadOverrideFile(path)))
+            if (this.ReadOverrideFileTolerantly(path) is { } text && EqualsDefaultApartFromLineEndings(prompt, text))
             {
                 File.Delete(path);
             }
         }
 
-        this.watched.Current = this.ApplyResolved(this.ReadOverridesFromDisk());
+        this.watched.Current = this.ApplyResolved(this.ReadOverridesFromDisk(tolerant: true));
     }
+
+    /// <summary>
+    /// Reads one override file through <see cref="RetryingFileRead"/> so an editor holding it does not make the
+    /// caller throw after the caller has already written.
+    /// </summary>
+    /// <param name="path">The file to read.</param>
+    /// <returns>The cleaned text, or <see langword="null"/> when the file could not be read on any attempt.</returns>
+    private string? ReadOverrideFileTolerantly(string path) =>
+        RetryingFileRead.Run(
+            () => ReadOverrideFile(path),
+            ex =>
+            {
+                this.logger.LogWarning(ex, "Could not read prompt override file '{Path}'; keeping what was resolved before.", path);
+                return null;
+            });
 
     /// <summary>Raises <see cref="PromptsChanged"/> with a throwing subscriber isolated.</summary>
     private void RaiseChanged() =>
@@ -364,9 +394,13 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         return all;
     }
 
-    /// <summary>Reads every override file in the folder, one winner per key; throws on an IO failure.</summary>
+    /// <summary>Reads every override file in the folder, one winner per key.</summary>
+    /// <param name="tolerant">
+    /// When <see langword="false"/> an IO failure throws. When <see langword="true"/> a file that cannot be read
+    /// on any attempt keeps the text the key resolved to before, so a write that already happened never ends in a throw.
+    /// </param>
     /// <returns>A mutable map from catalog key to the file's cleaned text.</returns>
-    private Dictionary<string, string> ReadOverridesFromDisk()
+    private Dictionary<string, string> ReadOverridesFromDisk(bool tolerant = false)
     {
         Dictionary<string, (string Path, bool Exact)> winners = new(StringComparer.Ordinal);
         foreach (var (path, prompt) in this.EnumerateOverrideFiles())
@@ -381,7 +415,18 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         Dictionary<string, string> overrides = new(StringComparer.Ordinal);
         foreach (var (key, winner) in winners)
         {
-            overrides[key] = ReadOverrideFile(winner.Path);
+            if (!tolerant)
+            {
+                overrides[key] = ReadOverrideFile(winner.Path);
+            }
+            else if (this.ReadOverrideFileTolerantly(winner.Path) is { } text)
+            {
+                overrides[key] = text;
+            }
+            else if (this.watched.Current.TryGetValue(key, out string? previous))
+            {
+                overrides[key] = previous;
+            }
         }
 
         return overrides;
@@ -394,7 +439,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// </summary>
     /// <returns>The freshly read overrides, or <see langword="null"/> when the caller should keep its current snapshot.</returns>
     private Dictionary<string, string>? ReadOverridesForWatcherRebuild() =>
-        RetryingFileRead.Run(this.ReadOverridesFromDisk, this.LogGaveUp);
+        RetryingFileRead.Run(() => this.ReadOverridesFromDisk(), this.LogGaveUp);
 
     private Dictionary<string, string>? LogGaveUp(Exception ex)
     {

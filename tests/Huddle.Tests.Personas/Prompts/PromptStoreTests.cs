@@ -31,7 +31,7 @@ public sealed class PromptStoreTests
 
     /// <summary>No override files is the normal first-run case, so the constructor creates the Prompts folder (to watch it) but no override file in it.</summary>
     [Fact]
-    public void Constructor_NoOverrideFile_DoesNotCreateOne()
+    public void Constructor_NoOverrideFile_CreatesTheFolderButNoFile()
     {
         using var dataDir = new TempDataDir();
         _ = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
@@ -555,7 +555,7 @@ public sealed class PromptStoreTests
 
     /// <summary>The first catalog prompt whose default spans several lines, so a CRLF copy of it differs from the default byte for byte.</summary>
     private static PromptDefinition MultiLinePrompt() =>
-        PromptCatalog.All.First(p => p.Default.Contains('\n') && string.Equals(p.Default, p.Default.TrimEnd(), StringComparison.Ordinal) && !string.Equals(p.Key, "getHelp.intro", StringComparison.Ordinal));
+        PromptCatalog.All.First(p => p.Default.Contains('\n') && !string.Equals(p.Key, "getHelp.intro", StringComparison.Ordinal));
 
     /// <summary>The Prompts folder under <paramref name="dataDir"/> (<c>Team:Library:Prompts:Dir</c> defaults to <c>Prompts</c>).</summary>
     /// <param name="dataDir">The temp data directory a <see cref="PromptStore"/> is pointed at.</param>
