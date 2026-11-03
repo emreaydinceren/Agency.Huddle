@@ -1,4 +1,5 @@
 using System.Globalization;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -40,6 +41,37 @@ internal sealed record ProcessSettings(
         {
             UnknownGates = unknownGates,
         };
+    }
+
+    /// <summary>Splits a process template into the settings its frontmatter holds and the prose after the closing fence.</summary>
+    /// <param name="template">The template text, with LF or CRLF line endings.</param>
+    /// <param name="body">The text after the closing fence, with LF line endings and no leading blank line added; the whole text when there is no frontmatter.</param>
+    /// <returns>The settings read from the frontmatter keys; <see cref="Empty"/> when there is none.</returns>
+    public static ProcessSettings Split(string template, out string body)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+
+        string[] lines = template.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        int closing = FrontmatterFence.IsOpening(lines[0]) ? FrontmatterFence.FindClosing(lines, 1) : -1;
+        if (closing < 0)
+        {
+            body = string.Join('\n', lines);
+            return Empty;
+        }
+
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        for (int index = 1; index < closing; index++)
+        {
+            string line = lines[index].TrimEnd();
+            int colon = line.IndexOf(':', StringComparison.Ordinal);
+            if (colon > 0 && !char.IsWhiteSpace(line[0]))
+            {
+                values[line[..colon].Trim()] = ProcessDocument.Unquote(line[(colon + 1)..]);
+            }
+        }
+
+        body = string.Join('\n', lines[(closing + 1)..]);
+        return Parse(values);
     }
 
     /// <summary>

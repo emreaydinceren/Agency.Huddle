@@ -119,9 +119,9 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        ArrangeTwoGates(ctx, dir);
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = [new TeamSummary(Team, [], ["Nova"], true)] });
         ctx.Services.AddSingleton(TestOptions.Create());
+        ArrangeTwoGates(ctx, dir);
         ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();

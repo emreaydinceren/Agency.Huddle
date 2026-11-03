@@ -16,10 +16,6 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
     private const string BlankText = """
-        ---
-        title: 'Process'
-        gates: []
-        ---
         # Process
 
         ## When it applies
@@ -65,7 +61,19 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
         }
 
         string? text = types.ReadProcess(file.TeamType.Id, processId);
-        return text is null ? ProvisionResult.UnknownProcess : this.Write(team, text);
+        if (text is null)
+        {
+            return ProvisionResult.UnknownProcess;
+        }
+
+        ProcessSettings settings = ProcessSettings.Split(text, out string body);
+        ProvisionResult result = this.Write(team, body);
+        if (result != ProvisionResult.Created)
+        {
+            return result;
+        }
+
+        return folders.UpdateTeamFile(team, current => current with { Process = settings }) ? result : ProvisionResult.Failed;
     }
 
     /// <summary>Writes the blank PR-6 outline, with empty sections and no gates, as <c>Process.md</c>.</summary>

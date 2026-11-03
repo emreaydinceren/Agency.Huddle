@@ -53,8 +53,8 @@ public sealed class SecondBrainSeedTests
         Assert.Empty(Files(seed.DataDir, "Instructions.md"));
     }
 
-    /// <summary>The seed writes no <c>Process.md</c> (owned by Task 52, which moves the process into the Team settings).</summary>
-    [Fact(Skip = "Task 52")]
+    /// <summary>The seed writes no <c>Process.md</c> (the process lives in <c>AGENTS.md</c> and the Team settings).</summary>
+    [Fact]
     public async Task Seed_WritesNoProcessFile()
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);

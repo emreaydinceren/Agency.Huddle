@@ -27,11 +27,14 @@ internal static class TeamFileWriter
             SeedTeam team = plan.Teams[index];
             VersionedRef type = TypeOf(team);
             string folder = $"Teams/{team.Name}";
-            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.TeamFileName}"), Compose(team, type, colours[index]));
+            ProcessSettings settings = ProcessSettings.Empty;
             if (team.TeamType is not null)
             {
-                SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.AgentsMdFileName}"), DefaultProcess(types, team, type));
+                settings = ProcessSettings.Split(DefaultProcess(types, team, type), out string body);
+                SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.AgentsMdFileName}"), body);
             }
+
+            SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.TeamFileName}"), Compose(team, type, colours[index], settings));
 
             EnsureScope(SeedIo.Resolve(dataDir, folder));
             foreach (string project in team.Projects)
@@ -52,9 +55,10 @@ internal static class TeamFileWriter
     /// The text of a Team's <c>_team.md</c>: its type (blank unless named), its manager, its "What it's for" line and its avatar
     /// colour. It is always <c>onboarded: true</c>, so a seeded manager is never sent the onboarding prompt.
     /// </summary>
-    private static string Compose(SeedTeam team, VersionedRef type, string colour) =>
+    private static string Compose(SeedTeam team, VersionedRef type, string colour, ProcessSettings settings) =>
         new TeamFile(type, team.Manager, Workspace: null, team.Owns, Notes: string.Empty)
         {
+            Process = settings,
             Onboarded = true,
             Avatar = new Avatar(Label: null, Image: null, Background: colour),
         }.Compose();

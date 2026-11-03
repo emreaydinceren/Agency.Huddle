@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 59 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 63 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -78,13 +78,13 @@ never by hand, so the status line stays true.
 | 6.3.t-b #50b Update tests that pin Process.md [Sonnet] | | | ✔ |
 | 6.3.i-a #51 Point the gates and cadence callers at the new files [Sonnet] | | | ✔ |
 | 6.3.i-b #51b Point the onboarding, retro and ProcessTab callers at the new files [Sonnet] | | | ✔ |
-| 6.3.t-c #51c Retire the process blocks (C5) [Sonnet] | ✔ | | |
-| 6.4.t #52 Provisioning writes `AGENTS.md` and `_team.md` [Sonnet] | ✔ | | |
-| 6.4.i #53 Provision both files [Sonnet] | ✔ | | |
+| 6.3.t-c #51c Retire the process blocks (C5) [Sonnet] | | | ✔ |
+| 6.4.t #52 Provisioning writes `AGENTS.md` and `_team.md` [Sonnet] | | | ✔ |
+| 6.4.i #53 Provision both files [Sonnet] | | | ✔ |
 | 6.5.t #54 Huddle never writes `AGENTS.md` unasked [Sonnet] | ✔ | | |
 | 6.5.i #55 Save settings to `_team.md` [Sonnet] | ✔ | | |
-| 6.6.t #56 Retro changes target `AGENTS.md` or `_team.md` [Sonnet] | ✔ | | |
-| 6.6.i #57 Retarget retro changes [Sonnet] | ✔ | | |
+| 6.6.t #56 Retro changes target `AGENTS.md` or `_team.md` [Sonnet] | | | ✔ |
+| 6.6.i #57 Retarget retro changes [Sonnet] | | ✔ | |
 | 6.7.t #58 Every template has the house headings [Haiku] | | | ✔ |
 | 6.7.a #59 Add Identity to templates 1–10 [Haiku] | | | ✔ |
 | 6.7.b #60 Add Identity to templates 11–20 [Haiku] | | | ✔ |
