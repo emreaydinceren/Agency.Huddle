@@ -45,7 +45,7 @@ public sealed class AgentsMdCapTests : IDisposable
         Write(Path.Combine(this.TeamsRoot, "A"), 'a', 150);
         string path = Path.Combine(this.TeamsRoot, "A", "AGENTS.md");
         string cutLine = new FakePromptSource().Render(
-            "systemPrompt.instructionsCut",
+            "systemPrompt.agentsMdCut",
             new Dictionary<string, string> { ["{{max}}"] = "100", ["{{path}}"] = path });
 
         AgentsMdSnapshot snapshot = Reader().Read(this.TeamsRoot, ["A"]);

@@ -129,6 +129,29 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// 5.5.t (SB-R06, correction C5): pins the AGENTS.md block for an Agent in Teams A and B, with a
+    /// Huddle-wide, a Team A, a Project A/Alpha and a Team B file. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void AgentsMd_TwoTeamsWithProjects()
+    {
+        AgentsMdSnapshot agentsMd = new(
+            [
+                new AgentsMdSection(AgentsMdLevel.HuddleWide, null, null, "Teams/AGENTS.md", "Be brief everywhere.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "A", null, "Teams/A/AGENTS.md", "Team A writes in British English.", false),
+                new AgentsMdSection(AgentsMdLevel.Project, "A", "Alpha", "Teams/A/Alpha/AGENTS.md", "Alpha ships on Fridays.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "B", null, "Teams/B/AGENTS.md", "Team B reviews every change.", false),
+            ],
+            []);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, agentsMd: agentsMd);
+
+        AssertMatchesGolden("systemPrompt.agentsMd.txt", actual);
+    }
+
+    /// <summary>
     /// Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload for a Persona holding one real
     /// shipped Skill (Spec §6.4). The Skill's description is read from <see cref="SkillCatalog.All"/>
     /// via <see cref="SkillValidator.Validate"/> rather than pasted in, so this test does not pin

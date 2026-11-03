@@ -83,6 +83,7 @@ internal static class PromptCatalog
         ..BuildPart37(),
         ..BuildPart38(),
         ..BuildPart39(),
+        ..BuildPart51(),
         ..BuildPart40(),
         ..BuildPart41(),
         ..BuildPart42(),
@@ -2024,44 +2025,15 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.rawRefusal</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.agentsMdCut</c> to <c>systemPrompt.rawRefusal</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart39() =>
     [
         new PromptDefinition(
-            Key: "systemPrompt.instructions",
-            Label: "Instructions block",
+            Key: "systemPrompt.agentsMdCut",
+            Label: "AGENTS.md cut line",
             HelperText:
-                "The Human's standing Instructions, spliced into the system prompt right after the Agent's " +
-                "own text (Instructions and Memory §3.2). Left out entirely when no level has any text. Must " +
-                "keep {{instructions}}: it holds one section per level, from Huddle-wide to the Agent's own.",
-            Default:
-                """
-                ## Instructions
-                The Human wrote these standing instructions for you. Follow them in every Room. Where they
-                conflict, the more specific level wins: your own over your Team's, your Team's over Huddle's.
-                {{instructions}}
-                """,
-            Placeholders: ["{{instructions}}"],
-            RequiredPlaceholders: ["{{instructions}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.instructionsSection",
-            Label: "Instructions section",
-            HelperText:
-                "One level of the Instructions: a heading naming whose they are (Huddle, a Team or You) and " +
-                "the file's text. Must keep {{source}} and {{text}}.",
-            Default: "### {{source}}\n{{text}}",
-            Placeholders: ["{{source}}", "{{text}}"],
-            RequiredPlaceholders: ["{{source}}", "{{text}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.instructionsCut",
-            Label: "Instructions cut line",
-            HelperText:
-                "Appended to an Instructions file that was cut at Team:Instructions:MaxChars. Must keep " +
+                "Appended to an AGENTS.md file that was cut at Team:AgentsMd:MaxCharsPerFile. Must keep " +
                 "{{max}} and {{path}}: they say how much was kept and where the rest is.",
             Default: "…cut at {{max}} characters; the rest is in {{path}}.",
             Placeholders: ["{{max}}", "{{path}}"],
@@ -2085,6 +2057,22 @@ internal static class PromptCatalog
             HelperText:
                 "The reason logged when an Agent's tool call that changes an original in a raw/ folder is refused (§8.6).",
             Default: "Files in raw/ are kept as they arrived. Add a new file beside the original instead, for example \"<name> - extract.md\".",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.agentsMdLevels</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart51() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.agentsMdLevels",
+            Label: "AGENTS.md levels sentence",
+            HelperText:
+                "Said once before the AGENTS.md sections in the system prompt: how the levels combine and which one wins " +
+                "(Spec §8.2). Left out when no level has any text.",
+            Default:
+                "Each level below adds to the one before it. If two rules conflict, follow the more specific one: " +
+                "a Project's over its Team's, a Team's over the Huddle-wide rules.",
             Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
     ];
 

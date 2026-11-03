@@ -194,10 +194,10 @@ internal static class SystemPromptComposer
     /// <c>_role</c>; <see langword="null"/> leaves the output byte-identical to a call without it. When
     /// set, <c>systemPrompt.roleBlock</c> follows the tools paragraph and any asking-the-Human paragraph.
     /// </param>
-    /// <param name="instructions">
-    /// The Human's standing Instructions (Instructions spec §3.2), or <see langword="null"/> or an empty
-    /// snapshot for none; either leaves the output byte-identical to a call without it. When it holds
-    /// a section, <c>systemPrompt.instructions</c> follows the Persona's text and precedes the identity part.
+    /// <param name="agentsMd">
+    /// The Human's AGENTS.md files (Spec §8.1), or <see langword="null"/> or an empty snapshot for none; either
+    /// leaves the output byte-identical to a call without it. When it holds a section, <c>systemPrompt.agentsMdLevels</c>
+    /// and then one headed part per section follow the Persona's text and precede the identity part.
     /// </param>
     /// <param name="memoryChangesListed">
     /// Whether a memory file's change reaches the Agent as a File Change at the start of its next Turn, which
@@ -229,7 +229,7 @@ internal static class SystemPromptComposer
         TeamMemorySnapshot? teamMemory = null,
         string? askHumanToolName = null,
         RoleBlockInput? roleBlock = null,
-        InstructionsSnapshot? instructions = null,
+        AgentsMdSnapshot? agentsMd = null,
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null)
     {
@@ -254,7 +254,7 @@ internal static class SystemPromptComposer
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
         List<string> parts = [orientation, persona.Text];
-        AddInstructionsPart(parts, prompts, instructions);
+        AddAgentsMdPart(parts, prompts, agentsMd);
         parts.AddRange([identity, chatRules, tools]);
 
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
@@ -321,26 +321,30 @@ internal static class SystemPromptComposer
     }
 
     /// <summary>
-    /// Adds the Instructions part, one section per level from general to specific, when the snapshot holds any.
-    /// Each section is rendered first and handed to the part as a value, so text containing <c>{{x}}</c> stays literal.
+    /// Adds the AGENTS.md block when the snapshot holds a section: the levels sentence, then each section under a
+    /// heading naming its level and path. The text is appended as a value, so text containing <c>{{x}}</c> stays literal.
     /// </summary>
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
-    /// <param name="instructions">The Instructions snapshot, or <see langword="null"/>.</param>
-    private static void AddInstructionsPart(List<string> parts, IPromptSource prompts, InstructionsSnapshot? instructions)
+    /// <param name="agentsMd">The AGENTS.md snapshot, or <see langword="null"/>.</param>
+    private static void AddAgentsMdPart(List<string> parts, IPromptSource prompts, AgentsMdSnapshot? agentsMd)
     {
-        if (instructions is null || instructions.IsEmpty)
+        if (agentsMd is null || agentsMd.Sections.Count == 0)
         {
             return;
         }
 
-        string sections = string.Join(
-            "\n\n",
-            instructions.Sections.Select(section => prompts.Render(
-                "systemPrompt.instructionsSection",
-                new Dictionary<string, string> { ["{{source}}"] = section.Source, ["{{text}}"] = section.Text })));
-
-        parts.Add(prompts.Render("systemPrompt.instructions", new Dictionary<string, string> { ["{{instructions}}"] = sections }));
+        parts.Add(prompts.Render("systemPrompt.agentsMdLevels", new Dictionary<string, string>()));
+        foreach (AgentsMdSection section in agentsMd.Sections)
+        {
+            string name = section.Level switch
+            {
+                AgentsMdLevel.Team => $"Team {section.Team}",
+                AgentsMdLevel.Project => $"Project {section.Team}/{section.Project}",
+                _ => "Huddle-wide",
+            };
+            parts.Add($"## {name} ({section.Path})\n{section.Text}");
+        }
     }
 
     /// <summary>The offered <c>log_change</c> tool's prefixed name, or <see langword="null"/> when the session does not offer it.</summary>

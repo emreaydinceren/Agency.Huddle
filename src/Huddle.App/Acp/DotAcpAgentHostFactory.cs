@@ -172,13 +172,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetService<IMergeGate>());
     }
 
-    /// <summary>Builds the Instructions reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
+    /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
     /// <param name="prompts">The prompt source the reader renders its cut line from.</param>
     /// <returns>The reader.</returns>
     private SessionPromptSources CreatePromptSources(IPromptSource prompts)
     {
         return new SessionPromptSources(
-            new InstructionsReader(prompts, this.options.AgentsMd.MaxCharsPerFile, this.loggerFactory.CreateLogger<InstructionsReader>()),
+            new AgentsMdReader(prompts, this.options.AgentsMd, this.loggerFactory.CreateLogger<AgentsMdReader>()),
             this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
             this.agentPaths);

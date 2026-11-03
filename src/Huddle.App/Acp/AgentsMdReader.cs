@@ -191,7 +191,7 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
         }
 
         string cutLine = prompts.Render(
-            "systemPrompt.instructionsCut",
+            "systemPrompt.agentsMdCut",
             new Dictionary<string, string>
             {
                 ["{{max}}"] = maxChars.ToString(CultureInfo.InvariantCulture),

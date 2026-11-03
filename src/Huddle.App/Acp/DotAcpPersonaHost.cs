@@ -293,17 +293,17 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             teamMemory: teamMemory,
             askHumanToolName: this.askHumanToolName,
             roleBlock: this.roleBlock(),
-            instructions: this.ReadInstructions(),
+            agentsMd: this.ReadAgentsMd(),
             memoryChangesListed: this.readsMemory,
             warnings: this.sources.Warnings);
     }
 
     /// <summary>
-    /// Reads the Human's Instructions now, so an edit made since the last session reaches the next one
-    /// (Instructions spec §3.4). The Teams are the Persona's own, named by the catalog's folder spelling.
+    /// Reads the Human's AGENTS.md files now, so an edit made since the last session reaches the next one.
+    /// The Teams are the Persona's own, named by the catalog's folder spelling.
     /// </summary>
-    /// <returns>The non-empty levels, or an empty snapshot.</returns>
-    private InstructionsSnapshot ReadInstructions()
+    /// <returns>The files read, or an empty snapshot.</returns>
+    private AgentsMdSnapshot ReadAgentsMd()
     {
         IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
         List<string> teamNames =
@@ -312,7 +312,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
                 catalogTeams.FirstOrDefault(team => string.Equals(team.Name, label, StringComparison.OrdinalIgnoreCase))?.Name ?? label),
         ];
 
-        return this.sources.Instructions.Read(this.teamsRoot, teamNames, this.workDir);
+        return this.sources.AgentsMd.Read(this.teamsRoot, teamNames);
     }
 
     /// <summary>
