@@ -643,6 +643,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITeamMembership, TeamMembership>();
         services.AddSingleton<IArchiveFileSystem, PhysicalArchiveFileSystem>();
         services.AddSingleton<ArchiveService>();
+        services.AddSingleton<IArchiveService>(static sp => sp.GetRequiredService<ArchiveService>());
 
         // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
         // to the very provisioner instance the host runs (no cycle: it needs the catalog above).

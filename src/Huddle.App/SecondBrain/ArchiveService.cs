@@ -17,7 +17,7 @@ namespace Agency.Huddle.App.SecondBrain;
 /// (items 7, 8, 4) are Task 113's and plug into <see cref="IArchiveFileSystem"/>; pausing Task writes during the
 /// move (item 5) is Tasks 115 and 117's.
 /// </remarks>
-internal sealed class ArchiveService : IDisposable
+internal sealed partial class ArchiveService : IArchiveService, IDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly LibraryRootStore roots;
@@ -403,6 +403,7 @@ internal sealed class ArchiveService : IDisposable
             await this.FinishArchiveAsync(archiveRoot, team, ct).ConfigureAwait(false);
         }
 
+        this.RecoverProjectMoves(teamsRoot, archiveRoot, archived);
         foreach (string team in live)
         {
             string? archivedSpelling = archived.FirstOrDefault(a => string.Equals(a, team, StringComparison.OrdinalIgnoreCase));

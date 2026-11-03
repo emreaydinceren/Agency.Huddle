@@ -23,8 +23,10 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.NeedsYou
+@using Agency.Huddle.App.SecondBrain
 @using Microsoft.Extensions.Options
 @implements IDisposable
+@inject IArchiveService Archive
 @inject ITeamCatalog Catalog
 @inject ITeamDirectory TeamDirectory
 @inject RoomEvents Events
@@ -178,6 +180,22 @@
         {
             <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
             <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">Build a team</NavTabLink>
+            @* Spec 6.9: archived Teams, each with Unarchive; not drawn while none is archived. *@
+            @if (this.archivedTeams.Count > 0)
+            {
+                <MudNavGroup Class="teams-nav-folder teams-nav-archived" Title="Archived Teams" Icon="@Icons.Material.Outlined.Inventory2"
+                             Expanded="this.IsFolderOpen(ArchivedFolder)" ExpandedChanged="@(open => this.SetFolderOpen(ArchivedFolder, open))">
+                    @foreach (string archived in this.archivedTeams)
+                    {
+                        string archivedName = archived;
+                        <div class="teams-nav-archived-row" @key="archivedName">
+                            <span class="teams-nav-archived-name sidebar-row-label" title="@archivedName">@archivedName</span>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="teams-nav-archived-unarchive"
+                                       OnClick="@(() => this.UnarchiveAsync(archivedName))">Unarchive</MudButton>
+                        </div>
+                    }
+                </MudNavGroup>
+            }
         }
     </MudNavMenu>
 </div>
@@ -194,6 +212,24 @@
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
 
     private const string ExpandedKey = "teamsNav:expanded";
+
+    /// <summary>The folder key of the Archived Teams group, after a control character that keeps it apart from any Team name.</summary>
+    private const string ArchivedFolder = "\u0001archived-teams";
+
+    /// <summary>The archived Teams the group lists, read again at start, on every catalog change and after an Unarchive.</summary>
+    private IReadOnlyList<string> archivedTeams = [];
+
+    /// <summary>Unarchives the Team; a refusal (T17) is shown as a warning and the row stays.</summary>
+    /// <param name="team">The archived Team's name.</param>
+    private async Task UnarchiveAsync(string team)
+    {
+        ArchiveOutcome outcome = await this.Archive.UnarchiveTeamAsync(team, CancellationToken.None);
+        this.archivedTeams = this.Archive.ArchivedTeams();
+        if (!outcome.Done && outcome.Refusal is { } refusal)
+        {
+            _ = this.Snackbar.Add(refusal, Severity.Warning, key: "teams-nav");
+        }
+    }
 
     /// <summary>Lower-cased names of the Teams the user opened (stored under <c>teamsNav:expanded</c>); a Team not in it is collapsed unless the route is inside it.</summary>
     private readonly HashSet<string> opened = new(StringComparer.Ordinal);
@@ -247,6 +283,7 @@
     /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/>, <see cref="ViewStore.ViewsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
     protected override async Task OnInitializedAsync()
     {
+        this.archivedTeams = this.Archive.ArchivedTeams();
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Views.ViewsChanged += this.OnViewsChanged;
@@ -448,6 +485,7 @@
     private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
         this.menuRefs.Clear();
+        this.archivedTeams = this.Archive.ArchivedTeams();
         await this.LoadRoomsAsync();
         this.StateHasChanged();
     });
