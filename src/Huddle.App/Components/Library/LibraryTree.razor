@@ -509,7 +509,7 @@
     }
 
     private static bool IsMissingPinnedRoot(LibraryPath path) =>
-        path.Root.Kind == LibraryRootKind.Pinned
+        path.Root.Kind is LibraryRootKind.Pinned or LibraryRootKind.Workspace
         && path.RelativePath.Length == 0
         && !Directory.Exists(path.FullPath);
 

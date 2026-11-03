@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Small business basics
 
+## Identity
+
+This Team runs the day-to-day work of a small business: it reconciles the books, drafts customer replies and writes marketing copy for the owner to approve. Work routes here when a figure, a reply or a piece of copy must be checked against its source record or brief. It does not file with an authority, set a price, grant a refund or answer a tax question, which go to the Human or their accountant, and it does not run one household's tax year, which belongs to a tax-season Team.
+
 ## When it applies
 
 - Day-to-day work for a small business: the books, customer replies and marketing copy.

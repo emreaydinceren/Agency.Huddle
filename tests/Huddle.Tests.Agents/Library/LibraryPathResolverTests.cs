@@ -21,8 +21,11 @@ public sealed class LibraryPathResolverTests
     [InlineData("teams", "Marketing/Launch Q4", "Marketing/Launch Q4", "ProjectFolder", null)]
     [InlineData("teams", "Marketing/memory", "Marketing/memory", "Folder", null)]
     [InlineData("teams", "Marketing/MEMORY", "Marketing/MEMORY", "Folder", null)]
-    [InlineData("teams", "Marketing/Uploads", "Marketing/Uploads", "Folder", null)]
-    [InlineData("teams", "Marketing/uploads", "Marketing/uploads", "Folder", null)]
+    [InlineData("teams", "Marketing/Uploads", "Marketing/Uploads", "ProjectFolder", null)]
+    [InlineData("teams", "Marketing/uploads", "Marketing/uploads", "ProjectFolder", null)]
+    [InlineData("teams", "Marketing/raw", "Marketing/raw", "Folder", null)]
+    [InlineData("teams", "Marketing/RAW", "Marketing/RAW", "Folder", null)]
+    [InlineData("teams", "Marketing/outputs", "Marketing/outputs", "Folder", null)]
     [InlineData("teams", "Marketing/Launch Q4/memory", "Marketing/Launch Q4/memory", "Folder", null)]
     [InlineData("teams", "memory", "memory", "TeamFolder", null)]
     [InlineData("teams", "memory/memory", "memory/memory", "Folder", null)]
@@ -71,17 +74,17 @@ public sealed class LibraryPathResolverTests
     public void TryResolve_UploadsRoot_ResolvesFile()
     {
         using Fixture fixture = BuildFixture();
-        string folder = Path.Combine(fixture.DataDir, "Uploads", "x");
+        string folder = Path.Combine(fixture.DataDir, "Raw", "x");
         Directory.CreateDirectory(folder);
         File.WriteAllBytes(Path.Combine(folder, "y.png"), [1, 2, 3]);
 
-        bool resolved = fixture.Resolver.TryResolve("uploads", "x/y.png", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("raw", "x/y.png", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.Null(error);
         Assert.NotNull(path);
         Assert.Equal(LibraryNodeRole.File, path.Role);
-        Assert.Equal(LibraryRootKind.Uploads, path.Root.Kind);
+        Assert.Equal(LibraryRootKind.Raw, path.Root.Kind);
         Assert.Equal("x/y.png", path.RelativePath);
     }
 

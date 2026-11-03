@@ -9,6 +9,7 @@ using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
 
@@ -126,11 +127,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         PersonaIdentity? parsed = ParseIdentity(persona);
         IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
-
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
-
-        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -143,6 +142,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile);
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
+        SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
         return new DotAcpPersonaHost(
             innerHost,
@@ -161,27 +161,45 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             teamLabels,
             this.teamCatalog,
             this.TeamsRoot(),
-            this.options.Teams.MaxMemoryEntries,
+            this.CreateGuards(toolSet.Prompts, workDir, sources),
+            this.options.Teams,
             workDir,
             toolServer.Endpoint,
             meta,
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
-            this.CreatePromptSources(toolSet.Prompts),
+            sources,
             this.serviceProvider.GetService<IMergeGate>());
     }
 
-    /// <summary>Builds the Instructions reader (capped by <c>Team:Instructions:MaxChars</c>) with the Team Memory access rules and the memory warnings.</summary>
+    /// <summary>Builds the file guards one Persona's permission handler consults.</summary>
+    /// <param name="prompts">Renders each guard's refusal reason.</param>
+    /// <param name="workDir">The Persona's Work Dir, where a relative path resolves.</param>
+    /// <param name="sources">Supplies the Team Memory access rules.</param>
+    /// <returns>The guards.</returns>
+    private PermissionGuards CreateGuards(IPromptSource prompts, string workDir, SessionPromptSources sources)
+    {
+        string teamsRoot = this.TeamsRoot();
+        return new PermissionGuards(
+            new AgentsMdGuard(teamsRoot, workDir, prompts),
+            new TeamMemoryWriteGuard(teamsRoot, workDir, sources.TeamMemory, prompts),
+            new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts),
+            new PromptsRootGuard(Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Prompts.Dir)), workDir, prompts));
+    }
+
+    /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
     /// <param name="prompts">The prompt source the reader renders its cut line from.</param>
     /// <returns>The reader.</returns>
     private SessionPromptSources CreatePromptSources(IPromptSource prompts)
     {
         return new SessionPromptSources(
-            new InstructionsReader(prompts, this.options.Instructions.MaxChars, this.loggerFactory.CreateLogger<InstructionsReader>()),
+            new AgentsMdReader(prompts, this.options.AgentsMd, this.loggerFactory.CreateLogger<AgentsMdReader>()),
             this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
-            this.agentPaths);
+            this.agentPaths,
+            this.options.Outputs.MaxIndexEntries,
+            this.serviceProvider.GetService<OverCapNotifier>());
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
@@ -216,8 +234,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="profile">The resolved Adapter Profile.</param>
     /// <param name="skillResolution">The Persona's resolved Skills.</param>
     /// <param name="proposesTeamMemory">Whether to offer <c>propose_team_memory</c>.</param>
+    /// <param name="teamLabels">The Persona's Team labels; those with a Team folder become <c>get_help</c>'s Second Brain map.</param>
     /// <returns>The tool set.</returns>
-    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory)
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels)
     {
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
@@ -247,7 +266,19 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
         // Captured in its own local, rather than only in the tools array below, so the system prompt
         // can name it from its own Name - never retyping "get_help" either.
-        var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
+        IReadOnlyList<string> teamNames = [.. teamLabels
+            .Select(label => this.teamCatalog.Find(label))
+            .OfType<TeamSummary>()
+            .Where(static team => team.HasFolder)
+            .Select(static team => team.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        var getHelpTool = new GetHelpTool(
+            chatTools,
+            prompts,
+            toolNamePrefix,
+            teamNames,
+            this.serviceProvider.GetRequiredService<Agency.Huddle.App.Data.RawBaselineStore>(),
+            this.options);
         IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         return new ToolSet(
@@ -376,6 +407,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private string TeamsRoot()
     {
         return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir));
+    }
+
+    /// <summary>The full path of the Raw root folder.</summary>
+    /// <returns>The absolute Raw root path.</returns>
+    private string RawRoot()
+    {
+        return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Raw.Dir));
+    }
+
+    /// <summary>The full path of the Archive root folder.</summary>
+    /// <returns>The absolute Archive root path.</returns>
+    private string ArchiveRoot()
+    {
+        return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Archive.Dir));
     }
 
     /// <summary>Creates the chat tools every Persona is offered before Skill gating.</summary>
@@ -553,7 +598,58 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 parsed,
                 skillResolution.Skills,
                 this.teamCatalog,
-                personaStore.Get,
-                this.TeamsRoot());
+                personaStore.Get);
+    }
+
+    /// <summary>
+    /// Composes, as labelled parts, what the Persona's next root session would be told (Spec §6.5). Read-only: it builds the tool
+    /// objects but starts no server or process, creates no folder and spends no Turn.
+    /// </summary>
+    /// <param name="persona">The Persona to preview.</param>
+    /// <returns>The parts in prompt order and the id of the Adapter they were composed for.</returns>
+    internal (IReadOnlyList<PromptPart> Parts, string Adapter) PreviewParts(Persona persona)
+    {
+        ArgumentNullException.ThrowIfNull(persona);
+
+        AdapterProfile profile = this.ResolveProfile(persona);
+        PersonaIdentity? parsed = ParseIdentity(persona);
+        IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
+        SkillResolution skillResolution = this.skills.Resolve(parsed?.Skills ?? []);
+        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
+        IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
+        SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
+
+        SessionPromptSnapshot inputs = SessionPromptInputs.Build(
+            sources.AgentsMd,
+            sources.Warnings,
+            this.teamCatalog.Teams,
+            persona.Name,
+            Path.Combine(this.agentPaths.WorkDir(persona.Name), "memory"),
+            this.options.FileChanges.MaxMemoryEntries,
+            teamLabels,
+            this.TeamsRoot(),
+            this.options.Teams.MaxMemoryEntries,
+            this.options.Teams.MaxHuddleMemoryEntries,
+            sources.MaxOutputsEntries);
+
+        IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
+            persona,
+            toolSet.Prompts,
+            toolSet.HelpToolName,
+            toolNames,
+            skillResolution.Skills,
+            toolSet.ReadSkillToolName,
+            inputs.Memory,
+            SessionScope.Shared,
+            teamMemory: inputs.TeamMemory,
+            askHumanToolName: toolSet.AskHumanToolName,
+            roleBlock: this.CreateRoleBlock(parsed, skillResolution)(),
+            agentsMd: inputs.AgentsMd,
+            memoryChangesListed: this.ReadsMemory(profile),
+            warnings: sources.Warnings,
+            huddleMemory: inputs.HuddleMemory,
+            outputs: inputs.Outputs,
+            workspaces: inputs.Workspaces);
+        return (parts, profile.Id);
     }
 }

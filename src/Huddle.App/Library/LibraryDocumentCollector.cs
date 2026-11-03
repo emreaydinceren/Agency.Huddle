@@ -324,12 +324,12 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// </summary>
     private async Task<string> ResolveLocationAsync(LibraryPath path, CancellationToken ct)
     {
-        if (path.Root.Kind == LibraryRootKind.Pinned)
+        if (path.Root.Kind is LibraryRootKind.Pinned or LibraryRootKind.Workspace)
         {
             return string.Create(CultureInfo.InvariantCulture, $"pinned root \"{path.Root.DisplayName}\"");
         }
 
-        if (path.Root.Kind == LibraryRootKind.Uploads)
+        if (path.Root.Kind == LibraryRootKind.Raw)
         {
             return LibraryDocumentCollector.UploadLocation(path);
         }
@@ -343,7 +343,14 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
         if (path.Root.Kind == LibraryRootKind.Teams)
         {
-            return segments.Length >= 3 && !string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase)
+            string? taskId = LibraryDocumentCollector.TaskAttachmentId(segments);
+
+            if (taskId is not null)
+            {
+                return string.Create(CultureInfo.InvariantCulture, $"Task {taskId}");
+            }
+
+            return segments.Length >= 3 && !string.Equals(segments[1], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase)
                 ? string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}, Project {segments[1]}")
                 : string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}");
         }
@@ -360,8 +367,27 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     }
 
     /// <summary>
+    /// The Task id of a file in a Team's or Project's <c>raw/Tasks/{ID}/</c> folder (Second Brain Spec 6.1, correction C4),
+    /// from its path segments below the Teams root, or <see langword="null"/> when the file is elsewhere.
+    /// </summary>
+    private static string? TaskAttachmentId(string[] segments)
+    {
+        foreach (int rawIndex in (ReadOnlySpan<int>)[1, 2])
+        {
+            if (segments.Length >= rawIndex + 4
+                && string.Equals(segments[rawIndex], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(segments[rawIndex + 1], TaskUploadFolders.FolderName, StringComparison.Ordinal))
+            {
+                return segments[rawIndex + 2];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// The label of a file in the Uploads root: <c>Task {ID}</c> under <c>Tasks/{ID}/</c> (TaskAttachments spec 6.6),
-    /// otherwise <c>upload</c>.
+    /// otherwise <c>upload</c>. Task files now live under a Team's <c>raw/Tasks/{ID}/</c>; see <see cref="TaskAttachmentId"/>.
     /// </summary>
     private static string UploadLocation(LibraryPath path)
     {

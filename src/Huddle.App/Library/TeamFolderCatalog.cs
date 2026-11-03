@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Library;
 
@@ -26,6 +27,11 @@ internal static class TeamFolderCatalog
         List<TeamFolder> folders = [];
         foreach (TeamFolder team in teams)
         {
+            if (TeamNames.IsReservedTeamName(team.Name))
+            {
+                continue;
+            }
+
             DirectoryInfo directory = new(Path.Combine(teamsRoot.FullPath, team.Name));
             if (!directory.Exists || !resolver.TryResolveChild(teamsRoot, directory, out _, out _))
             {

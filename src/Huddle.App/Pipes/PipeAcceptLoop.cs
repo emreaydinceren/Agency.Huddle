@@ -43,9 +43,10 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
     /// <summary>Accepts clients until <paramref name="stoppingToken"/> is cancelled, then disposes the listening instance.</summary>
     /// <param name="stoppingToken">Ends the loop.</param>
     /// <returns>A task that completes when the loop has stopped.</returns>
+    /// <exception cref="InvalidOperationException">Another server already listens on the pipe name.</exception>
     public async Task RunAsync(CancellationToken stoppingToken)
     {
-        NamedPipeServerStream listening = this.CreateInstance();
+        NamedPipeServerStream listening = this.ClaimPipeName();
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -101,9 +102,31 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
         }
     }
 
+    /// <summary>
+    /// Creates the first listening instance as the pipe's first instance, so a name another program already listens on is
+    /// refused instead of shared. Shared, two copies of Huddle on one machine each took some of the other's Agents: an Agent
+    /// connected to whichever program's listener answered, and stayed Offline in its own with nothing logged.
+    /// </summary>
+    /// <returns>The first instance, owned by the caller.</returns>
+    /// <exception cref="InvalidOperationException">Another server already listens on the pipe name.</exception>
+    private NamedPipeServerStream ClaimPipeName()
+    {
+        try
+        {
+            return this.CreateInstance(PipeOptions.FirstPipeInstance);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            throw new InvalidOperationException(
+                $"Another program is already listening on the pipe '{pipeName}', most likely another copy of Huddle. Stop it, or give this copy its own pipe with Team:PipeName.",
+                ex);
+        }
+    }
+
     /// <summary>Creates one unconnected server instance of the pipe.</summary>
+    /// <param name="extraOptions">Options added to <see cref="PipeOptions.Asynchronous"/>; <see cref="PipeOptions.FirstPipeInstance"/> for the first one only.</param>
     /// <returns>The new instance, owned by the caller.</returns>
-    private NamedPipeServerStream CreateInstance() =>
+    private NamedPipeServerStream CreateInstance(PipeOptions extraOptions = PipeOptions.None) =>
         // The buffer sizes are load-bearing, and their absence deadlocked an Agent permanently.
         // Left unspecified they default to 0, which on Windows means every write blocks until the
         // peer reads it - a lock-step handshake. AgentConnection answers a refused post (a spent
@@ -121,7 +144,7 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
             PipeDirection.InOut,
             NamedPipeServerStream.MaxAllowedServerInstances,
             PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous,
+            PipeOptions.Asynchronous | extraOptions,
             inBufferSize: PipeBufferBytes,
             outBufferSize: PipeBufferBytes);
 }

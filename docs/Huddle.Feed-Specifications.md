@@ -557,7 +557,7 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
 - **The filter bar**, one row: the **Category** control at the left and the **Team select** at the
   right; the Agent chip, when set, sits just left of the Team select.
 
-**Category** is a `HuddleSegmentedControl<FeedCategory>` with seven segments (`ItemCount="7"`), each a
+**Category** is a `HuddleSegmentedControl<FeedCategory>` with nine segments (`ItemCount="9"`; the original seven plus Devices and Second Brain), each a
 label and its count from `FeedStore.Counts`. Selecting one navigates the Tab to
 `?category=<value>`, keeping `agent` and `team`. Every Feed item is in All, in exactly one of
 Tasks, Gates, Rooms, Documents or Helpers, and in Needs you only while it is an unresolved Notification, so
@@ -804,7 +804,7 @@ A summary starting in lower case follows the actor's Name. Other copy:
 | Button | `Notifications` (tooltip and `aria-label`; `Notifications, <n> new` with a count) |
 | Panel title | `Notifications` |
 | Panel link | `See all activity` |
-| Panel Categories | The seven Category labels with counts; opens on `Needs you` |
+| Panel Categories | The nine Category labels (seven originally; Devices and Second Brain were added) with counts; opens on `Needs you` |
 | Panel empty | Needs you: `Nothing needs you` · `Asks from your Agents appear here.`; All: `Nothing yet` · `What your Agents do appears here.` |
 | Activity bar link | `Feed` |
 | Page title | `Feed` |

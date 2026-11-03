@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Job search basics
 
+## Identity
+
+This Team runs an active job search: finding openings, tailoring documents, preparing for interviews and following up. Work that arrives here is one opening or goal at a time, each with its acceptance in one line. Negotiating an offer or answering a salary question goes to the Human, and learning a new skill belongs to the learning Team type.
+
 ## When it applies
 
 - An active job search: finding openings, tailoring documents, preparing for interviews and following up.

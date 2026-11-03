@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Home lab basics
 
+## Identity
+
+This Team keeps a home lab as code in one repository: its configuration, scripts and runbook. Work that arrives here is a change to that repository, with the steps to check it and to undo it, or a review of a change for access, firewall or secrets. The Human applies every change to a live machine, and general support for a household's devices belongs to the household Team type.
+
 ## When it applies
 
 - Changes to a home lab kept as code in one repository: configuration, scripts and the runbook.

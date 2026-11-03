@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Teams;
 public sealed class RetroProposalTests
 {
     private const string DiffOfSquash =
-        "--- Process.md\n+++ Process.md\n@@\n Review before done.\n-One PR per Task.\n+One PR per Task, squash merged.";
+        "--- AGENTS.md\n+++ AGENTS.md\n@@\n Review before done.\n-One PR per Task.\n+One PR per Task, squash merged.";
 
     /// <summary>Builds the tool arguments.</summary>
     /// <param name="team">The Team name.</param>
@@ -31,7 +31,7 @@ public sealed class RetroProposalTests
 
     /// <summary>One valid proposal against <paramref name="file"/>.</summary>
     /// <param name="file">The target file.</param>
-    private static (string Title, string File, string Find, string Replace) Edit(string file = "Process.md") =>
+    private static (string Title, string File, string Find, string Replace) Edit(string file = "AGENTS.md") =>
         ("Squash", file, "One PR per Task.", "One PR per Task, squash merged.");
 
     /// <summary>The diff is computed from the file's current text and the change's find and replace.</summary>
@@ -40,7 +40,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", "One PR per Task, squash merged."));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", "One PR per Task, squash merged."));
 
         string diff = fixture.Service.Preview(set, set.Changes[0]);
 
@@ -53,7 +53,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "Nothing like this", "x"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "Nothing like this", "x"));
 
         string diff = fixture.Service.Preview(set, set.Changes[0]);
 
@@ -66,19 +66,19 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", "One PR per Task, squash merged."));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", "One PR per Task, squash merged."));
 
         RetroChangeOutcome first = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
         RetroChangeOutcome second = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Applied, first.Kind);
-        Assert.Equal("Applied 'Title 1' to Process.md. @Nova", first.Text);
+        Assert.Equal("Applied 'Title 1' to AGENTS.md. @Nova", first.Text);
         Assert.Equal(RetroChangeOutcomeKind.Gone, second.Kind);
         Assert.Equal("# Process\n\nReview before done.\nOne PR per Task, squash merged.\n", fixture.ProcessNow);
         IReadOnlyList<RegisterRow> rows = fixture.Retro.ReadRegister("Platform");
         RegisterRow row = Assert.Single(rows);
         Assert.Equal(
-            new RegisterRow("R-001", "Title 1", "Edited Process.md", "Nova", RetroStatus.Done, "Accepted 2026-10-08; verify at the next retro."),
+            new RegisterRow("R-001", "Title 1", "Edited AGENTS.md", "Nova", RetroStatus.Done, "Accepted 2026-10-08; verify at the next retro."),
             row);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
@@ -89,7 +89,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "Review before done.", "Review twice."));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "Review before done.", "Review twice."));
 
         RetroChangeOutcome[] outcomes = await Task.WhenAll(
             fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct),
@@ -106,12 +106,12 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "Not there", "x"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "Not there", "x"));
 
         RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
-        Assert.Equal("The text to replace is not in Process.md; nothing changed.", outcome.Text);
+        Assert.Equal("The text to replace is not in AGENTS.md; nothing changed.", outcome.Text);
         Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
         Assert.Single(fixture.Proposals.Pending("Platform"));
@@ -123,12 +123,12 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "e", "E"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "e", "E"));
 
         RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
-        Assert.Equal("The text to replace occurs more than once in Process.md; nothing changed.", outcome.Text);
+        Assert.Equal("The text to replace occurs more than once in AGENTS.md; nothing changed.", outcome.Text);
         Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
     }
@@ -227,7 +227,7 @@ public sealed class RetroProposalTests
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
         string directory = Path.Combine(fixture.TeamFolder, "_proposals", "retro");
         _ = Directory.CreateDirectory(directory);
-        RetroChange[] changes = [RetroProposalFixture.Change("1", "Process.md", "Review before done.", "Review twice.")];
+        RetroChange[] changes = [RetroProposalFixture.Change("1", "AGENTS.md", "Review before done.", "Review twice.")];
         File.WriteAllText(Path.Combine(directory, "good.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("good", "Platform", "Nova", changes)));
         File.WriteAllText(Path.Combine(directory, "renamed.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("other-id", "Platform", "Nova", changes)));
         File.WriteAllText(Path.Combine(directory, "foreign.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("foreign", "Other", "Nova", changes)));
@@ -246,7 +246,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", "x"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", "x"));
 
         RetroChangeOutcome outcome = await fixture.Service.RejectAsync(fixture.RoomId, set.Id, "1", "Too strict.", ct);
 
@@ -263,7 +263,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", "x"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", "x"));
 
         RetroChangeOutcome outcome = await fixture.Service.RejectAsync(fixture.RoomId, set.Id, "1", "  ", ct);
 
@@ -276,7 +276,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "a", "b"));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "a", "b"));
 
         IReadOnlyList<RetroProposalSet> here = await fixture.Service.PendingAsync(fixture.RoomId, ct);
         IReadOnlyList<RetroProposalSet> there = await fixture.Service.PendingAsync(fixture.OtherRoomId, ct);
@@ -298,7 +298,7 @@ public sealed class RetroProposalTests
         Assert.Equal("Proposal sent to the Human.", result);
         RetroProposalSet set = Assert.Single(fixture.Proposals.Pending("Platform"));
         Assert.Equal("Nova", set.Proposer);
-        Assert.Equal(["Process.md", "_team.md", "Kai.md"], set.Changes.Select(static each => each.TargetFile));
+        Assert.Equal(["AGENTS.md", "_team.md", "Kai.md"], set.Changes.Select(static each => each.TargetFile));
         Assert.Equal(["1", "2", "3"], set.Changes.Select(static each => each.Id));
     }
 
@@ -397,7 +397,7 @@ public sealed class RetroProposalTests
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit(file)), ct);
 
-        Assert.Equal("targetFile must be Process.md, _team.md or the file of an Agent (Name.md).", result);
+        Assert.Equal("targetFile must be AGENTS.md, _team.md or the file of an Agent (Name.md).", result);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
 
@@ -409,7 +409,7 @@ public sealed class RetroProposalTests
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
         ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
-        string result = await tool.InvokeAsync(Arguments("Platform", ("", "Process.md", "a", "b")), ct);
+        string result = await tool.InvokeAsync(Arguments("Platform", ("", "AGENTS.md", "a", "b")), ct);
 
         Assert.Equal("Each proposal needs a title, a targetFile and a find text.", result);
     }
@@ -439,7 +439,7 @@ public sealed class RetroProposalTests
 
         Assert.Equal("propose_retro_changes", tool.Name);
         Assert.Equal(
-            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or an Agent's Name.md), " +
+            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), " +
             "the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; " +
             "nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.",
             tool.Description);

@@ -7,6 +7,10 @@ checkCommand: 'dotnet test'
 ---
 # Spec-driven
 
+## Identity
+
+This Team delivers features and changes that touch shared contracts, the wire protocol or more than one module, as the spec-driven process of the `development` Team type. Work starts from a spec Task that the Human approves before anyone breaks it down or builds. Small single-module changes go to the lightweight-flow process, and fixes to shipped code go to maintenance.
+
 ## When it applies
 
 - Features and changes that touch shared contracts, the wire protocol or more than one module.

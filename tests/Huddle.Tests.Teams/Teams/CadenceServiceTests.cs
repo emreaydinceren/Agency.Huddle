@@ -36,7 +36,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
 
         await harness.Service().TickAsync(ct);
 
@@ -50,7 +50,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
 
@@ -66,7 +66,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
 
@@ -82,7 +82,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         await harness.Service().TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
         harness.WriteDone(10);
@@ -100,7 +100,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
@@ -118,7 +118,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         await harness.Service().TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
         await harness.Service().TickAsync(ct);
@@ -134,7 +134,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
@@ -155,7 +155,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         await harness.Service().TickAsync(ct);
         harness.WriteDone(9);
 
@@ -170,7 +170,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         harness.HireRetroAgent();
         await harness.Service().TickAsync(ct);
         harness.WriteDone(10);
@@ -186,7 +186,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         await harness.Service().TickAsync(ct);
         harness.WriteDone(10);
 
@@ -201,7 +201,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         await harness.Service().TickAsync(ct);
         harness.WriteDone(10);
         await harness.Service().TickAsync(ct);
@@ -217,7 +217,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess("---\ntitle: 'Flow'\nretro: { every: 3, unit: 'days' }\n---\n# Flow\n");
+        harness.UseSettings(ProcessSettings.Empty with { Retro = "{ every: 3, unit: 'days' }" });
         harness.HireRetroAgent();
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
@@ -231,9 +231,9 @@ public sealed class CadenceServiceTests
         Assert.Equal([(RetroAgent, "prompt.retro|Platform|2026-10-08")], harness.Poster.Posts);
     }
 
-    /// <summary>A Team without a Process.md is ignored: no state, no posts.</summary>
+    /// <summary>A Team whose <c>_team.md</c> sets no digest or retro is ignored: no state, no posts.</summary>
     [Fact]
-    public async Task Tick_NoProcessFile_IsIgnored()
+    public async Task Tick_NoProcessSettings_IsIgnored()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
@@ -254,7 +254,7 @@ public sealed class CadenceServiceTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
         harness.AddTeam("Design", "Dan");
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
@@ -271,7 +271,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         harness.WriteDone(5);
         await harness.Service().TickAsync(ct);
         harness.DeleteDone(keep: 2);
@@ -289,7 +289,7 @@ public sealed class CadenceServiceTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness harness = new();
-        harness.WriteProcess(Both);
+        harness.UseSettings(Both);
         CadenceService service = harness.Service();
         await service.TickAsync(ct);
         harness.Clock.UtcNow = Start.AddDays(1);
@@ -303,8 +303,8 @@ public sealed class CadenceServiceTests
         Assert.Equal(2, harness.Poster.Posts.Count);
     }
 
-    private static string Both =>
-        "---\ntitle: 'Flow'\ndigest: { every: 1, unit: 'days' }\nretro: { every: 10, unit: 'done-tasks' }\n---\n# Flow\n";
+    private static ProcessSettings Both =>
+        ProcessSettings.Empty with { Digest = "{ every: 1, unit: 'days' }", Retro = "{ every: 10, unit: 'done-tasks' }" };
 
     /// <summary>Records each post instead of waking anyone.</summary>
     internal sealed class RecordingPoster : IOnboardingPoster
@@ -361,6 +361,9 @@ public sealed class CadenceServiceTests
 
         /// <inheritdoc />
         public string Raw(string key) => key;
+
+        /// <inheritdoc />
+        public bool IsOverridden(string key) => false;
     }
 
     /// <summary>One Team over a temporary data folder, with a manual clock and a recording poster.</summary>
@@ -414,10 +417,10 @@ public sealed class CadenceServiceTests
             return new CadenceService(this.catalog, this.folders, this.types, this.personas, tasks, this.State, new KeyedPrompts(), this.Poster, NullLogger<CadenceService>.Instance, this.Clock);
         }
 
-        /// <summary>Writes the Team's Process.md.</summary>
-        /// <param name="text">The file's text.</param>
-        public void WriteProcess(string text) =>
-            File.WriteAllText(Path.Combine(this.dir.Path, TeamPaths.ProcessFileName), text);
+        /// <summary>Sets the process settings the Team's <c>_team.md</c> holds.</summary>
+        /// <param name="settings">The settings.</param>
+        public void UseSettings(ProcessSettings settings) =>
+            this.folders.ReadResult = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty) { Process = settings };
 
         /// <summary>Hires the Agent holding the type's retro role.</summary>
         public void HireRetroAgent() =>
@@ -440,7 +443,7 @@ public sealed class CadenceServiceTests
             }
         }
 
-        /// <summary>Adds a second Team, with the same Process.md and folder.</summary>
+        /// <summary>Adds a second Team, with the same settings and folder.</summary>
         /// <param name="name">The Team name.</param>
         /// <param name="manager">Its manager.</param>
         public void AddTeam(string name, string manager) =>

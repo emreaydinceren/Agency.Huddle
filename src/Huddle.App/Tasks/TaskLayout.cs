@@ -24,7 +24,7 @@ internal static class TaskLayout
         error = null;
         string[] parts = SplitRelativePath(root, fullPath);
 
-        if (parts.Length < 3 || IsReservedFolderName(parts[0]))
+        if (parts.Length < 3 || IsReservedFolderName(parts[0]) || TeamNames.IsReservedTeamName(parts[0]))
         {
             location = null;
             return false;
@@ -74,7 +74,7 @@ internal static class TaskLayout
     {
         string[] parts = SplitRelativePath(root, fullPath);
 
-        if (parts.Length == 0 || IsReservedFolderName(parts[0]))
+        if (parts.Length == 0 || IsReservedFolderName(parts[0]) || TeamNames.IsReservedTeamName(parts[0]))
         {
             return false;
         }

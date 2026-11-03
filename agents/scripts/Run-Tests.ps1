@@ -101,7 +101,10 @@
     (exit 8, no file written), even one with an allowed code, so a wrong name (e.g. CS1061 on the wrong
     member) cannot be saved as a red. With -NewNames, every line with one of those codes must quote an
     identifier in the list, or the run is rejected (exit 8, no file written) and the offending lines are
-    printed. Any compiler error OUTSIDE that allowed code set (e.g. CS7036, CS1503, CS0029) is always
+    printed. Also accepted without -AllowCodes: CS1729 / CS1503 / CS7036 when a quoted part of the message
+    names a -NewNames type (a new constructor on an existing class), and CS0234 / CS0246 for any namespace
+    segment of a dotted entry. The red is refused (exit 8) while any src/**/*.cs holds a "// <stub" marker:
+    run Remove-Stubs.ps1 first. Any compiler error OUTSIDE that allowed code set (e.g. CS7036, CS1503, CS0029) is always
     rejected the same way - it means the red is not a clean "doesn't exist yet" failure. A runtime red
     (failing tests, no compiler errors) needs no -NewNames.
 
@@ -340,18 +343,52 @@ if ($AllowCodes) {
     $script:AllowedRedCodes += @($AllowCodes -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
 }
 
+function Test-QuotesAnyName {
+    param([string]$Line, $Names)
+
+    foreach ($quoted in [regex]::Matches($Line, "'(?<name>[^']+)'")) {
+        $text = $quoted.Groups['name'].Value
+        foreach ($name in $Names) {
+            if ([regex]::IsMatch($text, '(?<![\w])' + [regex]::Escape($name) + '(?![\w])')) {
+                return $true
+            }
+        }
+    }
+    return $false
+}
+
 <#
 .SYNOPSIS
     Gates a red run for -NewNames: every compiler error must be one of $script:AllowedRedCodes, and (when
     -NewNames is given) every such error's quoted identifier must be in the allowed name list.
 #>
 function Test-RedGate {
-    param([string[]]$Lines, [string]$NewNames)
+    param([string[]]$Lines, [string]$NewNames, [string]$SrcRoot)
+
+    # Stubs left in src/ would turn the compile red into a false one.
+    if (-not $SrcRoot) {
+        $SrcRoot = Join-Path (git rev-parse --show-toplevel).Trim() 'src'
+    }
+    if ((Test-Path -LiteralPath $SrcRoot) -and
+        (Get-ChildItem -LiteralPath $SrcRoot -Recurse -Filter '*.cs' -File |
+            Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
+            Select-String -SimpleMatch '// <stub' -List | Select-Object -First 1)) {
+        return [PSCustomObject]@{
+            Passed          = $false
+            DisallowedLines = @('Remove stubs first (Remove-Stubs.ps1): a "// <stub" marker is still under src/')
+        }
+    }
 
     $allowedNames = $null
+    $segmentNames = [System.Collections.Generic.HashSet[string]]::new()
     if ($NewNames) {
-        $allowedNames = [System.Collections.Generic.HashSet[string]]::new(
-            [string[]]@($NewNames -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }))
+        $nameList = [string[]]@($NewNames -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+        $allowedNames = [System.Collections.Generic.HashSet[string]]::new($nameList)
+        foreach ($entry in $nameList) {
+            if ($entry.Contains('.')) {
+                foreach ($segment in ($entry -split '\.')) { $segmentNames.Add($segment) | Out-Null }
+            }
+        }
     }
 
     $disallowedLines = New-Object System.Collections.Generic.List[string]
@@ -362,6 +399,15 @@ function Test-RedGate {
         }
 
         $code = $codeMatch.Groups['code'].Value
+
+        # A new constructor on an existing class (CS1729 / CS1503 / CS7036) is a clean red when the
+        # message quotes a -NewNames type, without -AllowCodes.
+        if ($code -in 'CS1729', 'CS1503', 'CS7036' -and $script:AllowedRedCodes -notcontains $code -and $null -ne $allowedNames) {
+            if (Test-QuotesAnyName -Line $line -Names $allowedNames) {
+                continue
+            }
+        }
+
         if ($script:AllowedRedCodes -notcontains $code) {
             $disallowedLines.Add($line.Trim()) | Out-Null
             continue
@@ -370,6 +416,14 @@ function Test-RedGate {
         if ($null -eq $allowedNames) { $disallowedLines.Add($line.Trim()) | Out-Null; continue }
 
         if ($null -ne $allowedNames) {
+            # A namespace segment of a dotted -NewNames entry (Agency.Huddle.Notes) may be the missing name.
+            if ($code -in 'CS0234', 'CS0246') {
+                $firstQuoted = [regex]::Match($line, "'(?<name>[^']+)'")
+                if ($firstQuoted.Success -and $segmentNames.Contains($firstQuoted.Groups['name'].Value)) {
+                    continue
+                }
+            }
+
             # CS1061/CS0117 read "'Receiver' does not contain a definition for 'Member'": the new
             # identifier is the member, the second quoted name. Every other code names it first.
             $names = [regex]::Matches($line, "'(?<name>[^']+)'")

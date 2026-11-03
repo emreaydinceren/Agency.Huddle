@@ -833,14 +833,14 @@ public sealed class TaskStoreTests
         Assert.Equal(["Launch"], projects);
     }
 
-    /// <summary>Spec §6.8: a folder named <c>Uploads</c> under a Team is the Team's visible upload folder, not a Project, in any case; a real Project beside it still is.</summary>
+    /// <summary>Spec §6.8: a folder named <c>raw</c> under a Team is the Team's folder for files brought in, not a Project, in any case; a real Project beside it still is.</summary>
     [Fact]
-    public void Teams_UploadsFolder_IsNotAProject()
+    public void Teams_RawFolder_IsNotAProject()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        Directory.CreateDirectory(Path.Combine(root, "Business", "Uploads"));
-        Directory.CreateDirectory(Path.Combine(root, "Business", "uploads"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "raw"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "RAW"));
         Directory.CreateDirectory(Path.Combine(root, "Business", "Launch"));
         using PersonaStore personas = dir.CreatePersonaStore();
 
@@ -870,10 +870,10 @@ public sealed class TaskStoreTests
         Assert.Equal(["Marketing", "memories", "Memory-Notes"], projects);
     }
 
-    /// <summary>A Team folder named <c>memory</c> is still a Team: the reserved name applies to
-    /// Projects only.</summary>
+    /// <summary>A folder named <c>memory</c> directly under <c>Teams/</c> is not a Team: since the Second Brain it is the
+    /// Huddle-wide Memory, and <c>memory</c> is a reserved Team name (Spec §6.1, SB-R02).</summary>
     [Fact]
-    public void Teams_TeamNamedMemory_IsStillATeam()
+    public void Teams_FolderNamedMemory_IsNotATeam()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
@@ -882,8 +882,7 @@ public sealed class TaskStoreTests
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
-        TeamFolder memory = Assert.Single(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.Ordinal));
-        Assert.Equal(["Marketing"], memory.Projects);
+        Assert.DoesNotContain(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>A Task file under <c>Business/memory/_tasks</c> is neither indexed nor rejected: the

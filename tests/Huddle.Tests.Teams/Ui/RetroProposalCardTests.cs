@@ -38,7 +38,7 @@ public sealed class RetroProposalCardTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
         _ = fixture.Propose(
-            RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash),
+            RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash),
             RetroProposalFixture.Change("2", "_team.md", "keep it small", "keep it tiny"));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
@@ -46,10 +46,10 @@ public sealed class RetroProposalCardTests
         IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
 
         cut.WaitForAssertion(() => Assert.Equal(["Title 1", "Title 2"], cut.FindAll(".retro-change-title").Select(static each => each.TextContent.Trim())));
-        Assert.Equal(["Process.md", "_team.md"], cut.FindAll(".retro-change-file").Select(static each => each.TextContent.Trim()));
+        Assert.Equal(["AGENTS.md", "_team.md"], cut.FindAll(".retro-change-file").Select(static each => each.TextContent.Trim()));
         Assert.Equal(
             [
-                "--- Process.md\n+++ Process.md\n@@\n Review before done.\n-One PR per Task.\n+One PR per Task, squash merged.",
+                "--- AGENTS.md\n+++ AGENTS.md\n@@\n Review before done.\n-One PR per Task.\n+One PR per Task, squash merged.",
                 "--- _team.md\n+++ _team.md\n@@\n ---\n-Team notes: keep it small.\n+Team notes: keep it tiny.",
             ],
             cut.FindAll(".retro-change-diff").Select(static each => each.TextContent));
@@ -64,7 +64,7 @@ public sealed class RetroProposalCardTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
         _ = fixture.Propose(
-            RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash),
+            RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash),
             RetroProposalFixture.Change("2", "_team.md", "keep it small", "keep it tiny"));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
@@ -85,7 +85,7 @@ public sealed class RetroProposalCardTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
         IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
@@ -105,7 +105,7 @@ public sealed class RetroProposalCardTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
         AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
@@ -125,7 +125,7 @@ public sealed class RetroProposalCardTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash));
         await fixture.Harness.Directory.SetRoomArchivedAsync(fixture.RoomId, true, ct);
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
@@ -142,7 +142,7 @@ public sealed class RetroProposalCardTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", Squash));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
         AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
@@ -168,7 +168,7 @@ public sealed class RetroProposalCardTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "a", "b"));
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "a", "b"));
         await using MudBunitContext ctx = new();
         Register(fixture, ctx);
 

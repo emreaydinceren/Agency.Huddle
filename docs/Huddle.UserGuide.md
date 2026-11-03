@@ -37,7 +37,8 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
-| Give every Agent, or one Team, standing rules | [Instructions](#instructions) |
+| Understand where files go, and use the Second Brain pattern (planned) | [Your Second Brain](#your-second-brain) |
+| Give every Agent, or one Team, standing rules | [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
@@ -308,7 +309,7 @@ connect. Later sections explain how to work with them.
 | **You (the Human)** | The person using the app. You set your Name, Alias, Title and avatar on **Settings > Profile**; `Team:HumanName` (default `You`) is only the Name a blank system starts with. Your Alias @mentions you like your Name. You are in every Room. | `profile.json`, `avatars.json` and a row in `team.db` |
 | **Agent** (also called a **Persona**) | One AI Agent: its name, job title, @alias, Teams, Skills, and its instructions. | `Agents/<Name>/<Name>.md` |
 | **Agent** | An Agent that is running and online in chat. There is one Agent per Agent file. | A row in `team.db`, plus a running adapter process |
-| **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
+| **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (settings) and `AGENTS.md` (rules) |
 | **Project** | A piece of work inside one Team. | A sub-folder `Teams/<Team>/<Project>/` |
 | **Room** | A chat conversation between you and one or more Agents. | Rows in `team.db` |
 | **Message** | One chat message, in one Room. | One line in `rooms/<roomId>.jsonl` |
@@ -351,7 +352,8 @@ The relationships that matter most:
   any Agent, plus every folder directly under `Teams/`. A folder with no
   members still shows, as **No members**. A label with no folder gets one
   created automatically. A Team's folder may also hold `_team.md`, which names its
-  team type, manager and workspace, and `Process.md`, which says how it works.
+  team type, manager and workspace and holds its process settings, and `AGENTS.md`,
+  which says how it works.
 - **A Project belongs to exactly one Team** and has no members of its own. The
   Team's members work on it. Any ordinary sub-folder of a Team folder is a
   Project, except `memory` and names starting with `_` or `.`.
@@ -429,7 +431,7 @@ App_Data/
 ├── views.json                     saved Task Views
 ├── library-roots.json             pinned Library folders (created on first change)
 ├── custom-roles.json              your own roles from Build a team (created on first change)
-├── prompts.json                   prompt overrides from Settings
+├── Prompts/<key>.md               one file per prompt you changed in Settings
 ├── appearance.json                theme and accent colour
 ├── avatars.json, avatars/         avatars
 └── logs/                          log files, when file logging is on
@@ -698,7 +700,8 @@ this.
 
 A manager's card also has a **Process** step, with **Use this process** for the
 process its team type offers, or **Start blank**. Either one writes the Team's
-`Process.md` once. An existing `Process.md` is never overwritten: the step says
+`AGENTS.md` once and says "AGENTS.md created."; the process's settings go into
+`_team.md`. An existing `AGENTS.md` is never overwritten: the step says
 "This Team already has a process. Edit it on the Process tab." See
 [Process and gates](#process-and-gates).
 
@@ -789,8 +792,8 @@ the current visit only, and always stay inside the Team or Project.
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
 
-A Team whose `_team.md` names a process also has a **Process** tab, which shows its
-`Process.md` with an **Edit** button and a switch for each gate. See
+A Team with a `_team.md` also has a **Process** tab, which shows its
+`AGENTS.md` with an **Edit** button and a switch for each gate. See
 [Process and gates](#process-and-gates).
 
 Under a Team's title (not a Project's), the header has two more things:
@@ -935,6 +938,23 @@ vendor from the role it must differ from, and then looks for the model with
 `Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used. A
 mapped model the adapter does not list is ignored in the same way.
 
+### Running an Agent on Haiku
+
+Haiku is the cheapest model, and every Second Brain flow works on it. These were checked by hand on 2026-11-03: filing a
+fact, proposing a rule, a changed `AGENTS.md` and the `raw/` guard. It behaves differently from the larger models in a
+few ways worth knowing before you pick it for a role:
+
+| What you see | Why, and what to do |
+| --- | --- |
+| The Agent's first reply in a Room starts with **Auto mode unavailable: … using Accept edits instead.** | Your own `~/.claude/settings.json` sets `permissions.defaultMode` to `auto`, which Haiku does not support. The Adapter switches to Accept edits and writes that notice into the reply. Huddle never asks for auto mode itself. Remove the setting, or set the Agent's **Work mode** on its card. |
+| A Huddle tool call is refused, then retried and works | Haiku loads a tool's description only when it first needs it, so its first call can guess the arguments. Huddle's refusal says what to pass, for example *"Name the Team in team and the fact in fact; nothing was proposed."*, and the next call succeeds. Each retry is one more call on your bill. |
+| A fact you told it went nowhere, although it said **Done** | Rare since the refusals above were made explicit, but a small model can still report a refused call as done. Check the Feed for the **Team Memory (Helper)** record, or open the Team's `memory/` folder. |
+| It does not offer an `AGENTS.md` change for a standing rule | Only an Agent with the `retrospective` Skill is offered the tool that proposes one. Without it, the Agent tells you the rule belongs in `AGENTS.md` and you add the line yourself. |
+| **Effort** offers only **Agent default** | Haiku has no effort levels. |
+
+Choose a larger model for an Agent that manages a Team or runs long, many-step Tasks. Haiku suits Agents that answer
+questions, file what you tell them and do short jobs.
+
 > **Example (Scenario 1).** Emre picks **Development Team** in **Build a team**,
 > names it **Web Team** and points its Library folder at his repository. He adds the
 > Development Manager, a Developer, a Reviewer and QA to the roster, and selects
@@ -948,34 +968,41 @@ Household team.
 
 ### Process and gates
 
-A Team's **process** says how its work is done. It is the file `Process.md` in the
-Team folder, which the Team's manager and members read. Its frontmatter names the
-process's settings:
+A Team's **process** says how its work is done, in two files in the Team folder:
 
-- `gates:` lists the gates the Team enforces, from the four below.
-- `checkCommand:` names the command whose passing Evidence the merge gate looks for.
-- `wip:` sets a limit on work in progress.
-- `retro:` and `digest:` set when a retrospective and a digest run, such as
-  `retro: { every: 10, unit: 'done-tasks' }`. See
-  [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
+- **`AGENTS.md`** holds the prose every member reads at the start of each session: the
+  steps, the `## Onboarding` section and the Definition of Done. See
+  [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
+- **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
+  - `gates:` lists the gates the Team enforces, from the four below.
+  - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
+  - `wip:` sets a limit on work in progress.
+  - `retro:` and `digest:` set when a retrospective and a digest run, such as
+    `retro: { every: 10, unit: 'done-tasks' }`. See
+    [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
 
-A Team gets its `Process.md` from the **Process** step on the manager's card, or by
-writing the file yourself.
-**Start blank** writes an empty outline; **Use this process** copies the type's
-template. Neither overwrites an existing `Process.md`. The team types ship several
-templates, such as a lightweight flow, spec-driven, sprints and maintenance for a
-Development Team, and household basics for a Household.
+A Team gets its process from the **Process** step on the manager's card, or by
+writing the files yourself. **Start blank** writes an `AGENTS.md` with a heading
+outline and no settings; **Use this process** writes the type's prose to `AGENTS.md`
+and its settings to `_team.md`. Neither overwrites an existing `AGENTS.md`, and a
+setting `_team.md` already holds is kept. The team types ship several templates,
+such as a lightweight flow, spec-driven, sprints and maintenance for a Development
+Team, and household basics for a Household.
+
+> **Note.** A `Process.md` from before the Second Brain is no longer read. Huddle logs a
+> warning naming it at start-up; move its prose into `AGENTS.md` and its settings into
+> `_team.md`.
 
 ### The Process tab
 
-A Team whose `_team.md` names a process has a **Process** tab on its page. It shows
-`Process.md` as a document, with an **Edit** button that opens the file in the
-Library. Above the document there is one switch for each gate the process turns
-on. Turning a switch off asks first, naming the gate and its risk (for example,
-"A Task can then be marked Done with no verified Evidence."). Only **Turn off**
-rewrites the `gates:` line; **Cancel** leaves the file alone and the switch on.
-The tab only lists gates that are on; to turn one on, edit the file. A Team with
-no `Process.md` says "This Team has no process yet."
+A Team with a `_team.md` has a **Process** tab on its page. It shows the Team's
+`AGENTS.md` as a document, with an **Edit** button that opens it in the Library.
+Above the document there is one switch for each gate `_team.md` turns on. Turning a
+switch off asks first, naming the gate and its risk (for example, "A Task can then
+be marked Done with no verified Evidence."). Only **Turn off** rewrites the `gates:`
+line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab only
+lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
+`AGENTS.md` nor a gate says "This Team has no process yet."
 
 ### The four gates
 
@@ -1039,7 +1066,7 @@ never intercepted.
 
 ### Digests and retrospectives on a schedule
 
-If `Process.md` has a `digest:` or `retro:` line, Huddle checks each Team once a
+If a Team's `_team.md` has a `digest:` or `retro:` line, Huddle checks each Team once a
 minute. A **digest** is time-based (`digest: { every: 1, unit: 'days' }`): when the
 time is up, the Team's manager gets a message in its Room asking it to post the
 digest. A **retro** runs after so many Done Tasks (`unit: 'done-tasks'`) or so many
@@ -1119,7 +1146,7 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
 
 ### Retrospectives
 
-A retrospective runs on the cadence in `Process.md`: after every so many Done Tasks,
+A retrospective runs on the cadence in `_team.md`: after every so many Done Tasks,
 or every so many days (see
 [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule)).
 The Team's retro role, the Development Team's **Retro agent**, reads the Team's
@@ -1136,8 +1163,9 @@ member of the Team, or who lacks the Skill, is refused.
 
 **What it proposes.** The proposals arrive as a card in the Retro agent's Room.
 Each change shows its title, the file it targets and a diff Huddle computes from the
-file as it is now. A change is an exact-text replacement in one file: `Process.md`,
-`_team.md`, or one member's file. Select **Accept** to apply a change, or **Decline**
+file as it is now. A change is an exact-text replacement in one file: the Team's
+`AGENTS.md`, `_team.md`, or one member's file. An accepted change is the only way
+Huddle ever writes `AGENTS.md`. Select **Accept** to apply a change, or **Decline**
 (type the reason in **Reason if you decline** first). Huddle refuses an Accept, and
 changes nothing, when:
 
@@ -1159,7 +1187,7 @@ evidence from after the change, linking a Task, a `logs/...#L12` line or a
 `_retros/` file.
 
 > **Example (Scenario 4).** After a sprint, the Retro agent finds three Tasks sent
-> back from Review for missing tests. It proposes one change to `Process.md`: write
+> back from Review for missing tests. It proposes one change to `AGENTS.md`: write
 > the failing test before the fix. You accept it.
 
 ### Household teams
@@ -1352,8 +1380,7 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 ### Attaching files
 
 Press the paperclip beside Send, paste a screenshot, or drop files on the
-composer. Each file is saved at once into the Library, and its chip shows above
-the text box. Remove a chip with its close button before you send if you change
+composer. Each file is saved at once, and its chip shows above the text box. Remove a chip with its close button before you send if you change
 your mind; the saved file is then deleted and nothing is posted. When you send,
 each file's path is added to your Message, so the Agents who answer can open
 it with their own tools.
@@ -1366,10 +1393,11 @@ it with their own tools.
 - Send waits while a file is still uploading, and the text you typed stays in the
   box.
 - The paperclip, paste and drop appear only when the Library is on.
-- Files go to **Uploads** in the Library, one folder per Room. In a Team's chat
-  they go to that Team's Library instead, under `Uploads`.
-- Deleting a Room sends its uploaded files to the Recycle Bin. Archiving keeps
-  them.
+- In a Team's chat, files land in that Team's **`raw/`** folder, kept exactly as
+  they arrived. Other Rooms put their files in **Uploads** in the Library, one
+  folder per Room.
+- Deleting a Room sends its files in **Uploads** to the Recycle Bin. Archiving
+  keeps them.
 - The Message that carries a file's path is the only notice of it. File Changes
   does not report uploads, so an Agent is not told of one by a file change.
 - Pending chips do not survive a page reload. Files already saved stay in the
@@ -1478,34 +1506,202 @@ when the list of Teams changes, so a Team made by hand, or from an Agent's
 `teams:` line, gets one as well. A Team Room that you archive stays archived;
 Huddle does not recreate it.
 
-## Instructions
+## Your Second Brain
 
-**Instructions** are standing rules you write once, in plain Markdown, and every Agent in
-scope starts each session with them: Huddle's version of what a `CLAUDE.md` does for a
-coding agent in a repository. Use them for how you want things done here, so you do not
-edit every Agent's file.
+This section explains how Huddle organises what you and your Agents know: where files go, why,
+and how to use the pattern day to day. Read it before you set up Teams for areas of your life or
+work, or when you wonder where something should be saved.
+
+> [!NOTE]
+> **Two limits.** Jobs have no monthly timetable, so the Chief of Staff's monthly check runs
+> from a weekly Job on Mondays and acts only on the first Monday of the month. And Huddle does
+> not restrict what an Agent writes in a Team's workspace.
+
+### The principle
+
+A **Second Brain** is a place outside your head where knowledge is kept so it can be found and
+used again. People who keep one with an AI usually sort everything by what state it is in:
+
+- **What came in:** originals you brought, kept exactly as they arrived.
+- **What lasts:** the facts, decisions and agreements worth remembering, distilled from the
+  originals.
+- **What was made:** the documents produced from them: briefs, plans, reports.
+
+Huddle follows the same idea, and adds one thing: a plain file of **rules** at each level that
+says how Agents should behave there. Your Agents read and write this structure for you, so you
+spend your time on decisions rather than filing.
+
+### The pattern
+
+Every Team, and every Project inside it, has the same folders. The top of the Teams root has
+the same pattern for things that apply to everyone.
+
+```text
+Teams/
+  AGENTS.md     rules for every Agent
+  memory/       facts every Agent keeps
+  Home/                         a Team
+    AGENTS.md   how this Team works
+    raw/        what came in
+    memory/     what lasts
+    outputs/    what was made
+    _tasks/     what is due (Huddle keeps these)
+    Repairs/                    a Project in the Team
+      AGENTS.md
+      raw/  memory/  outputs/  _tasks/
+```
+
+| Folder | What goes in it | Who writes it | Can it change? | Agents read it |
+| --- | --- | --- | --- | --- |
+| `raw/` | Files you attach in chat or to a Task: PDFs, emails, screenshots, statements | You, by attaching | **No.** Kept exactly as it arrived. An Agent may add a derived file beside an original, such as a scan or a transcript | When a Message names a file, or when asked |
+| `memory/` | One fact per file: decisions and their reasons, who owns what, agreed ways of working | Agents, and you | Yes. A fact is corrected in place when it changes | **Every session**, as a short index of one line per fact |
+| `outputs/` | Documents worth reading again: briefs, plans, comparisons, reports, prep notes | Agents, and you | Yes | **Every session**, as an index of each document's "Read when…" line |
+| `_tasks/` | One file per Task | Huddle, through the Tasks screens | Through Tasks | Through the Task tools |
+| `AGENTS.md` | Rules: how to behave here | **You only** | When you edit it | **Every session**, in full |
+
+Two more things complete the picture:
+
+- **What recurs is a Job.** "Every weekday at 09:00, summarise yesterday" lives in the owner's
+  `schedule.md`, not in a Team folder. See [Scheduling jobs](#scheduling-jobs).
+- **An Agent's own rules live in its Agent file** (`Agents/<Name>/<Name>.md`). Use that only for
+  rules about that one Agent; editing it restarts the Agent.
+
+### How it helps
+
+- **Agents know where things go.** Every Agent is taught the same pattern, so a fact one Agent
+  learns is where every other Agent looks for it.
+- **Context stays small.** Agents carry short indexes of Memory and outputs, not every file. They
+  open a file only when its index line says it's relevant.
+- **Originals stay trustworthy.** Nothing in `raw/` is changed after it arrives, and a document
+  built from originals ends with a **Based on** list linking each one, so you can always check a
+  summary against its source.
+- **Rules are in one visible place.** What Agents are told to do is in `AGENTS.md` files you can
+  open, read and edit, in the Library or in any editor such as Obsidian.
+- **Nothing is lost when an area goes quiet.** You can archive a whole Team or Project, and bring
+  it back whole later.
+
+### Writing rules in `AGENTS.md`
+
+`AGENTS.md` is plain Markdown you write. There are three levels, and an Agent reads every level
+that applies to it:
 
 | Level | File | Who reads it |
 | --- | --- | --- |
-| **Huddle-wide** | `Teams/Instructions.md` | Every Agent |
-| **Team** | `Teams/<Team>/Instructions.md` | Every member of that Team. An Agent in several Teams gets each one, in the order of its `Teams:` line. |
-| **Agent** | `Agents/<Name>/work/Instructions.md` | That Agent only |
+| **Huddle-wide** | `Teams/AGENTS.md` | Every Agent |
+| **Team** | `Teams/<Team>/AGENTS.md` | Every member of the Team |
+| **Project** | `Teams/<Team>/<Project>/AGENTS.md` | Every member of the Team |
 
-Create the files in the Library: the first two in the **Teams** root, the third in the
-**Agents** root. Any editor works too. The name is always `Instructions.md` (the capital
-does not matter). It is never `AGENTS.md` or `CLAUDE.md`, which an Adapter loads on its own.
+- **Every level adds.** A Project's rules are read together with its Team's rules, never instead
+  of them. **When two rules conflict, the more specific one wins:** a Project's over its Team's, a
+  Team's over the Huddle-wide rules. Use that to make a deliberate exception, such as one Project
+  that writes in another language.
+- **Put a rule at the broadest level it applies to.** A rule about how a Team works belongs in the
+  Team's file. Editing an `AGENTS.md` restarts nobody.
+- **Agents can't edit `AGENTS.md`.** An Agent that thinks a rule should change proposes it in a
+  retrospective, and you accept or decline.
+- A Team's settings (its type, manager, gates and schedules) are kept by Huddle in the hidden
+  `_team.md` and changed on the Team page, so your `AGENTS.md` holds only your words.
+- A new Team made from a Team type starts with an `AGENTS.md` written from that type: who the
+  Team is and what routes to it, how work moves through it, onboarding and its Definition of Done.
+  Edit it freely.
 
-An Agent's prompt carries the levels from general to specific, and where they conflict
-the more specific one wins: the Agent's own over its Team's, its Team's over Huddle's.
-A level with no file, or an empty one, is left out. A file longer than 8,000 characters
-(`Team:Instructions:MaxChars`) is cut, and the cut line says where the rest is.
+### Using it day to day
 
-**When an edit takes effect.** Instructions are read when a session starts. Edit a Team's
-or an Agent's file and a running Agent hears of it as a changed file at the start of its
-next Turn, but only a new session (**Restart** on its card) follows it. An edit to
-`Teams/Instructions.md` applies from each Agent's next session. Agents read their
-Instructions and can never write them: an attempt to edit, delete or move an
-`Instructions.md` is refused.
+| You want to… | Do this | Where it ends up |
+| --- | --- | --- |
+| **Bring in a document** | Attach it in the Team's Room, or to a Task | `raw/`, unchanged |
+| **Capture something quickly** | Tell the Chief of Staff in a few words, without sorting it | The Chief of Staff routes it to the right Team, as a Task, a fact or a document, and asks you about anything it can't place |
+| **Have something remembered** | Say "remember this" to an Agent | Its own Memory, or its Team's Memory if the whole Team should know |
+| **Keep a document** | Ask the Agent to save it as an output | `outputs/`, with a "Read when…" line and a **Based on** list |
+| **Set a rule** | Edit the right `AGENTS.md` | Read by every Agent at that level |
+| **Track something with a date** | Ask for a Task, or create one | `_tasks/`, on the Board |
+| **Make something happen regularly** | Ask for a Job | The owner's `schedule.md` |
+| **Find something** | Ask. Agents look in their indexes, then Memory, outputs, Tasks and finally the originals, and say which file they used | — |
+
+Agents sort what they learn with two questions:
+
+1. **Does it say how to behave** ("always", "never", "before X, do Y")? Then it's a rule, and
+   belongs in an `AGENTS.md`. Agents propose rules; they don't write them.
+2. **Is it a fact that could change?** Then it's Memory.
+
+When neither question settles it, the Agent asks you.
+
+### Keeping it tidy
+
+A Second Brain drifts if nobody looks after it. Huddle can do most of the looking after:
+
+- **Daily reviews.** The Chief of Staff can run a review at times you choose: what's due and
+  overdue, what's waiting on you, and what was filed since the last review, with three things to
+  do today.
+- **A weekly check** per Team, run by the `brain-check` Skill, finds Memory over its limit,
+  outputs with no "Read when…" line, broken links and originals that changed after filing. It
+  changes nothing: it files what it finds as Tasks, and rule changes as proposals for you.
+- **A monthly check** lists Teams and Projects that have gone quiet and suggests keeping or
+  archiving each one. It runs from the weekly Job and acts only on the first Monday of the month.
+- **Wrapping up a session.** Ask an Agent to wrap up. The `wrap-up` Skill proposes the rules,
+  facts, documents and Tasks the session produced, grouped by where each goes, and waits for your OK.
+- **Ingesting new originals.** Ask an Agent to go through new files in `raw/`. The `ingest` Skill
+  proposes facts, Tasks and documents from them, each linked back to its source.
+
+The reviews and checks are Jobs. The Chief of Staff offers the upkeep Jobs when you start, and
+creates each one only if you say yes. The three Skills come with the Second Brain; see
+[Giving Agents Skills](#giving-agents-skills).
+
+When a Memory folder grows past its limit, you get a notification, and the Team's manager moves
+old facts into `memory/archive/`. They're kept, but no longer carried in every session.
+
+### Archiving a Team or a Project
+
+When an area of your life or work goes quiet, archive it from the Team's **Details** tab, or from
+a Project's row. Archiving moves the whole folder, unchanged, into the **Archive** root, which is
+laid out just like Teams.
+
+- It leaves every Agent's prompt and is no longer offered for new work. Its Rooms are archived,
+  and its Tasks leave the Boards. Before archiving, Huddle tells you how many open Tasks it would
+  hide.
+- Nothing is deleted. You can open its files in the Archive root, and links written before the
+  move still open them in Huddle.
+- **Unarchive** puts everything back where it was, members and Rooms included.
+
+### Teams with a workspace
+
+Some Teams work in a folder or repository outside Huddle, their **workspace**: a development
+Team's code repository, for example. For those Teams the real work lives in the workspace and
+follows its own conventions: specs and decisions in the repository, its own `AGENTS.md` or
+`CLAUDE.md` for rules about the code. The Team's `outputs/` then holds only what isn't part of
+that work, such as status reports and meeting prep. Agents are told which applies to each Team.
+Huddle does not restrict what Agents write in the workspace.
+
+### Seeing what an Agent reads
+
+An Agent's page shows, under **What this Agent reads**, everything its next session will be told, part by part: Huddle's own
+prompts, each `AGENTS.md` level, its Agent file, its Memory and output indexes, and its tools.
+Each part says where it comes from and links to where you change it. Huddle's own prompts can be
+changed on **Settings › Prompts**. A changed prompt is saved as a file in the **Prompts** root,
+and deleting that file returns it to Huddle's default.
+
+### If you use Jeff Su's system or BrainOS
+
+The pattern maps directly onto it:
+
+| In your vault | In Huddle |
+| --- | --- |
+| Workstation | Team |
+| Root and workstation `CLAUDE.md` | `Teams/AGENTS.md` and the Team's `AGENTS.md` |
+| Root and workstation `MEMORY.md` | `Teams/memory/` and the Team's `memory/` |
+| `raw/` | `raw/` |
+| Knowledge pages and the Resources table | `outputs/` and its "Read when…" index |
+| Inbox | A Message to the Chief of Staff |
+| Kanban board | Tasks |
+| `Archive/` | The Archive root |
+| Weekly and monthly checks | Jobs that run the checks for you |
+
+The full mapping is in [Huddle.SecondBrain.md](Huddle.SecondBrain.md), §2.4.
+
+## Instructions
+
+Standing rules for your Agents are plain Markdown in `AGENTS.md` files, one for each
+level. See [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 
 ## Memory and file changes
 
@@ -1827,7 +2023,7 @@ carry it out, and the assignee then moves the Task to Done.
 **Proof** is the checklist a gated Task must complete before it reaches you. Each line
 is one item of **Evidence**, such as a test run or a reviewer's check. The checklist
 comes from the Team's **Definition of Done**, a `## Definition of Done` section in its
-`Process.md`. Every built-in process template ships one. A line is a label, a colon
+`AGENTS.md`. Every built-in process template ships one. A line is a label, a colon
 and a rule:
 
 ```markdown
@@ -2222,7 +2418,7 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
 | **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card an Agent gets. Click the avatar to change it. A Name or Alias an Agent already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
-| **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
+| **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | One file per changed prompt in `Prompts/`, such as `Prompts/systemPrompt.chatRules.md`; delete a file to restore that prompt's default |
 | **Helpers** | The small background agents that make one judgement for you, such as whether a Task an Agent wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Agent definitions. | `Agents/…` |
@@ -2270,9 +2466,9 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Details tab (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
 | Members tab (**Save changes**) | An Agent file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Agents' files | The new Agents are hired; the ones taken off restart; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Agent files; no memory, notes or Tasks | New Agents start |
-| Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
+| Use a process | `Teams/<Team>/AGENTS.md`, never over an existing one, and the process's settings in `_team.md` | Members read it at their next session |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
-| Turn a gate off | The `gates:` line of `Process.md` | None |
+| Turn a gate off | The `gates:` line of `_team.md` | None |
 | Approve or decline a Sprint proposal | Approve creates the Sprint and adds the Tasks | The manager reads the outcome |
 | Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Agent file restarts that Agent |
 | Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
@@ -2302,6 +2498,8 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | An Agent forgot our conversation | It was restarted: an edit, a membership change, or **Restart**. Put lasting facts in memory files. |
 | An Agent file does not appear | See **Files that didn't load** on the Agents page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
 | All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
+| Huddle stops at start-up: *Another program is already listening on the pipe 'team'* | Another copy of Huddle is running on this computer. Stop it, or start this copy with its own `Team:PipeName`. |
+| A reply starts with **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
 | A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
 | A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |

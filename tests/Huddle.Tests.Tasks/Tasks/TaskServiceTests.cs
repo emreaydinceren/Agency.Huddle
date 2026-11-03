@@ -1310,11 +1310,11 @@ public sealed class TaskServiceTests
         Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
     }
 
-    /// <summary>Spec §6.8: a Project named <c>Uploads</c> in any case is the Team's shared upload folder, so Create refuses it with exactly the Uploads problem and writes nothing.</summary>
+    /// <summary>Spec §6.8: a Project named <c>raw</c> in any case is the Team's folder for files brought in, so Create refuses it with exactly the raw problem and writes nothing.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    public void Create_ProjectUploads_RefusedWithUploadsReservedProblem(string project)
+    [InlineData("raw")]
+    [InlineData("RAW")]
+    public void Create_ProjectRaw_RefusedWithRawReservedProblem(string project)
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
@@ -1324,16 +1324,16 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(new TaskDraft("T", "Platform", project), HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Equal(["\"Uploads\" is reserved for files shared in a Team's chats."], refused.Problems);
+        Assert.Equal(["\"raw\" is reserved for files brought into the Team."], refused.Problems);
         Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
         Assert.Empty(store.All);
     }
 
-    /// <summary>Spec §6.8 on the Update entry point: moving a Task into Project <c>Uploads</c> (any case) is refused with exactly the Uploads problem, and the Task stays where it was.</summary>
+    /// <summary>Spec §6.8 on the Update entry point: moving a Task into Project <c>raw</c> (any case) is refused with exactly the raw problem, and the Task stays where it was.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    public void Update_ProjectUploads_RefusedWithUploadsReservedProblem(string project)
+    [InlineData("raw")]
+    [InlineData("RAW")]
+    public void Update_ProjectRaw_RefusedWithRawReservedProblem(string project)
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
@@ -1345,7 +1345,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Project = Optional<string?>.Set(project) }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Equal(["\"Uploads\" is reserved for files shared in a Team's chats."], refused.Problems);
+        Assert.Equal(["\"raw\" is reserved for files brought into the Team."], refused.Problems);
         Assert.Equal(before, File.ReadAllBytes(task.Path));
         Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
     }

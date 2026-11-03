@@ -51,7 +51,23 @@ public sealed class TeamMemoryWriteGuardTests
             Path.Combine(Root, ".claude"),
             logger,
             personaName: persona,
-            teamMemoryGuard: new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, prompts));
+            guards: OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, prompts)));
+    }
+
+    /// <summary>
+    /// Wraps the Team Memory guard under test with an AGENTS.md guard and a Raw guard rooted in an unrelated folder, so only the Team Memory
+    /// guard can refuse a path under <see cref="TeamsRoot"/>.
+    /// </summary>
+    /// <param name="teamMemory">The guard under test.</param>
+    private static PermissionGuards OnlyTeamMemory(TeamMemoryWriteGuard teamMemory)
+    {
+        string inert = Path.Combine(Root, "Inert");
+        FakePromptSource prompts = new();
+        return new PermissionGuards(
+            new AgentsMdGuard(inert, WorkDir, prompts),
+            teamMemory,
+            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), WorkDir, prompts),
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), WorkDir, prompts));
     }
 
     /// <summary>Decides a tool call of one kind on one path and returns the chosen option id.</summary>
@@ -131,7 +147,6 @@ public sealed class TeamMemoryWriteGuardTests
     [InlineData("Teams/Dev/Apollo/notes.md")]
     [InlineData("Teams/Other/memory/x.md")]
     [InlineData("Teams/Dev/Notes/memory/x.md")]
-    [InlineData("Teams/memory/x.md")]
     [InlineData("elsewhere/Dev/memory/x.md")]
     public async Task Member_WriteElsewhere_IsAllowed(string path)
     {
@@ -294,7 +309,7 @@ public sealed class TeamMemoryWriteGuardTests
             Path.Combine(Root, ".claude"),
             NullLogger<WorkDirPermissionHandler>.Instance,
             personaName: "Chief",
-            teamMemoryGuard: new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, new FakePromptSource()));
+            guards: OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, new FakePromptSource())));
 
         string chosen = await DecideAsync(handler, ToolKind.Delete, TeamsRoot);
 
@@ -326,12 +341,14 @@ public sealed class TeamMemoryWriteGuardTests
         RecordingLogger<WorkDirPermissionHandler> logger = new();
         WorkDirPermissionHandler handler = Handler("Leo", logger);
 
-        _ = await DecideAsync(handler, ToolKind.Edit, Path.Combine(TeamsRoot, "Dev", "memory", "x.md"));
-        _ = await DecideAsync(handler, ToolKind.Edit, Path.Combine(TeamsRoot, "Ops", "memory", "x.md"));
+        string dev = Path.Combine(TeamsRoot, "Dev", "memory", "x.md");
+        string ops = Path.Combine(TeamsRoot, "Ops", "memory", "x.md");
+        _ = await DecideAsync(handler, ToolKind.Edit, dev);
+        _ = await DecideAsync(handler, ToolKind.Edit, ops);
 
         IReadOnlyList<LogEntry> warnings = logger.AtExactly(LogLevel.Warning);
         Assert.Equal(2, warnings.Count);
-        Assert.Equal("Refused a tool call for 'Leo': Only Dev's manager, Ada, writes Dev's Team Memory. Tell Ada, or keep it in your own Memory.", warnings[0].Message);
-        Assert.Equal("Refused a tool call for 'Leo': Ops has no manager, so its Team Memory is written by the Human.", warnings[1].Message);
+        Assert.Equal($"Refused a tool call for 'Leo' on '{dev}': Only Dev's manager, Ada, writes Dev's Team Memory. Tell Ada, or keep it in your own Memory.", warnings[0].Message);
+        Assert.Equal($"Refused a tool call for 'Leo' on '{ops}': Ops has no manager, so its Team Memory is written by the Human.", warnings[1].Message);
     }
 }

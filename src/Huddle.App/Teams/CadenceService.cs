@@ -10,12 +10,12 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Wakes a Team's manager for a digest and its Retro agent for a retro, on a schedule or after a count of Done Tasks,
-/// as the Team's <c>Process.md</c> declares (OR-3, RT-2, Spec §Cadence). Every minute it looks at each Team once.
+/// as the Team's <c>_team.md</c> declares (OR-3, RT-2, Spec §Cadence). Every minute it looks at each Team once.
 /// The last firing lives in <c>team.db</c>, so a restart repeats nothing (NF-8): the first time a Team is seen only
 /// sets a baseline. A digest is time-based only, because the state holds no Done count for it.
 /// </summary>
 /// <param name="catalog">Lists the Teams, their managers and their members.</param>
-/// <param name="folders">Locates each Team's folder, where <c>Process.md</c> lives.</param>
+/// <param name="folders">Locates each Team's folder, where <c>_team.md</c> lives.</param>
 /// <param name="types">Resolves a Team's type and its Retro role.</param>
 /// <param name="personas">Reads each member's role.</param>
 /// <param name="tasks">Counts Done Tasks.</param>
@@ -105,8 +105,10 @@ internal sealed class CadenceService(
 
     private async Task TickTeamAsync(TeamSummary team, string manager, CancellationToken ct)
     {
-        ProcessDocument? process = this.ReadProcess(team.Name);
-        if (process is null || (process.Digest is null && process.Retro is null))
+        ProcessSettings? settings = TeamProcessFile.Settings(folders, team.Name);
+        DigestCadence? digestCadence = settings?.DigestSchedule();
+        RetroCadence? retroCadence = settings?.RetroSchedule();
+        if (digestCadence is null && retroCadence is null)
         {
             return;
         }
@@ -127,8 +129,8 @@ internal sealed class CadenceService(
             state.Set(current);
         }
 
-        bool digestBaselined = process.Digest is not null && current.LastDigestUtc is null;
-        bool retroBaselined = process.Retro is not null && (current.LastRetroUtc is null || current.DoneAtLastRetro is null);
+        bool digestBaselined = digestCadence is not null && current.LastDigestUtc is null;
+        bool retroBaselined = retroCadence is not null && (current.LastRetroUtc is null || current.DoneAtLastRetro is null);
         if (digestBaselined || retroBaselined)
         {
             current = current with
@@ -140,14 +142,14 @@ internal sealed class CadenceService(
             state.Set(current);
         }
 
-        if (!digestBaselined && process.Digest is { Unit: CadenceUnit.Days } digest
+        if (!digestBaselined && digestCadence is { Unit: CadenceUnit.Days } digest
             && current.LastDigestUtc is { } lastDigest && Elapsed(now, lastDigest, digest.Every))
         {
             string text = prompts.Render(DigestPrompt, Values(team.Name, lastDigest));
             current = await this.FireAsync(current with { LastDigestUtc = now }, current, team.Name, manager, text, ct).ConfigureAwait(false);
         }
 
-        if (!retroBaselined && process.Retro is { } retro
+        if (!retroBaselined && retroCadence is { } retro
             && current.LastRetroUtc is { } lastRetro && current.DoneAtLastRetro is { } doneAtLast
             && RetroDue(retro, now, lastRetro, Math.Max(0, done - doneAtLast)))
         {
@@ -210,10 +212,4 @@ internal sealed class CadenceService(
 
     private int CountDone(string team) =>
         tasks.All.Count(item => item.Status == TaskState.Done && string.Equals(item.Location.Team, team, StringComparison.OrdinalIgnoreCase));
-
-    private ProcessDocument? ReadProcess(string team)
-    {
-        string? text = TeamProcessFile.Read(folders, team);
-        return text is not null && ProcessDocument.TryParse(text, out ProcessDocument? document) ? document : null;
-    }
 }

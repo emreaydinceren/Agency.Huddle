@@ -79,6 +79,19 @@ public sealed class ComposerUploadTests
         cut.WaitForAssertion(() => Assert.Equal("SVG files can't be attached.", cut.Find(".upload-chip .upload-chip-error").TextContent.Trim()));
     }
 
+    /// <summary>A file picked in a Room of an archived Team stays as a chip that shows the T15 refusal.</summary>
+    [Fact]
+    public async Task Pick_InArchivedTeamRoom_ShowsT15OnTheChip()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Rig rig = await Rig.BuildAsync(ct, archivedTeamRoom: true);
+        IRenderedComponent<ContainerFragment> cut = rig.Render();
+
+        cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("hello", "notes.txt"));
+
+        cut.WaitForAssertion(() => Assert.Equal("This Team is archived, so files can't be added here.", cut.Find(".upload-chip .upload-chip-error").TextContent.Trim()));
+    }
+
     /// <summary>A pick past the per-Message file cap leaves no chip and shows the cap copy from spec 7 as the status line.</summary>
     [Fact]
     public async Task Pick_PastTheCountCap_ShowsTheCapCopy()
@@ -271,7 +284,7 @@ public sealed class ComposerUploadTests
 
         public List<string> Posted { get; } = [];
 
-        public static async Task<Rig> BuildAsync(CancellationToken ct, bool libraryEnabled = true, int? maxUploadsPerMessage = null, long? maxUploadBytes = null)
+        public static async Task<Rig> BuildAsync(CancellationToken ct, bool libraryEnabled = true, int? maxUploadsPerMessage = null, long? maxUploadBytes = null, bool archivedTeamRoom = false)
         {
             TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
             if (maxUploadBytes is long bytes)
@@ -288,9 +301,17 @@ public sealed class ComposerUploadTests
             LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Attach(harness.Options.Value.DataDir);
             LibraryFileService files = fixture.CreateService();
             RoomUploadFolders folders = new(fixture.Resolver, files);
-            ChatUploadService service = new(harness.Directory, files, folders, harness.Options);
+            ChatUploadService service = new(harness.Directory, files, folders, harness.Options, new Agency.Huddle.App.Data.RawBaselineStore(harness.Options));
             PendingUploads pending = new(service, harness.Options);
             Room room = await harness.Chat.CreateRoomForAsync([harness.NovaId!], ct);
+            if (archivedTeamRoom)
+            {
+                room = await harness.Directory.CreateRoomAsync("Archived", [KnownIds.Human, harness.NovaId!], team: "Home", ct: ct);
+                string archivedTeam = Path.Combine(harness.Options.Value.DataDir, "Archive", "Home");
+                Directory.CreateDirectory(archivedTeam);
+                await File.WriteAllTextAsync(Path.Combine(archivedTeam, "_team.md"), "---\n---\n", ct);
+            }
+
             return new Rig(harness, fixture, pending, room.Id);
         }
 

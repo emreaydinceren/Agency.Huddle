@@ -22,7 +22,7 @@ public sealed class BuiltinAgentTests
         Assert.True(parsed, error);
         Assert.NotNull(identity);
         Assert.Equal(BuiltinAgent.ChiefOfStaffMarker, identity.Builtin);
-        Assert.Equal(["team-building", "team-rollup"], identity.Skills);
+        Assert.Equal(["team-building", "team-rollup", "ingest", "wrap-up", "brain-check"], identity.Skills);
     }
 
     /// <summary>RS §6.11 (RS-T13): the built-in Chief of Staff's own text teaches keeping one memory file per piece of work it coordinates, conditioned on having a memory folder at all (D31 correction 20).</summary>

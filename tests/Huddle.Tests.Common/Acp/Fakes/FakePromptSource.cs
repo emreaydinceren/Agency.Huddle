@@ -30,4 +30,8 @@ internal sealed class FakePromptSource : IPromptSource
     /// <param name="key">The prompt's <see cref="PromptDefinition.Key"/>.</param>
     public string Raw(string key) =>
         this.overrides.TryGetValue(key, out var text) ? text : PromptCatalog.Get(key).Default;
+
+    /// <summary>Whether a test configured an override for <paramref name="key"/> through <see cref="SetOverride"/>.</summary>
+    /// <param name="key">The prompt's <see cref="PromptDefinition.Key"/>.</param>
+    public bool IsOverridden(string key) => this.overrides.ContainsKey(key);
 }

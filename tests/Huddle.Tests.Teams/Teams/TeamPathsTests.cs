@@ -13,7 +13,7 @@ public sealed class TeamPathsTests
         Assert.Equal("SkillPacks", TeamPaths.SkillPacksDir);
         Assert.Equal("SkillsCatalog.json", TeamPaths.SkillsCatalogFile);
         Assert.Equal("_team.md", TeamPaths.TeamFileName);
-        Assert.Equal("Process.md", TeamPaths.ProcessFileName);
+        Assert.Equal("AGENTS.md", TeamPaths.AgentsMdFileName);
         Assert.Equal("Retro register.md", TeamPaths.RetroRegisterFileName);
         Assert.Equal("_retros", TeamPaths.RetrosDir);
         Assert.Equal("logs/tool-calls", TeamPaths.ToolCallLogDir);

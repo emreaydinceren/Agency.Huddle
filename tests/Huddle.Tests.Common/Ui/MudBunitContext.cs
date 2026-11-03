@@ -91,6 +91,7 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<RightSidebarService>();
         this.Services.AddSingleton<PageCommandBus>();
         this.Services.AddSingleton<TeamShortcutStore>();
+        this.Services.AddSingleton<Agency.Huddle.App.SecondBrain.IArchiveService, Agency.Huddle.Tests.Ui.Teams.EmptyArchiveService>();
 
         // The host actions (Agent card Open, folder picker) ask whether remote access is configured. Tests start with it off,
         // as a stock install is; a test of the configured state registers its own answer.

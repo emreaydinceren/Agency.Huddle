@@ -1,4 +1,12 @@
 @using Agency.Huddle.App.Components.Pages
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.SecondBrain
+@using Agency.Huddle.App.Teams
+@inject ITeamCatalog Catalog
+@inject IArchiveService Archive
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 @*
     The Team page's Details tab: Build a team's type and details sections for an existing Team, with its own Save
@@ -6,9 +14,47 @@
     It is BuildTeam with only Team set, so building a Team and editing its details share one form and one save path.
 *@
 
+@if (this.UnreadableWorkspace is { } workspace)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="team-details-workspace-warning">The workspace folder @workspace can't be read, so Agents aren't told to use it.</MudAlert>
+}
+
 <BuildTeam Team="@this.Team" />
 
+@* Archive (Spec 6.9, D-46, T16): asks first, then the service moves the Team out of the Boards and the sidebar. *@
+<div class="team-details-archive-row">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
+               Class="team-details-archive" OnClick="this.ArchiveAsync">Archive</MudButton>
+</div>
+
 @code {
+    /// <summary>Asks T16's question with the counts and the Agents left without a Team, then archives the Team once on Archive.</summary>
+    private async Task ArchiveAsync()
+    {
+        ArchiveConfirmation counts = this.Archive.Confirm(this.Team);
+        string title = $"Archive {this.Team}?";
+        string message = counts.Text(this.Team)[(title.Length + 1)..];
+        if (!await this.Dialogs.ConfirmAsync(title, message, "Archive"))
+        {
+            return;
+        }
+
+        ArchiveOutcome outcome = await this.Archive.ArchiveTeamAsync(this.Team, CancellationToken.None);
+        if (outcome.Done)
+        {
+            // The Team page is for a live Team; the archived Team is listed in the sidebar's Archived Teams group.
+            this.Navigation.NavigateTo("/");
+        }
+        else if (outcome.Refusal is { } refusal)
+        {
+            _ = this.Snackbar.Add(refusal, Severity.Warning, key: "team-archive");
+        }
+    }
+
+    /// <summary>The Team's workspace path when it is set but cannot be read (Spec §6.4, T18); otherwise <see langword="null"/>.</summary>
+    private string? UnreadableWorkspace =>
+        this.Catalog.Find(this.Team)?.Workspace is { Length: > 0 } path && WorkspaceProbe.StateOf(path) == WorkspaceState.Unreadable ? path : null;
+
     /// <summary>The Team whose details are shown, in the catalog's spelling.</summary>
     [Parameter, EditorRequired]
     public string Team { get; set; } = string.Empty;

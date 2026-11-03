@@ -7,6 +7,10 @@ checkCommand: 'dotnet test'
 ---
 # Lightweight flow
 
+## Identity
+
+This Team builds and ships software in a repository, and this process takes a small change or fix that one developer can carry from start to Done without a written spec. Work that needs agreed behaviour across modules or a shared contract goes to the spec-driven process, and bugs in code that already ships go to maintenance. Documentation-only changes belong to the `docs-team` Team type.
+
 ## When it applies
 
 - Small changes and fixes that one developer can take from start to Done without a written spec.

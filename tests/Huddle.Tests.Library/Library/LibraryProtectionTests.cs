@@ -36,7 +36,7 @@ public sealed class LibraryProtectionTests
     [InlineData(LibraryNodeRole.Folder, "room1")]
     public void For_UploadsRootNode_IsUnprotected(LibraryNodeRole role, string relativePath)
     {
-        LibraryRoot root = new("uploads", "Uploads", "/tmp/uploads", LibraryRootKind.Uploads);
+        LibraryRoot root = new("uploads", "Uploads", "/tmp/uploads", LibraryRootKind.Raw);
         LibraryPath path = new(root, relativePath, "/tmp/uploads/" + relativePath, role);
 
         LibraryProtection protection = LibraryProtection.For(path);

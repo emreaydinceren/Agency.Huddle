@@ -37,6 +37,11 @@
            path just before it. The absolute system path stays in the tooltip and is what the button copies. *@
         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy full path" title="Copy full path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline" title="@this.Path.FullPath">@this.FullPathText()</MudText>
+        @* Archived: read through the fallback from an old Teams path, or opened in the Archive root itself (SB-R20). *@
+        @if (this.Path.Archived || this.Path.Root.Kind == LibraryRootKind.Archive)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Inventory2" Class="library-document-archived">Archived</MudChip>
+        }
         <MudSpacer />
         @if (this.ShowModeToggle())
         {
@@ -648,7 +653,7 @@
 
         (string rootId, string relativePath) = SplitLibraryValue(libraryValue);
 
-        if (!this.PathResolver.TryResolve(rootId, relativePath, out LibraryPath? target, out _))
+        if (!this.PathResolver.TryResolveForRead(rootId, relativePath, out LibraryPath? target, out _))
         {
             context.PreventNavigation();
             return;
@@ -664,6 +669,12 @@
         if (target.IsFile)
         {
             await this.OnNavigate.InvokeAsync(target);
+            return;
+        }
+
+        if (target.Archived)
+        {
+            // A read fallback never decides a write: an archived folder is not a missing note to create.
             return;
         }
 

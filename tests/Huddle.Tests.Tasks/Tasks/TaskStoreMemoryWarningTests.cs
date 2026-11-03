@@ -196,10 +196,10 @@ public sealed class TaskStoreMemoryWarningTests
         Assert.Single(store.All);
     }
 
-    /// <summary>A Team that is itself named <c>memory</c> keeps its own <c>_tasks</c>: only a <c>memory</c> folder
-    /// INSIDE a Team is reserved, so this logs nothing and the Task loads.</summary>
+    /// <summary>A top-level folder named <c>memory</c> is reserved (Spec §6.1, SB-R02), not a Team: its
+    /// <c>_tasks</c> is not mapped, so no Task loads and nothing is logged.</summary>
     [Fact]
-    public void Start_TeamNamedMemory_WithItsOwnTasks_LogsNothing()
+    public void Start_TeamNamedMemory_WithItsOwnTasks_LoadsNoTasks()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
@@ -210,7 +210,7 @@ public sealed class TaskStoreMemoryWarningTests
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
 
         Assert.Empty(Warnings(logger));
-        Assert.Single(store.All);
+        Assert.Empty(store.All);
     }
 
     /// <summary>Every Warning the recorder captured, as its rendered message.</summary>

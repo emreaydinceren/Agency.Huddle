@@ -13,14 +13,20 @@ namespace Agency.Huddle.App.Uploads;
 /// <param name="files">The Library's byte writer.</param>
 /// <param name="folders">Resolves the Room's upload folders.</param>
 /// <param name="options">Supplies <see cref="LibraryOptions.MaxUploadBytes"/>.</param>
+/// <param name="baselines">Records the saved file's size and modified time for <c>brain-check</c> (Spec 7.6).</param>
 /// <param name="timeProvider">The clock a pasted image's name is stamped from; the system clock when <see langword="null"/>.</param>
+/// <param name="logger">Logs a baseline that could not be recorded; nothing is logged when <see langword="null"/>.</param>
 internal sealed class ChatUploadService(
     ITeamDirectory directory,
     LibraryFileService files,
     IRoomUploadFolders folders,
     IOptions<TeamOptions> options,
-    TimeProvider? timeProvider = null)
+    RawBaselineStore baselines,
+    TimeProvider? timeProvider = null,
+    ILogger<ChatUploadService>? logger = null)
 {
+    private const string ArchivedRefusal = "This Team is archived, so files can't be added here.";
+
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
     /// <summary>Cleans <paramref name="browserName"/> and saves <paramref name="content"/> into the Room's upload folder.</summary>
@@ -43,6 +49,11 @@ internal sealed class ChatUploadService(
             return LibraryResult<LibraryUpload>.Fail(couldNotSave);
         }
 
+        if (room.Team is not null && this.IsTeamArchived(room.Team))
+        {
+            return LibraryResult<LibraryUpload>.Fail(ArchivedRefusal);
+        }
+
         IReadOnlyList<LibraryPath> candidates = folders.For(room);
         int expected = room.Team is null ? 1 : 2;
         if (candidates.Count != expected)
@@ -50,7 +61,21 @@ internal sealed class ChatUploadService(
             return LibraryResult<LibraryUpload>.Fail(couldNotSave);
         }
 
-        return await files.CreateFromStreamAsync(candidates[^1], name, content, options.Value.Library.MaxUploadBytes, ct).ConfigureAwait(false);
+        LibraryResult<LibraryUpload> result = await files.CreateFromStreamAsync(candidates[^1], name, content, options.Value.Library.MaxUploadBytes, ct).ConfigureAwait(false);
+        if (result.Value is not null)
+        {
+            RawBaselineRecorder.Record(baselines, options.Value.DataDir, result.Value.File.FullPath, logger);
+        }
+
+        return result;
+    }
+
+    /// <summary>True when <c>Archive/&lt;team&gt;/_team.md</c> exists, through the provisioner's rule.</summary>
+    /// <param name="team">The Room's Team.</param>
+    private bool IsTeamArchived(string team)
+    {
+        TeamOptions value = options.Value;
+        return TeamFolderProvisioner.IsArchivedTeam(Path.Combine(value.DataDir, value.Library.Archive.Dir), team);
     }
 
     /// <summary>Deletes a saved upload that was never sent.</summary>

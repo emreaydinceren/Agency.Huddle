@@ -5719,6 +5719,95 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-08--the-wa
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Second Brain: the use cases as a Human's checklist
+
+### SB-01 — A dropped file lands in the Team raw folder
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `d7a9de8d` |  | Saved as `Teams\Finances\raw\<roomId>\2025 return.pdf`, 45 bytes as sent, and the Message carries the path line. The modified time is the upload time, not the original's: the test asks for a match, the Spec does not. The Team Room exists only once a member is connected, so this needs `Team__Acp__Enabled=true` although it is marked free. |
+
+### SB-02 — A fact the Human states is proposed to Team Memory
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `d7a9de8d` |  | Finn (Haiku) called `propose_team_memory` with the memory tool's arguments (`title`, `content`, `description`) and no `team` or `fact`. The tool replied "You are not a member of . You can propose to: Finances." and Finn told the Human "Done. I've saved that Dana Lee is our accountant." Asked to retry, Finn passed the right arguments: the Helper filed `Finances/memory/team-roles.md` and the Feed shows "Team Memory (Helper) created … Proposed by Finn". Two defects: the refusal for a missing `team` should say it is missing, and the Agent reported a refusal as a success. |
+| 2026-11-03 | Pass | `7c882730` |  | Rerun with "Remember that the tax adviser is Sam Ortiz.": Finn loaded the tool's schema (`ToolSearch`) and called `propose_team_memory` once; the Helper merged the fact into `Finances/memory/team-roles.md` and the Feed reads "Proposed by Finn: New financial role to track". Finn did not write the topic itself. |
+
+### SB-03 — A standing rule is proposed as an AGENTS.md change
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `d7a9de8d` |  | `AGENTS.md` stayed unchanged, but no change was ever offered. Without Skills, Finn (Haiku) offered to "set it up in your Claude Code settings using the update-config skill", so the Adapter's own Skills reach the Agent. `propose_retro_changes` is offered only to an Agent with the `retrospective` Skill, which this page's setup does not give; with it, Finn said "I'll lead every summary with a number from this point forward" and called no tool. |
+| 2026-11-03 | Pass | `7c882730` |  | Rerun after the summary named `propose_retro_changes`. Finn first asked whether the rule should replace the leftover "SB-04 marker: lead with the date." (test residue); told yes, it called `propose_retro_changes`, the Room showed "Finn is proposing changes" with the diff, `AGENTS.md` was unchanged until **Accept**, and then held "Lead every summary with the number.". A clean second rule drew "This should be a standing rule in the Team AGENTS.md. Should I propose it as a new rule addition?". |
+
+### SB-04 — An edit to Home AGENTS.md reaches the next session
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `d7a9de8d` |  | Run on Finances with Finn: Nova never came online. The running session reported `Teams\Finances\AGENTS.md` "changed" as a File Change (pass). **Stop** cancels the Turn but keeps the session, and the one-to-one Room's session was resumed from before the edit, so both answered "I don't see an SB-04 marker line". "What this Agent reads" does show the marker, so the next session would carry it; step 3 needs another way to open a new session. |
+| 2026-11-03 | Pass | `7c882730` |  | Rerun on Home with Nova, with the restart step. Step 3: "Yes—two files: AGENTS.md changed, and _team.md was added." After the app restart: "SB-04 marker: lead with the date." No Agent was restarted from its card. |
+
+### SB-05 — Nova prompt parts show their source
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-05--nova-prompt-parts-show-their-source)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `d7a9de8d` |  | Every part has a source, and the Home row names `…\Teams\Home\AGENTS.md`. Observations: the three `AGENTS.md` rows all read "AGENTS.md block"; file sources show the full `C:\…` path; Team Memory reads "1 Teams" rather than a topic count (the topics are listed in its text); the Prompt links land on the Prompts tab but not on the row, since no element carries the anchor id. |
+
+### SB-06 — Chat rules overridden on Settings and restored by deleting the file
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `d7a9de8d` |  | `Prompts\systemPrompt.chatRules.md` held `SB-06 override.`, the warning shows on the row, and after the delete and a restart the row shows the default. The first **Save** after typing did nothing: the text box commits on blur, so it took a second click. |
+
+### SB-07 — Archiving a Team counts its open Tasks and moves the folder
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Blocked | `d7a9de8d` |  | The confirmation read "1 open Tasks and 0 waiting on you will leave the Boards. These Agents will have no Team: Pia." (count right, plural wrong). The folder moved to `Archive\Property Investment\`, and `_team.md` gained `archivedMembers: ['Pia']` and `archivedManager`; Pia's label went. The Team had no Room, so the Room half was not seen. The sidebar listed the Team as live until a reload. |
+| 2026-11-03 | Pass | `c8e15b5e` |  | Rerun with every Agent online (own `Team__PipeName`). Same confirmation; the Team Room and Pia's Team-scoped Room left the open list and were recorded as `archivedRooms` beside `archivedMembers` and `archivedManager`; Pia's own one-to-one Room stayed open (D-46). The left rail updated without a reload this time. |
+
+### SB-08 — An archived file opens read-only and unarchiving restores the Team
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Blocked | `d7a9de8d` |  | A Message naming the old `Teams\Property Investment\outputs\teardown.md` linked to `root=archive`, and the Library opened it with no Read/Edit/Split controls (read-only). Nothing marks it *archived* beyond the path header, which SB-R20 asks for. Unarchive brought the folder back, restored `manager: 'Pia'`, removed the archive keys and gave Pia the label. Pia stayed Offline, so the Rooms half was not seen; a second one-to-one Room for Pia was created. |
+| 2026-11-03 | Pass | `c8e15b5e` |  | Rerun with every Agent online. The old link opened the archived file read-only (no Edit control); it is marked only by its `Archive/Property Investment/…` path header, with no separate *archived* label. Unarchive brought back the folder, `manager: 'Pia'`, Pia's label and both archived Rooms. Defect seen: moving the Task file back made the Task watcher post "Task PROP-0001 … was changed by You: edited outside Huddle" to Pia, who spent a Turn and asked the Human a Question; the Feed also showed "You created #PROP-0001" again. It happened on both unarchives. No "unarchived" Feed item is posted. |
+| 2026-11-03 | Pass | `7c882730` |  | Rerun after the fixes: the confirmation read "1 open Task … This Agent will have no Team: Pia."; the archived file showed the **Archived** chip beside its path; after unarchive Pia's Room gained no message and PROP-0001's change log gained no "edited outside Huddle" entry. The Spec defines no "unarchived" Feed item, so none is expected. |
+
+### SB-09 — An old data folder logs warnings at start-up
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `d7a9de8d` |  | The old seed with `Agents/Alan/work/Instructions.md` and `prompts.json` added logged four warnings naming `Instructions.md`, `Teams/Home and Family/Process.md`, `Uploads` and `prompts.json`. A folder re-seeded with the current seeder logged none. |
+
+### SB-10 — An Agent cannot overwrite a raw file and writes an extract beside it
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `d7a9de8d` |  | The SHA-256 of `statement.pdf` was unchanged and `statement - extract.md` was written beside it. Finn first asked where the file was, then said "I can't modify files in the `raw/` folder"; told to try anyway, it wrote the extract with no visible overwrite attempt, so the permission handler's refusal was not seen. An Adapter error ("API Error: a document in the conversation could not be processed…") leaked into the chat Message. |
+| 2026-11-03 | Pass | `7c882730` |  | Rerun of the guard on a readable original: asked to read `raw\<roomId>\balance.txt` and Write over it, Finn quoted "User refused permission to run tool"; the log reads "Refused a tool call for 'Finn' on '…\raw\…\balance.txt': Files in raw/ are kept as they arrived…" and the SHA-256 was unchanged. The stand-in `statement.pdf` is not a valid PDF, so Read failed on it first; use a real PDF or a text original. |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen

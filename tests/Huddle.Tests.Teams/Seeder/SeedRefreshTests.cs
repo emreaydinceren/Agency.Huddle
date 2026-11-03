@@ -384,7 +384,7 @@ public sealed class SeedRefreshTests
         using PersonaStore personas = Personas(options);
         using TaskStore tasks = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(seed.DataDir);
-        Agency.Huddle.App.Uploads.TaskUploadFolders folders = new(library.Resolver);
+        Agency.Huddle.App.Uploads.TaskUploadFolders folders = new(library.Resolver, tasks);
 
         List<SeedTask> attached = [.. plan.Tasks.Where(t => t.Attachments.Count > 0)];
         Assert.Contains(attached, t => t.Closed);

@@ -414,8 +414,13 @@ public sealed class LibraryFilesEndpointTests
         Directory.CreateDirectory(teamsRoot);
         await File.WriteAllBytesAsync(Path.Combine(teamsRoot, "shot.png"), MinimalPng, ct);
 
+        // The root host is already running (TeamsRootOf reads its Services), so this second host needs its own pipe: two
+        // hosts on one pipe name stop the second at start-up.
         using var disabled = factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("Team:Library:Enabled", "false"));
+        {
+            builder.UseSetting("Team:Library:Enabled", "false");
+            builder.UseSetting("Team:PipeName", factory.PipeName + "-disabled");
+        });
         using var client = disabled.CreateClient();
 
         using var response = await client.GetAsync("/library-files/teams/shot.png", ct);

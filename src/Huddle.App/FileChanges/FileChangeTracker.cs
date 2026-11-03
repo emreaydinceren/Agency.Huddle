@@ -578,7 +578,7 @@ internal sealed class FileChangeTracker(
     {
         int uploadsIndex = 1 - folderSegments.Length;
         return entrySegments.Length > uploadsIndex + 1
-            && string.Equals(entrySegments[uploadsIndex], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
+            && string.Equals(entrySegments[uploadsIndex], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

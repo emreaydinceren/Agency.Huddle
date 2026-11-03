@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -230,9 +231,18 @@ internal static class AgentLayoutMigration
         return moves;
     }
 
-    /// <summary>True when any path segment of <paramref name="relativePath"/> is reserved (<see cref="TaskLayout.IsReservedFolderName"/>) - a Tasks folder, not a legacy Persona definition.</summary>
-    private static bool HasReservedSegment(string relativePath) =>
-        relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]).Any(TaskLayout.IsReservedFolderName);
+    /// <summary>
+    /// True when <paramref name="relativePath"/> is a Team's own file, not a legacy Persona definition: any segment is reserved
+    /// (<see cref="TaskLayout.IsReservedFolderName"/>: a Tasks folder or <c>_team.md</c>) or is a Second Brain folder (<c>raw</c>,
+    /// <c>memory</c>, <c>outputs</c>), or the file is an <c>AGENTS.md</c>. Compared ignoring case on every OS, since the check
+    /// protects a file from being moved.
+    /// </summary>
+    private static bool HasReservedSegment(string relativePath)
+    {
+        string[] segments = relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+        return segments.Any(static segment => TaskLayout.IsReservedFolderName(segment) || TeamNames.IsReservedTeamName(segment))
+            || string.Equals(segments[^1], TeamPaths.AgentsMdFileName, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Plans one directory move per Agent under <paramref name="workRoot"/>, moving its whole

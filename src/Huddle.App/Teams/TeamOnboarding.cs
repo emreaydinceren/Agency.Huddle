@@ -4,7 +4,7 @@ using Agency.Huddle.App.Prompts;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Seeds a manager's first Turn with the onboarding steps of its Team's <c>Process.md</c> (PR-5, Spec §Hiring).
+/// Seeds a manager's first Turn with the onboarding steps of its Team's <c>AGENTS.md</c> (PR-5, Spec §Hiring).
 /// The <c>onboarded: true</c> line in <c>_team.md</c> makes the post happen once: a restart or a second start finds
 /// the marker and posts nothing.
 /// </summary>

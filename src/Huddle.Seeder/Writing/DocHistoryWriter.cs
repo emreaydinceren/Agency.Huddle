@@ -30,7 +30,7 @@ internal static class DocHistoryWriter
     {
         ["Teams"] = "teams",
         ["Agents"] = "agents",
-        ["Uploads"] = "uploads",
+        ["Raw"] = "raw",
     };
 
     /// <summary>The history file of a document, relative to the data folder.</summary>
@@ -43,7 +43,7 @@ internal static class DocHistoryWriter
         string folder = slash < 0 ? relativePath : relativePath[..slash];
         if (slash < 0 || !RootIdByFolder.TryGetValue(folder, out string? rootId))
         {
-            throw new InvalidOperationException($"The document {relativePath} is not under Teams/, Agents/ or Uploads/.");
+            throw new InvalidOperationException($"The document {relativePath} is not under Teams/, Agents/ or Raw/.");
         }
 
         return $"doc-history/{rootId}/{relativePath[(slash + 1)..]}.jsonl";

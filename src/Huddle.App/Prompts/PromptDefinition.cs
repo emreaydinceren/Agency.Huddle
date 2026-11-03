@@ -34,6 +34,10 @@ namespace Agency.Huddle.App.Prompts;
 /// <see cref="Placeholders"/>.
 /// </param>
 /// <param name="Timing">When an edit to this prompt's text reaches a model; see <see cref="PromptTiming"/>.</param>
+/// <param name="ReliedWarning">
+/// When set, a warning the Settings page shows under the field: agents rely on this prompt's wording
+/// for a behavior, so an edit can break it. <see langword="null"/> for a prompt nothing relies on.
+/// </param>
 internal sealed record PromptDefinition(
     string Key,
     string Label,
@@ -41,7 +45,8 @@ internal sealed record PromptDefinition(
     string Default,
     IReadOnlyList<string> Placeholders,
     IReadOnlyList<string> RequiredPlaceholders,
-    PromptTiming Timing)
+    PromptTiming Timing,
+    string? ReliedWarning = null)
 {
     /// <summary>
     /// The prompt's built-in text, normalised to <c>\n</c> line endings regardless of how the repository

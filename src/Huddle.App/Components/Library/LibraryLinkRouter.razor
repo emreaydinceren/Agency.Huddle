@@ -49,7 +49,7 @@
             int slash = decoded.IndexOf('/', StringComparison.Ordinal);
             if (slash > 0)
             {
-                _ = this.Resolver.TryResolve(decoded[..slash], decoded[(slash + 1)..], out resolved, out _);
+                _ = this.Resolver.TryResolveForRead(decoded[..slash], decoded[(slash + 1)..], out resolved, out _);
             }
         }
 

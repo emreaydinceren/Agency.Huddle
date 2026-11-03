@@ -80,7 +80,7 @@ public sealed class HireServiceStartTests
         Assert.Equal(["Lee"], seenAtWait);
     }
 
-    /// <summary>A started Team that has no <c>Process.md</c> receives the type's default process; one that has it keeps its file.</summary>
+    /// <summary>A started Team that has no <c>AGENTS.md</c> receives the type's default process prose; one that has it keeps its file.</summary>
     [Fact]
     public async Task StartTeamAsync_TeamWithoutProcess_ProvisionsDefaultProcessOnce()
     {
@@ -89,7 +89,7 @@ public sealed class HireServiceStartTests
         using TempDataDir teamFolder = new();
         DiskTeamFolders folders = new(teamFolder.Path) { File = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty) };
         HireService service = Create(dir, out _, out _, out _, makeProvisioner: types => new ProcessProvisioner(types, folders));
-        string path = Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName);
+        string path = Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName);
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
         string first = File.ReadAllText(path);
@@ -434,7 +434,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
         DiskTeamFolders folders = new(teamFolder.Path);
         FakeOnboardingPoster poster = new();
         HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
@@ -455,7 +455,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
         DiskTeamFolders folders = new(teamFolder.Path);
         FakeOnboardingPoster poster = new();
         HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
@@ -474,7 +474,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
         DiskTeamFolders folders = new(teamFolder.Path);
         FakeOnboardingPoster poster = new();
         HireService first = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
@@ -495,7 +495,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), "# Process\n");
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), "# Process\n");
         DiskTeamFolders folders = new(teamFolder.Path);
         FakeOnboardingPoster poster = new();
         HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
@@ -513,7 +513,7 @@ public sealed class HireServiceStartTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using TempDataDir teamFolder = new();
-        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
         DiskTeamFolders folders = new(teamFolder.Path);
         FakeOnboardingPoster poster = new() { Delivers = false };
         HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));

@@ -154,6 +154,7 @@ internal static class PromptFieldFactory
                 value.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal),
             HasUnsavedChange: !string.Equals(
                 value.ReplaceLineEndings("\n"), stored.ReplaceLineEndings("\n"), StringComparison.Ordinal),
-            Issues: PromptValidator.Validate(definition, value));
+            Issues: PromptValidator.Validate(definition, value),
+            ReliedWarning: definition.ReliedWarning);
     }
 }

@@ -35,14 +35,28 @@ internal interface ITeamFolders
     /// </summary>
     /// <param name="team">The Team's name, validated with the Team-name rules.</param>
     /// <param name="file">The team file to write.</param>
+    /// <param name="leaveExistingAlone">
+    /// Only the archive passes <see langword="true"/>: a Team folder that exists already receives its <c>_team.md</c>
+    /// and no Second Brain folders beside it. Everyone else gets <c>raw</c>, <c>memory</c> and <c>outputs</c> ensured.
+    /// </param>
     /// <returns>The outcome and, on success, the path of the written file.</returns>
-    TeamCreateResult CreateTeam(string team, TeamFile file);
+    TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false);
 
     /// <summary>Rewrites a Team's <c>_team.md</c> through <paramref name="change"/>, atomically.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="change">Maps the current file to the new one.</param>
     /// <returns><see langword="false"/> when the Team has no readable <c>_team.md</c>; <paramref name="change"/> is then not called.</returns>
     bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change);
+
+    /// <summary>Runs <paramref name="action"/> while no label sync or folder creation can touch the Teams root. The default runs it unguarded.</summary>
+    /// <typeparam name="T">The action's result.</typeparam>
+    /// <param name="action">The folder move; it must not call <c>ITeamMembership</c>.</param>
+    /// <returns>What <paramref name="action"/> returned.</returns>
+    T RunExclusive<T>(Func<T> action) => action();
+
+    /// <summary>The names of the archived Teams (a folder under the Archive root holding <c>_team.md</c>), for refusing a new Team of the same name up front. The default knows none.</summary>
+    /// <returns>The archived names in their on-disk spelling.</returns>
+    IReadOnlyList<string> ArchivedTeamNames() => [];
 
     /// <summary>Reads a Team's <c>_team.md</c>.</summary>
     /// <param name="team">The Team's name.</param>

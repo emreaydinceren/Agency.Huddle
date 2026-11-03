@@ -67,7 +67,7 @@ public sealed class LibraryOptionsTests
 
         Assert.Equal(26214400, options.MaxUploadBytes);
         Assert.Equal(10, options.MaxUploadsPerMessage);
-        Assert.Equal("Uploads", options.Uploads.Dir);
+        Assert.Equal("Raw", options.Raw.Dir);
     }
 
     /// <summary>The chat-upload limits and the Uploads folder bind from <c>Team:Library</c>.</summary>
@@ -79,14 +79,14 @@ public sealed class LibraryOptionsTests
             {
                 ["Team:Library:MaxUploadBytes"] = "1000",
                 ["Team:Library:MaxUploadsPerMessage"] = "3",
-                ["Team:Library:Uploads:Dir"] = "Attached",
+                ["Team:Library:Raw:Dir"] = "Attached",
             })
             .Build();
 
         TeamOptions options = new();
         configuration.GetSection(TeamOptions.SectionName).Bind(options);
 
-        Assert.Equal((1000L, 3, "Attached"), (options.Library.MaxUploadBytes, options.Library.MaxUploadsPerMessage, options.Library.Uploads.Dir));
+        Assert.Equal((1000L, 3, "Attached"), (options.Library.MaxUploadBytes, options.Library.MaxUploadsPerMessage, options.Library.Raw.Dir));
     }
 
     /// <summary>The Prompt-block limits bind from <c>Team:Library</c>.</summary>

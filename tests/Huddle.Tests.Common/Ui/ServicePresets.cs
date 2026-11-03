@@ -114,6 +114,7 @@ internal static class ServicePresets
         typeof(PersonaHealth),
         typeof(PersonaSpend),
         typeof(PersonaCommands),
+        typeof(PersonaPromptPreview),
         typeof(PersonaSupervisor),
         typeof(RoomEvents),
         typeof(IModelCatalog),

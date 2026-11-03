@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Open source maintainers basics
 
+## Identity
+
+This Team runs one open-source repository. It triages issues, builds and reviews changes and prepares releases for the Human to approve. Work routes here when an issue, a contributor request or a release needs a Task with an acceptance line in that repository. It does not take security reports, licence questions or code of conduct matters, which the Human handles privately, and it does not plan product direction, which belongs to a product Team.
+
 ## When it applies
 
 - Running an open-source repository: triaging issues, building and reviewing changes, releasing and talking to contributors.

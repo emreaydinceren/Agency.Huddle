@@ -745,21 +745,21 @@ public sealed class FileChangeTrackerTests
     }
 
     /// <summary>
-    /// Spec 6.8: a file added under <c>Teams/T/Uploads</c> produces no change, while a file under
+    /// Spec 6.8: a file added under <c>Teams/T/raw</c> produces no change, while a file under
     /// <c>Teams/T/Notes</c> still does.
     /// </summary>
     [Fact]
-    public async Task Collect_FileUnderTeamUploads_NotListedButNotesStill()
+    public async Task Collect_FileUnderTeamRaw_NotListedButNotesStill()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
         string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
         string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
-        Directory.CreateDirectory(Path.Combine(teamDir, "Uploads", "room1"));
+        Directory.CreateDirectory(Path.Combine(teamDir, "raw", "room1"));
         Directory.CreateDirectory(Path.Combine(teamDir, "Notes"));
         await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
 
-        File.WriteAllText(Path.Combine(teamDir, "Uploads", "room1", "a.png"), "x");
+        File.WriteAllText(Path.Combine(teamDir, "raw", "room1", "a.png"), "x");
         string notePath = Path.Combine(teamDir, "Notes", "n.md");
         File.WriteAllText(notePath, "n");
 
@@ -770,13 +770,13 @@ public sealed class FileChangeTrackerTests
     }
 
     /// <summary>
-    /// Spec 6.8: a baseline that already holds <c>Uploads</c> entries (saved before the pruning)
+    /// Spec 6.8: a baseline that already holds <c>raw</c> entries (saved before the pruning)
     /// reports no deletion for them, for a Team folder and for the Teams root itself.
     /// </summary>
     [Theory]
-    [InlineData("Teams/Marketing", "Uploads")]
+    [InlineData("Teams/Marketing", "raw")]
     [InlineData("Teams", "Marketing")]
-    public async Task Collect_PreexistingBaselineWithUploadsEntries_NotReportedDeleted(string watchedEntry, string firstSegment)
+    public async Task Collect_PreexistingBaselineWithRawEntries_NotReportedDeleted(string watchedEntry, string firstSegment)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Fixture fixture = await CreateFixtureAsync(ct);
@@ -784,10 +784,10 @@ public sealed class FileChangeTrackerTests
         Directory.CreateDirectory(teamDir);
         File.WriteAllText(Path.Combine(teamDir, "brief.md"), "brief");
 
-        string uploadsKey = firstSegment == "Uploads"
-            ? Path.Combine("Uploads", "room1", "a.png")
-            : Path.Combine("Marketing", "Uploads", "room1", "a.png");
-        string briefKey = firstSegment == "Uploads" ? "brief.md" : Path.Combine("Marketing", "brief.md");
+        string uploadsKey = firstSegment == "raw"
+            ? Path.Combine("raw", "room1", "a.png")
+            : Path.Combine("Marketing", "raw", "room1", "a.png");
+        string briefKey = firstSegment == "raw" ? "brief.md" : Path.Combine("Marketing", "brief.md");
         Dictionary<string, FileEntry> preexistingFiles = new(FolderSnapshot.PathComparer)
         {
             [briefKey] = new FileEntry(5, DateTimeOffset.UtcNow),

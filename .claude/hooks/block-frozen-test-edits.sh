@@ -8,13 +8,21 @@
 # worktree with no manifest, or a path not in it, passes untouched. It cannot see a shell
 # redirect or a script that rewrites a file; Freeze-Tests.ps1 -Check is the backstop for those.
 #
-# Bash builtins only: this runs before every Write and Edit, and under Git Bash each external
+# Mostly bash builtins: this runs before every Write and Edit, and under Git Bash each external
 # process (git, grep, sed, cygpath, ...) costs seconds under load - enough to hit the 10s hook
-# timeout, which lets the edit through unchecked. $(</dev/stdin) reads the payload in blocks
-# without a fork; `read -d ''` would read a large Write payload one byte at a time.
+# timeout, which lets the edit through unchecked. The payload is read with $(cat), the one
+# external process kept: $(</dev/stdin) fails in the Claude Code harness's Git Bash
+# ("/dev/stdin: No such file or directory"), which left the payload empty and let every edit
+# through. An empty payload therefore fails closed.
 set -uo pipefail
 
-payload=$(</dev/stdin)
+payload=$(cat)
+
+if [[ -z $payload ]]; then
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' \
+        "Frozen-test hook could not read its input."
+    exit 0
+fi
 
 # The first "file_path" is the tool's target; a later one could sit inside the edited text.
 [[ $payload =~ \"file_path\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]] || exit 0

@@ -3,7 +3,9 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Explains the chat application and lists every App Tool available to the calling Agent, so the
@@ -43,9 +45,14 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class GetHelpTool : IAppTool
 {
+    private static readonly EnumerationOptions RawScan = new() { RecurseSubdirectories = true, IgnoreInaccessible = true };
+
     private readonly IReadOnlyList<CatalogEntry> catalog;
     private readonly IPromptSource prompts;
     private readonly string toolNamePrefix;
+    private readonly IReadOnlyList<string> teamNames;
+    private readonly RawBaselineStore? rawBaselines;
+    private readonly TeamOptions? options;
 
     /// <summary>Initialises a new instance of the <see cref="GetHelpTool"/> class.</summary>
     /// <param name="otherTools">
@@ -62,7 +69,25 @@ internal sealed class GetHelpTool : IAppTool
     /// reported bare. Supplied by the caller — this type never hard-codes either form. A
     /// <see langword="null"/> or whitespace-only value is still rejected as nonsense.
     /// </param>
-    public GetHelpTool(IReadOnlyList<IAppTool> otherTools, IPromptSource prompts, string toolNamePrefix)
+    /// <param name="teamNames">
+    /// The names of the Agent's Teams that have a folder, for the Second Brain map (Spec 6.4), or
+    /// <see langword="null"/> or empty to leave that section out.
+    /// </param>
+    /// <param name="rawBaselines">
+    /// The <c>raw_baselines</c> rows the changed-raw list compares against (Spec 6.8, correction C9), or
+    /// <see langword="null"/> to list nothing.
+    /// </param>
+    /// <param name="options">
+    /// Locates the Teams folder (<see cref="TeamOptions.DataDir"/> and <see cref="TeamsOptions.Dir"/>) for the map and
+    /// the scan, or <see langword="null"/> to leave the section out.
+    /// </param>
+    public GetHelpTool(
+        IReadOnlyList<IAppTool> otherTools,
+        IPromptSource prompts,
+        string toolNamePrefix,
+        IReadOnlyList<string>? teamNames = null,
+        RawBaselineStore? rawBaselines = null,
+        TeamOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(otherTools);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -74,6 +99,9 @@ internal sealed class GetHelpTool : IAppTool
 
         this.prompts = prompts;
         this.toolNamePrefix = toolNamePrefix;
+        this.teamNames = teamNames is { Count: > 0 } && options is not null ? [.. teamNames] : [];
+        this.rawBaselines = rawBaselines;
+        this.options = options;
 
         // this.Description reads a prompt, so prompts must already be assigned. This tool goes first for
         // the same reason AllTools once yielded it first: it is offered first.
@@ -127,9 +155,109 @@ internal sealed class GetHelpTool : IAppTool
             sections.Add(this.prompts.Render("getHelp.tasks"));
         }
 
+        if (this.options is not null && this.teamNames.Count > 0)
+        {
+            sections.Add(this.BuildSecondBrainSection(this.options));
+        }
+
         sections.Add(this.BuildToolsSection());
 
         return string.Join("\n\n", sections);
+    }
+
+    /// <summary>
+    /// Builds the Second Brain map (<c>getHelp.secondBrain</c>, one path line per Team), followed by the
+    /// raw files changed since filing when there are any.
+    /// </summary>
+    /// <param name="teamOptions">Locates the Teams folder.</param>
+    /// <returns>The section text.</returns>
+    private string BuildSecondBrainSection(TeamOptions teamOptions)
+    {
+        string teamsDir = teamOptions.Teams.Dir;
+        string paths = string.Join(
+            '\n',
+            this.teamNames.Select(team => $"{teamsDir}/{team}/ — {TeamNames.RawFolder}/, {TeamNames.MemoryFolder}/, {TeamNames.OutputsFolder}/"));
+        string map = this.prompts.Render("getHelp.secondBrain", new Dictionary<string, string> { ["{{paths}}"] = paths });
+
+        List<string> changed = this.ChangedRawFiles(teamOptions);
+        if (changed.Count == 0)
+        {
+            return map;
+        }
+
+        string files = string.Join('\n', changed.Select(static path => "- " + path));
+        return map + "\n\n" + this.prompts.Render("getHelp.rawChanged", new Dictionary<string, string> { ["{{files}}"] = files });
+    }
+
+    /// <summary>
+    /// Lists the raw files of the Agent's Teams (and their Projects) whose size or modified time differs from
+    /// their <c>raw_baselines</c> row, by path relative to the data folder. A file with no row is not listed
+    /// (Spec 6.8). Task attachments under <c>raw/Tasks/&lt;ID&gt;</c> are scanned too: their baselines are
+    /// recorded like any other upload's and the Spec makes no exception for them.
+    /// </summary>
+    /// <param name="teamOptions">Locates the Teams folder.</param>
+    /// <returns>The changed files' relative paths, ordinal-sorted.</returns>
+    private List<string> ChangedRawFiles(TeamOptions teamOptions)
+    {
+        List<string> changed = [];
+        if (this.rawBaselines is null)
+        {
+            return changed;
+        }
+
+        string dataDir = Path.GetFullPath(teamOptions.DataDir);
+        foreach (string team in this.teamNames)
+        {
+            string teamDir = Path.Combine(dataDir, teamOptions.Teams.Dir, team);
+            foreach (string rawDir in RawFolders(teamDir))
+            {
+                foreach (string file in Directory.EnumerateFiles(rawDir, "*", RawScan))
+                {
+                    string relative = Path.GetRelativePath(dataDir, file).Replace('\\', '/');
+                    if (this.IsChanged(relative, file))
+                    {
+                        changed.Add(relative);
+                    }
+                }
+            }
+        }
+
+        changed.Sort(StringComparer.Ordinal);
+        return changed;
+    }
+
+    private bool IsChanged(string relative, string file)
+    {
+        if (this.rawBaselines is null || !this.rawBaselines.TryGet(relative, out RawBaseline? baseline))
+        {
+            return false;
+        }
+
+        FileInfo info = new(file);
+        return info.Length != baseline.SizeBytes || new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero) != baseline.ModifiedUtc;
+    }
+
+    private static IEnumerable<string> RawFolders(string teamDir)
+    {
+        if (!Directory.Exists(teamDir))
+        {
+            yield break;
+        }
+
+        string teamRaw = Path.Combine(teamDir, TeamNames.RawFolder);
+        if (Directory.Exists(teamRaw))
+        {
+            yield return teamRaw;
+        }
+
+        foreach (string project in Directory.EnumerateDirectories(teamDir))
+        {
+            string projectRaw = Path.Combine(project, TeamNames.RawFolder);
+            if (Directory.Exists(projectRaw))
+            {
+                yield return projectRaw;
+            }
+        }
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ public sealed partial class ProcessTemplatesTests
 
     private static readonly string[] OutlineHeadings =
     [
+        "Identity",
         "When it applies",
         "Stages",
         "Who does what",

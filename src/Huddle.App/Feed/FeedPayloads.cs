@@ -36,6 +36,8 @@ internal static class FeedPayloads
         FeedSourceType.AdminRequested => typeof(AdminRequestedPayload),
         FeedSourceType.DevicePaired => typeof(DevicePairedPayload),
         FeedSourceType.DeviceRevoked => typeof(DeviceRevokedPayload),
+        FeedSourceType.SecondBrainOverCap => typeof(SecondBrainOverCapPayload),
+        FeedSourceType.TeamArchived => typeof(TeamArchivedPayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

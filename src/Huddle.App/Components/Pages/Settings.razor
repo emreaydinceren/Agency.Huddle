@@ -87,6 +87,7 @@ else if (this.isAdmin == true)
 
                     <form @onsubmit="this.Save">
                         <PromptsPanel Groups="this.groups"
+                                    UnknownOverrides="this.Prompts.UnknownOverrides"
                                     ValueChanged="this.OnFieldValueChanged"
                                     ResetRequested="this.OnResetRequested" />
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">

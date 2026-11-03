@@ -41,6 +41,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     // rebuild (Task 5.4) share it too, rather than PersonaStore's two-lock design (Settled
     // corrections-B2 D5 item 1).
     private readonly Lock writeGate = new();
+    private readonly List<string> pausedTeams = [];
 
     // Keyed with FolderSnapshot.PathComparer (Settled corrections-B2 D5 item 4) so the watcher
     // (Task 5.4) can tell its own writes apart from an outside edit regardless of the file
@@ -57,6 +58,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
     private volatile TaskSnapshot index;
     private bool disposed;
+    private readonly string archiveRoot;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<TaskId, TaskItem> archivedFound = new();
 
     // Set by OnWatcherError, under writeGate, and consumed (and reset) by the next RebuildFromWatcher
     // - so the rebuild that follows a dropped-event buffer overflow always raises IndexChanged, even
@@ -90,6 +93,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
         this.RootDirectory = tasksRoot;
+        this.archiveRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Library.Archive.Dir));
         Directory.CreateDirectory(tasksRoot);
 
         this.index = this.Scan();
@@ -190,6 +194,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(location.Team);
+            this.RefuseIfTeamFolderMissing(location.Team, location.Project);
             if (File.Exists(path))
             {
                 return null;
@@ -268,6 +274,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(task.Location.Team);
             string? diskVersion = ReadDiskVersion(task.Path);
             if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
             {
@@ -339,6 +346,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(task.Location.Team);
+            this.RefuseIfPaused(canonicalTo.Team);
+            this.RefuseIfTeamFolderMissing(canonicalTo.Team, canonicalTo.Project);
             string? diskVersion = ReadDiskVersion(task.Path);
             if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
             {
@@ -357,6 +367,124 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
     }
+
+    /// <summary>
+    /// Refuses every Task write for <paramref name="team"/> (compared ignoring case) until the returned scope is disposed,
+    /// so an archive move can copy the Team folder without a late write landing in the source. The refusal is an
+    /// <see cref="InvalidOperationException"/> from <see cref="Create"/>, <see cref="Write"/>, <see cref="Move"/> and <see cref="AppendEntry"/>.
+    /// </summary>
+    /// <param name="team">The Team whose folder is being moved.</param>
+    /// <returns>The scope; disposing it lifts the pause (once).</returns>
+    internal IDisposable PauseWrites(string team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        lock (this.writeGate)
+        {
+            this.pausedTeams.Add(team);
+        }
+
+        return new PauseScope(this, team);
+    }
+
+    /// <summary>Throws when <paramref name="team"/> is paused. Call with <see cref="writeGate"/> held.</summary>
+    /// <param name="team">The Team a write is for.</param>
+    private void RefuseIfPaused(string team)
+    {
+        if (this.pausedTeams.Exists(paused => string.Equals(paused, team, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team} can't be written while the Team is being moved."));
+        }
+    }
+
+    /// <summary>
+    /// Throws when the Team is one the store has indexed but its folder is gone, so a Task write cannot re-create a Team
+    /// folder an archive move took away. A Team the store has never seen is not refused: its first Task creates the folder.
+    /// </summary>
+    /// <param name="team">The Team a write is for.</param>
+    /// <param name="project">
+    /// The Project it is for, or <see langword="null"/> for the Team's own Tasks. It is refused too when it exists only under
+    /// <c>Archive/{Team}/</c>: a write would re-create <c>Teams/{Team}/{Project}</c> beside its archived copy.
+    /// </param>
+    private void RefuseIfTeamFolderMissing(string team, string? project)
+    {
+        if (project is { Length: > 0 }
+            && !Directory.Exists(Path.Combine(this.RootDirectory, team, project))
+            && Directory.Exists(Path.Combine(this.archiveRoot, team, project)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team}/{project} can't be written: the Project is archived. Unarchive it to add Tasks."));
+        }
+
+        bool known = this.Teams.Any(folder => string.Equals(folder.Name, team, StringComparison.OrdinalIgnoreCase));
+        if (known && !Directory.Exists(Path.Combine(this.RootDirectory, team)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team} can't be written: the Team has no folder."));
+        }
+    }
+
+    /// <summary>Lifts one <see cref="PauseWrites"/> pause when disposed.</summary>
+    /// <param name="store">The store that was paused.</param>
+    /// <param name="team">The paused Team.</param>
+    private sealed class PauseScope(TaskStore store, string team) : IDisposable
+    {
+        private int disposed;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref this.disposed, 1) != 0)
+            {
+                return;
+            }
+
+            store.AdoptMovedTeam(team);
+        }
+    }
+
+    /// <summary>
+    /// Ends a <see cref="PauseWrites"/> pause: rescans and takes the paused Team's Tasks as they now are on disk as already
+    /// seen, so a Team moved to the Archive and back is not reported as edited or created outside Huddle, then lifts the pause
+    /// and raises <see cref="IndexChanged"/> when the index changed.
+    /// </summary>
+    /// <param name="team">The paused Team.</param>
+    private void AdoptMovedTeam(string team)
+    {
+        Action? indexChanged;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                _ = this.pausedTeams.Remove(team);
+                return;
+            }
+
+            TaskSnapshot previous = this.index;
+            TaskSnapshot rebuilt = this.Scan();
+            foreach (TaskItem oldTask in previous.All.Where(task => IsTeam(task, team)))
+            {
+                _ = this.lastSeenVersion.Remove(oldTask.Path);
+            }
+
+            foreach (TaskItem task in rebuilt.All.Where(task => IsTeam(task, team)))
+            {
+                this.RecordVersion(task);
+            }
+
+            _ = this.pausedTeams.Remove(team);
+            this.index = rebuilt;
+            indexChanged = this.IndexChanged;
+        }
+
+        EventRaise.Isolated(indexChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
+    }
+
+    /// <summary>Whether <paramref name="task"/> belongs to <paramref name="team"/>, compared ignoring case as a paused Team is.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="team">The Team.</param>
+    private static bool IsTeam(TaskItem task, string team) => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Renames the Task file from <paramref name="sourcePath"/> to <paramref name="targetPath"/> (creating the target
@@ -444,6 +572,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         {
             if (!this.disposed)
             {
+                foreach ((TaskItem task, string _, string _) in writes)
+                {
+                    this.RefuseIfPaused(task.Location.Team);
+                    this.RefuseIfTeamFolderMissing(task.Location.Team, task.Location.Project);
+                }
+
                 TaskSnapshot snapshot = this.index;
                 bool anyWritten = false;
                 foreach ((TaskItem task, string expectedVersion, string text) in writes)
@@ -503,6 +637,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 return null;
             }
+
+            this.RefuseIfPaused(current.Location.Team);
 
             string diskText = File.ReadAllText(current.Path);
             if (!string.Equals(TaskFileFormat.ComputeVersion(diskText), expectedVersion, StringComparison.Ordinal))
@@ -780,7 +916,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 this.lastSeenVersion.Remove(previousById.Path);
             }
 
-            edits.Add(new OutsideEdit(previousById, task));
+            // A Team being moved to or from the Archive is Huddle's own move, not an edit: its Tasks are recorded as seen.
+            if (!this.pausedTeams.Exists(paused => IsTeam(task, paused)))
+            {
+                edits.Add(new OutsideEdit(previousById, task));
+            }
+
             this.RecordVersion(task);
         }
 
@@ -968,6 +1109,78 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
+    /// Finds <paramref name="id"/> in an archived Team (Spec 8.5): <c>Archive/{Team}[/{Project}]/_tasks[/_closed]/{id}.md</c>.
+    /// The result is for reading only; it is never in the live index, so no write method accepts it. Each call looks at
+    /// the disk, so an archive or unarchive is seen at once.
+    /// </summary>
+    /// <param name="id">The Task id to look up.</param>
+    /// <returns>The parsed Task with its <c>Archive/</c> path, or <see langword="null"/> when no archived Team holds it.</returns>
+    internal TaskItem? FindArchived(TaskId id)
+    {
+        if (this.archivedFound.TryGetValue(id, out TaskItem? cached))
+        {
+            return cached;
+        }
+
+        TaskItem? found = this.ScanArchive(id);
+        if (found is not null)
+        {
+            this.archivedFound[id] = found;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Forgets the archived Task ids <see cref="FindArchived"/> remembered (Spec 8.5): the archive service calls it after
+    /// every archive or unarchive, the only operations that change what the Archive holds.
+    /// </summary>
+    internal void ArchiveChanged() => this.archivedFound.Clear();
+
+    private TaskItem? ScanArchive(TaskId id)
+    {
+        if (!Directory.Exists(this.archiveRoot))
+        {
+            return null;
+        }
+
+        string fileName = $"{id}.md";
+        foreach (string teamDir in Directory.EnumerateDirectories(this.archiveRoot))
+        {
+            List<string> containers = [teamDir, .. Directory.EnumerateDirectories(teamDir)];
+            foreach (string container in containers)
+            {
+                foreach (string candidate in new[] { Path.Combine(container, TaskLayout.TasksFolder, fileName), Path.Combine(container, TaskLayout.TasksFolder, TaskLayout.ClosedFolder, fileName) })
+                {
+                    if (TryParseArchived(this.archiveRoot, candidate) is TaskItem found)
+                    {
+                        return found;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static TaskItem? TryParseArchived(string archiveRoot, string path)
+    {
+        if (!File.Exists(path) || !TaskLayout.TryMap(archiveRoot, path, out TaskLocation? location, out _) || location is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return TaskFileFormat.TryParse(File.ReadAllText(path), path, location, out TaskItem? task, out _) ? task : null;
+        }
+        catch (IOException)
+        {
+            return null; // An unreadable archived file is a miss, as an unreadable live file is rejected.
+        }
+    }
+
+    /// <summary>
     /// Reads and parses every candidate Task file under <see cref="RootDirectory"/>; a file in a duplicate-cased Team
     /// folder, or that cannot be read or parsed, is added to <paramref name="rejected"/> instead.
     /// </summary>
@@ -1133,8 +1346,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>The full paths of <see cref="RootDirectory"/>'s non-reserved Team folders, every case
-    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list).</summary>
-    private List<string> RawTeamDirectories() => this.RawSubfolders(this.RootDirectory);
+    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list). The Second Brain
+    /// folders (<see cref="TeamNames.IsReservedTeamName"/>) are not Teams either: <c>Teams/memory/</c> is the Huddle-wide Memory.</summary>
+    private List<string> RawTeamDirectories() =>
+        [.. this.RawSubfolders(this.RootDirectory).Where(static dir => !TeamNames.IsReservedTeamName(Path.GetFileName(dir)))];
 
     /// <summary>
     /// Enumerates Team folders directly under <see cref="RootDirectory"/> with their Project

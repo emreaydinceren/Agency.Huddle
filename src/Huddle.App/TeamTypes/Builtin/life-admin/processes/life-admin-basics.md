@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Life admin basics
 
+## Identity
+
+This Team takes one person's personal admin from start to Done without a plan: a trip, a bill, an appointment, a form or a full inbox. Work that arrives here is one Task with an acceptance line the Chief of Household can check. A family's shared schedule, meals and chores belong to the household Team type, and money, bookings and health questions go to the Human.
+
 ## When it applies
 
 - Personal admin one person can take from start to Done without a plan: a trip, a bill, an appointment, a form, a full inbox.

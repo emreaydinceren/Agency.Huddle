@@ -197,14 +197,14 @@ public sealed class TeamsPhase4EndToEndTests
         Room room = await run.Services.GetRequiredService<ITeamDirectory>().CreateRoomAsync("Retro", [KnownIds.Human, retro.UserId ?? string.Empty], ct);
         RetroProposalService proposals = run.Services.GetRequiredService<RetroProposalService>();
         RetroProposalSet set = Assert.Single(await proposals.PendingAsync(room.Id, ct));
-        string before = File.ReadAllText(Path.Combine(run.TeamFolder(WebTeam), TeamPaths.ProcessFileName));
+        string before = File.ReadAllText(Path.Combine(run.TeamFolder(WebTeam), TeamPaths.AgentsMdFileName));
 
         RetroChangeOutcome applied = await proposals.AcceptAsync(room.Id, set.Id, "1", ct);
         RetroChangeOutcome again = await proposals.AcceptAsync(room.Id, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Applied, applied.Kind);
         Assert.Equal(RetroChangeOutcomeKind.Gone, again.Kind);
-        string after = File.ReadAllText(Path.Combine(run.TeamFolder(WebTeam), TeamPaths.ProcessFileName));
+        string after = File.ReadAllText(Path.Combine(run.TeamFolder(WebTeam), TeamPaths.AgentsMdFileName));
         Assert.Equal(1, RetroDiff.CountMatches(after, "- Explain a Review bounce on the Task."));
         Assert.Equal(0, RetroDiff.CountMatches(before, "- Explain a Review bounce on the Task."));
         RetroFileStore register = run.Services.GetRequiredService<RetroFileStore>();
@@ -366,7 +366,7 @@ public sealed class TeamsPhase4EndToEndTests
         JsonArray items = [];
         foreach ((string title, string find, string replace) in changes)
         {
-            items.Add(new JsonObject { ["title"] = title, ["targetFile"] = TeamPaths.ProcessFileName, ["find"] = find, ["replace"] = replace });
+            items.Add(new JsonObject { ["title"] = title, ["targetFile"] = TeamPaths.AgentsMdFileName, ["find"] = find, ["replace"] = replace });
         }
 
         return new JsonObject { ["team"] = WebTeam, ["proposals"] = items };

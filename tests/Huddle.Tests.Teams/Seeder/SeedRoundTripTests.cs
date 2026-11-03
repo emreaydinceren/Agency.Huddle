@@ -3,6 +3,7 @@ using MudBlazor.Utilities;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -227,7 +228,7 @@ public sealed class SeedRoundTripTests
 
     /// <summary>
     /// SEED-HOME-8: Home and Family is set up as a hire from <c>household@1.1.0</c> would leave it: a typed, onboarded
-    /// <c>_team.md</c> naming Hattie as manager, the type's default process as <c>Process.md</c>, and a <c>_role</c> on every member.
+    /// <c>_team.md</c> naming Hattie as manager, the type's default process prose as <c>AGENTS.md</c>, and a <c>_role</c> on every member.
     /// </summary>
     [Fact]
     public async Task Teams_HomeAndFamilyIsSetUpFromTheHouseholdType()
@@ -238,8 +239,12 @@ public sealed class SeedRoundTripTests
         TeamTypeCatalog types = new(seed.Options(), NullLogger<TeamTypeCatalog>.Instance);
 
         Assert.True(TeamFile.TryParse(await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.TeamFileName), ct), out TeamFile? file));
-        string process = await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.ProcessFileName), ct);
-        string? expected = types.ReadProcess("household", "household-basics");
+        string process = await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.AgentsMdFileName), ct);
+        string? template = types.ReadProcess("household", "household-basics");
+        string[] templateLines = (template ?? string.Empty).ReplaceLineEndings("\n").Split('\n');
+
+        // The template's frontmatter goes to _team.md; its body (everything after the closing fence) is the whole of AGENTS.md.
+        string? expected = template is null ? null : string.Join('\n', templateLines[(FrontmatterFence.FindClosing(templateLines, 1) + 1)..]);
 
         Assert.Equal("household@1.1.0", file.TeamType.ToString());
         Assert.Equal("Hattie", file.Manager);

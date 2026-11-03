@@ -68,6 +68,21 @@
         <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.CancelAsync">Close</MudButton>
     </div>
 }
+else if (this.archivedView && this.loaded is { } archivedTask)
+{
+    @* A Task of an archived Team (Spec 8.5) opens for reading only: no field, move, comment or attach control, and no footer. Attachment links in the
+       Description resolve through LibraryPathResolver.TryResolveForRead (LibraryReferenceResolver.ResolvePath), so they open from the Archive. *@
+    <div class="task-detail-archived">
+        <div class="task-detail-archived-title">
+            <MudText Typo="Typo.subtitle1" Class="task-detail-archived-name">@archivedTask.Title</MudText>
+            <StatusChip Icon="@Icons.Material.Filled.Inventory2" Class="task-detail-archived-chip">Archived</StatusChip>
+        </div>
+        <MudText Typo="Typo.caption" Class="task-detail-archived-id">@($"{archivedTask.Id} · {archivedTask.Status} · {archivedTask.Location.Team}")</MudText>
+        <div class="task-detail-description-box">
+            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(archivedTask.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+        </div>
+    </div>
+}
 else if (this.loaded is { } task)
 {
     TaskItem effective = this.Effective ?? task;
@@ -626,6 +641,9 @@ else if (this.loaded is { } task)
 
     private TaskItem? loaded;
     private bool deleted;
+
+    /// <summary>True while <see cref="Id"/> names a Task of an archived Team: the component shows the read-only view and never saves.</summary>
+    private bool archivedView;
     private bool createMode;
     private TaskPatch pending = new();
     private string? sprintInput;
@@ -746,7 +764,7 @@ else if (this.loaded is { } task)
     public bool IsCreate => this.createMode;
 
     /// <summary>Whether a host that draws the footer shows it: while there are changes to save, and always for a draft, which is a change from the start.</summary>
-    public bool FooterVisible => !this.deleted && this.loaded is not null && (this.HasPending || this.createMode);
+    public bool FooterVisible => !this.deleted && !this.archivedView && this.loaded is not null && (this.HasPending || this.createMode);
 
     /// <summary>The footer's Save label ("Save", or "Save &amp; notify {name}" for an awake or asleep assignee), as the inline row would draw it.</summary>
     public string FooterSaveLabel => this.loaded is { } task
@@ -1026,6 +1044,15 @@ else if (this.loaded is { } task)
         }
 
         TaskItem? current = this.Store.Get(id);
+        this.archivedView = false;
+        if (current is null && this.Store.FindArchived(id) is { } archivedTask)
+        {
+            this.archivedView = true;
+            this.deleted = false;
+            this.loaded = archivedTask;
+            return;
+        }
+
         if (current is null)
         {
             this.deleted = true;

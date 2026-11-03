@@ -5,11 +5,11 @@ using Agency.Huddle.App.Teams;
 namespace Agency.Huddle.App.Uploads;
 
 /// <summary>Resolves a Room's upload folders through the Library's path resolver.</summary>
-/// <param name="resolver">Resolves <c>uploads:/&lt;roomId&gt;</c> and <c>teams:/&lt;Team&gt;/Uploads/&lt;roomId&gt;</c>.</param>
+/// <param name="resolver">Resolves <c>raw:/&lt;roomId&gt;</c> and <c>teams:/&lt;Team&gt;/raw/&lt;roomId&gt;</c>.</param>
 /// <param name="files">Recycles a folder; the Library never hard-deletes.</param>
 internal sealed class RoomUploadFolders(LibraryPathResolver resolver, LibraryFileService files) : IRoomUploadFolders
 {
-    private const string UploadsRootId = "uploads";
+    private const string RawRootId = "raw";
     private const string TeamsRootId = "teams";
 
     /// <inheritdoc />
@@ -18,14 +18,14 @@ internal sealed class RoomUploadFolders(LibraryPathResolver resolver, LibraryFil
         ArgumentNullException.ThrowIfNull(room);
 
         List<LibraryPath> folders = [];
-        if (resolver.TryResolve(UploadsRootId, room.Id, out LibraryPath? rootFolder, out _))
+        if (resolver.TryResolve(RawRootId, room.Id, out LibraryPath? rootFolder, out _))
         {
             folders.Add(rootFolder);
         }
 
         if (room.Team is not null
             && LibrarySegments.Check(room.Team) is null
-            && resolver.TryResolve(TeamsRootId, $"{room.Team}/{TeamNames.UploadsFolder}/{room.Id}", out LibraryPath? teamFolder, out _))
+            && resolver.TryResolve(TeamsRootId, $"{room.Team}/{TeamNames.RawFolder}/{room.Id}", out LibraryPath? teamFolder, out _))
         {
             folders.Add(teamFolder);
         }

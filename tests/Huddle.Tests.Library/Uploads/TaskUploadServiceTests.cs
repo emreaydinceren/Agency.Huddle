@@ -1,9 +1,13 @@
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Uploads;
+using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Ui;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.Tests.Uploads;
@@ -27,12 +31,20 @@ public sealed class TaskUploadServiceTests
 
         FakeTaskReferenceResolver tasks = new();
         tasks.Add(new TaskReference(new TaskId("GROW", 2), "Write the plan", Closed: false));
-        TaskUploadFolders folders = new(fixture.Resolver);
-        TaskUploadService service = new(tasks, folders, fixture.CreateService(), Options.Create(teamOptions));
+        IOptions<TeamOptions> options = Options.Create(teamOptions);
+        _ = TestTaskStore.WriteTask(
+            Path.Combine(fixture.DataDir, "Teams"),
+            TestTaskStore.RelativePath("Marketing", "Growth", false, "GROW-0002.md"),
+            TestTasks.Make(id: "GROW-0002", location: new("Marketing", "Growth", false)));
+        PersonaStore personas = options.CreatePersonaStore();
+        _ = personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Marketing"]), "You are Nova.");
+        TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+        TaskUploadFolders folders = new(fixture.Resolver, store);
+        TaskUploadService service = new(tasks, folders, fixture.CreateService(), options, new Agency.Huddle.App.Data.RawBaselineStore(options));
         return (service, folders, fixture);
     }
 
-    /// <summary>A Task's folder is <c>uploads:/Tasks/&lt;ID&gt;</c> under the Uploads root.</summary>
+    /// <summary>A Task's folder is <c>raw/Tasks/&lt;ID&gt;</c> under its Team and Project.</summary>
     [Fact]
     public void For_Task_ResolvesUnderUploadsTasks()
     {
@@ -42,8 +54,8 @@ public sealed class TaskUploadServiceTests
         LibraryPath? folder = folders.For("GROW-0002");
 
         Assert.NotNull(folder);
-        Assert.Equal("uploads", folder.Root.Id);
-        Assert.Equal(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002"), folder.FullPath);
+        Assert.Equal("teams", folder.Root.Id);
+        Assert.Equal(Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002"), folder.FullPath);
     }
 
     /// <summary>An id that is not a safe path segment resolves to nothing.</summary>
@@ -69,7 +81,7 @@ public sealed class TaskUploadServiceTests
         LibraryResult<LibraryUpload> result = await service.SaveAsync("GROW-0002", "brief.png", new MemoryStream(PngHead), ct);
 
         Assert.NotNull(result.Value);
-        string expected = Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "brief.png");
+        string expected = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002", "brief.png");
         Assert.Equal(expected, result.Value.File.FullPath);
         Assert.Equal(UploadKind.Image, result.Value.Kind);
         Assert.True(File.Exists(expected));
@@ -102,7 +114,7 @@ public sealed class TaskUploadServiceTests
 
         Assert.Null(result.Value);
         Assert.Equal("Couldn't attach brief.png: this Task no longer exists.", result.Error);
-        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks")));
+        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks")));
     }
 
     /// <summary>The writer's own refusals pass through: an SVG and a file over the cap are not saved.</summary>
@@ -118,7 +130,7 @@ public sealed class TaskUploadServiceTests
 
         Assert.Equal("SVG files can't be attached.", svg.Error);
         Assert.Equal(LibraryFileService.UploadTooLargeMessage("big.txt", 8), big.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "big.txt")));
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002", "big.txt")));
     }
 
     /// <summary>A program is refused by its magic bytes, whatever its name, with the chat upload's text, and nothing is saved.</summary>
@@ -133,7 +145,7 @@ public sealed class TaskUploadServiceTests
         LibraryResult<LibraryUpload> result = await service.SaveAsync("GROW-0002", "setup.txt", new MemoryStream(program), ct);
 
         Assert.Equal("Programs can't be attached.", result.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "setup.txt")));
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002", "setup.txt")));
     }
 
     /// <summary>Deleting an unsent upload removes the file.</summary>

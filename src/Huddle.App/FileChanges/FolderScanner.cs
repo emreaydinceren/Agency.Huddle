@@ -33,8 +33,8 @@ internal static class FolderScanner
     /// is pruned before its contents are enumerated, alongside <see cref="FileChangesOptions.EffectiveIgnore"/>.
     /// </param>
     /// <param name="teamsRoot">
-    /// The Teams root, when known. Per Chat uploads spec 6.8, a <c>Teams/&lt;Team&gt;/Uploads</c>
-    /// folder (two levels under it, compared with <see cref="TeamNames.UploadsFolder"/>, ordinal
+    /// The Teams root, when known. Per Chat uploads spec 6.8, a <c>Teams/&lt;Team&gt;/raw</c>
+    /// folder (two levels under it, compared with <see cref="TeamNames.RawFolder"/>, ordinal
     /// ignoring case) is pruned before its contents are enumerated, so its files never count toward
     /// <see cref="FileChangesOptions.MaxFilesPerFolder"/>. <see langword="null"/> prunes nothing.
     /// </param>
@@ -90,7 +90,7 @@ internal static class FolderScanner
                 continue;
             }
 
-            if (teamsRoot is not null && FolderScanner.IsTeamUploads(subdirectory, name, teamsRoot))
+            if (teamsRoot is not null && FolderScanner.IsTeamRaw(subdirectory, name, teamsRoot))
             {
                 continue;
             }
@@ -104,10 +104,10 @@ internal static class FolderScanner
         return true;
     }
 
-    /// <summary>True when <paramref name="subdirectory"/> is named Uploads and sits directly under a Team folder, itself directly under <paramref name="teamsRoot"/>.</summary>
-    private static bool IsTeamUploads(string subdirectory, string name, string teamsRoot)
+    /// <summary>True when <paramref name="subdirectory"/> is named raw and sits directly under a Team folder, itself directly under <paramref name="teamsRoot"/>.</summary>
+    private static bool IsTeamRaw(string subdirectory, string name, string teamsRoot)
     {
-        if (!string.Equals(name, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(name, TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

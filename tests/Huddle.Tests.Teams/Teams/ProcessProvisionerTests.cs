@@ -3,14 +3,17 @@ using static Agency.Huddle.Tests.Teams.ProcessProvisionerFixtures;
 
 namespace Agency.Huddle.Tests.Teams;
 
-/// <summary>The chosen process template is copied into the Team folder as <c>Process.md</c> (PR-3, PR-6, Spec §Process).</summary>
+/// <summary>The chosen process template is split into the Team's <c>_team.md</c> settings and its <c>AGENTS.md</c> prose (PR-3, PR-6, Spec 6.4).</summary>
 public sealed class ProcessProvisionerTests
 {
     private const string Team = "Web Team";
 
-    /// <summary>The template text is written to <c>Process.md</c> and parses.</summary>
+    /// <summary>The template's body after its frontmatter (see <see cref="ProcessProvisionerFixtures.FlowText"/>).</summary>
+    private const string FlowBody = "# Flow\n\n## When it applies\n";
+
+    /// <summary>The template body is written to <c>AGENTS.md</c> and its gates go to <c>_team.md</c>.</summary>
     [Fact]
-    public void Provision_KnownProcess_WritesParsableFile()
+    public void Provision_KnownProcess_WritesProseAndSettings()
     {
         using TempDataDir dir = new();
         DiskTeamFolders folders = new(dir.Path);
@@ -18,34 +21,33 @@ public sealed class ProcessProvisionerTests
 
         ProvisionResult result = provisioner.Provision(Team, "flow");
 
-        string text = File.ReadAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName));
+        string text = File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName));
         Assert.Equal(ProvisionResult.Created, result);
-        Assert.Equal(FlowText, text);
-        Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
-        Assert.Equal([GateId.QaEvidenceBeforeDone], document.Gates);
+        Assert.Equal(FlowBody, text);
+        Assert.Equal([GateId.QaEvidenceBeforeDone], folders.File?.Process.Gates);
     }
 
-    /// <summary>The template id and version the file was copied from are recorded in its frontmatter.</summary>
+    /// <summary>The template id and version the settings were copied from are recorded in <c>_team.md</c>.</summary>
     [Fact]
     public void Provision_KnownProcess_RecordsTemplateIdAndVersion()
     {
         using TempDataDir dir = new();
-        ProcessProvisioner provisioner = Build(dir, new DiskTeamFolders(dir.Path));
+        DiskTeamFolders folders = new(dir.Path);
+        ProcessProvisioner provisioner = Build(dir, folders);
 
         _ = provisioner.Provision(Team, "flow");
 
-        Assert.True(ProcessDocument.TryParse(File.ReadAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName)), out ProcessDocument? document));
-        Assert.Equal(new VersionedRef("flow", "1.0.0"), document.Template);
+        Assert.Equal("flow@1.0.0", folders.File?.Process.Template);
     }
 
-    /// <summary>A second call reports <c>AlreadyExists</c> and leaves the file as it was, even for another process.</summary>
+    /// <summary>A second call reports <c>AlreadyExists</c> and leaves <c>AGENTS.md</c> as it was, even for another process.</summary>
     [Fact]
     public void Provision_FileExists_ReturnsAlreadyExistsAndKeepsFile()
     {
         using TempDataDir dir = new();
         ProcessProvisioner provisioner = Build(dir, new DiskTeamFolders(dir.Path));
         _ = provisioner.Provision(Team, "flow");
-        string path = Path.Combine(dir.Path, TeamPaths.ProcessFileName);
+        string path = Path.Combine(dir.Path, TeamPaths.AgentsMdFileName);
         File.AppendAllText(path, "hand edit\n");
 
         ProvisionResult again = provisioner.Provision(Team, "flow");
@@ -55,10 +57,10 @@ public sealed class ProcessProvisionerTests
         Assert.Equal(ProvisionResult.AlreadyExists, again);
         Assert.Equal(ProvisionResult.AlreadyExists, other);
         Assert.Equal(ProvisionResult.AlreadyExists, blank);
-        Assert.Equal(FlowText + "hand edit\n", File.ReadAllText(path));
+        Assert.Equal(FlowBody + "hand edit\n", File.ReadAllText(path));
     }
 
-    /// <summary>The blank outline has all seven PR-6 headings and declares no gates.</summary>
+    /// <summary>The blank outline in <c>AGENTS.md</c> has all seven PR-6 headings and the Team's settings declare no gates.</summary>
     [Fact]
     public void Blank_NoProcessYet_WritesSevenHeadingsAndNoGates()
     {
@@ -68,12 +70,12 @@ public sealed class ProcessProvisionerTests
 
         ProvisionResult result = provisioner.Blank(Team);
 
-        string text = File.ReadAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName));
+        string text = File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName));
         Assert.Equal(ProvisionResult.Created, result);
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
         Assert.Empty(document.MissingSections);
-        Assert.Empty(document.Gates);
-        Assert.Null(document.Template);
+        Assert.Empty(folders.File?.Process.Gates ?? [GateId.QaEvidenceBeforeDone]);
+        Assert.Null(folders.File?.Process.Template);
     }
 
     /// <summary>An unknown process id fails and writes nothing.</summary>
@@ -86,7 +88,7 @@ public sealed class ProcessProvisionerTests
         ProvisionResult result = provisioner.Provision(Team, "nope");
 
         Assert.Equal(ProvisionResult.UnknownProcess, result);
-        Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.ProcessFileName)));
+        Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 
     /// <summary>A Team with no <c>_team.md</c> is refused and nothing is written.</summary>
@@ -98,7 +100,7 @@ public sealed class ProcessProvisionerTests
 
         Assert.Equal(ProvisionResult.UnknownTeam, provisioner.Provision(Team, "flow"));
         Assert.Equal(ProvisionResult.UnknownTeam, provisioner.Blank(Team));
-        Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.ProcessFileName)));
+        Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 
     /// <summary>The type's default process is provisioned when the Team has none, and left alone when it has one.</summary>
@@ -113,6 +115,6 @@ public sealed class ProcessProvisionerTests
 
         Assert.Equal(ProvisionResult.Created, first);
         Assert.Equal(ProvisionResult.AlreadyExists, second);
-        Assert.Equal(FlowText, File.ReadAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName)));
+        Assert.Equal(FlowBody, File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 }

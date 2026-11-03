@@ -137,7 +137,8 @@ public sealed class BuiltinHouseholdTypeTests
         Assert.Equal(1, manager.MaxPerTeam);
         Assert.Equal(ModelTier.Strongest, manager.Model.Tier);
         Assert.Equal(["verify"], manager.Covers);
-        SkillRef skill = Assert.Single(manager.Skills);
+        // The manager also holds the three Second Brain Skills (Task 105), so pick team-management out of the list.
+        SkillRef skill = Assert.Single(manager.Skills, static s => s.Name == "team-management");
         Assert.Equal(new SkillRef("team-management", "builtin", "team-management"), skill);
         Assert.Equal(["Nora", "Ben", "Maya"], manager.SuggestedNames);
     }
@@ -195,12 +196,14 @@ public sealed class BuiltinHouseholdTypeTests
 
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
         Assert.NotNull(document);
-        Assert.Equal(new VersionedRef("household-basics", "1.1.0"), document.Template);
         Assert.Empty(document.MissingSections);
-        Assert.Empty(document.UnknownGates);
-        Assert.Empty(document.Gates);
-        Assert.Equal(new DigestCadence(7, CadenceUnit.Days), document.Digest);
-        Assert.Equal(new RetroCadence(28, CadenceUnit.Days), document.Retro);
+        Assert.True(TeamFile.TryParse(text, out TeamFile? file));
+        ProcessSettings settings = file.Process;
+        Assert.Equal("household-basics@1.1.0", settings.Template);
+        Assert.Empty(settings.Gates);
+        Assert.Empty(settings.UnknownGates);
+        Assert.Equal(new DigestCadence(7, CadenceUnit.Days), settings.DigestSchedule());
+        Assert.Equal(new RetroCadence(28, CadenceUnit.Days), settings.RetroSchedule());
     }
 
     /// <summary>The process says who does what for every role the type declares, so no hire arrives without a duty.</summary>

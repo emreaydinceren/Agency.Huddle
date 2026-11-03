@@ -31,7 +31,7 @@ its evidence link and the member's account where they gave one.
 ## Propose
 
 Propose at most three changes with `propose_retro_changes`. Each is a diff to
-`Process.md`, a stance or a skill assignment. Removing a rule counts as a change. The
+the Team's `AGENTS.md` or `_team.md`, a stance or a skill assignment. Removing a rule counts as a change. The
 Human accepts or rejects each one, and Huddle applies an accepted change; never say a
 change is already applied.
 

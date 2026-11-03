@@ -217,11 +217,11 @@ public sealed class WatchedFolderResolverTests
 
     /// <summary>Spec 6.8: the Uploads root and anything under it (including a Room's folder) is refused with the spec 7 text.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    [InlineData("./Uploads")]
-    [InlineData("Uploads/room1")]
-    [InlineData("Uploads\\room1\\deeper")]
+    [InlineData("Raw")]
+    [InlineData("raw")]
+    [InlineData("./Raw")]
+    [InlineData("Raw/room1")]
+    [InlineData("Raw\\room1\\deeper")]
     public void TryResolve_UploadsRootOrUnderIt_IsRefused(string entry)
     {
         using TempDataDir dataDir = new();
@@ -241,20 +241,20 @@ public sealed class WatchedFolderResolverTests
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
-        bool resolved = resolver.TryResolve(Path.Combine(dataDir.Path, "Uploads", "room1"), [], out WatchedFolder? folder, out string? reason);
+        bool resolved = resolver.TryResolve(Path.Combine(dataDir.Path, "Raw", "room1"), [], out WatchedFolder? folder, out string? reason);
 
         Assert.False(resolved);
         Assert.Null(folder);
         Assert.Equal("Uploads are announced in the chat, not watched.", reason);
     }
 
-    /// <summary>Spec 6.8: a Team's Uploads folder and anything under it is refused with the same text, whichever case and separator.</summary>
+    /// <summary>Spec 6.8: a Team's raw folder and anything under it is refused with the same text, whichever case and separator.</summary>
     [Theory]
-    [InlineData("./Teams/Alpha/Uploads")]
-    [InlineData("./teams/alpha/UPLOADS/room1")]
-    [InlineData("Teams/Alpha/uploads/room1/deeper")]
-    [InlineData("Teams\\Alpha\\Uploads\\room1")]
-    public void TryResolve_TeamUploadsOrUnderIt_IsRefused(string entry)
+    [InlineData("./Teams/Alpha/raw")]
+    [InlineData("./teams/alpha/RAW/room1")]
+    [InlineData("Teams/Alpha/raw/room1/deeper")]
+    [InlineData("Teams\\Alpha\\Raw\\room1")]
+    public void TryResolve_TeamRawOrUnderIt_IsRefused(string entry)
     {
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
@@ -266,12 +266,14 @@ public sealed class WatchedFolderResolverTests
         Assert.Equal("Uploads are announced in the chat, not watched.", reason);
     }
 
-    /// <summary>A Team's other folders, and a folder merely starting with <c>Uploads</c> inside a Team, still resolve.</summary>
+    /// <summary>A Team's other folders, a folder merely starting with <c>raw</c> inside a Team, and a Team folder named <c>Uploads</c> (no longer reserved) still resolve.</summary>
     [Theory]
     [InlineData("./Teams/Alpha")]
     [InlineData("./Teams/Alpha/Docs")]
-    [InlineData("./Teams/Alpha/Uploads-archive")]
-    public void TryResolve_TeamFolderOutsideUploads_Accepted(string entry)
+    [InlineData("./Teams/Alpha/raw-archive")]
+    [InlineData("./Teams/Alpha/Uploads")]
+    [InlineData("./Teams/Alpha/uploads/room1")]
+    public void TryResolve_TeamFolderOutsideRaw_Accepted(string entry)
     {
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));

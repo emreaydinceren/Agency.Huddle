@@ -20,12 +20,15 @@ namespace Agency.Huddle.Tests.Tasks.HumanGate;
 /// </summary>
 public sealed class ProofContextBuilderTests
 {
-    private const string Process = """
+    private const string TeamFileText = """
         ---
-        title: 'Flow'
+        teamType: 'web@1.2.0'
         gates: ['qa-evidence-before-done']
         checkCommand: 'dotnet test'
         ---
+        """;
+
+    private const string Process = """
         # Flow
 
         ## Definition of Done
@@ -203,7 +206,8 @@ public sealed class ProofContextBuilderTests
             _ = this.harness.Personas.Add(new PersonaIdentity("Quinn", "QA Engineer", "quinn", [Team], Role: qa), "You verify.");
             this.docsRoot = this.library.CreatePinnedRoot("Docs");
             this.history = new DocHistoryStore(this.library.BoundOptions, NullLogger<DocHistoryStore>.Instance);
-            this.Gates = TaskGateText.BuildGates(this.dir, Process);
+            File.WriteAllText(Path.Combine(this.dir.Path, "AGENTS.md"), Process);
+            this.Gates = TaskGateText.BuildGates(this.dir, TeamFileText);
             FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], ["Lead", "Quinn"], true) { TeamType = new VersionedRef("web", "1.2.0") }] };
             this.Builder = new ProofContextBuilder(this.harness.Store, this.harness.Personas, this.Gates, catalog, this.library.Resolver, this.history);
         }

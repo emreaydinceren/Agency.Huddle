@@ -20,3 +20,66 @@ allow|prose commit msg|{"tool_input":{"command":"git commit -m \"agents ran find
 BLOCK|sed -i|{"tool_input":{"command":"sed -i s/a/b/ src/x.cs"}}
 BLOCK|x && sed -E -i|{"tool_input":{"command":"cd x && sed -E -i \"s/a/b/\" y"}}
 allow|sed -n pipe grep -i|{"tool_input":{"command":"sed -n 1,5p x | grep -i foo"}}
+BLOCK|cat > src file heredoc|{"tool_input":{"command":"cat > src/Huddle.App/X.cs <<'EOF'\nclass X {}\nEOF"}}
+BLOCK|cat >> tests file|{"tool_input":{"command":"cat >> /e/Repos/Huddle-wt/sb/tests/Huddle.Tests.Agents/XTests.cs"}}
+BLOCK|cat > windows path under src|{"tool_input":{"command":"cat > \"E:\\Repos\\Huddle-wt\\sb\\src\\Huddle.App\\X.cs\""}}
+allow|cat > scratchpad|{"tool_input":{"command":"cat > /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt <<'EOF'\nhi\nEOF"}}
+BLOCK|printf append into src|{"tool_input":{"command":"printf 'x' >> src/Huddle.App/A.cs"}}
+BLOCK|echo redirect into tests|{"tool_input":{"command":"echo x > tests/A.cs"}}
+BLOCK|tee -a into src|{"tool_input":{"command":"echo x | tee -a src/A.cs"}}
+BLOCK|printf redirect windows src path|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb && printf 'x' >> /e/Repos/Huddle-wt/sb/src/Huddle.App/TeamOptions.cs"}}
+allow|printf append to scratchpad|{"tool_input":{"command":"printf 'x' >> /c/Users/user/AppData/Local/Temp/claude/scratchpad/a.cs"}}
+allow|echo redirect to mysrc|{"tool_input":{"command":"echo x > mysrc/a.txt"}}
+allow|echo stderr to null with src arg|{"tool_input":{"command":"echo src/A.cs 2>/dev/null"}}
+allow|cat reads src and redirects stderr|{"tool_input":{"command":"cat src/Huddle.App/X.cs 2>/dev/null"}}
+allow|cat > mysrc is not src|{"tool_input":{"command":"cat > mysrc/x.txt"}}
+BLOCK|WriteAllText into src|{"tool_input":{"command":"pwsh -NoProfile -Command \"[IO.File]::WriteAllText('src/Huddle.App/X.cs','x')\""}}
+BLOCK|WriteAllText windows tests path|{"tool_input":{"command":"pwsh -Command \"[System.IO.File]::WriteAllText('E:\\Repos\\Huddle-wt\\sb\\tests\\A\\B.cs', $t)\""}}
+allow|WriteAllText into scratchpad|{"tool_input":{"command":"pwsh -Command \"[IO.File]::WriteAllText('C:\\Users/user\\AppData\\Local\\Temp\\claude\\scratchpad\\x.txt','x')\""}}
+BLOCK|Set-Content under src|{"tool_input":{"command":"pwsh -Command \"Set-Content -Path src/Huddle.App/X.cs -Value x\""}}
+BLOCK|Out-File piped under tests|{"tool_input":{"command":"\"x\" | Out-File tests/Huddle.Tests.Agents/XTests.cs"}}
+allow|Out-File to scratchpad|{"tool_input":{"command":"Get-Date | Out-File C:\\Users/user\\AppData\\Local\\Temp\\claude\\scratchpad\\x.txt"}}
+allow|Set-Content to docs|{"tool_input":{"command":"Set-Content -Path docs/x.md -Value x"}}
+allow|prose mentions Out-File src|{"tool_input":{"command":"git commit -m \"ban Out-File src/ writes\""}}
+BLOCK|pwsh -File from tmp|{"tool_input":{"command":"pwsh -NoProfile -File /tmp/fix.ps1"}}
+BLOCK|chained pwsh -File from tmp|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb && pwsh -File /tmp/fix.ps1 -Fix"}}
+BLOCK|bash script from tmp|{"tool_input":{"command":"bash /tmp/fix.sh"}}
+allow|pwsh -File repo script|{"tool_input":{"command":"pwsh -NoProfile -File agents/scripts/Check-Eol.ps1 -Fix"}}
+BLOCK|truncate -s src|{"tool_input":{"command":"truncate -s -1 src/Huddle.App/Program.cs"}}
+BLOCK|truncate windows tests path|{"tool_input":{"command":"cd x && truncate -s 0 /e/Repos/Huddle-wt/sb/tests/A/B.cs"}}
+allow|truncate scratchpad|{"tool_input":{"command":"truncate -s 0 /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}
+BLOCK|printf >> sibling worktree posix|{"tool_input":{"command":"printf 'x' >> /e/Repos/Huddle-wt/sb-d5/src/Huddle.App/Acp/AgentsMdGuard.cs"}}
+BLOCK|printf >> sibling worktree windows|{"tool_input":{"command":"printf x >> E:\\Repos\\Huddle-wt\\sb-d5\\src\\Huddle.App\\A.cs"}}
+BLOCK|printf >> sibling worktree drive slash|{"tool_input":{"command":"printf x >> E:/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|echo >> absolute tests|{"tool_input":{"command":"echo x >> /e/Repos/Huddle-wt/sb-d5/tests/A/B.cs"}}
+BLOCK|printf with quoted semicolon|{"tool_input":{"command":"printf 'a;b' >> /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|echo with quoted ampersand|{"tool_input":{"command":"echo \"a & b\" >> /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|cd worktree then relative src|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb-d5 && printf x >> src/A.cs"}}
+BLOCK|cd into src folder then relative target|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb-d5/src/Huddle.App && printf x >> Acp/A.cs"}}
+BLOCK|cd into windows tests folder then tee|{"tool_input":{"command":"cd E:\\Repos\\Huddle-wt\\sb-d5\\tests && echo x | tee A.cs"}}
+BLOCK|tee absolute src|{"tool_input":{"command":"echo x | tee -a /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|cat > absolute src|{"tool_input":{"command":"cat a > /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|truncate drive slash src|{"tool_input":{"command":"truncate -s 0 E:/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|Set-Content windows src|{"tool_input":{"command":"Set-Content E:\\Repos\\Huddle-wt\\sb-d5\\src\\A.cs x"}}
+BLOCK|Out-File drive slash tests|{"tool_input":{"command":"'x' | Out-File -FilePath E:/Repos/Huddle-wt/sb-d5/tests/A.cs"}}
+BLOCK|WriteAllText windows src|{"tool_input":{"command":"pwsh -Command \"[System.IO.File]::WriteAllText('E:\\Repos\\Huddle-wt\\sb-d5\\src\\A.cs','x')\""}}
+BLOCK|scratch-looking path with src segment is still refused|{"tool_input":{"command":"printf x >> /tmp/scratch/src/A.cs"}}
+allow|cd into mysrc then write|{"tool_input":{"command":"cd /e/Repos/mysrc && printf x >> A.cs"}}
+allow|printf quoted pipe to scratchpad|{"tool_input":{"command":"printf 'a|b' >> /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}
+BLOCK|PS tool Set-Content quoted JSON-escaped windows path|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path \"E:\\Repos\\Huddle-wt\\sb-d5\\src\\Huddle.App\\X.cs\" -Value $x"}}
+BLOCK|PS tool Set-Content -LiteralPath|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -LiteralPath 'E:\\Repos\\W\\src\\X.cs' -Value $x"}}
+BLOCK|PS tool sc alias|{"tool_name":"PowerShell","tool_input":{"command":"sc E:\\Repos\\W\\src\\X.cs $x"}}
+BLOCK|PS tool ac alias|{"tool_name":"PowerShell","tool_input":{"command":"ac -Path src\\X.cs -Value $x"}}
+BLOCK|PS tool Add-Content positional|{"tool_name":"PowerShell","tool_input":{"command":"Add-Content tests\\Huddle.Tests.Agents\\A.cs $x"}}
+BLOCK|PS tool WriteAllText escaped path|{"tool_name":"PowerShell","tool_input":{"command":"[System.IO.File]::WriteAllText(\"E:\\Repos\\W\\src\\X.cs\", $x)"}}
+BLOCK|PS tool WriteAllText Join-Path quoted src|{"tool_name":"PowerShell","tool_input":{"command":"[IO.File]::WriteAllText((Join-Path $root 'src'), $x)"}}
+BLOCK|PS tool Set-Content Join-Path quoted src|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path (Join-Path $root \"src\") -Value $x"}}
+BLOCK|PS tool Out-File -FilePath|{"tool_name":"PowerShell","tool_input":{"command":"$x | Out-File -FilePath \"E:\\Repos\\W\\tests\\A.cs\""}}
+BLOCK|PS tool redirect variable|{"tool_name":"PowerShell","tool_input":{"command":"$x > src\\X.cs"}}
+BLOCK|PS tool redirect append string|{"tool_name":"PowerShell","tool_input":{"command":"\"x\" >> E:\\Repos\\W\\src\\X.cs"}}
+BLOCK|PS tool redirect cmdlet|{"tool_name":"PowerShell","tool_input":{"command":"Get-Date > tests/A.cs"}}
+allow|PS tool redirect to scratchpad|{"tool_name":"PowerShell","tool_input":{"command":"$x > C:\\Users/user\\scratchpad\\x.txt"}}
+allow|PS tool sc.exe service query|{"tool_name":"PowerShell","tool_input":{"command":"sc.exe query Spooler"}}
+allow|PS tool 2>&1 with src path arg|{"tool_name":"PowerShell","tool_input":{"command":"Get-ChildItem src 2>&1 | Out-Null"}}
+allow|PS tool commit prose redirect src|{"tool_name":"PowerShell","tool_input":{"command":"git commit -m \"route x > src/ later\""}}
+allow|PS tool Set-Content docs escaped path|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path \"E:\\Repos\\W\\docs\\x.md\" -Value $x"}}

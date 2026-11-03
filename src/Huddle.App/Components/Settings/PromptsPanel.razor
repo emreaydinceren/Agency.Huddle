@@ -61,6 +61,11 @@
                               Class="long-text-field markdown-field"
                               Immediate="true" />
 
+                @if (field.ReliedWarning is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-1">@field.ReliedWarning</MudAlert>
+                }
+
                 @if (field.Placeholders.Count > 0)
                 {
                     <p class="prompts-field-placeholders">
@@ -91,7 +96,25 @@
     </MudPaper>
 }
 
+@if (this.UnknownOverrides.Count > 0)
+{
+    <MudPaper Outlined="true" Class="pa-3 mb-4">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="prompts-group-heading">Unknown overrides</MudText>
+        <MudText Typo="Typo.body2">These files in the Prompts folder name no prompt, so they are not used.</MudText>
+        <ul class="prompts-unknown-overrides">
+            @foreach (var name in this.UnknownOverrides)
+            {
+                <li><code>@name</code></li>
+            }
+        </ul>
+    </MudPaper>
+}
+
 @code {
+    /// <summary>File names (without <c>.md</c>) in the Prompts folder that name no prompt; the section shows only when non-empty.</summary>
+    [Parameter]
+    public IReadOnlyList<string> UnknownOverrides { get; set; } = [];
+
     /// <summary>Every prompt field to render, already grouped and ordered by <see cref="PromptFieldFactory"/>.</summary>
     [Parameter]
     [EditorRequired]

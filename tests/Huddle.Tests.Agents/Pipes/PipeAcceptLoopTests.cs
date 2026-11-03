@@ -73,6 +73,30 @@ public sealed class PipeAcceptLoopTests
         Assert.Equal(42, echoed[0]);
     }
 
+    /// <summary>
+    /// A pipe name another server already listens on - a second Huddle on the same machine - stops the loop with an error naming
+    /// the pipe and <c>Team:PipeName</c>, rather than sharing the name: shared, each Agent connected to whichever program's
+    /// listener answered, and the ones that reached the other program stayed Offline here with nothing logged.
+    /// </summary>
+    [Fact]
+    public async Task PipeNameAlreadyListenedOn_StopsWithAnErrorNamingThePipe()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string pipeName = "pipe-accept-loop-tests-" + Guid.NewGuid().ToString("N");
+        await using NamedPipeServerStream other = new(
+            pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        PipeAcceptLoop loop = new(pipeName, static server => server.Dispose(), NullLogger.Instance);
+
+        // Bounded, so a loop that shares the name ends by cancellation and fails the assertion instead of waiting forever.
+        using CancellationTokenSource bounded = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bounded.CancelAfter(TimeSpan.FromSeconds(5));
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() => loop.RunAsync(bounded.Token));
+
+        Assert.Equal(
+            $"Another program is already listening on the pipe '{pipeName}', most likely another copy of Huddle. Stop it, or give this copy its own pipe with Team:PipeName.",
+            error.Message);
+    }
+
     /// <summary>Reads one byte from <paramref name="server"/>, writes it back, then disposes the instance.</summary>
     /// <param name="server">The connected instance; owned by this method.</param>
     /// <param name="ct">Cancels the read and the write.</param>

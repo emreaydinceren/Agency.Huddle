@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Seeder.Model;
 using System.Globalization;
@@ -110,8 +111,8 @@ internal static partial class MessageReferences
         Path.Combine([dataDir, .. relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)]);
 
     /// <summary>
-    /// The folder a Room's attachments go to: <c>Uploads/&lt;roomId&gt;</c> for a root Room, and
-    /// <c>Teams/&lt;Team&gt;/Uploads/&lt;roomId&gt;</c> for a Room scoped to a Team (<c>ChatUploadService</c> saves into the last candidate).
+    /// The folder a Room's attachments go to: <c>Raw/&lt;roomId&gt;</c> for a root Room, and
+    /// <c>Teams/&lt;Team&gt;/raw/&lt;roomId&gt;</c> for a Room scoped to a Team (<c>ChatUploadService</c> saves into the last candidate).
     /// </summary>
     /// <param name="dataDir">The data folder.</param>
     /// <param name="room">The Room.</param>
@@ -119,8 +120,8 @@ internal static partial class MessageReferences
     /// <returns>The absolute folder.</returns>
     internal static string UploadFolder(string dataDir, SeedRoom room, string roomId) =>
         room.Team is null
-            ? Path.Combine(dataDir, "Uploads", roomId)
-            : Path.Combine(dataDir, "Teams", room.Team, "Uploads", roomId);
+            ? Path.Combine(dataDir, "Raw", roomId)
+            : Path.Combine(dataDir, "Teams", room.Team, TeamNames.RawFolder, roomId);
 
     /// <summary>The plain label of a Room, which says its Scope (<c>ReferenceText.RoomPlainLabelFor</c>).</summary>
     /// <param name="room">The Room.</param>

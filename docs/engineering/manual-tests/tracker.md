@@ -154,6 +154,7 @@ the per-area tables below.
 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
 | [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | [below](#team-memory-helper) |
 | [Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush](long-running-rooms.md) | [below](#long-running-rooms) |
+| [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | [below](#second-brain) |
 ---
 
 ## at-tagging
@@ -1114,6 +1115,23 @@ Jobs: scheduled instructions in their own Rooms — [area file](jobs.md)
 | [JOBS-03](jobs.md#jobs-03--the-file-is-the-source-of-truth) |  | Active |  | | not yet run by a person |
 | [JOBS-04](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late) |  | Active |  | | not yet run by a person |
 | [JOBS-05](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others) | 💰 | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Ravi was refused with the exact text; the Chief of Staff scheduled `Bins check` for Ravi (`by: Chief of Staff`) |
+
+## second-brain
+
+Second Brain: the use cases as a Human's checklist — [area file](second-brain.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [SB-01](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder) |  | Pass |  | 2026-11-03: path, size and path line held; modified time is not kept, which the Spec does not ask for |
+| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Pass |  | 2026-11-03 rerun after `8fdb82ed`: filed on the first try, Feed names Finn |
+| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Pass |  | 2026-11-03 rerun after `0ac2df3e`: Finn said the rule belongs in AGENTS.md and proposed it; Accept wrote the line |
+| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Pass |  | 2026-11-03 rerun with the restart step, on Home with Nova |
+| [SB-05](second-brain.md#sb-05--nova-prompt-parts-show-their-source) |  | Pass |  | 2026-11-03: every part sourced; three rows share the label "AGENTS.md block" |
+| [SB-06](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file) |  | Pass |  | 2026-11-03 |
+| [SB-07](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder) |  | Pass |  | 2026-11-03 rerun after the pipe fix: Rooms left the list and are recorded in `archivedRooms`; "1 open Tasks" plural slip |
+| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Pass |  | 2026-11-03 rerun after `4f7d883c` and `176c037e`: Archived chip shown; unarchive no longer wakes the manager |
+| [SB-09](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up) |  | Pass |  | 2026-11-03 |
+| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Pass |  | 2026-11-03: hash unchanged, extract written; rerun reached the permission handler, which refused the Write and logged the reason |
 
 ## doc-history
 

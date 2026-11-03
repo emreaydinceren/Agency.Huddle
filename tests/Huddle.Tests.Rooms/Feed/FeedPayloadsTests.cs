@@ -52,6 +52,8 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.AdminRequested, "admin-requested"),
             (FeedSourceType.DevicePaired, "device-paired"),
             (FeedSourceType.DeviceRevoked, "device-revoked"),
+            (FeedSourceType.SecondBrainOverCap, "second-brain-over-cap"),
+            (FeedSourceType.TeamArchived, "team-archived"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -175,7 +177,7 @@ public sealed class FeedPayloadsTests
     [Fact]
     public void Categories_EveryType_IsInExactlyOneTypeSegment()
     {
-        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents, FeedCategory.Helpers, FeedCategory.Devices];
+        FeedCategory[] segments = [FeedCategory.Tasks, FeedCategory.Gates, FeedCategory.Rooms, FeedCategory.Documents, FeedCategory.Helpers, FeedCategory.Devices, FeedCategory.SecondBrain];
         foreach (FeedSourceType type in AllTypes)
         {
             int hits = segments.Count(segment => FeedCategories.SourceTypes(segment).Contains(type));
@@ -206,6 +208,8 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.HelperPaused, FeedCategory.Helpers),
             (FeedSourceType.HelperFailing, FeedCategory.Helpers),
             (FeedSourceType.TeamMemoryNotFiled, FeedCategory.Helpers),
+            (FeedSourceType.SecondBrainOverCap, FeedCategory.SecondBrain),
+            (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

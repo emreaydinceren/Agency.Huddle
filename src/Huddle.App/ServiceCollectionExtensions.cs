@@ -22,6 +22,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -337,11 +338,14 @@ public static class ServiceCollectionExtensions
         // with an in-process fake to drive a real Persona through a real host, session and tool
         // server against a scripted ACP peer, with no process spawned.
         services.AddSingleton<IAgentProcessLauncher, AgentProcessLauncher>();
-        services.AddSingleton<IAgentHostFactory, DotAcpAgentHostFactory>();
+        services.AddSingleton<DotAcpAgentHostFactory>();
+        services.AddSingleton<IAgentHostFactory>(sp => sp.GetRequiredService<DotAcpAgentHostFactory>());
+        services.AddSingleton<PersonaPromptPreview>();
         services.AddSingleton<AdapterCatalog>();
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<CadenceStateStore>();
+        services.AddSingleton<RawBaselineStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaSpendStore>();
@@ -377,7 +381,7 @@ public static class ServiceCollectionExtensions
 
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
-        // would mean a second file handle on prompts.json now and (once T4.1 adds one) a second
+        // would mean a second file handle on the Prompts folder now and (once T4.1 adds one) a second
         // FileSystemWatcher on it, the same class of intermittent test flake PersonaStore's remarks
         // already document for the closely related PersonaSupervisor case.
         services.AddSingleton<PromptStore>();
@@ -611,6 +615,9 @@ public static class ServiceCollectionExtensions
         // Same instance as the hosted service, the same singleton-plus-factory idiom as
         // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
+        // Archive recovery goes first so an interrupted archive is undone or finished before the provisioner
+        // synchronises folders and the reconciler reads the catalog (corrections-12 items 4, 8, 16).
+        services.AddHostedService<ArchiveRecoveryService>();
         services.AddSingleton<TeamFolderProvisioner>();
         services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
 
@@ -625,6 +632,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => TeamMemoryAccess.ForPersonas(sp.GetRequiredService<ITeamCatalog>(), sp.GetRequiredService<PersonaStore>()));
         services.AddSingleton<MemoryFolderGate>();
         services.AddSingleton<MemoryWarnings>();
+        services.AddSingleton<OverCapNotifier>();
 
         // How a memory call's folder and file become a path: File Changes resolves with it to record a memory-tool write as the
         // Agent's own (Instructions and Memory §6.1).
@@ -633,6 +641,9 @@ public static class ServiceCollectionExtensions
         // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.
         services.AddSingleton<ITeamMembership, TeamMembership>();
+        services.AddSingleton<IArchiveFileSystem, PhysicalArchiveFileSystem>();
+        services.AddSingleton<ArchiveService>();
+        services.AddSingleton<IArchiveService>(static sp => sp.GetRequiredService<ArchiveService>());
 
         // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
         // to the very provisioner instance the host runs (no cycle: it needs the catalog above).
@@ -780,6 +791,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
+        services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
+        services.AddHostedService<Agency.Huddle.App.SecondBrain.DefaultAgentsMdService>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();

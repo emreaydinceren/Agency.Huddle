@@ -5,30 +5,16 @@ using Agency.Huddle.App.Library;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// The parsed <c>Process.md</c> (PR-6, PR-7, Spec §Process): the frontmatter keys Huddle acts on and the
-/// outline headings the body is expected to carry. Unreadable optional values read as absent rather than
-/// failing the whole document, so a hand edit never locks a Team out of its process.
+/// The parsed process prose of a Team's <c>AGENTS.md</c> (PR-6, Spec §Process): the outline headings the body is
+/// expected to carry and the Definition of Done. The settings (gates, cadences, check command, template) live in
+/// <see cref="TeamFile.Process"/>; a leading frontmatter block is skipped as prose.
 /// </summary>
-/// <param name="Title">The frontmatter title, else the first level-one heading, else empty.</param>
-/// <param name="Template">The template the document was copied from, or <see langword="null"/>.</param>
-/// <param name="Gates">The known hard gates the document declares, in file order, without duplicates.</param>
-/// <param name="Retro">The retrospective cadence, or <see langword="null"/>.</param>
-/// <param name="Digest">The digest cadence, or <see langword="null"/>.</param>
-/// <param name="WipLimit">The work-in-progress limit, or <see langword="null"/>.</param>
-/// <param name="CheckCommand">The command whose exit code the checks gate looks for, or <see langword="null"/>.</param>
-/// <param name="UnknownGates">Gate ids in the frontmatter that Huddle does not know, in file order.</param>
+/// <param name="Title">The first level-one heading of the body, else empty.</param>
 /// <param name="MissingSections">PR-6 outline headings absent from the body, in outline order.</param>
 /// <param name="DefinitionOfDone">The items of the optional <c>## Definition of Done</c> section, in file order.</param>
 /// <param name="Text">The whole document text, verbatim.</param>
 internal sealed record ProcessDocument(
     string Title,
-    VersionedRef? Template,
-    IReadOnlyList<GateId> Gates,
-    RetroCadence? Retro,
-    DigestCadence? Digest,
-    int? WipLimit,
-    string? CheckCommand,
-    IReadOnlyList<string> UnknownGates,
     IReadOnlyList<string> MissingSections,
     IReadOnlyList<DoneItem> DefinitionOfDone,
     string Text)
@@ -44,10 +30,10 @@ internal sealed record ProcessDocument(
         "Escalation",
     ];
 
-    /// <summary>Parses the text of a <c>Process.md</c> file.</summary>
+    /// <summary>Parses the text of a Team's process (<c>AGENTS.md</c> prose and <c>_team.md</c> settings).</summary>
     /// <param name="text">The file text, with LF or CRLF line endings.</param>
     /// <param name="document">The parsed document, or <see langword="null"/>.</param>
-    /// <returns><see langword="false"/> when the text has no closed frontmatter block.</returns>
+    /// <returns><see langword="false"/> only when the text is empty; frontmatter is optional and a closed leading block is skipped as prose.</returns>
     public static bool TryParse(string text, [NotNullWhen(true)] out ProcessDocument? document)
     {
         document = null;
@@ -57,37 +43,10 @@ internal sealed record ProcessDocument(
         }
 
         string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        if (!FrontmatterFence.IsOpening(lines[0]))
-        {
-            return false;
-        }
-
-        int closing = FrontmatterFence.FindClosing(lines, 1);
-        if (closing < 0)
-        {
-            return false;
-        }
-
-        Dictionary<string, string> values = ReadFrontmatter(lines, closing);
+        int closing = FrontmatterFence.IsOpening(lines[0]) ? FrontmatterFence.FindClosing(lines, 1) : -1;
 
         string[] body = lines[(closing + 1)..];
-        (List<GateId> gates, List<string> unknownGates) = ReadGates(values);
-
-        VersionedRef? template = null;
-        if (values.TryGetValue("template", out string? templateText))
-        {
-            _ = VersionedRef.TryParse(Unquote(templateText), out template);
-        }
-
-        string title = values.TryGetValue("title", out string? titleText) ? Unquote(titleText) : string.Empty;
-        if (title.Length == 0)
-        {
-            title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
-        }
-
-        int? wip = ReadWip(values);
-
-        string? checkCommand = values.TryGetValue("checkCommand", out string? commandText) ? Unquote(commandText) : null;
+        string title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
         HashSet<string> headings = body
             .Where(static line => line.StartsWith("## ", StringComparison.Ordinal))
             .Select(static line => line[3..].Trim())
@@ -95,13 +54,6 @@ internal sealed record ProcessDocument(
 
         document = new ProcessDocument(
             title,
-            template,
-            gates,
-            ReadCadence(values, "retro", out int retroEvery, out CadenceUnit retroUnit) ? new RetroCadence(retroEvery, retroUnit) : null,
-            ReadCadence(values, "digest", out int digestEvery, out CadenceUnit digestUnit) ? new DigestCadence(digestEvery, digestUnit) : null,
-            wip,
-            string.IsNullOrWhiteSpace(checkCommand) ? null : checkCommand,
-            unknownGates,
             OutlineHeadings.Where(heading => !headings.Contains(heading)).ToList(),
             ReadDefinitionOfDone(body),
             text);
@@ -128,12 +80,17 @@ internal sealed record ProcessDocument(
 
             if (inSection && line.StartsWith("- ", StringComparison.Ordinal))
             {
-                items.Add(ParseDoneBullet(line[2..].Trim()));
+                items.Add(ParseDoneBullet(StripCheckbox(line[2..].Trim())));
             }
         }
 
         return items;
     }
+
+    private static string StripCheckbox(string text) =>
+        text.Length >= 3 && text[0] == '[' && text[2] == ']' && text[1] is ' ' or 'x' or 'X'
+            ? text[3..].TrimStart()
+            : text;
 
     private static DoneItem ParseDoneBullet(string text)
     {
@@ -181,30 +138,10 @@ internal sealed record ProcessDocument(
         return new DoneRule.Unreadable(text);
     }
 
-    /// <summary>Reads the <c>key: value</c> lines between the frontmatter delimiters.</summary>
-    /// <param name="lines">The document lines.</param>
-    /// <param name="closing">The index of the closing delimiter line.</param>
-    /// <returns>The values by key, compared without case.</returns>
-    private static Dictionary<string, string> ReadFrontmatter(string[] lines, int closing)
-    {
-        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
-        for (int index = 1; index < closing; index++)
-        {
-            string line = lines[index].TrimEnd();
-            int colon = line.IndexOf(':', StringComparison.Ordinal);
-            if (colon > 0 && !char.IsWhiteSpace(line[0]))
-            {
-                values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
-            }
-        }
-
-        return values;
-    }
-
     /// <summary>Reads the <c>gates</c> value into the known gates, without duplicates, and the ids it could not read.</summary>
     /// <param name="values">The frontmatter values.</param>
     /// <returns>The known gates and the unknown ids, each in the order written.</returns>
-    private static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
+    internal static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
     {
         List<GateId> gates = [];
         List<string> unknownGates = [];
@@ -226,7 +163,7 @@ internal sealed record ProcessDocument(
     /// <summary>Reads the <c>wip</c> value.</summary>
     /// <param name="values">The frontmatter values.</param>
     /// <returns>The limit when it is a positive whole number, else <see langword="null"/>.</returns>
-    private static int? ReadWip(Dictionary<string, string> values)
+    internal static int? ReadWip(Dictionary<string, string> values)
     {
         if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
         {
@@ -234,41 +171,6 @@ internal sealed record ProcessDocument(
         }
 
         return null;
-    }
-
-    /// <summary>Rewrites the <c>gates</c> line of the frontmatter, keeping every other line as it is.</summary>
-    /// <param name="text">The document text.</param>
-    /// <param name="gates">The gates the rewritten line lists.</param>
-    /// <returns>The new text.</returns>
-    public static string WithGates(string text, IReadOnlyList<GateId> gates)
-    {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(gates);
-
-        List<string> lines = [.. text.Split('\n')];
-        if (!FrontmatterFence.IsOpening(lines[0]))
-        {
-            return text;
-        }
-
-        int closing = FrontmatterFence.FindClosing(lines, 1);
-        if (closing < 0)
-        {
-            return text;
-        }
-
-        int existing = lines.FindIndex(1, closing - 1, static line => line.StartsWith("gates:", StringComparison.OrdinalIgnoreCase));
-        string newLine = string.Concat("gates: [", string.Join(", ", gates.Select(QuotedId)), "]");
-        if (existing >= 0)
-        {
-            lines[existing] = lines[existing].EndsWith('\r') ? newLine + "\r" : newLine;
-        }
-        else
-        {
-            lines.Insert(closing, lines[closing].EndsWith('\r') ? newLine + "\r" : newLine);
-        }
-
-        return string.Join('\n', lines);
     }
 
     /// <summary>Reads the lines of the <c>## Onboarding</c> section (PR-5), up to the next heading.</summary>
@@ -304,7 +206,7 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
-    /// <summary>The four gates a Process.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    /// <summary>The four gates a Team's _team.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
     private static readonly GateId[] ProcessGates =
     [
         GateId.QaEvidenceBeforeDone,
@@ -312,8 +214,6 @@ internal sealed record ProcessDocument(
         GateId.SpecApprovedBeforeBuild,
         GateId.FailingTestBeforeFix,
     ];
-
-    private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
     /// <param name="gate">The gate.</param>
@@ -365,54 +265,14 @@ internal sealed record ProcessDocument(
         return false;
     }
 
-    private static bool ReadCadence(Dictionary<string, string> values, string key, out int every, out CadenceUnit unit)
-    {
-        every = 0;
-        unit = default;
-        if (!values.TryGetValue(key, out string? raw) || !raw.StartsWith('{') || !raw.EndsWith('}'))
-        {
-            return false;
-        }
-
-        Dictionary<string, string> fields = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string pair in raw[1..^1].Split(','))
-        {
-            int colon = pair.IndexOf(':', StringComparison.Ordinal);
-            if (colon > 0)
-            {
-                fields[pair[..colon].Trim()] = Unquote(pair[(colon + 1)..]);
-            }
-        }
-
-        if (!fields.TryGetValue("every", out string? everyText)
-            || !int.TryParse(everyText, NumberStyles.None, CultureInfo.InvariantCulture, out every)
-            || every <= 0
-            || !fields.TryGetValue("unit", out string? unitText))
-        {
-            return false;
-        }
-
-        switch (unitText)
-        {
-            case "done-tasks":
-                unit = CadenceUnit.DoneTasks;
-                return true;
-            case "days":
-                unit = CadenceUnit.Days;
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static List<string> SplitList(string raw) =>
+    internal static List<string> SplitList(string raw) =>
         raw.Trim().Trim('[', ']')
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Select(Unquote)
             .Where(static item => item.Length > 0)
             .ToList();
 
-    private static string Unquote(string raw)
+    internal static string Unquote(string raw)
     {
         string value = raw.Trim();
         if (value.Length >= 2 && value[0] == '\'' && value[^1] == '\'')

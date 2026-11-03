@@ -12,10 +12,7 @@ public sealed class InstructionsAndMemoryPromptTests
     /// <param name="key">The Prompt's key.</param>
     /// <param name="placeholders">The placeholders it declares and requires, comma separated.</param>
     [Theory]
-    [InlineData("systemPrompt.instructions", "{{instructions}}")]
-    [InlineData("systemPrompt.instructionsSection", "{{source}},{{text}}")]
-    [InlineData("systemPrompt.instructionsCut", "{{max}},{{path}}")]
-    [InlineData("systemPrompt.instructionsRefusal", "{{path}}")]
+    [InlineData("systemPrompt.agentsMdCut", "{{max}},{{path}}")]
     public void InstructionsPrompts_DeclareTheirPlaceholders(string key, string placeholders)
     {
         ArgumentNullException.ThrowIfNull(placeholders);
@@ -30,16 +27,17 @@ public sealed class InstructionsAndMemoryPromptTests
     [Fact]
     public void InstructionsPrompts_CarryTheSpecWording()
     {
-        Assert.Equal("### {{source}}\n{{text}}", PromptCatalog.Get("systemPrompt.instructionsSection").Default);
-        Assert.Equal("…cut at {{max}} characters; the rest is in {{path}}.", PromptCatalog.Get("systemPrompt.instructionsCut").Default);
-        Assert.Equal(
-            "Instructions files are written by the Human. Ask the Human to change {{path}}.",
-            PromptCatalog.Get("systemPrompt.instructionsRefusal").Default);
+        Assert.Equal("…cut at {{max}} characters; the rest is in {{path}}.", PromptCatalog.Get("systemPrompt.agentsMdCut").Default);
+    }
 
-        string instructions = PromptCatalog.Get("systemPrompt.instructions").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
-        Assert.StartsWith("## Instructions\nThe Human wrote these standing instructions for you. Follow them in every Room.", instructions, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
-        Assert.Contains("the more specific level wins: your own over your Team's, your Team's over Huddle's.", instructions, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
-        Assert.EndsWith("{{instructions}}", instructions, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+    /// <summary>The levels Prompt (T8) takes no placeholders and applies at the next session.</summary>
+    [Fact]
+    public void AgentsMdLevels_HasNoPlaceholders_AndAppliesNextSession()
+    {
+        PromptDefinition prompt = PromptCatalog.Get("systemPrompt.agentsMdLevels");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
     }
 
     /// <summary>The index line is <c>- {{file}} - {{summary}}</c>, and only <c>{{summary}}</c> is required, so an older override that used <c>{{path}}</c> still validates.</summary>

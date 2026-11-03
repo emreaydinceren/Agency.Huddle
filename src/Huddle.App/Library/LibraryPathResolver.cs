@@ -91,6 +91,91 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
     }
 
     /// <summary>
+    /// The read-intent resolve (SB-R20, Spec §8.5): <see cref="TryResolve"/>, and when the result lies under the
+    /// Teams root but does not exist, the same relative path under the Archive root if THAT exists, marked
+    /// <see cref="LibraryPath.Archived"/> and read-only. Segments are matched against the Archive folder's
+    /// listing ignoring case, so a differently-cased Team name finds its archive on every OS (corrections-12 item 4).
+    /// Writers keep the strict <see cref="TryResolve"/>, which never falls back.
+    /// </summary>
+    /// <param name="rootId">The Library Root id, compared ordinally.</param>
+    /// <param name="relativePath">The path to resolve, relative to the root, either separator.</param>
+    /// <param name="path">The resolved path, when this returns <see langword="true"/>.</param>
+    /// <param name="error">The refusal reason, when this returns <see langword="false"/>.</param>
+    /// <returns><see langword="true"/> when the path resolves inside the Library, live or archived.</returns>
+    internal bool TryResolveForRead(string rootId, string relativePath, [NotNullWhen(true)] out LibraryPath? path, [NotNullWhen(false)] out string? error)
+    {
+        if (!this.TryResolve(rootId, relativePath, out path, out error))
+        {
+            return false;
+        }
+
+        if (path.Root.Kind == LibraryRootKind.Teams
+            && path.RelativePath.Length > 0
+            && !File.Exists(path.FullPath)
+            && !Directory.Exists(path.FullPath)
+            && this.TryResolveArchived(path.RelativePath) is LibraryPath archived)
+        {
+            path = archived;
+        }
+
+        return true;
+    }
+
+    /// <summary>The Archive-root twin of a Teams-relative path, or <see langword="null"/> when the Archive holds none.</summary>
+    private LibraryPath? TryResolveArchived(string teamsRelativePath)
+    {
+        LibraryRoot? archive = this.roots.Roots.FirstOrDefault(static root => root.Kind == LibraryRootKind.Archive);
+        if (archive is null)
+        {
+            return null;
+        }
+
+        string current = archive.FullPath;
+        List<string> onDisk = [];
+        foreach (string segment in teamsRelativePath.Split('/'))
+        {
+            string? found = FindChildIgnoringCase(current, segment);
+            if (found is null)
+            {
+                return null;
+            }
+
+            onDisk.Add(found);
+            current = Path.Combine(current, found);
+        }
+
+        return this.TryResolve(archive.Id, string.Join('/', onDisk), out LibraryPath? resolved, out _)
+            ? resolved with { ReadOnly = true, Archived = true }
+            : null;
+    }
+
+    /// <summary>Lists <paramref name="folder"/> and returns the child named <paramref name="name"/>, preferring an exact match over a case-insensitive one.</summary>
+    private static string? FindChildIgnoringCase(string folder, string name)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        string? insensitive = null;
+        foreach (string entry in Directory.EnumerateFileSystemEntries(folder))
+        {
+            string candidate = Path.GetFileName(entry);
+            if (string.Equals(candidate, name, StringComparison.Ordinal))
+            {
+                return candidate;
+            }
+
+            if (insensitive is null && string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase))
+            {
+                insensitive = candidate;
+            }
+        }
+
+        return insensitive;
+    }
+
+    /// <summary>
     /// Resolves one child of an already-resolved folder (Addendum A2): runs step 2 and steps 5-7 on
     /// <paramref name="child"/>'s name alone, following it only when it is itself a reparse point with
     /// a non-null <c>LinkTarget</c> (containment as step 4).

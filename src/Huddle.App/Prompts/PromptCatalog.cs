@@ -83,6 +83,8 @@ internal static class PromptCatalog
         ..BuildPart37(),
         ..BuildPart38(),
         ..BuildPart39(),
+        ..BuildPart51(),
+        ..BuildPart52(),
         ..BuildPart40(),
         ..BuildPart41(),
         ..BuildPart42(),
@@ -92,7 +94,9 @@ internal static class PromptCatalog
         ..BuildPart46(),
         ..BuildPart47(),
         ..BuildPart48(),
+        ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
+        ..BuildPart53(),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
@@ -152,12 +156,12 @@ internal static class PromptCatalog
                 A name may contain spaces, so "@Chief of Staff" is one mention of one member;
                 write the name exactly as it is given to you, with no quotes around it.
                 "@all" counts as a mention of every agent in the Room, exactly as if each name were
-                written, so the rule above applies to it unchanged. Write "@all" yourself only when
-                you need every other agent to answer, never just to reply to one member.
+                written, so the rule above applies to it unchanged.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to avoid replying to every message in group Rooms."),
 
         new PromptDefinition(
             Key: "systemPrompt.tools",
@@ -197,7 +201,7 @@ internal static class PromptCatalog
                 "{{askHumanTool}}: the tool's exact, prefixed name is substituted in.",
             Default:
                 """
-                When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
+                To ask the Human something, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
                 """,
             Placeholders: ["{{askHumanTool}}"],
             RequiredPlaceholders: ["{{askHumanTool}}"],
@@ -245,37 +249,10 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.processBlockManager</c> to <c>turn.onboarding</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.onboarding</c> to <c>turn.onboarding</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart04() =>
     [
-        new PromptDefinition(
-            Key: "systemPrompt.processBlockManager",
-            Label: "Process block (manager)",
-            HelperText:
-                "Gives a Team's manager the Team's whole Process.md, read afresh at each session start. " +
-                "Must keep {{process}}, where the document text is substituted in.",
-            Default:
-                """
-                This is your Team's process. Follow it and keep it current.
-
-                {{process}}
-                """,
-            Placeholders: ["{{process}}"],
-            RequiredPlaceholders: ["{{process}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.processBlockMember",
-            Label: "Process block (member)",
-            HelperText:
-                "Points every other member of a Team that has a Process.md at it. Must keep {{path}}, " +
-                "where the document's Library path is substituted in.",
-            Default: "Your Team follows a written process. Read it before you start work: {{path}}",
-            Placeholders: ["{{path}}"],
-            RequiredPlaceholders: ["{{path}}"],
-            Timing: PromptTiming.NextSession),
-
         new PromptDefinition(
             Key: "turn.onboarding",
             Label: "Onboarding turn",
@@ -803,7 +780,7 @@ internal static class PromptCatalog
                 {{roomLabel}}
                 The Human has just started using this application and has not written anything yet. This is
                 your first Message to them, and nothing prompted it. Greet them: if you hold a Skill for
-                this, read it first and follow it. Keep it to one Message that ends with one question.
+                this, read it first and follow it.
                 """,
             Placeholders: ["{{roomLabel}}"],
             RequiredPlaceholders: ["{{roomLabel}}"],
@@ -1179,7 +1156,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
+                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1390,8 +1367,7 @@ internal static class PromptCatalog
                 restarts, and every copy of you in your other Rooms reads the same folder.
                 Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them. The index below is built from each file's description, so there is no MEMORY.md to keep.
 
-                Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
-                about the people or work you support), write it to the right topic file at once, not at the end.
+                Save as you go. Write to the right topic file at once, not at the end.
                 Assume your context can reset at any moment: what is not written down is lost. When you
                 propose something (an idea, a plan, an option) and the Human takes it, turns it down or puts it
                 off, note the proposal and their answer in one topic file, and read that file before you
@@ -1403,8 +1379,7 @@ internal static class PromptCatalog
                 for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
                 it. When a file outgrows its description, update the description in the same step.
 
-                Do not save what is true only for this conversation, or what you can easily look up again. Never
-                save that something is missing, unknown or was never discussed: when you cannot find a fact, say
+                Never save that something is missing, unknown or was never discussed: when you cannot find a fact, say
                 so in your reply and leave your memory as it is, because a later read would take the gap for the
                 truth. If you are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
                 memory is the source of truth over what you think you remember.{{memoryChanges}} Do not claim to
@@ -1534,8 +1509,7 @@ internal static class PromptCatalog
                 Members propose facts, and Huddle files them through a Helper that decides whether each is worth
                 keeping and where it belongs, so you do not need to file what members tell you. You can still write it
                 yourself with the {{memoryTool}} tool: do so for your own decisions, and to fix or tidy what is there.
-                When a decision is reversed, replace it and note briefly that it changed. Descriptions follow the same
-                rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
+                Descriptions follow the same rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
                 instead.
                 """,
             Placeholders: ["{{managedTeams}}", "{{managedPaths}}", "{{memoryTool}}", "{{proposeTool}}"],
@@ -1555,9 +1529,8 @@ internal static class PromptCatalog
                 {{memberTeams}} keep shared Memory:
                 {{memberPaths}}
                 Read it with the {{memoryTool}} tool, passing the Team or Project as the folder. You do not write it.
-                When you learn something the whole Team should keep, such as a decision and its reason, an agreed way
-                of working or who owns what, propose it with {{proposeTool}}, one fact at a time; Huddle files it and
-                records that you proposed it. Keep your own notes in your own Memory.
+                When you learn something the whole Team should keep, propose it with {{proposeTool}}, one fact at a time; Huddle files it
+                and records that you proposed it. Keep your own notes in your own Memory.
                 """,
             Placeholders: ["{{memberTeams}}", "{{memberPaths}}", "{{memoryTool}}", "{{proposeTool}}"],
             RequiredPlaceholders: ["{{memberTeams}}", "{{memberPaths}}"],
@@ -1612,7 +1585,8 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.roomSessionsCarry</c> to <c>systemPrompt.sharedSession</c>.</summary>
@@ -1656,7 +1630,8 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>task.wake.message</c> to <c>tool.getTask.description</c>.</summary>
@@ -1808,7 +1783,7 @@ internal static class PromptCatalog
             Key: "prompt.digest",
             Label: "Digest prompt",
             HelperText:
-                "The status digest a manager is asked to post on the cadence in Process.md (OR-3). " +
+                "The status digest a manager is asked to post on the cadence in the Team's _team.md (OR-3). " +
                 "Takes the Team name and the date the digest covers from.",
             Default:
                 """
@@ -1841,7 +1816,7 @@ internal static class PromptCatalog
             Key: "prompt.retro",
             Label: "Retro prompt",
             HelperText:
-                "The retro a Retro agent is asked to run, on demand or on the cadence in Process.md " +
+                "The retro a Retro agent is asked to run, on demand or on the cadence in _team.md (its rules are in AGENTS.md) " +
                 "(RT-2). Takes the Team name and the date the retro covers from.",
             Default:
                 """
@@ -1849,7 +1824,7 @@ internal static class PromptCatalog
                 1. Gather: start with read_records for {{team}} since {{since}}. It returns Task change logs, Review bounces, Budget pauses, wake-up limits hit, escalations, persisted spend, Requests and tool-call log summaries. Read the evidence before you ask anyone anything.
                 2. Ask: open a Room with the members involved and ask each one about a specific moment in the evidence. Do not ask general questions.
                 3. Report: write the report to _retros/<date>.md with the top 3 issues, each linked to its evidence.
-                4. Propose: propose at most 3 changes as diffs to Process.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
+                4. Propose: propose at most 3 changes as diffs to the Team's AGENTS.md or _team.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
                 5. Register: add one row per finding to Retro register.md with ID, Finding, Action, Owner, Status (Open, Done, Partial, Verified or Changed) and Evidence / next check. At the next retro, check the Done rows against new evidence.
                 """,
             Placeholders: ["{{team}}", "{{since}}"],
@@ -2024,44 +1999,15 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.instructionsRefusal</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.agentsMdCut</c> to <c>systemPrompt.rawRefusal</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart39() =>
     [
         new PromptDefinition(
-            Key: "systemPrompt.instructions",
-            Label: "Instructions block",
+            Key: "systemPrompt.agentsMdCut",
+            Label: "AGENTS.md cut line",
             HelperText:
-                "The Human's standing Instructions, spliced into the system prompt right after the Agent's " +
-                "own text (Instructions and Memory §3.2). Left out entirely when no level has any text. Must " +
-                "keep {{instructions}}: it holds one section per level, from Huddle-wide to the Agent's own.",
-            Default:
-                """
-                ## Instructions
-                The Human wrote these standing instructions for you. Follow them in every Room. Where they
-                conflict, the more specific level wins: your own over your Team's, your Team's over Huddle's.
-                {{instructions}}
-                """,
-            Placeholders: ["{{instructions}}"],
-            RequiredPlaceholders: ["{{instructions}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.instructionsSection",
-            Label: "Instructions section",
-            HelperText:
-                "One level of the Instructions: a heading naming whose they are (Huddle, a Team or You) and " +
-                "the file's text. Must keep {{source}} and {{text}}.",
-            Default: "### {{source}}\n{{text}}",
-            Placeholders: ["{{source}}", "{{text}}"],
-            RequiredPlaceholders: ["{{source}}", "{{text}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.instructionsCut",
-            Label: "Instructions cut line",
-            HelperText:
-                "Appended to an Instructions file that was cut at Team:Instructions:MaxChars. Must keep " +
+                "Appended to an AGENTS.md file that was cut at Team:AgentsMd:MaxCharsPerFile. Must keep " +
                 "{{max}} and {{path}}: they say how much was kept and where the rest is.",
             Default: "…cut at {{max}} characters; the rest is in {{path}}.",
             Placeholders: ["{{max}}", "{{path}}"],
@@ -2069,15 +2015,67 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
-            Key: "systemPrompt.instructionsRefusal",
-            Label: "Instructions write refused",
+            Key: "systemPrompt.agentsMdRefusal",
+            Label: "AGENTS.md write refused",
             HelperText:
-                "The reason logged when an Agent's tool call that edits, deletes or moves an Instructions " +
-                "file is refused (Instructions and Memory §3.3). Must keep {{path}}.",
-            Default: "Instructions files are written by the Human. Ask the Human to change {{path}}.",
-            Placeholders: ["{{path}}"],
-            RequiredPlaceholders: ["{{path}}"],
+                "The reason logged when an Agent's tool call that edits, deletes or moves an AGENTS.md " +
+                "file is refused (Second Brain §6.6).",
+            Default: "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.rawRefusal",
+            Label: "Raw original change refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that changes an original in a raw/ folder is refused (§8.6).",
+            Default: "Files in raw/ are kept as they arrived. Add a new file beside the original instead, for example \"<name> - extract.md\".",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.agentsMdLevels</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart51() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.agentsMdLevels",
+            Label: "AGENTS.md levels sentence",
+            HelperText:
+                "Said once before the AGENTS.md sections in the system prompt: how the levels combine and which one wins " +
+                "(Spec §8.2). Left out when no level has any text.",
+            Default:
+                "Each level below adds to the one before it. If two rules conflict, follow the more specific one: " +
+                "a Project's over its Team's, a Team's over the Huddle-wide rules.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.huddleMemoryRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart52() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.huddleMemoryRefusal",
+            Label: "Huddle-wide Memory write refused",
+            HelperText:
+                "The reason logged when an Agent other than the Chief of Staff tries to change the Huddle-wide Memory " +
+                "folder, Teams/memory/ (§6.6).",
+            Default: "Huddle-wide Memory is kept by the Chief of Staff. Ask the Chief of Staff to record it.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the slice holding <c>systemPrompt.promptsRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart53() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.promptsRefusal",
+            Label: "Prompts folder write refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, deletes or moves a file in the " +
+                "Prompts folder, or the folder itself, is refused (Second Brain §6.6).",
+            Default: "Files in the Prompts folder are Huddle's prompts and only the Human changes them.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryChanges</c> to <c>systemPrompt.memoryNoManager</c>.</summary>
@@ -2411,6 +2409,15 @@ internal static class PromptCatalog
             Default: "You are not a member of {{team}}. You can propose to: {{teams}}.",
             Placeholders: ["{{team}}", "{{teams}}"],
             RequiredPlaceholders: ["{{team}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "tool.proposeTeamMemory.noTeam",
+            Label: "Team Memory proposal, no Team",
+            HelperText: "Said when the team argument is missing or blank. Must say nothing was proposed, so the Agent does not report the fact as saved; {{teams}} lists the Teams it may propose to.",
+            Default: "Name the Team in team and the fact in fact; nothing was proposed. You can propose to: {{teams}}.",
+            Placeholders: ["{{teams}}"],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
     ];
 

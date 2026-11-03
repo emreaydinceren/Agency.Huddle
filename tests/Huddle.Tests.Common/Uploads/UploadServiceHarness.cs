@@ -48,6 +48,9 @@ internal sealed class UploadServiceHarness : IDisposable
     /// <summary>The options a <see cref="PendingUploads"/> over this harness reads its cap from.</summary>
     public IOptions<TeamOptions> Options { get; private init; } = TestOptions.Create();
 
+    /// <summary>The baseline store the service records saved files into.</summary>
+    public required RawBaselineStore Baselines { get; init; }
+
     /// <summary>Builds the harness.</summary>
     /// <param name="ct">Cancels the directory setup.</param>
     /// <param name="maxUploadBytes">An override for <see cref="LibraryOptions.MaxUploadBytes"/>, or <see langword="null"/> for the default.</param>
@@ -75,8 +78,9 @@ internal sealed class UploadServiceHarness : IDisposable
         Assert.NotNull(nova);
         LibraryFileService files = fixture.CreateService();
         RoomUploadFolders folders = new(fixture.Resolver, files: files);
-        ChatUploadService service = new(directory, files, folders, options, clock);
-        return new UploadServiceHarness(dir, fixture, directory, nova, service, folders) { Options = options };
+        RawBaselineStore baselines = new(options);
+        ChatUploadService service = new(directory, files, folders, options, baselines, clock);
+        return new UploadServiceHarness(dir, fixture, directory, nova, service, folders) { Options = options, Baselines = baselines };
     }
 
     /// <inheritdoc />

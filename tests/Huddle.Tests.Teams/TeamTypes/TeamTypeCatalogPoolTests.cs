@@ -61,7 +61,15 @@ public sealed class TeamTypeCatalogPoolTests
         Assert.Equal("Team Lead", lead.Title);
         Assert.Equal(ModelTier.Strongest, lead.Model.Tier);
         Assert.Equal(["Lena"], lead.SuggestedNames);
-        Assert.Equal([new SkillRef("plan", "builtin", "plan")], lead.Skills);
+        // The lead is the manager, so it also holds the three Second Brain Skills (Task 105) after the job's own.
+        Assert.Equal(
+            [
+                new SkillRef("plan", "builtin", "plan"),
+                new SkillRef("ingest", "builtin", "ingest"),
+                new SkillRef("wrap-up", "builtin", "wrap-up"),
+                new SkillRef("brain-check", "builtin", "brain-check"),
+            ],
+            lead.Skills);
         Assert.True(lead.Manager);
         Assert.True(lead.Required);
         Assert.Equal(["check"], lead.Covers);

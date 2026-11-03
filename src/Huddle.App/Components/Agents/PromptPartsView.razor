@@ -1,0 +1,82 @@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
+@inject IServiceProvider Services
+
+@* "What this Agent reads" (Spec §6.5, SB-R16): one row per part of the next session's system prompt, in order, each with
+   where it comes from and where to change it. Read-only. *@
+<div class="prompt-parts-view">
+    <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary prompt-parts-note">Shown for @this.Adapter, as last started</MudText>
+    @foreach (PromptPart part in this.Parts)
+    {
+        string? href = this.LinkFor(part.Source);
+        <div class="prompt-part-row mb-2">
+            <MudText Typo="Typo.body2" Class="prompt-part-label d-inline">@part.Label</MudText>
+            @if (href is not null)
+            {
+                <a class="prompt-part-source ml-2 mud-typography mud-typography-caption" href="@href">@SourceText(part.Source)</a>
+            }
+            else
+            {
+                <span class="prompt-part-source ml-2 mud-typography mud-typography-caption mud-text-secondary">@SourceText(part.Source)</span>
+            }
+            @* The body is rendered only once opened: a prompt is long, and the page text should not carry all of it. *@
+            <button type="button" class="prompt-part-toggle ml-2 mud-typography mud-typography-caption" aria-expanded="@(this.expanded.Contains(part) ? "true" : "false")" @onclick="() => this.Toggle(part)">
+                @(this.expanded.Contains(part) ? "Hide text" : "Show text")
+            </button>
+            @if (this.expanded.Contains(part))
+            {
+                <pre class="agent-profile-card-persona prompt-part-body">@part.Text</pre>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The <see cref="PromptPart"/>s of the next session's prompt, in prompt order.</summary>
+    [Parameter]
+    public IReadOnlyList<PromptPart> Parts { get; set; } = [];
+
+    /// <summary>The Adapter the parts were composed for.</summary>
+    [Parameter]
+    public string Adapter { get; set; } = string.Empty;
+
+    private readonly HashSet<PromptPart> expanded = [];
+
+    /// <summary>Opens or closes one part's text.</summary>
+    private void Toggle(PromptPart part)
+    {
+        if (!this.expanded.Remove(part))
+        {
+            this.expanded.Add(part);
+        }
+    }
+
+    /// <summary>The text that says where a part comes from.</summary>
+    private static string SourceText(PromptPartSource source) => source switch
+    {
+        PromptPartSource.Prompt prompt => prompt.Overridden ? "Prompt · overridden" : "Prompt · default",
+        PromptPartSource.File file => file.Path,
+        PromptPartSource.Persona persona => $"Persona · {persona.Name}",
+        PromptPartSource.Index { Kind: "memory" or "huddleMemory" } index => $"{index.Count} topics",
+        PromptPartSource.Index { Kind: "outputs" } index => $"{index.Count} documents",
+        PromptPartSource.Index index => $"{index.Count} Teams",
+        PromptPartSource.Tools tools => $"{tools.Count} tools",
+        _ => string.Empty,
+    };
+
+    /// <summary>Where the Human changes the part: a Prompt's Settings row or a file's Library path; <see langword="null"/> where nothing links.</summary>
+    private string? LinkFor(PromptPartSource source)
+    {
+        switch (source)
+        {
+            case PromptPartSource.Prompt prompt:
+                return $"/settings?tab=prompts#{prompt.Key}";
+            case PromptPartSource.File file
+                when this.Services.GetService(typeof(LibraryPathResolver)) is LibraryPathResolver resolver
+                    && resolver.TryResolveAbsolute(file.Path, out LibraryPath? path):
+                return $"/library?root={Uri.EscapeDataString(path.Root.Id)}&path={Uri.EscapeDataString(path.RelativePath)}";
+            default:
+                return null;
+        }
+    }
+}

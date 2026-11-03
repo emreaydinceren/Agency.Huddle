@@ -22,24 +22,22 @@ internal static class TaskGateText
         ]
         """);
 
-    /// <summary>A Process.md frontmatter enabling the given comma-joined, quoted gate ids.</summary>
+    /// <summary>A <c>_team.md</c> text enabling the given comma-joined, quoted gate ids (Spec 6.2: the settings live in the Team file).</summary>
     internal static string Process(string gates) =>
-        $"---\ntitle: 'Flow'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n# Flow\n";
+        $"---\nteamType: 'web@1.2.0'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n";
 
-    /// <summary>Builds a gate service for Team Platform whose Process.md holds <paramref name="processText"/>, or no file when null.</summary>
-    internal static ProcessGateService BuildGates(TempDataDir dir, string? processText)
+    /// <summary>Builds a gate service for Team Platform whose <c>_team.md</c> is <paramref name="teamFileText"/>, or has no settings when null.</summary>
+    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText)
     {
-        if (processText is not null)
-        {
-            File.WriteAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName), processText);
-        }
-
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
+        TeamFile teamFile = teamFileText is not null && TeamFile.TryParse(teamFileText, out TeamFile? parsed)
+            ? parsed
+            : new TeamFile(type, null, null, null, string.Empty);
         FakeTeamFolders folders = new()
         {
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = new TeamFile(type, null, null, null, string.Empty),
+            ReadResult = teamFile,
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)

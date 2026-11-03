@@ -3,13 +3,12 @@
 # one-line reminder that agents/CSharpPrinciples.md is binding.
 #
 # CLAUDE.md already @-imports agents/CSharpPrinciples.md, so the reminder stays
-# short rather than restating the rules. Uses bash builtins only ($(</dev/stdin),
-# [[ =~ ]], printf): every external process costs seconds under Git Bash on Windows,
-# and this runs before every Write and Edit. $(</dev/stdin) reads the payload in
-# blocks without a fork; `read -d ''` would read a large Write payload one byte at a time.
+# short rather than restating the rules. Uses bash builtins apart from $(cat), which
+# reads the payload ($(</dev/stdin) fails in the harness's Git Bash); `read -d ''`
+# would read a large Write payload one byte at a time.
 set -uo pipefail
 
-payload=$(</dev/stdin)
+payload=$(cat)
 
 # The first "file_path" in the payload is the tool's target; a later one could sit
 # inside old_string/new_string.

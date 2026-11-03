@@ -121,7 +121,7 @@ internal sealed class ReferenceResolver(
             return null;
         }
 
-        if (!TaskId.TryParse(key, out TaskId id) || tasks.Get(id) is not TaskItem task)
+        if (!TaskId.TryParse(key, out TaskId id) || (tasks.Get(id) ?? tasks.FindArchived(id)) is not TaskItem task)
         {
             return dropMissing ? null : new GoneReference(ReferenceKind.Task, key);
         }

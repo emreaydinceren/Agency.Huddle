@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Caregiving basics
 
+## Identity
+
+This Team handles the paperwork of caring for one person: appointments, forms, benefits, care mail and the weekly plan. The family carer makes every decision and signs every form, and clinicians decide care. Anything that sounds medical or urgent does not stay here; it goes to the Human at once, with advice to contact a clinician.
+
 ## When it applies
 
 - The paperwork of caring for one person: appointments, forms, benefits, messages and the weekly plan.

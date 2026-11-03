@@ -29,6 +29,20 @@ public sealed class ProposeTeamMemoryToolTests
         Assert.Equal("You are not a member of Nowhere. You can propose to: Research.", await harness.ProposeAsync("Leo", "Nowhere", "A fact."));
     }
 
+    /// <summary>
+    /// A missing or blank Team is refused by saying what to pass, not as a membership refusal naming an empty Team: an Agent
+    /// that called the tool with another tool's arguments read "You are not a member of ." and reported the fact as saved.
+    /// </summary>
+    [Fact]
+    public async Task BlankTeam_IsRefusedNamingTheArguments()
+    {
+        using TeamMemoryHarness harness = new();
+
+        Assert.Equal(
+            "Name the Team in team and the fact in fact; nothing was proposed. You can propose to: Research.",
+            await harness.ProposeAsync("Leo", "  ", "A fact."));
+    }
+
     /// <summary>The manager and the Chief of Staff may propose; the Chief of Staff to any Team (U-9).</summary>
     /// <param name="persona">The caller.</param>
     /// <param name="team">The Team.</param>

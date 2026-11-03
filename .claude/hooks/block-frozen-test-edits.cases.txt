@@ -1,0 +1,7 @@
+BLOCK|empty payload fails closed|
+BLOCK|frozen path is denied|{"tool_name":"Edit","tool_input":{"file_path":"{TMP}/tests/Frozen.cs","old_string":"a","new_string":"b"}}
+BLOCK|frozen path with a later file_path in the text|{"tool_input":{"file_path":"{TMP}/tests/Frozen.cs","new_string":"\"file_path\": \"x\""}}
+allow|other test file in the same worktree|{"tool_input":{"file_path":"{TMP}/tests/Other.cs","old_string":"a","new_string":"b"}}
+allow|non-test path|{"tool_input":{"file_path":"{TMP}/src/Foo.cs","old_string":"a","new_string":"b"}}
+allow|new file in a folder that does not exist yet|{"tool_input":{"file_path":"{TMP}/tests/New/Thing.cs","content":"x"}}
+allow|payload without file_path|{"tool_input":{"command":"ls"}}

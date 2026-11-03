@@ -126,18 +126,18 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal("pinned root \"Huddle docs\"", report.Items[4].Location, StringComparer.Ordinal);
     }
 
-    /// <summary>A file in the Uploads root is labelled <c>upload</c>, not <c>agent {roomId}</c>; a file under a Team's Uploads folder keeps its Team label.</summary>
+    /// <summary>A file in the Uploads root is labelled <c>upload</c>, not <c>agent {roomId}</c>; a file under a Team's raw folder keeps its Team label.</summary>
     [Fact]
-    public async Task Collect_UploadsRootFile_LabelledUpload_TeamUploadKeepsTeamLabel()
+    public async Task Collect_UploadsRootFile_LabelledUpload_TeamRawKeepsTeamLabel()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
         using LibraryFileServiceFixture _ = fixture;
-        string uploadDir = Path.Combine(fixture.DataDir, "Uploads", "room1");
+        string uploadDir = Path.Combine(fixture.DataDir, "Raw", "room1");
         Directory.CreateDirectory(uploadDir);
         string uploadFile = Path.Combine(uploadDir, "note.md");
         File.WriteAllText(uploadFile, "upload");
-        string teamUploadDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Uploads", "room2");
+        string teamUploadDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "raw", "room2");
         Directory.CreateDirectory(teamUploadDir);
         string teamUploadFile = Path.Combine(teamUploadDir, "note.md");
         File.WriteAllText(teamUploadFile, "team upload");
@@ -160,7 +160,7 @@ public sealed class LibraryDocumentCollectorTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
         using LibraryFileServiceFixture _ = fixture;
-        string taskDir = Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002");
+        string taskDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002");
         Directory.CreateDirectory(taskDir);
         string taskFile = Path.Combine(taskDir, "brief.md");
         File.WriteAllText(taskFile, "brief");
@@ -178,7 +178,7 @@ public sealed class LibraryDocumentCollectorTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
         using LibraryFileServiceFixture _ = fixture;
-        string uploadDir = Path.Combine(fixture.DataDir, "Uploads", "room1");
+        string uploadDir = Path.Combine(fixture.DataDir, "Raw", "room1");
         Directory.CreateDirectory(uploadDir);
         string uploadFile = Path.Combine(uploadDir, "meeting notes (2).md");
         File.WriteAllText(uploadFile, "upload");
@@ -189,7 +189,7 @@ public sealed class LibraryDocumentCollectorTests
 
         Assert.True(resolved);
         Assert.NotNull(path);
-        Assert.Equal(LibraryRootKind.Uploads, path.Root.Kind);
+        Assert.Equal(LibraryRootKind.Raw, path.Root.Kind);
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal("upload", item.Location, StringComparer.Ordinal);
         Assert.Equal(uploadFile, item.FullPath, StringComparer.OrdinalIgnoreCase);

@@ -25,7 +25,9 @@ public sealed class ProcessStepTests
 
     private const string OtherText = "---\ntitle: 'Other'\n---\n# Other\n";
 
-    private const string TwoGateText = "---\ntitle: 'Flow'\ntemplate: 'flow@1.0.0'\ngates: ['qa-evidence-before-done', 'checks-before-merge']\ncheckCommand: 'dotnet test'\n---\n# Flow\n\n## When it applies\n";
+    private const string TwoGateBody = "# Flow\n\n## When it applies\n";
+
+    private const string FlowBody = "# Flow\n\n## When it applies\n";
 
     private const string Nf5Sentence = "Checks before merge only works in work modes where the adapter asks before running shell commands.";
 
@@ -53,8 +55,9 @@ public sealed class ProcessStepTests
 
         await cut.InvokeAsync(() => cut.Find("button.process-step-use").ClickAsync());
 
-        Assert.Equal(FlowText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
-        Assert.Equal("Process.md created.", cut.Find(".process-step-result").TextContent.Trim());
+        Assert.Equal(FlowBody, File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
+        Assert.Equal([GateId.QaEvidenceBeforeDone], GatesOf(ctx));
+        Assert.Equal("AGENTS.md created.", cut.Find(".process-step-result").TextContent.Trim());
     }
 
     /// <summary>Choosing the other process changes the preview, and Use this process writes that one.</summary>
@@ -72,7 +75,7 @@ public sealed class ProcessStepTests
         cut.WaitForAssertion(() => Assert.Equal(OtherText, cut.Find(".process-step-preview").TextContent));
         await cut.InvokeAsync(() => cut.Find("button.process-step-use").ClickAsync());
 
-        Assert.Equal(OtherText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
+        Assert.Equal("# Other\n", File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 
     /// <summary>Start blank writes the seven-heading outline with no gates.</summary>
@@ -86,10 +89,10 @@ public sealed class ProcessStepTests
 
         await cut.InvokeAsync(() => cut.Find("button.process-step-blank").ClickAsync());
 
-        bool parsed = ProcessDocument.TryParse(File.ReadAllText(Path.Combine(dir.Path, "Process.md")), out ProcessDocument? document);
+        bool parsed = ProcessDocument.TryParse(File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)), out ProcessDocument? document);
         Assert.True(parsed);
         Assert.NotNull(document);
-        Assert.Empty(document.Gates);
+        Assert.Empty(GatesOf(ctx));
         Assert.Empty(document.MissingSections);
     }
 
@@ -100,12 +103,12 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), "custom");
+        File.WriteAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName), "custom");
         IRenderedComponent<ContainerFragment> cut = RenderStep(ctx);
 
         await cut.InvokeAsync(() => cut.Find("button.process-step-use").ClickAsync());
 
-        Assert.Equal("custom", File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
+        Assert.Equal("custom", File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
         Assert.Equal("This Team already has a process. Edit it on the Process tab.", cut.Find(".process-step-result").TextContent.Trim());
     }
 
@@ -116,9 +119,9 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = [new TeamSummary(Team, [], ["Nova"], true)] });
         ctx.Services.AddSingleton(TestOptions.Create());
+        ArrangeTwoGates(ctx, dir);
         ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
@@ -142,8 +145,8 @@ public sealed class ProcessStepTests
 
         await cut.InvokeAsync(() => cut.Find("button.process-step-blank").ClickAsync());
 
-        Assert.Equal("Process.md could not be created.", cut.Find(".process-step-result").TextContent.Trim());
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Process.md")));
+        Assert.Equal("AGENTS.md could not be created.", cut.Find(".process-step-result").TextContent.Trim());
+        Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 
     /// <summary>The tab shows a gate switch per enabled gate and the NF-5 sentence beside checks-before-merge.</summary>
@@ -153,7 +156,7 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
@@ -169,7 +172,7 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
@@ -190,20 +193,20 @@ public sealed class ProcessStepTests
         Assert.Empty(cut.FindAll("div.process-tab-gate"));
     }
 
-    /// <summary>Edit opens Process.md in the Library page.</summary>
+    /// <summary>Edit opens <c>AGENTS.md</c> in the Library page.</summary>
     [Fact]
     public async Task Tab_Edit_NavigatesToTheLibraryFile()
     {
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         await cut.InvokeAsync(() => cut.Find("button.process-tab-edit").ClickAsync());
 
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("library?root=teams&path=Web%20Team%2FProcess.md", nav.ToBaseRelativePath(nav.Uri));
+        Assert.Equal("library?root=teams&path=Web%20Team%2FAGENTS.md", nav.ToBaseRelativePath(nav.Uri));
     }
 
     /// <summary>Turning a gate off asks first, with the gate named and its risk; Cancel leaves the file alone.</summary>
@@ -213,17 +216,17 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
         cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         Assert.Equal("A Task can then be marked Done with no verified Evidence.", cut.Find(".mud-dialog-content").TextContent.Trim());
-        Assert.Equal(TwoGateText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
+        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge], GatesOf(ctx));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Cancel").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
-        Assert.Equal(TwoGateText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
+        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge], GatesOf(ctx));
         Assert.Equal(2, cut.FindAll("div.process-tab-gate").Count);
     }
 
@@ -234,7 +237,7 @@ public sealed class ProcessStepTests
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
@@ -246,22 +249,24 @@ public sealed class ProcessStepTests
         Assert.Empty(cut.FindAll(".mud-message-box"));
     }
 
-    /// <summary>Confirming rewrites only the gates line and keeps every other key and the body.</summary>
+    /// <summary>Confirming rewrites only the gates in <c>_team.md</c> and keeps every other setting and the <c>AGENTS.md</c> prose.</summary>
     [Fact]
     public async Task GateSwitchOff_Confirm_RewritesOnlyTheGatesLine()
     {
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
         Register(ctx, dir, out _);
-        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        ArrangeTwoGates(ctx, dir);
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
         cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Turn off").ClickAsync());
 
-        string expected = TwoGateText.Replace("gates: ['qa-evidence-before-done', 'checks-before-merge']", "gates: ['checks-before-merge']", StringComparison.Ordinal);
-        cut.WaitForAssertion(() => Assert.Equal(expected, File.ReadAllText(Path.Combine(dir.Path, "Process.md"))));
+        cut.WaitForAssertion(() => Assert.Equal([GateId.ChecksBeforeMerge], GatesOf(ctx)));
+        Assert.Equal("dotnet test", SettingsOf(ctx).CheckCommand);
+        Assert.Equal("flow@1.0.0", SettingsOf(ctx).Template);
+        Assert.Equal(TwoGateBody, File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
         cut.WaitForAssertion(() => Assert.Equal(["checks-before-merge"], cut.FindAll("div.process-tab-gate").Select(static gate => gate.GetAttribute("data-gate")).ToList()));
     }
 
@@ -275,29 +280,26 @@ public sealed class ProcessStepTests
         Assert.Equal("A bug can then move to Review without a test that failed first.", ProcessGateService.GateRisk(GateId.FailingTestBeforeFix));
     }
 
-    /// <summary>WithGates replaces the gates line, keeps other lines and CRLF endings, and writes an empty list as <c>[]</c>.</summary>
-    [Fact]
-    public void WithGates_Rewrites_KeepsOtherLinesAndLineEndings()
+    /// <summary>Writes the two-gate arrangement: the prose in <c>AGENTS.md</c> and the gates, check command and template in the Team file.</summary>
+    private static void ArrangeTwoGates(MudBunitContext ctx, TempDataDir dir)
     {
-        string text = "---\r\ntitle: 'Flow'\r\ngates: ['qa-evidence-before-done', 'checks-before-merge']\r\nwip: 2\r\n---\r\n# Flow\r\n";
-
-        string one = ProcessDocument.WithGates(text, [GateId.ChecksBeforeMerge]);
-        string none = ProcessDocument.WithGates(text, []);
-
-        Assert.Equal("---\r\ntitle: 'Flow'\r\ngates: ['checks-before-merge']\r\nwip: 2\r\n---\r\n# Flow\r\n", one);
-        Assert.Equal("---\r\ntitle: 'Flow'\r\ngates: []\r\nwip: 2\r\n---\r\n# Flow\r\n", none);
+        File.WriteAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName), TwoGateBody);
+        DiskTeamFolders folders = Assert.IsType<DiskTeamFolders>(ctx.Services.GetRequiredService<ITeamFolders>());
+        folders.File = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty)
+        {
+            Process = ProcessSettings.Empty with
+            {
+                Gates = [GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge],
+                CheckCommand = "dotnet test",
+                Template = "flow@1.0.0",
+            },
+        };
     }
 
-    /// <summary>A document with no gates line gets one added inside the frontmatter; text without frontmatter is returned as it was.</summary>
-    [Fact]
-    public void WithGates_NoGatesLine_AddsOneOrLeavesTextAlone()
-    {
-        string added = ProcessDocument.WithGates("---\ntitle: 'X'\n---\n# X\n", [GateId.FailingTestBeforeFix]);
-        string untouched = ProcessDocument.WithGates("# No frontmatter\n", [GateId.FailingTestBeforeFix]);
+    private static ProcessSettings SettingsOf(MudBunitContext ctx) =>
+        Assert.IsType<DiskTeamFolders>(ctx.Services.GetRequiredService<ITeamFolders>()).File?.Process ?? ProcessSettings.Empty;
 
-        Assert.Equal("---\ntitle: 'X'\ngates: ['failing-test-before-fix']\n---\n# X\n", added);
-        Assert.Equal("# No frontmatter\n", untouched);
-    }
+    private static IReadOnlyList<GateId> GatesOf(MudBunitContext ctx) => SettingsOf(ctx).Gates;
 
     private static void Register(MudBunitContext ctx, TempDataDir dir, out DiskTeamFolders folders)
     {

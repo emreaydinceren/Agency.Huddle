@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Conformance;
 
 /// <summary>
 /// Pins the host wiring of Instructions and the file guards through a real session against the scripted ACP peer: that
-/// <c>DotAcpPersonaHost</c> reads the three <c>Instructions.md</c> files into the appended system prompt, and that the permission
+/// <c>DotAcpPersonaHost</c> reads the three <c>AGENTS.md</c> levels into the appended system prompt, and that the permission
 /// handler it gives the session refuses a member's edit of Team Memory and an Agent's edit of an Instructions file while allowing reads.
 /// </summary>
 public sealed class InstructionsAndGuardsSessionTests
@@ -61,35 +61,60 @@ public sealed class InstructionsAndGuardsSessionTests
         return (string?)(result["outcome"] as JsonObject)?["optionId"];
     }
 
-    /// <summary>The three levels of Instructions reach the system prompt in order, general to specific, under one heading.</summary>
+    /// <summary>
+    /// The three AGENTS.md levels reach the system prompt in order, general to specific, after the Persona's text and
+    /// behind the levels sentence; an <c>Instructions.md</c> in the Agent's Work Dir no longer does.
+    /// </summary>
     [Fact]
-    public async Task SessionStart_ReadsTheThreeInstructionsFilesInOrder()
+    public async Task SessionStart_ReadsTheThreeAgentsMdFilesInOrder()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
-        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teams", "Business"));
+        string business = Path.Combine(dataDir.Path, "Teams", "Business");
+        Directory.CreateDirectory(Path.Combine(business, "Alpha"));
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Agents", "nova", "work"));
-        File.WriteAllText(Path.Combine(dataDir.Path, "Teams", "Instructions.md"), "Huddle rule.");
-        File.WriteAllText(Path.Combine(dataDir.Path, "Teams", "Business", "Instructions.md"), "Business rule.");
-        File.WriteAllText(Path.Combine(dataDir.Path, "Agents", "nova", "work", "Instructions.md"), "Own rule.");
+        File.WriteAllText(Path.Combine(dataDir.Path, "Teams", "AGENTS.md"), "Huddle rule.");
+        File.WriteAllText(Path.Combine(business, "AGENTS.md"), "Business rule.");
+        File.WriteAllText(Path.Combine(business, "Alpha", "AGENTS.md"), "Alpha rule.");
+        File.WriteAllText(Path.Combine(dataDir.Path, "Agents", "nova", "work", "Instructions.md"), "ZEBRA");
 
         await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
         string prompt = (await fixture.AppendedSystemPromptAsync(ct)).ReplaceLineEndings("\n");
 
-        int start = prompt.IndexOf("## Instructions", StringComparison.Ordinal);
-        int end = prompt.IndexOf("Own rule.", StringComparison.Ordinal) + "Own rule.".Length;
-        Assert.True(start >= 0 && end > start, "The prompt has no Instructions part.");
-        Assert.Equal(
-            "## Instructions\nThe Human wrote these standing instructions for you. Follow them in every Room. Where they\n"
-            + "conflict, the more specific level wins: your own over your Team's, your Team's over Huddle's.\n"
-            + "### Huddle\nHuddle rule.\n\n### Team Business\nBusiness rule.\n\n### You\nOwn rule.",
-            prompt[start..end]);
-        Assert.True(prompt.IndexOf("You are Nova.", StringComparison.Ordinal) < start, "Instructions follow the Persona text.");
+        int persona = prompt.IndexOf("You are Nova.", StringComparison.Ordinal);
+        int levels = prompt.IndexOf("Each level below adds to the one before it.", StringComparison.Ordinal);
+        int huddle = prompt.IndexOf("## Huddle-wide (", StringComparison.Ordinal);
+        int team = prompt.IndexOf("## Team Business (", StringComparison.Ordinal);
+        int project = prompt.IndexOf("## Project Business/Alpha (", StringComparison.Ordinal);
+        Assert.True(persona >= 0 && persona < levels, "The levels sentence follows the Persona text.");
+        Assert.True(levels < huddle && huddle < team && team < project, "Levels sentence, then Huddle-wide, Team, Project.");
+        Assert.Contains(")\nHuddle rule.\n\n## Team Business (", prompt, StringComparison.Ordinal);
+        Assert.Contains(")\nBusiness rule.\n\n## Project Business/Alpha (", prompt, StringComparison.Ordinal);
+        Assert.Contains(")\nAlpha rule.", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZEBRA", prompt, StringComparison.Ordinal);
     }
 
-    /// <summary>With no Instructions files the prompt has no Instructions part.</summary>
+    /// <summary>With no AGENTS.md files the prompt has no AGENTS.md part.</summary>
     [Fact]
-    public async Task SessionStart_WithNoInstructionsFiles_HasNoInstructionsPart()
+    public async Task SessionStart_WithNoAgentsMdFiles_HasNoAgentsMdPart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+
+        // Start-up writes the default Teams/AGENTS.md unless a file is there; an empty one stands in for "no content".
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teams"));
+        File.WriteAllText(Path.Combine(dataDir.Path, "Teams", "AGENTS.md"), string.Empty);
+
+        await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(ct);
+
+        Assert.DoesNotContain("## Huddle-wide", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Each level below adds to the one before it.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>A fresh host writes the default Teams/AGENTS.md at start-up, so the session carries a Huddle-wide part.</summary>
+    [Fact]
+    public async Task SessionStart_FreshHost_CarriesTheDefaultHuddleWideAgentsMd()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
@@ -97,7 +122,7 @@ public sealed class InstructionsAndGuardsSessionTests
         await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
         string prompt = await fixture.AppendedSystemPromptAsync(ct);
 
-        Assert.DoesNotContain("## Instructions", prompt, StringComparison.Ordinal);
+        Assert.Contains("## Huddle-wide (", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>A member's edit of Team Memory is rejected by the session's permission handler, and its read of the same file is allowed.</summary>
@@ -130,19 +155,21 @@ public sealed class InstructionsAndGuardsSessionTests
         Assert.Equal("allow", edit);
     }
 
-    /// <summary>An Agent's edit of an Instructions file is rejected at the Teams root and in its own Work Dir; a read is allowed.</summary>
+    /// <summary>An Agent's edit of an AGENTS.md is rejected at the Teams root and in a Team folder, but not in its own Work Dir; a read is allowed.</summary>
     [Fact]
-    public async Task Permission_EditOfAnInstructionsFile_IsRejected_AndReadAllowed()
+    public async Task Permission_EditOfAnAgentsMdFile_IsRejected_AndReadAllowed()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
-        string huddle = Path.Combine(dataDir.Path, "Teams", "Instructions.md");
-        string own = Path.Combine(dataDir.Path, "Agents", "nova", "work", "Instructions.md");
+        string huddle = Path.Combine(dataDir.Path, "Teams", "AGENTS.md");
+        string team = Path.Combine(dataDir.Path, "Teams", "Business", "AGENTS.md");
+        string own = Path.Combine(dataDir.Path, "Agents", "nova", "work", "AGENTS.md");
 
         await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
 
         Assert.Equal("reject", await DecideAsync(fixture, "edit", huddle, ct));
-        Assert.Equal("reject", await DecideAsync(fixture, "edit", own, ct));
+        Assert.Equal("reject", await DecideAsync(fixture, "edit", team, ct));
+        Assert.Equal("allow", await DecideAsync(fixture, "edit", own, ct));
         Assert.Equal("allow", await DecideAsync(fixture, "read", huddle, ct));
     }
 }

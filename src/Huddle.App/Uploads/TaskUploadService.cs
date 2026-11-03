@@ -1,4 +1,5 @@
 using System.Globalization;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Microsoft.Extensions.Options;
@@ -13,13 +14,17 @@ namespace Agency.Huddle.App.Uploads;
 /// <param name="folders">Resolves the Task's upload folder.</param>
 /// <param name="files">The Library's byte writer.</param>
 /// <param name="options">Supplies <see cref="LibraryOptions.MaxUploadBytes"/>.</param>
+/// <param name="baselines">Records the saved file's size and modified time for <c>brain-check</c> (Spec 7.6).</param>
 /// <param name="timeProvider">The clock a pasted image's name is stamped from; the system clock when <see langword="null"/>.</param>
+/// <param name="logger">Logs a baseline that could not be recorded; nothing is logged when <see langword="null"/>.</param>
 internal sealed class TaskUploadService(
     ITaskReferenceResolver tasks,
     TaskUploadFolders folders,
     LibraryFileService files,
     IOptions<TeamOptions> options,
-    TimeProvider? timeProvider = null)
+    RawBaselineStore baselines,
+    TimeProvider? timeProvider = null,
+    ILogger<TaskUploadService>? logger = null)
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
@@ -46,7 +51,13 @@ internal sealed class TaskUploadService(
             return LibraryResult<LibraryUpload>.Fail(string.Create(CultureInfo.InvariantCulture, $"Couldn't save {name}."));
         }
 
-        return await files.CreateFromStreamAsync(folder, name, content, options.Value.Library.MaxUploadBytes, ct).ConfigureAwait(false);
+        LibraryResult<LibraryUpload> result = await files.CreateFromStreamAsync(folder, name, content, options.Value.Library.MaxUploadBytes, ct).ConfigureAwait(false);
+        if (result.Value is not null)
+        {
+            RawBaselineRecorder.Record(baselines, options.Value.DataDir, result.Value.File.FullPath, logger);
+        }
+
+        return result;
     }
 
     /// <summary>Deletes a saved upload whose path line was never saved into the description.</summary>

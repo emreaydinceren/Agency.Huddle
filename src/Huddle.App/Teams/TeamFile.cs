@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Library;
@@ -17,7 +18,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="Owns">The one-line statement of what the Team owns, or <see langword="null"/>.</param>
 /// <param name="Notes">The text after the frontmatter, LF-only, kept verbatim.</param>
 /// <remarks>
-/// The Process document is always <see cref="TeamPaths.ProcessFileName"/> (see <see cref="TeamProcessFile"/>). Files
+/// The Process document is always <see cref="TeamPaths.AgentsMdFileName"/> (see <see cref="TeamProcessFile"/>). Files
 /// written before issue #312 carry a <c>process:</c> line; it is read as a known key and dropped, so the next rewrite
 /// removes it rather than keeping a setting nothing reads.
 /// </remarks>
@@ -33,6 +34,15 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private const string AvatarLabelKey = "avatarLabel";
     private const string AvatarImageKey = "avatarImage";
     private const string AvatarBackgroundKey = "avatarBackground";
+    private const string GatesKey = "gates";
+    private const string WipKey = "wip";
+    private const string RetroKey = "retro";
+    private const string DigestKey = "digest";
+    private const string CheckCommandKey = "checkCommand";
+    private const string TemplateKey = "template";
+    private const string ArchivedMembersKey = "archivedMembers";
+    private const string ArchivedRoomsKey = "archivedRooms";
+    private const string ArchivedManagerKey = "archivedManager";
 
     /// <summary>
     /// The file's first line as read: <c>---</c>, or the lenient spelling a hand edit left (a leading byte-order mark, surrounding
@@ -57,6 +67,27 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     /// line so a restart does not repeat the post.
     /// </summary>
     public bool Onboarded { get; init; }
+
+    /// <summary>The process settings (Spec §7.2): gates, wip, retro, digest, check command and template.</summary>
+    public ProcessSettings Process { get; init; } = ProcessSettings.Empty;
+
+    /// <summary>The Names of members archived out of the Team; the <c>archivedMembers</c> key is written only while any are.</summary>
+    public IReadOnlyList<string> ArchivedMembers { get; init; } = [];
+
+    /// <summary>The ids of the Rooms archived with the Team; the <c>archivedRooms</c> key is written only while any are, and unarchive restores exactly these.</summary>
+    public IReadOnlyList<string> ArchivedRooms { get; init; } = [];
+
+    /// <summary>The Name of the manager the Team had when it was archived; the <c>archivedManager</c> key is written only while one is set, and unarchive puts the manager back.</summary>
+    public string? ArchivedManager { get; init; }
+
+    /// <summary>Returns a copy whose gates are <paramref name="gates"/>.</summary>
+    /// <param name="gates">The gates the copy lists.</param>
+    /// <returns>The new file; every other setting is unchanged.</returns>
+    public TeamFile WithGates(IReadOnlyList<GateId> gates)
+    {
+        ArgumentNullException.ThrowIfNull(gates);
+        return this with { Process = this.Process with { Gates = gates } };
+    }
 
     /// <summary>
     /// The Team's avatar, kept in the optional <c>avatarLabel</c>, <c>avatarImage</c> and <c>avatarBackground</c> keys.
@@ -92,7 +123,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
 
         (Dictionary<string, string> values, List<string> unknown) = ReadFrontmatter(lines, closing);
 
-        if (!values.TryGetValue(TeamTypeKey, out string? teamTypeText) || !VersionedRef.TryParse(teamTypeText, out VersionedRef? teamType))
+        VersionedRef? teamType = VersionedRef.None;
+        if (values.TryGetValue(TeamTypeKey, out string? teamTypeText) && !string.IsNullOrWhiteSpace(teamTypeText)
+            && !VersionedRef.TryParse(teamTypeText, out teamType))
         {
             return false;
         }
@@ -110,6 +143,10 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             UnknownLines = unknown,
             Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
             Avatar = ReadAvatar(values),
+            Process = ProcessSettings.Parse(values),
+            ArchivedMembers = values.TryGetValue(ArchivedMembersKey, out string? archived) ? ProcessDocument.SplitList(archived) : [],
+            ArchivedRooms = values.TryGetValue(ArchivedRoomsKey, out string? archivedRooms) ? ProcessDocument.SplitList(archivedRooms) : [],
+            ArchivedManager = NullIfBlank(values.GetValueOrDefault(ArchivedManagerKey)),
         };
         return true;
     }
@@ -195,7 +232,11 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     {
         StringBuilder builder = new();
         builder.Append(this.OpeningFence).Append('\n');
-        AppendScalar(builder, TeamTypeKey, this.TeamType.ToString());
+        if (this.TeamType != VersionedRef.None)
+        {
+            AppendScalar(builder, TeamTypeKey, this.TeamType.ToString());
+        }
+
         if (this.Manager is not null)
         {
             AppendScalar(builder, ManagerKey, this.Manager);
@@ -219,6 +260,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         AppendOptional(builder, AvatarLabelKey, this.Avatar.Label);
         AppendOptional(builder, AvatarImageKey, this.Avatar.Image);
         AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
+        this.AppendProcess(builder);
 
         foreach (string line in this.UnknownLines)
         {
@@ -230,8 +272,60 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         return builder.ToString();
     }
 
+    private void AppendProcess(StringBuilder builder)
+    {
+        ProcessSettings process = this.Process;
+        if (process.Gates.Count > 0 || process.UnknownGates.Count > 0)
+        {
+            AppendList(builder, GatesKey, process.Gates.Select(ProcessDocument.ToId).Concat(process.UnknownGates));
+        }
+
+        if (process.Wip is int wip)
+        {
+            builder.Append(WipKey).Append(": ").Append(wip.ToString(CultureInfo.InvariantCulture)).Append('\n');
+        }
+
+        AppendRaw(builder, RetroKey, process.Retro);
+        AppendRaw(builder, DigestKey, process.Digest);
+        AppendOptional(builder, CheckCommandKey, process.CheckCommand);
+        AppendOptional(builder, TemplateKey, process.Template);
+        if (this.ArchivedMembers.Count > 0)
+        {
+            AppendList(builder, ArchivedMembersKey, this.ArchivedMembers);
+        }
+
+        if (this.ArchivedRooms.Count > 0)
+        {
+            AppendList(builder, ArchivedRoomsKey, this.ArchivedRooms);
+        }
+
+        AppendOptional(builder, ArchivedManagerKey, this.ArchivedManager);
+    }
+
+    private static void AppendRaw(StringBuilder builder, string key, string? value)
+    {
+        if (value is not null)
+        {
+            builder.Append(key).Append(": ").Append(value).Append('\n');
+        }
+    }
+
+    private static void AppendList(StringBuilder builder, string key, IEnumerable<string> items) =>
+        builder.Append(key).Append(": [")
+            .Append(string.Join(", ", items.Select(static item => "'" + item.Replace("'", "''", StringComparison.Ordinal) + "'")))
+            .Append("]\n");
+
     private static bool IsKnownKey(string key) =>
-        string.Equals(key, TeamTypeKey, StringComparison.OrdinalIgnoreCase)
+        string.Equals(key, GatesKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, WipKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, RetroKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, DigestKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, CheckCommandKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, TemplateKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, ArchivedMembersKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, ArchivedRoomsKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, ArchivedManagerKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, TeamTypeKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, ManagerKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, WorkspaceKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, OwnsKey, StringComparison.OrdinalIgnoreCase)

@@ -12,6 +12,7 @@ using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
@@ -129,6 +130,75 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// 5.5.t (SB-R06, correction C5): pins the AGENTS.md block for an Agent in Teams A and B, with a
+    /// Huddle-wide, a Team A, a Project A/Alpha and a Team B file. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void AgentsMd_TwoTeamsWithProjects()
+    {
+        AgentsMdSnapshot agentsMd = new(
+            [
+                new AgentsMdSection(AgentsMdLevel.HuddleWide, null, null, "Teams/AGENTS.md", "Be brief everywhere.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "A", null, "Teams/A/AGENTS.md", "Team A writes in British English.", false),
+                new AgentsMdSection(AgentsMdLevel.Project, "A", "Alpha", "Teams/A/Alpha/AGENTS.md", "Alpha ships on Fridays.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "B", null, "Teams/B/AGENTS.md", "Team B reviews every change.", false),
+            ],
+            []);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, agentsMd: agentsMd);
+
+        AssertMatchesGolden("systemPrompt.agentsMd.txt", actual);
+    }
+
+    /// <summary>
+    /// 11.1.t (SB-R11, Spec §8.1 slot 11): pins the Huddle-wide Memory block between the Agent's own Memory and the closing part, for two
+    /// topics and two more not listed. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void HuddleMemory_Index()
+    {
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md")], NotListed: 0);
+        MemorySnapshot huddleMemory = new(
+            @"E:\Huddle\App_Data\Teams\memory",
+            [
+                new MemoryEntry("Always cite sources.", @"E:\Huddle\App_Data\Teams\memory\cite-sources.md"),
+                new MemoryEntry("Reports are written in British English.", @"E:\Huddle\App_Data\Teams\memory\spelling.md"),
+            ],
+            NotListed: 2);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.Shared, huddleMemory: huddleMemory);
+
+        AssertMatchesGolden("systemPrompt.huddleMemory.txt", actual);
+    }
+
+    /// <summary>
+    /// 11.3.t (SB-R12, Spec §8.1 slot 13): pins the outputs index block between the Agent's own Memory and the closing part: one document with a
+    /// description, one without, and one more left out of <c>B/outputs</c>. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void Outputs_Index()
+    {
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md")], NotListed: 0);
+        OutputsSnapshot outputs = new(
+            [
+                new OutputsEntry("A/outputs/report.md", "Read when judging how the Q3 launch went."),
+                new OutputsEntry("A/outputs/sub/notes.md", null),
+            ],
+            1,
+            [new OutputsOverflow("B/outputs", 1)]);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.Shared, outputs: outputs);
+
+        AssertMatchesGolden("systemPrompt.outputsIndex.txt", actual);
+    }
+
+    /// <summary>
     /// Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload for a Persona holding one real
     /// shipped Skill (Spec §6.4). The Skill's description is read from <see cref="SkillCatalog.All"/>
     /// via <see cref="SkillValidator.Validate"/> rather than pasted in, so this test does not pin
@@ -171,44 +241,6 @@ public sealed class PromptGoldenTests
             roleBlock: roleBlock);
 
         AssertMatchesGolden("systemPrompt.hiredMember.txt", actual);
-    }
-
-    /// <summary>Pins the composed prompt of a Team's manager: the role block followed by the whole process (Task 58, PR-4).</summary>
-    [Fact]
-    public void SystemPrompt_HiredManagerWithProcess_MatchesGolden()
-    {
-        var persona = new Persona("Grace", "You are Grace.");
-        var roleBlock = new RoleBlockInput(
-            "Grace",
-            "Lead",
-            "Apollo",
-            [new ConsultLine("Ada", "Developer", "Ask about code.")],
-            [],
-            new ProcessBlockInput(true, "# Process\n\n## Stages\n\n- Plan, build, review."));
-
-        var actual = SystemPromptComposer.Compose(
-            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, null, SessionScope.Shared, roleBlock: roleBlock);
-
-        AssertMatchesGolden("systemPrompt.managerProcess.txt", actual);
-    }
-
-    /// <summary>Pins the composed prompt of another member: the role block followed by one line with the process path (Task 58, PR-4).</summary>
-    [Fact]
-    public void SystemPrompt_HiredMemberWithProcess_MatchesGolden()
-    {
-        var persona = new Persona("Ada", "You are Ada.");
-        var roleBlock = new RoleBlockInput(
-            "Ada",
-            "Developer",
-            "Apollo",
-            [new ConsultLine("Grace", "Lead", "Ask about scope.")],
-            [],
-            new ProcessBlockInput(false, "Teams/Apollo/Process.md"));
-
-        var actual = SystemPromptComposer.Compose(
-            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, null, SessionScope.Shared, roleBlock: roleBlock);
-
-        AssertMatchesGolden("systemPrompt.memberProcess.txt", actual);
     }
 
     /// <summary>
@@ -323,6 +355,41 @@ public sealed class PromptGoldenTests
             persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human");
 
         AssertMatchesGolden("systemPrompt.askHuman.txt", actual);
+    }
+
+    /// <summary>
+    /// Task 87 (SB-R14, Spec 8.1 slot 6): a session offering every tool the summary names carries the
+    /// <c>systemPrompt.secondBrain</c> paragraph after the tool paragraphs, each placeholder filled with
+    /// the prefixed tool name. Pins the whole text.
+    /// </summary>
+    [Fact]
+    public void SecondBrain_Summary_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        IReadOnlyList<string> offered = [.. ToolNames, "mcp__team__propose_team_memory", "mcp__team__jobs", "mcp__team__log_change"];
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", offered, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human");
+
+        AssertMatchesGolden("systemPrompt.secondBrain.txt", actual);
+    }
+
+    /// <summary>
+    /// Task 130 (SB-R15, Spec 8.1 slot 7): a member of one Team whose workspace is a readable repository gets the
+    /// <c>systemPrompt.secondBrainWorkspace</c> paragraph straight after the Second Brain summary. Pins the whole text.
+    /// The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void Workspace_Repository()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        IReadOnlyList<string> offered = [.. ToolNames, "mcp__team__propose_team_memory", "mcp__team__jobs", "mcp__team__log_change"];
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", offered, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human",
+            workspaces: [("Alpha", "/work/alpha")]);
+
+        AssertMatchesGolden("systemPrompt.workspace.txt", actual);
     }
 
     /// <summary>Without an <c>ask_human</c> name the composed prompt is the existing golden, byte for byte: an Adapter session that does not offer the tool says nothing about it.</summary>
@@ -469,7 +536,14 @@ public sealed class PromptGoldenTests
     public async Task GetHelp_MatchesGolden()
     {
         var ct = TestContext.Current.CancellationToken;
-        var (tool, _) = await BuildToolsAsync(ct);
+        using TempDataDir rawDir = new();
+        Agency.Huddle.App.Data.RawBaselineStore baselines = new(rawDir.Options());
+        string rawFile = Path.Combine(rawDir.Path, "Teams", "Nova", "raw", "brief.txt");
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(rawFile)!);
+        await File.WriteAllTextAsync(rawFile, "filed text", ct);
+        // The baseline says one byte more than the file holds, so brief.txt is the one changed raw file listed.
+        baselines.Record("Teams/Nova/raw/brief.txt", new FileInfo(rawFile).Length + 1, File.GetLastWriteTimeUtc(rawFile));
+        var (tool, _) = await BuildToolsAsync(ct, ["Nova", "Ops"], baselines, rawDir.Options().Value);
 
         var actual = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -868,8 +942,15 @@ public sealed class PromptGoldenTests
     /// constructor dependencies.
     /// </summary>
     /// <param name="ct">Cancels directory initialisation.</param>
+    /// <param name="teamNames">The Agent's Team names for the Second Brain map; <see langword="null"/> leaves the section out.</param>
+    /// <param name="baselines">The raw baselines behind the changed-raw list, or <see langword="null"/>.</param>
+    /// <param name="teamOptions">Locates the Teams folder for the changed-raw scan, or <see langword="null"/>.</param>
     /// <returns>The get_help tool, and the six tools it was built from, in the order it reports them.</returns>
-    private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(CancellationToken ct)
+    private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(
+        CancellationToken ct,
+        IReadOnlyList<string>? teamNames = null,
+        Agency.Huddle.App.Data.RawBaselineStore? baselines = null,
+        Agency.Huddle.App.TeamOptions? teamOptions = null)
     {
         using var dir = new TempDataDir();
         var directory = await dir.CreateDirectoryAsync(ct);
@@ -919,7 +1000,7 @@ public sealed class PromptGoldenTests
         // Skill-gated tools (validate_agent, propose_agents) are only offered to a Persona holding a Skill that lists them.
         // A Persona with no Skills should not see them in get_help.
         var ungatedTools = others.Where(tool => !SkillGrants.Grantable.Contains(tool.Name, StringComparer.Ordinal)).ToList();
-        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__");
+        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__", teamNames, baselines, teamOptions);
 
         return (getHelp, others);
     }

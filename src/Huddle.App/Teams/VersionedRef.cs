@@ -24,6 +24,9 @@ public sealed record VersionedRef(string Id, string Version)
         return true;
     }
 
+    /// <summary>No team type: a Blank or label-born Team. <c>_team.md</c> omits the key for it.</summary>
+    public static VersionedRef None { get; } = new(string.Empty, string.Empty);
+
     /// <inheritdoc />
     public override string ToString() => $"{this.Id}@{this.Version}";
 }

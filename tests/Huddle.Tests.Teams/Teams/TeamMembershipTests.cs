@@ -507,7 +507,7 @@ public sealed class TeamMembershipTests
         public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => throw new NotSupportedException();
 
         /// <inheritdoc />
-        public TeamCreateResult CreateTeam(string team, TeamFile file) => throw new NotSupportedException();
+        public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false) => throw new NotSupportedException();
     }
 
     /// <summary>A temporary data directory, a real <see cref="PersonaStore"/> seeded before it starts, a <see cref="FakeTeamCatalog"/> and the service under test.</summary>

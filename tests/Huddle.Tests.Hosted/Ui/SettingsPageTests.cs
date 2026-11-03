@@ -246,8 +246,8 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The page tells a user exactly where <c>prompts.json</c> lives - matched against the factory's
-    /// own configured path (see <see cref="TeamWebApplicationFactory.PromptsJsonPath"/>) rather than a
+    /// The page tells a user exactly where the Prompts folder lives - matched against the factory's
+    /// own configured path (see <see cref="TeamWebApplicationFactory.PromptsDirPath"/>) rather than a
     /// hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh temp directory per factory.
     /// This is a fact about the server's configuration, so it stays on HTTP.
     /// </summary>
@@ -262,7 +262,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/prompts", ct);
 
-        Assert.Contains(factory.PromptsJsonPath, html, StringComparison.Ordinal);
+        Assert.Contains(factory.PromptsDirPath, html, StringComparison.Ordinal);
     }
 
     /// <summary>With no override configured, the "Reset all to defaults" button renders disabled.</summary>
@@ -375,7 +375,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
-        Assert.DoesNotContain(factory.PromptsJsonPath, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(factory.PromptsDirPath, html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -463,7 +463,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/personas", ct);
 
-        Assert.DoesNotContain(factory.PromptsJsonPath, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(factory.PromptsDirPath, html, StringComparison.Ordinal);
     }
 
     /// <summary>

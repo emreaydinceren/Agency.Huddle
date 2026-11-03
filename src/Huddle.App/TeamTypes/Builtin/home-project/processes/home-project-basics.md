@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Home project basics
 
+## Identity
+
+This Team gathers the costs, rules, quotes and dates for one renovation or repair, from the scope to the last contractor visit. Work that arrives here is a written scope, cost ranges, permit rules with their authority, contractor messages or the project calendar. The Human and qualified professionals agree every price, contract and date, and routine household chores belong to the household Team type.
+
 ## When it applies
 
 - One renovation or repair, from the scope to the last contractor visit.

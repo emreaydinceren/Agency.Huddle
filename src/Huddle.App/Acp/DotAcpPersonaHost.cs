@@ -37,7 +37,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<string> teamLabels;
     private readonly ITeamCatalog teamCatalog;
     private readonly string teamsRoot;
-    private readonly int maxTeamMemoryEntries;
+    private readonly PermissionGuards guards;
+    private readonly TeamsOptions teamsOptions;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
     private readonly IReadOnlyDictionary<string, object>? meta;
@@ -64,14 +65,15 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
     /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
-    /// <param name="maxTeamMemoryEntries">The cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams when <paramref name="readsMemory"/>.</param>
+    /// <param name="guards">The file guards every opened session's permission handler consults.</param>
+    /// <param name="teamsOptions">The Teams options: <c>MaxMemoryEntries</c> is the cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams, and <c>MaxHuddleMemoryEntries</c> the cap on <c>Teams/memory/</c>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
     /// <param name="meta">D14's isolation <c>_meta</c> (RS §6.10), or <see langword="null"/> when the profile does not ask for it.</param>
     /// <param name="loggerFactory">Creates the logger a fresh <see cref="WorkDirPermissionHandler"/> needs on every open or resume.</param>
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
-    /// <param name="sources">Reads the Human's Instructions, decides who writes a Team's Memory and warns about malformed memory files.</param>
+    /// <param name="sources">Reads the Human's AGENTS.md files, decides who writes a Team's Memory and warns about malformed memory files.</param>
     /// <param name="mergeGate">Decides the Persona's <c>git merge</c> and <c>git push</c> requests (PR-7); <see langword="null"/> approves them.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
@@ -90,7 +92,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyList<string> teamLabels,
         ITeamCatalog teamCatalog,
         string teamsRoot,
-        int maxTeamMemoryEntries,
+        PermissionGuards guards,
+        TeamsOptions teamsOptions,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
         IReadOnlyDictionary<string, object>? meta,
@@ -101,7 +104,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IMergeGate? mergeGate = null)
     {
         this.mergeGate = mergeGate;
-        ValidateSessionPromptSources(roleBlock, sources);
+        ValidateSessionPromptSources(roleBlock, sources, guards);
         this.sources = sources;
         this.roleBlock = roleBlock;
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
@@ -134,7 +137,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.teamLabels = teamLabels;
         this.teamCatalog = teamCatalog;
         this.teamsRoot = teamsRoot;
-        this.maxTeamMemoryEntries = maxTeamMemoryEntries;
+        this.guards = guards;
+        this.teamsOptions = teamsOptions;
         this.workDir = workDir;
         this.toolServerEndpoint = toolServerEndpoint;
         this.meta = meta;
@@ -142,13 +146,15 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.workModePolicy = workModePolicy;
     }
 
-    /// <summary>Guards the collaborators that build the system prompt's role block and Instructions and decide who writes a Team's Memory.</summary>
+    /// <summary>Guards the collaborators that build the system prompt's role block and AGENTS.md block and decide who writes a Team's Memory.</summary>
     /// <param name="roleBlock">The role block factory.</param>
-    /// <param name="sources">The Instructions reader, Team Memory access rules and memory warnings.</param>
-    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources)
+    /// <param name="sources">The AGENTS.md reader, Team Memory access rules and memory warnings.</param>
+    /// <param name="guards">The file guards the permission handler consults.</param>
+    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources, PermissionGuards guards)
     {
         ArgumentNullException.ThrowIfNull(roleBlock);
         ArgumentNullException.ThrowIfNull(sources);
+        ArgumentNullException.ThrowIfNull(guards);
     }
 
     /// <summary>Guards the constructor's collaborator arguments, in declaration order.</summary>
@@ -248,31 +254,33 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(),
             this.mergeGate,
             this.persona.Name,
-            new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts, this.sources.AgentPaths),
-            new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts),
+            this.guards,
             this.workDir);
     }
 
     /// <summary>
-    /// Composes the system prompt now, with the memory index and the Instructions read afresh. The Memory and Team Memory blocks are
+    /// Composes the system prompt now, with the memory index and the AGENTS.md files read afresh. The Memory and Team Memory blocks are
     /// built whenever the memory tool is offered, which is always, so an Adapter with no file tools gets them too; only the sentences
     /// that name File Changes depend on <see cref="readsMemory"/> (Instructions spec §6.1).
     /// </summary>
     /// <returns>The prompt appended to the Adapter's own.</returns>
     private string ComposeSystemPrompt()
     {
-        var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries, this.sources.Warnings);
-        MemorySnapshot memory = new(this.memoryDir, entries, notListed);
-
-        TeamMemorySnapshot? teamMemory = null;
-        if (this.teamLabels.Count > 0)
-        {
-            // Read once into a local: this runs per open or resume, concurrently across Rooms, and
-            // the catalog's snapshot is swapped atomically, so one read is one consistent view.
-            IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
-            TeamMemorySnapshot built = TeamMemoryIndex.Build(this.teamsRoot, this.teamLabels, catalogTeams, this.maxTeamMemoryEntries, this.persona.Name, this.sources.Warnings);
-            teamMemory = built.Groups.Count > 0 ? built : null;
-        }
+        // Read the catalog once into a local: this runs per open or resume, concurrently across Rooms, and
+        // the catalog's snapshot is swapped atomically, so one read is one consistent view.
+        SessionPromptSnapshot inputs = SessionPromptInputs.Build(
+            this.sources.AgentsMd,
+            this.sources.Warnings,
+            this.teamCatalog.Teams,
+            this.persona.Name,
+            this.memoryDir,
+            this.maxMemoryEntries,
+            this.teamLabels,
+            this.teamsRoot,
+            this.teamsOptions.MaxMemoryEntries,
+            this.teamsOptions.MaxHuddleMemoryEntries,
+            this.sources.MaxOutputsEntries,
+            this.sources.OverCap);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -281,31 +289,17 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.toolNames,
             this.skills,
             this.readSkillToolName,
-            memory,
+            inputs.Memory,
             this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
-            teamMemory: teamMemory,
+            teamMemory: inputs.TeamMemory,
             askHumanToolName: this.askHumanToolName,
             roleBlock: this.roleBlock(),
-            instructions: this.ReadInstructions(),
+            agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.readsMemory,
-            warnings: this.sources.Warnings);
-    }
-
-    /// <summary>
-    /// Reads the Human's Instructions now, so an edit made since the last session reaches the next one
-    /// (Instructions spec §3.4). The Teams are the Persona's own, named by the catalog's folder spelling.
-    /// </summary>
-    /// <returns>The non-empty levels, or an empty snapshot.</returns>
-    private InstructionsSnapshot ReadInstructions()
-    {
-        IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
-        List<string> teamNames =
-        [
-            .. this.teamLabels.Select(label =>
-                catalogTeams.FirstOrDefault(team => string.Equals(team.Name, label, StringComparison.OrdinalIgnoreCase))?.Name ?? label),
-        ];
-
-        return this.sources.Instructions.Read(this.teamsRoot, teamNames, this.workDir);
+            warnings: this.sources.Warnings,
+            huddleMemory: inputs.HuddleMemory,
+            outputs: inputs.Outputs,
+            workspaces: inputs.Workspaces);
     }
 
     /// <summary>

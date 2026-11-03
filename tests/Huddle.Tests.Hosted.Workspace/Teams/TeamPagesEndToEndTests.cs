@@ -142,9 +142,8 @@ public sealed class TeamPagesEndToEndTests
         Assert.Null(result.Value);
         Assert.Equal("\"memory\" is reserved for the Team's shared Memory.", result.Error);
         Assert.Equal(TeamNames.MemoryReservedProblem, result.Error);
-        Assert.False(Directory.Exists(Path.Combine(businessDir, "memory")));
         Assert.Equal(
-            ["Marketing Project"],
+            ["Marketing Project", "memory", "outputs", "raw"],
             Directory.GetDirectories(businessDir).Select(static dir => Path.GetFileName(dir)).Order(StringComparer.Ordinal).ToList());
 
         _ = TestTaskStore.WriteTask(

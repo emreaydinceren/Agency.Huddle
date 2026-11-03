@@ -74,11 +74,11 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
             return false;
         }
 
-        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
+        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Raw.Dir));
         string teamsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir));
-        // Spec 6.8 refuses Uploads whichever case it is typed in, so these refusals ignore case on every platform.
+        // Spec 6.8 refuses the raw folder whichever case it is typed in, so these refusals ignore case on every platform.
         if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true, StringComparison.OrdinalIgnoreCase)
-            || WatchedFolderResolver.IsTeamUploads(fullPath, teamsRoot))
+            || WatchedFolderResolver.IsTeamRaw(fullPath, teamsRoot))
         {
             reason = "Uploads are announced in the chat, not watched.";
             return false;
@@ -88,11 +88,11 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
         return true;
     }
 
-    /// <summary>True when <paramref name="fullPath"/> is a Team's Uploads folder or lies under it: its segments below the Teams root are <c>[Team, Uploads, ...]</c>.</summary>
+    /// <summary>True when <paramref name="fullPath"/> is a Team's raw folder or lies under it: its segments below the Teams root are <c>[Team, raw, ...]</c>.</summary>
     /// <param name="fullPath">The resolved full path.</param>
     /// <param name="teamsRoot">The full path of the Teams root.</param>
-    /// <returns><see langword="true"/> for a Team's Uploads folder or anything under it.</returns>
-    private static bool IsTeamUploads(string fullPath, string teamsRoot)
+    /// <returns><see langword="true"/> for a Team's raw folder or anything under it.</returns>
+    private static bool IsTeamRaw(string fullPath, string teamsRoot)
     {
         if (PathContainment.Below(fullPath, teamsRoot, StringComparison.OrdinalIgnoreCase) is not { Length: > 0 } below)
         {
@@ -100,7 +100,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
         }
 
         string[] segments = below.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        return segments.Length >= 2 && string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
+        return segments.Length >= 2 && string.Equals(segments[1], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Resolves <paramref name="entry"/> to a full path, per the ordered rules in FC §6.3, before the containment checks run.</summary>

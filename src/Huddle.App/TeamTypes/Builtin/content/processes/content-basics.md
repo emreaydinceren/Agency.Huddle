@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Content basics
 
+## Identity
+
+This Team takes an article, post or newsletter from a brief to a finished draft that the Human publishes. Each piece is written against its brief for audience, angle, length and deadline, and every fact is checked against a source before the editor-in-chief signs it off. Documentation that lives in a repository belongs to the `docs-team` Team type, and the Team never publishes a piece itself.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Write to the audience and angle the brief names, and put the source beside every figure, quote and claim it makes.
+
 ## When it applies
 
 - Articles, posts, newsletters and other pieces that go from an idea to a finished draft the Human publishes.

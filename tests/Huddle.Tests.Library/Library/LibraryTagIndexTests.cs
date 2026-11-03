@@ -152,7 +152,7 @@ public sealed class LibraryTagIndexTests
         Assert.Empty(tags.NotesWith(rootId, "new"));
 
         File.WriteAllText(Path.Combine(root, "d.md"), "#new\n");
-        fixture.RootStore.SetHidden("uploads", true);
+        fixture.RootStore.SetHidden("raw", true);
 
         Assert.Equal(["d.md"], tags.NotesWith(rootId, "new"));
     }

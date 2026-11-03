@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Community org basics
 
+## Identity
+
+This Team runs the paperwork of a club, society or volunteer group: agendas, minutes, rotas, newsletters, sign-ups and the treasurer's report. It drafts, and the group's officers approve and send. Votes, membership decisions, money and complaints about a member do not route here; they go to the Human.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Write plainly for members who may be volunteers, and give dates, places and amounts exactly as the minutes or the accounts state them.
+
 ## When it applies
 
 - The running of a club, society or volunteer group: meetings, minutes, rotas, newsletters and the books.

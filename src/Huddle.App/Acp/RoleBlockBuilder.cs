@@ -13,14 +13,12 @@ internal static class RoleBlockBuilder
     /// <param name="skills">The member's resolved skills.</param>
     /// <param name="teamCatalog">The Teams, read for the member's colleagues.</param>
     /// <param name="getPersona">Finds a colleague's Persona by Name, or <see langword="null"/>.</param>
-    /// <param name="teamsRoot">The Teams root folder, read for the Team's <c>Process.md</c>; <see langword="null"/> adds no process block.</param>
     /// <returns>The block, or <see langword="null"/> when the member has no <c>_role</c> or no Team.</returns>
     internal static RoleBlockInput? Build(
         PersonaIdentity identity,
         IReadOnlyList<Skill> skills,
         ITeamCatalog teamCatalog,
-        Func<string, Persona?> getPersona,
-        string? teamsRoot = null)
+        Func<string, Persona?> getPersona)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(skills);
@@ -62,37 +60,12 @@ internal static class RoleBlockBuilder
         }
 
         string displayTeam = team?.Name ?? teamName;
-        bool isManager = team?.Manager is { } manager && string.Equals(manager, identity.Name, StringComparison.OrdinalIgnoreCase);
         return new RoleBlockInput(
             identity.Name,
             identity.Title,
             displayTeam,
             consult,
-            [.. skills.Select(static skill => new SkillLine(skill.Name, skill.Description))],
-            ReadProcess(teamsRoot, displayTeam, isManager));
-    }
-
-    /// <summary>Reads the Team's <c>Process.md</c> afresh, so an edit reaches the next session (ADR-0023).</summary>
-    /// <param name="teamsRoot">The Teams root folder, or <see langword="null"/> to skip the process block.</param>
-    /// <param name="team">The Team's name.</param>
-    /// <param name="isManager">Whether the member is the manager, who receives the text rather than the path.</param>
-    /// <returns>The block, or <see langword="null"/> when there is no readable <c>Process.md</c>.</returns>
-    private static ProcessBlockInput? ReadProcess(string? teamsRoot, string team, bool isManager)
-    {
-        if (string.IsNullOrWhiteSpace(teamsRoot))
-        {
-            return null;
-        }
-
-        string? text = TeamProcessFile.ReadText(Path.Combine(teamsRoot, team, TeamPaths.ProcessFileName));
-        if (text is null)
-        {
-            return null;
-        }
-
-        return isManager
-            ? new ProcessBlockInput(true, text)
-            : new ProcessBlockInput(false, $"Teams/{team}/{TeamPaths.ProcessFileName}");
+            [.. skills.Select(static skill => new SkillLine(skill.Name, skill.Description))]);
     }
 
     /// <summary>Reads the <c>consult_when</c> line out of a colleague's public job description.</summary>

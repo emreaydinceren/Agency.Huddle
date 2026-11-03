@@ -341,7 +341,7 @@ internal sealed class TaskToolHarness : IDisposable
         {
             Agency.Huddle.Tests.Library.LibraryFileServiceFixture library = Agency.Huddle.Tests.Library.LibraryFileServiceFixture.Attach(this.Options.Value.DataDir);
             return new Agency.Huddle.App.Uploads.TaskUploadService(
-                this.Store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver), library.CreateService(), this.Options);
+                this.Store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver, this.Store), library.CreateService(), this.Options, new Agency.Huddle.App.Data.RawBaselineStore(this.Options));
         });
     }
 

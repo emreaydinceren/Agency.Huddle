@@ -58,9 +58,8 @@ public sealed class TeamFileTests
         Assert.Equal("the team's front end", parsed.Owns);
     }
 
-    /// <summary>A file without a teamType, or without frontmatter, does not parse.</summary>
+    /// <summary>A file with a malformed teamType, or without frontmatter, does not parse (a missing teamType parses, correction C6).</summary>
     [Theory]
-    [InlineData("---\nmanager: 'Joe'\n---\n")]
     [InlineData("---\nteamType: 'nonsense'\n---\n")]
     [InlineData("manager: 'Joe'\n")]
     [InlineData("")]

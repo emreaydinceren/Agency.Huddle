@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Sales outreach basics
 
+## Identity
+
+This Team finds prospects, drafts first emails, follow-ups and proposals, and keeps the CRM record current for a small sales effort. Work routes here when a Task names a prospect or list and can state its acceptance in one line. It does not send messages, set prices or agree terms, which the Human does, and it does not run a business's marketing copy or newsletters, which belongs to a small-business Team.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Every first email gives one reason to write now and one clear next step, and it makes no claim about results, prices or customers that the brief does not already support.
+
 ## When it applies
 
 - Finding and contacting prospects, following up and writing proposals for a small sales effort.

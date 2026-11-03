@@ -59,18 +59,18 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// The room database path <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> resolves
     /// under this factory's isolated data directory. Tests use this to assert the Settings page's
     /// Personas tab shows this exact path rather than a hardcoded guess, the same reasoning
-    /// <see cref="PromptsJsonPath"/>'s doc records for its own file.
+    /// <see cref="PromptsDirPath"/>'s doc records for its own file.
     /// </summary>
     public string DbPath => Path.Combine(this.dataDir.Path, "team.db");
 
     /// <summary>
-    /// The path <see cref="Agency.Huddle.App.Prompts.PromptStore"/> resolves its override file to under
+    /// The Prompts folder <see cref="Agency.Huddle.App.Prompts.PromptStore"/> reads its override files from under
     /// this factory's isolated data directory, i.e. <see cref="Agency.Huddle.App.Prompts.PromptStore.FilePath"/>'s
     /// value for the instance this factory's app composes. Tests assert the Settings page shows this
     /// exact path rather than a hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh
     /// temp directory per factory.
     /// </summary>
-    public string PromptsJsonPath => Path.Combine(this.dataDir.Path, "prompts.json");
+    public string PromptsDirPath => Path.Combine(this.dataDir.Path, "Prompts");
 
     /// <summary>
     /// The path <see cref="Agency.Huddle.App.Appearance.AppearanceStore"/> resolves its override file

@@ -106,7 +106,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   Task's top-level folder *is* its Team, and it names a Team label by convention.
   That rule applies to Tasks only and never to Personas; see
   [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md).
-: *Avoid*: group, squad, workspace, tenant.
+: *Avoid*: group, squad, tenant.
 
 **Team type**
 : A kind of Team, defined as data: a folder with a `team-type.json` manifest, its
@@ -283,7 +283,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : Where a Room belongs: the root, or exactly one Team. Set when the Room is
   created and never changed. It decides where the Room is listed and where its
   uploaded files go, never who may join or who replies (ADR-0052).
-: *Avoid*: team chat as a kind of Room, workspace, channel.
+: *Avoid*: team chat as a kind of Room, channel.
 
 **Team Room**
 : The Room scoped to a Team and named after it, holding the Human and every
@@ -292,18 +292,20 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: team channel, general.
 
 **Upload**
-: A file the Human attaches to a Message in the composer. It is saved into the
-  Room's upload folder in the Library at once, and its path is added to the
-  Message when it is sent (ADR-0053). Until then it is a pending upload, shown
-  as a chip.
+: A file the Human attaches to a Message in the composer. It is saved at once into
+  `raw/` in the Room's scope in the Library: `Raw/<roomId>/` for a root Room, and
+  `Teams/<Team>/raw/<roomId>/` for a Team Room. Its path is added to the Message when
+  it is sent (ADR-0053). Until then it is a pending upload, shown as a chip.
 : *Avoid*: attachment (there is no attachment field on a Message), file share.
 
 **Archived**
-: A Room hidden from the sidebar and listed under **Archived Chats** instead.
-  Reversible, and a display filter only — an Archived Room is still live, and
-  Agents still post into it.
+: Hidden from the sidebar and listed elsewhere instead. For a Room it is the
+  **Archived Chats** list: reversible, and a display filter only — an Archived Room is
+  still live, and Agents still post into it. For a Team or a Project it means the
+  folder has been moved to `{DataDir}/Archive`, where it is read-only.
 : *Avoid*: hidden, closed, muted, inactive, soft-deleted. A Room that was
   *deleted* is gone, not Archived — the two are not degrees of the same thing.
+
 **Member**
 : An Agent that belongs to a Room and receives its Messages.
 : *Avoid*: participant, subscriber.
@@ -475,17 +477,22 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   memory in one Room is news in its others. **Delivered 2026-09-23.**
 : *Avoid*: notification, alert, event, diff.
 
-**Instructions**
-: The standing rules the Human writes once and every Agent in scope starts each session
-  with, in a plain file named `Instructions.md` at three levels: the Teams root (every
-  Agent), a Team folder (its members) and an Agent's Work Dir (that Agent). Spliced into
-  the system prompt right after the Persona's text, from general to specific, the more
-  specific level winning. The Human's, never the Agent's: an Agent may read them and its
-  edit, delete or move of one is refused. **Built 2026-10-30** — see
+**Instructions** (retired 2026-11-03)
+: Replaced by **`AGENTS.md`**. Nothing reads an `Instructions.md` any more: the
+  start-up retired-file scan warns about each one under `Teams/` or an Agent's Work
+  Dir, and its rules are not moved for you. The file was built 2026-10-30 — see
   [ADR-0070](../adr/0070-an-agent-reads-the-instructions-the-human-writes.md).
-: Capitalised, it means only this. Not the Persona's own text, and never a file named
-  `AGENTS.md` or `CLAUDE.md`, which an Adapter loads on its own.
 : *Avoid*: house rules, system prompt, rules file.
+
+**`AGENTS.md`**
+: The Human's prose rules for one level of the Second Brain, in a file named
+  `AGENTS.md`. Every Team and every Project holds one, and the root of the Teams tree
+  holds one for everyone. Huddle splices them into the system prompt right after the
+  Persona's text, from general to specific: the Teams root, then each Team and each of
+  its Projects, so the more specific level wins. The Human edits them in Obsidian or the
+  Library; a running session hears of an edit as a File Change.
+: Not an Agent's own rules, which live in its Persona, and not the Persona's text.
+: *Avoid*: Instructions, rules file, house rules.
 
 **Memory**
 : What an Agent deliberately keeps for itself going forward: Markdown topic files in
@@ -519,6 +526,15 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 : Never just *Memory*, which stays the Agent's own.
 : *Avoid*: shared memory, project memory, team notes.
+
+**Huddle-wide Memory**
+: What the Human and the Chief of Staff keep going forward for every Agent: topic files
+  in `Teams/memory/`, in the same format as an Agent's Memory. Every Agent's new session
+  starts with an index of it, within its cap (`Team:Teams:MaxHuddleMemoryEntries`, 30),
+  ahead of its Team Memory.
+: Never just *Memory*, which stays the Agent's own, nor *Team Memory*, which is one
+  Team's or Project's.
+: *Avoid*: global memory, company memory, shared memory.
 
 **Context only**
 : What a delivery amounted to when it named no Agent the Reply Gate would wake:
@@ -720,6 +736,28 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Pinned root**
 : A Library Root the Human added in configuration or Settings.
 
+**Raw**
+: The folder for what came in: the Raw root (`{DataDir}/Raw`, set by `Team:Library:Raw:Dir`)
+  and every `raw/` folder under a Team, a Project or the Archive. Chat uploads land here.
+  An Agent may not delete, move or change an existing file under it, though it may create
+  a new file beside one. The Human's files, not Memory: what an Agent keeps for itself goes
+  in `memory/`.
+: *Avoid*: inbox, input, Uploads (the retired folder).
+
+**Outputs**
+: The folder for what was made: `outputs/` in a Team or a Project
+  (`Teams/<Team>/[<Project>/]outputs/`). Its Markdown files are indexed for the Team's
+  members at each session start.
+: *Avoid*: deliverables, artifacts.
+
+**Workspace**
+: A folder outside the Second Brain that a Team works in, named by the `workspace` key on
+  its Team card (an absolute path, often a repository). Its path reaches an Agent's prompt
+  as the Team's workspace part.
+: Not the Team's folder under `Teams/`, and not a Project. A workspace may be a
+  repository, but the word is the folder's.
+: *Avoid*: repo, repository (for the folder itself), project folder.
+
 **Library tag**
 : A label on a Library note, written `#tag` in its body or in its frontmatter `tags`
   list, matched without case and nested on `/` (`work/active` is under `work`), as in
@@ -755,7 +793,7 @@ See
 : An optional grouping of Tasks inside one Team: the folder below the Team's
   folder. Its name is unique only within its Team, so write it as
   *Team / Project* wherever the Team isn't clear.
-: *Avoid*: epic, milestone, board, workspace.
+: *Avoid*: epic, milestone, board.
 
 **Sprint**
 : A named group of Tasks in time. It is an id and a name, listed one per
@@ -776,8 +814,9 @@ See
   hidden until the Human looks at Closed Tasks. Closing is separate from status.
   It doesn't require a terminal status, and a Closed Task can be **Reopened**. In
   the interface the verbs are **Close** and **Reopen**.
-: *Avoid*: archived, and archive (**Archived** belongs to Rooms, where it means
-  hidden but still live), done (that is a status), resolved, deleted.
+: *Avoid*: archived, and archive (**Archived** belongs to Rooms, Teams and Projects, where
+  it means hidden, and for a Team or a Project read-only), done (that is a status),
+  resolved, deleted.
 
 **Won't do**
 : The three terminal statuses other than Done: **Cancelled**, **Duplicate** and

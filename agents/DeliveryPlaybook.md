@@ -51,6 +51,9 @@ below exists because its absence cost a fix round, a bug, or an hour.
 - **One editor per file at a time.** Reds for tasks that share a file can be written in parallel
   (in separate test files); their implementations run one after another, in a stated order.
   Rebase the waiting worktree before its turn.
+- **Two streams in two worktrees on disjoint files, merged by rebase at each deliverable
+  boundary, never conflicted** (Second Brain). But a start-up or hosted-service change in one
+  stream broke a test in the other: run the full suite after merging such a change.
 - **Choose resumed vs fresh agents deliberately.** Resuming within the same component chain costs
   2–6 tool calls to reorient versus 45–56 for a fresh agent, but a long-lived context grows to
   3–4× the cost per turn. Resume for the next task on the same files; start fresh, with a precise
@@ -88,7 +91,8 @@ below exists because its absence cost a fix round, a bug, or an hour.
 - **Split the corrections file per pair** (`corrections-<pair>.md`). One 16K file read whole by every
   agent held call-5 context at 46-61K although the facts Core was under 6K.
 - **Regenerate every line range with `grep -n` when you write the prompt.** Ranges copied from a
-  review written earlier were stale by the time the pair started.
+  review written earlier were stale by the time the pair started. Give docs agents exact line
+  numbers too: one spent its whole budget orienting.
 - **Keep verification lean in prompts:** the touched test classes once, fix, once more; the checks;
   the full suite once. A fix-resume runs only the touched classes. The machine allows one test run
   at a time, so extra full runs queue every other agent.
@@ -132,6 +136,10 @@ The Team Pages delivery (whole run, 320M re-read) put the same lesson in one tab
   Core and grep the rest by heading; the whole file read was 10K tokens for every fresh agent.
 - **Disable MCP servers the delivery doesn't need** before starting. Each agent inherits their tool
   definitions, and every agent here started at 38–50K before its first read.
+- **Define one tool-limited agent type per delivery** (Read, Edit, Write, Grep, Glob, Bash,
+  PowerShell). It cut each agent's starting context from ~71K to ~23K in the Second Brain delivery.
+- **The manager's own context dominated cost late in a run (600K+).** Chain logic pairs red→green
+  in one dispatch once the red is approved, and keep check-ins short.
 - **Measure at each retrospective** with the tally in the `/Execute-Project-Plan` command's
   Appendix D: calls, first and last context, and tokens re-read per agent.
 
@@ -152,6 +160,7 @@ with the reason, and audit every transcript for them:
 | Visibility changes and new packages are stop-and-ask | An agent made a service public on false reasoning |
 | A failing test is the spec. Never edit, skip, loosen or delete a frozen test to get green; if you think the test is wrong, stop and file a **test change request** (the failing line, your evidence, the change you would make) | Agents under pressure to reach green relax the assert instead of fixing the code; the freeze hook enforces it |
 | Before recording a compile-error red, build once against throwaway stubs of the missing names and fix the test file's analyzer errors, then delete the stubs | Analyzers do not run while a compile error exists: three frozen reds in the Long-Running Rooms delivery later failed on CA1859 and xUnit2029 and each blocked its implementation |
+| Wrap every test stub in `// <stub …>` … `// </stub>` markers and remove them with `Remove-Stubs.ps1 -ExpectClean`; never put a stub in an LF or `-text` file | Unmarked stubs were left behind; the script cannot rewrite a file whose line endings it must not touch |
 | A test that builds a RoomSession or RoomSessionPool cancels its run token before disposing it | The session consumer ends only when the run token is cancelled; a test on CancellationToken.None hung the Agents assembly for 22 minutes while holding the machine-wide test mutex |
 | Never stop every dotnet process to clear a hung run; stop only your own test process | Killing every run abandoned the test mutex, and Run-Tests.ps1 then failed the next caller instead of taking ownership |
 | Never run `python3` (the Windows Store stub blocks until the call times out), and never leave a server or `run.ps1` running in a tool call; use `-DryRun`, or `preview_start` for a dev server | A hung call ties up the agent and looks like a stuck delivery |
@@ -212,6 +221,9 @@ architect review.
 - **You triage, it never edits.** Each `BLOCKER` and `MAJOR` goes back to the same implementer by
   resume, or is dismissed in your judgement log with the reason. Do not commit with a `BLOCKER`
   open.
+- **Keep it for boundary, composer and UI work.** In the Second Brain delivery it found real
+  MAJORs on most boundary pairs: weakened replacement tests, clobbered settings, and crash recovery
+  that did not converge.
 - **Measure it.** At the next retrospective count what the reviewer found that your own checks
   missed. If that is near zero for a risk tag, stop dispatching it for that tag.
 - **Know its limit.** It shares a model family with the implementers, so it can share their

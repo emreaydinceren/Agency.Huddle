@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Events basics
 
+## Identity
+
+This Team plans one event at a time, from a small birthday to a small conference, with its date, guest count and budget. Work that arrives here is a venue, vendor or product comparison, a vendor quote or reply, the timeline and run of show, or the weekly status. Work that is not one event, such as a recurring household errand, belongs to the household Team type, and the Human confirms every deposit and contract.
+
 ## When it applies
 
 - Planning one event, from a birthday to a small conference, with a date, a guest count and a budget.

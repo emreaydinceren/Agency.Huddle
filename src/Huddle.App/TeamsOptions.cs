@@ -11,6 +11,9 @@ public sealed class TeamsOptions
     /// <summary>The most Team Memory lines in one session's system prompt, across all of a Persona's Teams and Projects; the rest are counted. Zero or less lists none.</summary>
     public int MaxMemoryEntries { get; set; } = 50;
 
+    /// <summary>The Huddle-wide Memory index cap, bound from <c>Team:Teams:MaxHuddleMemoryEntries</c> per Spec §7.4. Zero or less lists none.</summary>
+    public int MaxHuddleMemoryEntries { get; set; } = 30;
+
     /// <summary>Model ids by adapter id, then tier (<c>Team:Teams:Tiers:&lt;adapterId&gt;:&lt;strongest|balanced|fast&gt;</c>); an adapter with no entry for a tier uses its default model.</summary>
     public Dictionary<string, Dictionary<ModelTier, string>> Tiers { get; set; } = [];
 }

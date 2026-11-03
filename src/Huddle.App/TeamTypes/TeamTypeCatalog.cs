@@ -343,7 +343,7 @@ internal sealed class TeamTypeCatalog
                     Job = jobId,
                     Title = job.Title,
                     Candidate = job.Persona,
-                    Skills = job.SkillRefs,
+                    Skills = RoleSkills(role, job),
                     Packs = job.Packs,
                     Requires = job.Requires,
                     SuggestedNames = job.SuggestedNames,
@@ -352,6 +352,30 @@ internal sealed class TeamTypeCatalog
         }
 
         return manifest with { Roles = roles };
+    }
+
+    /// <summary>The Skills a role carries: its job's, plus the three Second Brain Skills (Spec §6.8) when it is the manager.</summary>
+    /// <param name="role">The role being composed.</param>
+    /// <param name="job">The role's pool job.</param>
+    /// <returns>The job's Skills followed, for a manager, by the Second Brain Skills it does not already list.</returns>
+    private static IReadOnlyList<SkillRef> RoleSkills(RoleSpec role, PoolJob job)
+    {
+        if (!role.Manager)
+        {
+            return job.SkillRefs ?? [];
+        }
+
+        List<SkillRef> skills = [.. job.SkillRefs ?? []];
+        foreach (string name in (string[])["ingest", "wrap-up", "brain-check"])
+        {
+            SkillRef skill = new(name, "builtin", name);
+            if (!skills.Contains(skill))
+            {
+                skills.Add(skill);
+            }
+        }
+
+        return skills;
     }
 
     /// <summary>

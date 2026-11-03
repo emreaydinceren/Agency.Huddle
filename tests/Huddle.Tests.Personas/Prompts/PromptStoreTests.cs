@@ -1,12 +1,10 @@
 namespace Agency.Huddle.Tests.Prompts;
 
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Watching;
-using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Waiting;
 using Agency.Huddle.Tests.Elicitation;
 
@@ -31,14 +29,15 @@ public sealed class PromptStoreTests
         }
     }
 
-    /// <summary>A missing override file is the normal first-run case, so the constructor never creates one.</summary>
+    /// <summary>No override files is the normal first-run case, so the constructor creates the Prompts folder (to watch it) but no override file in it.</summary>
     [Fact]
-    public void Constructor_NoOverrideFile_DoesNotCreateOne()
+    public void Constructor_NoOverrideFile_CreatesTheFolderButNoFile()
     {
         using var dataDir = new TempDataDir();
         _ = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
-        Assert.False(File.Exists(Path.Combine(dataDir.Path, "prompts.json")));
+        Assert.True(Directory.Exists(PromptsDir(dataDir.Path)));
+        Assert.Empty(Directory.GetFileSystemEntries(PromptsDir(dataDir.Path)));
     }
 
     /// <summary>A file overriding one key leaves every other key resolving to its catalog default.</summary>
@@ -47,7 +46,7 @@ public sealed class PromptStoreTests
     {
         using var dataDir = new TempDataDir();
         const string overriddenText = "[Room: {{roomName}} #{{roomId}}]";
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["turn.roomLabel"] = overriddenText });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["turn.roomLabel"] = overriddenText });
 
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
@@ -59,13 +58,12 @@ public sealed class PromptStoreTests
         }
     }
 
-    /// <summary>Malformed JSON falls back to every default, does not throw, and logs a warning naming the file's path.</summary>
+    /// <summary>A retired <c>prompts.json</c> (here malformed) is never read: every key resolves to its default, nothing throws and nothing is logged as a warning.</summary>
     [Fact]
-    public void Constructor_MalformedJson_FallsBackToDefaultsAndLogsWarning()
+    public void Constructor_RetiredPromptsJson_IsIgnoredWithoutWarning()
     {
         using var dataDir = new TempDataDir();
-        var path = Path.Combine(dataDir.Path, "prompts.json");
-        File.WriteAllText(path, "{ this is not valid json");
+        File.WriteAllText(Path.Combine(dataDir.Path, "prompts.json"), "{ this is not valid json");
         var logger = new RecordingLogger<PromptStore>();
 
         var store = new PromptStore(dataDir.Options(), logger);
@@ -75,8 +73,7 @@ public sealed class PromptStoreTests
             Assert.Equal(prompt.Default, store.Raw(prompt.Key));
         }
 
-        var warning = Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Contains(path, warning.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Warning);
     }
 
     /// <summary>
@@ -87,12 +84,12 @@ public sealed class PromptStoreTests
     public void Save_FileHasUnknownKey_UnknownKeySurvivesAndIsIgnoredForResolution()
     {
         using var dataDir = new TempDataDir();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
         store.Save("getHelp.budget", "a brand new override");
 
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.Equal("keep-me", onDisk["not.a.real.prompt"]);
         Assert.Equal("a brand new override", onDisk["getHelp.budget"]);
     }
@@ -102,7 +99,7 @@ public sealed class PromptStoreTests
     public void Constructor_FileHasUnknownKey_LogsAtInformationOrDebugNeverWarning()
     {
         using var dataDir = new TempDataDir();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
         var logger = new RecordingLogger<PromptStore>();
 
         _ = new PromptStore(dataDir.Options(), logger);
@@ -135,7 +132,7 @@ public sealed class PromptStoreTests
 
         store.Save("getHelp.intro", PromptCatalog.Get("getHelp.intro").Default);
 
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.False(onDisk.ContainsKey("getHelp.intro"));
         Assert.Equal(PromptCatalog.Get("getHelp.intro").Default, store.Raw("getHelp.intro"));
     }
@@ -151,7 +148,7 @@ public sealed class PromptStoreTests
         store.Reset("getHelp.intro");
 
         Assert.Equal(PromptCatalog.Get("getHelp.intro").Default, store.Raw("getHelp.intro"));
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.False(onDisk.ContainsKey("getHelp.intro"));
     }
 
@@ -251,7 +248,7 @@ public sealed class PromptStoreTests
             ["getHelp.budget"] = "A brand new budget line.",
         });
 
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.False(onDisk.ContainsKey("getHelp.intro"));
         Assert.Equal("A brand new budget line.", onDisk["getHelp.budget"]);
     }
@@ -261,12 +258,12 @@ public sealed class PromptStoreTests
     public void SaveMany_UnrelatedKeyOnDisk_Survives()
     {
         using var dataDir = new TempDataDir();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["not.a.real.prompt"] = "keep-me" });
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
         store.SaveMany(new Dictionary<string, string> { ["getHelp.intro"] = "A brand new introduction." });
 
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.Equal("keep-me", onDisk["not.a.real.prompt"]);
         Assert.Equal("A brand new introduction.", onDisk["getHelp.intro"]);
     }
@@ -280,7 +277,7 @@ public sealed class PromptStoreTests
     {
         using var dataDir = new TempDataDir();
         PromptDefinition multiLine = MultiLinePrompt();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
 
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
@@ -296,12 +293,12 @@ public sealed class PromptStoreTests
     {
         using var dataDir = new TempDataDir();
         PromptDefinition multiLine = MultiLinePrompt();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
         store.SaveMany(new Dictionary<string, string> { ["getHelp.intro"] = "A brand new introduction." });
 
-        var onDisk = ReadPromptsJson(dataDir.Path);
+        var onDisk = ReadOverrides(dataDir.Path);
         Assert.False(onDisk.ContainsKey(multiLine.Key));
         Assert.Equal("A brand new introduction.", onDisk["getHelp.intro"]);
     }
@@ -314,12 +311,12 @@ public sealed class PromptStoreTests
     {
         using var dataDir = new TempDataDir();
         PromptDefinition multiLine = MultiLinePrompt();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
         store.Reset("getHelp.intro");
 
-        Assert.False(ReadPromptsJson(dataDir.Path).ContainsKey(multiLine.Key));
+        Assert.False(ReadOverrides(dataDir.Path).ContainsKey(multiLine.Key));
     }
 
     /// <summary>An empty edit set is a no-op: no file write and no <see cref="PromptStore.PromptsChanged"/>.</summary>
@@ -334,7 +331,7 @@ public sealed class PromptStoreTests
         store.SaveMany(new Dictionary<string, string>());
 
         Assert.Equal(0, invocationCount);
-        Assert.False(File.Exists(Path.Combine(dataDir.Path, "prompts.json")));
+        Assert.Empty(Directory.GetFileSystemEntries(PromptsDir(dataDir.Path)));
     }
 
     /// <summary>
@@ -355,7 +352,7 @@ public sealed class PromptStoreTests
         PromptFieldFactory.StageAllDefaults(pendingEdits);
 
         // Staging alone must not have touched the file: both overrides saved above are still there.
-        var onDiskBeforeSave = ReadPromptsJson(dataDir.Path);
+        var onDiskBeforeSave = ReadOverrides(dataDir.Path);
         Assert.True(onDiskBeforeSave.ContainsKey("getHelp.intro"));
         Assert.True(onDiskBeforeSave.ContainsKey("turn.roomLabel"));
 
@@ -366,24 +363,24 @@ public sealed class PromptStoreTests
             Assert.Equal(prompt.Default, store.Raw(prompt.Key));
         }
 
-        var onDiskAfterSave = ReadPromptsJson(dataDir.Path);
+        var onDiskAfterSave = ReadOverrides(dataDir.Path);
         Assert.False(onDiskAfterSave.ContainsKey("getHelp.intro"));
         Assert.False(onDiskAfterSave.ContainsKey("turn.roomLabel"));
     }
 
-    /// <summary><see cref="PromptStore.FilePath"/> reports the exact override-file path this instance was constructed with, whether or not the file exists yet.</summary>
+    /// <summary><see cref="PromptStore.FilePath"/> reports the Prompts folder this instance was constructed with; a save puts a file in it.</summary>
     [Fact]
-    public void FilePath_ReportsTheOverrideFilePath()
+    public void FilePath_ReportsThePromptsFolder()
     {
         using var dataDir = new TempDataDir();
         var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
-        Assert.Equal(Path.Combine(dataDir.Path, "prompts.json"), store.FilePath);
-        Assert.False(File.Exists(store.FilePath));
+        Assert.Equal(Path.Combine(dataDir.Path, "Prompts"), store.FilePath);
+        Assert.Empty(Directory.GetFileSystemEntries(store.FilePath));
 
         store.Save("getHelp.intro", "Freshly saved text.");
 
-        Assert.True(File.Exists(store.FilePath));
+        Assert.True(File.Exists(Path.Combine(store.FilePath, "getHelp.intro.md")));
     }
 
     /// <summary>The same rebuild-before-notify invariant, exercised through <see cref="PromptStore.Reset"/> instead of <see cref="PromptStore.Save"/>.</summary>
@@ -401,21 +398,21 @@ public sealed class PromptStoreTests
         Assert.Equal(PromptCatalog.Get("getHelp.intro").Default, seenInsideHandler);
     }
 
-    /// <summary>An external write to <c>prompts.json</c> (no <see cref="PromptStore.Save"/> call) is picked up and resolves through <see cref="PromptStore.Raw"/>.</summary>
+    /// <summary>An external write to an override file (no <see cref="PromptStore.Save"/> call) is picked up and resolves through <see cref="PromptStore.Raw"/>.</summary>
     [Fact]
     public async Task Raw_ExternalWriteToOverrideFile_PicksUpNewValue()
     {
         using var dataDir = new TempDataDir();
         using var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
 
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
 
         await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), "Externally edited text.", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.Equal("Externally edited text.", store.Raw("getHelp.intro"));
     }
 
-    /// <summary>An external edit to <c>prompts.json</c> raises <see cref="PromptStore.PromptsChanged"/> once the watcher's debounce settles.</summary>
+    /// <summary>An external edit to an override file raises <see cref="PromptStore.PromptsChanged"/> once the watcher's debounce settles.</summary>
     [Fact]
     public async Task PromptsChanged_ExternalEdit_IsRaised()
     {
@@ -424,7 +421,7 @@ public sealed class PromptStoreTests
         var raised = false;
         store.PromptsChanged += () => raised = true;
 
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
 
         await Eventually.UntilAsync(() => raised, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
@@ -448,18 +445,18 @@ public sealed class PromptStoreTests
         Assert.Equal(1, Volatile.Read(ref raised));
     }
 
-    /// <summary>A hand edit that rewrites <c>prompts.json</c> with the same content raises nothing.</summary>
+    /// <summary>A hand edit that rewrites an override file with the same content raises nothing.</summary>
     [Fact]
     public async Task PromptsChanged_ExternalEditWithIdenticalContent_RaisesNothing()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
         using PromptStore store = new(dataDir.Options(), NullLogger<PromptStore>.Instance);
         int raised = 0;
         store.PromptsChanged += () => Interlocked.Increment(ref raised);
 
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Hand written text." });
         await Task.Delay(3 * DebouncedFileWatcher.DebounceMilliseconds, ct);
 
         Assert.Equal(0, Volatile.Read(ref raised));
@@ -475,7 +472,7 @@ public sealed class PromptStoreTests
         store.Save("getHelp.intro", "A previously saved override.");
         Assert.Equal("A previously saved override.", store.Raw("getHelp.intro"));
 
-        File.Delete(Path.Combine(dataDir.Path, "prompts.json"));
+        File.Delete(Path.Combine(PromptsDir(dataDir.Path), "getHelp.intro.md"));
 
         await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), PromptCatalog.Get("getHelp.intro").Default, StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
 
@@ -487,7 +484,7 @@ public sealed class PromptStoreTests
 
     /// <summary>
     /// A rename-over save - writing a temp file, then <see cref="File.Move(string, string, bool)"/>'ing
-    /// it over <c>prompts.json</c>, the idiom many editors and <see cref="File.Replace(string, string, string?)"/>
+    /// it over the override file, the idiom many editors and <see cref="File.Replace(string, string, string?)"/>
     /// use - arrives as a <see cref="WatcherChangeTypes.Renamed"/> event, not <see cref="WatcherChangeTypes.Changed"/>,
     /// and must still be picked up. A watcher that only subscribed to <c>Changed</c> would miss this.
     /// </summary>
@@ -496,12 +493,11 @@ public sealed class PromptStoreTests
     {
         using var dataDir = new TempDataDir();
         using var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
-        var targetPath = Path.Combine(dataDir.Path, "prompts.json");
-        var tempPath = Path.Combine(dataDir.Path, "prompts.json.tmp");
+        Directory.CreateDirectory(PromptsDir(dataDir.Path));
+        var targetPath = Path.Combine(PromptsDir(dataDir.Path), "getHelp.intro.md");
+        var tempPath = Path.Combine(PromptsDir(dataDir.Path), "getHelp.intro.md.tmp");
 
-        File.WriteAllText(tempPath, JsonSerializer.Serialize(
-            new Dictionary<string, string> { ["getHelp.intro"] = "Renamed into place." },
-            ProtocolJson.Options));
+        File.WriteAllText(tempPath, "Renamed into place.");
         File.Move(tempPath, targetPath, overwrite: true);
 
         await Eventually.UntilAsync(() => string.Equals(store.Raw("getHelp.intro"), "Renamed into place.", StringComparison.Ordinal), TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
@@ -520,7 +516,7 @@ public sealed class PromptStoreTests
 
         store.Dispose();
 
-        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Written after dispose." });
+        WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Written after dispose." });
 
         // No event to wait for a positive signal on, so this waits out a window comfortably longer
         // than the debounce and the retry budget, then asserts nothing happened - the only way to
@@ -543,7 +539,7 @@ public sealed class PromptStoreTests
 
         for (var i = 0; i < writeCount; i++)
         {
-            WritePromptsJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = $"Burst write {i}." });
+            WriteOverrides(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = $"Burst write {i}." });
         }
 
         // The last write must have settled and been observed before asserting the raise count, or
@@ -561,27 +557,42 @@ public sealed class PromptStoreTests
     private static PromptDefinition MultiLinePrompt() =>
         PromptCatalog.All.First(p => p.Default.Contains('\n') && !string.Equals(p.Key, "getHelp.intro", StringComparison.Ordinal));
 
-    /// <summary>Writes a flat override JSON object directly, as a human editing the file by hand would.</summary>
+    /// <summary>The Prompts folder under <paramref name="dataDir"/> (<c>Team:Library:Prompts:Dir</c> defaults to <c>Prompts</c>).</summary>
+    /// <param name="dataDir">The temp data directory a <see cref="PromptStore"/> is pointed at.</param>
+    private static string PromptsDir(string dataDir) => Path.Combine(dataDir, "Prompts");
+
+    /// <summary>Writes one <c>&lt;key&gt;.md</c> file per entry directly, as a human editing the folder by hand would.</summary>
     /// <param name="dataDir">The temp data directory a <see cref="PromptStore"/> will be pointed at.</param>
     /// <param name="overrides">The override keys and text to write.</param>
-    private static void WritePromptsJson(string dataDir, Dictionary<string, string> overrides)
+    private static void WriteOverrides(string dataDir, Dictionary<string, string> overrides)
     {
-        var path = Path.Combine(dataDir, "prompts.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(overrides, ProtocolJson.Options));
+        Directory.CreateDirectory(PromptsDir(dataDir));
+        foreach ((string key, string text) in overrides)
+        {
+            File.WriteAllText(Path.Combine(PromptsDir(dataDir), key + ".md"), text);
+        }
     }
 
-    /// <summary>Reads the override file back as a flat dictionary, for asserting what a <see cref="PromptStore"/> actually wrote.</summary>
+    /// <summary>Reads the Prompts folder back as key to text, for asserting what a <see cref="PromptStore"/> actually wrote.</summary>
     /// <param name="dataDir">The temp data directory a <see cref="PromptStore"/> was pointed at.</param>
-    private static Dictionary<string, string> ReadPromptsJson(string dataDir)
+    private static Dictionary<string, string> ReadOverrides(string dataDir)
     {
-        var path = Path.Combine(dataDir, "prompts.json");
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(json, ProtocolJson.Options)
-            ?? throw new InvalidOperationException("prompts.json deserialised to null.");
+        Dictionary<string, string> result = new(StringComparer.Ordinal);
+        if (!Directory.Exists(PromptsDir(dataDir)))
+        {
+            return result;
+        }
+
+        foreach (string file in Directory.GetFiles(PromptsDir(dataDir), "*.md"))
+        {
+            result[Path.GetFileNameWithoutExtension(file)] = File.ReadAllText(file);
+        }
+
+        return result;
     }
 
     /// <summary>
-    /// A watcher rebuild that cannot read <c>prompts.json</c> on any attempt (an editor holds it exclusively) logs a
+    /// A watcher rebuild that cannot read an override file on any attempt (an editor holds it exclusively) logs a
     /// warning and keeps the previously resolved prompt text instead of letting the <see cref="IOException"/> escape the timer thread.
     /// </summary>
     [Fact]
@@ -592,9 +603,9 @@ public sealed class PromptStoreTests
         Elicitation.RecordingLogger<PromptStore> logger = new();
         using PromptStore store = new(dataDir.Options(), logger);
         store.Save("getHelp.intro", "Saved before the lock.");
-        string path = Path.Combine(dataDir.Path, "prompts.json");
+        string path = Path.Combine(PromptsDir(dataDir.Path), "getHelp.intro.md");
 
-        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "getHelp.intro": "Written while locked." }"""))
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, "Written while locked."))
         {
             await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
 
