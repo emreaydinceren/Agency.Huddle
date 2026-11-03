@@ -49,6 +49,15 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// </summary>
     public string FilePath => this.promptsDir;
 
+    /// <summary>
+    /// The names (without <c>.md</c>) of files in the Prompts folder that name no prompt this application knows,
+    /// ordinal-sorted. They are never used; Settings lists them so a typo in a file name is visible. Refreshed
+    /// each time the resolved snapshot is rebuilt.
+    /// </summary>
+    public IReadOnlyList<string> UnknownOverrides => this.unknownOverrides;
+
+    private volatile IReadOnlyList<string> unknownOverrides = [];
+
     // The whole resolved state - one text per catalog key - swapped in as one immutable reference.
     private readonly WatchedFileStore<FrozenDictionary<string, string>> watched;
 
@@ -353,7 +362,26 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             }
         }
 
+        this.unknownOverrides = this.FindUnknownOverrides();
         return BuildResolved(overrides);
+    }
+
+    /// <summary>The stems of the folder's <c>.md</c> files that match no prompt key (ignoring case), ordinal-sorted.</summary>
+    private List<string> FindUnknownOverrides()
+    {
+        List<string> unknown = [];
+        foreach (string file in Directory.EnumerateFiles(this.promptsDir))
+        {
+            string stem = Path.GetFileNameWithoutExtension(file);
+            if (string.Equals(Path.GetExtension(file), Extension, StringComparison.OrdinalIgnoreCase)
+                && !KeysIgnoringCase.ContainsKey(stem))
+            {
+                unknown.Add(stem);
+            }
+        }
+
+        unknown.Sort(StringComparer.Ordinal);
+        return unknown;
     }
 
     /// <summary>

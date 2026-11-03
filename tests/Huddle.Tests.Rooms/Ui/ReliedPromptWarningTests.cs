@@ -61,6 +61,23 @@ public sealed class ReliedPromptWarningTests
         Assert.Empty(FieldOf(cut, "systemPrompt.orientation").QuerySelectorAll(".mud-alert"));
     }
 
+    /// <summary>With stray override files the panel lists them under the heading "Unknown overrides"; with none it shows no such heading.</summary>
+    [Fact]
+    public async Task UnknownOverrides_AreListedUnderTheirHeadingOnlyWhenPresent()
+    {
+        await using MudBunitContext ctx = new();
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), new Dictionary<string, string>(StringComparer.Ordinal));
+
+        var empty = ctx.Render<PromptsPanel>(parameters => parameters.Add(p => p.Groups, groups));
+        var listed = ctx.Render<PromptsPanel>(parameters => parameters
+            .Add(p => p.Groups, groups)
+            .Add(p => p.UnknownOverrides, ["alpha", "zeta"]));
+
+        Assert.DoesNotContain(empty.FindAll("h2"), h => h.TextContent.Contains("Unknown overrides", StringComparison.Ordinal));
+        Assert.Contains(listed.FindAll("h2"), h => string.Equals(h.TextContent.Trim(), "Unknown overrides", StringComparison.Ordinal));
+        Assert.Equal(["alpha", "zeta"], listed.FindAll(".prompts-unknown-overrides li").Select(li => li.TextContent.Trim()));
+    }
+
     /// <summary>Renders the panel over the whole catalog with every prompt at its default.</summary>
     private static IRenderedComponent<PromptsPanel> RenderPanel(MudBunitContext ctx) =>
         ctx.Render<PromptsPanel>(parameters => parameters
