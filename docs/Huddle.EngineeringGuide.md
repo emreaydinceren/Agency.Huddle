@@ -261,7 +261,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | Key | Default | Note |
 | --- | --- | --- |
 | `DataDir` | `App_Data` | Everything created at runtime lives here. |
-| `PipeName` | `team` | |
+| `PipeName` | `team` | The named pipe Agents connect on. The app claims it as the pipe's first instance and stops at start-up when another program already listens on it: two copies on one machine sharing a name each took some of the other's Agents, which then sat Offline with nothing logged. Give a second copy its own name. |
 | `HumanName` | `You` | The Human's Name on a blank system only. Once `{DataDir}/profile.json` exists (Settings > Profile, `HumanProfileStore`), that file wins; read the live Name through `IHumanIdentity`, never from this key. |
 | `HelperConcurrency` | `2` | How many Helper runs may happen at once, across all Helpers. A Helper is a background agent that makes one judgement and lets Huddle act on it ([the Helpers design](Huddle.Helpers-Specifications.md) §6.3). It sits outside `Team:Helpers` because the configuration binder cannot mix a dictionary's entries with ordinary properties on one section. |
 | `Team:Helpers:<Id>:Enabled`, `Adapter`, `Model`, `Effort`, `DailyCap`, `ContinueGrant`, `WaitSeconds`, `TimeoutSeconds` | the Helper's code default | Per-Helper defaults, such as `Team:Helpers:NeedsHuman:DailyCap`. A value left out keeps the Helper's code default; a choice saved on the Helper's card in Settings › Helpers wins over all of them. `NeedsHuman` defaults to on, Adapter `claude`, Model `haiku`, Effort `low`, 50 calls a day, a 10-second wait and a 60-second timeout. Helpers run only while `Team:Acp:Enabled` is true. |
