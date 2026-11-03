@@ -216,6 +216,23 @@ public sealed class BuildTeamTests
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
     }
 
+    /// <summary>A name that matches an archived Team is refused up front with the provisioner's text, and step 2 stays open.</summary>
+    [Fact]
+    public async Task Details_ArchivedTeamName_IsRefusedWithTheProvisionersText()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Folders.ArchivedNames = ["Home"];
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("home"));
+
+        Assert.Equal("A Team named Home is archived. Unarchive it or pick another name.", cut.Find(".build-team-name .mud-input-helper-text").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
     /// <summary>Every type shows the same "Library folder" field, filled with the Teams folder under the data folder; a missing folder is refused, a blank one is allowed, and an existing one is accepted.</summary>
     [Fact]
     public async Task Details_LibraryFolder_IsUniformDefaultedAndValidated()

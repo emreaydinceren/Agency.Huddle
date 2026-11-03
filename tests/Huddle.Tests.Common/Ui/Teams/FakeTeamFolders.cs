@@ -61,6 +61,12 @@ internal sealed class FakeTeamFolders : ITeamFolders
     /// <summary>What <see cref="CreateTeam"/> returns. Set it before the code under test calls.</summary>
     public TeamCreateResult CreateTeamResult { get; set; } = new(TeamCreateOutcome.Created, null);
 
+    /// <summary>What <see cref="ArchivedTeamNames"/> returns. Set it before the code under test calls.</summary>
+    public IReadOnlyList<string> ArchivedNames { get; set; } = [];
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> ArchivedTeamNames() => this.ArchivedNames;
+
     /// <summary>What <see cref="UpdateTeamFile"/> returns. Set it before the code under test calls.</summary>
     public bool UpdateResult { get; set; }
 

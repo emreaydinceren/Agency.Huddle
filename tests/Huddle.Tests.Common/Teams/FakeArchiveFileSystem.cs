@@ -42,6 +42,9 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
     /// <summary>Gets or sets an exception every <c>Move</c> throws (after it is logged), for example a rename that fails for a reason other than a held-open file.</summary>
     public Exception? MoveThrows { get; set; }
 
+    /// <summary>Gets or sets a callback run at the start of every <c>Move</c>, so a test can probe the world while the move is in flight.</summary>
+    public Action? OnMove { get; set; }
+
     /// <summary>Gets or sets an exception every <c>CopyTree</c> throws before it copies anything.</summary>
     public Exception? CopyThrows { get; set; }
 
@@ -81,6 +84,7 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
     {
         string step = "Move:" + Path.GetFileName(destination);
         this.Enter(step);
+        this.OnMove?.Invoke();
         if (this.MoveThrows is not null)
         {
             throw this.MoveThrows;

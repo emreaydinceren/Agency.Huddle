@@ -101,11 +101,28 @@ public sealed class InstructionsAndGuardsSessionTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
 
+        // Start-up writes the default Teams/AGENTS.md unless a file is there; an empty one stands in for "no content".
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teams"));
+        File.WriteAllText(Path.Combine(dataDir.Path, "Teams", "AGENTS.md"), string.Empty);
+
         await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
         string prompt = await fixture.AppendedSystemPromptAsync(ct);
 
         Assert.DoesNotContain("## Huddle-wide", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Each level below adds to the one before it.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>A fresh host writes the default Teams/AGENTS.md at start-up, so the session carries a Huddle-wide part.</summary>
+    [Fact]
+    public async Task SessionStart_FreshHost_CarriesTheDefaultHuddleWideAgentsMd()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+
+        await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(ct);
+
+        Assert.Contains("## Huddle-wide (", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>A member's edit of Team Memory is rejected by the session's permission handler, and its read of the same file is allowed.</summary>

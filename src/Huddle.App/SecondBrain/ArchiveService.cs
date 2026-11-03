@@ -163,6 +163,7 @@ internal sealed class ArchiveService : IDisposable
 
         string live = Path.Combine(teamsRoot, archived);
         ArchiveMoveResult moved;
+        using IDisposable pause = this.tasks.PauseWrites(archived);
         try
         {
             moved = this.folders.RunExclusive(

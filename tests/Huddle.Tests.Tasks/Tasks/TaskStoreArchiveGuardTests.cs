@@ -70,6 +70,45 @@ public sealed class TaskStoreArchiveGuardTests
         Assert.NotNull(written);
     }
 
+    /// <summary>A batch write that touches a paused Team is refused as a whole and the file keeps its bytes.</summary>
+    [Fact]
+    public void WriteMany_WhilePaused_RefusedAndFileUntouched()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Home", "_tasks", "HOME-0001.md"), TestTasks.Make(id: "HOME-0001", title: "v0", location: new("Home", null, false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("HOME-0001", out TaskId id);
+        TaskItem current = Assert.IsType<TaskItem>(store.Get(id));
+        string before = File.ReadAllText(current.Path);
+        string version = TaskFileFormat.Compose(current);
+
+        using IDisposable scope = store.PauseWrites("Home");
+        _ = Assert.Throws<InvalidOperationException>(() => store.WriteMany([(current, version, version.Replace("v0", "v1", StringComparison.Ordinal))]));
+
+        Assert.Equal(before, File.ReadAllText(current.Path));
+    }
+
+    /// <summary>A batch write for an indexed Team whose folder is gone is refused.</summary>
+    [Fact]
+    public void WriteMany_IndexedTeamFolderMissing_Refused()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Home", "_tasks", "HOME-0001.md"), TestTasks.Make(id: "HOME-0001", title: "v0", location: new("Home", null, false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("HOME-0001", out TaskId id);
+        TaskItem current = Assert.IsType<TaskItem>(store.Get(id));
+        string version = TaskFileFormat.Compose(current);
+        Directory.Delete(Path.Combine(root, "Home"), recursive: true);
+
+        _ = Assert.Throws<InvalidOperationException>(() => store.WriteMany([(current, version, version.Replace("v0", "v1", StringComparison.Ordinal))]));
+
+        Assert.False(Directory.Exists(Path.Combine(root, "Home")));
+    }
+
     /// <summary>An update of an existing Task of a paused Team is refused and the file keeps its bytes.</summary>
     [Fact]
     public void Write_WhilePaused_RefusedAndFileUntouched()

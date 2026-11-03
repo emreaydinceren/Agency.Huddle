@@ -54,6 +54,10 @@ internal interface ITeamFolders
     /// <returns>What <paramref name="action"/> returned.</returns>
     T RunExclusive<T>(Func<T> action) => action();
 
+    /// <summary>The names of the archived Teams (a folder under the Archive root holding <c>_team.md</c>), for refusing a new Team of the same name up front. The default knows none.</summary>
+    /// <returns>The archived names in their on-disk spelling.</returns>
+    IReadOnlyList<string> ArchivedTeamNames() => [];
+
     /// <summary>Reads a Team's <c>_team.md</c>.</summary>
     /// <param name="team">The Team's name.</param>
     /// <returns>The parsed file, or <see langword="null"/> when the Team or its file is missing or unreadable.</returns>

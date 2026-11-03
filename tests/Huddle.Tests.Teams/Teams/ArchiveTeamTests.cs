@@ -325,6 +325,9 @@ public sealed class ArchiveTeamTests
 
         public ArchiveService Service { get; }
 
+        /// <summary>Gets the Task store the service pauses.</summary>
+        public TaskStore Tasks => this.tasks;
+
         public RecordingTeamMembership Membership { get; }
 
         public SqliteTeamDirectory Directory { get; }

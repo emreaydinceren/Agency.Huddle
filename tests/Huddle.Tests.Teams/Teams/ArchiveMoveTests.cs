@@ -1,6 +1,8 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.SecondBrain;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Tasks;
 using Fixture = Agency.Huddle.Tests.Teams.ArchiveTeamTests.Fixture;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -293,6 +295,30 @@ public sealed class ArchiveMoveTests
         Assert.DoesNotContain(f.Membership.Calls, static c => c.Method == "Add");
         Assert.True(File.Exists(Path.Combine(f.ArchivedFolder, TeamPaths.TeamFileName)));
         Assert.False(Directory.Exists(f.TeamFolder));
+    }
+
+    /// <summary>While an unarchive moves the folder, the Team's Task writes are paused; afterwards they work again.</summary>
+    [Fact]
+    public async Task UnarchiveTeamAsync_WhileMoving_TaskWritesAreRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeArchiveFileSystem fs = new(new PhysicalArchiveFileSystem());
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct, files: fs);
+        _ = await f.Service.ArchiveTeamAsync(Home, ct);
+        f.Catalog.Teams = [new TeamSummary("Other", [], ["Nova"], HasFolder: true)];
+        bool refused = false;
+        fs.OnMove = () =>
+        {
+            TaskItem candidate = TestTasks.Make(id: "HOME-0099", location: new(Home, null, false), path: "");
+            refused = Assert.Throws<InvalidOperationException>(() => f.Tasks.Create(candidate, TaskFileFormat.Compose(candidate))) is not null;
+        };
+
+        ArchiveOutcome outcome = await f.Service.UnarchiveTeamAsync(Home, ct);
+
+        Assert.True(outcome.Done);
+        Assert.True(refused);
+        TaskItem after = TestTasks.Make(id: "HOME-0098", location: new(Home, null, false), path: "");
+        Assert.NotNull(f.Tasks.Create(after, TaskFileFormat.Compose(after)));
     }
 
     /// <summary>Cross-volume unarchive mirrors archive: stage under <c>Teams/.huddle-unarchiving-Home</c>, rename in, delete the archive folder through <c>Archive/.huddle-deleting-Home</c>.</summary>

@@ -518,6 +518,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         {
             if (!this.disposed)
             {
+                foreach ((TaskItem task, string _, string _) in writes)
+                {
+                    this.RefuseIfPaused(task.Location.Team);
+                    this.RefuseIfTeamFolderMissing(task.Location.Team);
+                }
+
                 TaskSnapshot snapshot = this.index;
                 bool anyWritten = false;
                 foreach ((TaskItem task, string expectedVersion, string text) in writes)

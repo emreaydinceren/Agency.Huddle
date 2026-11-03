@@ -167,7 +167,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        string? problem = TeamNames.ValidateTeamName(name, this.catalog.Teams, this.ArchivedTeamNames());
+        string? problem = TeamNames.ValidateTeamName(name, this.catalog.Teams, this.ArchivedTeamNameList());
         if (problem is not null)
         {
             return new LibraryResult<LibraryPath>(null, problem);
@@ -252,7 +252,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
         // A Team with exactly this name keeps its AlreadyExists path below; only a name that differs by case is refused here.
         IReadOnlyList<TeamSummary> others = [.. this.catalog.Teams.Where(t => !string.Equals(t.Name, team, StringComparison.Ordinal))];
-        if (TeamNames.ValidateTeamName(team, others, this.ArchivedTeamNames()) is not null)
+        if (TeamNames.ValidateTeamName(team, others, this.ArchivedTeamNameList()) is not null)
         {
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
         }
@@ -364,6 +364,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             }
         }
     }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<string> ArchivedTeamNames() => this.ArchivedTeamNameList();
 
     /// <inheritdoc/>
     public TeamFile? ReadTeamFile(string team)
@@ -488,10 +491,10 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// <summary>Whether <c>Archive/&lt;name&gt;/_team.md</c> exists, the folder matched ignoring case by listing the Archive root. A Project archive alone (no <c>_team.md</c>) does not count.</summary>
     /// <param name="name">The Team's name.</param>
     private bool ArchivedTeamExists(string name) =>
-        this.ArchivedTeamNames().Any(archived => string.Equals(archived, name, StringComparison.OrdinalIgnoreCase));
+        this.ArchivedTeamNameList().Any(archived => string.Equals(archived, name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The folder names under the Archive root that hold a <c>_team.md</c>, in their on-disk spelling.</summary>
-    private List<string> ArchivedTeamNames() =>
+    private List<string> ArchivedTeamNameList() =>
         this.ListArchive(null, static folder => File.Exists(Path.Combine(folder, TeamPaths.TeamFileName)));
 
     /// <summary>The Project folder names under <c>Archive/&lt;team&gt;/</c> (the Team matched ignoring case), in their on-disk spelling.</summary>

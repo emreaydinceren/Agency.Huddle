@@ -566,7 +566,7 @@
                 return ExistsMessage;
             }
 
-            return TeamNames.ValidateTeamName(trimmed, this.Catalog.Teams);
+            return TeamNames.ValidateTeamName(trimmed, this.Catalog.Teams, this.Folders.ArchivedTeamNames());
         }
     }
 
