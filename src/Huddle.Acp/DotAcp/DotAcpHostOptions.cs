@@ -11,8 +11,17 @@ namespace Agency.Huddle.Acp.DotAcp;
 /// has no way to answer must not advertise, because the adapter then holds its Turn open waiting for
 /// a reply. The production factory is the only place that turns it on.
 /// </param>
+/// <param name="AdvertiseSessionNotices">
+/// Whether <c>initialize</c> advertises <c>clientCapabilities.session.notices</c> and the host rewrites an
+/// inbound <c>session/update</c> whose <c>update.sessionUpdate</c> is <c>notice</c> to the extension
+/// notification <c>_session/notice</c>, published as an <see cref="Abstractions.AgentNotice"/>. Stable
+/// dotacp predates the <c>notice</c> update and fails to deserialise one, so the rewrite is what makes
+/// advertising safe. Off by default: an agent that was not told writes the notice into the reply text,
+/// which is what every host without a place to show one should get.
+/// </param>
 public sealed record DotAcpHostOptions(
     string ClientName = "Team.Console",
     string? ClientVersion = null,
     bool TraceWire = false,
-    bool AdvertiseElicitationForm = false);
+    bool AdvertiseElicitationForm = false,
+    bool AdvertiseSessionNotices = false);

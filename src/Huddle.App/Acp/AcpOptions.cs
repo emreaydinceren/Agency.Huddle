@@ -122,6 +122,19 @@ public sealed class AcpOptions
     public bool AdvertiseElicitation { get; set; } = true;
 
     /// <summary>
+    /// Whether Huddle tells the Adapter, in <c>initialize</c>, that it can show live notices
+    /// (<c>clientCapabilities.session.notices</c>). On, an advisory such as "Auto mode unavailable" arrives
+    /// as its own <c>notice</c> update: Huddle logs it and shows it as a row in the running Turn's activity,
+    /// apart from the reply. Off restores the old behaviour exactly: the Adapter writes the advisory into
+    /// the reply text, where it reads as the Agent's own words.
+    /// </summary>
+    /// <remarks>
+    /// Read once, when a Persona's Adapter process starts, like <see cref="AdvertiseElicitation"/>. Only the
+    /// app's own host reads it: the model catalog probe and the console never advertise.
+    /// </remarks>
+    public bool AdvertiseSessionNotices { get; set; } = true;
+
+    /// <summary>
     /// The install-wide Agent cap of the single-Team era. Bound so an existing configuration still
     /// loads, but it is no longer enforced anywhere: <see cref="MaxAgentsPerTeam"/> and
     /// <see cref="MaxLiveProcesses"/> (HR-10, decision D1) limit each Team and the live processes

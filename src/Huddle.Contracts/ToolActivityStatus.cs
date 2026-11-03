@@ -14,4 +14,11 @@ public enum ToolActivityStatus
 
     /// <summary>The call finished with an error.</summary>
     Failed,
+
+    /// <summary>
+    /// Not a tool call: a live notice from the Adapter (such as falling back from a mode the model lacks),
+    /// shown among the Turn's rows so it is never mistaken for the Agent's own words. Never logged as a
+    /// tool call.
+    /// </summary>
+    Notice,
 }

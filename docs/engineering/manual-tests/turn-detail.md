@@ -58,7 +58,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Pass if — all of these**
 
-- Rows appear under the streaming text, oldest first, never reordering, each with a status label of exactly `Waiting`, `Running`, `Done` or `Failed` (read from the element's `aria-label`).
+- Rows appear under the streaming text, oldest first, never reordering, each with a status label of exactly `Waiting`, `Running`, `Done` or `Failed` (read from the element's `aria-label`). A `Notice` row may also appear: it is an Adapter notice, not a tool call.
 - The edit row has an expander whose accessible name reads `Show change to notes.md`, and `Hide change to notes.md` once open.
 - The opened preview's header is the full path. The **Removed** block contains `Teh` with a `−`, the **Added** block contains `The` with a `+`, and neither block carries a note. (The model may send only the changed word as `old_string`; the block shows what it sent, so do not require the whole line.)
 - Opening the row does not scroll the Room.

@@ -317,6 +317,22 @@ public sealed class MessageListTests
             rows.Select(row => row.QuerySelector("[role=img]")?.GetAttribute("aria-label")));
     }
 
+    /// <summary>An Adapter notice row reads "Notice" with the info mark, never "Done", so it is not taken for a finished tool call.</summary>
+    [Fact]
+    public async Task Rows_NoticeRow_IsLabelledNotice()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(
+            new ToolCallDetail("huddle-notice-1", "Auto mode unavailable: using Accept edits instead.", ToolActivityStatus.Notice, null, null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        var row = Assert.Single(cut.FindAll("li.turn-detail-row"));
+        Assert.Equal("Auto mode unavailable: using Accept edits instead.", row.QuerySelector(".tool-activity")?.TextContent.Trim());
+        Assert.Equal("Notice", row.QuerySelector("[role=img]")?.GetAttribute("aria-label"));
+    }
+
     /// <summary>Nothing expands by itself: a closed row's preview is hidden from sight and from assistive technology until the Human opens it.</summary>
     [Fact]
     public async Task Preview_WhileClosed_IsHiddenUntilOpened()

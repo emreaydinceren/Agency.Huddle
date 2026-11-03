@@ -95,5 +95,17 @@ public sealed record AvailableCommandInfo(string Name, string Description, strin
 /// <param name="Commands">Every command the agent currently advertises.</param>
 public sealed record AvailableCommandsUpdated(string SessionId, IReadOnlyList<AvailableCommandInfo> Commands) : AgentEvent(SessionId);
 
+/// <summary>
+/// A live advisory from the agent (ACP <c>notice</c> session update): something for the Human to see that
+/// is not part of the agent's reply, such as an Adapter falling back from a mode the model lacks. Sent
+/// only to a host that advertised <c>session.notices</c>; otherwise the agent writes it into the reply
+/// text instead. A notice is not session history.
+/// </summary>
+/// <param name="SessionId">The id of the session this notice belongs to.</param>
+/// <param name="Severity">The agent's severity hint.</param>
+/// <param name="Title">The notice's short title.</param>
+/// <param name="Description">The longer explanation, or <see langword="null"/> when the agent sent none.</param>
+public sealed record AgentNotice(string SessionId, NoticeSeverity Severity, string Title, string? Description) : AgentEvent(SessionId);
+
 /// <summary>An update of a kind not recognised by this client.</summary>
 public sealed record UnknownUpdate(string SessionId, string TypeName) : AgentEvent(SessionId);

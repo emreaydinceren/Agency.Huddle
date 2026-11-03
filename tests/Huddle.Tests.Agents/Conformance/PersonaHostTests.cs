@@ -27,8 +27,11 @@ public sealed class PersonaHostTests
     /// <summary>The configuration key that switches elicitation advertising, named from the option so a rename cannot leave these tests asserting on a switch that no longer exists.</summary>
     private static readonly string AdvertiseKey = "Team:Acp:" + nameof(AcpOptions.AdvertiseElicitation);
 
-    /// <summary>The only <c>clientCapabilities</c> keys Huddle ever advertises, sorted: file system and terminal (both turned off) and elicitation (form mode only, when switched on).</summary>
-    private static readonly string[] AllowedCapabilityKeys = ["elicitation", "fs", "terminal"];
+    /// <summary>The configuration key that switches session-notice advertising, named from the option for the same reason.</summary>
+    private static readonly string NoticesKey = "Team:Acp:" + nameof(AcpOptions.AdvertiseSessionNotices);
+
+    /// <summary>The only <c>clientCapabilities</c> keys Huddle ever advertises, sorted: file system and terminal (both turned off), elicitation (form mode only, when switched on) and session (notices only, when switched on).</summary>
+    private static readonly string[] AllowedCapabilityKeys = ["elicitation", "fs", "session", "terminal"];
 
     /// <summary><see cref="IAgentHostFactory.StartAsync"/> starts the host but sends no <c>session/new</c> at all.</summary>
     [Fact]
@@ -80,15 +83,17 @@ public sealed class PersonaHostTests
     }
 
     /// <summary>
-    /// Questions spec Q-G1: whatever the switch, the only <c>clientCapabilities</c> keys <c>initialize</c>
-    /// carries are <c>fs</c>, <c>terminal</c> and <c>elicitation</c>. A capability added beside them is a new
-    /// decision the way elicitation was, so it has to change this test rather than slip in unnoticed.
+    /// Questions spec Q-G1: whatever the switches, the only <c>clientCapabilities</c> keys <c>initialize</c>
+    /// carries are <c>fs</c>, <c>terminal</c>, <c>elicitation</c> and <c>session</c>. <c>session</c> (notices)
+    /// was added on 2026-11-03 so the Adapter's advisories stop arriving as reply text. A capability added
+    /// beside them is a new decision the way each of these was, so it has to change this test rather than
+    /// slip in unnoticed.
     /// </summary>
     [Fact]
-    public async Task Start_CapabilityKeys_AreFsTerminalElicitation_Only()
+    public async Task Start_CapabilityKeys_AreFsTerminalElicitationSession_Only()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true);
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true, advertiseNotices: true);
 
         await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
 
@@ -107,7 +112,7 @@ public sealed class PersonaHostTests
     public async Task Start_WithAdvertiseElicitationOff_AdvertisesNoElicitation()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: false);
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: false, advertiseNotices: false);
 
         await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
 
@@ -115,6 +120,36 @@ public sealed class PersonaHostTests
         Assert.False(capabilities.ContainsKey("elicitation"), "initialize must not advertise clientCapabilities.elicitation while Acp:AdvertiseElicitation is off.");
         Assert.Equal(["fs", "terminal"], capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
         AssertFsAndTerminalOff(capabilities);
+    }
+
+    /// <summary>
+    /// With <c>Acp:AdvertiseSessionNotices</c> left alone, the real factory's host advertises
+    /// <c>clientCapabilities.session</c> equal to exactly <c>{"notices":{}}</c>: the shipped configuration
+    /// keeps the Adapter's advisories out of the reply.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithTheShippedDefault_AdvertisesNoticesOnly()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal("""{"notices":{}}""", capabilities["session"]?.ToJsonString());
+    }
+
+    /// <summary>With <c>Acp:AdvertiseSessionNotices</c> off, <c>initialize</c> carries no <c>session</c> key, so the Adapter writes its advisories into the reply as before; elicitation is unaffected.</summary>
+    [Fact]
+    public async Task Start_WithAdvertiseSessionNoticesOff_AdvertisesNoSession()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true, advertiseNotices: false);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal(["elicitation", "fs", "terminal"], capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -367,10 +402,11 @@ public sealed class PersonaHostTests
         /// <summary>The same <see cref="AgentFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
         internal AgentFolderMoves Moves => this.host.Services.GetRequiredService<AgentFolderMoves>();
 
-        /// <summary>Starts the harness, optionally pinning <c>Acp:AdvertiseElicitation</c>.</summary>
+        /// <summary>Starts the harness, optionally pinning <c>Acp:AdvertiseElicitation</c> and <c>Acp:AdvertiseSessionNotices</c>.</summary>
         /// <param name="cancellationToken">Cancels startup.</param>
         /// <param name="advertiseElicitation">The value to pin, or <see langword="null"/> to leave the shipped default alone.</param>
-        internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken, bool? advertiseElicitation = null)
+        /// <param name="advertiseNotices">The notices value to pin, or <see langword="null"/> to leave the shipped default alone.</param>
+        internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken, bool? advertiseElicitation = null, bool? advertiseNotices = null)
         {
             TempDataDir dataDir = new();
             string pipeName = "persona-host-test-" + Guid.NewGuid().ToString("N");
@@ -388,6 +424,11 @@ public sealed class PersonaHostTests
             if (advertiseElicitation is { } advertise)
             {
                 config[AdvertiseKey] = advertise ? "true" : "false";
+            }
+
+            if (advertiseNotices is { } notices)
+            {
+                config[NoticesKey] = notices ? "true" : "false";
             }
 
             HostApplicationBuilder builder = Host.CreateApplicationBuilder();

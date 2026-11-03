@@ -14,7 +14,11 @@ namespace Agency.Huddle.Acp.DotAcp;
 /// <c>method</c> is exactly <c>elicitation/create</c> (and that carries an <c>id</c>) to
 /// <c>_elicitation/create</c>. Stable dotacp routes only methods that start with an underscore to
 /// <c>IAcpClient.ExtMethodAsync</c> and answers a bare <c>elicitation/create</c> with -32601, so the
-/// rename is how the host receives the request at all.
+/// rename is how the host receives the request at all. When <c>rewriteNotices</c> is set, it also renames
+/// a <c>session/update</c> notification whose <c>params.update.sessionUpdate</c> is exactly <c>notice</c> to
+/// <c>_session/notice</c>: stable dotacp predates that update kind and throws on its discriminator, so the
+/// rename routes it to <c>IAcpClient.ExtNotificationAsync</c> instead. The line is still counted as a
+/// <c>session/update</c>, and the client adapter marks it dispatched, so the wire-order barrier holds.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -38,6 +42,10 @@ internal sealed class NdjsonMethodRewriteStream : Stream
 
     private const string ToMethod = "_elicitation/create";
 
+    private const string NoticeUpdateKind = "notice";
+
+    private const string NoticeMethod = "_session/notice";
+
     private const int ReadBufferSize = 4096;
 
     private static readonly JsonSerializerOptions WriteOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -47,6 +55,8 @@ internal sealed class NdjsonMethodRewriteStream : Stream
     private readonly WireOrderLedger ledger;
 
     private readonly bool rewriteElicitation;
+
+    private readonly bool rewriteNotices;
 
     private readonly byte[] readBuffer = new byte[NdjsonMethodRewriteStream.ReadBufferSize];
 
@@ -64,13 +74,15 @@ internal sealed class NdjsonMethodRewriteStream : Stream
     /// <param name="inner">The agent process's standard output.</param>
     /// <param name="ledger">Receives one <see cref="WireOrderLedger.NoteRead"/> per <c>session/update</c> notification line.</param>
     /// <param name="rewriteElicitation">True to rename inbound <c>elicitation/create</c> requests; false to forward them unchanged.</param>
-    internal NdjsonMethodRewriteStream(Stream inner, WireOrderLedger ledger, bool rewriteElicitation)
+    /// <param name="rewriteNotices">True to rename inbound <c>notice</c> session updates to <c>_session/notice</c>; false to forward them unchanged.</param>
+    internal NdjsonMethodRewriteStream(Stream inner, WireOrderLedger ledger, bool rewriteElicitation, bool rewriteNotices = false)
     {
         ArgumentNullException.ThrowIfNull(inner);
         ArgumentNullException.ThrowIfNull(ledger);
         this.inner = inner;
         this.ledger = ledger;
         this.rewriteElicitation = rewriteElicitation;
+        this.rewriteNotices = rewriteNotices;
     }
 
     public override bool CanRead => this.inner.CanRead;
@@ -221,6 +233,43 @@ internal sealed class NdjsonMethodRewriteStream : Stream
         return true;
     }
 
+    /// <summary>Re-serialises <paramref name="body"/> with its method renamed when it is a <c>notice</c> session update.</summary>
+    /// <param name="body">One line without its terminator, already known to be a counted <c>session/update</c> notification.</param>
+    /// <param name="rewritten">The replacement bytes when this returns true.</param>
+    /// <returns>True when the line's <c>params.update.sessionUpdate</c> is exactly <c>notice</c>.</returns>
+    private static bool TryRewriteNotice(ReadOnlySpan<byte> body, out byte[] rewritten)
+    {
+        rewritten = [];
+
+        // Most counted lines are streamed text chunks; only one that carries the word at all is parsed.
+        if (body.IndexOf("\"notice\""u8) < 0)
+        {
+            return false;
+        }
+
+        JsonObject? message;
+        try
+        {
+            message = JsonNode.Parse(body) as JsonObject;
+        }
+        catch (JsonException)
+        {
+            // The line was already read as JSON to count it, so this is unreachable; forward untouched.
+            return false;
+        }
+
+        if (message?["params"]?["update"]?["sessionUpdate"] is not JsonValue kind
+            || !kind.TryGetValue(out string? name)
+            || !string.Equals(name, NdjsonMethodRewriteStream.NoticeUpdateKind, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        message["method"] = NdjsonMethodRewriteStream.NoticeMethod;
+        rewritten = JsonSerializer.SerializeToUtf8Bytes(message, NdjsonMethodRewriteStream.WriteOptions);
+        return true;
+    }
+
     /// <summary>Reads the session id of a line that is a <c>session/update</c> notification.</summary>
     /// <param name="body">One line without its terminator.</param>
     /// <param name="sessionId">The line's <c>params.sessionId</c> when this returns true.</param>
@@ -356,12 +405,19 @@ internal sealed class NdjsonMethodRewriteStream : Stream
             body = body[..^1];
         }
 
+        bool isSessionUpdate = false;
         if (NdjsonMethodRewriteStream.TryReadSessionUpdate(body, out string? sessionId))
         {
             this.ledger.NoteRead(sessionId);
+            isSessionUpdate = true;
         }
 
-        if (this.rewriteElicitation && NdjsonMethodRewriteStream.TryRewrite(body, out byte[] rewritten))
+        if (isSessionUpdate && this.rewriteNotices && NdjsonMethodRewriteStream.TryRewriteNotice(body, out byte[] notice))
+        {
+            this.ready.Write(notice);
+            this.ready.Write(line[body.Length..]);
+        }
+        else if (this.rewriteElicitation && NdjsonMethodRewriteStream.TryRewrite(body, out byte[] rewritten))
         {
             this.ready.Write(rewritten);
             this.ready.Write(line[body.Length..]);

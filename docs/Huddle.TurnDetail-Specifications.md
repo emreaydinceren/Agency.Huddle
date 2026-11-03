@@ -512,7 +512,7 @@ takes its data as parameters and never calls a service.
 | --- | --- |
 | The list | A `<ul class="turn-detail">` inside `.message-content`, after `.message-body`, with `aria-label="Tool calls"`. No `aria-live`: a Turn fires several updates a second and a live region would chatter |
 | A row | A `<li class="turn-detail-row">`. The title keeps the class `tool-activity`, so the existing hook survives |
-| Status mark | `MudIcon` from `Icons.Material`, inside a `<span role="img" aria-label="…">`. Labels: *Waiting* (`Pending`), *Running* (`InProgress`), *Done* (`Completed`), *Failed* (`Failed`) |
+| Status mark | `MudIcon` from `Icons.Material`, inside a `<span role="img" aria-label="…">`. Labels: *Waiting* (`Pending`), *Running* (`InProgress`), *Done* (`Completed`), *Failed* (`Failed`), and since 2026-11-03 *Notice* (`Notice`, the info mark): an Adapter notice shown among the rows, never a tool call and never in the tool-call log |
 | Expander | `MudCollapse` bound to a bool, per `agents/MudBlazorDesign.md`, with a `<button>` carrying `aria-expanded` and `aria-controls`. At least 44 px tall and wrapping, so it works at phone width. Ids are index-based, because a `ToolCallId` is Adapter-chosen text |
 | The path | The file name in the row, the full path in the preview header and in a `title` attribute |
 | The preview | `EditPreview.razor`: a `role="group"` named *Change to* the file, holding one `<pre>` per side, labelled *Removed* (`−`) and *Added* (`+`). A second line reads *Shortened* when `Truncated`, and *and N more changes in this call* when `OmittedChanges` is above zero |
@@ -1379,7 +1379,7 @@ Exact strings, for the tests to assert with `Assert.Equal`. `language.md` is bin
 | Where | Text |
 | --- | --- |
 | The list's accessible name | `Tool calls` |
-| Status marks | `Waiting`, `Running`, `Done`, `Failed` |
+| Status marks | `Waiting`, `Running`, `Done`, `Failed`, `Notice` (an Adapter notice, added 2026-11-03) |
 | Expander, closed and open | `Show change to {file}` and `Hide change to {file}` |
 | The preview's group name | `Change to {file}` |
 | The two blocks | `Removed` with a `−`, and `Added` with a `+` |

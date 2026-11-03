@@ -16,6 +16,10 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 {
     private const string ElicitationCreateMethod = "elicitation/create";
 
+    // The notice session update after NdjsonMethodRewriteStream renamed it to _session/notice; dotacp
+    // strips the leading underscore before calling ExtNotificationAsync.
+    private const string SessionNoticeMethod = "session/notice";
+
     private readonly ConcurrentDictionary<string, ISessionSink> sinks = new ConcurrentDictionary<string, ISessionSink>();
 
     // One cancellation source per registered session, cancelled when that session is unregistered, so
@@ -177,6 +181,12 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 
     public Task ExtNotificationAsync(string method, object notification, CancellationToken cancellationToken = default)
     {
+        if (string.Equals(method, DotAcpClientAdapter.SessionNoticeMethod, StringComparison.Ordinal))
+        {
+            this.PublishNotice(notification);
+            return Task.CompletedTask;
+        }
+
         DotAcpClientAdapter.LogExtensionNotificationIgnored(logger, method);
         return Task.CompletedTask;
     }
@@ -253,6 +263,55 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
         }
     }
 
+    /// <summary>
+    /// Publishes a <c>notice</c> session update (reached as the extension notification, see
+    /// <see cref="NdjsonMethodRewriteStream"/>) to its session as an <see cref="AgentNotice"/>. The
+    /// stream counted the line as a <c>session/update</c>, so it is marked dispatched whatever becomes of
+    /// it, exactly as <see cref="SessionUpdateAsync"/> does; a notice with no title, or for no known
+    /// session, is dropped with a log line.
+    /// </summary>
+    /// <param name="notification">The notification's params: a dictionary of Newtonsoft tokens, as dotacp hands them over.</param>
+    private void PublishNotice(object notification)
+    {
+        if (notification is not IDictionary<string, object> arguments
+            || DotAcpClientAdapter.ReadString(arguments, "sessionId") is not { } sessionId)
+        {
+            // The stream renames only a line whose params.sessionId is a string, so this is unreachable.
+            DotAcpClientAdapter.LogNoticeMalformed(logger);
+            return;
+        }
+
+        try
+        {
+            if (!arguments.TryGetValue("update", out object? update)
+                || update is not JObject fields
+                || fields.Value<string>("title") is not { Length: > 0 } title)
+            {
+                DotAcpClientAdapter.LogNoticeMalformed(logger);
+                return;
+            }
+
+            if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
+            {
+                DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
+                return;
+            }
+
+            NoticeSeverity severity = fields.Value<string>("severity") switch
+            {
+                "warning" => NoticeSeverity.Warning,
+                "error" => NoticeSeverity.Error,
+                _ => NoticeSeverity.Info,
+            };
+            string? description = fields.Value<string>("description") is { Length: > 0 } text ? text : null;
+            sink.TryPublish(new AgentNotice(sessionId, severity, title, description));
+        }
+        finally
+        {
+            ledger.NoteDispatched(sessionId);
+        }
+    }
+
     /// <summary>Reads a string argument. dotacp hands each value over as a Newtonsoft <see cref="JValue"/>.</summary>
     /// <param name="arguments">The request arguments.</param>
     /// <param name="key">The argument name.</param>
@@ -316,6 +375,9 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Ignoring extension notification {Method}.")]
     private static partial void LogExtensionNotificationIgnored(ILogger logger, string method);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Dropping a session notice that carries no readable session id or title.")]
+    private static partial void LogNoticeMalformed(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Cancelling an elicitation request that carries no readable session id.")]
     private static partial void LogElicitationMalformed(ILogger logger);

@@ -46,6 +46,23 @@ public sealed class DraftsToolCallLogTests
         Assert.Equal("room1", entry.GetProperty("room").GetString());
     }
 
+    /// <summary>An Adapter notice row is shown in the Draft but is not a tool call, so it is never written to the log; a real call beside it still is.</summary>
+    [Fact]
+    public void Activity_Notice_ShownButNeverLogged()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "huddle-notice-1", "room1", "agentA", "Ada", "Auto mode unavailable", ToolActivityStatus.Notice);
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "Bash", ToolActivityStatus.Completed);
+
+        Assert.Equal(
+            [("huddle-notice-1", ToolActivityStatus.Notice), ("t1", ToolActivityStatus.Completed)],
+            Assert.Single(drafts.ForRoom("room1")).ToolCalls.Select(call => (call.ToolCallId, call.Status)));
+        JsonElement entry = Assert.Single(ReadLog(dir));
+        Assert.Equal("Bash", entry.GetProperty("tool").GetString());
+    }
+
     /// <summary>A call that fails is logged with the failed status.</summary>
     [Fact]
     public void Activity_Failed_LogsFailedStatus()

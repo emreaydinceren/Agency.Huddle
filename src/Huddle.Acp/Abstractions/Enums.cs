@@ -65,3 +65,11 @@ public enum SystemPromptMode
     Append,
     Replace,
 }
+
+/// <summary>The severity hint of an agent's session notice. A severity the client does not know reads as <see cref="Info"/>.</summary>
+public enum NoticeSeverity
+{
+    Info,
+    Warning,
+    Error,
+}

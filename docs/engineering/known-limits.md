@@ -8,12 +8,15 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
-- **An Agent on a model without auto mode may open its first reply with an Adapter notice.** When the Human's own
-  `~/.claude/settings.json` sets `permissions.defaultMode` to `auto` and the Agent runs on a model that has no auto mode
-  (Haiku), `claude-agent-acp` falls back to Accept edits and writes "**Auto mode unavailable:** … using Accept edits
-  instead." into the reply text, where Huddle cannot tell it from the Agent's own words. Huddle never asks for `auto`
-  itself (`WorkModePolicy` hides it); set the Agent's Work mode, or change that setting, to stop it. Seen in the Second
-  Brain manual run on 2026-11-03.
+- **An Agent on a model without auto mode may open its first reply with an Adapter notice. Resolved 2026-11-03.**
+  When the Human's own `~/.claude/settings.json` set `permissions.defaultMode` to `auto` and the Agent ran on a model
+  with no auto mode, `claude-agent-acp` fell back to Accept edits and wrote "**Auto mode unavailable:** … using Accept
+  edits instead." into the reply text, where Huddle could not tell it from the Agent's own words (seen in the Second
+  Brain manual run on 2026-11-03, on adapter 0.75.1). Two changes retire it. Adapter 0.100.0 ships Claude Code 2.1.316,
+  where the `haiku` alias is Haiku 5.5 and supports auto mode, so `haiku` no longer falls back at all. For a model that
+  still lacks it (the pinned `claude-haiku-4-5-20251001`), Huddle now advertises `session.notices`
+  (`Acp:AdvertiseSessionNotices`), so the Adapter sends the advisory as its own `notice` update, which Huddle logs and
+  shows as a **Notice** row in the Turn's activity, apart from the reply. `RealAdapterNoticeTests` pins both halves live.
 - **A pipe client can receive a Message whose sender is not in the delivery's `members` list.** A Message Huddle wrote itself
   (the wake-up after a Helper's change, [ADR-0065](../adr/0065-huddle-posts-as-itself.md)) carries the sender id `huddle`,
   which is never a Room Member. The protocol version is unchanged, and a client that looks the sender up in `members` must
