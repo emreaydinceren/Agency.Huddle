@@ -65,7 +65,7 @@ public sealed class SessionPromptInputsTests : IDisposable
         MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
         IReadOnlyList<TeamSummary> teams = [new TeamSummary("Business", [], ["nova"], true)];
 
-        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["business"], teamsRoot, 50);
+        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["business"], teamsRoot, 50, maxHuddleMemoryEntries: 30);
 
         // The reference is what ComposeSystemPrompt built inline: MemoryIndex, TeamMemoryIndex and the reader, with the label resolved to the catalog's spelling.
         var (entries, notListed) = MemoryIndex.Build(memoryDir, 50, warnings);
@@ -93,7 +93,7 @@ public sealed class SessionPromptInputsTests : IDisposable
         AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
         MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
 
-        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, [], "nova", memoryDir, 50, [], teamsRoot, 50);
+        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, [], "nova", memoryDir, 50, [], teamsRoot, 50, maxHuddleMemoryEntries: 30);
 
         Assert.Null(actual.TeamMemory);
         Assert.Empty(actual.Memory.Entries);

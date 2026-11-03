@@ -38,7 +38,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly ITeamCatalog teamCatalog;
     private readonly string teamsRoot;
     private readonly PermissionGuards guards;
-    private readonly int maxTeamMemoryEntries;
+    private readonly TeamsOptions teamsOptions;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
     private readonly IReadOnlyDictionary<string, object>? meta;
@@ -66,7 +66,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
     /// <param name="guards">The file guards every opened session's permission handler consults.</param>
-    /// <param name="maxTeamMemoryEntries">The cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams when <paramref name="readsMemory"/>.</param>
+    /// <param name="teamsOptions">The Teams options: <c>MaxMemoryEntries</c> is the cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams, and <c>MaxHuddleMemoryEntries</c> the cap on <c>Teams/memory/</c>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
     /// <param name="meta">D14's isolation <c>_meta</c> (RS §6.10), or <see langword="null"/> when the profile does not ask for it.</param>
@@ -93,7 +93,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ITeamCatalog teamCatalog,
         string teamsRoot,
         PermissionGuards guards,
-        int maxTeamMemoryEntries,
+        TeamsOptions teamsOptions,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
         IReadOnlyDictionary<string, object>? meta,
@@ -138,7 +138,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.teamCatalog = teamCatalog;
         this.teamsRoot = teamsRoot;
         this.guards = guards;
-        this.maxTeamMemoryEntries = maxTeamMemoryEntries;
+        this.teamsOptions = teamsOptions;
         this.workDir = workDir;
         this.toolServerEndpoint = toolServerEndpoint;
         this.meta = meta;
@@ -277,7 +277,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.maxMemoryEntries,
             this.teamLabels,
             this.teamsRoot,
-            this.maxTeamMemoryEntries);
+            this.teamsOptions.MaxMemoryEntries,
+            this.teamsOptions.MaxHuddleMemoryEntries);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -293,7 +294,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             roleBlock: this.roleBlock(),
             agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.readsMemory,
-            warnings: this.sources.Warnings);
+            warnings: this.sources.Warnings,
+            huddleMemory: inputs.HuddleMemory);
     }
 
     /// <summary>

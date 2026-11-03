@@ -57,7 +57,7 @@
         PromptPartSource.Prompt prompt => prompt.Overridden ? "Prompt · overridden" : "Prompt · default",
         PromptPartSource.File file => file.Path,
         PromptPartSource.Persona persona => $"Persona · {persona.Name}",
-        PromptPartSource.Index { Kind: "memory" } index => $"{index.Count} topics",
+        PromptPartSource.Index { Kind: "memory" or "huddleMemory" } index => $"{index.Count} topics",
         PromptPartSource.Index index => $"{index.Count} Teams",
         PromptPartSource.Tools tools => $"{tools.Count} tools",
         _ => string.Empty,

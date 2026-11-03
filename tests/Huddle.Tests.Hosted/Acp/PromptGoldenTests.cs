@@ -152,6 +152,29 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// 11.1.t (SB-R11, Spec §8.1 slot 11): pins the Huddle-wide Memory block between the Agent's own Memory and the closing part, for two
+    /// topics and two more not listed. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void HuddleMemory_Index()
+    {
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md")], NotListed: 0);
+        MemorySnapshot huddleMemory = new(
+            @"E:\Huddle\App_Data\Teams\memory",
+            [
+                new MemoryEntry("Always cite sources.", @"E:\Huddle\App_Data\Teams\memory\cite-sources.md"),
+                new MemoryEntry("Reports are written in British English.", @"E:\Huddle\App_Data\Teams\memory\spelling.md"),
+            ],
+            NotListed: 2);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.Shared, huddleMemory: huddleMemory);
+
+        AssertMatchesGolden("systemPrompt.huddleMemory.txt", actual);
+    }
+
+    /// <summary>
     /// Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload for a Persona holding one real
     /// shipped Skill (Spec §6.4). The Skill's description is read from <see cref="SkillCatalog.All"/>
     /// via <see cref="SkillValidator.Validate"/> rather than pasted in, so this test does not pin

@@ -161,7 +161,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.teamCatalog,
             this.TeamsRoot(),
             this.CreateGuards(toolSet.Prompts, workDir, sources),
-            this.options.Teams.MaxMemoryEntries,
+            this.options.Teams,
             workDir,
             toolServer.Endpoint,
             meta,
@@ -625,7 +625,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.options.FileChanges.MaxMemoryEntries,
             teamLabels,
             this.TeamsRoot(),
-            this.options.Teams.MaxMemoryEntries);
+            this.options.Teams.MaxMemoryEntries,
+            this.options.Teams.MaxHuddleMemoryEntries);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -641,7 +642,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             roleBlock: this.CreateRoleBlock(parsed, skillResolution)(),
             agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.ReadsMemory(profile),
-            warnings: sources.Warnings);
+            warnings: sources.Warnings,
+            huddleMemory: inputs.HuddleMemory);
         return (parts, profile.Id);
     }
 }

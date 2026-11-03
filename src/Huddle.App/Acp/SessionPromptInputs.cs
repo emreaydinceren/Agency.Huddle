@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Acp;
 /// <summary>Reads, afresh, the snapshots a Persona's system prompt is composed from. The one place both a session start and the prompt preview build them (Spec §6.5, D-18).</summary>
 internal static class SessionPromptInputs
 {
-    /// <summary>Builds the Memory, Team Memory and AGENTS.md snapshots for one Persona.</summary>
+    /// <summary>Builds the Memory, Team Memory, AGENTS.md and Huddle-wide Memory snapshots for one Persona.</summary>
     /// <param name="agentsMd">Reads the Human's AGENTS.md files.</param>
     /// <param name="warnings">Warns once per file and content about malformed memory frontmatter.</param>
     /// <param name="catalogTeams">The catalog's Teams, read once by the caller so the build sees one consistent view.</param>
@@ -17,7 +17,8 @@ internal static class SessionPromptInputs
     /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
     /// <param name="maxTeamMemoryEntries">The cap on Team Memory entries across all of the Persona's Teams.</param>
-    /// <returns>The three snapshots.</returns>
+    /// <param name="maxHuddleMemoryEntries">The cap on the Huddle-wide Memory entries of <c>Teams/memory/</c>, which every Persona gets.</param>
+    /// <returns>The four snapshots.</returns>
     internal static SessionPromptSnapshot Build(
         AgentsMdReader agentsMd,
         MemoryWarnings warnings,
@@ -27,7 +28,8 @@ internal static class SessionPromptInputs
         int maxMemoryEntries,
         IReadOnlyList<string> teamLabels,
         string teamsRoot,
-        int maxTeamMemoryEntries)
+        int maxTeamMemoryEntries,
+        int maxHuddleMemoryEntries)
     {
         var (entries, notListed) = MemoryIndex.Build(memoryDir, maxMemoryEntries, warnings);
         MemorySnapshot memory = new(memoryDir, entries, notListed);
@@ -46,6 +48,10 @@ internal static class SessionPromptInputs
                 catalogTeams.FirstOrDefault(team => string.Equals(team.Name, label, StringComparison.OrdinalIgnoreCase))?.Name ?? label),
         ];
 
-        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames));
+        string huddleMemoryDir = Path.Combine(teamsRoot, TeamNames.MemoryFolder);
+        var (huddleEntries, huddleNotListed) = MemoryIndex.Build(huddleMemoryDir, maxHuddleMemoryEntries, warnings);
+        MemorySnapshot huddleMemory = new(huddleMemoryDir, huddleEntries, huddleNotListed);
+
+        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory);
     }
 }

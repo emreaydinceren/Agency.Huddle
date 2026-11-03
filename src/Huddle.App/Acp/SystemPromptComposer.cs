@@ -208,6 +208,10 @@ internal static class SystemPromptComposer
     /// <param name="warnings">
     /// Warns, once per override text, about a <c>systemPrompt.teamMemory</c> override that still uses the old frame; <see langword="null"/> warns of nothing.
     /// </param>
+    /// <param name="huddleMemory">
+    /// The Huddle-wide Memory index (<c>Teams/memory/</c>), or <see langword="null"/> or an empty one for none; either leaves the output
+    /// byte-identical to a call without it. Otherwise <c>systemPrompt.huddleMemory</c> follows the Memory block and precedes Team Memory.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -231,16 +235,17 @@ internal static class SystemPromptComposer
         RoleBlockInput? roleBlock = null,
         AgentsMdSnapshot? agentsMd = null,
         bool memoryChangesListed = true,
-        MemoryWarnings? warnings = null)
+        MemoryWarnings? warnings = null,
+        MemorySnapshot? huddleMemory = null)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -257,6 +262,7 @@ internal static class SystemPromptComposer
     /// <param name="agentsMd">The Human's AGENTS.md files, or <see langword="null"/>.</param>
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
+    /// <param name="huddleMemory">The Huddle-wide Memory index (<c>Teams/memory/</c>), or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.huddleMemory</c> between Memory and Team Memory.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -272,7 +278,8 @@ internal static class SystemPromptComposer
         RoleBlockInput? roleBlock = null,
         AgentsMdSnapshot? agentsMd = null,
         bool memoryChangesListed = true,
-        MemoryWarnings? warnings = null)
+        MemoryWarnings? warnings = null,
+        MemorySnapshot? huddleMemory = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -303,7 +310,7 @@ internal static class SystemPromptComposer
 
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
-        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings);
+        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings, huddleMemory);
 
         AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
 
@@ -411,6 +418,7 @@ internal static class SystemPromptComposer
     /// <param name="toolNames">The offered tools' names, already prefixed: the memory and proposal tools are named from them.</param>
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
+    /// <param name="huddleMemory">The Huddle-wide Memory index, added between the two; <see langword="null"/> for none.</param>
     private static void AddMemoryParts(
         List<PromptPart> parts,
         IPromptSource prompts,
@@ -418,7 +426,8 @@ internal static class SystemPromptComposer
         TeamMemorySnapshot? teamMemory,
         IReadOnlyList<string> toolNames,
         bool memoryChangesListed,
-        MemoryWarnings? warnings)
+        MemoryWarnings? warnings,
+        MemorySnapshot? huddleMemory)
     {
         string memoryToolName = FindMemoryTool(toolNames);
         if (memory is not null)
@@ -429,6 +438,8 @@ internal static class SystemPromptComposer
                 BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed)));
         }
 
+        AddHuddleMemoryPart(parts, prompts, huddleMemory);
+
         if (teamMemory is not null && teamMemory.Groups.Count > 0)
         {
             parts.Add(new PromptPart(
@@ -436,6 +447,27 @@ internal static class SystemPromptComposer
                 new PromptPartSource.Index("teamMemory", teamMemory.Groups.Count),
                 BuildTeamMemoryBlock(prompts, teamMemory, new TeamMemoryTools(memoryToolName, FindProposeTool(toolNames)), warnings)));
         }
+    }
+
+    /// <summary>
+    /// Adds the Huddle-wide Memory block (slot 11, Spec §8.1) when <c>Teams/memory/</c> has topics. Every Agent gets it, in no Team or many.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="huddleMemory">The Huddle-wide Memory index, or <see langword="null"/> for none.</param>
+    private static void AddHuddleMemoryPart(List<PromptPart> parts, IPromptSource prompts, MemorySnapshot? huddleMemory)
+    {
+        if (huddleMemory is null || (huddleMemory.Entries.Count == 0 && huddleMemory.NotListed == 0))
+        {
+            return;
+        }
+
+        parts.Add(new PromptPart(
+            "Huddle-wide Memory",
+            new PromptPartSource.Index("huddleMemory", huddleMemory.Entries.Count),
+            prompts.Render(
+                "systemPrompt.huddleMemory",
+                new Dictionary<string, string> { ["{{memoryIndex}}"] = RenderMemoryIndex(prompts, huddleMemory) })));
     }
 
     /// <summary>
@@ -626,6 +658,25 @@ internal static class SystemPromptComposer
     /// <param name="memoryChangesListed">Whether to add <c>systemPrompt.memoryChanges</c>; it names File Changes, which only some Adapters get.</param>
     private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory, string memoryToolName, bool memoryChangesListed)
     {
+        return prompts.Render(
+            "systemPrompt.memory",
+            new Dictionary<string, string>
+            {
+                ["{{memoryPath}}"] = memory.MemoryPath,
+                ["{{memoryIndex}}"] = RenderMemoryIndex(prompts, memory),
+                ["{{memoryTool}}"] = memoryToolName,
+                ["{{memoryChanges}}"] = memoryChangesListed ? prompts.Render("systemPrompt.memoryChanges", new Dictionary<string, string>()) : string.Empty,
+            });
+    }
+
+    /// <summary>
+    /// Renders the index lines of <paramref name="memory"/>: one per entry, "Nothing yet." when there are none, and the "…and N more" line when
+    /// files were left out. The Memory block and the Huddle-wide Memory block share it, so both read the same.
+    /// </summary>
+    /// <param name="prompts">Resolves the entry, empty and more prompts' current text.</param>
+    /// <param name="memory">The Memory index to render.</param>
+    private static string RenderMemoryIndex(IPromptSource prompts, MemorySnapshot memory)
+    {
         var index = memory.Entries.Count == 0
             ? prompts.Render("systemPrompt.memoryEmpty", new Dictionary<string, string>())
             : string.Join('\n', memory.Entries.Select(entry => RenderEntry(prompts, entry)));
@@ -643,15 +694,7 @@ internal static class SystemPromptComposer
             index = memory.Entries.Count == 0 ? more : string.Join('\n', index, more);
         }
 
-        return prompts.Render(
-            "systemPrompt.memory",
-            new Dictionary<string, string>
-            {
-                ["{{memoryPath}}"] = memory.MemoryPath,
-                ["{{memoryIndex}}"] = index,
-                ["{{memoryTool}}"] = memoryToolName,
-                ["{{memoryChanges}}"] = memoryChangesListed ? prompts.Render("systemPrompt.memoryChanges", new Dictionary<string, string>()) : string.Empty,
-            });
+        return index;
     }
 
     /// <summary>Renders one index line: the file's name, its description and its full path.</summary>

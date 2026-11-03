@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 95 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 98 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -126,8 +126,8 @@ never by hand, so the status line stays true.
 | 10.4.i #90 Add the section [Sonnet] | | | ✔ |
 | 🔁 R6 Retrospective 6 (tasks 76–90): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | **D11. P5: indexes and upkeep** | | | |
-| 11.1.t #91 Huddle-wide Memory index [Sonnet] | | ✔ | |
-| 11.1.i #92 Index `Teams/memory/` [Sonnet] | ✔ | | |
+| 11.1.t #91 Huddle-wide Memory index [Sonnet] | | | ✔ |
+| 11.1.i #92 Index `Teams/memory/` [Sonnet] | | | ✔ |
 | 11.2.t #93 The outputs index [Sonnet] | ✔ | | |
 | 11.2.i #94 `OutputsIndex` [Sonnet] | ✔ | | |
 | 11.3.t #95 Outputs in the prompt [Sonnet] | ✔ | | |
@@ -147,8 +147,8 @@ never by hand, so the status line stays true.
 | **D12. P6: archive** | | | |
 | 12.1.t #108 Archive a Team (same volume) [Sonnet] | | | ✔ |
 | 12.1.i #109 `ArchiveService` (archive) [Sonnet] | | | ✔ |
-| 12.2.t #110 Unarchive a Team [Sonnet] | | ✔ | |
-| 12.2.i #111 Unarchive [Sonnet] | ✔ | | |
+| 12.2.t #110 Unarchive a Team [Sonnet] | | | ✔ |
+| 12.2.i #111 Unarchive [Sonnet] | | ✔ | |
 | 12.3.t #112 Crash-safe cross-volume move [Sonnet] | ✔ | | |
 | 12.3.i #113 `ArchiveMove` [Sonnet] | ✔ | | |
 | 12.4.t #114 Names can't collide [Sonnet] | ✔ | | |
