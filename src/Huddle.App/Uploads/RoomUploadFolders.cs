@@ -5,7 +5,7 @@ using Agency.Huddle.App.Teams;
 namespace Agency.Huddle.App.Uploads;
 
 /// <summary>Resolves a Room's upload folders through the Library's path resolver.</summary>
-/// <param name="resolver">Resolves <c>raw:/&lt;roomId&gt;</c> and <c>teams:/&lt;Team&gt;/Uploads/&lt;roomId&gt;</c>.</param>
+/// <param name="resolver">Resolves <c>raw:/&lt;roomId&gt;</c> and <c>teams:/&lt;Team&gt;/raw/&lt;roomId&gt;</c>.</param>
 /// <param name="files">Recycles a folder; the Library never hard-deletes.</param>
 internal sealed class RoomUploadFolders(LibraryPathResolver resolver, LibraryFileService files) : IRoomUploadFolders
 {
