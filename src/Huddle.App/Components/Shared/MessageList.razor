@@ -417,6 +417,7 @@
         ToolActivityStatus.InProgress => "Running",
         ToolActivityStatus.Completed => "Done",
         ToolActivityStatus.Failed => "Failed",
+        ToolActivityStatus.Notice => "Notice",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unmapped tool activity status."),
     };
 
@@ -427,6 +428,7 @@
         ToolActivityStatus.Pending => Icons.Material.Filled.Schedule,
         ToolActivityStatus.Completed => Icons.Material.Filled.CheckCircleOutline,
         ToolActivityStatus.Failed => Icons.Material.Filled.ErrorOutline,
+        ToolActivityStatus.Notice => Icons.Material.Outlined.Info,
         _ => Icons.Material.Filled.Circle,
     };
 

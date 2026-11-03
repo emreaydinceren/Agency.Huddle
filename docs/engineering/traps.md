@@ -51,6 +51,18 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   option's label is `name` (the schema requires `value` and `name`), *not*
   `displayName` — reading `displayName` silently yields nothing and degrades the
   label to the raw id. `acp-session-config.md` now calls this out.
+- **dotacp drops a `session/update` kind newer than its schema, silently.** dotacp
+  2026.7.19 is built on ACP schema 1.19. Its `DiscriminatorConverter` raises
+  `JsonSerializationException("Unknown discriminator value …")` for any
+  `sessionUpdate` it has no type for, before `SessionUpdateMapper`'s
+  `UnknownUpdate` fallback ever runs, so the update never reaches the session. The
+  Turn still completes and nothing is reported (checked by mutation on
+  2026-11-03): advertising `session.notices` without the rename would have turned
+  every notice into nothing at all. Never advertise a capability that unlocks a new
+  update kind without a rename in `NdjsonMethodRewriteStream` and a handler in
+  `DotAcpClientAdapter` that marks the line dispatched, as notices and elicitation
+  both have. `Prompt_WithOption_NoticeArrivesAsAgentNoticeAndTurnCompletes` fails
+  without the rename.
 - **Never hardcode a `configId`.** They are adapter-defined. Read the owning
   option's own id back off the `session/new` response every time.
 - **The wire contract has no explicit declaration.** There are no

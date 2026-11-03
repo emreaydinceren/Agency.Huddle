@@ -1006,6 +1006,72 @@ public sealed class PersonaRunnerTests
         Assert.Equal(started.MessageId, updated.MessageId);
     }
 
+    /// <summary>
+    /// An Adapter notice during a Turn becomes one <see cref="ToolActivity"/> row with status
+    /// <see cref="ToolActivityStatus.Notice"/>, its title and description joined, an id no tool call can
+    /// carry, and the Turn's Room and Message id; it is logged as a Warning and never reaches the reply text.
+    /// </summary>
+    [Fact]
+    public async Task AdapterNotice_IsWrittenAsANoticeRow_AndKeptOutOfTheReply()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueToolActivity(
+            new AgentNotice("session-1", NoticeSeverity.Warning, "Auto mode unavailable", "The selected model does not support Auto mode; using Accept edits instead."));
+        factory.Session.EnqueueReply("hello");
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
+        RecordingLogger<PersonaRunner> logger = new();
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var notice = await ReceiveUntilAsync<ToolActivity>(server, ct);
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal(
+            new ToolActivity("room-1", posted.MessageId ?? "", "huddle-notice-1", "Auto mode unavailable: The selected model does not support Auto mode; using Accept edits instead.", ToolActivityStatus.Notice),
+            notice);
+        Assert.Equal("hello", posted.Text);
+        Assert.Equal(
+            [$"Persona '{persona.Name}' Adapter notice: Auto mode unavailable: The selected model does not support Auto mode; using Accept edits instead."],
+            logger.AtExactly(LogLevel.Warning).Select(entry => entry.Message));
+    }
+
+    /// <summary>An Info notice with no description is shown by its title alone, numbered after the session's earlier notice, and logged at Information rather than Warning.</summary>
+    [Fact]
+    public async Task AdapterNotice_InfoWithoutDescription_ShowsTitleAlone_AndLogsInformation()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueToolActivity(
+            new AgentNotice("session-1", NoticeSeverity.Info, "First", null),
+            new AgentNotice("session-1", NoticeSeverity.Info, "Context compacted", null));
+        factory.Session.EnqueueReply("ok");
+        var persona = TestPersonas.Nova;
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
+        RecordingLogger<PersonaRunner> logger = new();
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        _ = await ReceiveUntilAsync<ToolActivity>(server, ct);
+        var second = await ReceiveUntilAsync<ToolActivity>(server, ct);
+        Assert.Equal("huddle-notice-2", second.ToolCallId);
+        Assert.Equal("Context compacted", second.Title);
+        Assert.Empty(logger.AtExactly(LogLevel.Warning));
+        Assert.Contains($"Persona '{persona.Name}' Adapter notice: Context compacted", logger.AtExactly(LogLevel.Information).Select(entry => entry.Message));
+    }
+
     /// <summary>A cost the Adapter reports reaches the Persona's Spend under the Persona's own Name, through the runner that owns the session.</summary>
     [Fact]
     public async Task CostReportedByTheAdapter_IsAddedToThePersonasSpend()

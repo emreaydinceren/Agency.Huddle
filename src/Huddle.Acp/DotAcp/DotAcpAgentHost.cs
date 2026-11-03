@@ -66,11 +66,11 @@ public sealed partial class DotAcpAgentHost(
         }
 
         // Every host reads through the line stream: it counts each session/update into the ledger in
-        // wire order (the Turn-completion barrier), and renames elicitation/create only for a host
-        // that advertised it (a host that never advertised sees its bytes unchanged). The connection
+        // wire order (the Turn-completion barrier), and renames elicitation/create and notice updates
+        // only for a host that advertised them (a host that never advertised sees its bytes unchanged). The connection
         // does not dispose the streams it was given, so DisposeAsync releases the wrapper itself (the
         // process pipe underneath is released by the process).
-        NdjsonMethodRewriteStream agentOutput = new(launchedProcess.StandardOutput, this.ledger, options.AdvertiseElicitationForm);
+        NdjsonMethodRewriteStream agentOutput = new(launchedProcess.StandardOutput, this.ledger, options.AdvertiseElicitationForm, options.AdvertiseSessionNotices);
         this.rewriteStream = agentOutput;
 
         dotacp.client.Connection establishedConnection = dotacp.client.Connection.RunClient(
@@ -89,6 +89,10 @@ public sealed partial class DotAcpAgentHost(
             WriteTextFile = false,
         };
         clientCapabilities.Terminal = false;
+        if (options.AdvertiseSessionNotices)
+        {
+            clientCapabilities.Session = new NoticeSessionCapabilities();
+        }
 
         dotacp.protocol.InitializeResponse response = await establishedConnection.InitializeAsync(
             new dotacp.protocol.InitializeRequest

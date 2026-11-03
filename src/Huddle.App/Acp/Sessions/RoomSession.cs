@@ -117,6 +117,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private Task? eventReaderTask;
     private CancellationTokenSource? eventReaderCts;
     private ActiveTurn? activeTurn;
+
+    // Numbers each Adapter notice so its Turn-activity row has an id no tool call can carry. Touched
+    // only from the single-threaded event reader.
+    private long noticeSequence;
     private Task? pendingStopCancel;
     private bool running;
     private long lastUsed;
@@ -2057,9 +2061,34 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // Adapter Profile's allowlist and keeps only what a Human may run.
             this.owner.SetCommands(advertised.SessionId, advertised.Commands);
         }
+        else if (agentEvent is AgentNotice notice)
+        {
+            await this.ShowNoticeAsync(notice, ct).ConfigureAwait(false);
+        }
 
         // ThoughtChunk, PlanUpdated, ModeChanged, UserMessageChunk, UnsupportedContent and
         // UnknownUpdate are ignored.
+    }
+
+    /// <summary>
+    /// Logs an Adapter notice and shows it as a <see cref="ToolActivityStatus.Notice"/> row in the active
+    /// Turn's activity, so it is never part of the reply text. A notice outside a Turn is logged only:
+    /// a notice is live, not history, so there is nowhere later to show it.
+    /// </summary>
+    /// <param name="notice">The notice the Adapter sent.</param>
+    /// <param name="ct">The reader's own cancellation token.</param>
+    private async Task ShowNoticeAsync(AgentNotice notice, CancellationToken ct)
+    {
+        string text = notice.Description is null ? notice.Title : $"{notice.Title}: {notice.Description}";
+        LogLevel level = notice.Severity == NoticeSeverity.Info ? LogLevel.Information : LogLevel.Warning;
+        if (this.logger.IsEnabled(level))
+        {
+            this.logger.Log(level, "Persona '{PersonaName}' Adapter notice: {Notice}", this.owner.PersonaName, text);
+        }
+
+        this.noticeSequence++;
+        string rowId = string.Create(CultureInfo.InvariantCulture, $"huddle-notice-{this.noticeSequence}");
+        await this.WriteToolActivityAsync(rowId, text, ToolActivityStatus.Notice, null, null, null, ct).ConfigureAwait(false);
     }
 
     /// <summary>Takes the active Turn off <see cref="activeTurn"/> and completes it with the text gathered so far.</summary>

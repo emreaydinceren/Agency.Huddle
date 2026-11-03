@@ -375,6 +375,64 @@ public sealed class NdjsonMethodRewriteStreamTests
         Assert.Equal(1, ledger.ReadCount("s1"));
     }
 
+    /// <summary>With the notice rewrite on, a <c>notice</c> session update comes out with exactly its method changed to <c>_session/notice</c>, and it is still counted for its session.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Notice_RewriteOn_BecomesSessionNoticeAndStillCounted()
+    {
+        WireOrderLedger ledger = new();
+
+        string output = await RewriteAsync(Notice("s1") + "\n", int.MaxValue, TestContext.Current.CancellationToken, ledger, rewriteNotices: true);
+
+        Assert.Equal(Notice("s1").Replace("\"session/update\"", "\"_session/notice\"", StringComparison.Ordinal) + "\n", output);
+        Assert.Equal(1, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>A notice delivered one byte per read is still rewritten, with its CRLF terminator kept.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Notice_LineSplitAcrossReads_StillRewritten()
+    {
+        string output = await RewriteAsync(Notice("s1") + "\r\n", 1, TestContext.Current.CancellationToken, rewriteNotices: true);
+
+        Assert.Equal(Notice("s1").Replace("\"session/update\"", "\"_session/notice\"", StringComparison.Ordinal) + "\r\n", output);
+    }
+
+    /// <summary>With the notice rewrite off (a host that never advertised), a notice passes through byte for byte and is counted.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Notice_RewriteOff_BytesUnchangedAndStillCounted()
+    {
+        WireOrderLedger ledger = new();
+
+        string output = await RewriteAsync(Notice("s1") + "\n", int.MaxValue, TestContext.Current.CancellationToken, ledger, rewriteNotices: false);
+
+        Assert.Equal(Notice("s1") + "\n", output);
+        Assert.Equal(1, ledger.ReadCount("s1"));
+    }
+
+    /// <summary>
+    /// Lines that carry the word but are not a notice update are untouched with the rewrite on: a text
+    /// chunk quoting <c>"notice"</c>, a notice-shaped request (it has an id), another method, and a notice
+    /// with no session id (it is never counted, so it must not be routed either).
+    /// </summary>
+    [Theory(Timeout = 10000)]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"a \"notice\" here"}}}}""")]
+    [InlineData("""{"jsonrpc":"2.0","id":4,"method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"notice","title":"t"}}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/other","params":{"sessionId":"s1","update":{"sessionUpdate":"notice","title":"t"}}}""")]
+    [InlineData("""{"jsonrpc":"2.0","method":"session/update","params":{"update":{"sessionUpdate":"notice","title":"t"}}}""")]
+    public async Task Notice_LinesThatAreNotANoticeUpdate_Untouched(string line)
+    {
+        string output = await RewriteAsync(line + "\n", int.MaxValue, TestContext.Current.CancellationToken, rewriteNotices: true);
+
+        Assert.Equal(line + "\n", output);
+    }
+
+    /// <summary>Builds one <c>notice</c> <c>session/update</c> notification line, as <c>claude-agent-acp</c> 0.100.0 writes the Auto mode fallback.</summary>
+    /// <param name="sessionId">The session id.</param>
+    private static string Notice(string sessionId)
+    {
+        return """{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"SID","update":{"sessionUpdate":"notice","severity":"warning","title":"Auto mode unavailable","description":"The selected model does not support Auto mode; using Accept edits instead."}}}"""
+            .Replace("SID", sessionId, StringComparison.Ordinal);
+    }
+
     /// <summary>Builds one agent_message_chunk <c>session/update</c> notification line.</summary>
     /// <param name="sessionId">The session id.</param>
     /// <param name="text">The chunk text.</param>
@@ -391,9 +449,10 @@ public sealed class NdjsonMethodRewriteStreamTests
     /// <param name="cancellationToken">The test's token.</param>
     /// <param name="ledger">The ledger the stream counts into, or null for a throwaway one.</param>
     /// <param name="rewriteElicitation">Whether the elicitation rewrite is on.</param>
-    private static async Task<string> RewriteAsync(string input, int maxChunk, CancellationToken cancellationToken, WireOrderLedger? ledger = null, bool rewriteElicitation = true)
+    /// <param name="rewriteNotices">Whether the notice rewrite is on.</param>
+    private static async Task<string> RewriteAsync(string input, int maxChunk, CancellationToken cancellationToken, WireOrderLedger? ledger = null, bool rewriteElicitation = true, bool rewriteNotices = false)
     {
-        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(input, maxChunk), ledger ?? new WireOrderLedger(), rewriteElicitation);
+        using NdjsonMethodRewriteStream stream = new(ChunkedReadStream.FromText(input, maxChunk), ledger ?? new WireOrderLedger(), rewriteElicitation, rewriteNotices);
         using MemoryStream sink = new();
 
         await stream.CopyToAsync(sink, cancellationToken);

@@ -15,6 +15,15 @@ serialiser (§4.3), and concurrent hosts (§8, where the one-agent-at-a-time gap
 now closed). Also 2026-09-10: which tools actually run where (§2.2) and how to
 give the agent a tool it does not already have (§3.6).
 
+Updated 2026-11-03: the adapter in `tools/acp` is now 0.100.0 (ACP SDK 2.4.0,
+Claude Agent SDK 0.3.316), and the real-adapter E2E suite passes on it. Line
+numbers and observations below that name 0.75.1 were not re-checked. `dotacp` is
+unchanged at 2026.7.19, still built on ACP schema 1.19.0. The same day the host
+started advertising `session.notices` (schema 1.25) behind
+`DotAcpHostOptions.AdvertiseSessionNotices`; dotacp cannot parse a `notice`, so
+`NdjsonMethodRewriteStream` renames it to `_session/notice` and
+`DotAcpClientAdapter` publishes it as `AgentNotice`.
+
 ---
 
 ## 1. Orientation, in sixty seconds

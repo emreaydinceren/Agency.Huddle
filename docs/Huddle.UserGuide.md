@@ -946,7 +946,7 @@ few ways worth knowing before you pick it for a role:
 
 | What you see | Why, and what to do |
 | --- | --- |
-| The Agent's first reply in a Room starts with **Auto mode unavailable: … using Accept edits instead.** | Your own `~/.claude/settings.json` sets `permissions.defaultMode` to `auto`, which Haiku does not support. The Adapter switches to Accept edits and writes that notice into the reply. Huddle never asks for auto mode itself. Remove the setting, or set the Agent's **Work mode** on its card. |
+| A **Notice** row, **Auto mode unavailable: … using Accept edits instead.**, appears under the Agent's reply while it works | Your own `~/.claude/settings.json` sets `permissions.defaultMode` to `auto`, and the Agent is pinned to an older Haiku (Haiku 4.5) that has no auto mode. The Adapter switches to Accept edits and tells you so in the Turn's activity; it is not part of the reply. Choose **Haiku** (the current one has auto mode), remove the setting, or set the Agent's **Work mode** on its card. |
 | A Huddle tool call is refused, then retried and works | Haiku loads a tool's description only when it first needs it, so its first call can guess the arguments. Huddle's refusal says what to pass, for example *"Name the Team in team and the fact in fact; nothing was proposed."*, and the next call succeeds. Each retry is one more call on your bill. |
 | A fact you told it went nowhere, although it said **Done** | Rare since the refusals above were made explicit, but a small model can still report a refused call as done. Check the Feed for the **Team Memory (Helper)** record, or open the Team's `memory/` folder. |
 | It does not offer an `AGENTS.md` change for a standing rule | Only an Agent with the `retrospective` Skill is offered the tool that proposes one. Without it, the Agent tells you the rule belongs in `AGENTS.md` and you add the line yourself. |
@@ -2499,7 +2499,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | An Agent file does not appear | See **Files that didn't load** on the Agents page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
 | All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
 | Huddle stops at start-up: *Another program is already listening on the pipe 'team'* | Another copy of Huddle is running on this computer. Stop it, or start this copy with its own `Team:PipeName`. |
-| A reply starts with **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
+| A **Notice** row says **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
 | A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
 | A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |
