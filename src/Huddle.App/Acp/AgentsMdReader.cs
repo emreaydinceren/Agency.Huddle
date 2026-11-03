@@ -44,7 +44,41 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             }
         }
 
+        this.ApplyBudget(sections, omitted);
         return new AgentsMdSnapshot(sections, omitted);
+    }
+
+    /// <summary>Drops Project sections from the end while the total is over the budget, then cuts the last section to fit (Spec §8.2).</summary>
+    /// <param name="sections">The sections, edited in place.</param>
+    /// <param name="omitted">Receives the path of each dropped section.</param>
+    private void ApplyBudget(List<AgentsMdSection> sections, List<string> omitted)
+    {
+        int maxTotal = options.MaxTotalChars;
+        if (maxTotal <= 0)
+        {
+            return;
+        }
+
+        int total = sections.Sum(static section => section.Text.Length);
+        while (total > maxTotal)
+        {
+            int index = sections.FindLastIndex(static section => section.Level == AgentsMdLevel.Project);
+            if (index < 0)
+            {
+                break;
+            }
+
+            total -= sections[index].Text.Length;
+            omitted.Add(sections[index].Path);
+            sections.RemoveAt(index);
+        }
+
+        if (total > maxTotal && sections.Count > 0)
+        {
+            AgentsMdSection last = sections[^1];
+            int allowed = Math.Max(maxTotal - (total - last.Text.Length), 1);
+            sections[^1] = last with { Text = this.Cut(last.Text, last.Path, allowed) };
+        }
     }
 
     /// <summary>Lists a Team's Project folder names, minus reserved names, sorted ordinally.</summary>
@@ -119,7 +153,7 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             }
         }
 
-        sections.Add(new AgentsMdSection(level, team, project, path, this.Cut(body, path), had));
+        sections.Add(new AgentsMdSection(level, team, project, path, this.Cut(body, path, options.MaxCharsPerFile), had));
     }
 
     /// <summary>Strips a leading frontmatter block: the first line is exactly <c>---</c> and a later line is too.</summary>
@@ -148,9 +182,9 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
     /// <summary>Cuts <paramref name="text"/> at the cap and appends the cut line naming the file.</summary>
     /// <param name="text">The file's whole text.</param>
     /// <param name="path">The file's path, named in the cut line.</param>
-    private string Cut(string text, string path)
+    /// <param name="maxChars">The most characters to keep; zero or less keeps the whole text.</param>
+    private string Cut(string text, string path, int maxChars)
     {
-        int maxChars = options.MaxCharsPerFile;
         if (maxChars <= 0 || text.Length <= maxChars)
         {
             return text;
