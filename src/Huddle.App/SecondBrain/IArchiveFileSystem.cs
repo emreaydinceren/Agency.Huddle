@@ -43,6 +43,16 @@ internal interface IArchiveFileSystem
     /// <returns>The file count and total bytes.</returns>
     (int Files, long Bytes) Measure(string folder);
 
+    /// <summary>Reads a whole text file.</summary>
+    /// <param name="path">The file path.</param>
+    /// <returns>The text, or <see langword="null"/> when the file does not exist.</returns>
+    string? ReadText(string path);
+
+    /// <summary>Writes a text file atomically (a temporary file beside it, then a rename over it), so a crash leaves the old text or the new, never half.</summary>
+    /// <param name="path">The file path; its folder must exist.</param>
+    /// <param name="text">The new text.</param>
+    void WriteTextAtomic(string path, string text);
+
     /// <summary>Deletes a folder and everything under it; a missing folder is not an error.</summary>
     /// <param name="path">The folder to delete.</param>
     void DeleteTree(string path);

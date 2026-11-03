@@ -39,11 +39,33 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
     /// <summary>Gets or sets whether the copy writes one byte less into the last file it copies, so the verify step must notice.</summary>
     public bool CorruptCopy { get; set; }
 
+    /// <summary>Gets or sets an exception every <c>Move</c> throws (after it is logged), for example a rename that fails for a reason other than a held-open file.</summary>
+    public Exception? MoveThrows { get; set; }
+
+    /// <summary>Gets or sets an exception every <c>CopyTree</c> throws before it copies anything.</summary>
+    public Exception? CopyThrows { get; set; }
+
+    /// <summary>Gets or sets the destination leaf whose rename always answers <see cref="ArchiveMoveResult.InUse"/>.</summary>
+    public string? InUseFor { get; set; }
+
+    /// <summary>Gets or sets whether <c>FileExists</c> and <c>ReadText</c> match path names case-sensitively, as a Linux file system does.</summary>
+    public bool CaseSensitiveNames { get; set; }
+
     /// <inheritdoc />
     public IReadOnlyList<string> ListEntries(string folder) => inner.ListEntries(folder);
 
     /// <inheritdoc />
-    public bool FileExists(string path) => inner.FileExists(path);
+    public bool FileExists(string path) => this.NameMatches(path) && inner.FileExists(path);
+
+    /// <inheritdoc />
+    public string? ReadText(string path)
+    {
+        this.log.Add("ReadText:" + Path.GetFileName(path));
+        return this.NameMatches(path) ? inner.ReadText(path) : null;
+    }
+
+    /// <inheritdoc />
+    public void WriteTextAtomic(string path, string text) => inner.WriteTextAtomic(path, text);
 
     /// <inheritdoc />
     public void CreateDirectory(string path) => inner.CreateDirectory(path);
@@ -59,6 +81,16 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
     {
         string step = "Move:" + Path.GetFileName(destination);
         this.Enter(step);
+        if (this.MoveThrows is not null)
+        {
+            throw this.MoveThrows;
+        }
+
+        if (string.Equals(this.InUseFor, Path.GetFileName(destination), StringComparison.Ordinal))
+        {
+            return ArchiveMoveResult.InUse;
+        }
+
         if (this.SharingViolations > 0)
         {
             this.SharingViolations = this.SharingViolations == int.MaxValue ? int.MaxValue : this.SharingViolations - 1;
@@ -82,6 +114,11 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
     {
         string step = "CopyTree:" + Path.GetFileName(destination);
         this.Enter(step);
+        if (this.CopyThrows is not null)
+        {
+            throw this.CopyThrows;
+        }
+
         this.copiedFiles = 0;
         this.CopyInto(source, destination, Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories).Count());
         this.Leave(step);
@@ -111,6 +148,17 @@ internal sealed class FakeArchiveFileSystem(IArchiveFileSystem inner) : IArchive
 
         inner.DeleteTree(path);
         this.Leave(step);
+    }
+
+    private bool NameMatches(string path)
+    {
+        // Two levels are enough for the tests: the leaf and the Team folder that holds it.
+        string? parent = Path.GetDirectoryName(path);
+        string? grandparent = parent is null ? null : Path.GetDirectoryName(parent);
+        return !this.CaseSensitiveNames
+            || parent is null
+            || (inner.ListEntries(parent).Contains(Path.GetFileName(path), StringComparer.Ordinal)
+                && (grandparent is null || inner.ListEntries(grandparent).Contains(Path.GetFileName(parent), StringComparer.Ordinal)));
     }
 
     private void CopyInto(string source, string destination, int total)

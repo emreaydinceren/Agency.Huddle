@@ -449,7 +449,7 @@ public sealed class ArchiveMoveTests
     }
 
     private static string[] Dots(string root) =>
-        [.. Directory.EnumerateFileSystemEntries(root).Select(static p => Path.GetFileName(p)).Where(static n => n.StartsWith(".huddle-", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+        [.. Directory.EnumerateFileSystemEntries(root).Select(static p => Path.GetFileName(p)).Where(static n => n.StartsWith(".huddle-", StringComparison.Ordinal) && !n.StartsWith(".huddle-move-", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
 
     private static TeamFile ReadLive(Fixture f)
     {

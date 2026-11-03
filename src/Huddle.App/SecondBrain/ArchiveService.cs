@@ -162,8 +162,18 @@ internal sealed class ArchiveService : IDisposable
         }
 
         string live = Path.Combine(teamsRoot, archived);
-        ArchiveMoveResult moved = this.folders.RunExclusive(
-            () => ArchiveMove.Move(Path.Combine(archiveRoot, archived), live, ArchiveMove.UnarchivingPrefix, this.files));
+        ArchiveMoveResult moved;
+        try
+        {
+            moved = this.folders.RunExclusive(
+                () => ArchiveMove.Move(Path.Combine(archiveRoot, archived), live, ArchiveMove.UnarchivingPrefix, this.files));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The copy, its verification or a rename failed; the archive folder is whole.
+            return Refuse($"{archived} could not be moved: {ex.Message}");
+        }
+
         if (moved != ArchiveMoveResult.Moved)
         {
             return Refuse($"{archived} has files open in another program. Close them and try again.");
@@ -239,21 +249,23 @@ internal sealed class ArchiveService : IDisposable
         IReadOnlyList<string> roster = RosterOf(summary);
         IReadOnlyList<string> roomIds = await this.OpenRoomIdsAsync(name, ct).ConfigureAwait(false);
         TeamFile? original = this.folders.ReadTeamFile(name);
+        ArchiveMove.Begin(source, destination, ArchiveMove.ArchivingPrefix, this.files, teamFileCreated: original is null);
         if (!this.WriteRoster(name, original, roster, roomIds))
         {
+            ArchiveMove.Abandon(source, destination, ArchiveMove.ArchivingPrefix, this.files);
             return Refuse($"{name} can't be archived: its team file couldn't be written.");
         }
 
         ArchiveMoveResult moved;
         try
         {
-            moved = this.folders.RunExclusive(() => ArchiveMove.Move(source, destination, ArchiveMove.ArchivingPrefix, this.files));
+            moved = this.folders.RunExclusive(() => ArchiveMove.Move(source, destination, ArchiveMove.ArchivingPrefix, this.files, teamFileCreated: original is null));
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // The copy or its verification failed; the source is whole, so the team file goes back as it was.
+            // The copy, its verification or a rename failed; the source is whole, so the team file goes back as it was.
             this.RestoreTeamFile(name, source, original);
-            throw;
+            return Refuse($"{name} could not be moved: {ex.Message}");
         }
 
         if (moved != ArchiveMoveResult.Moved)
@@ -357,12 +369,13 @@ internal sealed class ArchiveService : IDisposable
         IReadOnlyList<string> archived = [.. this.files.ListEntries(archiveRoot).Where(static e => !e.StartsWith('.'))];
         foreach (string team in archived.Where(a => !live.Contains(a, StringComparer.OrdinalIgnoreCase)))
         {
-            this.RemoveLabelsAgain(archiveRoot, team);
+            await this.FinishArchiveAsync(archiveRoot, team, ct).ConfigureAwait(false);
         }
 
         foreach (string team in live)
         {
-            if (archived.Contains(team, StringComparer.OrdinalIgnoreCase) && this.files.FileExists(Path.Combine(archiveRoot, team, TeamPaths.TeamFileName)))
+            string? archivedSpelling = archived.FirstOrDefault(a => string.Equals(a, team, StringComparison.OrdinalIgnoreCase));
+            if (archivedSpelling is not null && this.files.FileExists(Path.Combine(archiveRoot, archivedSpelling, TeamPaths.TeamFileName)))
             {
                 this.logger.LogWarning("{Team} exists in both Teams and Archive; archive recovery left both alone.", team);
                 continue;
@@ -372,13 +385,19 @@ internal sealed class ArchiveService : IDisposable
         }
     }
 
-    /// <summary>An archived Team whose roster still has the label on a Persona: the crash came after the move, so remove the label again.</summary>
-    private void RemoveLabelsAgain(string archiveRoot, string team)
+    /// <summary>An archived Team the crash left short of the post-move steps: archive its recorded Rooms and remove the labels that remain.</summary>
+    private async Task FinishArchiveAsync(string archiveRoot, string team, CancellationToken ct)
     {
         string path = Path.Combine(archiveRoot, team, TeamPaths.TeamFileName);
-        if (!this.files.FileExists(path) || !TeamFile.TryParse(File.ReadAllText(path), out TeamFile? file))
+        string? text = this.files.ReadText(path);
+        if (text is null || !TeamFile.TryParse(text, out TeamFile? file))
         {
             return;
+        }
+
+        foreach (string id in file.ArchivedRooms)
+        {
+            await this.directory.SetRoomArchivedAsync(id, true, ct).ConfigureAwait(false);
         }
 
         foreach (string member in file.ArchivedMembers.Where(m => this.HasLabel(m, team)))
