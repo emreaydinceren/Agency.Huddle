@@ -6,7 +6,8 @@ namespace Agency.Huddle.App.Library;
 /// <param name="FullPath">The absolute file system path.</param>
 /// <param name="Role">The node role in the Library tree structure.</param>
 /// <param name="ReadOnly">True when the root is read only or the resolved location lies inside a read-only root; every writer asks this.</param>
-public sealed record LibraryPath(LibraryRoot Root, string RelativePath, string FullPath, LibraryNodeRole Role, bool ReadOnly = false)
+/// <param name="Archived">True when a read of a Teams path was answered from the Archive root (SB-R20, Spec §8.5); such a path is always read-only.</param>
+public sealed record LibraryPath(LibraryRoot Root, string RelativePath, string FullPath, LibraryNodeRole Role, bool ReadOnly = false, bool Archived = false)
 {
     /// <summary>Why a read-only path cannot be changed, as the Human reads it.</summary>
     public const string ReadOnlyReason = "The Skill Sources folder is read only. Ask your AI tool to change it.";
