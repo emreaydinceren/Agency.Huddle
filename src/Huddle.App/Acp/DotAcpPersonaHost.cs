@@ -37,6 +37,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<string> teamLabels;
     private readonly ITeamCatalog teamCatalog;
     private readonly string teamsRoot;
+    private readonly RawGuard rawGuard;
     private readonly int maxTeamMemoryEntries;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
@@ -64,6 +65,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
     /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
+    /// <param name="rawRoot">The full path of the Raw root folder, which the Raw guard keeps unedited.</param>
+    /// <param name="archiveRoot">The full path of the Archive root folder, whose <c>raw</c> folders the Raw guard keeps unedited.</param>
     /// <param name="maxTeamMemoryEntries">The cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams when <paramref name="readsMemory"/>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
@@ -90,6 +93,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyList<string> teamLabels,
         ITeamCatalog teamCatalog,
         string teamsRoot,
+        string rawRoot,
+        string archiveRoot,
         int maxTeamMemoryEntries,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
@@ -134,6 +139,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.teamLabels = teamLabels;
         this.teamCatalog = teamCatalog;
         this.teamsRoot = teamsRoot;
+        this.rawGuard = new RawGuard(teamsRoot, rawRoot, archiveRoot, workDir, prompts);
         this.maxTeamMemoryEntries = maxTeamMemoryEntries;
         this.workDir = workDir;
         this.toolServerEndpoint = toolServerEndpoint;
@@ -250,7 +256,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.persona.Name,
             new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts, this.sources.AgentPaths),
             new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts),
-            this.workDir);
+            this.workDir,
+            rawGuard: this.rawGuard);
     }
 
     /// <summary>

@@ -126,10 +126,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         PersonaIdentity? parsed = ParseIdentity(persona);
         IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
-
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
-
         ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
@@ -161,6 +159,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             teamLabels,
             this.teamCatalog,
             this.TeamsRoot(),
+            this.RawRoot(),
+            this.ArchiveRoot(),
             this.options.Teams.MaxMemoryEntries,
             workDir,
             toolServer.Endpoint,
@@ -376,6 +376,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private string TeamsRoot()
     {
         return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir));
+    }
+
+    /// <summary>The full path of the Raw root folder.</summary>
+    /// <returns>The absolute Raw root path.</returns>
+    private string RawRoot()
+    {
+        return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Raw.Dir));
+    }
+
+    /// <summary>The full path of the Archive root folder.</summary>
+    /// <returns>The absolute Archive root path.</returns>
+    private string ArchiveRoot()
+    {
+        return Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Archive.Dir));
     }
 
     /// <summary>Creates the chat tools every Persona is offered before Skill gating.</summary>

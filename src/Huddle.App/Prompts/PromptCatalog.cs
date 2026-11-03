@@ -2024,7 +2024,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.instructionsRefusal</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.instructions</c> to <c>systemPrompt.rawRefusal</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart39() =>
     [
@@ -2078,6 +2078,14 @@ internal static class PromptCatalog
             Placeholders: ["{{path}}"],
             RequiredPlaceholders: ["{{path}}"],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.rawRefusal",
+            Label: "Raw original change refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that changes an original in a raw/ folder is refused (§8.6).",
+            Default: "Files in raw/ are kept as they arrived. Add a new file beside the original instead, for example \"<name> - extract.md\".",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryChanges</c> to <c>systemPrompt.memoryNoManager</c>.</summary>

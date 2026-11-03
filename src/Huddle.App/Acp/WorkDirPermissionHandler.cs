@@ -67,6 +67,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="instructionsGuard">Refuses an edit, delete or move of an <c>Instructions.md</c> (Instructions spec §3.3); <see langword="null"/> leaves them approved.</param>
 /// <param name="teamMemoryGuard">Refuses an edit, delete or move inside a Team's Memory by anyone but its manager or the Chief of Staff (Instructions spec §5.6); <see langword="null"/> leaves them approved.</param>
 /// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
+/// <param name="rawGuard">Refuses an edit, delete or move of an original in a <c>raw/</c> position (Second Brain §8.6); <see langword="null"/> leaves them approved.</param>
 internal sealed class WorkDirPermissionHandler(
     string? protectedDirectory,
     ILogger<WorkDirPermissionHandler> logger,
@@ -74,7 +75,8 @@ internal sealed class WorkDirPermissionHandler(
     string personaName = "",
     InstructionsWriteGuard? instructionsGuard = null,
     TeamMemoryWriteGuard? teamMemoryGuard = null,
-    string? workDir = null)
+    string? workDir = null,
+    RawGuard? rawGuard = null)
     : IPermissionHandler
 {
     /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
@@ -178,7 +180,8 @@ internal sealed class WorkDirPermissionHandler(
             return Task.FromResult(Refuse(context.Options));
         }
 
-        string? guardReason = instructionsGuard?.RefusalFor(context.ToolCall) ?? teamMemoryGuard?.RefusalFor(context.ToolCall, personaName);
+        string? guardReason = instructionsGuard?.RefusalFor(context.ToolCall) ?? teamMemoryGuard?.RefusalFor(context.ToolCall, personaName)
+            ?? rawGuard?.RefusalFor(context.ToolCall);
         if (guardReason is not null)
         {
             logger.LogWarning("Refused a tool call for '{PersonaName}': {Reason}", personaName, guardReason);
