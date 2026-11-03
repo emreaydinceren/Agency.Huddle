@@ -186,6 +186,9 @@ public sealed class ProcessSourcesTests
 
         /// <inheritdoc />
         public string Raw(string key) => key;
+
+        /// <inheritdoc />
+        public bool IsOverridden(string key) => false;
     }
 
     /// <summary>One Team over a temporary folder whose <c>_team.md</c> holds the given settings, with a manual clock.</summary>

@@ -22,4 +22,9 @@ internal interface IPromptSource
     /// <param name="key">The prompt's <see cref="PromptDefinition.Key"/>.</param>
     /// <returns>The raw text, for display and editing in the settings UI.</returns>
     string Raw(string key);
+
+    /// <summary>Whether the prompt currently resolves to a configured override rather than its catalog default.</summary>
+    /// <param name="key">The prompt's <see cref="PromptDefinition.Key"/>.</param>
+    /// <returns><see langword="true"/> when the Human has overridden the prompt's text.</returns>
+    bool IsOverridden(string key);
 }

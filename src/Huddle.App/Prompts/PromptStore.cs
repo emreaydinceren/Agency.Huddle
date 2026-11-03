@@ -139,6 +139,13 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         return this.watched.Current.TryGetValue(key, out var text) ? text : definition.Default;
     }
 
+    /// <summary>Whether the prompt currently resolves to a configured override rather than its catalog default.</summary>
+    /// <param name="key">The prompt's <see cref="PromptDefinition.Key"/>.</param>
+    /// <returns><see langword="true"/> when the resolved text differs from the catalog default.</returns>
+    /// <exception cref="KeyNotFoundException"><paramref name="key"/> names no prompt in <see cref="PromptCatalog"/>.</exception>
+    public bool IsOverridden(string key) =>
+        !string.Equals(this.Raw(key), PromptCatalog.Get(key).Default, StringComparison.Ordinal);
+
     /// <summary>
     /// Stores an override for <paramref name="key"/> and writes the file, rebuilding the resolved
     /// snapshot before raising <see cref="PromptsChanged"/>. Text equal to the catalog default removes

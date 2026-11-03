@@ -1,0 +1,95 @@
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.Tests.Acp.Fakes;
+
+namespace Agency.Huddle.Tests.Acp;
+
+/// <summary>
+/// Task 68 (8.1.t, SB-R16, Spec §6.4): <c>SystemPromptComposer.ComposeParts</c> returns the labelled
+/// parts and <c>SystemPromptComposer.Compose</c> is exactly those parts joined with a blank line.
+/// The three setups are rebuilt here from the cases in <c>PromptGoldenTests</c> (Tests.Hosted), whose
+/// private inputs are not reachable from this project.
+/// </summary>
+public sealed class PromptPartsTests
+{
+    /// <summary>The prefixed tool names the golden tests offer, trimmed to what the three setups need.</summary>
+    private static readonly IReadOnlyList<string> ToolNames =
+    [
+        "mcp__team__get_help",
+        "mcp__team__ask_human",
+        "mcp__team__memory",
+    ];
+
+    /// <summary>A plain Persona: the joined parts equal <c>Compose</c> and none is empty.</summary>
+    [Fact]
+    public void ComposeParts_PlainPersona_JoinEqualsCompose()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+
+        var parts = SystemPromptComposer.ComposeParts(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+        var composed = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        AssertJoinsAndNonEmpty(parts, composed);
+    }
+
+    /// <summary>A Persona with an AGENTS.md snapshot (golden case <c>AgentsMd_TwoTeamsWithProjects</c>): the AGENTS.md block is one of several parts.</summary>
+    [Fact]
+    public void ComposeParts_WithAgentsMd_JoinEqualsCompose()
+    {
+        AgentsMdSnapshot agentsMd = new(
+            [
+                new AgentsMdSection(AgentsMdLevel.HuddleWide, null, null, "Teams/AGENTS.md", "Be brief everywhere.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "A", null, "Teams/A/AGENTS.md", "Team A writes in British English.", false),
+                new AgentsMdSection(AgentsMdLevel.Project, "A", "Alpha", "Teams/A/Alpha/AGENTS.md", "Alpha ships on Fridays.", false),
+            ],
+            []);
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+
+        var parts = SystemPromptComposer.ComposeParts(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, agentsMd: agentsMd);
+        var composed = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, agentsMd: agentsMd);
+
+        AssertJoinsAndNonEmpty(parts, composed);
+        Assert.True(parts.Count > 5, "The AGENTS.md block adds a part to the five fixed ones.");
+    }
+
+    /// <summary>A hired member with a role block, a Memory index and per-Room sessions (golden cases <c>SystemPrompt_HiredMember</c> and <c>PerRoomWithMemory</c>); skills are left out because the shipped Skill catalogue is a Hosted helper.</summary>
+    [Fact]
+    public void ComposeParts_HiredMemberWithMemory_JoinEqualsCompose()
+    {
+        Persona persona = new("Ada", "You are Ada.");
+        RoleBlockInput roleBlock = new(
+            "Ada",
+            "Developer",
+            "Apollo",
+            [new ConsultLine("Grace", "Lead", "Ask about scope and priorities.")],
+            [new SkillLine("team-building", "Use when you are asked to propose or change a Team.")]);
+        MemorySnapshot memory = new(
+            @"E:\Huddle\App_Data\work\Ada\memory",
+            [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Ada\memory\code-language.md")],
+            NotListed: 0);
+        FakePromptSource prompts = new();
+
+        var parts = SystemPromptComposer.ComposeParts(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.PerRoom, askHumanToolName: "mcp__team__ask_human", roleBlock: roleBlock);
+        var composed = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.PerRoom, askHumanToolName: "mcp__team__ask_human", roleBlock: roleBlock);
+
+        AssertJoinsAndNonEmpty(parts, composed);
+        Assert.True(parts.Count > 8, "Role, memory and closing parts follow the five fixed ones.");
+    }
+
+    /// <summary>Asserts the invariant of SB-R16: the parts joined with a blank line are the composed prompt, and no part is empty.</summary>
+    /// <param name="parts">The parts from <c>ComposeParts</c>.</param>
+    /// <param name="composed">The text from <c>Compose</c> with the same arguments.</param>
+    private static void AssertJoinsAndNonEmpty(IReadOnlyList<PromptPart> parts, string composed)
+    {
+        Assert.Equal(composed, string.Join("\n\n", parts.Select(part => part.Text)));
+        Assert.All(parts, part => Assert.False(string.IsNullOrEmpty(part.Text), $"Part '{part.Label}' is empty."));
+    }
+}

@@ -361,6 +361,9 @@ public sealed class CadenceServiceTests
 
         /// <inheritdoc />
         public string Raw(string key) => key;
+
+        /// <inheritdoc />
+        public bool IsOverridden(string key) => false;
     }
 
     /// <summary>One Team over a temporary data folder, with a manual clock and a recording poster.</summary>

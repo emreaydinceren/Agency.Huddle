@@ -233,29 +233,64 @@ internal static class SystemPromptComposer
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null)
     {
+        IReadOnlyList<PromptPart> parts = ComposeParts(
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings);
+
+        return string.Join("\n\n", parts.Select(static part => part.Text));
+    }
+
+    /// <summary>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?)"/>
+    /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
+    /// </summary>
+    /// <param name="persona">The Persona whose text and name are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="helpToolName"><c>get_help</c>'s own prefixed name.</param>
+    /// <param name="toolNames">Every tool name this session exposes, prefixed, in listing order.</param>
+    /// <param name="skills">The Persona's resolved Skills; an empty list omits the block.</param>
+    /// <param name="readSkillToolName"><c>read_skill</c>'s prefixed name; read only when <paramref name="skills"/> is non-empty.</param>
+    /// <param name="memory">The Agent's Memory index, or <see langword="null"/> for none.</param>
+    /// <param name="scope">Which truthful closing text this session gets.</param>
+    /// <param name="teamMemory">The Persona's Team Memory snapshot, or <see langword="null"/> for none.</param>
+    /// <param name="askHumanToolName"><c>ask_human</c>'s prefixed name, or <see langword="null"/> when not offered.</param>
+    /// <param name="roleBlock">The hired member's role block, or <see langword="null"/>.</param>
+    /// <param name="agentsMd">The Human's AGENTS.md files, or <see langword="null"/>.</param>
+    /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change.</param>
+    /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
+    /// <returns>The labelled parts in prompt order.</returns>
+    internal static IReadOnlyList<PromptPart> ComposeParts(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName,
+        MemorySnapshot? memory,
+        SessionScope scope,
+        TeamMemorySnapshot? teamMemory = null,
+        string? askHumanToolName = null,
+        RoleBlockInput? roleBlock = null,
+        AgentsMdSnapshot? agentsMd = null,
+        bool memoryChangesListed = true,
+        MemoryWarnings? warnings = null)
+    {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
         ArgumentNullException.ThrowIfNull(skills);
 
-        var orientation = prompts.Render(
-            "systemPrompt.orientation",
-            new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName });
-
-        var identity = prompts.Render(
-            "systemPrompt.identity",
-            new Dictionary<string, string> { ["{{personaName}}"] = persona.Name });
-
-        var chatRules = prompts.Render("systemPrompt.chatRules", new Dictionary<string, string>());
-
-        var tools = prompts.Render(
-            "systemPrompt.tools",
-            new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
-
-        List<string> parts = [orientation, persona.Text];
+        List<PromptPart> parts =
+        [
+            PromptOf(
+                prompts,
+                "Orientation",
+                "systemPrompt.orientation",
+                prompts.Render("systemPrompt.orientation", new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName })),
+            new("Persona text", new PromptPartSource.Persona(persona.Name), persona.Text),
+        ];
         AddAgentsMdPart(parts, prompts, agentsMd);
-        parts.AddRange([identity, chatRules, tools]);
+        AddIdentityParts(parts, prompts, persona, toolNames);
 
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
 
@@ -270,7 +305,38 @@ internal static class SystemPromptComposer
 
         AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
 
-        return string.Join("\n\n", parts);
+        return parts;
+    }
+
+    /// <summary>A part rendered from a catalog prompt, recording whether the Human has overridden it.</summary>
+    /// <param name="prompts">Says whether the prompt is overridden.</param>
+    /// <param name="label">The part's label.</param>
+    /// <param name="key">The prompt's key.</param>
+    /// <param name="text">The rendered text.</param>
+    private static PromptPart PromptOf(IPromptSource prompts, string label, string key, string text) =>
+        new(label, new PromptPartSource.Prompt(key, prompts.IsOverridden(key)), text);
+
+    /// <summary>Adds the identity, chat rules and tools parts (slot 4).</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="persona">The Persona being named.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    private static void AddIdentityParts(List<PromptPart> parts, IPromptSource prompts, Persona persona, IReadOnlyList<string> toolNames)
+    {
+        parts.Add(PromptOf(
+            prompts,
+            "Identity",
+            "systemPrompt.identity",
+            prompts.Render("systemPrompt.identity", new Dictionary<string, string> { ["{{personaName}}"] = persona.Name })));
+        parts.Add(PromptOf(
+            prompts,
+            "Chat rules",
+            "systemPrompt.chatRules",
+            prompts.Render("systemPrompt.chatRules", new Dictionary<string, string>())));
+        parts.Add(new PromptPart(
+            "Tools",
+            new PromptPartSource.Tools(toolNames.Count),
+            prompts.Render("systemPrompt.tools", new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) })));
     }
 
     /// <summary>The offered <c>memory</c> tool's prefixed name, or the bare name when the session does not list it.</summary>
@@ -300,7 +366,7 @@ internal static class SystemPromptComposer
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     private static void AddMemoryParts(
-        List<string> parts,
+        List<PromptPart> parts,
         IPromptSource prompts,
         MemorySnapshot? memory,
         TeamMemorySnapshot? teamMemory,
@@ -311,12 +377,18 @@ internal static class SystemPromptComposer
         string memoryToolName = FindMemoryTool(toolNames);
         if (memory is not null)
         {
-            parts.Add(BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed));
+            parts.Add(new PromptPart(
+                "Memory",
+                new PromptPartSource.Index("memory", memory.Entries.Count),
+                BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed)));
         }
 
         if (teamMemory is not null && teamMemory.Groups.Count > 0)
         {
-            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory, new TeamMemoryTools(memoryToolName, FindProposeTool(toolNames)), warnings));
+            parts.Add(new PromptPart(
+                "Team Memory",
+                new PromptPartSource.Index("teamMemory", teamMemory.Groups.Count),
+                BuildTeamMemoryBlock(prompts, teamMemory, new TeamMemoryTools(memoryToolName, FindProposeTool(toolNames)), warnings)));
         }
     }
 
@@ -327,14 +399,18 @@ internal static class SystemPromptComposer
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="agentsMd">The AGENTS.md snapshot, or <see langword="null"/>.</param>
-    private static void AddAgentsMdPart(List<string> parts, IPromptSource prompts, AgentsMdSnapshot? agentsMd)
+    private static void AddAgentsMdPart(List<PromptPart> parts, IPromptSource prompts, AgentsMdSnapshot? agentsMd)
     {
         if (agentsMd is null || agentsMd.Sections.Count == 0)
         {
             return;
         }
 
-        parts.Add(prompts.Render("systemPrompt.agentsMdLevels", new Dictionary<string, string>()));
+        parts.Add(PromptOf(
+            prompts,
+            "AGENTS.md block",
+            "systemPrompt.agentsMdLevels",
+            prompts.Render("systemPrompt.agentsMdLevels", new Dictionary<string, string>())));
         foreach (AgentsMdSection section in agentsMd.Sections)
         {
             string name = section.Level switch
@@ -343,7 +419,7 @@ internal static class SystemPromptComposer
                 AgentsMdLevel.Project => $"Project {section.Team}/{section.Project}",
                 _ => "Huddle-wide",
             };
-            parts.Add($"## {name} ({section.Path})\n{section.Text}");
+            parts.Add(new PromptPart("AGENTS.md block", new PromptPartSource.File(section.Path), $"## {name} ({section.Path})\n{section.Text}"));
         }
     }
 
@@ -364,7 +440,7 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="toolNames">The offered tools' names, already prefixed.</param>
     /// <param name="askHumanToolName"><c>ask_human</c>'s own prefixed name, or <see langword="null"/> when it is not offered.</param>
-    private static void AddToolParagraphs(List<string> parts, IPromptSource prompts, IReadOnlyList<string> toolNames, string? askHumanToolName)
+    private static void AddToolParagraphs(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<string> toolNames, string? askHumanToolName)
     {
         // An Adapter can defer a tool's own description, so the model may see only the name of
         // ask_human; this paragraph is the one place its "when to ask" is always read. The name
@@ -372,9 +448,13 @@ internal static class SystemPromptComposer
         // the session offers no such tool, so a caller that does not pass it gets the old output.
         if (!string.IsNullOrWhiteSpace(askHumanToolName))
         {
-            parts.Add(prompts.Render(
+            parts.Add(PromptOf(
+                prompts,
+                "Tool paragraphs",
                 "systemPrompt.askHuman",
-                new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName }));
+                prompts.Render(
+                    "systemPrompt.askHuman",
+                    new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName })));
         }
 
         // Same reason as ask_human above: the tool's description may never reach the model, and without this
@@ -383,9 +463,13 @@ internal static class SystemPromptComposer
         string? logChangeToolName = FindLogChangeTool(toolNames);
         if (logChangeToolName is not null)
         {
-            parts.Add(prompts.Render(
+            parts.Add(PromptOf(
+                prompts,
+                "Tool paragraphs",
                 "systemPrompt.docHistory",
-                new Dictionary<string, string> { ["{{logChangeTool}}"] = logChangeToolName }));
+                prompts.Render(
+                    "systemPrompt.docHistory",
+                    new Dictionary<string, string> { ["{{logChangeTool}}"] = logChangeToolName })));
         }
     }
 
@@ -393,15 +477,15 @@ internal static class SystemPromptComposer
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="roleBlock">The member's role, Team, colleagues and skills.</param>
-    private static void AddRoleParts(List<string> parts, IPromptSource prompts, RoleBlockInput roleBlock) =>
-        parts.Add(BuildRoleBlock(prompts, roleBlock));
+    private static void AddRoleParts(List<PromptPart> parts, IPromptSource prompts, RoleBlockInput roleBlock) =>
+        parts.Add(PromptOf(prompts, "Role block", "systemPrompt.roleBlock", BuildRoleBlock(prompts, roleBlock)));
 
     /// <summary>Adds the Skills block when the Persona has Skills; an empty list adds nothing.</summary>
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="skills">The Persona's resolved Skills.</param>
     /// <param name="readSkillToolName"><c>read_skill</c>'s own name; only read, and then required, when <paramref name="skills"/> is non-empty.</param>
-    private static void AddSkillsPart(List<string> parts, IPromptSource prompts, IReadOnlyList<Skill> skills, string readSkillToolName)
+    private static void AddSkillsPart(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<Skill> skills, string readSkillToolName)
     {
         if (skills.Count == 0)
         {
@@ -418,7 +502,7 @@ internal static class SystemPromptComposer
                 ["{{readSkillTool}}"] = readSkillToolName,
             });
 
-        parts.Add(skillsBlock);
+        parts.Add(PromptOf(prompts, "Skills", "systemPrompt.skills", skillsBlock));
     }
 
     /// <summary>
@@ -430,21 +514,28 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="scope">Which of RS §6.9's two truthful texts this session gets.</param>
     /// <param name="carryLine">Whether to add the carry line in <see cref="SessionScope.PerRoom"/>: it names memory and File Changes, so it needs both.</param>
-    private static void AddClosingParts(List<string> parts, IPromptSource prompts, SessionScope scope, bool carryLine)
+    private static void AddClosingParts(List<PromptPart> parts, IPromptSource prompts, SessionScope scope, bool carryLine)
     {
         if (scope == SessionScope.PerRoom)
         {
-            parts.Add(prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>()));
+            AddClosing(parts, prompts, "systemPrompt.roomSessions");
             if (carryLine)
             {
-                parts.Add(prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>()));
+                AddClosing(parts, prompts, "systemPrompt.roomSessionsCarry");
             }
         }
         else
         {
-            parts.Add(prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>()));
+            AddClosing(parts, prompts, "systemPrompt.sharedSession");
         }
     }
+
+    /// <summary>Adds one closing part: a prompt with no placeholders.</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves the prompt's current text.</param>
+    /// <param name="key">The closing prompt's key.</param>
+    private static void AddClosing(List<PromptPart> parts, IPromptSource prompts, string key) =>
+        parts.Add(PromptOf(prompts, "Closing", key, prompts.Render(key, new Dictionary<string, string>())));
 
     /// <summary>
     /// Renders the <c>systemPrompt.roleBlock</c> block. The colleague and skill lists are built first and

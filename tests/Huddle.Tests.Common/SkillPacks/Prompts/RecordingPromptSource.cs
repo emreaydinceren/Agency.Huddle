@@ -20,4 +20,7 @@ internal sealed class RecordingPromptSource : IPromptSource
     {
         return PromptCatalog.All.Single(definition => definition.Key == key).Default;
     }
+
+    /// <inheritdoc/>
+    public bool IsOverridden(string key) => false;
 }
