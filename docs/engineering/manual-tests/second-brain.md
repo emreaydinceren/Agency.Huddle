@@ -18,8 +18,12 @@ procedures and oracles this page names.
 
 Take a backup of `src\Huddle.App\App_Data` first, as [section 0.4](../manual-tests.md#04-rollback) describes. Start the app
 under the cost guard in [section 0.2](../manual-tests.md#02-the-cost-guard), with `Team__Acp__Enabled` set to `true` only for
-the paid tests. The Second Brain data is three Teams: **Finances**, **Home** and **Property Investment**, each with its
-`AGENTS.md`, `raw/`, `memory/` and `outputs/` folders, and at least one Agent in Home and one in Finances. In the
+the paid tests and for SB-01, SB-07 and SB-08: a Team Room exists only once a member is connected, so those three need
+Agents running although they send no Message an Agent answers. If another copy of Huddle is running on this machine, give
+this one its own pipe with `Team__PipeName`, or it stops at start-up. The Second Brain data is three Teams: **Finances**,
+**Home** and **Property Investment**, each with its
+`AGENTS.md`, `raw/`, `memory/` and `outputs/` folders, and at least one Agent in each Team. The Finances Agent holds the
+`retrospective` Skill, which is what offers it the tool that proposes an `AGENTS.md` change (SB-03). In the
 paths below, `<data>` is `src\Huddle.App\App_Data`, and `<roomId>` is the id of the Room you are in, read from its
 address or from the Room's folder under `raw/`.
 
@@ -32,10 +36,10 @@ address or from the Room's folder under `raw/`.
 1. Open the **Finances** Team Room. Attach `2025 return.pdf` with the paperclip, and send a Message `Here is my 2025 return.`
 2. In Terminal B, list `<data>\Teams\Finances\raw\<roomId>\` and compare the file's size and modified time with the original.
 
-**Expect**: the file is saved as `Teams\Finances\raw\<roomId>\2025 return.pdf`, its size and modified time match the original,
-and the Message carries the path line that names it (ADR-0053).
+**Expect**: the file is saved as `Teams\Finances\raw\<roomId>\2025 return.pdf`, its size matches the original, and the
+Message carries the path line that names it (ADR-0053). The modified time is the upload's, not the original's.
 
-**Pass if**: the file sits at that path with matching size and time, and the path line is on the Message.
+**Pass if**: the file sits at that path with matching size, and the path line is on the Message.
 **Fail if**: the file is saved elsewhere, is missing, or the Message carries no path line.
 
 ### SB-02 — A fact the Human states is proposed to Team Memory
@@ -72,14 +76,17 @@ topic itself. The Helper files it as a topic line, and the History records the p
 
 1. Open the **Home** Room and send a Message to a Home Agent so its session is running.
 2. Edit `<data>\Teams\Home\AGENTS.md` in Obsidian or any editor and add the line `SB-04 marker: lead with the date.` Save.
-3. Back in the Home Room, send one Message to the running Agent. Then in the same Room press **Stop** on that Agent,
-   send a new Message, and ask `Repeat the SB-04 marker line from your instructions.`
+3. Back in the Home Room, send `Did you receive any notice this turn that a file changed? If so, which file?`
+4. Stop the app and start it again under the same settings. In the Home Room ask
+   `Repeat the SB-04 marker line from your instructions.`
 
-**Expect**: the running session hears of the change as a File Change on its next Turn. After **Stop**, the new session
-carries the new body and quotes the marker. No Agent is restarted from its card.
+**Expect**: the running session hears of the change as a File Change on its next Turn, naming `Teams\Home\AGENTS.md`. A
+session that is already open keeps the prompt it opened with, so **Stop** (which only ends a Turn) does not bring the new
+line in. After the app restarts, the Room's session is composed again: it carries the new body and quotes the marker. No
+Agent is restarted from its card.
 
-**Pass if**: the File Change is seen on the running session, and the new session quotes the marker line.
-**Fail if**: the new session does not quote the marker, or the Agent card was restarted to make it appear.
+**Pass if**: the File Change names `AGENTS.md` at step 3, and the session after the restart quotes the marker line.
+**Fail if**: the session after the restart does not quote the marker, or the Agent card was restarted to make it appear.
 
 ### SB-05 — Nova prompt parts show their source
 
