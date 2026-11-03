@@ -41,6 +41,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     // rebuild (Task 5.4) share it too, rather than PersonaStore's two-lock design (Settled
     // corrections-B2 D5 item 1).
     private readonly Lock writeGate = new();
+    private readonly List<string> pausedTeams = [];
 
     // Keyed with FolderSnapshot.PathComparer (Settled corrections-B2 D5 item 4) so the watcher
     // (Task 5.4) can tell its own writes apart from an outside edit regardless of the file
@@ -190,6 +191,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(location.Team);
+            this.RefuseIfTeamFolderMissing(location.Team);
             if (File.Exists(path))
             {
                 return null;
@@ -268,6 +271,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(task.Location.Team);
             string? diskVersion = ReadDiskVersion(task.Path);
             if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
             {
@@ -339,6 +343,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
+            this.RefuseIfPaused(task.Location.Team);
+            this.RefuseIfPaused(canonicalTo.Team);
+            this.RefuseIfTeamFolderMissing(canonicalTo.Team);
             string? diskVersion = ReadDiskVersion(task.Path);
             if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
             {
@@ -356,6 +363,73 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
         EventRaise.Isolated(changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
         return written;
+    }
+
+    /// <summary>
+    /// Refuses every Task write for <paramref name="team"/> (compared ignoring case) until the returned scope is disposed,
+    /// so an archive move can copy the Team folder without a late write landing in the source. The refusal is an
+    /// <see cref="InvalidOperationException"/> from <see cref="Create"/>, <see cref="Write"/>, <see cref="Move"/> and <see cref="AppendEntry"/>.
+    /// </summary>
+    /// <param name="team">The Team whose folder is being moved.</param>
+    /// <returns>The scope; disposing it lifts the pause (once).</returns>
+    internal IDisposable PauseWrites(string team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        lock (this.writeGate)
+        {
+            this.pausedTeams.Add(team);
+        }
+
+        return new PauseScope(this, team);
+    }
+
+    /// <summary>Throws when <paramref name="team"/> is paused. Call with <see cref="writeGate"/> held.</summary>
+    /// <param name="team">The Team a write is for.</param>
+    private void RefuseIfPaused(string team)
+    {
+        if (this.pausedTeams.Exists(paused => string.Equals(paused, team, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team} can't be written while the Team is being moved."));
+        }
+    }
+
+    /// <summary>
+    /// Throws when the Team is one the store has indexed but its folder is gone, so a Task write cannot re-create a Team
+    /// folder an archive move took away. A Team the store has never seen is not refused: its first Task creates the folder.
+    /// </summary>
+    /// <param name="team">The Team a write is for.</param>
+    private void RefuseIfTeamFolderMissing(string team)
+    {
+        bool known = this.Teams.Any(folder => string.Equals(folder.Name, team, StringComparison.OrdinalIgnoreCase));
+        if (known && !Directory.Exists(Path.Combine(this.RootDirectory, team)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team} can't be written: the Team has no folder."));
+        }
+    }
+
+    /// <summary>Lifts one <see cref="PauseWrites"/> pause when disposed.</summary>
+    /// <param name="store">The store that was paused.</param>
+    /// <param name="team">The paused Team.</param>
+    private sealed class PauseScope(TaskStore store, string team) : IDisposable
+    {
+        private int disposed;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref this.disposed, 1) != 0)
+            {
+                return;
+            }
+
+            lock (store.writeGate)
+            {
+                _ = store.pausedTeams.Remove(team);
+            }
+        }
     }
 
     /// <summary>
@@ -503,6 +577,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 return null;
             }
+
+            this.RefuseIfPaused(current.Location.Team);
 
             string diskText = File.ReadAllText(current.Path);
             if (!string.Equals(TaskFileFormat.ComputeVersion(diskText), expectedVersion, StringComparison.Ordinal))

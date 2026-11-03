@@ -74,7 +74,8 @@ internal static class TeamNames
     /// <param name="name">The Team name to validate.</param>
     /// <param name="existing">The list of existing Teams to check for duplicates.</param>
     /// <returns>Null if the name is valid; an error message otherwise.</returns>
-    public static string? ValidateTeamName(string name, IReadOnlyList<TeamSummary> existing)
+    /// <param name="archivedNames">The names of the archived Teams (<c>Archive/&lt;T&gt;/_team.md</c> exists), compared ignoring case; null when the caller has none to check.</param>
+    public static string? ValidateTeamName(string name, IReadOnlyList<TeamSummary> existing, IReadOnlyList<string>? archivedNames = null)
     {
         // 0. Refuse the folders a Team reserves for itself (memory, raw, outputs), ignoring case
         if (IsReservedTeamName(name))
@@ -109,7 +110,9 @@ internal static class TeamNames
             }
         }
 
-        return null;
+        // 4. Check for an archived Team of the same name (case-insensitive); the text names the archived spelling
+        string? archived = archivedNames?.FirstOrDefault(a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
+        return archived is null ? null : $"A Team named {archived} is archived. Unarchive it or pick another name.";
     }
 
     /// <summary>
@@ -119,7 +122,8 @@ internal static class TeamNames
     /// <param name="name">The Project name to validate.</param>
     /// <param name="team">The Team containing the Project.</param>
     /// <returns>Null if the name is valid; an error message otherwise.</returns>
-    public static string? ValidateProjectName(string name, TeamSummary team)
+    /// <param name="archivedNames">The names of the Team's archived Projects (<c>Archive/&lt;Team&gt;/&lt;Project&gt;</c>), compared ignoring case; null when the caller has none to check.</param>
+    public static string? ValidateProjectName(string name, TeamSummary team, IReadOnlyList<string>? archivedNames = null)
     {
         // 1. Check LibraryNames rules first (empty, contains /, \, reserved names, etc.)
         string? libraryProblem = LibraryNames.Validate(name);
@@ -150,7 +154,9 @@ internal static class TeamNames
             }
         }
 
-        return null;
+        // 5. Check for an archived Project of the same name (case-insensitive); the text names the archived spelling
+        string? archived = archivedNames?.FirstOrDefault(a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
+        return archived is null ? null : $"A Project named {archived} is archived in {team.Name}. Unarchive it or pick another name.";
     }
 
     /// <summary>

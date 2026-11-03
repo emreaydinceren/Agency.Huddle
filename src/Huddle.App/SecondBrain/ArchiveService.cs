@@ -256,22 +256,10 @@ internal sealed class ArchiveService : IDisposable
             return Refuse($"{name} can't be archived: its team file couldn't be written.");
         }
 
-        ArchiveMoveResult moved;
-        try
+        string? failure = this.MoveWithTasksPaused(name, source, destination, original);
+        if (failure is not null)
         {
-            moved = this.folders.RunExclusive(() => ArchiveMove.Move(source, destination, ArchiveMove.ArchivingPrefix, this.files, teamFileCreated: original is null));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // The copy, its verification or a rename failed; the source is whole, so the team file goes back as it was.
-            this.RestoreTeamFile(name, source, original);
-            return Refuse($"{name} could not be moved: {ex.Message}");
-        }
-
-        if (moved != ArchiveMoveResult.Moved)
-        {
-            this.RestoreTeamFile(name, source, original);
-            return Refuse($"{name} has files open in another program. Close them and try again.");
+            return Refuse(failure);
         }
 
         foreach (string id in roomIds)
@@ -284,6 +272,32 @@ internal sealed class ArchiveService : IDisposable
     }
 
     private static ArchiveOutcome Refuse(string reason) => new(false, reason);
+
+    /// <summary>Moves the Team folder under the provisioner's gate with the Team's Task writes paused (corrections-12 item 5); on failure the team file goes back as it was.</summary>
+    /// <returns>The refusal text, or <see langword="null"/> when the folder moved.</returns>
+    private string? MoveWithTasksPaused(string name, string source, string destination, TeamFile? original)
+    {
+        using IDisposable pause = this.tasks.PauseWrites(name);
+        ArchiveMoveResult moved;
+        try
+        {
+            moved = this.folders.RunExclusive(() => ArchiveMove.Move(source, destination, ArchiveMove.ArchivingPrefix, this.files, teamFileCreated: original is null));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The copy, its verification or a rename failed; the source is whole, so the team file goes back as it was.
+            this.RestoreTeamFile(name, source, original);
+            return $"{name} could not be moved: {ex.Message}";
+        }
+
+        if (moved == ArchiveMoveResult.Moved)
+        {
+            return null;
+        }
+
+        this.RestoreTeamFile(name, source, original);
+        return $"{name} has files open in another program. Close them and try again.";
+    }
 
     /// <summary>The members to record: everyone the catalog lists plus the manager, ordinal, without duplicates.</summary>
     private static List<string> RosterOf(TeamSummary? summary)

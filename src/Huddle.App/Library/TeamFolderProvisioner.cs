@@ -167,7 +167,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        string? problem = TeamNames.ValidateTeamName(name, this.catalog.Teams);
+        string? problem = TeamNames.ValidateTeamName(name, this.catalog.Teams, this.ArchivedTeamNames());
         if (problem is not null)
         {
             return new LibraryResult<LibraryPath>(null, problem);
@@ -213,7 +213,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new LibraryResult<LibraryPath>(null, $"There is no Team named \"{team}\".");
         }
 
-        string? projectProblem = TeamNames.ValidateProjectName(project, summary);
+        string? projectProblem = TeamNames.ValidateProjectName(project, summary, this.ArchivedProjectNames(summary.Name));
         if (projectProblem is not null)
         {
             return new LibraryResult<LibraryPath>(null, projectProblem);
@@ -252,7 +252,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
         // A Team with exactly this name keeps its AlreadyExists path below; only a name that differs by case is refused here.
         IReadOnlyList<TeamSummary> others = [.. this.catalog.Teams.Where(t => !string.Equals(t.Name, team, StringComparison.Ordinal))];
-        if (TeamNames.ValidateTeamName(team, others) is not null)
+        if (TeamNames.ValidateTeamName(team, others, this.ArchivedTeamNames()) is not null)
         {
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
         }
@@ -487,29 +487,52 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
     /// <summary>Whether <c>Archive/&lt;name&gt;/_team.md</c> exists, the folder matched ignoring case by listing the Archive root. A Project archive alone (no <c>_team.md</c>) does not count.</summary>
     /// <param name="name">The Team's name.</param>
-    private bool ArchivedTeamExists(string name)
+    private bool ArchivedTeamExists(string name) =>
+        this.ArchivedTeamNames().Any(archived => string.Equals(archived, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The folder names under the Archive root that hold a <c>_team.md</c>, in their on-disk spelling.</summary>
+    private List<string> ArchivedTeamNames() =>
+        this.ListArchive(null, static folder => File.Exists(Path.Combine(folder, TeamPaths.TeamFileName)));
+
+    /// <summary>The Project folder names under <c>Archive/&lt;team&gt;/</c> (the Team matched ignoring case), in their on-disk spelling.</summary>
+    /// <param name="team">The Team's name.</param>
+    private List<string> ArchivedProjectNames(string team)
+    {
+        string? folder = this.ListArchive(null, static _ => true)
+            .FirstOrDefault(d => string.Equals(d, team, StringComparison.OrdinalIgnoreCase));
+        return folder is null ? [] : this.ListArchive(folder, static f => !TaskLayout.IsReservedFolderName(Path.GetFileName(f)));
+    }
+
+    /// <summary>Lists the sub-folder names of the Archive root (or of one folder in it) that satisfy <paramref name="keep"/>; empty when the root is missing or unreadable.</summary>
+    /// <param name="inside">A folder directly under the Archive root, or null for the root itself.</param>
+    /// <param name="keep">Receives a candidate folder's full path.</param>
+    private List<string> ListArchive(string? inside, Func<string, bool> keep)
     {
         LibraryRoot? archive = this.roots.Roots.FirstOrDefault(r => r.Kind == LibraryRootKind.Archive);
-        if (archive is null || !Directory.Exists(archive.FullPath))
+        if (archive is null)
         {
-            return false;
+            return [];
+        }
+
+        string parent = inside is null ? archive.FullPath : Path.Combine(archive.FullPath, inside);
+        if (!Directory.Exists(parent))
+        {
+            return [];
         }
 
         try
         {
-            return Directory.EnumerateDirectories(archive.FullPath)
-                .Any(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(Path.Combine(d, TeamPaths.TeamFileName)));
+            return [.. Directory.EnumerateDirectories(parent).Where(keep).Select(static d => Path.GetFileName(d))];
         }
         catch (IOException ex)
         {
             this.LogSyncFailed(ex);
-            return false;
+            return [];
         }
         catch (UnauthorizedAccessException ex)
         {
             this.LogSyncFailed(ex);
-            return false;
+            return [];
         }
     }
 
