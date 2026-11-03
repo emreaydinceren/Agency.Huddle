@@ -217,11 +217,11 @@ public sealed class WatchedFolderResolverTests
 
     /// <summary>Spec 6.8: the Uploads root and anything under it (including a Room's folder) is refused with the spec 7 text.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    [InlineData("./Uploads")]
-    [InlineData("Uploads/room1")]
-    [InlineData("Uploads\\room1\\deeper")]
+    [InlineData("Raw")]
+    [InlineData("raw")]
+    [InlineData("./Raw")]
+    [InlineData("Raw/room1")]
+    [InlineData("Raw\\room1\\deeper")]
     public void TryResolve_UploadsRootOrUnderIt_IsRefused(string entry)
     {
         using TempDataDir dataDir = new();
@@ -241,7 +241,7 @@ public sealed class WatchedFolderResolverTests
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
-        bool resolved = resolver.TryResolve(Path.Combine(dataDir.Path, "Uploads", "room1"), [], out WatchedFolder? folder, out string? reason);
+        bool resolved = resolver.TryResolve(Path.Combine(dataDir.Path, "Raw", "room1"), [], out WatchedFolder? folder, out string? reason);
 
         Assert.False(resolved);
         Assert.Null(folder);

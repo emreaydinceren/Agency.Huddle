@@ -42,8 +42,8 @@ public sealed class TaskUploadServiceTests
         LibraryPath? folder = folders.For("GROW-0002");
 
         Assert.NotNull(folder);
-        Assert.Equal("uploads", folder.Root.Id);
-        Assert.Equal(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002"), folder.FullPath);
+        Assert.Equal("raw", folder.Root.Id);
+        Assert.Equal(Path.Combine(fixture.DataDir, "Raw", "Tasks", "GROW-0002"), folder.FullPath);
     }
 
     /// <summary>An id that is not a safe path segment resolves to nothing.</summary>
@@ -69,7 +69,7 @@ public sealed class TaskUploadServiceTests
         LibraryResult<LibraryUpload> result = await service.SaveAsync("GROW-0002", "brief.png", new MemoryStream(PngHead), ct);
 
         Assert.NotNull(result.Value);
-        string expected = Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "brief.png");
+        string expected = Path.Combine(fixture.DataDir, "Raw", "Tasks", "GROW-0002", "brief.png");
         Assert.Equal(expected, result.Value.File.FullPath);
         Assert.Equal(UploadKind.Image, result.Value.Kind);
         Assert.True(File.Exists(expected));
@@ -102,7 +102,7 @@ public sealed class TaskUploadServiceTests
 
         Assert.Null(result.Value);
         Assert.Equal("Couldn't attach brief.png: this Task no longer exists.", result.Error);
-        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks")));
+        Assert.False(Directory.Exists(Path.Combine(fixture.DataDir, "Raw", "Tasks")));
     }
 
     /// <summary>The writer's own refusals pass through: an SVG and a file over the cap are not saved.</summary>
@@ -118,7 +118,7 @@ public sealed class TaskUploadServiceTests
 
         Assert.Equal("SVG files can't be attached.", svg.Error);
         Assert.Equal(LibraryFileService.UploadTooLargeMessage("big.txt", 8), big.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "big.txt")));
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Raw", "Tasks", "GROW-0002", "big.txt")));
     }
 
     /// <summary>A program is refused by its magic bytes, whatever its name, with the chat upload's text, and nothing is saved.</summary>
@@ -133,7 +133,7 @@ public sealed class TaskUploadServiceTests
         LibraryResult<LibraryUpload> result = await service.SaveAsync("GROW-0002", "setup.txt", new MemoryStream(program), ct);
 
         Assert.Equal("Programs can't be attached.", result.Error);
-        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Uploads", "Tasks", "GROW-0002", "setup.txt")));
+        Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Raw", "Tasks", "GROW-0002", "setup.txt")));
     }
 
     /// <summary>Deleting an unsent upload removes the file.</summary>

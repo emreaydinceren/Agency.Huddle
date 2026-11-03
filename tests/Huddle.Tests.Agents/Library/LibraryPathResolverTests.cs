@@ -74,17 +74,17 @@ public sealed class LibraryPathResolverTests
     public void TryResolve_UploadsRoot_ResolvesFile()
     {
         using Fixture fixture = BuildFixture();
-        string folder = Path.Combine(fixture.DataDir, "Uploads", "x");
+        string folder = Path.Combine(fixture.DataDir, "Raw", "x");
         Directory.CreateDirectory(folder);
         File.WriteAllBytes(Path.Combine(folder, "y.png"), [1, 2, 3]);
 
-        bool resolved = fixture.Resolver.TryResolve("uploads", "x/y.png", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("raw", "x/y.png", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.Null(error);
         Assert.NotNull(path);
         Assert.Equal(LibraryNodeRole.File, path.Role);
-        Assert.Equal(LibraryRootKind.Uploads, path.Root.Kind);
+        Assert.Equal(LibraryRootKind.Raw, path.Root.Kind);
         Assert.Equal("x/y.png", path.RelativePath);
     }
 

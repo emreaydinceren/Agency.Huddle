@@ -38,7 +38,9 @@ internal sealed class LibraryRootStore
     private const string FileName = "library-roots.json";
     private const string TeamsRootId = "teams";
     private const string AgentsRootId = "agents";
-    private const string UploadsRootId = "uploads";
+    private const string RawRootId = "raw";
+    private const string ArchiveRootId = "archive";
+    private const string PromptsRootId = "prompts";
     private const int MaxSlugLength = 64;
 
     private readonly IOptions<TeamOptions> options;
@@ -140,7 +142,7 @@ internal sealed class LibraryRootStore
         EventRaise.Isolated(this.RootsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RootsChanged)));
     }
 
-    /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"agents"</c>, <c>"uploads"</c> or <c>"skill-sources"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
+    /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"agents"</c>, <c>"raw"</c>, <c>"archive"</c>, <c>"prompts"</c> or <c>"skill-sources"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
     /// <param name="builtInId">The built-in root's id.</param>
     /// <param name="hidden">Whether the root should be hidden.</param>
     /// <exception cref="ArgumentException"><paramref name="builtInId"/> does not name a built-in root.</exception>
@@ -150,10 +152,12 @@ internal sealed class LibraryRootStore
         ArgumentException.ThrowIfNullOrWhiteSpace(builtInId);
         if (!string.Equals(builtInId, TeamsRootId, StringComparison.Ordinal)
             && !string.Equals(builtInId, AgentsRootId, StringComparison.Ordinal)
-            && !string.Equals(builtInId, UploadsRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, RawRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, ArchiveRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, PromptsRootId, StringComparison.Ordinal)
             && !string.Equals(builtInId, SkillSourcesRootId, StringComparison.Ordinal))
         {
-            throw new ArgumentException("Only a built-in Library root ('teams', 'agents', 'uploads' or 'skill-sources') can be hidden.", nameof(builtInId));
+            throw new ArgumentException("Only a built-in Library root ('teams', 'agents', 'raw', 'archive', 'prompts' or 'skill-sources') can be hidden.", nameof(builtInId));
         }
 
         lock (this.writeGate)
@@ -232,7 +236,7 @@ internal sealed class LibraryRootStore
 
         string baseSlug = collapsed.Length == 0 ? "root" : collapsed;
 
-        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, AgentsRootId, UploadsRootId, SkillSourcesRootId };
+        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, AgentsRootId, RawRootId, ArchiveRootId, PromptsRootId, SkillSourcesRootId };
         if (!takenSlugs.Contains(baseSlug))
         {
             return baseSlug;
@@ -391,13 +395,17 @@ internal sealed class LibraryRootStore
         string dataDir = options.Value.DataDir;
         string teamsRoot = TrimTrailingSeparator(Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir)));
         string agentsRoot = TrimTrailingSeparator(Path.GetFullPath(paths.DefinitionsRoot));
-        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
+        string rawRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Raw.Dir));
+        string archiveRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Archive.Dir));
+        string promptsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Prompts.Dir));
 
         List<LibraryRoot> roots =
         [
             new LibraryRoot(TeamsRootId, "Teams", teamsRoot, LibraryRootKind.Teams),
             new LibraryRoot(AgentsRootId, "Agents", agentsRoot, LibraryRootKind.Agents),
-            new LibraryRoot(UploadsRootId, "Uploads", uploadsRoot, LibraryRootKind.Uploads),
+            new LibraryRoot(RawRootId, "Raw", rawRoot, LibraryRootKind.Raw),
+            new LibraryRoot(ArchiveRootId, "Archive", archiveRoot, LibraryRootKind.Archive, ReadOnly: true),
+            new LibraryRoot(PromptsRootId, "Prompts", promptsRoot, LibraryRootKind.Prompts),
             new LibraryRoot(SkillSourcesRootId, "Skill Sources", TrimTrailingSeparator(Path.GetFullPath(skillSourcesDir)), LibraryRootKind.SkillSources, ReadOnly: true),
         ];
 

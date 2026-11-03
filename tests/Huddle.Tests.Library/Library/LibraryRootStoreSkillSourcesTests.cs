@@ -19,7 +19,7 @@ public sealed class LibraryRootStoreSkillSourcesTests : IDisposable
         this.dir.Dispose();
     }
 
-    /// <summary>The last built-in root is <c>skill-sources</c>, of kind SkillSources, read only, at the settings' folder.</summary>
+    /// <summary>The last built-in root is <c>skill-sources</c>, of kind SkillSources, read only, at the settings' folder; Archive is the only other read-only root.</summary>
     [Fact]
     public void Roots_EndWithTheReadOnlySkillSourcesRoot_AtTheSettingsFolder()
     {
@@ -33,7 +33,8 @@ public sealed class LibraryRootStoreSkillSourcesTests : IDisposable
         Assert.Equal(LibraryRootKind.SkillSources, last.Kind);
         Assert.True(last.ReadOnly);
         Assert.Equal(settings.Dir, last.FullPath);
-        Assert.All(store.Roots.Take(store.Roots.Count - 1), root => Assert.False(root.ReadOnly));
+        Assert.True(store.Roots.Single(root => root.Kind == LibraryRootKind.Archive).ReadOnly);
+        Assert.All(store.Roots.Take(store.Roots.Count - 1).Where(root => root.Kind != LibraryRootKind.Archive), root => Assert.False(root.ReadOnly));
     }
 
     /// <summary>Changing the folder setting raises <c>RootsChanged</c> once and the root shows the new path, keeping the

@@ -42,8 +42,14 @@ public sealed class TeamOptions
 
     public FileChangesOptions FileChanges { get; set; } = new();
 
-    /// <summary>Configuration for the Human's standing Instructions, bound from <c>Team:Instructions</c> per Instructions and Memory §3.2.</summary>
-    public InstructionsOptions Instructions { get; set; } = new();
+    /// <summary>Size limits on the AGENTS.md files, bound from <c>Team:AgentsMd</c> per Spec §7.4.</summary>
+    public AgentsMdOptions AgentsMd { get; set; } = new();
+
+    /// <summary>Configuration for the Outputs index, bound from <c>Team:Outputs</c> per Spec §7.4.</summary>
+    public OutputsOptions Outputs { get; set; } = new();
+
+    /// <summary>Configuration for the Second Brain check, bound from <c>Team:SecondBrain</c> per Spec §7.4.</summary>
+    public SecondBrainOptions SecondBrain { get; set; } = new();
 
     /// <summary>Configuration for the memory tool, bound from <c>Team:Memory</c> per Instructions and Memory §5.7.</summary>
     public MemoryOptions Memory { get; set; } = new();

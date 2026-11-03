@@ -216,12 +216,12 @@ public sealed class ReferencePurposeProviderTests
     public async Task Library_Reference_FindsAnUploadByName()
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        WriteFile(Path.Combine(fixture.DataDir, "Uploads", "quarterly-report.pdf"), "x");
+        WriteFile(Path.Combine(fixture.DataDir, "Raw", "quarterly-report.pdf"), "x");
 
         SearchResult result = await LibraryProvider(fixture).SearchAsync(LibraryQuery("quarterly", SearchPurpose.Reference), TestContext.Current.CancellationToken);
 
         LibraryHit hit = Assert.IsType<LibraryHit>(Assert.Single(result.Hits));
-        Assert.Equal("uploads", hit.RootId);
+        Assert.Equal("raw", hit.RootId);
     }
 
     /// <summary>A file whose full path holds a backtick is dropped under Reference but found by the box.</summary>

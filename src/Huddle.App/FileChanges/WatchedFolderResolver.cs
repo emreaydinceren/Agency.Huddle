@@ -74,7 +74,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
             return false;
         }
 
-        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
+        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Raw.Dir));
         string teamsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir));
         // Spec 6.8 refuses Uploads whichever case it is typed in, so these refusals ignore case on every platform.
         if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true, StringComparison.OrdinalIgnoreCase)

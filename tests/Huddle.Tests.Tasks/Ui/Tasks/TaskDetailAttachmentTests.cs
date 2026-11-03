@@ -315,7 +315,7 @@ public sealed class TaskDetailAttachmentTests
     private static async Task<IRenderedComponent<ContainerFragment>> PreviewAsync(MudBunitContext ctx, TaskItem task, string path, bool exists)
     {
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver(resolvePath: p => string.Equals(p, path, StringComparison.Ordinal)
-            ? new LibraryReference("uploads", $"Tasks/{task.Id}/notes.txt", exists)
+            ? new LibraryReference("raw",$"Tasks/{task.Id}/notes.txt", exists)
             : null));
         IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx, task.Id);
         IRenderedComponent<MudTextField<string>> field = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
@@ -334,7 +334,7 @@ public sealed class TaskDetailAttachmentTests
 
     /// <summary>Where an upload named <paramref name="name"/> lands for <paramref name="task"/>.</summary>
     private static string UploadPath(TaskToolHarness harness, TaskItem task, string name) =>
-        Path.Combine(harness.Options.Value.DataDir, "Uploads", "Tasks", task.Id.ToString(), name);
+        Path.Combine(harness.Options.Value.DataDir, "Raw", "Tasks", task.Id.ToString(), name);
 
     /// <summary>Registers a real <see cref="TaskUploadService"/> over the harness's data directory.</summary>
     private static void RegisterUploader(MudBunitContext ctx, TaskToolHarness harness, LibraryFileServiceFixture library)

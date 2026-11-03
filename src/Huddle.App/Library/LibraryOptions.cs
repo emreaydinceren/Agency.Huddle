@@ -56,6 +56,12 @@ public sealed class LibraryOptions
     /// </summary>
     public string PropertyTypesFile { get; set; } = DefaultPropertyTypesFile;
 
-    /// <summary>The Uploads folder under <c>DataDir</c>, per spec 6.6 (<c>Team:Library:Uploads:Dir</c>).</summary>
-    public LibraryUploadsOptions Uploads { get; set; } = new();
+    /// <summary>The Raw root folder under <c>DataDir</c>, per Spec §6.1 and §7.4 (<c>Team:Library:Raw:Dir</c>).</summary>
+    public LibraryRawOptions Raw { get; set; } = new();
+
+    /// <summary>The Archive root folder under <c>DataDir</c>, per Spec §6.9 and §7.4 (<c>Team:Library:Archive:Dir</c>).</summary>
+    public LibraryArchiveOptions Archive { get; set; } = new();
+
+    /// <summary>The Prompt override folder under <c>DataDir</c>, per Spec §6.6 and §7.4 (<c>Team:Library:Prompts:Dir</c>).</summary>
+    public LibraryPromptsOptions Prompts { get; set; } = new();
 }

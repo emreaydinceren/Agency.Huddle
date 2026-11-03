@@ -20,7 +20,7 @@ public sealed class RoomUploadFoldersTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Marketing", ct: ct);
-        string rootFolder = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        string rootFolder = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
         string teamFolder = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
 
         IReadOnlyList<string> failures = await harness.Folders.RecycleAsync(room, ct);
@@ -36,7 +36,7 @@ public sealed class RoomUploadFoldersTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], ct);
-        _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        _ = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
         harness.RecycleBin.FailureError = "No bin.";
 
         IReadOnlyList<string> failures = await harness.Folders.RecycleAsync(room, ct);
@@ -51,7 +51,7 @@ public sealed class RoomUploadFoldersTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Marketing", ct: ct);
-        _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        _ = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
         string teamFolder = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
         _ = Seed(Path.Combine(teamFolder, "deeper"), "b.txt");
 
@@ -70,6 +70,6 @@ public sealed class RoomUploadFoldersTests
         IReadOnlyList<LibraryPath> folders = harness.Folders.For(room);
 
         LibraryPath only = Assert.Single(folders);
-        Assert.Equal("uploads", only.Root.Id);
+        Assert.Equal("raw", only.Root.Id);
     }
 }

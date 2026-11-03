@@ -25,9 +25,9 @@ public sealed class ChatUploadServiceTests
         LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "photo.png", new MemoryStream(PngHead), ct);
 
         Assert.NotNull(result.Value);
-        string expected = Path.Combine(harness.DataDir, "Uploads", room.Id, "photo.png");
+        string expected = Path.Combine(harness.DataDir, "Raw", room.Id, "photo.png");
         Assert.Equal(expected, result.Value.File.FullPath);
-        Assert.Equal("uploads", result.Value.File.Root.Id);
+        Assert.Equal("raw", result.Value.File.Root.Id);
         Assert.Equal(UploadKind.Image, result.Value.Kind);
         Assert.Equal(PngHead.Length, result.Value.Size);
         Assert.True(File.Exists(expected));
@@ -46,7 +46,7 @@ public sealed class ChatUploadServiceTests
         Assert.NotNull(result.Value);
         Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id, "notes.txt"), result.Value.File.FullPath);
         Assert.Equal("teams", result.Value.File.Root.Id);
-        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id)));
+        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Raw", room.Id)));
     }
 
     /// <summary>A Team with no folder yet gets one: the writer creates the whole chain.</summary>
@@ -75,7 +75,7 @@ public sealed class ChatUploadServiceTests
 
         Assert.Null(result.Value);
         Assert.Equal("Couldn't save a.txt.", result.Error);
-        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Uploads")));
+        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Raw")));
     }
 
     /// <summary>The browser's name is cleaned first: a directory part is stripped and a refused character becomes a dash.</summary>
@@ -131,7 +131,7 @@ public sealed class ChatUploadServiceTests
         IReadOnlyList<LibraryPath> folders = harness.Folders.For(room);
 
         LibraryPath only = Assert.Single(folders);
-        Assert.Equal(Path.Combine(harness.DataDir, "Uploads", room.Id), only.FullPath);
+        Assert.Equal(Path.Combine(harness.DataDir, "Raw", room.Id), only.FullPath);
     }
 
     /// <summary><see cref="IRoomUploadFolders"/> gives a Team Room two folders, the root one first.</summary>
@@ -145,7 +145,7 @@ public sealed class ChatUploadServiceTests
         IReadOnlyList<LibraryPath> folders = harness.Folders.For(room);
 
         Assert.Equal(2, folders.Count);
-        Assert.Equal(Path.Combine(harness.DataDir, "Uploads", room.Id), folders[0].FullPath);
+        Assert.Equal(Path.Combine(harness.DataDir, "Raw", room.Id), folders[0].FullPath);
         Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id), folders[1].FullPath);
     }
 }

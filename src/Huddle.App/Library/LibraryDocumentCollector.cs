@@ -329,7 +329,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
             return string.Create(CultureInfo.InvariantCulture, $"pinned root \"{path.Root.DisplayName}\"");
         }
 
-        if (path.Root.Kind == LibraryRootKind.Uploads)
+        if (path.Root.Kind == LibraryRootKind.Raw)
         {
             return LibraryDocumentCollector.UploadLocation(path);
         }

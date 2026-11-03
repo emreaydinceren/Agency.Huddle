@@ -50,7 +50,7 @@ public sealed class PendingUploadsTests
         Assert.Equal("a.txt", chip.DisplayName);
         Assert.Equal(5, chip.Size);
         Assert.Equal(UploadKind.Text, chip.Kind);
-        Assert.Equal(Path.Combine(harness.DataDir, "Uploads", room.Id, "a.txt"), chip.File?.FullPath);
+        Assert.Equal(Path.Combine(harness.DataDir, "Raw", room.Id, "a.txt"), chip.File?.FullPath);
         PendingUpload listed = Assert.Single(pending.For(room.Id));
         Assert.Equal(chip.Id, listed.Id);
     }
@@ -112,7 +112,7 @@ public sealed class PendingUploadsTests
         Assert.Equal(UploadState.Failed, third.State);
         Assert.Equal("A Message can carry up to 2 files.", third.Error);
         Assert.Equal(2, pending.For(room.Id).Count);
-        Assert.False(File.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id, "3.txt")));
+        Assert.False(File.Exists(Path.Combine(harness.DataDir, "Raw", room.Id, "3.txt")));
         first.Release();
         second.Release();
         _ = await one;
@@ -128,7 +128,7 @@ public sealed class PendingUploadsTests
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], ct);
         PendingUploads pending = new(harness.Service, harness.Options);
         PendingUpload chip = await pending.AddAsync(room.Id, "a.txt", _ => new MemoryStream("hello"u8.ToArray()), ct);
-        string path = Path.Combine(harness.DataDir, "Uploads", room.Id, "a.txt");
+        string path = Path.Combine(harness.DataDir, "Raw", room.Id, "a.txt");
         Assert.True(File.Exists(path));
 
         await pending.RemoveAsync(room.Id, chip.Id, ct);
@@ -169,7 +169,7 @@ public sealed class PendingUploadsTests
 
         Assert.Equal(UploadState.Failed, settled.State);
         Assert.Empty(pending.For(room.Id));
-        string folder = Path.Combine(harness.DataDir, "Uploads", room.Id);
+        string folder = Path.Combine(harness.DataDir, "Raw", room.Id);
         Assert.Empty(Directory.Exists(folder) ? Directory.GetFiles(folder) : []);
     }
 
@@ -190,7 +190,7 @@ public sealed class PendingUploadsTests
         Assert.Equal(["b.txt", "a.txt"], taken.Select(static c => c.DisplayName));
         Assert.All(taken, static c => Assert.Equal(UploadState.Done, c.State));
         Assert.Empty(pending.For(room.Id));
-        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id, "b.txt")));
+        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Raw", room.Id, "b.txt")));
     }
 
     /// <summary><see cref="PendingUploads.TakeAll"/> takes only the named chips: one added after the snapshot stays listed and keeps its file.</summary>
@@ -208,7 +208,7 @@ public sealed class PendingUploadsTests
 
         Assert.Equal("a.txt", Assert.Single(taken).DisplayName);
         Assert.Equal(later.Id, Assert.Single(pending.For(room.Id)).Id);
-        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id, "b.txt")));
+        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Raw", room.Id, "b.txt")));
     }
 
     /// <summary>A stream that cannot be opened (the browser refuses an oversized file) settles the chip as Failed with the save copy, not Uploading forever.</summary>

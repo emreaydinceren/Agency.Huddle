@@ -111,7 +111,7 @@ internal static partial class MessageReferences
         Path.Combine([dataDir, .. relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)]);
 
     /// <summary>
-    /// The folder a Room's attachments go to: <c>Uploads/&lt;roomId&gt;</c> for a root Room, and
+    /// The folder a Room's attachments go to: <c>Raw/&lt;roomId&gt;</c> for a root Room, and
     /// <c>Teams/&lt;Team&gt;/raw/&lt;roomId&gt;</c> for a Room scoped to a Team (<c>ChatUploadService</c> saves into the last candidate).
     /// </summary>
     /// <param name="dataDir">The data folder.</param>
@@ -120,7 +120,7 @@ internal static partial class MessageReferences
     /// <returns>The absolute folder.</returns>
     internal static string UploadFolder(string dataDir, SeedRoom room, string roomId) =>
         room.Team is null
-            ? Path.Combine(dataDir, "Uploads", roomId)
+            ? Path.Combine(dataDir, "Raw", roomId)
             : Path.Combine(dataDir, "Teams", room.Team, TeamNames.RawFolder, roomId);
 
     /// <summary>The plain label of a Room, which says its Scope (<c>ReferenceText.RoomPlainLabelFor</c>).</summary>

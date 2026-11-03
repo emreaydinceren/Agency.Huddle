@@ -33,7 +33,7 @@ public sealed class RoomDeleteUploadsTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], ct);
-        string folder = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        string folder = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
 
         await CreateChat(harness).DeleteRoomAsync(room.Id, ct);
 
@@ -48,7 +48,7 @@ public sealed class RoomDeleteUploadsTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Marketing", ct: ct);
-        string rootFolder = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        string rootFolder = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
         string teamFolder = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
 
         await CreateChat(harness).DeleteRoomAsync(room.Id, ct);
@@ -77,13 +77,13 @@ public sealed class RoomDeleteUploadsTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], ct);
-        _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        _ = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
         harness.RecycleBin.FailureError = "No Recycle Bin here.";
 
         await CreateChat(harness).DeleteRoomAsync(room.Id, ct);
 
         Assert.Null(await harness.Directory.GetRoomAsync(room.Id, ct));
-        Assert.True(Directory.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id)));
+        Assert.True(Directory.Exists(Path.Combine(harness.DataDir, "Raw", room.Id)));
     }
 
     /// <summary>Archiving a Room leaves its upload folder alone.</summary>
@@ -93,7 +93,7 @@ public sealed class RoomDeleteUploadsTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], ct);
-        string folder = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
+        string folder = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
 
         _ = await CreateChat(harness).SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -111,8 +111,8 @@ public sealed class RoomDeleteUploadsTests
         ChatService chat = CreateChat(harness);
         Assert.Equal(0, chat.CountRoomUploads(room));
 
-        _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
-        _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id), "b.txt");
+        _ = Seed(Path.Combine(harness.DataDir, "Raw", room.Id));
+        _ = Seed(Path.Combine(harness.DataDir, "Raw", room.Id), "b.txt");
         _ = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
 
         Assert.Equal(3, chat.CountRoomUploads(room));

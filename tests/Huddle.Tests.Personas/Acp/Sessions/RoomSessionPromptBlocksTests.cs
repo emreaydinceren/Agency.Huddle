@@ -102,7 +102,7 @@ public sealed class RoomSessionPromptBlocksTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
-        Assert.True(fixture.Resolver.TryResolve("uploads", "room-1", out LibraryPath? folder, out _));
+        Assert.True(fixture.Resolver.TryResolve("raw", "room-1", out LibraryPath? folder, out _));
         byte[] bytes = TestImages.Png(40, 30, 64);
         LibraryResult<LibraryUpload> saved = await fixture.CreateService().CreateFromStreamAsync(folder, "shot.png", new MemoryStream(bytes), 1024 * 1024, ct);
         Assert.NotNull(saved.Value);
