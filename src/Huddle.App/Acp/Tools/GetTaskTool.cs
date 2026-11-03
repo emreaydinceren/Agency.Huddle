@@ -52,7 +52,7 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
             return Task.FromResult(taskIdRefusal);
         }
 
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? task, out string idRefusal))
+        if (!TaskToolText.TryResolveForRead(store, taskIdText, out TaskItem? task, out string idRefusal))
         {
             return Task.FromResult(idRefusal);
         }

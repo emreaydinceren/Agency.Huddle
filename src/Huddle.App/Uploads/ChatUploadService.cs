@@ -25,6 +25,8 @@ internal sealed class ChatUploadService(
     TimeProvider? timeProvider = null,
     ILogger<ChatUploadService>? logger = null)
 {
+    private const string ArchivedRefusal = "This Team is archived, so files can't be added here.";
+
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
     /// <summary>Cleans <paramref name="browserName"/> and saves <paramref name="content"/> into the Room's upload folder.</summary>
@@ -47,6 +49,11 @@ internal sealed class ChatUploadService(
             return LibraryResult<LibraryUpload>.Fail(couldNotSave);
         }
 
+        if (room.Team is not null && this.IsTeamArchived(room.Team))
+        {
+            return LibraryResult<LibraryUpload>.Fail(ArchivedRefusal);
+        }
+
         IReadOnlyList<LibraryPath> candidates = folders.For(room);
         int expected = room.Team is null ? 1 : 2;
         if (candidates.Count != expected)
@@ -62,6 +69,19 @@ internal sealed class ChatUploadService(
 
         return result;
     }
+
+    /// <summary>True when the Team has a folder under the Archive root and none under the Teams root (names compared ignoring case).</summary>
+    /// <param name="team">The Room's Team.</param>
+    private bool IsTeamArchived(string team)
+    {
+        TeamOptions value = options.Value;
+        return HasFolder(Path.Combine(value.DataDir, value.Library.Archive.Dir), team)
+            && !HasFolder(Path.Combine(value.DataDir, value.Teams.Dir), team);
+    }
+
+    private static bool HasFolder(string root, string name) =>
+        Directory.Exists(root)
+        && Directory.EnumerateDirectories(root).Any(dir => string.Equals(Path.GetFileName(dir), name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Deletes a saved upload that was never sent.</summary>
     /// <param name="file">The saved file.</param>

@@ -62,13 +62,42 @@ internal static class TaskToolText
         if (found is null)
         {
             task = null;
-            refusal = $"Unknown task '{id}'.";
+            refusal = store.FindArchived(id) is TaskItem archived
+                ? $"Task {id} is in an archived Team. Unarchive {archived.Location.Team} to change it."
+                : $"Unknown task '{id}'.";
             return false;
         }
 
         task = found;
         refusal = string.Empty;
         return true;
+    }
+
+    /// <summary>
+    /// Like <see cref="TryResolve"/> for a tool that only reads (Spec 8.5): an id from an archived Team resolves to its
+    /// <c>Archive/</c> file, read-only.
+    /// </summary>
+    /// <param name="store">The Task store to look the id up in.</param>
+    /// <param name="text">The argument text, or <see langword="null"/>.</param>
+    /// <param name="task">The resolved Task, or <see langword="null"/> when this returns <see langword="false"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>; otherwise <see cref="string.Empty"/>.</param>
+    public static bool TryResolveForRead(TaskStore store, string? text, [NotNullWhen(true)] out TaskItem? task, out string refusal)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+
+        if (TryResolve(store, text, out task, out refusal))
+        {
+            return true;
+        }
+
+        if (TaskId.TryParse(text, out TaskId id) && store.FindArchived(id) is TaskItem archived)
+        {
+            task = archived;
+            refusal = string.Empty;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -40,6 +40,44 @@ public sealed class RawUploadPlacementTests
         Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Home", "raw", room.Id, "notes.txt"), result.Value.File.FullPath);
     }
 
+    /// <summary>
+    /// A Team Room whose Team folder lives under <c>Archive/</c> (Spec 6.7) refuses the upload with T15 and
+    /// writes nothing: no file under <c>Teams/</c>, no raw folder, no baseline row.
+    /// </summary>
+    [Fact]
+    public async Task SaveAsync_ArchivedTeamRoom_RefusesWithT15AndWritesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
+        Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Home", ct: ct);
+
+        // Archiving moved Teams/Home to Archive/Home, so only the Archive copy exists.
+        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "Home"));
+
+        LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "notes.txt", new MemoryStream("hello"u8.ToArray()), ct);
+
+        Assert.Null(result.Value);
+        Assert.Equal("This Team is archived, so files can't be added here.", result.Error);
+        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Teams", "Home", "raw", room.Id)));
+        Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Raw", room.Id)));
+        Assert.False(File.Exists(Path.Combine(harness.DataDir, "Archive", "Home", "raw", room.Id, "notes.txt")));
+    }
+
+    /// <summary>A Team that has a live folder is unaffected, even if an Archive folder of the same name also exists (a Project archived earlier).</summary>
+    [Fact]
+    public async Task SaveAsync_LiveTeamWithArchiveSibling_StillSaves()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
+        Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Home", ct: ct);
+        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Teams", "Home"));
+        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "Home"));
+
+        LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "notes.txt", new MemoryStream("hello"u8.ToArray()), ct);
+
+        Assert.NotNull(result.Value);
+    }
+
     /// <summary>For a root Room, <c>RoomUploadFolders.For</c> returns exactly the root <c>raw/</c> folder for that Room.</summary>
     [Fact]
     public async Task For_RootRoom_ReturnsOnlyRawRoomFolder()

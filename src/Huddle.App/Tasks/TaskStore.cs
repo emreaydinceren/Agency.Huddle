@@ -58,6 +58,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
     private volatile TaskSnapshot index;
     private bool disposed;
+    private readonly string archiveRoot;
 
     // Set by OnWatcherError, under writeGate, and consumed (and reset) by the next RebuildFromWatcher
     // - so the rebuild that follows a dropped-event buffer overflow always raises IndexChanged, even
@@ -91,6 +92,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
         this.RootDirectory = tasksRoot;
+        this.archiveRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Library.Archive.Dir));
         Directory.CreateDirectory(tasksRoot);
 
         this.index = this.Scan();
@@ -1047,6 +1049,56 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         }
 
         return new TaskSnapshot(all, byId.ToFrozenDictionary(), rejected, this.RecomputeOrphans(rawTeams));
+    }
+
+    /// <summary>
+    /// Finds <paramref name="id"/> in an archived Team (Spec 8.5): <c>Archive/{Team}[/{Project}]/_tasks[/_closed]/{id}.md</c>.
+    /// The result is for reading only; it is never in the live index, so no write method accepts it. Each call looks at
+    /// the disk, so an archive or unarchive is seen at once.
+    /// </summary>
+    /// <param name="id">The Task id to look up.</param>
+    /// <returns>The parsed Task with its <c>Archive/</c> path, or <see langword="null"/> when no archived Team holds it.</returns>
+    internal TaskItem? FindArchived(TaskId id)
+    {
+        if (!Directory.Exists(this.archiveRoot))
+        {
+            return null;
+        }
+
+        string fileName = $"{id}.md";
+        foreach (string teamDir in Directory.EnumerateDirectories(this.archiveRoot))
+        {
+            List<string> containers = [teamDir, .. Directory.EnumerateDirectories(teamDir)];
+            foreach (string container in containers)
+            {
+                foreach (string candidate in new[] { Path.Combine(container, TaskLayout.TasksFolder, fileName), Path.Combine(container, TaskLayout.TasksFolder, TaskLayout.ClosedFolder, fileName) })
+                {
+                    if (TryParseArchived(this.archiveRoot, candidate) is TaskItem found)
+                    {
+                        return found;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static TaskItem? TryParseArchived(string archiveRoot, string path)
+    {
+        if (!File.Exists(path) || !TaskLayout.TryMap(archiveRoot, path, out TaskLocation? location, out _) || location is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return TaskFileFormat.TryParse(File.ReadAllText(path), path, location, out TaskItem? task, out _) ? task : null;
+        }
+        catch (IOException)
+        {
+            return null; // An unreadable archived file is a miss, as an unreadable live file is rejected.
+        }
     }
 
     /// <summary>
