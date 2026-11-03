@@ -108,16 +108,13 @@ public sealed class TaskLayoutTests
 
     /// <summary>A Project named <c>memory</c> in any case is never a Project (ADR-0032, Spec §6.3), so
     /// its <c>_tasks</c> is not mapped on any OS; the neighbours <c>memory-notes</c> and
-    /// <c>memories</c> stay valid Projects, and a Team folder named <c>memory</c> is still a Team.</summary>
+    /// <c>memories</c> stay valid Projects.</summary>
     [Theory]
     [InlineData("Business/memory-notes/_tasks/X.md", "Business", "memory-notes", false)]
     [InlineData("Business/memory-notes/_tasks/_closed/X.md", "Business", "memory-notes", true)]
     [InlineData("Business/memories/_tasks/X.md", "Business", "memories", false)]
     [InlineData("Business/Marketing/_tasks/X.md", "Business", "Marketing", false)]
     [InlineData("Business/_tasks/X.md", "Business", null, false)]
-    [InlineData("memory/_tasks/X.md", "memory", null, false)]
-    [InlineData("memory/_tasks/_closed/X.md", "memory", null, true)]
-    [InlineData("memory/Marketing/_tasks/X.md", "memory", "Marketing", false)]
     public void TryMap_MemoryNeighboursAndTeamLevel_StillMap(string relativePath, string team, string? project, bool closed)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);

@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 4 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 6 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -21,8 +21,8 @@ never by hand, so the status line stays true.
 | **D1. P1: reserved names** | | | |
 | 1.1.t #3 Reserved Team and Project names [Haiku] | | | ✔ |
 | 1.1.i #4 Reserve the names [Haiku] | | | ✔ |
-| 1.2.t #5 Reserved names are never Teams or Projects [Sonnet] | ✔ | | |
-| 1.2.i #6 Skip reserved names at Team level [Sonnet] | ✔ | | |
+| 1.2.t #5 Reserved names are never Teams or Projects [Sonnet] | | | ✔ |
+| 1.2.i #6 Skip reserved names at Team level [Sonnet] | | | ✔ |
 | 1.3.t #7 Memory topic names stay free [Haiku] | ✔ | | |
 | 1.3.i #8 Give topic names their own list [Haiku] | ✔ | | |
 | 1.4.t #9 Every name check uses the new names [Sonnet] | ✔ | | |
