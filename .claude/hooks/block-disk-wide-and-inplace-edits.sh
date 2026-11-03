@@ -53,6 +53,12 @@ matches() {
 if matches "${pos}cat\\b${same}>>?\\s*[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
     deny "Blocked: cat > into src/ or tests/ skips the Edit hooks and writes LF endings. Use the Edit or Write tool."
 fi
+if matches "${pos}(?:printf|echo)\\b${same}(?<![0-9&])>>?\\s*[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
+    deny "Blocked: printf/echo redirected into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
+fi
+if matches "${pos}(?:[^|;&]*\\|\\s*)?tee\\b${same}\\s[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
+    deny "Blocked: tee into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
+fi
 if matches "(?i)File\\]::(?:WriteAll|AppendAll)\\w*\\(${same}${under}"; then
     deny "Blocked: File.WriteAll/AppendAll into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
 fi

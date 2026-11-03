@@ -4,7 +4,7 @@
     PromptDefaultsFileTests to confirm the result matches what the app itself computes.
 
 .DESCRIPTION
-    Runs the throwaway helper project at agents/scripts/RegeneratePromptDefaults (not part of
+    Builds the solution first with Build.ps1 and stops with only its diagnostics if that fails. Then runs the throwaway helper project at agents/scripts/RegeneratePromptDefaults (not part of
     Huddle.slnx - see that folder's .csproj for why it is excluded) via `dotnet run`, which serialises
     PromptCatalog.All (key -> Default) using the same indented JsonSerializerOptions
     PromptStore.IndentedJsonOptions uses, normalises line endings, and overwrites prompts.default.json in
@@ -23,6 +23,15 @@ $ScriptDir = $PSScriptRoot
 $HelperProject = Join-Path $ScriptDir 'RegeneratePromptDefaults\RegeneratePromptDefaults.csproj'
 
 $WorktreeRoot = (git rev-parse --show-toplevel).Trim()
+
+# Build first: a compile error otherwise surfaces as pages of `dotnet run` noise. Build.ps1 prints
+# only the de-duplicated diagnostics, so on failure stop with just those.
+& (Join-Path $ScriptDir 'Build.ps1')
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Build failed; prompts.default.json was not regenerated.'
+    exit $LASTEXITCODE
+}
+
 Write-Host "Building and running $HelperProject against $WorktreeRoot ..."
 # The helper reference and output follow the caller's worktree, not this script's location.
 & dotnet run --project $HelperProject "-p:HuddleRoot=$WorktreeRoot" -- $WorktreeRoot

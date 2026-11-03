@@ -24,6 +24,13 @@ BLOCK|cat > src file heredoc|{"tool_input":{"command":"cat > src/Huddle.App/X.cs
 BLOCK|cat >> tests file|{"tool_input":{"command":"cat >> /e/Repos/Huddle-wt/sb/tests/Huddle.Tests.Agents/XTests.cs"}}
 BLOCK|cat > windows path under src|{"tool_input":{"command":"cat > \"E:\\Repos\\Huddle-wt\\sb\\src\\Huddle.App\\X.cs\""}}
 allow|cat > scratchpad|{"tool_input":{"command":"cat > /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt <<'EOF'\nhi\nEOF"}}
+BLOCK|printf append into src|{"tool_input":{"command":"printf 'x' >> src/Huddle.App/A.cs"}}
+BLOCK|echo redirect into tests|{"tool_input":{"command":"echo x > tests/A.cs"}}
+BLOCK|tee -a into src|{"tool_input":{"command":"echo x | tee -a src/A.cs"}}
+BLOCK|printf redirect windows src path|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb && printf 'x' >> /e/Repos/Huddle-wt/sb/src/Huddle.App/TeamOptions.cs"}}
+allow|printf append to scratchpad|{"tool_input":{"command":"printf 'x' >> /c/Users/user/AppData/Local/Temp/claude/scratchpad/a.cs"}}
+allow|echo redirect to mysrc|{"tool_input":{"command":"echo x > mysrc/a.txt"}}
+allow|echo stderr to null with src arg|{"tool_input":{"command":"echo src/A.cs 2>/dev/null"}}
 allow|cat reads src and redirects stderr|{"tool_input":{"command":"cat src/Huddle.App/X.cs 2>/dev/null"}}
 allow|cat > mysrc is not src|{"tool_input":{"command":"cat > mysrc/x.txt"}}
 BLOCK|WriteAllText into src|{"tool_input":{"command":"pwsh -NoProfile -Command \"[IO.File]::WriteAllText('src/Huddle.App/X.cs','x')\""}}
