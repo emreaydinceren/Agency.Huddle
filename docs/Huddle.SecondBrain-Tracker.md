@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 20 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 22 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -39,8 +39,8 @@ never by hand, so the status line stays true.
 | 2.4.i #18 Save into `raw/` [Sonnet] | | | ✔ |
 | 2.5.t #19 Task attachments under their Team [Sonnet] | | | ✔ |
 | 2.5.i #20 Resolve the Task's Team [Sonnet] | | | ✔ |
-| 2.6.t #21 `raw/` is not watched [Sonnet] | ✔ | | |
-| 2.6.i #22 Prune `raw` [Sonnet] | ✔ | | |
+| 2.6.t #21 `raw/` is not watched [Sonnet] | | | ✔ |
+| 2.6.i #22 Prune `raw` [Sonnet] | | | ✔ |
 | **D3. P1: raw protection and baselines** | | | |
 | 3.1.t #23 The raw guard [Sonnet] | ✔ | | |
 | 3.1.i #24 `RawGuard` and the refusal Prompt [Sonnet] | ✔ | | |
