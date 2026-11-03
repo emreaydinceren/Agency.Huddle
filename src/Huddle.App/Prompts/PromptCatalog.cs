@@ -246,37 +246,10 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.processBlockManager</c> to <c>turn.onboarding</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>turn.onboarding</c> to <c>turn.onboarding</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart04() =>
     [
-        new PromptDefinition(
-            Key: "systemPrompt.processBlockManager",
-            Label: "Process block (manager)",
-            HelperText:
-                "Gives a Team's manager the Team's whole Process.md, read afresh at each session start. " +
-                "Must keep {{process}}, where the document text is substituted in.",
-            Default:
-                """
-                This is your Team's process. Follow it and keep it current.
-
-                {{process}}
-                """,
-            Placeholders: ["{{process}}"],
-            RequiredPlaceholders: ["{{process}}"],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.processBlockMember",
-            Label: "Process block (member)",
-            HelperText:
-                "Points every other member of a Team that has a Process.md at it. Must keep {{path}}, " +
-                "where the document's Library path is substituted in.",
-            Default: "Your Team follows a written process. Read it before you start work: {{path}}",
-            Placeholders: ["{{path}}"],
-            RequiredPlaceholders: ["{{path}}"],
-            Timing: PromptTiming.NextSession),
-
         new PromptDefinition(
             Key: "turn.onboarding",
             Label: "Onboarding turn",

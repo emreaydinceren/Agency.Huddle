@@ -567,7 +567,6 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 parsed,
                 skillResolution.Skills,
                 this.teamCatalog,
-                personaStore.Get,
-                this.TeamsRoot());
+                personaStore.Get);
     }
 }

@@ -389,20 +389,12 @@ internal static class SystemPromptComposer
         }
     }
 
-    /// <summary>Adds the role block, followed by the Process block (manager or member wording) when the role carries one.</summary>
+    /// <summary>Adds the role block; the Team's process reaches the member through the AGENTS.md block (C5, D-47).</summary>
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="roleBlock">The member's role, Team, colleagues and skills.</param>
-    private static void AddRoleParts(List<string> parts, IPromptSource prompts, RoleBlockInput roleBlock)
-    {
+    private static void AddRoleParts(List<string> parts, IPromptSource prompts, RoleBlockInput roleBlock) =>
         parts.Add(BuildRoleBlock(prompts, roleBlock));
-        if (roleBlock.Process is { } process)
-        {
-            parts.Add(process.IsManager
-                ? prompts.Render("systemPrompt.processBlockManager", new Dictionary<string, string> { ["{{process}}"] = process.Content })
-                : prompts.Render("systemPrompt.processBlockMember", new Dictionary<string, string> { ["{{path}}"] = process.Content }));
-        }
-    }
 
     /// <summary>Adds the Skills block when the Persona has Skills; an empty list adds nothing.</summary>
     /// <param name="parts">The prompt parts so far.</param>

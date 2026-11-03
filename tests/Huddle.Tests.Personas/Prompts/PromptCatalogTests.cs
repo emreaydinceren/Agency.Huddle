@@ -38,12 +38,12 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141), plus <c>turn.transcriptOmittedOwn</c> added for Long-Running Rooms LR-R12 (Task 3.3.t; count now 142), plus <c>tool.jobs.description</c> for scheduled Jobs (count now 143), plus <c>systemPrompt.rawRefusal</c> for the Raw guard (Task 3.1.i; count now 144), plus <c>systemPrompt.agentsMdLevels</c> and minus <c>systemPrompt.instructions</c> and <c>systemPrompt.instructionsSection</c> for the AGENTS.md block (Task 5.5.i; <c>instructionsCut</c> is renamed <c>agentsMdCut</c>; count now 143).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141), plus <c>turn.transcriptOmittedOwn</c> added for Long-Running Rooms LR-R12 (Task 3.3.t; count now 142), plus <c>tool.jobs.description</c> for scheduled Jobs (count now 143), plus <c>systemPrompt.rawRefusal</c> for the Raw guard (Task 3.1.i; count now 144), plus <c>systemPrompt.agentsMdLevels</c> and minus <c>systemPrompt.instructions</c> and <c>systemPrompt.instructionsSection</c> for the AGENTS.md block (Task 5.5.i; <c>instructionsCut</c> is renamed <c>agentsMdCut</c>; count now 143), minus <c>systemPrompt.processBlockManager</c> and <c>systemPrompt.processBlockMember</c> for the retired process blocks (Task 51c, C5; count now 141).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(143, PromptCatalog.All.Count);
+        Assert.Equal(141, PromptCatalog.All.Count);
     }
 
     /// <summary>3.3.t (LR-R12, correction C10): <c>turn.transcriptOmittedOwn</c> is in the catalog directly after <c>turn.transcriptOmitted</c>.</summary>
@@ -68,10 +68,8 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(PromptTiming.Live, prompt.Timing);
     }
 
-    /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
+    /// <summary>Task 58 (PR-4, PR-5): the onboarding turn takes and require their one placeholder and carry no tool prefix.</summary>
     [Theory]
-    [InlineData("systemPrompt.processBlockManager", "{{process}}", PromptTiming.NextSession)]
-    [InlineData("systemPrompt.processBlockMember", "{{path}}", PromptTiming.NextSession)]
     [InlineData("turn.onboarding", "{{steps}}", PromptTiming.Live)]
     public void ProcessPrompts_TakeTheirPlaceholder(string key, string placeholder, PromptTiming timing)
     {
