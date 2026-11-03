@@ -143,7 +143,7 @@ internal sealed class ProposeRetroChangesTool(
 
             if (!IsAllowed(team, file))
             {
-                refusal = "targetFile must be Process.md, _team.md or the file of an Agent (Name.md).";
+                refusal = "targetFile must be AGENTS.md, _team.md or the file of an Agent (Name.md).";
                 return false;
             }
 
@@ -157,7 +157,7 @@ internal sealed class ProposeRetroChangesTool(
     /// <summary>Whether <paramref name="file"/> is one of the three kinds the Human may be asked to edit. The file is matched by name only and never used as a path.</summary>
     private static bool IsAllowed(TeamSummary team, string file)
     {
-        if (string.Equals(file, RetroProposalService.ProcessTarget, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
+        if (string.Equals(file, TeamPaths.AgentsMdFileName, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
         {
             return true;
         }

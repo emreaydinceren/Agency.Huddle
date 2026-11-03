@@ -1153,7 +1153,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
+                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1815,7 +1815,7 @@ internal static class PromptCatalog
             Key: "prompt.retro",
             Label: "Retro prompt",
             HelperText:
-                "The retro a Retro agent is asked to run, on demand or on the cadence in Process.md " +
+                "The retro a Retro agent is asked to run, on demand or on the cadence in AGENTS.md " +
                 "(RT-2). Takes the Team name and the date the retro covers from.",
             Default:
                 """
@@ -1823,7 +1823,7 @@ internal static class PromptCatalog
                 1. Gather: start with read_records for {{team}} since {{since}}. It returns Task change logs, Review bounces, Budget pauses, wake-up limits hit, escalations, persisted spend, Requests and tool-call log summaries. Read the evidence before you ask anyone anything.
                 2. Ask: open a Room with the members involved and ask each one about a specific moment in the evidence. Do not ask general questions.
                 3. Report: write the report to _retros/<date>.md with the top 3 issues, each linked to its evidence.
-                4. Propose: propose at most 3 changes as diffs to Process.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
+                4. Propose: propose at most 3 changes as diffs to the Team's AGENTS.md or _team.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
                 5. Register: add one row per finding to Retro register.md with ID, Finding, Action, Owner, Status (Open, Done, Partial, Verified or Changed) and Evidence / next check. At the next retro, check the Done rows against new evidence.
                 """,
             Placeholders: ["{{team}}", "{{since}}"],
