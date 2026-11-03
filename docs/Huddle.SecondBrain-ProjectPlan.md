@@ -7,7 +7,7 @@ builds. The *why* behind every rule is in [`Huddle.SecondBrain.md`](Huddle.Secon
 (decisions D-1 to D-47); tasks cite a decision only where it settles a choice. It covers all of
 the Spec's phases, **P0 to P7** (Spec §14.4, lines 1036–1049).
 
-**15 deliverables · 141 tasks · 34 sized for Haiku (24%) · 9 retrospectives.** Every
+**15 deliverables · 143 tasks · 34 sized for Haiku (24%) · 9 retrospectives.** Every
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**;
 its `.i` partner ends **green**. Chore and docs tasks have no test partner.
 
@@ -85,6 +85,8 @@ Haiku agent that reaches 40 tool calls without a red or a green stops too.
 12. **Cascades.** A `.t` whose `.i` renames or changes a constructor, signature, path or text that
     existing tests pin runs `Find-PinnedTests.ps1 -Pattern <old>` and updates those tests to the
     new behaviour in the same `.t`; they are frozen with the red. Cross-file renames are never Haiku.
+
+Parallel worktrees are safe for 58–61 (templates) and 62–63 (`ListTeamsTool`); D7 and D8 stay in the main stream.
 
 ### Retrospectives, every 15 completed tasks
 
@@ -176,9 +178,13 @@ The manager keeps this section; retrospectives add to it.
 | Goldens today | `tests/Huddle.Tests.Hosted/Acp/Golden/`: `systemPrompt.txt`, `systemPrompt.managerProcess.txt`, `systemPrompt.memberProcess.txt`, `systemPrompt.hiredMember.txt`, `systemPrompt.memory.txt`, `getHelp.txt` and others |
 | Atomic writes | `src/Huddle.App/Library/AtomicFile.cs` line 18 |
 | MA0051 headroom (R2) | The `DotAcpPersonaHost` constructor is at the 40-statement limit; `DotAcpAgentHostFactory.cs` ~line 113 is a method at 60 lines; the `PromptCatalog` `BuildPartNN` methods are near 61 lines. A new Prompt goes in a NEW `BuildPartNN` listed in `BuildAll` |
-| Prompt count pin (R2) | `tests/Huddle.Tests.Personas/PromptCatalogTests.cs` ~line 46 pins the count (now 144); a task that adds or removes a Prompt updates it |
+| Prompt count pin (R2) | `tests/Huddle.Tests.Personas/PromptCatalogTests.cs` ~line 46 pins the count (now 143, after Task 42); a task that adds or removes a Prompt updates it |
 | Stubs for a new namespace (R2) | Put the throwaway stubs in `src/Huddle.App/Program.cs` (it has no file-scoped namespace), then remove them |
 | Constructor call sites (R2) | They often use target-typed `new(`, so a grep for `new X(` misses them: use `agents/scripts/Find-Constructions.ps1 -Type X` (being added; check it exists) |
+| Test namespace for `Teams/` (R3) | Files in `tests/Huddle.Tests.Teams/Teams/` use the namespace `Agency.Huddle.Tests.Teams` |
+| Valid gate ids (R3) | Exactly what `ProcessDocument.TryParseGate` accepts (`src/Huddle.App/Teams/ProcessDocument.cs` line 344) |
+| Prompt chain (R3) | `DotAcpAgentHostFactory.CreatePromptSources` (line 178) → `SessionPromptSources` (`SessionPromptSources.cs` line 10) → `DotAcpPersonaHost.ReadAgentsMd` (line 306, called at line 296) → `SystemPromptComposer.Compose(agentsMd:)` (line 220) → `AddAgentsMdPart` (line 330, called at line 257) |
+| Prompt-file hotspot (R3) | Tasks 51c, 57, 65 and 67 touch `prompts.default.json` and the count pin: run them in one stream, never in parallel worktrees |
 | `AgentsMdOptions` (R2) | `src/Huddle.App/AgentsMdOptions.cs` has both `MaxCharsPerFile` (8000) and `MaxTotalChars` (32000) |
 
 ---
@@ -680,9 +686,16 @@ their required placeholders, not their prose.
 - **Goal:** Pin SB-R07: gates and cadence from `_team.md`, onboarding and the Done checklist from `AGENTS.md` (Spec §6.2).
 - **Read first:** `src/Huddle.App/Teams/TeamProcessFile.cs` (44 lines); `Teams/ProcessGateService.cs` and `Teams/CadenceService.cs` (grep `TeamProcessFile.` for the lines); `Teams/TeamOnboarding.cs` (same).
 - **Risk:** `logic`.
-- **Deliverable:** `tests/Huddle.Tests.Teams/Teams/ProcessSourcesTests.cs`: a Team with `_team.md` `gates: [proof]` and `AGENTS.md` Done items refuses a Done move until the Proof is complete; `retro:` in `_team.md` schedules the retro; onboarding steps come from `AGENTS.md`; a Team with no `AGENTS.md` has no Done items and no onboarding steps.
-- **Cascade (R2):** run `pwsh -NoProfile -File agents/scripts/Find-PinnedTests.ps1 -Pattern 'Process\.md|ProcessFileName'` and update the pinned tests (about 25 files) to the new behaviour in this `.t`.
+- **Deliverable:** `tests/Huddle.Tests.Teams/Teams/ProcessSourcesTests.cs` only: a Team with `_team.md` `gates: [proof]` and `AGENTS.md` Done items refuses a Done move until the Proof is complete; `retro:` in `_team.md` schedules the retro; onboarding steps come from `AGENTS.md`; a Team with no `AGENTS.md` has no Done items and no onboarding steps. The cascade is Task 50b.
 - **Acceptance:** Red (callers still read `Process.md`).
+
+### Task 50b — 6.3.t-b Update tests that pin Process.md [Sonnet]
+
+- **Goal:** Move the existing tests that pin `Process.md` to the new behaviour, so Tasks 51 and 51b do not break them.
+- **Read first:** the 6.3.t test (`ProcessSourcesTests.cs`); the `Find-PinnedTests.ps1` output below.
+- **Risk:** `logic`.
+- **Deliverable:** **Cascade (R2):** run `pwsh -NoProfile -File agents/scripts/Find-PinnedTests.ps1 -Pattern 'Process\.md|ProcessFileName'` and update the pinned tests (about 25 files) to the new behaviour, at the same strength. They are frozen with the red.
+- **Acceptance:** Red for the right reason (callers still read `Process.md`); `git diff --stat -- src/` is empty.
 
 ### Task 51 — 6.3.i-a Point the gates and cadence callers at the new files [Sonnet]
 
@@ -697,8 +710,16 @@ their required placeholders, not their prose.
 - **Goal:** Make the rest of 6.3.t green.
 - **Read first:** the 6.3.t test; `TeamOnboarding.cs`, `RetroProposalService.cs`, `ProcessTab.razor` and `RoleBlockBuilder.cs` `TeamProcessFile.` lines.
 - **Risk:** `logic`.
-- **Deliverable:** **Independent review.** `TeamOnboarding` reads prose through `TeamProcessFile.Read`; move the retro, `ProcessTab` and `RoleBlockBuilder` callers to the new members (Tasks 55 and 57 retarget their behaviour). Remove `TeamPaths.ProcessFileName`. **Correction C5 (added after the 5.5 review, settled by the manager):** retire the process blocks — remove `systemPrompt.processBlockManager` and `systemPrompt.processBlockMember` from `SystemPromptComposer` (~line 398), `PromptCatalog` and `prompts.default.json` (run `Regenerate-PromptDefaults.ps1`; lower the count pin in `PromptCatalogTests.cs`), remove `RoleBlockBuilder`'s process read if nothing else uses it, delete goldens `systemPrompt.managerProcess.txt` and `systemPrompt.memberProcess.txt` and the `PromptGoldenTests` cases that produce them; the Team's `AGENTS.md` (slot 3) now carries the process for every member (D-47).
+- **Deliverable:** **Independent review.** `TeamOnboarding` reads prose through `TeamProcessFile.Read`; move the retro, `ProcessTab` and `RoleBlockBuilder` callers to the new members (Tasks 55 and 57 retarget their behaviour). Remove `TeamPaths.ProcessFileName`.
 - **Acceptance:** 6.3.t green; full build green; `Process*`, `Cadence*`, `TeamOnboarding*` tests green.
+
+### Task 51c — 6.3.t-c/i Retire the process blocks (C5) [Sonnet] (independent review)
+
+- **Goal:** Retire the process blocks (Correction C5, added after the 5.5 review, settled by the manager).
+- **Read first:** `SystemPromptComposer.cs` (grep `processBlock`); `PromptCatalog`; `PromptGoldenTests`; `RoleBlockBuilder.cs`.
+- **Risk:** `logic`.
+- **Deliverable:** Write the test first: a manager prompt and a member prompt contain no process-block text, and `systemPrompt.processBlockManager` and `systemPrompt.processBlockMember` are not in `PromptCatalog.All`. Then retire the blocks: remove `systemPrompt.processBlockManager` and `systemPrompt.processBlockMember` from `SystemPromptComposer` (~line 398), `PromptCatalog` and `prompts.default.json` (run `Regenerate-PromptDefaults.ps1`; lower the count pin in `PromptCatalogTests.cs`), remove `RoleBlockBuilder`'s process read if nothing else uses it, delete goldens `systemPrompt.managerProcess.txt` and `systemPrompt.memberProcess.txt` and the `PromptGoldenTests` cases that produce them; the Team's `AGENTS.md` (slot 3) now carries the process for every member (D-47). In the report, list every deleted test and the test that now covers its behaviour.
+- **Acceptance:** The new absence test green; `PromptCatalogTests` and `PromptGoldenTests` green; full build green; full suite green.
 
 ### Task 52 — 6.4.t Provisioning writes `AGENTS.md` and `_team.md` [Sonnet]
 
@@ -819,7 +840,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 7.1.t green.
 - **Read first:** the 7.1.t test; `InstructionsWriteGuard.cs`; `WorkDirPermissionHandler.cs` lines 60–90, 175–190; `Acp/DotAcpAgentHostFactory.cs` (where the guard is constructed).
 - **Risk:** `boundary`.
-- **Deliverable:** Rename `InstructionsWriteGuard` → `AgentsMdGuard(string teamsRoot, IPromptSource prompts)` (drop `workDir` and `agentPaths`: no Work Dir level); guarded depths below `teamsRoot`: 1 (`AGENTS.md`), 2 (`<Team>/AGENTS.md`), 3 (`<Team>/<Project>/AGENTS.md`); file name compared ignoring case; keep the 8.3 alias and folder-move checks. Update the handler parameter name and the factory. Delete the old tests. Also rename the Prompt `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` with T5 (moved from Task 42; the guard at ~line 49 is what uses it).
+- **Deliverable:** Rename `InstructionsWriteGuard` → `AgentsMdGuard(string teamsRoot, IPromptSource prompts)` (drop `workDir` and `agentPaths`: no Work Dir level); guarded depths below `teamsRoot`: 1 (`AGENTS.md`), 2 (`<Team>/AGENTS.md`), 3 (`<Team>/<Project>/AGENTS.md`); file name compared ignoring case; keep the 8.3 alias and folder-move checks. Update the handler parameter name and the factory. Delete the old tests, and list every deleted test and the test that now covers its behaviour in the report. Also rename the Prompt `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` with T5 (moved from Task 42; the guard at ~line 49 is what uses it).
 - **Acceptance:** 7.1.t green; handler tests green.
 
 ### Task 66 — 7.2.t Huddle-wide Memory is the Chief of Staff's [Sonnet]
@@ -857,7 +878,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 8.1.t green without changing any golden.
 - **Read first:** the 8.1.t test; `SystemPromptComposer.cs` (the `Compose` body and the `Add*` helpers it calls).
 - **Risk:** `logic`.
-- **Deliverable:** `src/Huddle.App/Acp/PromptPart.cs` (`internal sealed record PromptPart(string Label, PromptPartSource Source, string Text)`) and `PromptPartSource.cs` (`internal abstract record PromptPartSource` with sealed nested records `Prompt(string Key, bool Overridden)`, `File(string Path)`, `Persona(string Name)`, `Index(string Kind, int Count)`, `Tools(int Count)`). `ComposeParts` has `Compose`'s parameters and returns `IReadOnlyList<PromptPart>`; the `Add*` helpers add `PromptPart`s; `Compose` joins their text. Overridden comes from `IPromptSource` (add `bool IsOverridden(string key)` to the interface and `PromptStore`).
+- **Deliverable:** `src/Huddle.App/Acp/PromptPart.cs` (`internal sealed record PromptPart(string Label, PromptPartSource Source, string Text)`) and `PromptPartSource.cs` (`internal abstract record PromptPartSource` with sealed nested records `Prompt(string Key, bool Overridden)`, `File(string Path)`, `Persona(string Name)`, `Index(string Kind, int Count)`, `Tools(int Count)`). `ComposeParts` has `Compose`'s parameters and returns `IReadOnlyList<PromptPart>`; the `Add*` helpers add `PromptPart`s; `Compose` joins their text. Overridden comes from `IPromptSource` (add `bool IsOverridden(string key)` to the interface and `PromptStore`). `IPromptSource.IsOverridden` changes an interface: update `FakePromptSource` (Tests.Common/Acp/Fakes) and every implementation (`grep -rln ': IPromptSource\|IPromptSource$' src tests`).
 - **Acceptance:** 8.1.t green; every golden unchanged.
 
 ### Task 70 — 8.2.t Each part names its source [Sonnet]
@@ -1510,7 +1531,7 @@ their required placeholders, not their prose.
 | --- | --- | --- | --- | --- |
 | 1 | #15 | 2026-11-02 | Tasks 1–16 done. About 26M subagent tokens for 16 tasks, roughly 70% of it the 71K inherited baseline of general-purpose agents. The frozen-test hook never fired (`$(</dev/stdin)` fails in the harness). Heredoc and `WriteAllText` edits bypassed the hooks. Two stale-test cascades (renames that existing tests pinned). | Implementers switch to a tool-limited agent type. Frozen-test hook fixed, fail-closed, with test cases. Hook extended to heredoc and `WriteAllText` writes. Dispatch rule 12 (cascades). Tasks 17–18 and 21–22 recast as guard test plus comment or rename, tagged Haiku. Tasks 43–44 retagged Sonnet. Cascade greps added to Tasks 20, 28, 32 and 42. New scripts `Find-PinnedTests.ps1` and `Rerun-Failed.ps1`. Delivery facts refreshed. |
 | 2 | #30 | 2026-11-02 | Tasks 17–30 done. About 14M subagent tokens for 14 tasks (inherited baseline cut from 71K to 23K through the `secondbrain-dev` agent type). The reviewer on 3.1 found 2 MAJORs the manager missed. | Keep independent reviews on boundary, composer and UI deliverables (marked in Tasks 42, 49–51b, 53, 55, 57). Plan fixes: seeder tests path (`Huddle.Tests.Teams/Seeder`), Task 32 grep narrowed, Task 36 reader deletion is Task 42, Task 41/42 cascade and the refusal rename moved to Task 65, Task 49 keeps record members until Task 51, Task 51 split into 51 and 51b, Tasks 58–61 commit together. New Delivery facts rows (MA0051 headroom, prompt-count pin, stub placement, constructor call sites). Scripts: `Find-Constructions.ps1`, `Remove-Stubs.ps1`, `Run-Tests.ps1` red-gate auto-accept, `Regenerate-PromptDefaults.ps1` pre-build. |
-| 3 | #45 | | | |
+| 3 | #45 | 2026-11-02 | Tasks 31–49 done. About 16M subagent tokens for 19 tasks. Two worktrees merged by rebase. 3 test change requests were frozen-test arithmetic or id errors. Reviewers found 2 MAJORs on 5.5. `Remove-Stubs.ps1` fixed. | Brief rule: derive expected values in a comment and grep input ids. Retiring the process blocks (C5) gets its own task (51c). Splits: Task 50 into 50 and 50b, Task 51b into 51b and 51c. |
 | 4 | #60 | | | |
 | 5 | #75 | | | |
 | 6 | #90 | | | |
