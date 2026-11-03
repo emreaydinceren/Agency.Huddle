@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -73,6 +75,94 @@ public sealed class SecondBrainRootsTests
 
         Assert.NotEqual(reserved, slug);
     }
+
+    /// <summary>A Team with a readable workspace adds a writable <c>Pinned</c> root <c>workspace-business</c> named "Business workspace" at that folder.</summary>
+    [Fact]
+    public void Roots_TeamWithReadableWorkspace_AddsWorkspaceRoot()
+    {
+        using TempDataDir dataDir = new();
+        string workspace = MakeFolder(dataDir, "biz");
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", workspace)] };
+
+        LibraryRootStore store = Store(dataDir, catalog);
+
+        // The id is "workspace-" plus the slug of the Team name ("Business" -> "business"); the name is "<Team> workspace".
+        LibraryRoot root = Assert.Single(store.Roots, r => string.Equals(r.Id, "workspace-business", StringComparison.Ordinal));
+        Assert.Equal("Business workspace", root.DisplayName);
+        Assert.Equal(LibraryRootKind.Pinned, root.Kind);
+        Assert.False(root.ReadOnly);
+        Assert.Equal(Path.GetFullPath(workspace), Path.GetFullPath(root.FullPath));
+    }
+
+    /// <summary>A Team whose workspace folder is missing, and a Team with no workspace, add no root.</summary>
+    [Fact]
+    public void Roots_UnreadableOrAbsentWorkspace_AddsNone()
+    {
+        using TempDataDir dataDir = new();
+        string missing = Path.Combine(dataDir.Path, "gone");
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", missing), Team("Sales", null)] };
+
+        LibraryRootStore store = Store(dataDir, catalog);
+
+        Assert.DoesNotContain(store.Roots, r => r.Id.StartsWith("workspace-", StringComparison.Ordinal));
+    }
+
+    /// <summary>Two Teams with readable workspaces add two roots, each with its own id.</summary>
+    [Fact]
+    public void Roots_TwoTeams_AddTwoRoots()
+    {
+        using TempDataDir dataDir = new();
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", MakeFolder(dataDir, "a")), Team("Sales & Ops", MakeFolder(dataDir, "b"))] };
+
+        LibraryRootStore store = Store(dataDir, catalog);
+
+        // "Sales & Ops" slugs to "sales-ops".
+        string[] ids = [.. store.Roots.Where(r => r.Id.StartsWith("workspace-", StringComparison.Ordinal)).Select(r => r.Id)];
+        Assert.Equal(["workspace-business", "workspace-sales-ops"], ids);
+    }
+
+    /// <summary>When the Team list changes, the workspace roots are re-derived and <c>RootsChanged</c> fires, as it does for a Skill Sources change.</summary>
+    [Fact]
+    public void Roots_CatalogChanged_RefreshesWorkspaceRootsAndRaises()
+    {
+        using TempDataDir dataDir = new();
+        FakeTeamCatalog catalog = new();
+        LibraryRootStore store = Store(dataDir, catalog);
+        int raised = 0;
+        store.RootsChanged += () => raised++;
+        Assert.DoesNotContain(store.Roots, r => r.Id.StartsWith("workspace-", StringComparison.Ordinal));
+
+        catalog.Teams = [Team("Business", MakeFolder(dataDir, "biz"))];
+        catalog.Raise();
+
+        Assert.Contains(store.Roots, r => string.Equals(r.Id, "workspace-business", StringComparison.Ordinal));
+        Assert.Equal(1, raised);
+    }
+
+    /// <summary>A workspace root is derived, not pinned: it is not in <c>Pinned</c>, so a Settings save cannot persist it.</summary>
+    [Fact]
+    public void Pinned_WithWorkspaceRoot_DoesNotListIt()
+    {
+        using TempDataDir dataDir = new();
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", MakeFolder(dataDir, "biz"))] };
+
+        LibraryRootStore store = Store(dataDir, catalog);
+
+        Assert.Empty(store.Pinned);
+    }
+
+    private static LibraryRootStore Store(TempDataDir dataDir, FakeTeamCatalog catalog) =>
+        new(dataDir.Options(), new AgentPaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance, null, catalog);
+
+    private static string MakeFolder(TempDataDir dataDir, string name)
+    {
+        string path = Path.Combine(dataDir.Path, "workspaces", name);
+        _ = Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static TeamSummary Team(string name, string? workspace) =>
+        new(name, [], ["Nova"], true) { Workspace = workspace };
 
     private static LibraryRoot Find(TempDataDir dataDir, string id)
     {
