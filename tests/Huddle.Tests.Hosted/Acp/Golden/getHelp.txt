@@ -52,6 +52,26 @@ Human can turn human_gate off or clear the Action. After the Accept, the assigne
 carries out the Action and then moves the Task to Done. Use list_tasks with the
 status Needs You to see what is waiting for the Human.
 
+Your Second Brain folders:
+
+- Memory: your own facts, indexed in your prompt.
+- Team Memory: facts the Team keeps.
+- Huddle-wide Memory: kept by the Chief of Staff only.
+- outputs/: documents worth reading again, each with a "Read when…" line.
+- raw/: originals, kept as they arrived.
+- Tasks and Jobs: what is due and what recurs.
+- Archive: Teams and Projects put away. Read it only when asked about the past.
+
+Where they are: Teams/Nova/ — raw/, memory/, outputs/
+Teams/Ops/ — raw/, memory/, outputs/
+
+Look in this order and stop when you have the answer: what is already in your prompt; the Memory topic files an index line points at; outputs/, through the outputs index, and the Team's workspace when it has one; Tasks, with list_tasks; raw/, when the answer must quote the original; then search across the Library, Tasks and Rooms. Cite the path of what you used.
+
+raw/ keeps originals exactly as they arrived. Never edit a file there; add a new file beside the original instead.
+
+Raw files changed since filing
+- Teams/Nova/raw/brief.txt
+
 TOOLS
   mcp__team__get_help
       Explains how the Team chat application works — Rooms, members, mentions, and who is expected to reply when — and lists every tool you can call here with its exact name. Call this before using any other Team tool, and whenever you are unsure how something in the chat works. It takes no arguments.

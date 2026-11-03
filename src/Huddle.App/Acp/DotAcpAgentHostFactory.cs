@@ -128,7 +128,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
-        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -231,8 +231,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="profile">The resolved Adapter Profile.</param>
     /// <param name="skillResolution">The Persona's resolved Skills.</param>
     /// <param name="proposesTeamMemory">Whether to offer <c>propose_team_memory</c>.</param>
+    /// <param name="teamLabels">The Persona's Team labels; those with a Team folder become <c>get_help</c>'s Second Brain map.</param>
     /// <returns>The tool set.</returns>
-    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory)
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels)
     {
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
@@ -262,7 +263,19 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
         // Captured in its own local, rather than only in the tools array below, so the system prompt
         // can name it from its own Name - never retyping "get_help" either.
-        var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
+        IReadOnlyList<string> teamNames = [.. teamLabels
+            .Select(label => this.teamCatalog.Find(label))
+            .OfType<TeamSummary>()
+            .Where(static team => team.HasFolder)
+            .Select(static team => team.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        var getHelpTool = new GetHelpTool(
+            chatTools,
+            prompts,
+            toolNamePrefix,
+            teamNames,
+            this.serviceProvider.GetRequiredService<Agency.Huddle.App.Data.RawBaselineStore>(),
+            this.options);
         IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         return new ToolSet(
@@ -599,7 +612,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         PersonaIdentity? parsed = ParseIdentity(persona);
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(parsed?.Skills ?? []);
-        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
+        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 

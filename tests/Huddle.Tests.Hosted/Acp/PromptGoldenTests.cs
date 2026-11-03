@@ -471,7 +471,14 @@ public sealed class PromptGoldenTests
     public async Task GetHelp_MatchesGolden()
     {
         var ct = TestContext.Current.CancellationToken;
-        var (tool, _) = await BuildToolsAsync(ct);
+        using TempDataDir rawDir = new();
+        Agency.Huddle.App.Data.RawBaselineStore baselines = new(rawDir.Options());
+        string rawFile = Path.Combine(rawDir.Path, "Teams", "Nova", "raw", "brief.txt");
+        _ = Directory.CreateDirectory(Path.GetDirectoryName(rawFile)!);
+        await File.WriteAllTextAsync(rawFile, "filed text", ct);
+        // The baseline says one byte more than the file holds, so brief.txt is the one changed raw file listed.
+        baselines.Record("Teams/Nova/raw/brief.txt", new FileInfo(rawFile).Length + 1, File.GetLastWriteTimeUtc(rawFile));
+        var (tool, _) = await BuildToolsAsync(ct, ["Nova", "Ops"], baselines, rawDir.Options().Value);
 
         var actual = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -870,8 +877,15 @@ public sealed class PromptGoldenTests
     /// constructor dependencies.
     /// </summary>
     /// <param name="ct">Cancels directory initialisation.</param>
+    /// <param name="teamNames">The Agent's Team names for the Second Brain map; <see langword="null"/> leaves the section out.</param>
+    /// <param name="baselines">The raw baselines behind the changed-raw list, or <see langword="null"/>.</param>
+    /// <param name="teamOptions">Locates the Teams folder for the changed-raw scan, or <see langword="null"/>.</param>
     /// <returns>The get_help tool, and the six tools it was built from, in the order it reports them.</returns>
-    private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(CancellationToken ct)
+    private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(
+        CancellationToken ct,
+        IReadOnlyList<string>? teamNames = null,
+        Agency.Huddle.App.Data.RawBaselineStore? baselines = null,
+        Agency.Huddle.App.TeamOptions? teamOptions = null)
     {
         using var dir = new TempDataDir();
         var directory = await dir.CreateDirectoryAsync(ct);
@@ -921,7 +935,7 @@ public sealed class PromptGoldenTests
         // Skill-gated tools (validate_agent, propose_agents) are only offered to a Persona holding a Skill that lists them.
         // A Persona with no Skills should not see them in get_help.
         var ungatedTools = others.Where(tool => !SkillGrants.Grantable.Contains(tool.Name, StringComparer.Ordinal)).ToList();
-        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__");
+        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__", teamNames, baselines, teamOptions);
 
         return (getHelp, others);
     }
