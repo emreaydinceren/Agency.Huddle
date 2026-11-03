@@ -203,4 +203,50 @@ public sealed class TaskStoreArchiveGuardTests
 
         Assert.Equal(before, File.ReadAllText(current.Path));
     }
+
+    /// <summary>
+    /// A Team's Tasks moved to the Archive and back under <see cref="TaskStore.PauseWrites"/> are not outside edits, whether
+    /// the watcher rebuilds during the move or after it. Unarchive used to post "edited outside Huddle" to the manager, who
+    /// spent a Turn on it, and the Feed showed the Human creating the Task again.
+    /// </summary>
+    /// <param name="rebuildDuringMove">Whether the watcher rebuilds while the pause is still held.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ArchiveAndUnarchiveMove_RaisesNoOutsideEdit(bool rebuildDuringMove)
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Home", "_tasks", "HOME-0001.md"), TestTasks.Make(id: "HOME-0001", location: new("Home", null, false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        List<OutsideEdit> edits = [];
+        store.OutsideEditDetected += edits.Add;
+        string live = Path.Combine(root, "Home");
+        string archived = Path.Combine(dir.Path, "Archive", "Home");
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Archive"));
+
+        MoveUnderPause(store, live, archived, rebuildDuringMove);
+        store.RebuildFromWatcher();
+        MoveUnderPause(store, archived, live, rebuildDuringMove);
+        store.RebuildFromWatcher();
+
+        Assert.Empty(edits);
+        Assert.NotNull(store.Get(new TaskId("HOME", 1)));
+    }
+
+    /// <summary>Moves a Team folder the way an archive move does: under the Team's write pause.</summary>
+    /// <param name="store">The Task store.</param>
+    /// <param name="from">The folder to move.</param>
+    /// <param name="to">Where it goes.</param>
+    /// <param name="rebuildDuringMove">Whether the watcher rebuilds before the pause is lifted.</param>
+    private static void MoveUnderPause(TaskStore store, string from, string to, bool rebuildDuringMove)
+    {
+        using IDisposable pause = store.PauseWrites("Home");
+        Directory.Move(from, to);
+        if (rebuildDuringMove)
+        {
+            store.RebuildFromWatcher();
+        }
+    }
 }

@@ -440,12 +440,51 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return;
             }
 
-            lock (store.writeGate)
-            {
-                _ = store.pausedTeams.Remove(team);
-            }
+            store.AdoptMovedTeam(team);
         }
     }
+
+    /// <summary>
+    /// Ends a <see cref="PauseWrites"/> pause: rescans and takes the paused Team's Tasks as they now are on disk as already
+    /// seen, so a Team moved to the Archive and back is not reported as edited or created outside Huddle, then lifts the pause
+    /// and raises <see cref="IndexChanged"/> when the index changed.
+    /// </summary>
+    /// <param name="team">The paused Team.</param>
+    private void AdoptMovedTeam(string team)
+    {
+        Action? indexChanged;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                _ = this.pausedTeams.Remove(team);
+                return;
+            }
+
+            TaskSnapshot previous = this.index;
+            TaskSnapshot rebuilt = this.Scan();
+            foreach (TaskItem oldTask in previous.All.Where(task => IsTeam(task, team)))
+            {
+                _ = this.lastSeenVersion.Remove(oldTask.Path);
+            }
+
+            foreach (TaskItem task in rebuilt.All.Where(task => IsTeam(task, team)))
+            {
+                this.RecordVersion(task);
+            }
+
+            _ = this.pausedTeams.Remove(team);
+            this.index = rebuilt;
+            indexChanged = this.IndexChanged;
+        }
+
+        EventRaise.Isolated(indexChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.IndexChanged)));
+    }
+
+    /// <summary>Whether <paramref name="task"/> belongs to <paramref name="team"/>, compared ignoring case as a paused Team is.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="team">The Team.</param>
+    private static bool IsTeam(TaskItem task, string team) => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Renames the Task file from <paramref name="sourcePath"/> to <paramref name="targetPath"/> (creating the target
@@ -877,7 +916,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 this.lastSeenVersion.Remove(previousById.Path);
             }
 
-            edits.Add(new OutsideEdit(previousById, task));
+            // A Team being moved to or from the Archive is Huddle's own move, not an edit: its Tasks are recorded as seen.
+            if (!this.pausedTeams.Exists(paused => IsTeam(task, paused)))
+            {
+                edits.Add(new OutsideEdit(previousById, task));
+            }
+
             this.RecordVersion(task);
         }
 
