@@ -154,6 +154,7 @@ the per-area tables below.
 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
 | [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | [below](#team-memory-helper) |
 | [Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush](long-running-rooms.md) | [below](#long-running-rooms) |
+| [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | [below](#second-brain) |
 ---
 
 ## at-tagging
@@ -1114,6 +1115,23 @@ Jobs: scheduled instructions in their own Rooms — [area file](jobs.md)
 | [JOBS-03](jobs.md#jobs-03--the-file-is-the-source-of-truth) |  | Active |  | | not yet run by a person |
 | [JOBS-04](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late) |  | Active |  | | not yet run by a person |
 | [JOBS-05](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others) | 💰 | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Ravi was refused with the exact text; the Chief of Staff scheduled `Bins check` for Ravi (`by: Chief of Staff`) |
+
+## second-brain
+
+Second Brain: the use cases as a Human's checklist — [area file](second-brain.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [SB-01](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder) |  | Active |  | not yet run by a person |
+| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Active |  | not yet run by a person |
+| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Active |  | not yet run by a person |
+| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Active |  | not yet run by a person |
+| [SB-05](second-brain.md#sb-05--nova-prompt-parts-show-their-source) |  | Active |  | not yet run by a person |
+| [SB-06](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file) |  | Active |  | not yet run by a person |
+| [SB-07](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder) |  | Active |  | not yet run by a person |
+| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Active |  | not yet run by a person |
+| [SB-09](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up) |  | Active |  | not yet run by a person |
+| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Active |  | not yet run by a person |
 
 ## doc-history
 

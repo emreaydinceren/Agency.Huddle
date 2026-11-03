@@ -5719,6 +5719,78 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-08--the-wa
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Second Brain: the use cases as a Human's checklist
+
+### SB-01 — A dropped file lands in the Team raw folder
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-02 — A fact the Human states is proposed to Team Memory
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-03 — A standing rule is proposed as an AGENTS.md change
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-04 — An edit to Home AGENTS.md reaches the next session
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-05 — Nova prompt parts show their source
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-05--nova-prompt-parts-show-their-source)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-06 — Chat rules overridden on Settings and restored by deleting the file
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-07 — Archiving a Team counts its open Tasks and moves the folder
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-08 — An archived file opens read-only and unarchiving restores the Team
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-09 — An old data folder logs warnings at start-up
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SB-10 — An Agent cannot overwrite a raw file and writes an extract beside it
+
+File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen
