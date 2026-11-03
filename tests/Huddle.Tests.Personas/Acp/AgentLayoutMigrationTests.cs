@@ -127,6 +127,36 @@ public sealed class AgentLayoutMigrationTests
         Assert.Equal("Just notes, no frontmatter here.", File.ReadAllText(target));
     }
 
+    /// <summary>
+    /// A Second Brain file under <c>Teams/</c> - an <c>AGENTS.md</c> at any level, or a document in a <c>raw/</c>,
+    /// <c>memory/</c> or <c>outputs/</c> folder - is the Team's, not a stray Persona, and stays where it is. A hand-made or
+    /// copied data folder used to lose every one of them to <c>Agents/_unsorted/</c> on its first start.
+    /// </summary>
+    /// <param name="relativePath">The file's path under <c>Teams/</c>.</param>
+    [Theory]
+    [InlineData("AGENTS.md")]
+    [InlineData("Home/AGENTS.md")]
+    [InlineData("Home/Garden/agents.md")]
+    [InlineData("memory/household.md")]
+    [InlineData("Home/memory/bins.md")]
+    [InlineData("Home/raw/room1/notes.md")]
+    [InlineData("Home/Outputs/plan.md")]
+    [InlineData("Home/Garden/outputs/plan.md")]
+    public void Run_SecondBrainFile_StaysInTeams(string relativePath)
+    {
+        ArgumentNullException.ThrowIfNull(relativePath);
+        using TempDataDir dataDir = new();
+        string relative = relativePath.Replace('/', Path.DirectorySeparatorChar);
+        WriteTeamsFile(dataDir.Path, relative, "# Team document");
+        string path = Path.Combine(dataDir.Path, "Teams", relative);
+        RecordingLogger<AgentLayoutMigrationTests> logger = new();
+
+        AgentLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(path));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Agents", "_unsorted")));
+    }
+
     /// <summary>An organisational folder that still holds a non-Persona file is not removed, and the file stays put.</summary>
     [Fact]
     public void Run_FolderStillHoldingFiles_IsKept()
