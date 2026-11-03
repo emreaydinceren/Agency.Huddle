@@ -309,7 +309,7 @@ connect. Later sections explain how to work with them.
 | **You (the Human)** | The person using the app. You set your Name, Alias, Title and avatar on **Settings > Profile**; `Team:HumanName` (default `You`) is only the Name a blank system starts with. Your Alias @mentions you like your Name. You are in every Room. | `profile.json`, `avatars.json` and a row in `team.db` |
 | **Agent** (also called a **Persona**) | One AI Agent: its name, job title, @alias, Teams, Skills, and its instructions. | `Agents/<Name>/<Name>.md` |
 | **Agent** | An Agent that is running and online in chat. There is one Agent per Agent file. | A row in `team.db`, plus a running adapter process |
-| **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
+| **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (settings) and `AGENTS.md` (rules) |
 | **Project** | A piece of work inside one Team. | A sub-folder `Teams/<Team>/<Project>/` |
 | **Room** | A chat conversation between you and one or more Agents. | Rows in `team.db` |
 | **Message** | One chat message, in one Room. | One line in `rooms/<roomId>.jsonl` |
@@ -352,7 +352,8 @@ The relationships that matter most:
   any Agent, plus every folder directly under `Teams/`. A folder with no
   members still shows, as **No members**. A label with no folder gets one
   created automatically. A Team's folder may also hold `_team.md`, which names its
-  team type, manager and workspace, and `Process.md`, which says how it works.
+  team type, manager and workspace and holds its process settings, and `AGENTS.md`,
+  which says how it works.
 - **A Project belongs to exactly one Team** and has no members of its own. The
   Team's members work on it. Any ordinary sub-folder of a Team folder is a
   Project, except `memory` and names starting with `_` or `.`.
@@ -430,7 +431,7 @@ App_Data/
 ├── views.json                     saved Task Views
 ├── library-roots.json             pinned Library folders (created on first change)
 ├── custom-roles.json              your own roles from Build a team (created on first change)
-├── prompts.json                   prompt overrides from Settings
+├── Prompts/<key>.md               one file per prompt you changed in Settings
 ├── appearance.json                theme and accent colour
 ├── avatars.json, avatars/         avatars
 └── logs/                          log files, when file logging is on
@@ -699,7 +700,8 @@ this.
 
 A manager's card also has a **Process** step, with **Use this process** for the
 process its team type offers, or **Start blank**. Either one writes the Team's
-`Process.md` once. An existing `Process.md` is never overwritten: the step says
+`AGENTS.md` once and says "AGENTS.md created."; the process's settings go into
+`_team.md`. An existing `AGENTS.md` is never overwritten: the step says
 "This Team already has a process. Edit it on the Process tab." See
 [Process and gates](#process-and-gates).
 
@@ -790,8 +792,8 @@ the current visit only, and always stay inside the Team or Project.
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
 
-A Team whose `_team.md` names a process also has a **Process** tab, which shows its
-`Process.md` with an **Edit** button and a switch for each gate. See
+A Team with a `_team.md` also has a **Process** tab, which shows its
+`AGENTS.md` with an **Edit** button and a switch for each gate. See
 [Process and gates](#process-and-gates).
 
 Under a Team's title (not a Project's), the header has two more things:
@@ -966,34 +968,41 @@ Household team.
 
 ### Process and gates
 
-A Team's **process** says how its work is done. It is the file `Process.md` in the
-Team folder, which the Team's manager and members read. Its frontmatter names the
-process's settings:
+A Team's **process** says how its work is done, in two files in the Team folder:
 
-- `gates:` lists the gates the Team enforces, from the four below.
-- `checkCommand:` names the command whose passing Evidence the merge gate looks for.
-- `wip:` sets a limit on work in progress.
-- `retro:` and `digest:` set when a retrospective and a digest run, such as
-  `retro: { every: 10, unit: 'done-tasks' }`. See
-  [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
+- **`AGENTS.md`** holds the prose every member reads at the start of each session: the
+  steps, the `## Onboarding` section and the Definition of Done. See
+  [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
+- **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
+  - `gates:` lists the gates the Team enforces, from the four below.
+  - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
+  - `wip:` sets a limit on work in progress.
+  - `retro:` and `digest:` set when a retrospective and a digest run, such as
+    `retro: { every: 10, unit: 'done-tasks' }`. See
+    [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
 
-A Team gets its `Process.md` from the **Process** step on the manager's card, or by
-writing the file yourself.
-**Start blank** writes an empty outline; **Use this process** copies the type's
-template. Neither overwrites an existing `Process.md`. The team types ship several
-templates, such as a lightweight flow, spec-driven, sprints and maintenance for a
-Development Team, and household basics for a Household.
+A Team gets its process from the **Process** step on the manager's card, or by
+writing the files yourself. **Start blank** writes an `AGENTS.md` with a heading
+outline and no settings; **Use this process** writes the type's prose to `AGENTS.md`
+and its settings to `_team.md`. Neither overwrites an existing `AGENTS.md`, and a
+setting `_team.md` already holds is kept. The team types ship several templates,
+such as a lightweight flow, spec-driven, sprints and maintenance for a Development
+Team, and household basics for a Household.
+
+> **Note.** A `Process.md` from before the Second Brain is no longer read. Huddle logs a
+> warning naming it at start-up; move its prose into `AGENTS.md` and its settings into
+> `_team.md`.
 
 ### The Process tab
 
-A Team whose `_team.md` names a process has a **Process** tab on its page. It shows
-`Process.md` as a document, with an **Edit** button that opens the file in the
-Library. Above the document there is one switch for each gate the process turns
-on. Turning a switch off asks first, naming the gate and its risk (for example,
-"A Task can then be marked Done with no verified Evidence."). Only **Turn off**
-rewrites the `gates:` line; **Cancel** leaves the file alone and the switch on.
-The tab only lists gates that are on; to turn one on, edit the file. A Team with
-no `Process.md` says "This Team has no process yet."
+A Team with a `_team.md` has a **Process** tab on its page. It shows the Team's
+`AGENTS.md` as a document, with an **Edit** button that opens it in the Library.
+Above the document there is one switch for each gate `_team.md` turns on. Turning a
+switch off asks first, naming the gate and its risk (for example, "A Task can then
+be marked Done with no verified Evidence."). Only **Turn off** rewrites the `gates:`
+line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab only
+lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
+`AGENTS.md` nor a gate says "This Team has no process yet."
 
 ### The four gates
 
@@ -1057,7 +1066,7 @@ never intercepted.
 
 ### Digests and retrospectives on a schedule
 
-If `Process.md` has a `digest:` or `retro:` line, Huddle checks each Team once a
+If a Team's `_team.md` has a `digest:` or `retro:` line, Huddle checks each Team once a
 minute. A **digest** is time-based (`digest: { every: 1, unit: 'days' }`): when the
 time is up, the Team's manager gets a message in its Room asking it to post the
 digest. A **retro** runs after so many Done Tasks (`unit: 'done-tasks'`) or so many
@@ -1137,7 +1146,7 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
 
 ### Retrospectives
 
-A retrospective runs on the cadence in `Process.md`: after every so many Done Tasks,
+A retrospective runs on the cadence in `_team.md`: after every so many Done Tasks,
 or every so many days (see
 [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule)).
 The Team's retro role, the Development Team's **Retro agent**, reads the Team's
@@ -1154,8 +1163,9 @@ member of the Team, or who lacks the Skill, is refused.
 
 **What it proposes.** The proposals arrive as a card in the Retro agent's Room.
 Each change shows its title, the file it targets and a diff Huddle computes from the
-file as it is now. A change is an exact-text replacement in one file: `Process.md`,
-`_team.md`, or one member's file. Select **Accept** to apply a change, or **Decline**
+file as it is now. A change is an exact-text replacement in one file: the Team's
+`AGENTS.md`, `_team.md`, or one member's file. An accepted change is the only way
+Huddle ever writes `AGENTS.md`. Select **Accept** to apply a change, or **Decline**
 (type the reason in **Reason if you decline** first). Huddle refuses an Accept, and
 changes nothing, when:
 
@@ -1177,7 +1187,7 @@ evidence from after the change, linking a Task, a `logs/...#L12` line or a
 `_retros/` file.
 
 > **Example (Scenario 4).** After a sprint, the Retro agent finds three Tasks sent
-> back from Review for missing tests. It proposes one change to `Process.md`: write
+> back from Review for missing tests. It proposes one change to `AGENTS.md`: write
 > the failing test before the fix. You accept it.
 
 ### Household teams
@@ -2013,7 +2023,7 @@ carry it out, and the assignee then moves the Task to Done.
 **Proof** is the checklist a gated Task must complete before it reaches you. Each line
 is one item of **Evidence**, such as a test run or a reviewer's check. The checklist
 comes from the Team's **Definition of Done**, a `## Definition of Done` section in its
-`Process.md`. Every built-in process template ships one. A line is a label, a colon
+`AGENTS.md`. Every built-in process template ships one. A line is a label, a colon
 and a rule:
 
 ```markdown
@@ -2408,7 +2418,7 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
 | **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card an Agent gets. Click the avatar to change it. A Name or Alias an Agent already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
-| **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
+| **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | One file per changed prompt in `Prompts/`, such as `Prompts/systemPrompt.chatRules.md`; delete a file to restore that prompt's default |
 | **Helpers** | The small background agents that make one judgement for you, such as whether a Task an Agent wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Agent definitions. | `Agents/…` |
@@ -2456,9 +2466,9 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Details tab (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
 | Members tab (**Save changes**) | An Agent file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Agents' files | The new Agents are hired; the ones taken off restart; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Agent files; no memory, notes or Tasks | New Agents start |
-| Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
+| Use a process | `Teams/<Team>/AGENTS.md`, never over an existing one, and the process's settings in `_team.md` | Members read it at their next session |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
-| Turn a gate off | The `gates:` line of `Process.md` | None |
+| Turn a gate off | The `gates:` line of `_team.md` | None |
 | Approve or decline a Sprint proposal | Approve creates the Sprint and adds the Tasks | The manager reads the outcome |
 | Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Agent file restarts that Agent |
 | Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
