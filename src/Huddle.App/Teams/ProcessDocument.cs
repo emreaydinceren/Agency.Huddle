@@ -204,7 +204,7 @@ internal sealed record ProcessDocument(
     /// <summary>Reads the <c>gates</c> value into the known gates, without duplicates, and the ids it could not read.</summary>
     /// <param name="values">The frontmatter values.</param>
     /// <returns>The known gates and the unknown ids, each in the order written.</returns>
-    private static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
+    internal static (List<GateId> Gates, List<string> UnknownGates) ReadGates(Dictionary<string, string> values)
     {
         List<GateId> gates = [];
         List<string> unknownGates = [];
@@ -226,7 +226,7 @@ internal sealed record ProcessDocument(
     /// <summary>Reads the <c>wip</c> value.</summary>
     /// <param name="values">The frontmatter values.</param>
     /// <returns>The limit when it is a positive whole number, else <see langword="null"/>.</returns>
-    private static int? ReadWip(Dictionary<string, string> values)
+    internal static int? ReadWip(Dictionary<string, string> values)
     {
         if (values.TryGetValue("wip", out string? wipText) && int.TryParse(Unquote(wipText), NumberStyles.None, CultureInfo.InvariantCulture, out int wipValue) && wipValue > 0)
         {
@@ -405,7 +405,7 @@ internal sealed record ProcessDocument(
         }
     }
 
-    private static List<string> SplitList(string raw) =>
+    internal static List<string> SplitList(string raw) =>
         raw.Trim().Trim('[', ']')
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Select(Unquote)
