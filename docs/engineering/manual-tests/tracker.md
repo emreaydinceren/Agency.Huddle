@@ -1123,15 +1123,15 @@ Second Brain: the use cases as a Human's checklist — [area file](second-brain.
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [SB-01](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder) |  | Pass |  | 2026-11-03: path, size and path line held; modified time is not kept, which the Spec does not ask for |
-| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Fail |  | 2026-11-03: Haiku passed the wrong arguments, the refusal named an empty Team, the Agent said "Done"; issue not filed yet |
-| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Fail |  | 2026-11-03: no AGENTS.md proposal on Haiku, with or without the retrospective Skill; issue not filed yet |
-| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Fail |  | 2026-11-03: File Change seen; Stop does not open a new session, so the step cannot pass as written; run on Finances (Nova Offline) |
+| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Pass |  | 2026-11-03 rerun after `8fdb82ed`: filed on the first try, Feed names Finn |
+| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Pass |  | 2026-11-03 rerun after `0ac2df3e`: Finn said the rule belongs in AGENTS.md and proposed it; Accept wrote the line |
+| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Pass |  | 2026-11-03 rerun with the restart step, on Home with Nova |
 | [SB-05](second-brain.md#sb-05--nova-prompt-parts-show-their-source) |  | Pass |  | 2026-11-03: every part sourced; three rows share the label "AGENTS.md block" |
 | [SB-06](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file) |  | Pass |  | 2026-11-03 |
 | [SB-07](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder) |  | Pass |  | 2026-11-03 rerun after the pipe fix: Rooms left the list and are recorded in `archivedRooms`; "1 open Tasks" plural slip |
-| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Pass |  | 2026-11-03 rerun: marked only by its `Archive/…` path, no separate label; unarchive wakes the manager with a false "edited outside Huddle" Task notice; issue not filed yet |
+| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Pass |  | 2026-11-03 rerun after `4f7d883c` and `176c037e`: Archived chip shown; unarchive no longer wakes the manager |
 | [SB-09](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up) |  | Pass |  | 2026-11-03 |
-| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Pass |  | 2026-11-03: hash unchanged, extract written; the Agent refused itself, so the permission handler was not reached |
+| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Pass |  | 2026-11-03: hash unchanged, extract written; rerun reached the permission handler, which refused the Write and logged the reason |
 
 ## doc-history
 
