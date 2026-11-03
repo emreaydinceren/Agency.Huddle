@@ -30,7 +30,7 @@ internal sealed record ProcessDocument(
         "Escalation",
     ];
 
-    /// <summary>Parses the text of a <c>Process.md</c> file.</summary>
+    /// <summary>Parses the text of a Team's process (<c>AGENTS.md</c> prose and <c>_team.md</c> settings).</summary>
     /// <param name="text">The file text, with LF or CRLF line endings.</param>
     /// <param name="document">The parsed document, or <see langword="null"/>.</param>
     /// <returns><see langword="false"/> only when the text is empty; frontmatter is optional and a closed leading block is skipped as prose.</returns>
@@ -206,7 +206,7 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
-    /// <summary>The four gates a Process.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    /// <summary>The four gates a Team's _team.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
     private static readonly GateId[] ProcessGates =
     [
         GateId.QaEvidenceBeforeDone,

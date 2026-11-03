@@ -57,7 +57,7 @@ public sealed class ProcessStepTests
 
         Assert.Equal(FlowBody, File.ReadAllText(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
         Assert.Equal([GateId.QaEvidenceBeforeDone], GatesOf(ctx));
-        Assert.Equal("Process.md created.", cut.Find(".process-step-result").TextContent.Trim());
+        Assert.Equal("AGENTS.md created.", cut.Find(".process-step-result").TextContent.Trim());
     }
 
     /// <summary>Choosing the other process changes the preview, and Use this process writes that one.</summary>
@@ -145,7 +145,7 @@ public sealed class ProcessStepTests
 
         await cut.InvokeAsync(() => cut.Find("button.process-step-blank").ClickAsync());
 
-        Assert.Equal("Process.md could not be created.", cut.Find(".process-step-result").TextContent.Trim());
+        Assert.Equal("AGENTS.md could not be created.", cut.Find(".process-step-result").TextContent.Trim());
         Assert.False(File.Exists(Path.Combine(dir.Path, TeamPaths.AgentsMdFileName)));
     }
 

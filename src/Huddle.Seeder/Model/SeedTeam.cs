@@ -7,7 +7,7 @@ internal sealed record SeedTeam(string Name, IReadOnlyList<string> Projects)
 {
     /// <summary>
     /// The built-in team type the Team was "hired" from, written <c>id@version</c> such as <c>household@1.0.0</c>, or
-    /// <see langword="null"/> for a blank Team. A typed Team also gets the type's default process as <c>Process.md</c>.
+    /// <see langword="null"/> for a blank Team. A typed Team also gets the type's default process as <c>AGENTS.md</c> and <c>_team.md</c>.
     /// </summary>
     public string? TeamType { get; init; }
 

@@ -5,9 +5,9 @@ using System.Text;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Copies a process template into the Team folder as <c>Process.md</c> (PR-3, Spec §Process). The
+/// Copies a process template into the Team folder as <c>AGENTS.md</c> prose and <c>_team.md</c> settings (PR-3, Spec §Process). The
 /// template text is copied verbatim, so the template id and version in its frontmatter are recorded
-/// with it. An existing <c>Process.md</c> is never overwritten.
+/// with it. An existing <c>AGENTS.md</c> is never overwritten.
 /// </summary>
 /// <param name="types">Supplies the process templates of the Team's type.</param>
 /// <param name="folders">Locates the Team folder and its <c>_team.md</c>.</param>
@@ -34,7 +34,7 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
 
         """;
 
-    /// <summary>Copies a process template of the Team's type into <c>Teams/&lt;Team&gt;/Process.md</c>.</summary>
+    /// <summary>Copies a process template of the Team's type into <c>Teams/&lt;Team&gt;/AGENTS.md</c> and <c>_team.md</c>.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="processId">The id of the process template.</param>
     /// <returns>How the call ended.</returns>
@@ -104,7 +104,7 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
         };
     }
 
-    /// <summary>Writes the blank PR-6 outline, with empty sections and no gates, as <c>Process.md</c>.</summary>
+    /// <summary>Writes the blank PR-6 outline, with empty sections and no gates, as <c>AGENTS.md</c>.</summary>
     /// <param name="team">The Team's name.</param>
     /// <returns>How the call ended.</returns>
     public ProvisionResult Blank(string team)
@@ -119,7 +119,7 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
         return this.Write(team, BlankText.ReplaceLineEndings("\n"));
     }
 
-    /// <summary>Provisions the team type's default process when the Team has no <c>Process.md</c> yet.</summary>
+    /// <summary>Provisions the team type's default process when the Team has no <c>AGENTS.md</c> yet.</summary>
     /// <param name="team">The Team's name.</param>
     /// <returns>How the call ended; <see cref="ProvisionResult.UnknownProcess"/> when the type offers no process.</returns>
     public ProvisionResult ProvisionDefault(string team)

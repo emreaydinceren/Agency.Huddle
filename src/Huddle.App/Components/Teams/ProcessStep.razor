@@ -7,8 +7,8 @@
 @*
     Task 57 (PR-2, PR-3): the manager's Process step. A MudSelect of the processes the Team's type ships
     (the default pre-selected), a read-only preview of the chosen template, Use this process (copies the
-    template into the Team folder as Process.md through ProcessProvisioner) and Start blank (the empty
-    PR-6 outline). An existing Process.md is never overwritten; the step says so. Editing afterwards is
+    template into the Team folder as AGENTS.md prose and _team.md settings through ProcessProvisioner) and
+    Start blank (the empty outline). An existing AGENTS.md is never overwritten; the step says so. Editing afterwards is
     the Process tab.
 *@
 
@@ -74,8 +74,8 @@
 
     private void Report(ProvisionResult outcome) => this.result = outcome switch
     {
-        ProvisionResult.Created => "Process.md created.",
+        ProvisionResult.Created => "AGENTS.md created.",
         ProvisionResult.AlreadyExists => "This Team already has a process. Edit it on the Process tab.",
-        _ => "Process.md could not be created.",
+        _ => "AGENTS.md could not be created.",
     };
 }

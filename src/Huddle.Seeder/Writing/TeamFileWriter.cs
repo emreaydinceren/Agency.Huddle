@@ -9,7 +9,7 @@ using Agency.Huddle.Seeder.Model;
 namespace Agency.Huddle.Seeder.Writing;
 
 /// <summary>
-/// Writes each Team's <c>_team.md</c>, composed by the app's <see cref="TeamFile"/>, and a typed Team's <c>Process.md</c>, read
+/// Writes each Team's <c>_team.md</c>, composed by the app's <see cref="TeamFile"/>, and a typed Team's <c>AGENTS.md</c>, read
 /// through the app's <see cref="TeamTypeCatalog"/>. Seeder spec SEED-AV-5 and SEED-HOME-8.
 /// </summary>
 internal static class TeamFileWriter

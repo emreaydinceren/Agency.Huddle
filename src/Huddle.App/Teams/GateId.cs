@@ -15,9 +15,9 @@ internal enum GateId
     /// <summary>A bug Task cannot move to Review until an Evidence line shows a failing test before the fix.</summary>
     FailingTestBeforeFix,
 
-    /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in Process.md.</summary>
+    /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in _team.md.</summary>
     HumanGate,
 
-    /// <summary>A Task cannot go to Needs You while its Proof has an open item; never written in Process.md.</summary>
+    /// <summary>A Task cannot go to Needs You while its Proof has an open item; never written in _team.md.</summary>
     ProofIncomplete,
 }

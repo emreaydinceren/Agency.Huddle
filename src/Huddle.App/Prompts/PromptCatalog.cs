@@ -1782,7 +1782,7 @@ internal static class PromptCatalog
             Key: "prompt.digest",
             Label: "Digest prompt",
             HelperText:
-                "The status digest a manager is asked to post on the cadence in Process.md (OR-3). " +
+                "The status digest a manager is asked to post on the cadence in the Team's _team.md (OR-3). " +
                 "Takes the Team name and the date the digest covers from.",
             Default:
                 """

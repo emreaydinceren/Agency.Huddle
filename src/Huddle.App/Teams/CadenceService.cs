@@ -10,12 +10,12 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Wakes a Team's manager for a digest and its Retro agent for a retro, on a schedule or after a count of Done Tasks,
-/// as the Team's <c>Process.md</c> declares (OR-3, RT-2, Spec §Cadence). Every minute it looks at each Team once.
+/// as the Team's <c>_team.md</c> declares (OR-3, RT-2, Spec §Cadence). Every minute it looks at each Team once.
 /// The last firing lives in <c>team.db</c>, so a restart repeats nothing (NF-8): the first time a Team is seen only
 /// sets a baseline. A digest is time-based only, because the state holds no Done count for it.
 /// </summary>
 /// <param name="catalog">Lists the Teams, their managers and their members.</param>
-/// <param name="folders">Locates each Team's folder, where <c>Process.md</c> lives.</param>
+/// <param name="folders">Locates each Team's folder, where <c>_team.md</c> lives.</param>
 /// <param name="types">Resolves a Team's type and its Retro role.</param>
 /// <param name="personas">Reads each member's role.</param>
 /// <param name="tasks">Counts Done Tasks.</param>
