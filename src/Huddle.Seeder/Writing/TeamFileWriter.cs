@@ -30,7 +30,7 @@ internal static class TeamFileWriter
             SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.TeamFileName}"), Compose(team, type, colours[index]));
             if (team.TeamType is not null)
             {
-                SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.ProcessFileName}"), DefaultProcess(types, team, type));
+                SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.AgentsMdFileName}"), DefaultProcess(types, team, type));
             }
 
             EnsureScope(SeedIo.Resolve(dataDir, folder));

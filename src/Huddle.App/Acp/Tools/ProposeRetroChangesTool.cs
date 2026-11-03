@@ -157,7 +157,7 @@ internal sealed class ProposeRetroChangesTool(
     /// <summary>Whether <paramref name="file"/> is one of the three kinds the Human may be asked to edit. The file is matched by name only and never used as a path.</summary>
     private static bool IsAllowed(TeamSummary team, string file)
     {
-        if (string.Equals(file, TeamPaths.ProcessFileName, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
+        if (string.Equals(file, RetroProposalService.ProcessTarget, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
         {
             return true;
         }

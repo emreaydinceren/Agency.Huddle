@@ -18,7 +18,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="Owns">The one-line statement of what the Team owns, or <see langword="null"/>.</param>
 /// <param name="Notes">The text after the frontmatter, LF-only, kept verbatim.</param>
 /// <remarks>
-/// The Process document is always <see cref="TeamPaths.ProcessFileName"/> (see <see cref="TeamProcessFile"/>). Files
+/// The Process document is always <see cref="TeamPaths.AgentsMdFileName"/> (see <see cref="TeamProcessFile"/>). Files
 /// written before issue #312 carry a <c>process:</c> line; it is read as a known key and dropped, so the next rewrite
 /// removes it rather than keeping a setting nothing reads.
 /// </remarks>

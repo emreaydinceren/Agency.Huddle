@@ -33,6 +33,9 @@ internal sealed class RetroProposalService(
     ILogger<RetroProposalService> logger)
 {
     /// <summary>What <see cref="Preview"/> returns when the diff cannot be computed.</summary>
+    /// <summary>The target name a retro change uses for the Team's Process prose; it is stored in <c>AGENTS.md</c> (Tasks 56-57 retarget it).</summary>
+    internal const string ProcessTarget = "Process.md";
+
     private const string NoMatchText = "The text to replace is not in the file exactly once.";
 
     private const string NoReason = "no reason given.";
@@ -231,7 +234,7 @@ internal sealed class RetroProposalService(
     {
         text = string.Empty;
         path = null;
-        if (string.Equals(file, TeamPaths.ProcessFileName, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
+        if (string.Equals(file, ProcessTarget, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
         {
             LibraryResult<LibraryPath> folder = folders.FindTeam(team);
             if (folder.Value is not { } found)
@@ -239,7 +242,7 @@ internal sealed class RetroProposalService(
                 return false;
             }
 
-            path = Path.Combine(found.FullPath, file);
+            path = Path.Combine(found.FullPath, string.Equals(file, ProcessTarget, StringComparison.Ordinal) ? TeamPaths.AgentsMdFileName : file);
             try
             {
                 text = File.ReadAllText(path);

@@ -1,4 +1,3 @@
-@using System.Text
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
@@ -7,14 +6,14 @@
 @inject NavigationManager Navigation
 
 @*
-    Task 57 (PR-2, PR-8, NF-5): the Process tab of a Team page. Process.md rendered as Markdown, Edit
+    Task 57 (PR-2, PR-8, NF-5): the Process tab of a Team page. AGENTS.md rendered as Markdown, Edit
     (opens the file in the Library page), and one switch per enabled hard gate. Turning a gate off asks
-    first, naming the gate and its risk; only Turn off rewrites the gates line of the frontmatter
-    (ProcessDocument.WithGates keeps every other line). Cancel leaves the file alone and the switch on.
+    first, naming the gate and its risk; only Turn off rewrites the gates line of _team.md
+    (TeamFile.WithGates keeps every other line). Cancel leaves the file alone and the switch on.
 *@
 
 <div class="process-tab">
-    @if (this.text is null)
+    @if (this.text is null && this.gates.Count == 0)
     {
         <EmptyState Title="This Team has no process yet" Text="A process lists the steps the Team follows to deliver work." />
     }
@@ -25,7 +24,7 @@
         {
             <MudAlert Severity="Severity.Error" role="alert" Class="process-tab-error">@this.error</MudAlert>
         }
-        @if (this.document is not null)
+        @if (this.gates.Count > 0)
         {
             <MudStack Spacing="1" Class="my-2">
                 @foreach (GateId gate in this.gates)
@@ -44,20 +43,20 @@
                 }
             </MudStack>
         }
-        <div class="process-tab-document">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
+        @if (this.text is not null)
+        {
+            <div class="process-tab-document">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
+        }
     }
 </div>
 
 @code {
-    private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
-
     private string? text;
-    private ProcessDocument? document;
     private IReadOnlyList<GateId> gates = [];
     private string? error;
     private int version;
 
-    /// <summary>The Team whose <c>Process.md</c> is shown.</summary>
+    /// <summary>The Team whose <c>AGENTS.md</c> prose and <c>_team.md</c> gates are shown.</summary>
     [Parameter]
     [EditorRequired]
     public string Team { get; set; } = string.Empty;
@@ -73,7 +72,6 @@
     {
         string? path = this.FilePath;
         this.text = path is not null ? TeamProcessFile.ReadText(path) : null;
-        this.document = this.text is not null && ProcessDocument.TryParse(this.text, out ProcessDocument? parsed) ? parsed : null;
         this.gates = TeamProcessFile.Settings(this.Folders, this.Team)?.Gates ?? [];
     }
 
@@ -81,7 +79,7 @@
     {
         if (this.Folder is { } folder)
         {
-            string relative = $"{folder.RelativePath}/{TeamPaths.ProcessFileName}";
+            string relative = $"{folder.RelativePath}/{TeamPaths.AgentsMdFileName}";
             this.Navigation.NavigateTo($"/library?root={Uri.EscapeDataString(folder.Root.Id)}&path={Uri.EscapeDataString(relative)}");
         }
     }
@@ -104,32 +102,19 @@
             return;
         }
 
-        this.Load();
-        string? path = this.Folder is { } folder ? Path.Combine(folder.FullPath, TeamPaths.TeamFileName) : null;
-        if (path is null || this.Folders.ReadTeamFile(this.Team) is not { } file)
-        {
-            return;
-        }
-
-        string updated = file.WithGates([.. file.Process.Gates.Where(existing => existing != gate)]).Compose();
-        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(temp, updated, Utf8);
-            File.Move(temp, path, overwrite: true);
-            this.error = null;
+            this.error = this.Folders.UpdateTeamFile(this.Team, file => file.WithGates([.. file.Process.Gates.Where(existing => existing != gate)]))
+                ? null
+                : "_team.md could not be saved.";
         }
         catch (IOException)
         {
-            this.error = "Process.md could not be saved.";
+            this.error = "_team.md could not be saved.";
         }
         catch (UnauthorizedAccessException)
         {
-            this.error = "Process.md could not be saved.";
-        }
-        finally
-        {
-            File.Delete(temp);
+            this.error = "_team.md could not be saved.";
         }
 
         this.Load();

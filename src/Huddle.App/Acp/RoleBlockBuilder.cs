@@ -7,6 +7,7 @@ namespace Agency.Huddle.App.Acp;
 internal static class RoleBlockBuilder
 {
     private const string ConsultWhenPrefix = "Consult When: ";
+    private const string LegacyProcessFile = "Process.md";
 
     /// <summary>Builds the role block for one member.</summary>
     /// <param name="identity">The member's identity, read from its file.</param>
@@ -84,7 +85,8 @@ internal static class RoleBlockBuilder
             return null;
         }
 
-        string? text = TeamProcessFile.ReadText(Path.Combine(teamsRoot, team, TeamPaths.ProcessFileName));
+        // Task 51c retires this block (C5): until then the frozen ProcessBlockTests pin the legacy Process.md file.
+        string? text = TeamProcessFile.ReadText(Path.Combine(teamsRoot, team, LegacyProcessFile));
         if (text is null)
         {
             return null;
@@ -92,7 +94,7 @@ internal static class RoleBlockBuilder
 
         return isManager
             ? new ProcessBlockInput(true, text)
-            : new ProcessBlockInput(false, $"Teams/{team}/{TeamPaths.ProcessFileName}");
+            : new ProcessBlockInput(false, $"Teams/{team}/{LegacyProcessFile}");
     }
 
     /// <summary>Reads the <c>consult_when</c> line out of a colleague's public job description.</summary>

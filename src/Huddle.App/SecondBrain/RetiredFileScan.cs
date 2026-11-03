@@ -21,6 +21,7 @@ internal static class RetiredFileScan
             foreach (string file in Directory.EnumerateFiles(teams, "*", SearchOption.AllDirectories))
             {
                 string name = Path.GetFileName(file);
+                // A literal on purpose: this reports the retired file, which no code reads or writes any more.
                 if (string.Equals(name, "Process.md", StringComparison.Ordinal) || string.Equals(name, Instructions, StringComparison.Ordinal))
                 {
                     found.Add(Relative(dataDir, file));
