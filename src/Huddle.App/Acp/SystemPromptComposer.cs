@@ -424,6 +424,7 @@ internal static class SystemPromptComposer
                     ["{{createTaskTool}}"] = FindCreateTaskTool(toolNames) ?? ToolUnavailable,
                     ["{{jobsTool}}"] = FindJobsTool(toolNames) ?? ToolUnavailable,
                     ["{{logChangeTool}}"] = FindLogChangeTool(toolNames) ?? ToolUnavailable,
+                    ["{{retroTool}}"] = toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "propose_retro_changes")) ?? ToolUnavailable,
                 })));
 
     /// <summary>Adds one workspace part per Team with a readable workspace (slot 7, Spec 8.1), in the order given.</summary>

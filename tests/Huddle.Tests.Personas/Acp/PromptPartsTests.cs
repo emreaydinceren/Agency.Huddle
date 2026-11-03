@@ -217,6 +217,25 @@ public sealed class PromptPartsTests
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A rule names the tool that proposes it (Spec U4): with <c>propose_retro_changes</c> offered, the summary tells the
+    /// Agent to say the rule belongs in <c>AGENTS.md</c> and to propose it with that tool. Without a tool named, a Haiku Agent
+    /// in the manual run answered "I'll lead every summary with a number" and proposed nothing.
+    /// </summary>
+    [Fact]
+    public void ComposeParts_SecondBrain_RuleNamesTheRetroTool()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", [.. SummaryToolNames, "mcp__team__propose_retro_changes"], [], string.Empty, memory: null, SessionScope.Shared);
+
+        string text = Assert.Single(parts, p => p.Label == "Second Brain").Text;
+
+        Assert.Contains(
+            "Then it is a rule: it belongs in the AGENTS.md of its level. Tell the Human so and propose the line with mcp__team__propose_retro_changes; never edit an AGENTS.md yourself.",
+            text,
+            StringComparison.Ordinal);
+    }
+
     /// <summary>Whether a part is rendered from the workspace Prompt.</summary>
     /// <param name="part">The part.</param>
     private static bool IsWorkspacePart(PromptPart part) =>
@@ -312,6 +331,7 @@ public sealed class PromptPartsTests
         Assert.Contains($"Due by a date: {Unavailable}.", text, StringComparison.Ordinal);
         Assert.Contains($"Recurs: {Unavailable}.", text, StringComparison.Ordinal);
         Assert.Contains($"then {Unavailable}.", text, StringComparison.Ordinal);
+        Assert.Contains($"propose the line with {Unavailable};", text, StringComparison.Ordinal); // contains-ok: one sentence of a long prompt; the whole text is pinned by systemPrompt.secondBrain.txt.
         Assert.DoesNotContain("create_task", text, StringComparison.Ordinal);
         Assert.DoesNotContain("propose_team_memory", text, StringComparison.Ordinal);
         Assert.DoesNotContain("log_change", text, StringComparison.Ordinal);
