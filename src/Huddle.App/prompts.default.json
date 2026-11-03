@@ -134,6 +134,7 @@
   "tool.proposeTeamMemory.description": "Propose a fact for a Team's shared Memory: a decision and the reason for it, an agreed way of working, who owns what, or a lesson the whole Team should keep. Huddle files it: a Helper decides whether it is worth keeping and whether it belongs in an existing topic file, and records that you proposed it. 'team' is a Team you belong to. 'fact' is one fact in your own words, with enough context to stand alone. 'why' (optional) says where it was decided or learned. Propose one fact at a time. Do not propose personal preferences or anything only you need: keep those in your own Memory.",
   "tool.proposeTeamMemory.proposed": "Proposed to {{team}}'s Team Memory.",
   "tool.proposeTeamMemory.notMember": "You are not a member of {{team}}. You can propose to: {{teams}}.",
+  "tool.proposeTeamMemory.noTeam": "Name the Team in team and the fact in fact; nothing was proposed. You can propose to: {{teams}}.",
   "tool.proposeTeamMemory.noFact": "Write the fact to propose: one to a few sentences.",
   "tool.proposeTeamMemory.tooLong": "The {{field}} is {{length}} characters; the most is {{max}}. Propose one fact at a time.",
   "tool.proposeTeamMemory.off": "Team Memory proposals are switched off. Note the fact in your own Memory, or tell the manager.",

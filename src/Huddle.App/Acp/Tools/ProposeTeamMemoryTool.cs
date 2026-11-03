@@ -72,11 +72,14 @@ internal sealed class ProposeTeamMemoryTool(
     private string Propose(JsonObject arguments)
     {
         string teamArgument = Text(arguments, "team");
-        TeamSummary? team = access.Find(teamArgument);
+        TeamSummary? team = teamArgument.Length == 0 ? null : access.Find(teamArgument);
         if (team is null || !team.HasFolder || !access.CanRead(personaName, team))
         {
             string teams = string.Join(", ", access.Readable(personaName).Select(static readable => readable.Name));
-            return this.Say("tool.proposeTeamMemory.notMember", ("team", teamArgument), ("teams", teams.Length > 0 ? teams : "none"));
+            string offered = teams.Length > 0 ? teams : "none";
+            return teamArgument.Length == 0
+                ? this.Say("tool.proposeTeamMemory.noTeam", ("teams", offered))
+                : this.Say("tool.proposeTeamMemory.notMember", ("team", teamArgument), ("teams", offered));
         }
 
         string fact = Text(arguments, "fact");

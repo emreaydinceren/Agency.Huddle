@@ -2410,6 +2410,15 @@ internal static class PromptCatalog
             Placeholders: ["{{team}}", "{{teams}}"],
             RequiredPlaceholders: ["{{team}}"],
             Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "tool.proposeTeamMemory.noTeam",
+            Label: "Team Memory proposal, no Team",
+            HelperText: "Said when the team argument is missing or blank. Must say nothing was proposed, so the Agent does not report the fact as saved; {{teams}} lists the Teams it may propose to.",
+            Default: "Name the Team in team and the fact in fact; nothing was proposed. You can propose to: {{teams}}.",
+            Placeholders: ["{{teams}}"],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds the <c>memory</c> tool's read failure, kept apart from its write failure so a failed read never invites a write.</summary>
