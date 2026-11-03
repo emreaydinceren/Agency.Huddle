@@ -7,7 +7,7 @@ builds. The *why* behind every rule is in [`Huddle.SecondBrain.md`](Huddle.Secon
 (decisions D-1 to D-47); tasks cite a decision only where it settles a choice. It covers all of
 the Spec's phases, **P0 to P7** (Spec §14.4, lines 1036–1049).
 
-**15 deliverables · 140 tasks · 32 sized for Haiku (23%) · 9 retrospectives.** Every
+**15 deliverables · 140 tasks · 34 sized for Haiku (24%) · 9 retrospectives.** Every
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**;
 its `.i` partner ends **green**. Chore and docs tasks have no test partner.
 
@@ -82,6 +82,9 @@ Haiku agent that reaches 40 tool calls without a red or a green stops too.
     marked "settled — implement, do not re-litigate". `data` work gets no review.
 11. **Don't run the Linux Docker repro** (CLAUDE.md). **Don't push or open a PR without the
     Human's go-ahead.**
+12. **Cascades.** A `.t` whose `.i` renames or changes a constructor, signature, path or text that
+    existing tests pin runs `Find-PinnedTests.ps1 -Pattern <old>` and updates those tests to the
+    new behaviour in the same `.t`; they are frozen with the red. Cross-file renames are never Haiku.
 
 ### Retrospectives, every 15 completed tasks
 
@@ -133,18 +136,22 @@ The manager keeps this section; retrospectives add to it.
 
 | Fact | Where |
 | --- | --- |
-| Reserved names today | `src/Huddle.App/Teams/TeamNames.cs` (133 lines): `MemoryFolder` line 10, `UploadsFolder` line 16, `UploadsReservedProblem` line 19, `IsReservedProjectName(string)` line 27, `ValidateTeamName(string, IReadOnlyList<TeamSummary>)` line 39, `ValidateProjectName(string, TeamSummary)` line 78 |
-| Other `UploadsFolder` users | `Tasks/TaskService.cs` line 1502; `Library/TeamFolderProvisioner.cs` line 158 (`ValidateProjectName`, line 145); `Library/LibraryDocumentCollector.cs` lines 332–346; `FileChanges/WatchedFolderResolver.cs` lines 77–103; `FileChanges/FolderScanner.cs` lines 93–110; `FileChanges/FileChangeTracker.cs` lines 530–581; `Uploads/RoomUploadFolders.cs` line 28 |
+| Reserved names today (R1) | `src/Huddle.App/Teams/TeamNames.cs`: `MemoryFolder` line 10, `RawFolder` line 16, `OutputsFolder` line 22, `IsReservedTeamName` line 60, `TeamReservedProblem` line 68, `ReservedProjectProblem`. `UploadsFolder` is gone. Every name check goes through `TeamNames` |
+| Raw users (R1) | `Tasks/TaskService.cs`; `Library/TeamFolderProvisioner.cs`; `Library/LibraryDocumentCollector.cs`; `FileChanges/WatchedFolderResolver.cs` and `FileChanges/FolderScanner.cs` (already `TeamNames.RawFolder`; only the private `IsTeamUploads` helpers keep the old name); `Uploads/RoomUploadFolders.cs` line 28 |
+| Second Brain folders (R1) | New `src/Huddle.App/Teams/SecondBrainFolders.cs`: `PerScope` (`raw`, `memory`, `outputs`), `Ensure(folderFullPath)`; called from `TeamFolderProvisioner` (Project line 124, Team line 473, label folder line 570) |
+| Run-Tests and logs (R1) | `agents/scripts/Run-Tests.ps1 -FilterClass` takes a `string[]` (comma list). Failing test names print at the end (use `tail -30`). Logs: `Conversation/logs/<label>-<stamp>.log`; failure lines start `failed ` |
+| Folder-listing pins (R1) | Tests that list a Team or Project folder's entries: `tests/Huddle.Tests.Hosted.Workspace/Library/TeamFolderProvisionerTests.cs` (`GetDirectories`, `EntryNames`) and `tests/Huddle.Tests.Hosted.Workspace/Teams/TeamPagesEndToEndTests.cs`. Seeder upload paths: `src/Huddle.Seeder/Writing/MessageReferences.cs` (~line 115, `UploadFolder`), `Writing/DocHistoryWriter.cs`, `Model/SeedTaskUpload.cs` |
+| Cascade scripts (R1) | `agents/scripts/Find-PinnedTests.ps1 -Pattern <regex>` lists the tests that pin an old behaviour and marks frozen files; `agents/scripts/Rerun-Failed.ps1 -Log <path>` reruns a log's failures and classifies each flaky or real. Both are being written; check they exist before a task names them |
 | Task layout | `src/Huddle.App/Tasks/TaskLayout.cs`: `TryMap` line 22 (Team-level skip at line 27, Project check at line 41), `AffectsTasks` line 73 |
 | Team folder listing | `src/Huddle.App/Library/TeamFolderCatalog.cs` (40 lines): `List(LibraryPathResolver, LibraryPath teamsRoot, IReadOnlyList<TeamFolder>)` line 20 |
 | Provisioner | `src/Huddle.App/Library/TeamFolderProvisioner.cs` (617 lines): `EnsureProject` line 88, `CreateTeamFolder` line 471, `SyncFolders` line 533 (creates a folder per Persona label), `TeamFolderExistsOnDisk` line 418, `teamFileGate` line 35 |
 | Memory topic names | `src/Huddle.App/Memory/MemoryFileRules.cs` lines 58–65 (excludes `TeamPaths.InstructionsFileName` at line 62 and reserved Project names at line 64) |
-| Library roots | `src/Huddle.App/Library/LibraryRootStore.cs` (495 lines): `UploadsRootId = "uploads"` line 41; reserved slugs line 235; `BuildRoots` line 389; the built-in roots lines 394–401. `LibraryRoot(id, name, path, kind, ReadOnly: bool)` already exists (Skill Sources uses `ReadOnly: true`) |
-| Root kinds | `src/Huddle.App/Library/LibraryRootKind.cs`: `Teams`, `Agents`, `Pinned`, `Uploads`, `SkillSources` |
-| Uploads options | `src/Huddle.App/Library/LibraryOptions.cs` line 60 (`Uploads`); `Library/LibraryUploadsOptions.cs` (`Dir = "Uploads"`) |
+| Library roots | `src/Huddle.App/Library/LibraryRootStore.cs` (R1): `RawRootId = "raw"` line 41, `ArchiveRootId = "archive"` line 42, `PromptsRootId = "prompts"` line 43; reserved slugs line 239; `BuildRoots` from line ~398; `archive` is `ReadOnly: true`. `LibraryRoot(id, name, path, kind, ReadOnly: bool)` already exists (Skill Sources uses `ReadOnly: true`) |
+| Root kinds | `src/Huddle.App/Library/LibraryRootKind.cs`: `Teams`, `Agents`, `Pinned`, `Raw`, `SkillSources`, `Archive`, `Prompts` (R1) |
+| Library options (R1) | `src/Huddle.App/Library/LibraryOptions.cs` lines 60–66: `Raw`, `Archive`, `Prompts` (`LibraryRawOptions`, `LibraryArchiveOptions`, `LibraryPromptsOptions`, each with `Dir`). `TeamOptions.cs` also has `AgentsMd` line 46, `Outputs` line 49, `SecondBrain` line 52 |
 | Chat upload save | `src/Huddle.App/Uploads/ChatUploadService.cs` `SaveAsync` lines 32–55: `folders.For(room)`, expects 1 candidate for a root Room and 2 for a Team Room, saves into `candidates[^1]` via `LibraryFileService.CreateFromStreamAsync` |
-| Room upload folders | `src/Huddle.App/Uploads/RoomUploadFolders.cs` (78 lines): `For(Room)` line 16, `CountFiles` line 37, `RecycleAsync` line 59 |
-| Task upload folder | `src/Huddle.App/Uploads/TaskUploadFolders.cs` (34 lines): `For(string taskId)` resolves `uploads:/Tasks/<ID>` |
+| Room upload folders | `src/Huddle.App/Uploads/RoomUploadFolders.cs` (R1): `RawRootId = "raw"` line 12; `For(Room)` line 15 already resolves `raw:/<roomId>` and `teams:/<Team>/raw/<roomId>`; `CountFiles` and `RecycleAsync` follow. The `<param>` comment on line 8 still says `Uploads` |
+| Task upload folder | `src/Huddle.App/Uploads/TaskUploadFolders.cs` (R1): `RawRootId = "raw"` line 16; `For(string taskId)` resolves `raw:/Tasks/<ID>` (the Team move is Task 20). Its `///` comments still say `Uploads` |
 | Permission handler | `src/Huddle.App/Acp/WorkDirPermissionHandler.cs` (352 lines): constructor line 70 with optional `instructionsGuard` and `teamMemoryGuard`; guards consulted at line 181 (`instructionsGuard?.RefusalFor(...) ?? teamMemoryGuard?.RefusalFor(..., personaName)`) |
 | Instructions guard | `src/Huddle.App/Acp/InstructionsWriteGuard.cs` (173 lines): `(string teamsRoot, string workDir, IPromptSource prompts, AgentPaths? agentPaths)`, `RefusalFor(ToolCallInfo)` line 29, `GuardedPlace` line 66 |
 | Team Memory guard | `src/Huddle.App/Acp/TeamMemoryWriteGuard.cs` (126 lines): `RefusalFor(ToolCallInfo, string personaName)` line 34 |
@@ -163,7 +170,7 @@ The manager keeps this section; retrospectives add to it.
 | Chief of Staff | `Builtin == BuiltinAgent.ChiefOfStaffMarker` (`"chief-of-staff"`, `src/Huddle.App/Agents/BuiltinAgent.cs` line 26), as `ListTeamsTool` line 43 checks |
 | Membership | `src/Huddle.App/Teams/ITeamMembership.cs` / `TeamMembership.cs`: `Add(team, personaName)` line 34, `Remove(team, personaName)` line 59 |
 | Persona store | `src/Huddle.App/Acp/PersonaStore.cs`: `event Action? PersonasChanged` line 176, `Teams` line 250, `Update(...)` line 409 |
-| Options | `src/Huddle.App/TeamOptions.cs`: `Instructions` line 46, `Library` line 52, `Teams` line 61; `TeamsOptions.cs` `MaxMemoryEntries = 50` line 12; `InstructionsOptions.MaxChars = 8000` |
+| Options | `src/Huddle.App/TeamOptions.cs`: `Instructions` line 46, `Library` line 52, `Teams` line 61; `TeamsOptions.cs` `MaxMemoryEntries = 50` line 12 and `MaxHuddleMemoryEntries = 30` line 15 (R1); `InstructionsOptions.MaxChars = 8000` |
 | SQLite store pattern | `src/Huddle.App/Data/CadenceStateStore.cs` line 14 (synchronous, `CREATE TABLE IF NOT EXISTS`) |
 | Reconciler | `src/Huddle.App/Teams/TeamRoomReconciler.cs` line 16 (archives a vanished Team's Rooms, restores them on return) |
 | Goldens today | `tests/Huddle.Tests.Hosted/Acp/Golden/`: `systemPrompt.txt`, `systemPrompt.managerProcess.txt`, `systemPrompt.memberProcess.txt`, `systemPrompt.hiredMember.txt`, `systemPrompt.memory.txt`, `getHelp.txt` and others |
@@ -367,20 +374,21 @@ their required placeholders, not their prose.
 
 > 🔁 **Retrospective 1** runs here (after task #15, at this pair boundary).
 
-### Task 17 — 2.4.t Room uploads land in `raw/` [Sonnet]
+### Task 17 — 2.4.t Room uploads land in `raw/` (guard test) [Haiku]
 
 - **Goal:** Pin SB-R03 (Spec §6.1).
 - **Read first:** `src/Huddle.App/Uploads/RoomUploadFolders.cs` (78 lines); `Uploads/ChatUploadService.cs` lines 17–55; an existing upload test (`grep -rln "ChatUploadService" tests/`).
 - **Risk:** `logic`.
 - **Deliverable:** `tests/Huddle.Tests.Rooms/Uploads/RawUploadPlacementTests.cs`: a root Room's upload is saved under `{DataDir}/Raw/<roomId>/`; a Team Room's (`room.Team == "Home"`) under `Teams/Home/raw/<roomId>/`; `RoomUploadFolders.For(room)` returns the same folders in the same order as today (root candidate first, Team candidate last).
-- **Acceptance:** Red on the Team-room path (`Uploads` folder today).
+- **R1 recast:** `RoomUploadFolders.For` already resolves `raw:/<roomId>` and `teams:/<Team>/raw/<roomId>`, so this is a **guard test** and arrives green. It does not end red.
+- **Acceptance:** Green on arrival. Prove it can fail with a one-line mutation per the brief (for example, resolve `Uploads` instead of `TeamNames.RawFolder` in `For`), see it go red, restore it by inverse edit, and report both runs.
 
-### Task 18 — 2.4.i Save into `raw/` [Sonnet]
+### Task 18 — 2.4.i Save into `raw/` (comments only) [Haiku]
 
-- **Goal:** Make 2.4.t green.
+- **Goal:** Remove the stale `Uploads` wording (R1 recast; the behaviour is already in place).
 - **Read first:** the 2.4.t test; `RoomUploadFolders.cs`.
 - **Risk:** `logic`.
-- **Deliverable:** `RoomUploadFolders.For` resolves `raw:/<roomId>` and `teams:/<Team>/raw/<roomId>` (`TeamNames.RawFolder`). Update its `///` comments. `ChatUploadService` is unchanged.
+- **Deliverable:** Update the stale `Uploads` wording in `RoomUploadFolders.cs`'s `///` comments (the `<param>` on line 8 says `teams:/<Team>/Uploads/<roomId>`). No behaviour change; `ChatUploadService` is unchanged.
 - **Acceptance:** 2.4.t green; existing upload tests green (update their expected paths only).
 
 ### Task 19 — 2.5.t Task attachments under their Team [Sonnet]
@@ -396,24 +404,25 @@ their required placeholders, not their prose.
 - **Goal:** Make 2.5.t green.
 - **Read first:** the 2.5.t test; the files above; `ServiceCollectionExtensions.cs` registration of `TaskUploadFolders` (grep).
 - **Risk:** `logic`.
-- **Deliverable:** `TaskUploadFolders(LibraryPathResolver resolver, TaskStore tasks)`; `For(taskId)` looks the Task up and resolves `teams:/<Team>[/<Project>]/raw/Tasks/<ID>`. Update DI and `LibraryDocumentCollector`'s Task-label branch (lines 330–370) to read `raw/Tasks/<ID>` under a Team.
+- **Deliverable:** `TaskUploadFolders(LibraryPathResolver resolver, TaskStore tasks)`; `For(taskId)` looks the Task up and resolves `teams:/<Team>[/<Project>]/raw/Tasks/<ID>`. Update DI and `LibraryDocumentCollector`'s Task-label branch (lines 330–370) to read `raw/Tasks/<ID>` under a Team. **Cascade (R1):** the constructor changes, so run `grep -rln "new TaskUploadFolders(" src tests` and update every site in this task.
 - **Acceptance:** 2.5.t green; `TaskUpload*` and `LibraryDocumentCollector*` tests green.
 
-### Task 21 — 2.6.t `raw/` is not watched [Sonnet]
+### Task 21 — 2.6.t `raw/` is not watched (guard test) [Haiku]
 
 - **Goal:** Pin that a file in `raw/` raises no File Change, as `Uploads/` didn't (Spec §6.1).
 - **Read first:** `src/Huddle.App/FileChanges/WatchedFolderResolver.cs` lines 70–110; `FolderScanner.cs` lines 85–115; `FileChangeTracker.cs` lines 525–585.
 - **Risk:** `logic`.
 - **Deliverable:** `tests/Huddle.Tests.Library/FileChanges/RawNotWatchedTests.cs`: watching `Teams/Home` reports a change in `Teams/Home/outputs/a.md` but not `Teams/Home/raw/r1/a.pdf`; watching the Raw root is refused with the existing reason text; neighbour: `Teams/Home/notes.md` is reported.
-- **Acceptance:** Red on the `raw` rows.
+- **R1 recast:** the three FileChanges files already use `TeamNames.RawFolder` and `Library.Raw.Dir`; only the private `IsTeamUploads` helpers keep the old name. This is a **guard test** and arrives green.
+- **Acceptance:** Green on arrival. Prove it can fail with a one-line mutation per the brief (for example, make `WatchedFolderResolver` stop pruning `raw`), see it go red, restore it by inverse edit, and report both runs.
 
-### Task 22 — 2.6.i Prune `raw` [Sonnet]
+### Task 22 — 2.6.i Prune `raw` (rename only) [Haiku]
 
-- **Goal:** Make 2.6.t green.
-- **Read first:** the 2.6.t test; the three ranges above.
+- **Goal:** Remove the stale `Uploads` names (R1 recast; the behaviour is already in place).
+- **Read first:** `grep -rn "IsTeamUploads" src/Huddle.App/FileChanges` (`FolderScanner.cs` and `WatchedFolderResolver.cs`).
 - **Risk:** `logic`.
-- **Deliverable:** Replace the `Uploads`/`TeamNames.UploadsFolder` checks in the three files with `TeamNames.RawFolder` and the Raw root (`options.Value.Library.Raw.Dir`). Rename private helpers `IsTeamUploads` → `IsTeamRaw`.
-- **Acceptance:** 2.6.t green; `FileChange*` tests green.
+- **Deliverable:** Rename the private helpers `IsTeamUploads` → `IsTeamRaw` and fix stale `Uploads` comments in the FileChanges files. No behaviour change.
+- **Acceptance:** 2.6.t still green; `FileChange*` tests green.
 
 ---
 
@@ -466,7 +475,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 3.3.t green.
 - **Read first:** the 3.3.t test; the two services.
 - **Risk:** `logic`.
-- **Deliverable:** Both services take `RawBaselineStore` and, after a successful save, call `Record(relativeToDataDir, new FileInfo(path).Length, File.GetLastWriteTimeUtc(path))`. A recording failure is logged and never fails the upload.
+- **Deliverable:** Both services take `RawBaselineStore` and, after a successful save, call `Record(relativeToDataDir, new FileInfo(path).Length, File.GetLastWriteTimeUtc(path))`. A recording failure is logged and never fails the upload. **Cascade (R1):** the upload service constructors change; `Conversation/second-brain/corrections-3.2-3.3.md` lists the six construction sites to update, and `grep -rln "new ChatUploadService(\|new TaskUploadService(" src tests` must show no stale call.
 - **Acceptance:** 3.3.t green; upload tests green.
 
 ---
@@ -506,7 +515,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 4.2.t green.
 - **Read first:** the 4.2.t test; the seeder files above and `grep -rn "Uploads\|Process.md\|Instructions.md" src/Huddle.Seeder`.
 - **Risk:** `logic`.
-- **Deliverable:** Seed `raw/` instead of `Uploads/` (Room and Task attachments per Spec §7.1); create the three folders per Team and Project; stop writing `Instructions.md` (its text moves to `AGENTS.md` in Task 52). Leave `Process.md` writing to Task 52.
+- **Deliverable:** Seed `raw/` instead of `Uploads/` (Room and Task attachments per Spec §7.1); create the three folders per Team and Project; stop writing `Instructions.md` (its text moves to `AGENTS.md` in Task 52). Leave `Process.md` writing to Task 52. **Cascade (R1):** the seeder's output layout changes; run `Find-PinnedTests.ps1 -Pattern "Uploads|Instructions\.md"` and update `SeedRefreshTests` and every other test it lists in this task.
 - **Acceptance:** 4.2.t green except the `Process.md` row, which is marked `[Fact(Skip = "Task 52")]` with that reason.
 
 ---
@@ -593,9 +602,10 @@ their required placeholders, not their prose.
 - **Read first:** the 5.5.t tests; `SystemPromptComposer.cs` lines 210–275, 326–362; `DotAcpPersonaHost.cs` lines 262–310; `PromptCatalog` definitions `systemPrompt.instructions*` (grep).
 - **Risk:** `logic`.
 - **Deliverable:** Replace `InstructionsSnapshot? instructions` with `AgentsMdSnapshot? agentsMd` in `Compose`; `AddAgentsMdPart` renders T8 (new Prompt `systemPrompt.agentsMdLevels`) then each section under a heading `## <Huddle-wide|Team A|Project A/Alpha> (<path>)`. Remove Prompts `systemPrompt.instructions`, `systemPrompt.instructionsSection`, `systemPrompt.instructionsCut` only if `AgentsMdReader` no longer renders them (it reuses the cut Prompt: rename it `systemPrompt.agentsMdCut`), and rename `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` with T5. `DotAcpPersonaHost.ReadInstructions` becomes `ReadAgentsMd` calling `AgentsMdReader.Read(teamsRoot, teamNames)`; `SessionPromptSources` holds `AgentsMdReader` instead of `InstructionsReader`; delete `InstructionsReader.cs`, `InstructionsSnapshot.cs`, `InstructionsSection.cs` and their tests. Regenerate Prompt defaults; reseed only the goldens this changes.
+- **Cascade (R1):** the `Compose` signature changes. Run `grep -rln "InstructionsSnapshot" src tests` and update every caller and test in this task, and regenerate the goldens under `tests/Huddle.Tests.Hosted/Acp/Golden/` that carry the Instructions block.
 - **Acceptance:** 5.5.t green; full suite green.
 
-### Task 43 — 5.6.t The Agent level is gone [Haiku]
+### Task 43 — 5.6.t The Agent level is gone [Sonnet]
 
 - **Goal:** Pin SB-R10: `Agents/<Name>/work/Instructions.md` never reaches the prompt (Spec §6.2, D-9).
 - **Read first:** `AgentsMdCompositionTests` (5.5.t); `DotAcpPersonaHost.cs` lines 295–312.
@@ -603,7 +613,7 @@ their required placeholders, not their prose.
 - **Deliverable:** Add a row: with `work/Instructions.md` holding "ZEBRA", the composed prompt does not contain "ZEBRA".
 - **Acceptance:** Green already if 5.5.i removed the Agent level; if green, record it as a guard test (the manager accepts a green `.t` here with a note); if red, 5.6.i fixes it.
 
-### Task 44 — 5.6.i Remove any Agent-level read [Haiku]
+### Task 44 — 5.6.i Remove any Agent-level read [Sonnet]
 
 - **Goal:** Make 5.6.t green if it was red.
 - **Read first:** the 5.6.t row; `DotAcpPersonaHost.cs`.
@@ -1481,7 +1491,7 @@ their required placeholders, not their prose.
 
 | # | After task | Date | Main findings | Plan changes |
 | --- | --- | --- | --- | --- |
-| 1 | #15 | | | |
+| 1 | #15 | 2026-11-02 | Tasks 1–16 done. About 26M subagent tokens for 16 tasks, roughly 70% of it the 71K inherited baseline of general-purpose agents. The frozen-test hook never fired (`$(</dev/stdin)` fails in the harness). Heredoc and `WriteAllText` edits bypassed the hooks. Two stale-test cascades (renames that existing tests pinned). | Implementers switch to a tool-limited agent type. Frozen-test hook fixed, fail-closed, with test cases. Hook extended to heredoc and `WriteAllText` writes. Dispatch rule 12 (cascades). Tasks 17–18 and 21–22 recast as guard test plus comment or rename, tagged Haiku. Tasks 43–44 retagged Sonnet. Cascade greps added to Tasks 20, 28, 32 and 42. New scripts `Find-PinnedTests.ps1` and `Rerun-Failed.ps1`. Delivery facts refreshed. |
 | 2 | #30 | | | |
 | 3 | #45 | | | |
 | 4 | #60 | | | |
