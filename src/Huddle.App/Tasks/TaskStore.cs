@@ -59,6 +59,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private volatile TaskSnapshot index;
     private bool disposed;
     private readonly string archiveRoot;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<TaskId, TaskItem> archivedFound = new();
 
     // Set by OnWatcherError, under writeGate, and consumed (and reset) by the next RebuildFromWatcher
     // - so the rebuild that follows a dropped-event buffer overflow always raises IndexChanged, even
@@ -194,7 +195,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             }
 
             this.RefuseIfPaused(location.Team);
-            this.RefuseIfTeamFolderMissing(location.Team);
+            this.RefuseIfTeamFolderMissing(location.Team, location.Project);
             if (File.Exists(path))
             {
                 return null;
@@ -347,7 +348,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
             this.RefuseIfPaused(task.Location.Team);
             this.RefuseIfPaused(canonicalTo.Team);
-            this.RefuseIfTeamFolderMissing(canonicalTo.Team);
+            this.RefuseIfTeamFolderMissing(canonicalTo.Team, canonicalTo.Project);
             string? diskVersion = ReadDiskVersion(task.Path);
             if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
             {
@@ -402,8 +403,20 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// folder an archive move took away. A Team the store has never seen is not refused: its first Task creates the folder.
     /// </summary>
     /// <param name="team">The Team a write is for.</param>
-    private void RefuseIfTeamFolderMissing(string team)
+    /// <param name="project">
+    /// The Project it is for, or <see langword="null"/> for the Team's own Tasks. It is refused too when it exists only under
+    /// <c>Archive/{Team}/</c>: a write would re-create <c>Teams/{Team}/{Project}</c> beside its archived copy.
+    /// </param>
+    private void RefuseIfTeamFolderMissing(string team, string? project)
     {
+        if (project is { Length: > 0 }
+            && !Directory.Exists(Path.Combine(this.RootDirectory, team, project))
+            && Directory.Exists(Path.Combine(this.archiveRoot, team, project)))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Tasks of {team}/{project} can't be written: the Project is archived. Unarchive it to add Tasks."));
+        }
+
         bool known = this.Teams.Any(folder => string.Equals(folder.Name, team, StringComparison.OrdinalIgnoreCase));
         if (known && !Directory.Exists(Path.Combine(this.RootDirectory, team)))
         {
@@ -523,7 +536,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 foreach ((TaskItem task, string _, string _) in writes)
                 {
                     this.RefuseIfPaused(task.Location.Team);
-                    this.RefuseIfTeamFolderMissing(task.Location.Team);
+                    this.RefuseIfTeamFolderMissing(task.Location.Team, task.Location.Project);
                 }
 
                 TaskSnapshot snapshot = this.index;
@@ -1059,6 +1072,28 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="id">The Task id to look up.</param>
     /// <returns>The parsed Task with its <c>Archive/</c> path, or <see langword="null"/> when no archived Team holds it.</returns>
     internal TaskItem? FindArchived(TaskId id)
+    {
+        if (this.archivedFound.TryGetValue(id, out TaskItem? cached))
+        {
+            return cached;
+        }
+
+        TaskItem? found = this.ScanArchive(id);
+        if (found is not null)
+        {
+            this.archivedFound[id] = found;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Forgets the archived Task ids <see cref="FindArchived"/> remembered (Spec 8.5): the archive service calls it after
+    /// every archive or unarchive, the only operations that change what the Archive holds.
+    /// </summary>
+    internal void ArchiveChanged() => this.archivedFound.Clear();
+
+    private TaskItem? ScanArchive(TaskId id)
     {
         if (!Directory.Exists(this.archiveRoot))
         {

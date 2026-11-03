@@ -69,6 +69,22 @@ public sealed class ArchivedTaskLookupTests
         Assert.Null(reopened.FindArchived(Id("HOME-0001")));
     }
 
+    /// <summary>A found id is remembered until the next archive operation (Spec 8.5): the second lookup needs no disk, and <c>ArchiveChanged</c> makes the next one look again.</summary>
+    [Fact]
+    public void FindArchived_FoundId_CachedUntilArchiveChanged()
+    {
+        using ArchivedTaskFixture fixture = new();
+        Assert.NotNull(fixture.Store.FindArchived(Id("HOME-0001")));
+        File.Delete(Path.Combine(fixture.Dir.Path, Path.Combine(ArchivedIdSegments)));
+
+        TaskItem? cached = fixture.Store.FindArchived(Id("HOME-0001"));
+        fixture.Store.ArchiveChanged();
+        TaskItem? afterChange = fixture.Store.FindArchived(Id("HOME-0001"));
+
+        Assert.NotNull(cached); // The file is gone, so only the cache can answer.
+        Assert.Null(afterChange);
+    }
+
     /// <summary>The read lookup a tool uses (get_task) returns the archived Task.</summary>
     [Fact]
     public void TryResolveForRead_ArchivedId_ReturnsTask()

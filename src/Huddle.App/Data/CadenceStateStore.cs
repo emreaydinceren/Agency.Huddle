@@ -79,6 +79,19 @@ public sealed class CadenceStateStore
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Forgets the stored state of a Team, so its next tick baselines at that moment instead of catching up.</summary>
+    /// <param name="team">The Team's name.</param>
+    public void Remove(string team)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM cadence_state WHERE team = $team;";
+        _ = command.Parameters.AddWithValue("$team", team);
+        _ = command.ExecuteNonQuery();
+    }
+
     private static object FormatTime(DateTimeOffset? time) =>
         time is { } value ? value.UtcDateTime.ToString("O", CultureInfo.InvariantCulture) : DBNull.Value;
 

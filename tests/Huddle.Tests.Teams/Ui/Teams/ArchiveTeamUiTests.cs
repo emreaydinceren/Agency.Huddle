@@ -1,5 +1,6 @@
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -102,6 +103,40 @@ public sealed class ArchiveTeamUiTests
         await cut.InvokeAsync(() => DialogButton(cut, "Archive").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(["Home"], archive.Archived));
+    }
+
+    /// <summary>After the Team is archived the page leaves its own (now archived) Team page for Home.</summary>
+    [Fact]
+    public async Task ConfirmArchive_Success_NavigatesAwayFromTheTeamPage()
+    {
+        await using MudBunitContext ctx = NewDetailsContext(new FakeArchiveService());
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/teams/Home/details");
+        IRenderedComponent<ContainerFragment> cut = RenderDetails(ctx);
+        await ClickArchiveAsync(cut);
+
+        await cut.InvokeAsync(() => DialogButton(cut, "Archive").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("http://localhost/", navigation.Uri));
+    }
+
+    /// <summary>A refused archive shows the reason as a warning snackbar and stays on the Team page.</summary>
+    [Fact]
+    public async Task ConfirmArchive_Refused_ShowsTheReasonAndStays()
+    {
+        FakeArchiveService archive = new() { ArchiveOutcome = new ArchiveOutcome(false, "Home has files open in another program. Close them and try again.") };
+        await using MudBunitContext ctx = NewDetailsContext(archive);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/teams/Home/details");
+        IRenderedComponent<ContainerFragment> cut = RenderDetails(ctx);
+        ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
+        await ClickArchiveAsync(cut);
+
+        await cut.InvokeAsync(() => DialogButton(cut, "Archive").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("Home has files open in another program. Close them and try again.", Assert.Single(snackbar.ShownSnackbars).Message));
+        Assert.Equal(Severity.Warning, snackbar.ShownSnackbars.Single().Severity);
+        Assert.Equal("http://localhost/teams/Home/details", navigation.Uri);
     }
 
     /// <summary>An archived Team is a row under the sidebar's Archived Teams group with an Unarchive button; with none archived the group is absent.</summary>
@@ -326,6 +361,9 @@ public sealed class ArchiveTeamUiTests
         /// <summary>What <see cref="Confirm"/> returns.</summary>
         public ArchiveConfirmation Confirmation { get; init; } = new(0, 0, []);
 
+        /// <summary>What <see cref="ArchiveTeamAsync"/> returns.</summary>
+        public ArchiveOutcome ArchiveOutcome { get; init; } = new(true, null);
+
         /// <summary>What <see cref="UnarchiveTeamAsync"/> returns; a success removes the Team from <see cref="ArchivedTeamNames"/>.</summary>
         public ArchiveOutcome UnarchiveOutcome { get; init; } = new(true, null);
 
@@ -361,7 +399,7 @@ public sealed class ArchiveTeamUiTests
         public Task<ArchiveOutcome> ArchiveTeamAsync(string team, CancellationToken ct)
         {
             this.Archived.Add(team);
-            return Task.FromResult(new ArchiveOutcome(true, null));
+            return Task.FromResult(this.ArchiveOutcome);
         }
 
         /// <inheritdoc />

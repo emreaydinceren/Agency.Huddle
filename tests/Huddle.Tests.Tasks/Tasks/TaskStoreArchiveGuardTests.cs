@@ -31,6 +31,81 @@ public sealed class TaskStoreArchiveGuardTests
         Assert.False(Directory.Exists(Path.Combine(root, "Home")));
     }
 
+    /// <summary>A Create into a Project that sits in <c>Archive/Home/Alpha</c> (and not in <c>Teams/Home</c>) is refused and no live Project folder appears.</summary>
+    [Fact]
+    public void Create_ArchivedProject_RefusedAndNoFolderCreated()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Home"));
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Archive", "Home", "Alpha"));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        TaskItem candidate = TestTasks.Make(id: "HOME-0002", location: new("Home", "Alpha", false), path: "");
+
+        InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => store.Create(candidate, TaskFileFormat.Compose(candidate)));
+
+        Assert.Equal("Tasks of Home/Alpha can't be written: the Project is archived. Unarchive it to add Tasks.", refusal.Message);
+        Assert.False(Directory.Exists(Path.Combine(root, "Home", "Alpha")));
+    }
+
+    /// <summary>A Move into an archived Project is refused, the Task stays where it was and no live Project folder appears.</summary>
+    [Fact]
+    public void Move_IntoArchivedProject_RefusedAndTaskStays()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Home", "_tasks", "HOME-0001.md"), TestTasks.Make(id: "HOME-0001", location: new("Home", null, false)));
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Archive", "Home", "Alpha"));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("HOME-0001", out TaskId id);
+        TaskItem current = Assert.IsType<TaskItem>(store.Get(id));
+        string version = TaskFileFormat.Compose(current);
+
+        _ = Assert.Throws<InvalidOperationException>(() => store.Move(current, version, new("Home", "Alpha", false), version));
+
+        Assert.True(File.Exists(current.Path));
+        Assert.False(Directory.Exists(Path.Combine(root, "Home", "Alpha")));
+    }
+
+    /// <summary>A batch write for a Task whose Project was archived after it was indexed is refused and no live Project folder is re-created.</summary>
+    [Fact]
+    public void WriteMany_ArchivedProject_RefusedAndNoFolderCreated()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Home", "Alpha", "_tasks", "HOME-0001.md"), TestTasks.Make(id: "HOME-0001", title: "v0", location: new("Home", "Alpha", false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("HOME-0001", out TaskId id);
+        TaskItem current = Assert.IsType<TaskItem>(store.Get(id));
+        string version = TaskFileFormat.Compose(current);
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Archive", "Home"));
+        Directory.Move(Path.Combine(root, "Home", "Alpha"), Path.Combine(dir.Path, "Archive", "Home", "Alpha"));
+
+        _ = Assert.Throws<InvalidOperationException>(() => store.WriteMany([(current, version, version.Replace("v0", "v1", StringComparison.Ordinal))]));
+
+        Assert.False(Directory.Exists(Path.Combine(root, "Home", "Alpha")));
+    }
+
+    /// <summary>A Project that is live in <c>Teams/Home</c> and also archived under the same name is not refused: only a Project that exists in the archive alone is archived.</summary>
+    [Fact]
+    public void Create_ProjectLiveAndArchived_Succeeds()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Home", "Alpha"));
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Archive", "Home", "Alpha"));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        TaskItem candidate = TestTasks.Make(id: "HOME-0001", location: new("Home", "Alpha", false), path: "");
+
+        TaskItem? written = store.Create(candidate, TaskFileFormat.Compose(candidate));
+
+        Assert.NotNull(written);
+    }
+
     /// <summary>While a Team's writes are paused a Create for it is refused; after the scope is disposed the same Create succeeds.</summary>
     [Fact]
     public void Create_WhilePaused_RefusedThenWorksAfterDispose()

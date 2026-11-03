@@ -85,7 +85,14 @@ internal sealed partial class ArchiveService
             _ = this.folders.RunExclusive(
                 () =>
                 {
-                    ArchiveMove.Recover(Path.Combine(archiveRoot, team), Path.Combine(teamsRoot, live), this.files);
+                    string archivedFolder = Path.Combine(archiveRoot, team);
+                    ArchiveMove.Recover(archivedFolder, Path.Combine(teamsRoot, live), this.files);
+                    if (!this.files.FileExists(Path.Combine(archivedFolder, TeamPaths.TeamFileName)))
+                    {
+                        // A Project move that never placed anything leaves an empty Archive folder with no _team.md.
+                        this.files.DeleteEmptyFolder(archivedFolder);
+                    }
+
                     return true;
                 });
         }
@@ -163,7 +170,7 @@ internal sealed partial class ArchiveService
     private string? RunProjectMove(string team, string source, string destination, bool archiving)
     {
         string prefix = archiving ? ArchiveMove.ArchivingPrefix : ArchiveMove.UnarchivingPrefix;
-        using IDisposable pause = this.tasks.PauseWrites(team);
+        using IDisposable pause = this.PauseTasks(team);
         ArchiveMoveResult moved;
         try
         {

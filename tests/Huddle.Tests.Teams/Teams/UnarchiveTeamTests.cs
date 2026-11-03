@@ -189,6 +189,40 @@ public sealed class UnarchiveTeamTests
         Assert.Equal(calls, f.Membership.Calls.Count);
     }
 
+    /// <summary>Spec 6.7 (ADR-0042): the cadence marks from before the archive are forgotten on unarchive, so the next tick baselines at now instead of catching up.</summary>
+    [Fact]
+    public async Task UnarchiveTeamAsync_Success_ForgetsTheCadenceState()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ArchiveTeamTests.Fixture f = await ArchiveTeamTests.Fixture.CreateAsync(labelOnly: false, ct);
+        DateTimeOffset old = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        f.Cadences.Set(new CadenceState(Home, old, old, 3));
+        _ = await f.Service.ArchiveTeamAsync(Home, ct);
+        ForgetHome(f);
+        Assert.NotNull(f.Cadences.Get(Home)); // Archiving leaves the marks alone; only the unarchive resets them.
+
+        ArchiveOutcome outcome = await f.Service.UnarchiveTeamAsync(Home, ct);
+
+        Assert.True(outcome.Done);
+        Assert.Null(f.Cadences.Get(Home));
+    }
+
+    /// <summary>T17 names the Team as the folder is spelled on disk, not as the request typed it.</summary>
+    [Fact]
+    public async Task UnarchiveTeamAsync_RequestInOtherCase_T17UsesTheOnDiskSpelling()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ArchiveTeamTests.Fixture f = await ArchiveTeamTests.Fixture.CreateAsync(labelOnly: false, ct);
+        _ = await f.Service.ArchiveTeamAsync(Home, ct);
+        ForgetHome(f);
+        Directory.CreateDirectory(f.TeamFolder);
+
+        ArchiveOutcome outcome = await f.Service.UnarchiveTeamAsync("hOME", ct);
+
+        Assert.False(outcome.Done);
+        Assert.Equal(Refused, outcome.Refusal); // "Home" is the Archive folder's spelling.
+    }
+
     /// <summary>T17 also covers a live folder spelled in another case: the check lists <c>Teams</c> and compares ignoring case.</summary>
     [Fact]
     public async Task UnarchiveTeamAsync_LiveFolderInOtherCase_RefusedWithT17()

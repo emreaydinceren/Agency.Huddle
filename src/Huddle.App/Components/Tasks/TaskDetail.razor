@@ -764,7 +764,7 @@ else if (this.loaded is { } task)
     public bool IsCreate => this.createMode;
 
     /// <summary>Whether a host that draws the footer shows it: while there are changes to save, and always for a draft, which is a change from the start.</summary>
-    public bool FooterVisible => !this.deleted && !this.archivedView &&this.loaded is not null && (this.HasPending || this.createMode);
+    public bool FooterVisible => !this.deleted && !this.archivedView && this.loaded is not null && (this.HasPending || this.createMode);
 
     /// <summary>The footer's Save label ("Save", or "Save &amp; notify {name}" for an awake or asleep assignee), as the inline row would draw it.</summary>
     public string FooterSaveLabel => this.loaded is { } task

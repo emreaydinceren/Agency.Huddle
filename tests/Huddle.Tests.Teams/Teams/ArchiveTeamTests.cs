@@ -304,6 +304,7 @@ public sealed class ArchiveTeamTests
             this.Directory = directory;
             this.Catalog = catalog;
             this.Membership = new RecordingTeamMembership();
+            this.Cadences = new CadenceStateStore(dir.Options());
             ITeamMembership membership = realMembership
                 ? new TeamMembership(personas, catalog, folders, RoleFixtures.Types(dir))
                 : this.Membership;
@@ -313,6 +314,7 @@ public sealed class ArchiveTeamTests
                 membership,
                 folders,
                 tasks,
+                this.Cadences,
                 personas,
                 directory,
                 files,
@@ -324,6 +326,9 @@ public sealed class ArchiveTeamTests
         }
 
         public ArchiveService Service { get; }
+
+        /// <summary>Gets the cadence state the service resets when a Team comes back.</summary>
+        public CadenceStateStore Cadences { get; }
 
         /// <summary>Gets the publisher the service posts to.</summary>
         public RecordingFeedPublisher Feed { get; } = new();

@@ -25,6 +25,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     private readonly ITeamMembership membership;
     private readonly ITeamFolders folders;
     private readonly TaskStore tasks;
+    private readonly CadenceStateStore cadences;
     private readonly PersonaStore personas;
     private readonly ITeamDirectory directory;
     private readonly IArchiveFileSystem files;
@@ -37,6 +38,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     /// <param name="membership">Removes the labels once the folder has moved.</param>
     /// <param name="folders">Writes <c>_team.md</c> and holds the folder gate during the move.</param>
     /// <param name="tasks">Counts the Team's open Tasks for the confirmation.</param>
+    /// <param name="cadences">Forgets a Team's digest and retro marks when it is unarchived (Spec 6.7).</param>
     /// <param name="personas">Reads each member's Team labels for the confirmation.</param>
     /// <param name="directory">Archives the Team's Rooms.</param>
     /// <param name="files">The disk operations.</param>
@@ -48,6 +50,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
         ITeamMembership membership,
         ITeamFolders folders,
         TaskStore tasks,
+        CadenceStateStore cadences,
         PersonaStore personas,
         ITeamDirectory directory,
         IArchiveFileSystem files,
@@ -59,6 +62,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
         ArgumentNullException.ThrowIfNull(membership);
         ArgumentNullException.ThrowIfNull(folders);
         ArgumentNullException.ThrowIfNull(tasks);
+        ArgumentNullException.ThrowIfNull(cadences);
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(directory);
         ArgumentNullException.ThrowIfNull(files);
@@ -70,6 +74,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
         this.membership = membership;
         this.folders = folders;
         this.tasks = tasks;
+        this.cadences = cadences;
         this.personas = personas;
         this.directory = directory;
         this.files = files;
@@ -160,12 +165,12 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
 
         if (this.Spelling(teamsRoot, archived) is not null || this.catalog.Find(request) is not null || this.catalog.Find(archived) is not null)
         {
-            return Refuse($"A Team named {request} exists now. Rename one of them first.");
+            return Refuse($"A Team named {archived} exists now. Rename one of them first.");
         }
 
         string live = Path.Combine(teamsRoot, archived);
         ArchiveMoveResult moved;
-        using IDisposable pause = this.tasks.PauseWrites(archived);
+        using IDisposable pause = this.PauseTasks(archived);
         try
         {
             moved = this.folders.RunExclusive(
@@ -196,6 +201,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
             skipped = [.. skipped.Append(file?.ArchivedManager ?? string.Empty).Distinct(StringComparer.Ordinal)];
         }
 
+        this.cadences.Remove(archived); // Cadences run from now, never caught up (Spec 6.7, ADR-0042).
         _ = this.folders.UpdateTeamFile(
             archived,
             f => f with { ArchivedMembers = [], ArchivedRooms = [], ArchivedManager = null, Manager = manager ?? f.Manager });
@@ -294,7 +300,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     /// <returns>The refusal text, or <see langword="null"/> when the folder moved.</returns>
     private string? MoveWithTasksPaused(string name, string source, string destination, TeamFile? original)
     {
-        using IDisposable pause = this.tasks.PauseWrites(name);
+        using IDisposable pause = this.PauseTasks(name);
         ArchiveMoveResult moved;
         try
         {
@@ -468,6 +474,23 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
             {
                 this.logger.LogWarning("Archived {Team}, but {Member}'s Team label could not be removed.", team, member);
             }
+        }
+    }
+
+    /// <summary>Pauses the Team's Task writes; disposing lifts the pause and tells the Task store the Archive changed.</summary>
+    /// <param name="team">The Team whose folder is being moved.</param>
+    private ArchiveChangeScope PauseTasks(string team) => new(this.tasks, this.tasks.PauseWrites(team));
+
+    /// <summary>Lifts a Task-write pause and then forgets the store's archived-Task lookups.</summary>
+    /// <param name="tasks">The Task store.</param>
+    /// <param name="pause">The pause to lift.</param>
+    private sealed class ArchiveChangeScope(TaskStore tasks, IDisposable pause) : IDisposable
+    {
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            pause.Dispose();
+            tasks.ArchiveChanged();
         }
     }
 

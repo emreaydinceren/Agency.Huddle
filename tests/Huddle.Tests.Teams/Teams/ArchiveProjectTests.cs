@@ -1,4 +1,6 @@
 using Agency.Huddle.App.SecondBrain;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Tasks;
 using Fixture = Agency.Huddle.Tests.Teams.ArchiveTeamTests.Fixture;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -153,7 +155,45 @@ public sealed class ArchiveProjectTests
 
         Assert.Equal(before, Fixture.Snapshot(live));
         Assert.Empty(f.Service.ArchivedProjects("Home"));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(f.ArchiveRoot, "Home")));
+        Assert.False(Directory.Exists(Path.Combine(f.ArchiveRoot, "Home"))); // Recovery removes the empty Archive/Home the move created.
+    }
+
+    /// <summary>A crash after the unarchive copy is placed converges at start-up: the Project is live whole, and no empty Archive/Home, dot folder or journal remains.</summary>
+    [Fact]
+    public async Task UnarchiveProject_CrashAfterPlacing_RecoversToLive()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeArchiveFileSystem fs = new(new PhysicalArchiveFileSystem()) { CrossVolume = true };
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct, files: fs);
+        string live = SeedProject(f);
+        Dictionary<string, string> before = Fixture.Snapshot(live);
+        _ = await f.Service.ArchiveProjectAsync("Home", Alpha, ct);
+        fs.CrashAfter = "Move:Alpha";
+        _ = await Assert.ThrowsAsync<SimulatedCrashException>(() => f.Service.UnarchiveProjectAsync("Home", Alpha, ct));
+        fs.CrashAfter = null;
+
+        await f.Service.RecoverAsync(ct);
+
+        Assert.Equal(before, Fixture.Snapshot(live));
+        Assert.False(Directory.Exists(Path.Combine(f.ArchiveRoot, "Home")));
+        Assert.Empty(f.Service.ArchivedProjects("Home"));
+    }
+
+    /// <summary>Archiving and unarchiving a Project tell the Task store, so an archived-Task lookup remembered across the move is not served stale.</summary>
+    [Fact]
+    public async Task UnarchiveProject_ForgetsArchivedTaskLookups()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct);
+        _ = SeedProject(f);
+        _ = TestTaskStore.WriteTask(f.TeamsRoot, TestTaskStore.RelativePath("Home", Alpha, false, "HOME-0007.md"), TestTasks.Make(id: "HOME-0007", location: new TaskLocation("Home", Alpha, false)));
+        _ = TaskId.TryParse("HOME-0007", out TaskId id);
+        _ = await f.Service.ArchiveProjectAsync("Home", Alpha, ct);
+        Assert.NotNull(f.Tasks.FindArchived(id));
+
+        _ = await f.Service.UnarchiveProjectAsync("Home", Alpha, ct);
+
+        Assert.Null(f.Tasks.FindArchived(id));
     }
 
     /// <summary>Creates <c>Teams/Home/Alpha</c> with a nested file and returns its path.</summary>

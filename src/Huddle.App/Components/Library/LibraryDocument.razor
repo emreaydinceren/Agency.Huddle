@@ -671,6 +671,12 @@
             return;
         }
 
+        if (target.Archived)
+        {
+            // A read fallback never decides a write: an archived folder is not a missing note to create.
+            return;
+        }
+
         if (this.PathResolver.TryResolve(rootId, ParentRelativePath(relativePath), out LibraryPath? parent, out _))
         {
             string name = System.IO.Path.GetFileNameWithoutExtension(relativePath);

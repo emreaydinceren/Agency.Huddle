@@ -313,8 +313,8 @@ internal sealed class LibraryRootStore
         string filePath = Path.Combine(options.Value.DataDir, FileName);
         var (pinnedFromFile, hidden, loadError) = ReadFile(filePath, logger);
         IReadOnlyList<(string Name, string Path)> source = ToSource(options, pinnedFromFile);
-        var (roots, workspaceIds) = BuildRoots(options, paths, source, logger, skillSourcesDir, teams?.Teams ?? []);
-        return new Snapshot(roots, hidden, pinnedFromFile, loadError, workspaceIds);
+        List<LibraryRoot> roots = BuildRoots(options, paths, source, logger, skillSourcesDir, teams?.Teams ?? []);
+        return new Snapshot(roots, hidden, pinnedFromFile, loadError);
     }
 
     /// <summary>Parses <paramref name="filePath"/>, if it exists. A missing file is the normal first-run case, not an error.</summary>
@@ -418,7 +418,7 @@ internal sealed class LibraryRootStore
         return string.IsNullOrWhiteSpace(options.Value.SkillSourcesDir) ? Path.Combine(dataDir, "SkillSources") : Path.GetFullPath(options.Value.SkillSourcesDir, dataDir);
     }
 
-    private static (List<LibraryRoot> Roots, HashSet<string> WorkspaceIds) BuildRoots(IOptions<TeamOptions> options, AgentPaths paths, IReadOnlyList<(string Name, string Path)> pinnedSource, ILogger logger, string skillSourcesDir, IReadOnlyList<TeamSummary> teams)
+    private static List<LibraryRoot> BuildRoots(IOptions<TeamOptions> options, AgentPaths paths, IReadOnlyList<(string Name, string Path)> pinnedSource, ILogger logger, string skillSourcesDir, IReadOnlyList<TeamSummary> teams)
     {
         string dataDir = options.Value.DataDir;
         string teamsRoot = TrimTrailingSeparator(Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir)));
@@ -462,18 +462,16 @@ internal sealed class LibraryRootStore
             roots.Add(new LibraryRoot(slug, name, resolved, LibraryRootKind.Pinned));
         }
 
-        HashSet<string> workspaceIds = AddWorkspaceRoots(roots, teams, takenSlugs);
-        return (roots, workspaceIds);
+        AddWorkspaceRoots(roots, teams, takenSlugs);
+        return roots;
     }
 
     /// <summary>
     /// Adds one writable <c>workspace-{team}</c> root, named "{Team} workspace", for each Team whose workspace folder can be read.
     /// An unreadable or absent workspace adds none (D-39); the Team page shows the warning.
     /// </summary>
-    /// <returns>The ids of the roots added, so <see cref="Snapshot.Pinned"/> can leave them out.</returns>
-    private static HashSet<string> AddWorkspaceRoots(List<LibraryRoot> roots, IReadOnlyList<TeamSummary> teams, List<string> takenSlugs)
+    private static void AddWorkspaceRoots(List<LibraryRoot> roots, IReadOnlyList<TeamSummary> teams, List<string> takenSlugs)
     {
-        HashSet<string> workspaceIds = new(StringComparer.Ordinal);
         foreach (TeamSummary team in teams)
         {
             if (string.IsNullOrWhiteSpace(team.Workspace) || WorkspaceProbe.StateOf(team.Workspace) == WorkspaceState.Unreadable)
@@ -483,11 +481,8 @@ internal sealed class LibraryRootStore
 
             string slug = Slug("workspace-" + team.Name, takenSlugs);
             takenSlugs.Add(slug);
-            _ = workspaceIds.Add(slug);
             roots.Add(new LibraryRoot(slug, team.Name + " workspace", TrimTrailingSeparator(Path.GetFullPath(team.Workspace)), LibraryRootKind.Workspace));
         }
-
-        return workspaceIds;
     }
 
     /// <summary>Trims a single trailing directory separator, except from a drive root such as <c>E:\</c>.</summary>
@@ -538,8 +533,8 @@ internal sealed class LibraryRootStore
     private Snapshot BuildSnapshot(IReadOnlyList<PinnedRootEntry>? pinnedFromFile, IReadOnlySet<string> hidden, LibraryRootLoadError? loadError)
     {
         var source = ToSource(this.options, pinnedFromFile);
-        var (roots, workspaceIds) = BuildRoots(this.options, this.paths, source, this.logger, SkillSourcesDirOf(this.options, this.skillSources), this.teams?.Teams ?? []);
-        return new Snapshot(roots, hidden, pinnedFromFile, loadError, workspaceIds);
+        List<LibraryRoot> roots = BuildRoots(this.options, this.paths, source, this.logger, SkillSourcesDirOf(this.options, this.skillSources), this.teams?.Teams ?? []);
+        return new Snapshot(roots, hidden, pinnedFromFile, loadError);
     }
 
     /// <summary>The immutable, single-writer/many-readers state published through the <see langword="volatile"/> <see cref="current"/> field.</summary>
@@ -547,8 +542,7 @@ internal sealed class LibraryRootStore
     /// <param name="Hidden">The ids of hidden built-in roots.</param>
     /// <param name="PinnedFromFile">The pinned list as last saved, or <see langword="null"/> when no save has happened yet (still configuration-driven).</param>
     /// <param name="LoadError">Set when the on-disk file exists but could not be parsed.</param>
-    /// <param name="WorkspaceIds">The ids of the roots derived from Teams' workspaces; they are not pinned roots.</param>
-    private sealed record Snapshot(IReadOnlyList<LibraryRoot> Roots, IReadOnlySet<string> Hidden, IReadOnlyList<PinnedRootEntry>? PinnedFromFile, LibraryRootLoadError? LoadError, IReadOnlySet<string> WorkspaceIds)
+    private sealed record Snapshot(IReadOnlyList<LibraryRoot> Roots, IReadOnlySet<string> Hidden, IReadOnlyList<PinnedRootEntry>? PinnedFromFile, LibraryRootLoadError? LoadError)
     {
         public IReadOnlyList<LibraryRoot> VisibleRoots => [.. this.Roots.Where(r => !this.Hidden.Contains(r.Id))];
 
