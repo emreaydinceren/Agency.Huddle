@@ -4,7 +4,7 @@ using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>Decides whether the gates enabled in a Team's <c>Process.md</c> refuse a Task change or a merge (PR-7, Spec §Gates).</summary>
+/// <summary>Decides whether the gates enabled in a Team's <c>_team.md</c> refuse a Task change or a merge (PR-7, Spec §Gates).</summary>
 /// <param name="teams">Finds the Team.</param>
 /// <param name="folders">Locates the Team's folder and its <c>_team.md</c>.</param>
 /// <param name="types">Confirms the Team's type exists.</param>
@@ -67,13 +67,13 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(teamEvidence);
 
-        ProcessDocument? document = this.Load(team);
-        if (document is null || !document.Gates.Contains(GateId.ChecksBeforeMerge) || string.IsNullOrWhiteSpace(document.CheckCommand))
+        ProcessSettings? settings = this.Load(team);
+        if (settings is null || !settings.Gates.Contains(GateId.ChecksBeforeMerge) || string.IsNullOrWhiteSpace(settings.CheckCommand))
         {
             return null;
         }
 
-        string command = document.CheckCommand.Trim();
+        string command = settings.CheckCommand.Trim();
         EvidenceLine? latest = teamEvidence
             .Where(line => line.ExitCode is not null && string.Equals(line.Command.Trim(), command, StringComparison.Ordinal))
             .OrderBy(static line => line.Time)
@@ -83,9 +83,9 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             : new GateRefusal(GateId.ChecksBeforeMerge, $"Gate checks-before-merge: an Evidence line with exit code 0 for '{command}' is needed before merging or pushing.");
     }
 
-    /// <summary>Lists the gates the Team's <c>Process.md</c> enables.</summary>
+    /// <summary>Lists the gates the Team's <c>_team.md</c> enables.</summary>
     /// <param name="team">The Team name.</param>
-    /// <returns>The gates in file order; empty when the Team has no process file or no known team type.</returns>
+    /// <returns>The gates in file order; empty when the Team has no <c>_team.md</c> or no known team type.</returns>
     public IReadOnlyList<GateId> EnabledGates(string team)
     {
         ArgumentNullException.ThrowIfNull(team);
@@ -121,22 +121,24 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
     /// <summary>The Team's parsed Process, for the Proof builder.</summary>
     /// <param name="team">The Team name.</param>
     /// <returns>The Process document, or <see langword="null"/> when the Team or its Process is unknown.</returns>
-    internal ProcessDocument? ProcessOf(string team) => this.Load(team);
-
-    private ProcessDocument? Load(string team)
+    internal ProcessDocument? ProcessOf(string team)
     {
-        if (teams.Find(team) is null)
-        {
-            return null;
-        }
-
-        TeamFile? file = folders.ReadTeamFile(team);
-        if (file is null || types.Find(file.TeamType.Id) is null)
+        if (this.Load(team) is null)
         {
             return null;
         }
 
         string? text = TeamProcessFile.Read(folders, team);
         return text is not null && ProcessDocument.TryParse(text, out ProcessDocument? document) ? document : null;
+    }
+
+    private ProcessSettings? Load(string team)
+    {
+        if (teams.Find(team) is not { } summary || summary.TeamType is not { } type || types.Find(type.Id) is null)
+        {
+            return null;
+        }
+
+        return TeamProcessFile.Settings(folders, team);
     }
 }

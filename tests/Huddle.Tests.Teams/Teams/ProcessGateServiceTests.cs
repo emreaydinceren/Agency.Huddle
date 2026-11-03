@@ -46,17 +46,16 @@ public sealed class ProcessGateServiceTests
 
     /// <summary>
     /// A <c>_team.md</c> whose retired <c>process:</c> line names another file does not move the gate off
-    /// Process.md, so the gate reads the same Process as cadence, onboarding, the role block and the Process tab (issue #312).
+    /// the Team file's own <c>gates:</c>, and the named file is never read (issue #312).
     /// </summary>
     [Fact]
-    public void EnabledGates_TeamFileNamesAnotherProcess_ReadsProcessMd()
+    public void EnabledGates_TeamFileNamesAnotherProcess_ReadsGatesFromTeamFile()
     {
         using TempDataDir dir = new();
         File.WriteAllText(Path.Combine(dir.Path, "OurWay.md"), Process("'checks-before-merge'"));
         ProcessGateService service = Build(
             dir,
-            Process("'qa-evidence-before-done'"),
-            teamFileText: "---\nteamType: 'web@1.2.0'\nprocess: 'OurWay.md'\n---\n");
+            "---\nteamType: 'web@1.2.0'\nprocess: 'OurWay.md'\ngates: ['qa-evidence-before-done']\n---\n");
 
         Assert.Equal([GateId.QaEvidenceBeforeDone], service.EnabledGates(Team));
     }
@@ -283,7 +282,7 @@ public sealed class ProcessGateServiceTests
     }
 
     private static string Process(string gates) =>
-        $"---\ntitle: 'Flow'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n# Flow\n";
+        $"---\nteamType: 'web@1.2.0'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n";
 
     private static EvidenceLine Line(string author, string command, int exitCode, int minutes = 0) =>
         new(Noon.AddMinutes(minutes), author, command, exitCode, null, null, $"{author} | {command}");
@@ -297,13 +296,8 @@ public sealed class ProcessGateServiceTests
         string? actor = null) =>
         new(Team, new TaskId("TASK", 1), from, to, isBug, parentSpecApproved, evidence ?? [], Covers, actor);
 
-    private static ProcessGateService Build(TempDataDir dir, string? processText, string typeId = "web", string? teamFileText = null)
+    private static ProcessGateService Build(TempDataDir dir, string? teamFileText, string typeId = "web")
     {
-        if (processText is not null)
-        {
-            File.WriteAllText(Path.Combine(dir.Path, TeamPaths.ProcessFileName), processText);
-        }
-
         VersionedRef type = new(typeId, "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
         TeamFile teamFile = teamFileText is not null && TeamFile.TryParse(teamFileText, out TeamFile? parsed)

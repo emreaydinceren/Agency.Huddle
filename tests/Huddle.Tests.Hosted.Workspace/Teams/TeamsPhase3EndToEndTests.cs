@@ -66,7 +66,7 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.Equal([true], run.Gate.Results);
         string teamFolder = Path.Combine(root.TasksDirPath, TeamName);
         Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.TeamFileName)));
-        Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.ProcessFileName)));
+        Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.AgentsMdFileName)));
         string[] roleFiles = [.. Directory.GetFiles(root.AgentsDirPath, "*.md", SearchOption.AllDirectories).Where(static path => File.ReadAllText(path).Contains("_role:", StringComparison.Ordinal))];
         Assert.Equal(cast.Cards.Count, roleFiles.Length);
         Assert.True(run.Services.GetRequiredService<ITeamFolders>().ReadTeamFile(TeamName)?.Onboarded);

@@ -13,11 +13,11 @@ namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
 /// Everything the retro proposal tests (Task 76) share: the Task harness, the Platform Team folder on disk with a
-/// <c>Process.md</c> and a <c>_team.md</c>, a room with Nova (the proposer) and the real store and service.
+/// <c>AGENTS.md</c> and a <c>_team.md</c>, a room with Nova (the proposer) and the real store and service.
 /// </summary>
 internal sealed class RetroProposalFixture : IDisposable
 {
-    /// <summary>The text of <c>Process.md</c> the fixture starts with.</summary>
+    /// <summary>The text of <c>AGENTS.md</c> the fixture starts with.</summary>
     public const string ProcessText = "# Process\n\nReview before done.\nOne PR per Task.\n";
 
     /// <summary>The text of <c>_team.md</c> the fixture starts with.</summary>
@@ -37,7 +37,7 @@ internal sealed class RetroProposalFixture : IDisposable
         this.OtherRoomId = otherRoomId;
         this.TeamFolder = Path.Combine(harness.Options.Value.DataDir, "platform-folder");
         _ = Directory.CreateDirectory(this.TeamFolder);
-        File.WriteAllText(Path.Combine(this.TeamFolder, TeamPaths.ProcessFileName), ProcessText);
+        File.WriteAllText(Path.Combine(this.TeamFolder, TeamPaths.AgentsMdFileName), ProcessText);
         File.WriteAllText(Path.Combine(this.TeamFolder, TeamPaths.TeamFileName), TeamText);
         this.Catalog = new FakeTeamCatalog
         {
@@ -99,8 +99,8 @@ internal sealed class RetroProposalFixture : IDisposable
     /// <summary>The service under test.</summary>
     public RetroProposalService Service { get; }
 
-    /// <summary>The text of Platform's <c>Process.md</c> now.</summary>
-    public string ProcessNow => File.ReadAllText(Path.Combine(this.TeamFolder, TeamPaths.ProcessFileName));
+    /// <summary>The text of Platform's <c>AGENTS.md</c> now.</summary>
+    public string ProcessNow => File.ReadAllText(Path.Combine(this.TeamFolder, TeamPaths.AgentsMdFileName));
 
     /// <summary>The text of Platform's <c>_team.md</c> now.</summary>
     public string TeamNow => File.ReadAllText(Path.Combine(this.TeamFolder, TeamPaths.TeamFileName));

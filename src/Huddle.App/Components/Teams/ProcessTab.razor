@@ -28,7 +28,7 @@
         @if (this.document is not null)
         {
             <MudStack Spacing="1" Class="my-2">
-                @foreach (GateId gate in this.document.Gates)
+                @foreach (GateId gate in this.gates)
                 {
                     GateId current = gate;
                     string id = ProcessDocument.ToId(current);
@@ -53,6 +53,7 @@
 
     private string? text;
     private ProcessDocument? document;
+    private IReadOnlyList<GateId> gates = [];
     private string? error;
     private int version;
 
@@ -73,6 +74,7 @@
         string? path = this.FilePath;
         this.text = path is not null ? TeamProcessFile.ReadText(path) : null;
         this.document = this.text is not null && ProcessDocument.TryParse(this.text, out ProcessDocument? parsed) ? parsed : null;
+        this.gates = TeamProcessFile.Settings(this.Folders, this.Team)?.Gates ?? [];
     }
 
     private void Edit()
@@ -103,13 +105,13 @@
         }
 
         this.Load();
-        string? path = this.FilePath;
-        if (path is null || this.text is null || this.document is null)
+        string? path = this.Folder is { } folder ? Path.Combine(folder.FullPath, TeamPaths.TeamFileName) : null;
+        if (path is null || this.Folders.ReadTeamFile(this.Team) is not { } file)
         {
             return;
         }
 
-        string updated = ProcessDocument.WithGates(this.text, [.. this.document.Gates.Where(existing => existing != gate)]);
+        string updated = file.WithGates([.. file.Process.Gates.Where(existing => existing != gate)]).Compose();
         string temp = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {

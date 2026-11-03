@@ -1,4 +1,5 @@
 using System.Reflection;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 
@@ -21,6 +22,26 @@ public sealed class ProcessDocumentTests
     private static string Compose(string frontmatter, string body = FullOutline) =>
         "---\n" + frontmatter + "\n---\n" + body.Replace("\r\n", "\n", StringComparison.Ordinal) + "\n";
 
+    /// <summary>Reads the frontmatter of a template or Process text into settings, as the <c>_team.md</c> reader would hold them.</summary>
+    /// <param name="text">The file text.</param>
+    /// <returns>The settings; empty when there is no closed frontmatter block.</returns>
+    private static ProcessSettings Settings(string text)
+    {
+        string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        int closing = FrontmatterFence.IsOpening(lines[0]) ? FrontmatterFence.FindClosing(lines, 1) : -1;
+        for (int index = 1; index < closing; index++)
+        {
+            int colon = lines[index].IndexOf(':', StringComparison.Ordinal);
+            if (colon > 0 && !char.IsWhiteSpace(lines[index][0]))
+            {
+                values[lines[index][..colon].Trim()] = ProcessDocument.Unquote(lines[index][(colon + 1)..]);
+            }
+        }
+
+        return ProcessSettings.Parse(values);
+    }
+
     private static ProcessDocument Parse(string text)
     {
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
@@ -37,13 +58,13 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse(text);
 
         Assert.Equal("Lightweight flow", document.Title);
-        Assert.Equal(new VersionedRef("lightweight-flow", "1.0.0"), document.Template);
-        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge], document.Gates);
-        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), document.Retro);
-        Assert.Null(document.Digest);
-        Assert.Null(document.WipLimit);
-        Assert.Null(document.CheckCommand);
-        Assert.Empty(document.UnknownGates);
+        ProcessSettings settings = Settings(text);
+        Assert.Equal("lightweight-flow@1.0.0", settings.Template);
+        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge], settings.Gates);
+        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), settings.RetroSchedule());
+        Assert.Null(settings.DigestSchedule());
+        Assert.Null(settings.Wip);
+        Assert.Null(settings.CheckCommand);
         Assert.Empty(document.MissingSections);
         Assert.Equal(text, document.Text);
     }
@@ -52,15 +73,15 @@ public sealed class ProcessDocumentTests
     [Fact]
     public void TryParse_AllFourGateIds_ParseAndRoundTrip()
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\ngates: ['qa-evidence-before-done', 'checks-before-merge', 'spec-approved-before-build', 'failing-test-before-fix']"));
+        ProcessSettings settings = Settings(Compose("title: 'T'\ngates: ['qa-evidence-before-done', 'checks-before-merge', 'spec-approved-before-build', 'failing-test-before-fix']"));
 
         Assert.Equal(
             [GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge, GateId.SpecApprovedBeforeBuild, GateId.FailingTestBeforeFix],
-            document.Gates);
+            settings.Gates);
         Assert.Equal(
             ["qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "failing-test-before-fix"],
-            document.Gates.Select(ProcessDocument.ToId).ToArray());
-        Assert.All(document.Gates, gate =>
+            settings.Gates.Select(ProcessDocument.ToId).ToArray());
+        Assert.All(settings.Gates, gate =>
         {
             Assert.True(ProcessDocument.TryParseGate(ProcessDocument.ToId(gate), out GateId parsed));
             Assert.Equal(gate, parsed);
@@ -79,31 +100,33 @@ public sealed class ProcessDocumentTests
     [Fact]
     public void TryParse_UnknownGate_IsListedNotKept()
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\ngates: ['checks-before-merge', 'deploy-on-friday', 'checks-before-merge']"));
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase) { ["gates"] = "['checks-before-merge', 'deploy-on-friday', 'checks-before-merge']" };
 
-        Assert.Equal([GateId.ChecksBeforeMerge], document.Gates);
-        Assert.Equal(["deploy-on-friday"], document.UnknownGates);
+        (List<GateId> gates, List<string> unknown) = ProcessDocument.ReadGates(values);
+
+        Assert.Equal([GateId.ChecksBeforeMerge], gates);
+        Assert.Equal(["deploy-on-friday"], unknown);
     }
 
     /// <summary>Retro and digest cadences read both units; wip and checkCommand are read too.</summary>
     [Fact]
     public void TryParse_CadencesWipAndCheckCommand_AreRead()
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\nretro: { every: 3, unit: 'days' }\ndigest: { every: 1, unit: 'days' }\nwip: 3\ncheckCommand: 'dotnet test'"));
+        ProcessSettings settings = Settings(Compose("title: 'T'\nretro: { every: 3, unit: 'days' }\ndigest: { every: 1, unit: 'days' }\nwip: 3\ncheckCommand: 'dotnet test'"));
 
-        Assert.Equal(new RetroCadence(3, CadenceUnit.Days), document.Retro);
-        Assert.Equal(new DigestCadence(1, CadenceUnit.Days), document.Digest);
-        Assert.Equal(3, document.WipLimit);
-        Assert.Equal("dotnet test", document.CheckCommand);
+        Assert.Equal(new RetroCadence(3, CadenceUnit.Days), settings.RetroSchedule());
+        Assert.Equal(new DigestCadence(1, CadenceUnit.Days), settings.DigestSchedule());
+        Assert.Equal(3, settings.Wip);
+        Assert.Equal("dotnet test", settings.CheckCommand);
     }
 
     /// <summary>A retro with the done-tasks unit parses to DoneTasks.</summary>
     [Fact]
     public void TryParse_RetroDoneTasks_ParsesUnit()
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\nretro: { every: 10, unit: 'done-tasks' }"));
+        ProcessSettings settings = Settings(Compose("title: 'T'\nretro: { every: 10, unit: 'done-tasks' }"));
 
-        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), document.Retro);
+        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), settings.RetroSchedule());
     }
 
     /// <summary>A malformed cadence, an unknown unit, a non-positive count and a non-numeric wip all read as absent.</summary>
@@ -114,9 +137,7 @@ public sealed class ProcessDocumentTests
     [InlineData("retro: 10")]
     public void TryParse_MalformedRetro_IsNull(string line)
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\n" + line));
-
-        Assert.Null(document.Retro);
+        Assert.Null(Settings(Compose("title: 'T'\n" + line)).RetroSchedule());
     }
 
     /// <summary>A wip that is not a positive integer reads as null.</summary>
@@ -125,9 +146,7 @@ public sealed class ProcessDocumentTests
     [InlineData("wip: 0")]
     public void TryParse_BadWip_IsNull(string line)
     {
-        ProcessDocument document = Parse(Compose("title: 'T'\n" + line));
-
-        Assert.Null(document.WipLimit);
+        Assert.Null(Settings(Compose("title: 'T'\n" + line)).Wip);
     }
 
     /// <summary>Headings of the PR-6 outline absent from the body are reported in outline order; the extra Onboarding section is not required.</summary>
@@ -148,7 +167,7 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse(text);
 
         Assert.Equal("Lightweight flow", document.Title);
-        Assert.Equal([GateId.ChecksBeforeMerge], document.Gates);
+        Assert.Equal([GateId.ChecksBeforeMerge], Settings(text).Gates);
         Assert.Empty(document.MissingSections);
     }
 
@@ -167,17 +186,16 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse("# Just a heading\n## Stages\n");
 
         Assert.Equal("Just a heading", document.Title);
-        Assert.Empty(document.Gates);
+        Assert.Empty(Settings("# Just a heading\n## Stages\n").Gates);
     }
 
-    /// <summary>Without a frontmatter title the first level-one heading is the title; a malformed template reads as null.</summary>
+    /// <summary>Without a frontmatter title the first level-one heading is the title.</summary>
     [Fact]
     public void TryParse_NoTitleKey_FallsBackToHeading()
     {
         ProcessDocument document = Parse(Compose("template: 'no-version'"));
 
         Assert.Equal("Lightweight flow", document.Title);
-        Assert.Null(document.Template);
     }
 
     /// <summary>All four shipped Development templates parse with the production parser, with their gates, cadences and the full outline.</summary>
@@ -200,17 +218,18 @@ public sealed class ProcessDocumentTests
         Assert.NotNull(stream);
         using StreamReader reader = new(stream);
 
-        ProcessDocument document = Parse(reader.ReadToEnd());
+        string text = reader.ReadToEnd();
+        ProcessDocument document = Parse(text);
+        ProcessSettings settings = Settings(text);
 
-        Assert.Equal(new VersionedRef(processId, "1.0.0"), document.Template);
+        Assert.Equal(processId + "@1.0.0", settings.Template);
         Assert.NotEmpty(document.Title);
-        Assert.Equal(gateCount, document.Gates.Count);
-        Assert.Empty(document.UnknownGates);
+        Assert.Equal(gateCount, settings.Gates.Count);
         Assert.Empty(document.MissingSections);
-        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), document.Retro);
-        Assert.Equal(hasDigest, document.Digest is not null);
-        Assert.Equal(wip == 0 ? null : wip, document.WipLimit);
-        Assert.Equal("dotnet test", document.CheckCommand);
+        Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), settings.RetroSchedule());
+        Assert.Equal(hasDigest, settings.DigestSchedule() is not null);
+        Assert.Equal(wip == 0 ? null : wip, settings.Wip);
+        Assert.Equal("dotnet test", settings.CheckCommand);
     }
 
     /// <summary>Each gate reads as its sentence-case display name in the Process tab and the override prompt.</summary>
@@ -240,7 +259,7 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse(text);
 
         Assert.Equal("Flow", document.Title);
-        Assert.Equal(3, document.WipLimit);
+        Assert.Equal(3, Settings(text).Wip);
         Assert.DoesNotContain("Stages", document.MissingSections);
         Assert.Equal(text, document.Text);
     }
@@ -255,29 +274,10 @@ public sealed class ProcessDocumentTests
     [InlineData("---\ntitle: 'Flow'\n....\n")]
     public void TryParse_UnclosedOrNearMiss_IsProseWithoutSettings(string text)
     {
+        ArgumentNullException.ThrowIfNull(text);
         ProcessDocument document = Parse(text);
 
         Assert.Equal(string.Empty, document.Title);
-        Assert.Empty(document.Gates);
-    }
-
-    /// <summary>Rewriting the gates of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines byte for byte and changes only the gates line.</summary>
-    /// <param name="opening">The first line.</param>
-    /// <param name="closing">The closing line.</param>
-    [Theory]
-    [InlineData("\uFEFF---", "---")]
-    [InlineData("---", "...")]
-    [InlineData("  ---  ", "  ---  ")]
-    [InlineData("\uFEFF  ---  ", "  ...  ")]
-    public void WithGates_LenientFences_KeepsBomAndFenceLines(string opening, string closing)
-    {
-        string text = opening + "\ntitle: 'Flow'\ngates: ['qa-evidence-before-done']\nwip: 2\n" + closing + "\n# Flow\n";
-        string noGatesLine = opening + "\ntitle: 'Flow'\n" + closing + "\n# Flow\n";
-
-        string replaced = ProcessDocument.WithGates(text, [GateId.ChecksBeforeMerge]);
-        string added = ProcessDocument.WithGates(noGatesLine, [GateId.ChecksBeforeMerge]);
-
-        Assert.Equal(opening + "\ntitle: 'Flow'\ngates: ['checks-before-merge']\nwip: 2\n" + closing + "\n# Flow\n", replaced);
-        Assert.Equal(opening + "\ntitle: 'Flow'\ngates: ['checks-before-merge']\n" + closing + "\n# Flow\n", added);
+        Assert.Empty(Settings(text).Gates);
     }
 }

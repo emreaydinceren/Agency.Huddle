@@ -103,15 +103,13 @@ public sealed class ProcessMergeGateTests
 
     private static ProcessMergeGate Build(TaskToolHarness harness, TempDataDir dir, string gates)
     {
-        File.WriteAllText(
-            Path.Combine(dir.Path, TeamPaths.ProcessFileName),
-            $"---\ntitle: 'Flow'\ngates: [{gates}]\ncheckCommand: 'dotnet test'\n---\n# Flow\n");
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
+        Assert.True(TeamFile.TryParse($"---\nteamType: 'web@1.2.0'\ngates: [{gates}]\ncheckCommand: 'dotnet test'\n---\n", out TeamFile? teamFile));
         FakeTeamFolders folders = new()
         {
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = new TeamFile(type, null, null, null, string.Empty),
+            ReadResult = teamFile,
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         ProcessGateService service = new(catalog, folders, RoleFixtures.Types(dir));

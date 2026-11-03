@@ -195,12 +195,11 @@ public sealed class BuiltinHouseholdTypeTests
 
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
         Assert.NotNull(document);
-        Assert.Equal(new VersionedRef("household-basics", "1.1.0"), document.Template);
         Assert.Empty(document.MissingSections);
-        Assert.Empty(document.UnknownGates);
-        Assert.Empty(document.Gates);
-        Assert.Equal(new DigestCadence(7, CadenceUnit.Days), document.Digest);
-        Assert.Equal(new RetroCadence(28, CadenceUnit.Days), document.Retro);
+        Assert.Contains("template: 'household-basics@1.1.0'", text, StringComparison.Ordinal);
+        Assert.Contains("gates: []", text, StringComparison.Ordinal);
+        Assert.Contains("digest: { every: 7, unit: 'days' }", text, StringComparison.Ordinal);
+        Assert.Contains("retro: { every: 28, unit: 'days' }", text, StringComparison.Ordinal);
     }
 
     /// <summary>The process says who does what for every role the type declares, so no hire arrives without a duty.</summary>

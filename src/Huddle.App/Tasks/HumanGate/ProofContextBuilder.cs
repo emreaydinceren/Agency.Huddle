@@ -40,7 +40,7 @@ internal sealed class ProofContextBuilder(
             .Concat(documents.SelectMany(static document => document.History.Select(static entry => entry.Actor)));
         return new ProofContext(
             process?.DefinitionOfDone ?? [],
-            process?.Gates ?? [],
+            gates.EnabledGates(team),
             TaskService.HasBugMarker(task),
             evidence,
             this.CoverageFor(names),

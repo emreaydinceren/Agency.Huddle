@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
@@ -34,6 +36,56 @@ internal sealed record ProcessSettings(
             Value(values, "digest"),
             Value(values, "checkCommand"),
             Value(values, "template"));
+    }
+
+    /// <summary>The retro cadence read from <see cref="Retro"/>.</summary>
+    /// <returns>The cadence, or <see langword="null"/> when it is absent or unreadable.</returns>
+    public RetroCadence? RetroSchedule() =>
+        ReadCadence(this.Retro, out int every, out CadenceUnit unit) ? new RetroCadence(every, unit) : null;
+
+    /// <summary>The digest cadence read from <see cref="Digest"/>.</summary>
+    /// <returns>The cadence, or <see langword="null"/> when it is absent or unreadable.</returns>
+    public DigestCadence? DigestSchedule() =>
+        ReadCadence(this.Digest, out int every, out CadenceUnit unit) ? new DigestCadence(every, unit) : null;
+
+    private static bool ReadCadence(string? raw, out int every, out CadenceUnit unit)
+    {
+        every = 0;
+        unit = default;
+        if (raw is null || !raw.StartsWith('{') || !raw.EndsWith('}'))
+        {
+            return false;
+        }
+
+        Dictionary<string, string> fields = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string pair in raw[1..^1].Split(','))
+        {
+            int colon = pair.IndexOf(':', StringComparison.Ordinal);
+            if (colon > 0)
+            {
+                fields[pair[..colon].Trim()] = ProcessDocument.Unquote(pair[(colon + 1)..]);
+            }
+        }
+
+        if (!fields.TryGetValue("every", out string? everyText)
+            || !int.TryParse(everyText, NumberStyles.None, CultureInfo.InvariantCulture, out every)
+            || every <= 0
+            || !fields.TryGetValue("unit", out string? unitText))
+        {
+            return false;
+        }
+
+        switch (unitText)
+        {
+            case "done-tasks":
+                unit = CadenceUnit.DoneTasks;
+                return true;
+            case "days":
+                unit = CadenceUnit.Days;
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static string? Value(Dictionary<string, string> values, string key) =>

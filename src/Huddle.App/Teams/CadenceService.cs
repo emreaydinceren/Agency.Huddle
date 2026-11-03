@@ -105,8 +105,10 @@ internal sealed class CadenceService(
 
     private async Task TickTeamAsync(TeamSummary team, string manager, CancellationToken ct)
     {
-        ProcessDocument? process = this.ReadProcess(team.Name);
-        if (process is null || (process.Digest is null && process.Retro is null))
+        ProcessSettings? settings = TeamProcessFile.Settings(folders, team.Name);
+        DigestCadence? digestCadence = settings?.DigestSchedule();
+        RetroCadence? retroCadence = settings?.RetroSchedule();
+        if (digestCadence is null && retroCadence is null)
         {
             return;
         }
@@ -127,8 +129,8 @@ internal sealed class CadenceService(
             state.Set(current);
         }
 
-        bool digestBaselined = process.Digest is not null && current.LastDigestUtc is null;
-        bool retroBaselined = process.Retro is not null && (current.LastRetroUtc is null || current.DoneAtLastRetro is null);
+        bool digestBaselined = digestCadence is not null && current.LastDigestUtc is null;
+        bool retroBaselined = retroCadence is not null &&(current.LastRetroUtc is null || current.DoneAtLastRetro is null);
         if (digestBaselined || retroBaselined)
         {
             current = current with
@@ -140,14 +142,14 @@ internal sealed class CadenceService(
             state.Set(current);
         }
 
-        if (!digestBaselined && process.Digest is { Unit: CadenceUnit.Days } digest
+        if (!digestBaselined && digestCadence is { Unit: CadenceUnit.Days } digest
             && current.LastDigestUtc is { } lastDigest && Elapsed(now, lastDigest, digest.Every))
         {
             string text = prompts.Render(DigestPrompt, Values(team.Name, lastDigest));
             current = await this.FireAsync(current with { LastDigestUtc = now }, current, team.Name, manager, text, ct).ConfigureAwait(false);
         }
 
-        if (!retroBaselined && process.Retro is { } retro
+        if (!retroBaselined && retroCadence is { } retro
             && current.LastRetroUtc is { } lastRetro && current.DoneAtLastRetro is { } doneAtLast
             && RetroDue(retro, now, lastRetro, Math.Max(0, done - doneAtLast)))
         {
@@ -210,10 +212,4 @@ internal sealed class CadenceService(
 
     private int CountDone(string team) =>
         tasks.All.Count(item => item.Status == TaskState.Done && string.Equals(item.Location.Team, team, StringComparison.OrdinalIgnoreCase));
-
-    private ProcessDocument? ReadProcess(string team)
-    {
-        string? text = TeamProcessFile.Read(folders, team);
-        return text is not null && ProcessDocument.TryParse(text, out ProcessDocument? document) ? document : null;
-    }
 }
