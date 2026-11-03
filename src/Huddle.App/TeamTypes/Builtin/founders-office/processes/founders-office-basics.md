@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Founder's office basics
 
+## Identity
+
+This Team runs the founder's recurring work: investor research, pitches, investor updates, the financial model and meeting prep. Work that arrives here is one deliverable for the founder at a time, with its acceptance in one line. Public content and marketing copy belong to the content Team type, and anything sent to an investor or any commitment on terms stays with the founder.
+
 ## When it applies
 
 - The founder's recurring work: fundraising research, pitches, investor updates, the model and meeting prep.

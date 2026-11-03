@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Docs team basics
 
+## Identity
+
+This Team writes, fixes and restructures the documentation that lives in a repository. Each Task covers one page or one closely related set, and a Docs Tester follows every step from a clean start before the Docs Lead posts the Evidence line. Product bugs the tester finds become separate Tasks for the `development` Team type, and articles or posts belong to the `content` Team type.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Write each step as an action the reader can follow from a clean start, and say what the reader should see once it is done.
+
 ## When it applies
 
 - Writing, fixing or restructuring documentation that lives in the repository.

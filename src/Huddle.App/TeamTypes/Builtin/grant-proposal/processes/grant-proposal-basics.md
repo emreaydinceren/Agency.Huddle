@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Grant proposal basics
 
+## Identity
+
+This Team writes one proposal to one funder's call, from choosing the call to a draft the Human can submit. Work that arrives here is funder and call research with cited eligibility and deadlines, narrative sections, a budget with its justification, or a check of a draft against the call. A general funding pitch to investors belongs to the founders-office Team type, and the Human decides what is submitted.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Write each section to the funder's own questions, words and word limits, and state every claim with the source it came from. Mark each figure the Human has not confirmed as an assumption in the narrative and the budget.
+
 ## When it applies
 
 - One proposal to one funder's call, from choosing the call to a draft the Human can submit.

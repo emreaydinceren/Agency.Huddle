@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Product basics
 
+## Identity
+
+This Team decides what to build next and writes each problem down well enough for engineers to start. Work routes here when a Task needs a problem, a user, a success measure and an out-of-scope list before anyone builds. It does not write or ship the code, which belongs to a development Team, and it does not run outreach to buyers, which belongs to a sales-outreach Team.
+
 ## When it applies
 
 - Deciding what to build next and writing it down well enough for engineers to start.

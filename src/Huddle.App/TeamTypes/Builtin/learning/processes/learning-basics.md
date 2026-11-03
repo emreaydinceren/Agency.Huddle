@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Learning basics
 
+## Identity
+
+This Team supports one learner working towards one goal: a subject, a skill, a language or an exam, at their own pace. Work that arrives here is a study plan, practice questions with answer keys, and feedback on practice answers. Graded coursework and final grades stay with the learner and their teacher, and the Team never writes graded work for the learner.
+
 ## When it applies
 
 - A learner working towards one goal: a subject, a skill, a language or an exam, at their own pace.

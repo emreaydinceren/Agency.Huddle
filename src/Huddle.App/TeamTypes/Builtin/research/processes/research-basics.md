@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Research basics
 
+## Identity
+
+This Team answers one question from sources, such as a comparison, a literature review or a background brief, with citations and a stated confidence level. Work routes here when the Human wants a question answered from evidence and the Task can say what would count as an answer. It does not make the decision the answer informs, and it does not write a finished piece for publication, which belongs to a content Team.
+
 ## When it applies
 
 - A question the Human wants answered from sources: a comparison, a literature review, a background brief.

@@ -8,6 +8,10 @@ checkCommand: 'dotnet test'
 ---
 # Maintenance
 
+## Identity
+
+This Team fixes bugs and upgrades dependencies in code that already ships, as the maintenance process of the `development` Team type. Work starts from a bug Task that states the symptom, the affected version and the expected behaviour, and a regression test must fail before any fix lands. A new feature or a change that needs a design goes to the spec-driven process, and documentation fixes go to the `docs-team` Team type.
+
 ## When it applies
 
 - Bug fixes, dependency upgrades and upkeep of code that already ships.

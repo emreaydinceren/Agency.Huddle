@@ -8,6 +8,10 @@ checkCommand: 'dotnet test'
 ---
 # Sprints
 
+## Identity
+
+This Team delivers software in fixed sprints, as the sprints process of the `development` Team type: the manager sets the goal and the scope at the start, and the scope does not change for the stretch. It suits a team that wants a daily digest and a shared view of what is in flight. Work with no fixed goal or stretch goes to the lightweight-flow process, and a change that needs an agreed spec goes to spec-driven.
+
 ## When it applies
 
 - Work that the team plans around a goal for a fixed stretch, with the scope set at the start.

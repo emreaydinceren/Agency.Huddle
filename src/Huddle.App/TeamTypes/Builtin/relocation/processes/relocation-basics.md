@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Relocation basics
 
+## Identity
+
+This Team runs one move, from the first housing search to the first week in the new place. It searches listings, compares quotes, sorts move mail and keeps the dated checklist. Work routes here when a move needs a search, a comparison or a schedule tracked with sources. It does not sign, book, pay or decide, which the Human does, and it does not run a household's ongoing paperwork, which belongs to a life-admin Team.
+
 ## When it applies
 
 - One move, from the first housing search to the first week in the new place.

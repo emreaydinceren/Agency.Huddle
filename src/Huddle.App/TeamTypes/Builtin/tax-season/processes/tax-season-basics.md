@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Tax season basics
 
+## Identity
+
+This Team gathers and cites the documents for one tax year, from the checklist to a worksheet for the accountant. Work routes here when a household or small business needs receipts, deductions or income totals sorted, with a source for each line. It does not decide what to claim or file, which the Human and their accountant decide, and it does not run a business's monthly bookkeeping, which belongs to a small-business Team.
+
 ## When it applies
 
 - One tax year for one household or small business, from the document checklist to a worksheet for the accountant.

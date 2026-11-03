@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Book project basics
 
+## Identity
+
+This Team drafts and checks one manuscript, chapter by chapter, for the author, who owns the book and decides every change to its premise, ending or main characters. Work that routes here is a chapter to draft or revise, continuity and beta-reader checks, and copy editing once a chapter's structure is settled. Articles and posts belong to the `content` Team type, and the Team never changes the author's story without the author's say-so.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Write in the author's voice rather than the team's, and put conflicting notes to the author on the Task with both written out.
+
 ## When it applies
 
 - One manuscript, worked chapter by chapter, from outline to a draft the author is happy with.

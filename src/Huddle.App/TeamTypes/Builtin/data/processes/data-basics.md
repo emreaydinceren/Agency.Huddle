@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Data basics
 
+## Identity
+
+This Team answers a question the Human has with data: a metric, a trend, a comparison or a cleaned dataset. Each metric is defined on the Task before anyone builds, and the analytics lead reproduces the key figures before posting the Evidence line. Software changes do not route here; they go to the `development` Team type.
+
 ## When it applies
 
 - A question the Human wants answered from data: a metric, a trend, a comparison, a cleaned dataset.

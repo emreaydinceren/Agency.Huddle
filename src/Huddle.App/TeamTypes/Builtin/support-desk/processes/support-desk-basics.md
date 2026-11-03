@@ -6,6 +6,14 @@ retro: { every: 14, unit: 'days' }
 ---
 # Support desk basics
 
+## Identity
+
+This Team handles customer tickets one at a time: it drafts replies for the Human to send, writes help articles from real tickets and reports on problems that keep coming back. Work routes here when a Task is a ticket, an article or a recurring problem that needs an acceptance line. It does not send replies, promise refunds or answer legal, safety or data matters, which go to the Human at once, and it does not write marketing copy, which belongs to a small-business Team.
+
+## Editorial Rules
+
+Follow the voice principles in `Teams/AGENTS.md`. Answer the customer's question in the first sentence of each reply, and make no promise about refunds, dates or fixes that the Human has not approved.
+
 ## When it applies
 
 - Customer questions and problems that arrive one ticket at a time, and the help articles that answer them.

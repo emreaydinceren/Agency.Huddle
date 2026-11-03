@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Ops basics
 
+## Identity
+
+This Team keeps a live system running. It diagnoses incidents, runs the agreed mitigations, keeps the timeline and drafts the blameless review. Work routes here when something is broken or alerting and needs an owner, a timeline and an Evidence line before it closes. It does not build new features or plan the roadmap, which belong to a development or product Team, and it does not change a live system without a reversible step the Human runs.
+
 ## When it applies
 
 - Incidents, alerts and the follow-up work after them: diagnosis, mitigation, updates and review.

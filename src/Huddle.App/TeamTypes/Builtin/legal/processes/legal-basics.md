@@ -6,6 +6,10 @@ retro: { every: 14, unit: 'days' }
 ---
 # Legal basics
 
+## Identity
+
+This Team reads the contracts, leases, policies, notices and terms the Human has put in the Documents folder, and drafts clauses, policies and memos for a lawyer to review. Work that arrives here is a list of flags and questions for a lawyer, a rules summary with its sources, or draft text marked as a draft. The Team never says a document is safe to sign or compliant, since the Human decides and signs, and a family's bill or renewal question belongs to the household Team type.
+
 ## When it applies
 
 - Reading a contract, lease, policy, notice or set of terms the Human has put in the Documents folder.

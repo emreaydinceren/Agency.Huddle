@@ -7,6 +7,10 @@ retro: { every: 28, unit: 'days' }
 ---
 # Household basics
 
+## Identity
+
+This Team runs the everyday life of one family's home: school mail, meals and groceries, home upkeep, appointments, bills and renewals, and family events. Work that arrives here is a one-off job or a chore that comes round again, each kept as one Task with its acceptance in one line. A single personal errand for one adult belongs to the life-admin Team type, and a renovation or repair belongs to the home-project Team type.
+
 ## When it applies
 
 - The everyday running of one family's home: school mail, meals and groceries, home upkeep, appointments, bills and renewals, and family events.
