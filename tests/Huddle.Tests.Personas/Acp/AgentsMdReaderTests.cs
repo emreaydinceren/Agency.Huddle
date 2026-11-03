@@ -114,4 +114,44 @@ public sealed class AgentsMdReaderTests : IDisposable
 
         Assert.Empty(snapshot.Sections);
     }
+
+    /// <summary>A leading frontmatter block is stripped from the text and reported on the section (SB-R07, D-11).</summary>
+    [Fact]
+    public void Read_Frontmatter_IsStrippedAndReported()
+    {
+        Write(this.TeamsRoot, "AGENTS.md", "---\r\nkey: v\r\n---\r\nRule one.");
+
+        AgentsMdSnapshot snapshot = Reader().Read(this.TeamsRoot, []);
+
+        AgentsMdSection section = Assert.Single(snapshot.Sections);
+        Assert.Equal("Rule one.", section.Text);
+        Assert.True(section.HadFrontmatter);
+    }
+
+    /// <summary>A file that starts with a rule line and holds a later <c>---</c> keeps all its text and reports no frontmatter.</summary>
+    [Fact]
+    public void Read_RuleThenDashes_IsNotFrontmatter()
+    {
+        Write(this.TeamsRoot, "AGENTS.md", "Rule one.\n---\n");
+
+        AgentsMdSnapshot snapshot = Reader().Read(this.TeamsRoot, []);
+
+        AgentsMdSection section = Assert.Single(snapshot.Sections);
+        Assert.Equal("Rule one.\n---\n", section.Text);
+        Assert.False(section.HadFrontmatter);
+    }
+
+    /// <summary>A file holding only a frontmatter block is absent and named in <c>Omitted</c>.</summary>
+    [Fact]
+    public void Read_FrontmatterOnly_IsAbsentAndOmitted()
+    {
+        Write(this.TeamsRoot, "AGENTS.md", "---\nkey: v\n---\n");
+
+        AgentsMdSnapshot snapshot = Reader().Read(this.TeamsRoot, []);
+
+        Assert.Empty(snapshot.Sections);
+        Assert.Equal(
+            [Path.Combine(this.TeamsRoot, "AGENTS.md") + " (settings block only)"],
+            snapshot.Omitted);
+    }
 }

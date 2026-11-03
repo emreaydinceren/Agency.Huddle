@@ -25,7 +25,8 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
         ArgumentNullException.ThrowIfNull(teamNames);
 
         List<AgentsMdSection> sections = [];
-        this.AddSection(sections, AgentsMdLevel.HuddleWide, null, null, teamsRoot);
+        List<string> omitted = [];
+        this.AddSection(sections, omitted, AgentsMdLevel.HuddleWide, null, null, teamsRoot);
 
         HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
         foreach (string team in teamNames)
@@ -36,14 +37,14 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             }
 
             string teamDir = Path.Combine(teamsRoot, team);
-            this.AddSection(sections, AgentsMdLevel.Team, team, null, teamDir);
+            this.AddSection(sections, omitted, AgentsMdLevel.Team, team, null, teamDir);
             foreach (string project in ProjectNames(teamDir))
             {
-                this.AddSection(sections, AgentsMdLevel.Project, team, project, Path.Combine(teamDir, project));
+                this.AddSection(sections, omitted, AgentsMdLevel.Project, team, project, Path.Combine(teamDir, project));
             }
         }
 
-        return new AgentsMdSnapshot(sections, []);
+        return new AgentsMdSnapshot(sections, omitted);
     }
 
     /// <summary>Lists a Team's Project folder names, minus reserved names, sorted ordinally.</summary>
@@ -74,11 +75,12 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
 
     /// <summary>Adds the level's section when its file holds any text.</summary>
     /// <param name="sections">The sections so far.</param>
+    /// <param name="omitted">The files left out with a reason.</param>
     /// <param name="level">The level.</param>
     /// <param name="team">The Team name, or <see langword="null"/> for Huddle-wide.</param>
     /// <param name="project">The Project name, or <see langword="null"/> above Project level.</param>
     /// <param name="folder">The folder that holds the level's file.</param>
-    private void AddSection(List<AgentsMdSection> sections, AgentsMdLevel level, string? team, string? project, string folder)
+    private void AddSection(List<AgentsMdSection> sections, List<string> omitted, AgentsMdLevel level, string? team, string? project, string folder)
     {
         string path = Path.Combine(folder, TeamPaths.AgentsMdFileName);
         if (!File.Exists(path))
@@ -102,7 +104,45 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             return;
         }
 
-        sections.Add(new AgentsMdSection(level, team, project, path, this.Cut(text, path), HadFrontmatter: false));
+        (string body, bool had) = StripFrontmatter(text);
+        if (had)
+        {
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Stripped the settings block from '{Path}'; settings belong in _team.md.", path);
+            }
+
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                omitted.Add(path + " (settings block only)");
+                return;
+            }
+        }
+
+        sections.Add(new AgentsMdSection(level, team, project, path, this.Cut(body, path), had));
+    }
+
+    /// <summary>Strips a leading frontmatter block: the first line is exactly <c>---</c> and a later line is too.</summary>
+    /// <param name="text">The file's whole text.</param>
+    /// <returns>The body after the closing line without leading blank lines, and whether a block was stripped.</returns>
+    private static (string Body, bool Had) StripFrontmatter(string text)
+    {
+        string[] lines = text.Split('\n');
+        if (lines[0].TrimEnd('\r') != "---")
+        {
+            return (text, false);
+        }
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (lines[i].TrimEnd('\r') == "---")
+            {
+                string body = string.Join('\n', lines[(i + 1)..]);
+                return (body.TrimStart('\r', '\n'), true);
+            }
+        }
+
+        return (text, false);
     }
 
     /// <summary>Cuts <paramref name="text"/> at the cap and appends the cut line naming the file.</summary>
