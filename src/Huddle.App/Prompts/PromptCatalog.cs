@@ -84,6 +84,7 @@ internal static class PromptCatalog
         ..BuildPart38(),
         ..BuildPart39(),
         ..BuildPart51(),
+        ..BuildPart52(),
         ..BuildPart40(),
         ..BuildPart41(),
         ..BuildPart42(),
@@ -2046,6 +2047,20 @@ internal static class PromptCatalog
             Default:
                 "Each level below adds to the one before it. If two rules conflict, follow the more specific one: " +
                 "a Project's over its Team's, a Team's over the Huddle-wide rules.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.huddleMemoryRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart52() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.huddleMemoryRefusal",
+            Label: "Huddle-wide Memory write refused",
+            HelperText:
+                "The reason logged when an Agent other than the Chief of Staff tries to change the Huddle-wide Memory " +
+                "folder, Teams/memory/ (§6.6).",
+            Default: "Huddle-wide Memory is kept by the Chief of Staff. Ask the Chief of Staff to record it.",
             Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
     ];
 

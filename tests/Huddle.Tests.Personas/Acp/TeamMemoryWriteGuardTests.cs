@@ -146,7 +146,6 @@ public sealed class TeamMemoryWriteGuardTests
     [InlineData("Teams/Dev/Apollo/notes.md")]
     [InlineData("Teams/Other/memory/x.md")]
     [InlineData("Teams/Dev/Notes/memory/x.md")]
-    [InlineData("Teams/memory/x.md")]
     [InlineData("elsewhere/Dev/memory/x.md")]
     public async Task Member_WriteElsewhere_IsAllowed(string path)
     {
