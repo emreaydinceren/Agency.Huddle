@@ -96,6 +96,7 @@ internal static class PromptCatalog
         ..BuildPart48(),
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
+        ..BuildPart53(),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
@@ -2065,6 +2066,20 @@ internal static class PromptCatalog
                 "The reason logged when an Agent other than the Chief of Staff tries to change the Huddle-wide Memory " +
                 "folder, Teams/memory/ (§6.6).",
             Default: "Huddle-wide Memory is kept by the Chief of Staff. Ask the Chief of Staff to record it.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the slice holding <c>systemPrompt.promptsRefusal</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart53() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.promptsRefusal",
+            Label: "Prompts folder write refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, deletes or moves a file in the " +
+                "Prompts folder, or the folder itself, is refused (Second Brain §6.6).",
+            Default: "Files in the Prompts folder are Huddle's prompts and only the Human changes them.",
             Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
     ];
 

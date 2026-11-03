@@ -30,7 +30,8 @@ public sealed class RawGuardWiringTests
         PermissionGuards guards = new(
             new AgentsMdGuard(inert, workDir, prompts),
             new TeamMemoryWriteGuard(inert, workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
-            guard);
+            guard,
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), workDir, prompts));
         string path = Path.Combine(teamsRoot, "Home", "raw", "r1", "a.pdf");
         PermissionRequestContext request = new(
             "session-1",

@@ -66,7 +66,8 @@ public sealed class TeamMemoryWriteGuardTests
         return new PermissionGuards(
             new AgentsMdGuard(inert, WorkDir, prompts),
             teamMemory,
-            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), WorkDir, prompts));
+            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), WorkDir, prompts),
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), WorkDir, prompts));
     }
 
     /// <summary>Decides a tool call of one kind on one path and returns the chosen option id.</summary>

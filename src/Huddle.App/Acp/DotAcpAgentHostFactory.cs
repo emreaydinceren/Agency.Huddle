@@ -183,7 +183,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         return new PermissionGuards(
             new AgentsMdGuard(teamsRoot, workDir, prompts),
             new TeamMemoryWriteGuard(teamsRoot, workDir, sources.TeamMemory, prompts),
-            new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts));
+            new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts),
+            new PromptsRootGuard(Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Prompts.Dir)), workDir, prompts));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>

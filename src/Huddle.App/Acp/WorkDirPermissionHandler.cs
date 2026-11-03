@@ -64,7 +64,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
 /// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
 /// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
-/// <param name="guards">The file guards consulted in order (<c>AGENTS.md</c>, Raw, Team Memory; Spec §6.6); <see langword="null"/> leaves those writes approved.</param>
+/// <param name="guards">The file guards consulted in order (<c>AGENTS.md</c>, Raw, Prompts, Team Memory; Spec §6.6); <see langword="null"/> leaves those writes approved.</param>
 /// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
 internal sealed class WorkDirPermissionHandler(
     string? protectedDirectory,
@@ -177,6 +177,7 @@ internal sealed class WorkDirPermissionHandler(
         }
 
         string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.Raw.RefusalFor(context.ToolCall)
+            ?? guards?.Prompts.RefusalFor(context.ToolCall)
             ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName);
         if (guardReason is not null)
         {

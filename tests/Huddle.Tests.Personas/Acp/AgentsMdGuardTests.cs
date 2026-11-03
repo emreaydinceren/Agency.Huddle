@@ -258,7 +258,8 @@ public sealed class AgentsMdGuardTests : IDisposable
         PermissionGuards guards = new(
             this.guard,
             new TeamMemoryWriteGuard(inert, this.workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
-            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), this.workDir, prompts));
+            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), this.workDir, prompts),
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), this.workDir, prompts));
         return new WorkDirPermissionHandler(protectedDirectory, logger, workDir: this.workDir, guards: guards);
     }
 
