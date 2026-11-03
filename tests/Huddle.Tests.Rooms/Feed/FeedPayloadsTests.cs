@@ -53,6 +53,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.DevicePaired, "device-paired"),
             (FeedSourceType.DeviceRevoked, "device-revoked"),
             (FeedSourceType.SecondBrainOverCap, "second-brain-over-cap"),
+            (FeedSourceType.TeamArchived, "team-archived"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -208,6 +209,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.HelperFailing, FeedCategory.Helpers),
             (FeedSourceType.TeamMemoryNotFiled, FeedCategory.Helpers),
             (FeedSourceType.SecondBrainOverCap, FeedCategory.SecondBrain),
+            (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

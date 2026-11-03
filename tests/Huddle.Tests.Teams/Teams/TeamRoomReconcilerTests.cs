@@ -171,9 +171,25 @@ public sealed class TeamRoomReconcilerTests
         Assert.Single(await f.Directory.GetRoomsAsync(ct), r => r.Team is not null);
     }
 
-    /// <summary>An empty catalog changes nothing at all: a not-yet-loaded catalog must not archive every scoped Room.</summary>
+    /// <summary>A catalog that was never non-empty changes nothing at all: a not-yet-loaded catalog must not archive every scoped Room.</summary>
     [Fact]
-    public async Task Reconcile_EmptyCatalog_ChangesNothing()
+    public async Task Reconcile_CatalogNeverLoaded_ChangesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(["Nova"], ct);
+        f.Catalog.Teams = [Team("Marketing", "Nova")];
+        await f.Reconciler.ReconcileAsync(ct);
+        f.Catalog.Teams = [];
+        TeamRoomReconciler restarted = f.NewReconciler();
+
+        await restarted.ReconcileAsync(ct);
+
+        Assert.False((await f.TeamRoomAsync("Marketing", ct)).Archived);
+    }
+
+    /// <summary>The last Team leaving the catalog still archives its Room (corrections-12 item 12).</summary>
+    [Fact]
+    public async Task Reconcile_LastTeamLeavesCatalog_ArchivesItsRoom()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Fixture f = await Fixture.CreateAsync(["Nova"], ct);
@@ -183,7 +199,7 @@ public sealed class TeamRoomReconcilerTests
 
         await f.Reconciler.ReconcileAsync(ct);
 
-        Assert.False((await f.TeamRoomAsync("Marketing", ct)).Archived);
+        Assert.True((await f.TeamRoomAsync("Marketing", ct)).Archived);
     }
 
     /// <summary>A Team with no members, or none who has connected yet, gets no Room.</summary>

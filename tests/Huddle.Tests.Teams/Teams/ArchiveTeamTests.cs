@@ -316,7 +316,7 @@ public sealed class ArchiveTeamTests
                 personas,
                 directory,
                 files,
-                new RecordingFeedPublisher(),
+                this.Feed,
                 NullLogger<ArchiveService>.Instance);
             this.TeamsRoot = library.RootStore.Roots.Single(r => r.Kind == LibraryRootKind.Teams).FullPath;
             this.ArchiveRoot = library.RootStore.Roots.Single(r => r.Kind == LibraryRootKind.Archive).FullPath;
@@ -324,6 +324,9 @@ public sealed class ArchiveTeamTests
         }
 
         public ArchiveService Service { get; }
+
+        /// <summary>Gets the publisher the service posts to.</summary>
+        public RecordingFeedPublisher Feed { get; } = new();
 
         /// <summary>Gets the Task store the service pauses.</summary>
         public TaskStore Tasks => this.tasks;

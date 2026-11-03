@@ -27,6 +27,7 @@ internal sealed partial class TeamRoomReconciler(
     private readonly HashSet<string> lastSeenTeams = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> archivedByReconciler = new(StringComparer.Ordinal);
     private bool seeded;
+    private bool catalogLoaded;
     private bool disposed;
     private bool running;
     private bool dirty;
@@ -111,8 +112,9 @@ internal sealed partial class TeamRoomReconciler(
     }
 
     /// <summary>
-    /// Brings the Team Rooms in line with the catalog. Does nothing while the catalog is empty, so a
-    /// catalog that has not loaded yet cannot archive everything.
+    /// Brings the Team Rooms in line with the catalog. Does nothing while the catalog is empty and has never held a
+    /// Team in this run, so a catalog that has not loaded yet cannot archive everything; once it has held a Team,
+    /// an empty catalog means the last Team was archived or removed and its Room is archived.
     /// </summary>
     /// <param name="ct">Cancels the run.</param>
     /// <returns>A task that completes when the run has finished.</returns>
@@ -122,10 +124,12 @@ internal sealed partial class TeamRoomReconciler(
         try
         {
             IReadOnlyList<TeamSummary> teams = catalog.Teams;
-            if (teams.Count == 0)
+            if (teams.Count == 0 && !this.catalogLoaded)
             {
                 return;
             }
+
+            this.catalogLoaded = true;
 
             if (!this.seeded)
             {

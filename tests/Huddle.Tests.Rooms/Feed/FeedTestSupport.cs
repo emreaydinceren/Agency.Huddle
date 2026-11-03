@@ -65,6 +65,7 @@ internal static class FeedTestSupport
         FeedSourceType.DevicePaired => new DevicePairedPayload("dev-1", "iPad", "approval"),
         FeedSourceType.DeviceRevoked => new DeviceRevokedPayload("dev-1", "iPad", "revoked"),
         FeedSourceType.SecondBrainOverCap => new SecondBrainOverCapPayload("Teams/Home/memory", "Teams/Home/memory has more Memory than Agents are shown (50 of 50 listed). Ask the Team's manager to tidy it."),
+        FeedSourceType.TeamArchived => new TeamArchivedPayload(team, "Team " + team + " archived"),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 

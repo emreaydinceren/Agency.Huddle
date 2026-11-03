@@ -28,6 +28,7 @@ internal sealed class ArchiveService : IDisposable
     private readonly PersonaStore personas;
     private readonly ITeamDirectory directory;
     private readonly IArchiveFileSystem files;
+    private readonly IFeedPublisher feed;
     private readonly ILogger<ArchiveService> logger;
 
     /// <summary>Creates the service over the stores it reads and the folders it moves.</summary>
@@ -39,7 +40,7 @@ internal sealed class ArchiveService : IDisposable
     /// <param name="personas">Reads each member's Team labels for the confirmation.</param>
     /// <param name="directory">Archives the Team's Rooms.</param>
     /// <param name="files">The disk operations.</param>
-    /// <param name="feed">Reserved for the Team-archived Feed item, which has no source type yet.</param>
+    /// <param name="feed">Receives the "Team archived" item.</param>
     /// <param name="logger">Logs a label that could not be removed.</param>
     public ArchiveService(
         LibraryRootStore roots,
@@ -72,6 +73,7 @@ internal sealed class ArchiveService : IDisposable
         this.personas = personas;
         this.directory = directory;
         this.files = files;
+        this.feed = feed;
         this.logger = logger;
     }
 
@@ -269,7 +271,21 @@ internal sealed class ArchiveService : IDisposable
         }
 
         this.RemoveLabels(name, roster);
+        this.PostArchived(name);
         return new ArchiveOutcome(true, null);
+    }
+
+    /// <summary>Tells the Feed the Team is archived (Spec 6.7 step 8); a failing Feed never undoes the archive.</summary>
+    private void PostArchived(string team)
+    {
+        try
+        {
+            this.feed.Post(new FeedMessage(FeedSourceType.TeamArchived, team, FeedActor.Huddle, false, new TeamArchivedPayload(team, "Team " + team + " archived")));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "The Feed could not record that {Team} was archived.", team);
+        }
     }
 
     private static ArchiveOutcome Refuse(string reason) => new(false, reason);
