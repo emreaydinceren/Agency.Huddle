@@ -65,7 +65,7 @@ public sealed class ProcessGateServiceTests
     public void EnabledGates_UnknownTeamType_IsEmpty()
     {
         using TempDataDir dir = new();
-        ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'"), "ghost");
+        ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'").Replace("web@", "ghost@", StringComparison.Ordinal), "ghost");
 
         Assert.Empty(service.EnabledGates(Team));
     }

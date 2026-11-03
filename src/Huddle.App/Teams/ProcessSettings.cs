@@ -25,18 +25,28 @@ internal sealed record ProcessSettings(
 
     /// <summary>Reads the settings from frontmatter values, sharing the gate and wip reading with <see cref="ProcessDocument"/>.</summary>
     /// <param name="values">The frontmatter values by key, already unquoted.</param>
-    /// <returns>The settings; unknown gate ids are dropped.</returns>
+    /// <returns>The settings; unknown gate ids are kept in <see cref="UnknownGates"/>, not in <see cref="Gates"/>.</returns>
     public static ProcessSettings Parse(Dictionary<string, string> values)
     {
         ArgumentNullException.ThrowIfNull(values);
+        (List<GateId> gates, List<string> unknownGates) = ProcessDocument.ReadGates(values);
         return new ProcessSettings(
-            ProcessDocument.ReadGates(values).Gates,
+            gates,
             ProcessDocument.ReadWip(values),
             Value(values, "retro"),
             Value(values, "digest"),
             Value(values, "checkCommand"),
-            Value(values, "template"));
+            Value(values, "template"))
+        {
+            UnknownGates = unknownGates,
+        };
     }
+
+    /// <summary>
+    /// The gate ids in the file that this version does not know, in the order written. They enforce nothing, but a
+    /// <c>_team.md</c> rewrite writes them back so a newer build's gate is not lost.
+    /// </summary>
+    public IReadOnlyList<string> UnknownGates { get; init; } = [];
 
     /// <summary>The retro cadence read from <see cref="Retro"/>.</summary>
     /// <returns>The cadence, or <see langword="null"/> when it is absent or unreadable.</returns>

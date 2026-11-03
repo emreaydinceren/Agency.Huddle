@@ -265,9 +265,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private void AppendProcess(StringBuilder builder)
     {
         ProcessSettings process = this.Process;
-        if (process.Gates.Count > 0)
+        if (process.Gates.Count > 0 || process.UnknownGates.Count > 0)
         {
-            AppendList(builder, GatesKey, process.Gates.Select(ProcessDocument.ToId));
+            AppendList(builder, GatesKey, process.Gates.Select(ProcessDocument.ToId).Concat(process.UnknownGates));
         }
 
         if (process.Wip is int wip)

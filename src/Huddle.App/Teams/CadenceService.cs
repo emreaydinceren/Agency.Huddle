@@ -130,7 +130,7 @@ internal sealed class CadenceService(
         }
 
         bool digestBaselined = digestCadence is not null && current.LastDigestUtc is null;
-        bool retroBaselined = retroCadence is not null &&(current.LastRetroUtc is null || current.DoneAtLastRetro is null);
+        bool retroBaselined = retroCadence is not null && (current.LastRetroUtc is null || current.DoneAtLastRetro is null);
         if (digestBaselined || retroBaselined)
         {
             current = current with

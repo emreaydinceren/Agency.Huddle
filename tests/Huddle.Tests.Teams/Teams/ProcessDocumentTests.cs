@@ -1,5 +1,4 @@
 using System.Reflection;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 
@@ -22,25 +21,11 @@ public sealed class ProcessDocumentTests
     private static string Compose(string frontmatter, string body = FullOutline) =>
         "---\n" + frontmatter + "\n---\n" + body.Replace("\r\n", "\n", StringComparison.Ordinal) + "\n";
 
-    /// <summary>Reads the frontmatter of a template or Process text into settings, as the <c>_team.md</c> reader would hold them.</summary>
+    /// <summary>Reads a template or Process text into the settings the production <c>_team.md</c> reader holds for it.</summary>
     /// <param name="text">The file text.</param>
-    /// <returns>The settings; empty when there is no closed frontmatter block.</returns>
-    private static ProcessSettings Settings(string text)
-    {
-        string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
-        int closing = FrontmatterFence.IsOpening(lines[0]) ? FrontmatterFence.FindClosing(lines, 1) : -1;
-        for (int index = 1; index < closing; index++)
-        {
-            int colon = lines[index].IndexOf(':', StringComparison.Ordinal);
-            if (colon > 0 && !char.IsWhiteSpace(lines[index][0]))
-            {
-                values[lines[index][..colon].Trim()] = ProcessDocument.Unquote(lines[index][(colon + 1)..]);
-            }
-        }
-
-        return ProcessSettings.Parse(values);
-    }
+    /// <returns>The <see cref="TeamFile.Process"/> of the parsed text; empty when there is no closed frontmatter block.</returns>
+    private static ProcessSettings Settings(string text) =>
+        TeamFile.TryParse(text, out TeamFile? file) ? file.Process : ProcessSettings.Empty;
 
     private static ProcessDocument Parse(string text)
     {
@@ -138,6 +123,17 @@ public sealed class ProcessDocumentTests
     public void TryParse_MalformedRetro_IsNull(string line)
     {
         Assert.Null(Settings(Compose("title: 'T'\n" + line)).RetroSchedule());
+    }
+
+    /// <summary>A template id the frontmatter leaves blank, or writes no value for, reads as null; a written one is kept.</summary>
+    [Theory]
+    [InlineData("template: ''", null)]
+    [InlineData("template:", null)]
+    [InlineData("title: 'T'", null)]
+    [InlineData("template: 'lightweight-flow@1.0.0'", "lightweight-flow@1.0.0")]
+    public void TryParse_MalformedTemplate_ReadsAsNull(string line, string? expected)
+    {
+        Assert.Equal(expected, Settings(Compose("title: 'T'\n" + line)).Template);
     }
 
     /// <summary>A wip that is not a positive integer reads as null.</summary>
@@ -278,6 +274,7 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse(text);
 
         Assert.Equal(string.Empty, document.Title);
-        Assert.Empty(Settings(text).Gates);
+        Assert.False(TeamFile.TryParse(text, out _));
+        Assert.Equal(ProcessSettings.Empty, Settings(text));
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
@@ -8,9 +9,12 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="teams">Finds the Team.</param>
 /// <param name="folders">Locates the Team's folder and its <c>_team.md</c>.</param>
 /// <param name="types">Confirms the Team's type exists.</param>
-internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folders, TeamTypeCatalog types)
+/// <param name="logger">Warns once per Team about gate ids it does not know; optional.</param>
+internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folders, TeamTypeCatalog types, ILogger<ProcessGateService>? logger = null)
 {
     private const string VerifyCoverage = "verify";
+
+    private readonly ConcurrentDictionary<string, bool> warned = new(StringComparer.Ordinal);
 
     /// <summary>The one-sentence risk shown when a gate is turned off.</summary>
     /// <param name="gate">The gate.</param>
@@ -134,11 +138,26 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
     private ProcessSettings? Load(string team)
     {
-        if (teams.Find(team) is not { } summary || summary.TeamType is not { } type || types.Find(type.Id) is null)
+        if (teams.Find(team) is not { } summary || folders.ReadTeamFile(team) is not { } file)
         {
             return null;
         }
 
-        return TeamProcessFile.Settings(folders, team);
+        // The Team type comes from the same _team.md the gates come from; the catalog summary is only the fallback for a file that names none.
+        string? typeId = file.TeamType is { Id.Length: > 0 } written ? written.Id : summary.TeamType?.Id;
+        if (typeId is null || types.Find(typeId) is null)
+        {
+            return null;
+        }
+
+        if (file.Process.UnknownGates.Count > 0 && this.warned.TryAdd(team, true))
+        {
+            logger?.LogWarning(
+                "Team {Team} lists gates this version does not know and will not enforce: {UnknownGates}.",
+                team,
+                string.Join(", ", file.Process.UnknownGates));
+        }
+
+        return file.Process;
     }
 }
