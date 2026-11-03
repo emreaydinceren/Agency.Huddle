@@ -1,10 +1,10 @@
-namespace Agency.Huddle.Tests.Acp;
-
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
+
+namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>
 /// Pins <see cref="PromptsRootGuard"/> (Spec §6.6, SB-R09; corrections-9 §9.3): an Agent's edit (creating or overwriting), delete or move of
@@ -79,6 +79,13 @@ public sealed class PromptsRootGuardTests : IDisposable
     public void Write_ToARelativePath_ResolvesAgainstTheWorkDir()
     {
         Assert.Equal(Refusal, this.guard.RefusalFor(Call(ToolKind.Edit, "../../../Prompts/x.md")));
+    }
+
+    /// <summary>A relative path written with backslashes is read as folders on every OS (the guard turns <c>\</c> into <c>/</c>), so <c>..\..\..\Prompts\x.md</c> is the Prompts file and is refused.</summary>
+    [Fact]
+    public void Write_ToARelativePathWithBackslashes_IsRefusedWithT6()
+    {
+        Assert.Equal(Refusal, this.guard.RefusalFor(Call(ToolKind.Edit, @"..\..\..\Prompts\x.md")));
     }
 
     /// <summary>Deleting or moving the Prompts folder, or a folder above it (the Data Dir and its parent), takes the prompts with it.</summary>
