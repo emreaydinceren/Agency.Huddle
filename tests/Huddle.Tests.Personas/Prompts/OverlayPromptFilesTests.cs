@@ -158,6 +158,13 @@ public sealed class OverlayPromptFilesTests
         Assert.Empty(missing);
     }
 
+    /// <summary>The default of <c>getHelp.rawChanged</c> is the heading line then the list placeholder, character for character.</summary>
+    [Fact]
+    public void RawChanged_DefaultText_IsHeadingThenFilesPlaceholder()
+    {
+        Assert.Equal("Raw files changed since filing\n{{files}}", PromptCatalog.Get("getHelp.rawChanged").Default.ReplaceLineEndings("\n"));
+    }
+
     /// <summary>Every shipped overlay key is in <c>prompts.default.json</c> (regenerate it when a file is added).</summary>
     [Fact]
     public void DefaultsFile_ContainsEveryOverlayKey()

@@ -45,8 +45,6 @@ using Agency.Huddle.App.Teams;
 /// </remarks>
 internal sealed class GetHelpTool : IAppTool
 {
-    private const string ChangedRawHeading = "Raw files changed since filing";
-
     private static readonly EnumerationOptions RawScan = new() { RecurseSubdirectories = true, IgnoreInaccessible = true };
 
     private readonly IReadOnlyList<CatalogEntry> catalog;
@@ -187,7 +185,8 @@ internal sealed class GetHelpTool : IAppTool
             return map;
         }
 
-        return map + "\n\n" + ChangedRawHeading + "\n" + string.Join('\n', changed.Select(static path => "- " + path));
+        string files = string.Join('\n', changed.Select(static path => "- " + path));
+        return map + "\n\n" + this.prompts.Render("getHelp.rawChanged", new Dictionary<string, string> { ["{{files}}"] = files });
     }
 
     /// <summary>
