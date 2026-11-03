@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 84 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 84 of 143 tasks Done · 5 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -106,7 +106,7 @@ never by hand, so the status line stays true.
 | 8.3.i #73 Extract `SessionPromptInputs` [Sonnet] | | | ✔ |
 | 8.4.t #74 "What this Agent reads" [Sonnet] | | | ✔ |
 | 8.4.i #75 Build the view [Sonnet] | | | ✔ |
-| 🔁 R5 Retrospective 5 (tasks 61–75): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
+| 🔁 R5 Retrospective 5 (tasks 61–75): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | **D9. P4: Prompt override files** | | | |
 | 9.1.t #76 A folder of overrides [Sonnet] | | | ✔ |
 | 9.1.i #77 Folder-backed `PromptStore` [Sonnet] | | | ✔ |
