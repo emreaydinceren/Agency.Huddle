@@ -32,7 +32,20 @@ internal static class TeamFileWriter
             {
                 SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{folder}/{TeamPaths.ProcessFileName}"), DefaultProcess(types, team, type));
             }
+
+            EnsureScope(SeedIo.Resolve(dataDir, folder));
+            foreach (string project in team.Projects)
+            {
+                EnsureScope(SeedIo.Resolve(dataDir, $"{folder}/{project}"));
+            }
         }
+    }
+
+    /// <summary>Creates a Team or Project folder with its <c>raw</c>, <c>memory</c> and <c>outputs</c> sub-folders (Spec §6.1).</summary>
+    private static void EnsureScope(string fullPath)
+    {
+        Directory.CreateDirectory(fullPath);
+        SecondBrainFolders.Ensure(fullPath);
     }
 
     /// <summary>

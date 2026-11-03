@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 30 of 141 tasks Done · 2 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 34 of 141 tasks Done · 2 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -52,12 +52,12 @@ never by hand, so the status line stays true.
 | 4.1.t #29 The retired-file scan [Sonnet] | | | ✔ |
 | 4.1.i #30 Implement the scan [Sonnet] | | | ✔ |
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
-| 4.2.t #31 The seeder writes the new layout [Sonnet] | ✔ | | |
-| 4.2.i #32 Update the seeder [Sonnet] | ✔ | | |
+| 4.2.t #31 The seeder writes the new layout [Sonnet] | | | ✔ |
+| 4.2.i #32 Update the seeder [Sonnet] | | | ✔ |
 | **D5. P2: reading `AGENTS.md`** | | | |
-| 5.1.t #33 `AgentsMdSnapshot` shape [Haiku] | ✔ | | |
-| 5.1.i #34 Add the types [Haiku] | ✔ | | |
-| 5.2.t #35 Levels and order [Sonnet] | ✔ | | |
+| 5.1.t #33 `AgentsMdSnapshot` shape [Haiku] | | | ✔ |
+| 5.1.i #34 Add the types [Haiku] | | | ✔ |
+| 5.2.t #35 Levels and order [Sonnet] | | ✔ | |
 | 5.2.i #36 `AgentsMdReader` [Sonnet] | ✔ | | |
 | 5.3.t #37 Frontmatter is stripped and reported [Haiku] | ✔ | | |
 | 5.3.i #38 Strip frontmatter [Haiku] | ✔ | | |
