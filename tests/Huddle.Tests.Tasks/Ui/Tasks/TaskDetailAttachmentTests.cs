@@ -340,7 +340,7 @@ public sealed class TaskDetailAttachmentTests
     private static void RegisterUploader(MudBunitContext ctx, TaskToolHarness harness, LibraryFileServiceFixture library)
     {
         TaskUploadFolders folders = new(library.Resolver, harness.Store);
-        ctx.Services.AddSingleton(new TaskUploadService(harness.Store, folders, library.CreateService(), harness.Options));
+        ctx.Services.AddSingleton(new TaskUploadService(harness.Store, folders, library.CreateService(), harness.Options, new Agency.Huddle.App.Data.RawBaselineStore(harness.Options)));
     }
 
     /// <summary>Creates a Task with no assignee through the harness's service.</summary>

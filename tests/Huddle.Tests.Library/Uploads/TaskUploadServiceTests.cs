@@ -40,7 +40,7 @@ public sealed class TaskUploadServiceTests
         _ = personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Marketing"]), "You are Nova.");
         TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
         TaskUploadFolders folders = new(fixture.Resolver, store);
-        TaskUploadService service = new(tasks, folders, fixture.CreateService(), Options.Create(teamOptions));
+        TaskUploadService service = new(tasks, folders, fixture.CreateService(), options, new Agency.Huddle.App.Data.RawBaselineStore(options));
         return (service, folders, fixture);
     }
 

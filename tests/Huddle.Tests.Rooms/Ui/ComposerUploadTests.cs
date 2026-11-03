@@ -288,7 +288,7 @@ public sealed class ComposerUploadTests
             LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Attach(harness.Options.Value.DataDir);
             LibraryFileService files = fixture.CreateService();
             RoomUploadFolders folders = new(fixture.Resolver, files);
-            ChatUploadService service = new(harness.Directory, files, folders, harness.Options);
+            ChatUploadService service = new(harness.Directory, files, folders, harness.Options, new Agency.Huddle.App.Data.RawBaselineStore(harness.Options));
             PendingUploads pending = new(service, harness.Options);
             Room room = await harness.Chat.CreateRoomForAsync([harness.NovaId!], ct);
             return new Rig(harness, fixture, pending, room.Id);
