@@ -616,6 +616,9 @@ public static class ServiceCollectionExtensions
         // Same instance as the hosted service, the same singleton-plus-factory idiom as
         // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
+        // Archive recovery goes first so an interrupted archive is undone or finished before the provisioner
+        // synchronises folders and the reconciler reads the catalog (corrections-12 items 4, 8, 16).
+        services.AddHostedService<ArchiveRecoveryService>();
         services.AddSingleton<TeamFolderProvisioner>();
         services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
 

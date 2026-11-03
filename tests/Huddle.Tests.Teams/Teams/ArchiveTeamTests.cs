@@ -295,7 +295,7 @@ public sealed class ArchiveTeamTests
         private readonly TaskStore tasks;
         private readonly PersonaStore personas;
 
-        private Fixture(TempDataDir dir, LibraryFileServiceFixture library, PersonaStore personas, SqliteTeamDirectory directory, TaskStore tasks, TeamFolderProvisioner folders, FakeTeamCatalog catalog, bool realMembership)
+        private Fixture(TempDataDir dir, LibraryFileServiceFixture library, PersonaStore personas, SqliteTeamDirectory directory, TaskStore tasks, TeamFolderProvisioner folders, FakeTeamCatalog catalog, bool realMembership, IArchiveFileSystem files)
         {
             this.dir = dir;
             this.library = library;
@@ -315,7 +315,7 @@ public sealed class ArchiveTeamTests
                 tasks,
                 personas,
                 directory,
-                new PhysicalArchiveFileSystem(),
+                files,
                 new RecordingFeedPublisher(),
                 NullLogger<ArchiveService>.Instance);
             this.TeamsRoot = library.RootStore.Roots.Single(r => r.Kind == LibraryRootKind.Teams).FullPath;
@@ -347,7 +347,8 @@ public sealed class ArchiveTeamTests
         /// <param name="labelOnly">When <see langword="true"/> Home has a folder but no <c>_team.md</c>.</param>
         /// <param name="ct">Cancels the database set-up.</param>
         /// <param name="realMembership">When <see langword="true"/> the service removes labels through the real <see cref="TeamMembership"/>.</param>
-        public static async Task<Fixture> CreateAsync(bool labelOnly, CancellationToken ct, bool realMembership = false)
+        /// <param name="files">The file system the service moves with; <see langword="null"/> is the real disk (Task 112 passes a <see cref="FakeArchiveFileSystem"/>).</param>
+        public static async Task<Fixture> CreateAsync(bool labelOnly, CancellationToken ct, bool realMembership = false, IArchiveFileSystem? files = null)
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(dir.Path);
@@ -377,7 +378,7 @@ public sealed class ArchiveTeamTests
             _ = await directory.UpsertAgentUserAsync("Ada", null, ct);
             _ = await directory.UpsertAgentUserAsync("Nova", null, ct);
             TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
-            return new Fixture(dir, library, personas, directory, tasks, folders, catalog, realMembership);
+            return new Fixture(dir, library, personas, directory, tasks, folders, catalog, realMembership, files ?? new PhysicalArchiveFileSystem());
         }
 
         /// <summary>Lists every folder and file under <paramref name="root"/> except <c>_team.md</c>, keyed by forward-slash relative path; a file maps to its hex bytes, a folder to a marker.</summary>

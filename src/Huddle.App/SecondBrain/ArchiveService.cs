@@ -125,6 +125,24 @@ internal sealed class ArchiveService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Finishes or undoes an archive or unarchive a crash interrupted: deletes the Huddle dot folders, removes labels an
+    /// archived Team still has, and restores a live Team whose roster was written but whose move never finished.
+    /// </summary>
+    /// <param name="ct">Cancels the wait for the gate.</param>
+    public async Task RecoverAsync(CancellationToken ct)
+    {
+        await this.gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await this.RecoverLockedAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ = this.gate.Release();
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose() => this.gate.Dispose();
 
@@ -144,7 +162,8 @@ internal sealed class ArchiveService : IDisposable
         }
 
         string live = Path.Combine(teamsRoot, archived);
-        ArchiveMoveResult moved = this.folders.RunExclusive(() => this.files.Move(Path.Combine(archiveRoot, archived), live));
+        ArchiveMoveResult moved = this.folders.RunExclusive(
+            () => ArchiveMove.Move(Path.Combine(archiveRoot, archived), live, ArchiveMove.UnarchivingPrefix, this.files));
         if (moved != ArchiveMoveResult.Moved)
         {
             return Refuse($"{archived} has files open in another program. Close them and try again.");
@@ -225,7 +244,18 @@ internal sealed class ArchiveService : IDisposable
             return Refuse($"{name} can't be archived: its team file couldn't be written.");
         }
 
-        ArchiveMoveResult moved = this.folders.RunExclusive(() => this.MoveFolder(source, destination));
+        ArchiveMoveResult moved;
+        try
+        {
+            moved = this.folders.RunExclusive(() => ArchiveMove.Move(source, destination, ArchiveMove.ArchivingPrefix, this.files));
+        }
+        catch (IOException)
+        {
+            // The copy or its verification failed; the source is whole, so the team file goes back as it was.
+            this.RestoreTeamFile(name, source, original);
+            throw;
+        }
+
         if (moved != ArchiveMoveResult.Moved)
         {
             this.RestoreTeamFile(name, source, original);
@@ -303,27 +333,79 @@ internal sealed class ArchiveService : IDisposable
         }
     }
 
-    /// <summary>Renames the folder whole when the archive has none for the Team, else moves its entries into the archive's.</summary>
-    private ArchiveMoveResult MoveFolder(string source, string destination)
+    /// <summary>Whether the member's Persona still carries the Team label.</summary>
+    private bool HasLabel(string member, string team)
     {
-        this.files.CreateDirectory(Path.GetDirectoryName(destination) ?? destination);
-        if (this.files.ListEntries(destination).Count == 0)
-        {
-            // An empty Archive/<T>/ (left by hand or an earlier run) would make a whole-folder rename fail on Windows.
-            this.files.DeleteEmptyFolder(destination);
-            return this.files.Move(source, destination);
-        }
+        Persona? persona = this.personas.Get(member);
+        return persona is not null
+            && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
+            && identity.Teams.Any(t => string.Equals(t, team, StringComparison.OrdinalIgnoreCase));
+    }
 
-        foreach (string entry in this.files.ListEntries(source))
-        {
-            if (this.files.Move(Path.Combine(source, entry), Path.Combine(destination, entry)) != ArchiveMoveResult.Moved)
+    private async Task RecoverLockedAsync(CancellationToken ct)
+    {
+        string teamsRoot = this.RootPath(LibraryRootKind.Teams);
+        string archiveRoot = this.RootPath(LibraryRootKind.Archive);
+        _ = this.folders.RunExclusive(
+            () =>
             {
-                return ArchiveMoveResult.InUse;
-            }
+                ArchiveMove.Recover(archiveRoot, teamsRoot, this.files);
+                return true;
+            });
+
+        IReadOnlyList<string> live = [.. this.files.ListEntries(teamsRoot).Where(static e => !e.StartsWith('.'))];
+        IReadOnlyList<string> archived = [.. this.files.ListEntries(archiveRoot).Where(static e => !e.StartsWith('.'))];
+        foreach (string team in archived.Where(a => !live.Contains(a, StringComparer.OrdinalIgnoreCase)))
+        {
+            this.RemoveLabelsAgain(archiveRoot, team);
         }
 
-        this.files.DeleteEmptyFolder(source);
-        return ArchiveMoveResult.Moved;
+        foreach (string team in live)
+        {
+            if (archived.Contains(team, StringComparer.OrdinalIgnoreCase) && this.files.FileExists(Path.Combine(archiveRoot, team, TeamPaths.TeamFileName)))
+            {
+                this.logger.LogWarning("{Team} exists in both Teams and Archive; archive recovery left both alone.", team);
+                continue;
+            }
+
+            await this.RestoreLiveTeamAsync(team, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>An archived Team whose roster still has the label on a Persona: the crash came after the move, so remove the label again.</summary>
+    private void RemoveLabelsAgain(string archiveRoot, string team)
+    {
+        string path = Path.Combine(archiveRoot, team, TeamPaths.TeamFileName);
+        if (!this.files.FileExists(path) || !TeamFile.TryParse(File.ReadAllText(path), out TeamFile? file))
+        {
+            return;
+        }
+
+        foreach (string member in file.ArchivedMembers.Where(m => this.HasLabel(m, team)))
+        {
+            _ = this.membership.RemoveForArchive(team, member);
+        }
+    }
+
+    /// <summary>A live Team whose <c>_team.md</c> still holds an archive roster: the crash came before the move finished (or an unarchive stopped short), so put it back.</summary>
+    private async Task RestoreLiveTeamAsync(string team, CancellationToken ct)
+    {
+        TeamFile? file = this.folders.ReadTeamFile(team);
+        if (file is null || file.ArchivedMembers.Count == 0)
+        {
+            return;
+        }
+
+        _ = this.AddMembersBack(team, file.ArchivedMembers);
+        foreach (string id in file.ArchivedRooms)
+        {
+            await this.directory.SetRoomArchivedAsync(id, false, ct).ConfigureAwait(false);
+        }
+
+        string? manager = file.ArchivedManager is { } recorded && this.personas.Get(recorded) is not null ? recorded : null;
+        _ = this.folders.UpdateTeamFile(
+            team,
+            f => f with { ArchivedMembers = [], ArchivedRooms = [], ArchivedManager = null, Manager = manager ?? f.Manager });
     }
 
     private void RemoveLabels(string team, IReadOnlyList<string> roster)

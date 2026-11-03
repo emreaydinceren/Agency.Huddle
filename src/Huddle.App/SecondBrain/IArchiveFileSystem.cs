@@ -27,9 +27,23 @@ internal interface IArchiveFileSystem
     /// <param name="path">The folder path.</param>
     void DeleteEmptyFolder(string path);
 
-    /// <summary>Renames a file or folder, retrying briefly while another program holds a file open.</summary>
+    /// <summary>Renames a file or folder once; <see cref="ArchiveMove"/> does the retrying.</summary>
     /// <param name="source">The existing path.</param>
     /// <param name="destination">The new path; it must not exist.</param>
-    /// <returns><see cref="ArchiveMoveResult.Moved"/>, or <see cref="ArchiveMoveResult.InUse"/> when the retries ran out; nothing has moved then.</returns>
+    /// <returns><see cref="ArchiveMoveResult.Moved"/>, <see cref="ArchiveMoveResult.InUse"/> or <see cref="ArchiveMoveResult.CrossVolume"/>; nothing has moved unless <c>Moved</c>.</returns>
     ArchiveMoveResult Move(string source, string destination);
+
+    /// <summary>Copies a folder and everything under it into a new folder.</summary>
+    /// <param name="source">The folder to copy.</param>
+    /// <param name="destination">The new folder.</param>
+    void CopyTree(string source, string destination);
+
+    /// <summary>Counts the files under a folder and their total size.</summary>
+    /// <param name="folder">The folder to measure; a missing folder holds nothing.</param>
+    /// <returns>The file count and total bytes.</returns>
+    (int Files, long Bytes) Measure(string folder);
+
+    /// <summary>Deletes a folder and everything under it; a missing folder is not an error.</summary>
+    /// <param name="path">The folder to delete.</param>
+    void DeleteTree(string path);
 }
