@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 118 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 122 of 143 tasks Done · 7 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -141,9 +141,9 @@ never by hand, so the status line stays true.
 | 11.7 #103 Write the three Skills [Haiku] | | | ✔ |
 | 11.8.t #104 The Skills are installed and granted [Sonnet] | | | ✔ |
 | 11.8.i #105 Install and grant [Sonnet] | | | ✔ |
-| 🔁 R7 Retrospective 7 (tasks 91–105): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
-| 11.9.t #106 Onboarding offers the Jobs [Sonnet] | ✔ | | |
-| 11.9.i #107 Add the offers [Sonnet] | ✔ | | |
+| 🔁 R7 Retrospective 7 (tasks 91–105): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
+| 11.9.t #106 Onboarding offers the Jobs [Sonnet] | | | ✔ |
+| 11.9.i #107 Add the offers [Sonnet] | | | ✔ |
 | **D12. P6: archive** | | | |
 | 12.1.t #108 Archive a Team (same volume) [Sonnet] | | | ✔ |
 | 12.1.i #109 `ArchiveService` (archive) [Sonnet] | | | ✔ |
@@ -155,9 +155,9 @@ never by hand, so the status line stays true.
 | 12.4.i #115 Collision checks [Sonnet] | | | ✔ |
 | 12.5.t #116 The provisioner leaves archived Teams alone [Sonnet] | | | ✔ |
 | 12.5.i #117 Skip archived labels [Sonnet] | | | ✔ |
-| 12.6.t #118 Rooms follow the Team [Sonnet] | | ✔ | |
-| 12.6.i #119 Wire the reconciler [Sonnet] | ✔ | | |
-| 12.7.t #120 Read-only fallback [Sonnet] | ✔ | | |
+| 12.6.t #118 Rooms follow the Team [Sonnet] | | | ✔ |
+| 12.6.i #119 Wire the reconciler [Sonnet] | | | ✔ |
+| 12.7.t #120 Read-only fallback [Sonnet] | | ✔ | |
 | 12.7.i #121 The fallback [Sonnet] | ✔ | | |
 | 🔁 R8 Retrospective 8 (tasks 106–120): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | 12.8.t #122 Archived Task ids resolve [Sonnet] | ✔ | | |
