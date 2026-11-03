@@ -121,6 +121,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         try
         {
             Directory.CreateDirectory(projectPath.FullPath);
+            SecondBrainFolders.Ensure(projectPath.FullPath);
         }
         catch (IOException)
         {
@@ -469,6 +470,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         try
         {
             Directory.CreateDirectory(teamPath.FullPath);
+            SecondBrainFolders.Ensure(teamPath.FullPath);
         }
         catch (IOException)
         {
@@ -528,6 +530,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return;
         }
 
+        this.TryEnsureSharedMemory(teamsRoot.FullPath);
         string[]? existing = this.TryListTeamFolders(teamsRoot.FullPath);
         if (existing is null)
         {
@@ -549,7 +552,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
                 continue;
             }
 
-            if (TaskLayout.IsReservedFolderName(label))
+            if (TaskLayout.IsReservedFolderName(label) || TeamNames.IsReservedTeamName(label))
             {
                 this.LogLabelSkipped(label, "That folder is reserved.");
                 continue;
@@ -562,7 +565,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
             try
             {
-                Directory.CreateDirectory(Path.Combine(teamsRoot.FullPath, label));
+                string labelFolder = Path.Combine(teamsRoot.FullPath, label);
+                Directory.CreateDirectory(labelFolder);
+                SecondBrainFolders.Ensure(labelFolder);
             }
             catch (IOException ex)
             {
@@ -572,6 +577,24 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             {
                 this.LogCreateFailed(label, ex);
             }
+        }
+    }
+
+    /// <summary>Creates <c>Teams/memory/</c>, logging (not throwing) a failure.</summary>
+    /// <param name="teamsRootPath">The Teams root's full path.</param>
+    private void TryEnsureSharedMemory(string teamsRootPath)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(teamsRootPath, TeamNames.MemoryFolder));
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
         }
     }
 

@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 14 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 16 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -32,8 +32,8 @@ never by hand, so the status line stays true.
 | 2.1.i #12 Add the options [Haiku] | | | ✔ |
 | 2.2.t #13 The Raw, Archive and Prompts roots [Sonnet] | | | ✔ |
 | 2.2.i #14 Build the roots [Sonnet] | | | ✔ |
-| 2.3.t #15 Provision the three folders [Sonnet] | ✔ | | |
-| 2.3.i #16 `SecondBrainFolders` [Sonnet] | ✔ | | |
+| 2.3.t #15 Provision the three folders [Sonnet] | | | ✔ |
+| 2.3.i #16 `SecondBrainFolders` [Sonnet] | | | ✔ |
 | 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | 2.4.t #17 Room uploads land in `raw/` [Sonnet] | ✔ | | |
 | 2.4.i #18 Save into `raw/` [Sonnet] | ✔ | | |

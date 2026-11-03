@@ -79,7 +79,7 @@ public sealed class TeamFolderProvisionerTests
         await provisioner.StartAsync(TestContext.Current.CancellationToken);
 
         Assert.False(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Bad:Label")));
-        Assert.Empty(Directory.GetDirectories(fixture.TeamsRoot));
+        Assert.Equal([Path.Combine(fixture.TeamsRoot, "memory")], Directory.GetDirectories(fixture.TeamsRoot));
     }
 
     /// <summary>Two labels differing only by case create exactly one folder (corrections-B4 item 37
@@ -93,7 +93,7 @@ public sealed class TeamFolderProvisionerTests
 
         await provisioner.StartAsync(TestContext.Current.CancellationToken);
 
-        Assert.Single(Directory.GetDirectories(fixture.TeamsRoot));
+        Assert.Equal(2, Directory.GetDirectories(fixture.TeamsRoot).Length);
     }
 
     /// <summary>A folder that already exists under a different case is reused rather than duplicated
@@ -109,7 +109,7 @@ public sealed class TeamFolderProvisionerTests
 
         await provisioner.StartAsync(TestContext.Current.CancellationToken);
 
-        Assert.Single(Directory.GetDirectories(fixture.TeamsRoot));
+        Assert.Equal(2, Directory.GetDirectories(fixture.TeamsRoot).Length);
     }
 
     /// <summary>Creates the Project folder under an already-existing Team folder.</summary>
@@ -231,9 +231,9 @@ public sealed class TeamFolderProvisionerTests
         Assert.True(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Marketing", "memory-notes")));
     }
 
-    /// <summary>Guard (passes today): a Persona Team LABEL <c>memory</c> still gets its <c>Teams/memory/</c> folder on start, because a Team named memory is legal (Spec §6.3 restricts Projects only).</summary>
+    /// <summary>A Persona Team LABEL <c>memory</c> creates no Team folder on start: <c>Teams/memory/</c> is the shared memory folder, reserved (Spec §6.1), so it holds no Team sub-folders.</summary>
     [Fact]
-    public async Task Start_LabelMemory_StillCreatesTeamFolder()
+    public async Task Start_LabelMemory_CreatesNoTeamFolder()
     {
         using ProvisionerFixture fixture = new();
         fixture.Personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["memory"]), "body");
@@ -241,12 +241,14 @@ public sealed class TeamFolderProvisionerTests
 
         await provisioner.StartAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(Path.Combine(fixture.TeamsRoot, "memory"), Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+        string memory = Path.Combine(fixture.TeamsRoot, "memory");
+        Assert.Equal(memory, Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+        Assert.Empty(Directory.GetFileSystemEntries(memory));
     }
 
-    /// <summary>Guard (passes today): a Persona added AFTER start with label <c>memory</c> also gets its Team folder (the <see cref="PersonaStore.PersonasChanged"/> path into the same sync).</summary>
+    /// <summary>A Persona added AFTER start with label <c>memory</c> also creates no Team folder (the <see cref="PersonaStore.PersonasChanged"/> path into the same sync).</summary>
     [Fact]
-    public async Task PersonasChanged_LabelMemory_StillCreatesTeamFolder()
+    public async Task PersonasChanged_LabelMemory_CreatesNoTeamFolder()
     {
         using ProvisionerFixture fixture = new();
         using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
@@ -254,7 +256,9 @@ public sealed class TeamFolderProvisionerTests
 
         fixture.Personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["memory"]), "body");
 
-        Assert.Equal(Path.Combine(fixture.TeamsRoot, "memory"), Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+        string memory = Path.Combine(fixture.TeamsRoot, "memory");
+        Assert.Equal(memory, Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+        Assert.Empty(Directory.GetFileSystemEntries(memory));
     }
 
     /// <summary>Calling <see cref="TeamFolderProvisioner.EnsureProject"/> twice for the same name is
@@ -551,7 +555,7 @@ public sealed class TeamFolderProvisionerTests
         Assert.Equal(LibraryNodeRole.ProjectFolder, result.Value.Role);
         Assert.Equal("Business/Launch", result.Value.RelativePath);
         Assert.True(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Business", "Launch")));
-        Assert.Equal(["Launch"], EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
+        Assert.Equal(["Launch", "memory", "outputs", "raw"], EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
     }
 
     /// <summary>A Team that exists only as a Persona label gets its Team folder created first, then the
@@ -574,7 +578,7 @@ public sealed class TeamFolderProvisionerTests
         Assert.Equal(LibraryNodeRole.ProjectFolder, result.Value.Role);
         Assert.Equal("Ops/Launch", result.Value.RelativePath);
         Assert.Equal(["Ops"], EntryNames(fixture.TeamsRoot));
-        Assert.Equal(["Launch"], EntryNames(Path.Combine(fixture.TeamsRoot, "Ops")));
+        Assert.Equal(["Launch", "memory", "outputs", "raw"], EntryNames(Path.Combine(fixture.TeamsRoot, "Ops")));
     }
 
     /// <summary>A label-only Team whose label the Library cannot hold as a folder name is refused with
@@ -642,7 +646,7 @@ public sealed class TeamFolderProvisionerTests
 
         Assert.Null(result.Error);
         Assert.NotNull(result.Value);
-        Assert.Equal([project], EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
+        Assert.Equal(new[] { "memory", "outputs", "raw", project }.Order(StringComparer.Ordinal), EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
     }
 
     /// <summary>A Team the catalog does not know is refused with the exact text and nothing is created.</summary>
@@ -694,7 +698,7 @@ public sealed class TeamFolderProvisionerTests
         Assert.NotNull(duplicate.Error);
         Assert.Equal("notes", File.ReadAllText(keep));
         Assert.Equal(["Business", "Ops"], EntryNames(fixture.TeamsRoot));
-        Assert.Equal(["Launch", "keep.md"], EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
+        Assert.Equal(["Launch", "keep.md", "memory", "outputs", "raw"], EntryNames(Path.Combine(fixture.TeamsRoot, "Business")));
     }
 
     /// <summary>Lists a directory's entry names (files and folders), ordinal-sorted, so a whole listing can be asserted.</summary>
