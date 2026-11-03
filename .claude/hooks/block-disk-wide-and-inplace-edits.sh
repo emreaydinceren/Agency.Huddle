@@ -6,7 +6,11 @@
 #   - `sed -i` / `--in-place`: rewrites the file with LF endings in this CRLF working copy.
 # It also refuses shell writes that go around the Edit hooks when the target is under src/ or
 # tests/: cat > / >>, File.WriteAll*/AppendAll*, Set-Content, Add-Content, Out-File, and a script
-# file run from /tmp.
+# file run from /tmp. A target matches when any path segment is src or tests, in any drive form
+# (/e/..., E:\..., E:/...) and either slash, so sibling worktrees (sb-d5/src/...) are covered.
+# Scratch paths are NOT exempt: a /tmp/x/src/ or scratchpad/src/ target is refused too, because an
+# exemption would need path-prefix guessing that a crafted path could abuse; name scratch
+# folders without a src or tests segment.
 # Uses perl rather than jq (jq is not installed). Everything else passes through untouched.
 # Regression cases: block-disk-wide-and-inplace-edits.cases.txt beside this file, one
 # "BLOCK|allow|name|payload" per line; run them with agents/scripts/Test-HookCases.sh.
@@ -44,7 +48,10 @@ fi
 pos='(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*)'
 posc='(?:\x22command\x22\s*:\s*\x22|[;&|({]\s*|\\n\s*|-Command\s+[\x22\x27\\]*)'
 under='(?<=[/\\\x22\x27\s=(])(?:src|tests)(?:/|\\+)'
-same='(?:(?!\\n)[^|;&])*?'
+same='(?:\x27[^\x27]*\x27|\\\x22(?:(?!\\\x22).)*\\\x22|(?!\\n)[^|;&])*?'
+# `cd` into a folder that is itself a src or tests segment (any drive form, either slash), then a
+# writer with a relative target: cd /e/Repos/W/src/App && printf x >> A.cs
+cdsrc='cd\s+[\x22\x27\\]*(?:[^\s\x22\x27|;&<>]*[/\\])?(?:src|tests)(?:[/\\]+[^\s|;&]*)?[\x22\x27\\]*\s*(?:&&|;)\s*'
 
 matches() {
     PAT="$1" perl -0777 -ne 'exit(/$ENV{PAT}/ ? 0 : 1)' <<<"$payload"
@@ -58,6 +65,9 @@ if matches "${pos}(?:printf|echo)\\b${same}(?<![0-9&])>>?\\s*[\\x22\\x27\\\\]*(?
 fi
 if matches "${pos}(?:[^|;&]*\\|\\s*)?tee\\b${same}\\s[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
     deny "Blocked: tee into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
+fi
+if matches "${pos}${cdsrc}(?:(?:cat|printf|echo)\\b${same}(?<![0-9&])>>?|(?:[^|;&]*\\|\\s*)?(?:tee|truncate)\\b)"; then
+    deny "Blocked: a write after cd into a src or tests folder skips the Edit hooks. Use the Edit or Write tool."
 fi
 if matches "(?i)File\\]::(?:WriteAll|AppendAll)\\w*\\(${same}${under}"; then
     deny "Blocked: File.WriteAll/AppendAll into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."

@@ -48,3 +48,21 @@ allow|pwsh -File repo script|{"tool_input":{"command":"pwsh -NoProfile -File age
 BLOCK|truncate -s src|{"tool_input":{"command":"truncate -s -1 src/Huddle.App/Program.cs"}}
 BLOCK|truncate windows tests path|{"tool_input":{"command":"cd x && truncate -s 0 /e/Repos/Huddle-wt/sb/tests/A/B.cs"}}
 allow|truncate scratchpad|{"tool_input":{"command":"truncate -s 0 /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}
+BLOCK|printf >> sibling worktree posix|{"tool_input":{"command":"printf 'x' >> /e/Repos/Huddle-wt/sb-d5/src/Huddle.App/Acp/AgentsMdGuard.cs"}}
+BLOCK|printf >> sibling worktree windows|{"tool_input":{"command":"printf x >> E:\\Repos\\Huddle-wt\\sb-d5\\src\\Huddle.App\\A.cs"}}
+BLOCK|printf >> sibling worktree drive slash|{"tool_input":{"command":"printf x >> E:/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|echo >> absolute tests|{"tool_input":{"command":"echo x >> /e/Repos/Huddle-wt/sb-d5/tests/A/B.cs"}}
+BLOCK|printf with quoted semicolon|{"tool_input":{"command":"printf 'a;b' >> /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|echo with quoted ampersand|{"tool_input":{"command":"echo \"a & b\" >> /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|cd worktree then relative src|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb-d5 && printf x >> src/A.cs"}}
+BLOCK|cd into src folder then relative target|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb-d5/src/Huddle.App && printf x >> Acp/A.cs"}}
+BLOCK|cd into windows tests folder then tee|{"tool_input":{"command":"cd E:\\Repos\\Huddle-wt\\sb-d5\\tests && echo x | tee A.cs"}}
+BLOCK|tee absolute src|{"tool_input":{"command":"echo x | tee -a /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|cat > absolute src|{"tool_input":{"command":"cat a > /e/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|truncate drive slash src|{"tool_input":{"command":"truncate -s 0 E:/Repos/Huddle-wt/sb-d5/src/A.cs"}}
+BLOCK|Set-Content windows src|{"tool_input":{"command":"Set-Content E:\\Repos\\Huddle-wt\\sb-d5\\src\\A.cs x"}}
+BLOCK|Out-File drive slash tests|{"tool_input":{"command":"'x' | Out-File -FilePath E:/Repos/Huddle-wt/sb-d5/tests/A.cs"}}
+BLOCK|WriteAllText windows src|{"tool_input":{"command":"pwsh -Command \"[System.IO.File]::WriteAllText('E:\\Repos\\Huddle-wt\\sb-d5\\src\\A.cs','x')\""}}
+BLOCK|scratch-looking path with src segment is still refused|{"tool_input":{"command":"printf x >> /tmp/scratch/src/A.cs"}}
+allow|cd into mysrc then write|{"tool_input":{"command":"cd /e/Repos/mysrc && printf x >> A.cs"}}
+allow|printf quoted pipe to scratchpad|{"tool_input":{"command":"printf 'a|b' >> /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}
