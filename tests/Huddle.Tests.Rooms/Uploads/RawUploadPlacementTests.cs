@@ -52,7 +52,8 @@ public sealed class RawUploadPlacementTests
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Home", ct: ct);
 
         // Archiving moved Teams/Home to Archive/Home, so only the Archive copy exists.
-        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "Home"));
+        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "home"));
+        File.WriteAllText(Path.Combine(harness.DataDir, "Archive", "home", "_team.md"), "---\n---\n");
 
         LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "notes.txt", new MemoryStream("hello"u8.ToArray()), ct);
 
@@ -71,7 +72,7 @@ public sealed class RawUploadPlacementTests
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Home", ct: ct);
         Directory.CreateDirectory(Path.Combine(harness.DataDir, "Teams", "Home"));
-        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "Home"));
+        Directory.CreateDirectory(Path.Combine(harness.DataDir, "Archive", "Home", "Apollo"));
 
         LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "notes.txt", new MemoryStream("hello"u8.ToArray()), ct);
 

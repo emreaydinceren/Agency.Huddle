@@ -493,6 +493,32 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     private bool ArchivedTeamExists(string name) =>
         this.ArchivedTeamNameList().Any(archived => string.Equals(archived, name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>The one rule for "this Team is archived": <c>&lt;archiveRoot&gt;/&lt;name&gt;/_team.md</c> exists, the folder found by listing and matched ignoring case. A Project archive alone does not count.</summary>
+    /// <param name="archiveRoot">The full path of the Archive root.</param>
+    /// <param name="name">The Team's name.</param>
+    internal static bool IsArchivedTeam(string archiveRoot, string name)
+    {
+        if (!Directory.Exists(archiveRoot))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(archiveRoot).Any(folder =>
+                string.Equals(Path.GetFileName(folder), name, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(Path.Combine(folder, TeamPaths.TeamFileName)));
+        }
+        catch (IOException)
+        {
+            return false; // An unreadable Archive root is treated as having no archived Team, as ListArchive does.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false; // Same: nothing readable means nothing archived.
+        }
+    }
+
     /// <summary>The folder names under the Archive root that hold a <c>_team.md</c>, in their on-disk spelling.</summary>
     private List<string> ArchivedTeamNameList() =>
         this.ListArchive(null, static folder => File.Exists(Path.Combine(folder, TeamPaths.TeamFileName)));

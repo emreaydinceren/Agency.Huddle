@@ -44,6 +44,12 @@ internal sealed partial class LibraryReferenceResolver(LibraryPathResolver paths
         }
 
         bool exists = File.Exists(resolved.FullPath) || Directory.Exists(resolved.FullPath);
+        if (!exists && this.paths.TryResolveForRead(resolved.Root.Id, resolved.RelativePath, out LibraryPath? readable, out _) && readable.Archived)
+        {
+            // A file that moved with its archived Team still opens, read-only, from the Archive twin.
+            return new LibraryReference(readable.Root.Id, readable.RelativePath, Exists: true);
+        }
+
         return new LibraryReference(resolved.Root.Id, resolved.RelativePath, exists);
     }
 

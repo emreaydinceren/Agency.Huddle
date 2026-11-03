@@ -70,18 +70,13 @@ internal sealed class ChatUploadService(
         return result;
     }
 
-    /// <summary>True when the Team has a folder under the Archive root and none under the Teams root (names compared ignoring case).</summary>
+    /// <summary>True when <c>Archive/&lt;team&gt;/_team.md</c> exists, through the provisioner's rule.</summary>
     /// <param name="team">The Room's Team.</param>
     private bool IsTeamArchived(string team)
     {
         TeamOptions value = options.Value;
-        return HasFolder(Path.Combine(value.DataDir, value.Library.Archive.Dir), team)
-            && !HasFolder(Path.Combine(value.DataDir, value.Teams.Dir), team);
+        return TeamFolderProvisioner.IsArchivedTeam(Path.Combine(value.DataDir, value.Library.Archive.Dir), team);
     }
-
-    private static bool HasFolder(string root, string name) =>
-        Directory.Exists(root)
-        && Directory.EnumerateDirectories(root).Any(dir => string.Equals(Path.GetFileName(dir), name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Deletes a saved upload that was never sent.</summary>
     /// <param name="file">The saved file.</param>
