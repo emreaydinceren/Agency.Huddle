@@ -11,15 +11,15 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 0 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 2 of 140 tasks Done · 0 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
 | **D0. Setup** | | | |
-| 0.1 #1 Baseline build and test [Haiku] | | ✔ | |
-| 0.2 #2 Write ADR-0075 [Sonnet] | ✔ | | |
+| 0.1 #1 Baseline build and test [Haiku] | | | ✔ |
+| 0.2 #2 Write ADR-0075 [Sonnet] | | | ✔ |
 | **D1. P1: reserved names** | | | |
-| 1.1.t #3 Reserved Team and Project names [Haiku] | ✔ | | |
+| 1.1.t #3 Reserved Team and Project names [Haiku] | | ✔ | |
 | 1.1.i #4 Reserve the names [Haiku] | ✔ | | |
 | 1.2.t #5 Reserved names are never Teams or Projects [Sonnet] | ✔ | | |
 | 1.2.i #6 Skip reserved names at Team level [Sonnet] | ✔ | | |
