@@ -201,7 +201,7 @@ Each key gets a row in the Engineering Guide's configuration table in the same t
 | --- | --- | --- |
 | OQ-1 | Should a PDF also go to an Adapter with file tools (`readsFiles`)? | No, as PromptBlocks D-1 decided for text |
 | OQ-2 | Spend by model? | Not built (§6) |
-| OQ-4 | Does Haiku 5.5 now offer Effort levels? The user guide says Haiku has none | Task 7.3 checks with `supportedModels()` and corrects the user guide |
+| OQ-4 | Does Haiku 5.5 now offer Effort levels? The user guide says Haiku has none | **Answered 2026-11-03: yes, Haiku 5.5 offers `low`, `medium`, `high`, `xhigh` and `max`.** Checked with the SDK's `supportedModels()` (`tools/acp`): the `haiku` row (Haiku 5.5) has `supportsEffort: true` and those five `supportedEffortLevels`. The older `claude-haiku-4-5-20251001` row (Haiku 4.5) has no effort fields. The user guide's Effort row is corrected to say so |
 
 ## 12. Verification
 

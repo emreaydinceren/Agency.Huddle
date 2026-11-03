@@ -950,7 +950,7 @@ few ways worth knowing before you pick it for a role:
 | A Huddle tool call is refused, then retried and works | Haiku loads a tool's description only when it first needs it, so its first call can guess the arguments. Huddle's refusal says what to pass, for example *"Name the Team in team and the fact in fact; nothing was proposed."*, and the next call succeeds. Each retry is one more call on your bill. |
 | A fact you told it went nowhere, although it said **Done** | Rare since the refusals above were made explicit, but a small model can still report a refused call as done. Check the Feed for the **Team Memory (Helper)** record, or open the Team's `memory/` folder. |
 | It does not offer an `AGENTS.md` change for a standing rule | Only an Agent with the `retrospective` Skill is offered the tool that proposes one. Without it, the Agent tells you the rule belongs in `AGENTS.md` and you add the line yourself. |
-| **Effort** offers only **Agent default** | Haiku has no effort levels. |
+| **Effort** offers only **Agent default** | Only an Agent on the older Haiku (Haiku 4.5) has no effort levels. Haiku 5.5, the current Haiku that **Haiku** picks, offers low, medium, high, extra high and max, as the Agent's card lists them. |
 
 Choose a larger model for an Agent that manages a Team or runs long, many-step Tasks. Haiku suits Agents that answer
 questions, file what you tell them and do short jobs.
