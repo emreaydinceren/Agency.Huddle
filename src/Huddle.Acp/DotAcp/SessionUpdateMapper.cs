@@ -58,7 +58,8 @@ internal static class SessionUpdateMapper
                 SessionUpdateMapper.MapToolCallStatus(toolCall.Status),
                 SessionUpdateMapper.SerializeRaw(toolCall.RawInput),
                 SessionUpdateMapper.MapLocation(toolCall.Locations),
-                SessionUpdateMapper.MapDiff(toolCall.Content));
+                SessionUpdateMapper.MapDiff(toolCall.Content),
+                SessionUpdateMapper.ReadClaudeCodeToolName(toolCall.Meta));
 
             case dotacp.protocol.SessionUpdateToolCallUpdate toolCallUpdate:
             return new ToolCallUpdated(
@@ -72,7 +73,8 @@ internal static class SessionUpdateMapper
                 SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawOutput),
                 SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawInput),
                 SessionUpdateMapper.MapLocation(toolCallUpdate.Locations),
-                SessionUpdateMapper.MapDiff(toolCallUpdate.Content));
+                SessionUpdateMapper.MapDiff(toolCallUpdate.Content),
+                SessionUpdateMapper.ReadClaudeCodeToolName(toolCallUpdate.Meta));
 
             case dotacp.protocol.Plan plan:
             return new PlanUpdated(sessionId, SessionUpdateMapper.MapPlanEntries(plan.Entries));
@@ -283,6 +285,28 @@ internal static class SessionUpdateMapper
         dotacp.protocol.ToolCallLocation first = locations[0];
         int? line = first.Line is { } value ? (int)Math.Min(value, (uint)int.MaxValue) : null;
         return new ToolCallLocationInfo(first.Path, line);
+    }
+
+    /// <summary>
+    /// Reads the Adapter's tool name from <c>_meta.claudeCode.toolName</c>. dotacp hands each <c>_meta</c>
+    /// value over as a Newtonsoft token, so the name is a <c>JValue</c> string; a number, an object or a
+    /// missing key yields <see langword="null"/>.
+    /// </summary>
+    /// <param name="meta">The tool call's <c>_meta</c>, or <see langword="null"/> when the notification carries none.</param>
+    /// <returns>The tool name, or <see langword="null"/> when it is absent or not a string.</returns>
+    internal static string? ReadClaudeCodeToolName(Dictionary<string, object>? meta)
+    {
+        if (meta is null || !meta.TryGetValue("claudeCode", out object? claudeCode))
+        {
+            return null;
+        }
+
+        if (claudeCode is not Newtonsoft.Json.Linq.JObject fields)
+        {
+            return null;
+        }
+
+        return fields["toolName"] is Newtonsoft.Json.Linq.JValue { Value: string name } ? name : null;
     }
 
     /// <summary>

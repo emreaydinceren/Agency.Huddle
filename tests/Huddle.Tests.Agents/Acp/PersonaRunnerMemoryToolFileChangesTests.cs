@@ -97,6 +97,54 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
         Assert.Equal(!recorded, nextInA.Contains(scenario.NotesPath, StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The Adapter's tool name wins over its display title (Spec §5): a memory save titled with display text, whose
+    /// <c>ToolName</c> is the memory tool's prefixed name, is still the Agent's own change and is not listed back in Room A.
+    /// </summary>
+    [Fact]
+    public async Task MemoryCall_ToolNameSet_TitleIsDisplayText_StillAttributed()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
+
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
+        await scenario.RunMemoryTurnInRoomAAsync("Remember a fact", MemoryInput("write"), mutate: scenario.RewriteNotes, cts.Token, toolName: PrefixedName);
+        string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
+
+        // contains-ok: prompt text, not markup; whether one file's File Changes line is present is under test.
+        Assert.DoesNotContain(scenario.NotesPath, nextInA, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A set tool name is authoritative (Spec §5): a call titled like the memory tool but named <c>Bash</c> is not a memory
+    /// save, so its file change is listed back in Room A.
+    /// </summary>
+    [Fact]
+    public async Task MemoryCall_ToolNameOther_TitleLooksLikeMemory_NotAttributed()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
+
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
+        await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput("write"), mutate: scenario.RewriteNotes, cts.Token, toolName: "Bash");
+        string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
+
+        // contains-ok: prompt text, not markup; whether one file's File Changes line is present is under test.
+        Assert.Contains(scenario.NotesPath, nextInA, StringComparison.Ordinal);
+    }
+
+    /// <summary>With no tool name (an Adapter that sends no <c>_meta</c>) the title still identifies the memory tool, as before.</summary>
+    [Fact]
+    public async Task MemoryCall_NoToolName_TitleFallbackStillWorks()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(30));
+
+        await using Scenario scenario = await Scenario.StartAsync(alsoRoomB: false, cts);
+        await scenario.RunMemoryTurnInRoomAAsync(PrefixedName, MemoryInput("write"), mutate: scenario.RewriteNotes, cts.Token, toolName: null);
+        string nextInA = await scenario.NextTurnInRoomAAsync(cts.Token);
+
+        // contains-ok: prompt text, not markup; whether one file's File Changes line is present is under test.
+        Assert.DoesNotContain(scenario.NotesPath, nextInA, StringComparison.Ordinal);
+    }
+
     /// <summary>A memory <c>delete</c> records the path: the file's removal is not listed back in Room A as a deletion.</summary>
     [Fact]
     public async Task MemoryDeleteInRoomA_RecordsThePath_DeletionNotListedBack()
@@ -228,12 +276,13 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
         /// <param name="rawInput">The tool call's raw input.</param>
         /// <param name="mutate">What the call did to the file.</param>
         /// <param name="ct">Cancels the Turn.</param>
-        public async Task RunMemoryTurnInRoomAAsync(string title, string rawInput, Action mutate, CancellationToken ct)
+        /// <param name="toolName">The Adapter's own tool name carried on both events, or null when it sends none.</param>
+        public async Task RunMemoryTurnInRoomAAsync(string title, string rawInput, Action mutate, CancellationToken ct, string? toolName = null)
         {
             string sessionId = this.factory.Session.SessionId;
             this.factory.Session.EnqueueToolActivity(
-                new ToolCallStarted(sessionId, "m1", title, ToolKind.Other, ToolCallStatus.Pending, "{}"),
-                new ToolCallUpdated(sessionId, "m1", title, ToolKind.Other, ToolCallStatus.Completed, null, rawInput));
+                new ToolCallStarted(sessionId, "m1", title, ToolKind.Other, ToolCallStatus.Pending, "{}", ToolName: toolName),
+                new ToolCallUpdated(sessionId, "m1", title, ToolKind.Other, ToolCallStatus.Completed, null, rawInput, ToolName: toolName));
             this.factory.Session.EnqueueDripFedReply(TimeSpan.FromMilliseconds(300), "saved");
 
             Drafts drafts = this.Services.GetRequiredService<Drafts>();

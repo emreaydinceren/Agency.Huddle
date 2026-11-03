@@ -2037,14 +2037,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
             this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.RawInputJson);
+            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.ToolName, started.RawInputJson);
             await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
             this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
             this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.RawInputJson);
+            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.ToolName, updated.RawInputJson);
             await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
@@ -2384,8 +2384,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// returns the file any <c>memory</c> call names, which is the only argument the tool-call log would otherwise lose.
     /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
     /// <c>claude-agent-acp</c> 0.75.1 has no case for an MCP tool in <c>toolInfoFromToolUse</c> (<c>dist/tools.js</c>), so it
-    /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>;
-    /// the name arrives nowhere else in a <see cref="ToolCallStarted"/> or <see cref="ToolCallUpdated"/>. A live run saw it there:
+    /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>.
+    /// The name is read from <c>_meta.claudeCode.toolName</c> (<see cref="ToolCallStarted.ToolName"/>) when the Adapter sends it,
+    /// with the title as the fallback for an Adapter that sends no <c>_meta</c>. A live run saw it in the title:
     /// the tool-activity line, which shows the title, read <c>mcp__team__list_agents</c> (manual-tests run log, 2026-09-15). Only <c>write</c>,
     /// <c>append</c>, <c>replace</c> and <c>delete</c> count. A call the tool then refuses is recorded too, harmlessly:
     /// <c>FileChangeTracker.CommitAsync</c> stores a touched file's state as it is on disk, which a refusal left unchanged.
@@ -2393,16 +2394,18 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// </summary>
     /// <param name="kind">The tool call's category, as ACP reported it.</param>
     /// <param name="title">The tool call's title, which carries the tool's name for an App Tool.</param>
+    /// <param name="toolName">The Adapter's own tool name, when it sends one; it wins over <paramref name="title"/> (Spec §5).</param>
     /// <param name="rawInputJson">The tool call's raw input, if any.</param>
     /// <returns>
     /// The file the call names, for every command that names one (a <c>read</c> as well as a <c>write</c>), so the tool-call log
     /// and the tool-activity line say which memory file was used; <see langword="null"/> for any other call.
     /// </returns>
-    private string? RecordMemoryToolPath(ToolKind kind, string? title, string? rawInputJson)
+    private string? RecordMemoryToolPath(ToolKind kind, string? title, string? toolName, string? rawInputJson)
     {
+        string? name = toolName ?? title;
         if (kind != ToolKind.Other
-            || title is null
-            || !MemoryTool.IsToolName(title)
+            || name is null
+            || !MemoryTool.IsToolName(name)
             || this.fileChanges?.MemoryPaths is not { } memoryPaths
             || MemoryRequest.FromJson(rawInputJson) is not { } request
             || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
