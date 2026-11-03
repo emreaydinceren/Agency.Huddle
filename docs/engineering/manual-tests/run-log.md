@@ -5776,6 +5776,7 @@ File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-07--a
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-03 | Blocked | `d7a9de8d` |  | The confirmation read "1 open Tasks and 0 waiting on you will leave the Boards. These Agents will have no Team: Pia." (count right, plural wrong). The folder moved to `Archive\Property Investment\`, and `_team.md` gained `archivedMembers: ['Pia']` and `archivedManager`; Pia's label went. The Team had no Room, so the Room half was not seen. The sidebar listed the Team as live until a reload. |
+| 2026-11-03 | Pass | `c8e15b5e` |  | Rerun with every Agent online (own `Team__PipeName`). Same confirmation; the Team Room and Pia's Team-scoped Room left the open list and were recorded as `archivedRooms` beside `archivedMembers` and `archivedManager`; Pia's own one-to-one Room stayed open (D-46). The left rail updated without a reload this time. |
 
 ### SB-08 — An archived file opens read-only and unarchiving restores the Team
 
@@ -5784,6 +5785,7 @@ File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-08--a
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-03 | Blocked | `d7a9de8d` |  | A Message naming the old `Teams\Property Investment\outputs\teardown.md` linked to `root=archive`, and the Library opened it with no Read/Edit/Split controls (read-only). Nothing marks it *archived* beyond the path header, which SB-R20 asks for. Unarchive brought the folder back, restored `manager: 'Pia'`, removed the archive keys and gave Pia the label. Pia stayed Offline, so the Rooms half was not seen; a second one-to-one Room for Pia was created. |
+| 2026-11-03 | Pass | `c8e15b5e` |  | Rerun with every Agent online. The old link opened the archived file read-only (no Edit control); it is marked only by its `Archive/Property Investment/…` path header, with no separate *archived* label. Unarchive brought back the folder, `manager: 'Pia'`, Pia's label and both archived Rooms. Defect seen: moving the Task file back made the Task watcher post "Task PROP-0001 … was changed by You: edited outside Huddle" to Pia, who spent a Turn and asked the Human a Question; the Feed also showed "You created #PROP-0001" again. It happened on both unarchives. No "unarchived" Feed item is posted. |
 
 ### SB-09 — An old data folder logs warnings at start-up
 
