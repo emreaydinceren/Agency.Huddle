@@ -8,6 +8,12 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **An Agent on a model without auto mode may open its first reply with an Adapter notice.** When the Human's own
+  `~/.claude/settings.json` sets `permissions.defaultMode` to `auto` and the Agent runs on a model that has no auto mode
+  (Haiku), `claude-agent-acp` falls back to Accept edits and writes "**Auto mode unavailable:** … using Accept edits
+  instead." into the reply text, where Huddle cannot tell it from the Agent's own words. Huddle never asks for `auto`
+  itself (`WorkModePolicy` hides it); set the Agent's Work mode, or change that setting, to stop it. Seen in the Second
+  Brain manual run on 2026-11-03.
 - **A pipe client can receive a Message whose sender is not in the delivery's `members` list.** A Message Huddle wrote itself
   (the wake-up after a Helper's change, [ADR-0065](../adr/0065-huddle-posts-as-itself.md)) carries the sender id `huddle`,
   which is never a Room Member. The protocol version is unchanged, and a client that looks the sender up in `members` must
