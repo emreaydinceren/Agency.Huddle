@@ -20,6 +20,7 @@ internal static class FeedSourceTypes
         FeedSourceType.RoomQuestion => "room-question",
         FeedSourceType.RoomForm => "room-form",
         FeedSourceType.RoomBudget => "room-budget",
+        FeedSourceType.RoomJob => "room-job",
         FeedSourceType.RoomCreated => "room-created",
         FeedSourceType.RoomJoined => "room-joined",
         FeedSourceType.RoomArchived => "room-archived",

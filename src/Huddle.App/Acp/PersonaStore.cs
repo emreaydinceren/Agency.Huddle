@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
@@ -677,7 +678,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// definition must live inside its own agent folder). Inside each agent folder, only the
     /// top-level ".md" whose stem matches the folder Name (case-insensitively) is a candidate
     /// definition - <c>work/</c> and any other sub-folder are never descended into. Every OTHER
-    /// top-level ".md" in that folder is rejected (corrections-B2 item 14). A folder named
+    /// top-level ".md" in that folder is rejected (corrections-B2 item 14), except the Agent's Job file,
+    /// <see cref="JobFiles.FileName"/>, which is skipped. A folder named
     /// <c>_unsorted</c> is scanned recursively and every file inside it rejected with a fixed
     /// migration reason (item 15); any other <c>_</c>- or <c>.</c>-prefixed folder is skipped
     /// entirely - no Persona, no rejection.
@@ -788,7 +790,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
                 candidates.Add((file, text));
             }
-            else
+            else if (!JobFiles.IsSidecar(file))
             {
                 preRejected.Add(new RejectedPersonaFile(file, "An agent folder holds only its definition; use work/."));
             }
@@ -1082,8 +1084,12 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     // ignore it entirely on the strength of the new, deeper path alone: moving
     // Agents/Nova/Nova.md into Agents/Nova/work/Nova.md must still be noticed, or Nova keeps
     // loading from a file that no longer exists.
+    //
+    // A Job file (schedule.md beside a definition, JobFiles.IsSidecar) is never a Persona and is written on every Job edit, so
+    // its events are dropped here; a rename still counts when its OLD path was a definition.
     internal static bool AffectsATeamsFile(string definitionsRoot, FileSystemEventArgs e) =>
-        (HasAtMostTwoSegments(definitionsRoot, e.FullPath)
+        !(JobFiles.IsSidecar(e.FullPath) && (e is not RenamedEventArgs moved || JobFiles.IsSidecar(moved.OldFullPath)))
+        && (HasAtMostTwoSegments(definitionsRoot, e.FullPath)
             || (e is RenamedEventArgs renamed && HasAtMostTwoSegments(definitionsRoot, renamed.OldFullPath)))
         && (IsMarkdownFile(e.Name)
             || (e.ChangeType == WatcherChangeTypes.Created && SegmentCount(definitionsRoot, e.FullPath) == 1 && Directory.Exists(e.FullPath))

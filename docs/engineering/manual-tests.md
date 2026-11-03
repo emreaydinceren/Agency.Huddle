@@ -221,6 +221,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Library explorer and editor](manual-tests/library.md): the Library tree, document view and editor.
 - [Model and Effort](manual-tests/model-effort.md): the pickers, the catalog probe and the runner restart.
 - [Needs You](manual-tests/needs-you.md): the sidebar card of Rooms waiting on the Human.
+- [Jobs](manual-tests/jobs.md): scheduled Jobs, their Rooms, Needs You for the Human, `schedule.md` and restarts.
 - [Feed](manual-tests/feed.md): the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart.
 - [Remote access](manual-tests/remote-access.md): the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action.
 - [Right sidebar](manual-tests/right-sidebar.md): the panels by Subject, Outline scrolling, collapse and focus.

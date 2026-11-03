@@ -348,6 +348,9 @@ order decides per Token, independently.
 | `Acp/Tools/TriageRequestTool.cs` (`triage_request`) | Lets the receiving manager accept, decline or ask for more on a Request. |
 | `Acp/Tools/ConfirmRequestTool.cs` (`confirm_request`) | Lets the requester-side QA confirm a Request is done, which closes it. |
 | `Acp/Tools/ListTeamsTool.cs` (`list_teams`) | Lists every Team's card and how many Requests are open in each backlog. |
+| `Acp/Tools/JobsTool.cs` (`jobs`) | Creates, lists, changes, pauses, deletes and runs Jobs. Offered to every Persona while Jobs are on; only the Chief of Staff may act on another's Job. |
+| `Jobs/` | Scheduled Jobs: `JobRecurrence` (the `when` grammar and next-run rule), `JobDocument` (`schedule.md`), `JobStore` (every owner's file, watched), `JobScheduler` (the once-a-minute hosted service), `JobRunner` (the Job Room and the Huddle post). `Data/JobStateStore.cs` and `Data/JobRoomStore.cs` hold the firing state and the Room link. ADR-0074. |
+| `Components/Jobs/` | The Scheduled view: `ScheduledNav` (the Sidebar), `ScheduledPage` (`/scheduled`, `/scheduled/{id}`), `JobEditorDialog` over the pure `JobForm`, and `JobText` for every word shown. |
 | `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence line to a Task, the input the gates read. |
 | `Acp/Tools/ReadRecordsTool.cs` (`read_records`) | Gives the retro role a Team's evidence bundle, or one Task's change log and Evidence. |
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |

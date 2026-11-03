@@ -26,6 +26,7 @@ internal sealed class NeedsYouStartupScan(
         FeedSourceType.RoomQuestion,
         FeedSourceType.RoomForm,
         FeedSourceType.RoomBudget,
+        FeedSourceType.RoomJob,
     ];
 
     /// <summary>How many Messages at the end of each Transcript the scan reads.</summary>
@@ -114,6 +115,7 @@ internal sealed class NeedsYouStartupScan(
         FeedSourceType.RoomMention => NeedsYouReason.Mention,
         FeedSourceType.RoomQuestion => NeedsYouReason.Question,
         FeedSourceType.RoomForm => NeedsYouReason.Form,
+        FeedSourceType.RoomJob => NeedsYouReason.Job,
         _ => NeedsYouReason.Budget,
     };
 

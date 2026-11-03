@@ -70,7 +70,7 @@
 
     private static List<string> ReasonNames(NeedsYouReason held) =>
     [
-        .. new[] { (NeedsYouReason.Mention, "mention"), (NeedsYouReason.Question, "question"), (NeedsYouReason.Form, "form"), (NeedsYouReason.Budget, "budget") }
+        .. new[] { (NeedsYouReason.Mention, "mention"), (NeedsYouReason.Question, "question"), (NeedsYouReason.Form, "form"), (NeedsYouReason.Budget, "budget"), (NeedsYouReason.Job, "job") }
             .Where(pair => held.HasFlag(pair.Item1))
             .Select(static pair => pair.Item2),
     ];

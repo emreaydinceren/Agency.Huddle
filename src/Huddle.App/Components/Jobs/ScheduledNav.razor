@@ -1,0 +1,73 @@
+@*
+    The Scheduled view of the Sidebar (S2g): every Job, the Human's first and then each Agent's, as one-line rows that open
+    the Job's page, then New job, which opens JobEditorDialog. JobStore is a singleton, so its Changed subscription is
+    dropped in Dispose (rules.md). A Job that is paused wears the pause icon; a section that could not be read is counted on
+    the All jobs row, whose page lists it.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Jobs
+@inject JobStore Store
+@inject IHumanIdentity Human
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+<MudNavMenu Class="scheduled-nav">
+    <MudNavGroup Title="Scheduled" Icon="@Icons.Material.Outlined.Schedule" @bind-Expanded="this.expanded">
+        <NavTabLink Href="/scheduled" TabTitle="Scheduled" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.ListAlt" Class="nav-row-link">
+            <span class="sidebar-row-label">All jobs@(this.Store.Problems.Count > 0 ? $" ({this.Store.Problems.Count} to fix)" : string.Empty)</span>
+        </NavTabLink>
+        @foreach (Job job in SidebarRows.Visible(this.Store.Jobs, this.showAll, this.IsActive))
+        {
+            string label = $"{job.Title} · {JobText.OwnerName(job.Owner, this.Human.Name)}";
+            <NavTabLink @key="job.Id" Href="@($"/scheduled/{job.Id}")" TabTitle="@job.Title" Class="scheduled-nav-row"
+                        Icon="@(job.Paused ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.Schedule)">
+                <span class="sidebar-row-label" title="@($"{label} · {job.When.Describe()}")">@label</span>
+            </NavTabLink>
+        }
+        <ShowAllRow Total="this.Store.Jobs.Count" Expanded="this.showAll" OnToggle="this.ToggleShowAll" />
+        <MudNavLink Icon="@Icons.Material.Filled.Add" Class="nav-action-link scheduled-nav-new" OnClick="this.NewAsync">New job</MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>
+
+@code {
+    private bool expanded = true;
+    private bool showAll;
+    private string currentPath = string.Empty;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Store.Changed += this.OnJobsChanged;
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+        this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+    }
+
+    /// <summary>Unsubscribes from the store and from navigation.</summary>
+    public void Dispose()
+    {
+        this.Store.Changed -= this.OnJobsChanged;
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+    }
+
+    private bool IsActive(Job job) => string.Equals(this.currentPath, $"scheduled/{job.Id}", StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleShowAll() => this.showAll = !this.showAll;
+
+    private async Task NewAsync()
+    {
+        IDialogReference dialog = await this.DialogService.ShowAsync<JobEditorDialog>("New job", JobEditorDialog.Options);
+        if (await dialog.Result is { Canceled: false, Data: string id })
+        {
+            this.Navigation.NavigateTo($"/scheduled/{id}");
+        }
+    }
+
+    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

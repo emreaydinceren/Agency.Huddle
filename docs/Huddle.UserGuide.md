@@ -33,6 +33,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Chat with one or several Agents | [Chatting in Rooms](#chatting-in-rooms) |
 | Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
+| Have an Agent, or yourself, reminded of something on a timetable | [Scheduling jobs](#scheduling-jobs) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
@@ -1937,6 +1938,32 @@ In a View, you can filter by Sprint (including **@current** for the newest, or *
 Tasks with no Sprint), group by it, or sort by it. Agents can set a Task's Sprint by name
 or id, or use **current** to mean the newest. Only you can create a new Sprint by typing a
 name; Agents cannot — they must pick from the existing ones.
+
+## Scheduling jobs
+
+A **job** is an instruction that runs on a timetable, for you or for one Agent: "every weekday at 09:00, summarise
+yesterday". Each job runs in its own Room, named with ⏰ and its title. Huddle posts the instruction there; an Agent then
+replies, and a job for you puts its Room on [Needs you](#needs-you) until you post in it.
+
+To schedule one, click **Scheduled** in the Activity bar, then **New job**:
+
+1. Choose who it is for, and give it a title and an instruction.
+2. Choose how it repeats: once, every day, every weekday, on chosen days, or every few hours.
+3. Check the **Next runs** preview, then click **Schedule**.
+
+A job's page shows when it runs next and how its last run went, with **Edit…**, **Pause**, **Run now**, **Open Room** and
+**Delete job…**. Deleting a job keeps its Room.
+
+Agents schedule their own jobs with the `jobs` tool. Only the Chief of Staff can schedule a job for another Agent or for
+you, so you can ask it: "remind me every Friday at 16:00 to send the weekly update".
+
+Jobs are kept in `schedule.md`: beside each Agent's definition in its Agent folder, and in `Human/schedule.md` under
+the data folder for yours. You can edit the file by hand; a line Huddle cannot read is listed on the Scheduled page and
+that job does not run until you fix it.
+
+> [!NOTE]
+> Huddle runs jobs only while it is running. A run more than two minutes late, because Huddle was stopped or the
+> computer was asleep, is skipped; the job runs next at its following time.
 
 ## Keeping notes in the Library
 

@@ -24,6 +24,7 @@ internal static class TabIcons
         "library" => Icons.Material.Filled.MenuBook,
         "needs-you" => Icons.Material.Filled.NotificationsActive,
         "feed" => Icons.Material.Outlined.DynamicFeed,
+        "scheduled" => Icons.Material.Outlined.Schedule,
         _ => Icons.Material.Filled.Description,
     };
 }

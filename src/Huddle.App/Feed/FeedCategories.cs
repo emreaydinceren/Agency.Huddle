@@ -47,7 +47,7 @@ internal static class FeedCategories
     {
         FeedSourceType.TaskCreated or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou => FeedCategory.Tasks,
         FeedSourceType.TaskGateOn or FeedSourceType.TaskNeedsYou or FeedSourceType.GateDecisionDue => FeedCategory.Gates,
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => FeedCategory.Rooms,
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing or FeedSourceType.TeamMemoryNotFiled => FeedCategory.Helpers,

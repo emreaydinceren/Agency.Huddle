@@ -1,0 +1,152 @@
+@page "/scheduled"
+@page "/scheduled/{JobId}"
+@*
+    The Scheduled page (J1). Without an id it lists every Job (J2) and every section of a schedule.md that could not be read
+    (J3); with one it shows that Job (J4): what it posts, when it runs next and last ran, and Edit, Pause or Resume, Run now,
+    Open Room and Delete. JobStore is a singleton, so its Changed subscription is dropped in Dispose (rules.md).
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Jobs
+@inject JobStore Store
+@inject JobScheduler Scheduler
+@inject JobRoomStore JobRooms
+@inject IHumanIdentity Human
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject TimeProvider Clock
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
+    @if (this.JobId is null)
+    {
+        <PageHeader Title="Scheduled" CreateText="New job" CreateIcon="@Icons.Material.Filled.Add" OnCreate="this.NewAsync" />
+        @if (this.Store.Problems.Count > 0)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-4 scheduled-problems">
+                @Plural.Of(this.Store.Problems.Count, "section", "sections") of a schedule could not be read, so @(this.Store.Problems.Count == 1 ? "it does" : "they do") not run:
+                <ul>
+                    @foreach (JobProblem problem in this.Store.Problems)
+                    {
+                        <li>@JobText.OwnerName(problem.Owner, this.Human.Name), "@problem.Title": @problem.Reason</li>
+                    }
+                </ul>
+            </MudAlert>
+        }
+
+        @if (this.Store.Jobs.Count == 0)
+        {
+            <EmptyState Title="@JobText.EmptyTitle" Text="@JobText.EmptyText" Icon="@Icons.Material.Outlined.Schedule" />
+        }
+        else
+        {
+            <MudList T="string" Class="scheduled-list" Dense="true">
+                @foreach (Job job in this.Store.Jobs)
+                {
+                    <MudListItem T="string" @key="job.Id" Href="@($"/scheduled/{job.Id}")" Class="scheduled-row"
+                                 Icon="@(job.Paused ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.Schedule)">
+                        <MudText Typo="Typo.body1">@job.Title</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                            For @JobText.OwnerName(job.Owner, this.Human.Name) · @job.When.Describe() · @JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone)
+                        </MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    }
+    else if (this.Store.Find(this.JobId) is { } job)
+    {
+        <PageHeader Title="@job.Title" Subtitle="@($"For {JobText.OwnerName(job.Owner, this.Human.Name)} · {job.When.Describe()}")">
+            <Actions>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</MudButton>
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="@MenuDialogs.ActivatorLabel(job.Title)">
+                    @if (this.JobRooms.RoomOf(job.Id) is { } roomId)
+                    {
+                        <MudMenuItem Href="@($"/rooms/{roomId}")">Open Room</MudMenuItem>
+                        <MudDivider />
+                    }
+                    <MudMenuItem Class="menu-item-destructive" OnClick="@(() => this.DeleteAsync(job))">Delete job…</MudMenuItem>
+                </MudMenu>
+            </Actions>
+        </PageHeader>
+
+        <MudStack Spacing="2" Class="scheduled-detail">
+            <MudText Typo="Typo.body2" Class="scheduled-next">@JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone)</MudText>
+            @if (this.Scheduler.StateOf(job) is { } state && JobText.LastRun(state.LastRunUtc, state.LastOutcome, this.Zone) is { } last)
+            {
+                <MudText Typo="Typo.body2" Class="scheduled-last mud-text-secondary">@last</MudText>
+            }
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Time zone @(job.TimeZoneId ?? JobTimeZones.IdOf(this.Scheduler.ZoneOf(job)))@(job.CreatedBy is { } by ? $" · scheduled by {by}" : string.Empty)
+            </MudText>
+            <MudPaper Outlined="true" Class="pa-3 scheduled-instruction">
+                <div class="scheduled-instruction-text">@job.Instruction</div>
+            </MudPaper>
+        </MudStack>
+    }
+    else
+    {
+        <PageHeader Title="Scheduled" />
+        <EmptyState Title="This job no longer exists" Text="It was deleted, or it ran once and finished. Open Scheduled to see the jobs that remain." />
+    }
+</MudContainer>
+
+@code {
+    private bool running;
+
+    /// <summary>The Job to show; <see langword="null"/> lists them all.</summary>
+    [Parameter]
+    public string? JobId { get; set; }
+
+    private TimeZoneInfo Zone => this.Clock.LocalTimeZone;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.Store.Changed += this.OnJobsChanged;
+
+    /// <summary>Unsubscribes from the store.</summary>
+    public void Dispose() => this.Store.Changed -= this.OnJobsChanged;
+
+    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+
+    private async Task NewAsync()
+    {
+        IDialogReference dialog = await this.DialogService.ShowAsync<JobEditorDialog>("New job", JobEditorDialog.Options);
+        if (await dialog.Result is { Canceled: false, Data: string id })
+        {
+            this.Navigation.NavigateTo($"/scheduled/{id}");
+        }
+    }
+
+    private async Task EditAsync(string id)
+    {
+        DialogParameters<JobEditorDialog> parameters = new() { { dialog => dialog.JobId, id } };
+        _ = await (await this.DialogService.ShowAsync<JobEditorDialog>("Edit job", parameters, JobEditorDialog.Options)).Result;
+    }
+
+    private void SetPaused(Job job, bool paused) => _ = this.Store.Update(job with { Paused = paused });
+
+    private async Task RunNowAsync(Job job)
+    {
+        this.running = true;
+        try
+        {
+            JobOutcome? outcome = await this.Scheduler.RunNowAsync(job.Id, CancellationToken.None);
+            this.Snackbar.Add(JobText.RanNow(job.Title, outcome), outcome == JobOutcome.Delivered ? Severity.Success : Severity.Warning, key: "job-run-" + job.Id);
+        }
+        finally
+        {
+            this.running = false;
+        }
+    }
+
+    private async Task DeleteAsync(Job job)
+    {
+        if (await this.DialogService.ConfirmAsync(ConfirmCopy.DeleteTitle(job.Title), "It stops running. Its Room stays, with everything posted there.", "Delete", danger: true))
+        {
+            _ = this.Scheduler.Delete(job.Id);
+            this.Navigation.NavigateTo("/scheduled");
+        }
+    }
+}

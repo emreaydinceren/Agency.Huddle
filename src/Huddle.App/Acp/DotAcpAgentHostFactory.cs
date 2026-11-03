@@ -432,6 +432,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ];
         }
 
+        // Every Persona may schedule its own Jobs, so like the Task tools this is gated only by the feature flag; the
+        // tool itself refuses a Job for anyone else unless the caller is the Chief of Staff.
+        if (this.options.Jobs.Enabled)
+        {
+            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<JobsTool>(this.serviceProvider, personaName)];
+        }
+
         return chatTools;
     }
 

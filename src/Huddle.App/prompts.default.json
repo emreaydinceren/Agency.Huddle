@@ -140,5 +140,6 @@
   "tool.proposeTeamMemory.off": "Team Memory proposals are switched off. Note the fact in your own Memory, or tell the manager.",
   "tool.proposeTeamMemory.paused": "The Team Memory Helper is paused for today. Note the fact in your own Memory, or tell the manager.",
   "systemPrompt.memoryReadFailed": "{{file}} could not be read because something else is using it. Nothing was changed; try again.",
-  "systemPrompt.memoryOnlyFrontmatter": "The text for {{file}} is only a frontmatter block. Huddle writes the frontmatter: pass the description in 'description' and the body, without frontmatter, in 'text'."
+  "systemPrompt.memoryOnlyFrontmatter": "The text for {{file}} is only a frontmatter block. Huddle writes the frontmatter: pass the description in 'description' and the body, without frontmatter, in 'text'.",
+  "tool.jobs.description": "Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule only for yourself; the Chief of Staff may also schedule for another Agent or for the Human, by passing 'target'."
 }

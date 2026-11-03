@@ -5331,6 +5331,45 @@ File: [`docs/engineering/manual-tests/needs-you.md`](needs-you.md#needsyou-04--a
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+## Jobs: scheduled instructions in their own Rooms
+
+### JOBS-01 — A Job for an Agent runs in its own Room
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-01--a-job-for-an-agent-runs-in-its-own-room)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | Pass | `8c89c795` + uncommitted `feat/schedules` | | `software-co` seed, `run.ps1 -Seed` with ACP on, claude-agent-acp. New job from the Scheduled page for Ben, Once, today 16:49, America/Los_Angeles (the form's new default), instruction `Reply in one short sentence: say which day of the week it is today. Do not use any tools.` Log `Job job-137e1d ran in Room 01a19ee1…` within the 16:49 tick. Room `⏰ Invoice check`, members Ben and the Human; Huddle's Message `@Ben ⏰ Invoice check` then the instruction; Ben replied `Today is Monday, 2 November 2026.` Ben's one-to-one unchanged and still listed apart. The one-off then left Scheduled and Ben's `schedule.md` was deleted. Found and fixed during the run: the browser's time input handed back `16:48:00`, which the form refused; `JobForm` now drops the seconds (`TryBuild_TimeWithSeconds_IsRead`). One Turn. |
+
+### JOBS-02 — A Job for the Human goes on Needs You
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-02--a-job-for-the-human-goes-on-needs-you)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### JOBS-03 — The file is the source of truth
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-03--the-file-is-the-source-of-truth)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### JOBS-04 — A restart neither repeats nor sends late
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### JOBS-05 — Only the Chief of Staff schedules for others
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | Pass | `8c89c795` + uncommitted `feat/schedules` | | Same run. In Ravi's one-to-one, asked for a daily 09:00 Job for the Chief of Staff: Ravi called `jobs` and quoted `You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human.` Nothing was written. In the Chief of Staff's one-to-one, asked for a weekday 09:00 Job for Ravi: the tool answered `Scheduled job-cd16de "Bins check" for Ravi: weekdays at 09:00. It runs next on Tue 3 Nov 2026 at 09:00 (Pacific Standard Time).`; `Agents/Ravi/schedule.md` held it with `by: Chief of Staff`; Scheduled listed `Bins check · Ravi`. The zone in the answer was the Windows id; fixed after the run to name the IANA zone. Both test Jobs were then deleted by removing their files, and the view emptied within a second. Two Turns. |
+
 ## Right sidebar: the panels by Subject, Outline, collapse and focus
 
 ### RSIDE-01 — A Room shows Members, Tasks and Documents

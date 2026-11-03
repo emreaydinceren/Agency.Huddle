@@ -51,7 +51,7 @@ internal static class FeedTestSupport
         FeedSourceType.TaskAssignedToYou => new TaskAssignedPayload("GRO-1", "Title", team, "Sage"),
         FeedSourceType.RequestAwaitsYou => new RequestAwaitsPayload("GRO-1", "Title", team, "Sales", "review"),
         FeedSourceType.GateDecisionDue => new GateDecisionPayload("GRO-1", "Title", team, "gate-1", "Ship it?", "Doing", "Done"),
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
             => new RoomWaitPayload("room-1", "Plan", team),
         FeedSourceType.RoomCreated => new RoomCreatedPayload("room-1", "Plan", team, ["Nova", "You"]),
         FeedSourceType.RoomJoined => new RoomJoinedPayload("room-1", "Plan", team, "Sage"),

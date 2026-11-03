@@ -23,4 +23,7 @@ public enum SidebarView
 
     /// <summary>One Team's Rooms, Library and Tasks folders, opened from its shortcut at the top of the Activity bar.</summary>
     Team,
+
+    /// <summary>The scheduled Jobs, by who each is for, and New job.</summary>
+    Scheduled,
 }

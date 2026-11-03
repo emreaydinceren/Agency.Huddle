@@ -65,6 +65,17 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_room_teams_team_room ON room_teams(team) WHERE team_room = 1;";
 
     /// <summary>
+    /// Marks a Job Room: a row means the Room belongs to that Job. A sibling table for the same reason as the two above. Created
+    /// here as well as by <see cref="JobRoomStore"/>, because the one-to-one lookups below exclude its Rooms and so read it.
+    /// </summary>
+    internal const string DdlCreateRoomJobs = """
+        CREATE TABLE IF NOT EXISTS room_jobs (
+            room_id TEXT PRIMARY KEY REFERENCES rooms(id),
+            job_id  TEXT NOT NULL UNIQUE
+        );
+        """;
+
+    /// <summary>
     /// The Room projection and its two LEFT JOINs, ending in a newline so a <c>WHERE</c>, extra
     /// <c>JOIN</c> or <c>ORDER BY</c> can be appended directly. <see cref="ReadRoom"/> reads these
     /// seven columns by ordinal, so the column order here and there must change together.
@@ -115,6 +126,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeams, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsIndex, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsTeamRoomIndex, ct).ConfigureAwait(false);
+        await ExecuteNonQueryAsync(connection, DdlCreateRoomJobs, ct).ConfigureAwait(false);
 
         // A Name already held by an Agent row is skipped rather than allowed to throw on the unique
         // index: the Human keeps the Name they had, and startup goes on. On a fresh database there
@@ -485,6 +497,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
               AND EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $ag)
               AND (SELECT COUNT(*) FROM room_members WHERE room_id = r.id) = 2
               AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+              AND NOT EXISTS (SELECT 1 FROM room_jobs WHERE room_id = r.id)
               AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
@@ -524,6 +537,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             {RoomSelect}WHERE (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) = $count
               AND (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id AND m.user_id IN ({inClause})) = $count
               AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+              AND NOT EXISTS (SELECT 1 FROM room_jobs WHERE room_id = r.id)
               AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
@@ -614,6 +628,15 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             deleteScope.CommandText = "DELETE FROM room_teams WHERE room_id = $id;";
             deleteScope.Parameters.AddWithValue("$id", roomId);
             await deleteScope.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+
+        var deleteJob = connection.CreateCommand();
+        await using (deleteJob.ConfigureAwait(false))
+        {
+            deleteJob.Transaction = transaction;
+            deleteJob.CommandText = "DELETE FROM room_jobs WHERE room_id = $id;";
+            deleteJob.Parameters.AddWithValue("$id", roomId);
+            await deleteJob.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         }
 
         var deleteArchived = connection.CreateCommand();

@@ -1,0 +1,210 @@
+@*
+    New job and Edit job (O1): who it is for, a title, the instruction, and when it runs as one of five presets, with a live
+    preview of the next runs. It saves through JobStore itself and closes with the Job's id. The parameters are plain values
+    because a [Parameter] may not be of an internal type (rules.md), and an open dialog's parameters are frozen, so it loads
+    the Job by id.
+*@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Jobs
+@inject JobStore Store
+@inject JobScheduler Scheduler
+@inject PersonaStore Personas
+@inject IHumanIdentity Human
+@inject TimeProvider Clock
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @if (this.error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="job-editor-error">@this.error</MudAlert>
+            }
+            <MudSelect T="string" Label="For" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-target"
+                       Value="this.target" ValueChanged="this.OnTargetChanged">
+                <MudSelectItem T="string" Value="@HumanKey">@this.Human.Name (you)</MudSelectItem>
+                @foreach (string name in this.agentNames)
+                {
+                    <MudSelectItem T="string" Value="@(AgentKey + name)">@name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="string" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="job-editor-title"
+                          HelperText="Names the job and its Room." @bind-Value="this.title" />
+            <MudTextField T="string" Label="Instruction" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Lines="4"
+                          HelperText="Posted into the job's Room each time it runs." Class="job-editor-instruction long-text-field"
+                          @bind-Value="this.instruction" />
+            <MudSelect T="JobCadence" Label="Repeats" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-cadence"
+                       @bind-Value="this.form.Cadence">
+                <MudSelectItem T="JobCadence" Value="JobCadence.Once">Once</MudSelectItem>
+                <MudSelectItem T="JobCadence" Value="JobCadence.Daily">Every day</MudSelectItem>
+                <MudSelectItem T="JobCadence" Value="JobCadence.Weekdays">Every weekday</MudSelectItem>
+                <MudSelectItem T="JobCadence" Value="JobCadence.Weekly">On chosen days</MudSelectItem>
+                <MudSelectItem T="JobCadence" Value="JobCadence.EveryHours">Every few hours</MudSelectItem>
+            </MudSelect>
+            @if (this.form.Cadence == JobCadence.Once)
+            {
+                <MudTextField T="string" Label="Date" InputType="InputType.Date" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="job-editor-date" @bind-Value="this.form.Date" />
+            }
+            @if (this.form.Cadence == JobCadence.Weekly)
+            {
+                <div class="job-editor-days d-flex flex-wrap gap-1" role="group" aria-label="Days">
+                    @foreach (DayOfWeek day in JobForm.Week)
+                    {
+                        DayOfWeek shown = day;
+                        <MudCheckBox T="bool" Label="@JobForm.ShortName(shown)" Dense="true" Value="this.form.Has(shown)"
+                                     ValueChanged="@(chosen => this.form.Set(shown, chosen))" />
+                    }
+                </div>
+            }
+            @if (this.form.Cadence == JobCadence.EveryHours)
+            {
+                <MudNumericField T="int" Label="Every (hours)" Min="1" Max="@JobRecurrence.MaxHours" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 Class="job-editor-hours" @bind-Value="this.form.Hours" />
+            }
+            else
+            {
+                <MudTextField T="string" Label="Time" InputType="InputType.Time" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="job-editor-time" @bind-Value="this.form.Time" />
+            }
+            <MudTextField T="string" Label="Time zone" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="job-editor-zone"
+                          HelperText="An IANA name such as Europe/Berlin." @bind-Value="this.zone" />
+            <div class="job-editor-preview" role="status">
+                <MudText Typo="Typo.subtitle2">Next runs</MudText>
+                @if (this.Preview() is { Count: > 0 } runs)
+                {
+                    @foreach (DateTimeOffset run in runs)
+                    {
+                        <MudText Typo="Typo.body2" Class="job-editor-run">@JobText.Moment(run, this.Clock.LocalTimeZone)</MudText>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@this.PreviewProblem()</MudText>
+                }
+            </div>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="job-editor-save" OnClick="this.Save">
+            @(this.JobId is null ? "Schedule" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How a caller shows this dialog: the shared small-form options.</summary>
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
+
+    private const string HumanKey = "human";
+    private const string AgentKey = "agent:";
+
+    private JobForm form = new();
+    private IReadOnlyList<string> agentNames = [];
+    private string target = HumanKey;
+    private string title = string.Empty;
+    private string instruction = string.Empty;
+    private string zone = string.Empty;
+    private string? error;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The id of the Job being edited; <see langword="null"/> for a new Job.</summary>
+    [Parameter]
+    public string? JobId { get; set; }
+
+    /// <summary>The Agent a new Job is for, by Name; <see langword="null"/> for the Human.</summary>
+    [Parameter]
+    public string? Agent { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.agentNames = [.. this.Personas.Entries.Select(entry => entry.Name).Order(StringComparer.OrdinalIgnoreCase)];
+        this.zone = JobTimeZones.IdOf(this.Clock.LocalTimeZone);
+        if (this.JobId is not null && this.Store.Find(this.JobId) is { } job)
+        {
+            this.target = job.Owner.AgentName is { } name ? AgentKey + name : HumanKey;
+            this.title = job.Title;
+            this.instruction = job.Instruction;
+            this.zone = job.TimeZoneId ?? this.zone;
+            this.form = JobForm.From(job.When);
+            return;
+        }
+
+        this.form = JobForm.New(this.Clock.GetUtcNow(), this.Clock.LocalTimeZone);
+        if (this.Agent is { } agent)
+        {
+            this.target = AgentKey + agent;
+        }
+    }
+
+    private void OnTargetChanged(string value) => this.target = value;
+
+    private JobOwner Owner() => this.target.StartsWith(AgentKey, StringComparison.Ordinal) ? JobOwner.Agent(this.target[AgentKey.Length..]) : JobOwner.Human;
+
+    private TimeZoneInfo? Zone() => JobTimeZones.TryFind(this.zone.Trim(), out TimeZoneInfo? found) ? found : null;
+
+    private IReadOnlyList<DateTimeOffset> Preview() =>
+        this.form.TryBuild(out JobRecurrence? when, out _) && this.Zone() is { } found ? JobForm.NextRuns(when, this.Clock.GetUtcNow(), found, 3) : [];
+
+    private string PreviewProblem()
+    {
+        if (!this.form.TryBuild(out JobRecurrence? when, out string? problem))
+        {
+            return problem;
+        }
+
+        return this.Zone() is null ? JobTimeZones.Unknown(this.zone) : JobText.NoRunAfterNow(when);
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+
+    private void Save()
+    {
+        this.error = this.Validate(out JobRecurrence? when);
+        if (this.error is not null || when is null)
+        {
+            return;
+        }
+
+        string? zoneId = this.zone.Trim();
+        try
+        {
+            string id;
+            if (this.JobId is not null && this.Store.Find(this.JobId) is { } current)
+            {
+                _ = this.Store.Update(current with { Owner = this.Owner(), Title = this.title.Trim(), Instruction = this.instruction.Trim(), When = when, TimeZoneId = zoneId });
+                id = current.Id;
+            }
+            else
+            {
+                id = this.Store.Add(new Job(string.Empty, this.Owner(), this.title.Trim(), this.instruction.Trim(), when, zoneId, this.Human.Name, false)).Id;
+            }
+
+            this.Dialog?.Close(DialogResult.Ok(id));
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            this.error = ex.Message;
+        }
+    }
+
+    private string? Validate(out JobRecurrence? when)
+    {
+        when = null;
+        if (this.title.Trim().Length == 0 || this.instruction.Trim().Length == 0)
+        {
+            return JobText.NeedsTitleAndInstruction;
+        }
+
+        if (!this.form.TryBuild(out when, out string? problem))
+        {
+            return problem;
+        }
+
+        return this.Zone() is null ? JobTimeZones.Unknown(this.zone) : null;
+    }
+}

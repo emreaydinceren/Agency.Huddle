@@ -62,6 +62,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 37 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | 9 | 8 | 2.6h |
 | 38 | [Team Memory Helper: proposals filed by a Helper, the History, the Feed record, the membership check and the daily cap](team-memory-helper.md) | 7 | 6 | 1.5h |
 | 39 | [Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush](long-running-rooms.md) | 5 | 5 | 3.3h |
+| 40 | [Jobs: the Scheduled view, Job Rooms, Needs You for the Human, schedule.md both ways, restarts and who may schedule](jobs.md) | 5 | 1 | 0.5h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

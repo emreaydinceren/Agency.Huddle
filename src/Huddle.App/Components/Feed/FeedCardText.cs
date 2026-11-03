@@ -51,6 +51,7 @@ internal static class FeedCardText
         FeedSourceType.RoomMention => new("mention", Icons.Material.Filled.AlternateEmail),
         FeedSourceType.RoomQuestion => new("question", Icons.Material.Filled.QuestionMark),
         FeedSourceType.RoomForm => new("form", Icons.Material.Filled.ListAlt),
+        FeedSourceType.RoomJob => new("schedule", Icons.Material.Filled.Schedule),
         FeedSourceType.TaskCreated or FeedSourceType.RoomCreated => new("plus", Icons.Material.Filled.Add),
         FeedSourceType.RoomJoined => new("joined", Icons.Material.Filled.GroupAdd),
         FeedSourceType.RoomArchived => new("archived", Icons.Material.Filled.Archive),

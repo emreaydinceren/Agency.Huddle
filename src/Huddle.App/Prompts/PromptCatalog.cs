@@ -92,6 +92,7 @@ internal static class PromptCatalog
         ..BuildPart46(),
         ..BuildPart47(),
         ..BuildPart48(),
+        ..BuildPart50(),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
@@ -2433,6 +2434,25 @@ internal static class PromptCatalog
             Default: "The text for {{file}} is only a frontmatter block. Huddle writes the frontmatter: pass the description in 'description' and the body, without frontmatter, in 'text'.",
             Placeholders: ["{{file}}"],
             RequiredPlaceholders: ["{{file}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the <c>jobs</c> tool's description.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart50() =>
+    [
+        new PromptDefinition(
+            Key: "tool.jobs.description",
+            Label: "jobs description",
+            HelperText:
+                "The job description a model reads for the jobs tool, which schedules instructions to run on a " +
+                "timetable. Takes no placeholders.",
+            Default:
+                """
+                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule only for yourself; the Chief of Staff may also schedule for another Agent or for the Human, by passing 'target'.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
     ];
 

@@ -1103,6 +1103,18 @@ Needs You: the sidebar card of Rooms waiting on the Human — [area file](needs-
 | [NEEDSYOU-03](needs-you.md#needsyou-03--dismiss-hides-a-room-without-answering-what-is-behind-it) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
 | [NEEDSYOU-04](needs-you.md#needsyou-04--archiving-hides-a-room-from-the-card-and-unarchiving-brings-it-back) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
 
+## jobs
+
+Jobs: scheduled instructions in their own Rooms — [area file](jobs.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [JOBS-01](jobs.md#jobs-01--a-job-for-an-agent-runs-in-its-own-room) |  | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Once at 16:49 for Ben ran on its tick into `⏰ Invoice check` (Ben and the Human); Ben replied; the one-off then left Scheduled. Time-input seconds bug found and fixed in the run |
+| [JOBS-02](jobs.md#jobs-02--a-job-for-the-human-goes-on-needs-you) |  | Active |  | | not yet run by a person |
+| [JOBS-03](jobs.md#jobs-03--the-file-is-the-source-of-truth) |  | Active |  | | not yet run by a person |
+| [JOBS-04](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late) |  | Active |  | | not yet run by a person |
+| [JOBS-05](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others) | 💰 | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Ravi was refused with the exact text; the Chief of Staff scheduled `Bins check` for Ravi (`by: Chief of Staff`) |
+
 ## doc-history
 
 Document history: the byline, the History and the History panel — [area file](doc-history.md)
