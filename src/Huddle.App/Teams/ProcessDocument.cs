@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.Teams;
 /// outline headings the body is expected to carry. Unreadable optional values read as absent rather than
 /// failing the whole document, so a hand edit never locks a Team out of its process.
 /// </summary>
-/// <param name="Title">The frontmatter title, else the first level-one heading, else empty.</param>
+/// <param name="Title">The first level-one heading of the body, else empty.</param>
 /// <param name="Template">The template the document was copied from, or <see langword="null"/>.</param>
 /// <param name="Gates">The known hard gates the document declares, in file order, without duplicates.</param>
 /// <param name="Retro">The retrospective cadence, or <see langword="null"/>.</param>
@@ -47,7 +47,7 @@ internal sealed record ProcessDocument(
     /// <summary>Parses the text of a <c>Process.md</c> file.</summary>
     /// <param name="text">The file text, with LF or CRLF line endings.</param>
     /// <param name="document">The parsed document, or <see langword="null"/>.</param>
-    /// <returns><see langword="false"/> when the text has no closed frontmatter block.</returns>
+    /// <returns><see langword="false"/> only when the text is empty; frontmatter is optional and a closed leading block is skipped as prose.</returns>
     public static bool TryParse(string text, [NotNullWhen(true)] out ProcessDocument? document)
     {
         document = null;
@@ -57,18 +57,8 @@ internal sealed record ProcessDocument(
         }
 
         string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        if (!FrontmatterFence.IsOpening(lines[0]))
-        {
-            return false;
-        }
-
-        int closing = FrontmatterFence.FindClosing(lines, 1);
-        if (closing < 0)
-        {
-            return false;
-        }
-
-        Dictionary<string, string> values = ReadFrontmatter(lines, closing);
+        int closing = FrontmatterFence.IsOpening(lines[0]) ? FrontmatterFence.FindClosing(lines, 1) : -1;
+        Dictionary<string, string> values = closing < 0 ? new(StringComparer.OrdinalIgnoreCase) : ReadFrontmatter(lines, closing);
 
         string[] body = lines[(closing + 1)..];
         (List<GateId> gates, List<string> unknownGates) = ReadGates(values);
@@ -79,11 +69,7 @@ internal sealed record ProcessDocument(
             _ = VersionedRef.TryParse(Unquote(templateText), out template);
         }
 
-        string title = values.TryGetValue("title", out string? titleText) ? Unquote(titleText) : string.Empty;
-        if (title.Length == 0)
-        {
-            title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
-        }
+        string title = body.FirstOrDefault(static line => line.StartsWith("# ", StringComparison.Ordinal))?[2..].Trim() ?? string.Empty;
 
         int? wip = ReadWip(values);
 
@@ -128,12 +114,17 @@ internal sealed record ProcessDocument(
 
             if (inSection && line.StartsWith("- ", StringComparison.Ordinal))
             {
-                items.Add(ParseDoneBullet(line[2..].Trim()));
+                items.Add(ParseDoneBullet(StripCheckbox(line[2..].Trim())));
             }
         }
 
         return items;
     }
+
+    private static string StripCheckbox(string text) =>
+        text.Length >= 3 && text[0] == '[' && text[2] == ']' && text[1] is ' ' or 'x' or 'X'
+            ? text[3..].TrimStart()
+            : text;
 
     private static DoneItem ParseDoneBullet(string text)
     {

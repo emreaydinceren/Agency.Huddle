@@ -147,20 +147,27 @@ public sealed class ProcessDocumentTests
 
         ProcessDocument document = Parse(text);
 
-        Assert.Equal("T", document.Title);
+        Assert.Equal("Lightweight flow", document.Title);
         Assert.Equal([GateId.ChecksBeforeMerge], document.Gates);
         Assert.Empty(document.MissingSections);
     }
 
-    /// <summary>A file with no frontmatter, an unclosed fence or empty text is rejected.</summary>
-    [Theory]
-    [InlineData("# Just a heading\n## Stages\n")]
-    [InlineData("---\ntitle: 'T'\n# never closed\n")]
-    [InlineData("")]
-    public void TryParse_NoFrontmatter_ReturnsFalse(string text)
+    /// <summary>Empty text is rejected; a file with no frontmatter is prose and parses (Spec 6.2, D-10).</summary>
+    [Fact]
+    public void TryParse_EmptyText_ReturnsFalse()
     {
-        Assert.False(ProcessDocument.TryParse(text, out ProcessDocument? document));
+        Assert.False(ProcessDocument.TryParse(string.Empty, out ProcessDocument? document));
         Assert.Null(document);
+    }
+
+    /// <summary>A heading-only file with no frontmatter parses, with its title and no gates.</summary>
+    [Fact]
+    public void TryParse_NoFrontmatter_ParsesAsProse()
+    {
+        ProcessDocument document = Parse("# Just a heading\n## Stages\n");
+
+        Assert.Equal("Just a heading", document.Title);
+        Assert.Empty(document.Gates);
     }
 
     /// <summary>Without a frontmatter title the first level-one heading is the title; a malformed template reads as null.</summary>
@@ -238,7 +245,7 @@ public sealed class ProcessDocumentTests
         Assert.Equal(text, document.Text);
     }
 
-    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence.</summary>
+    /// <summary>A block that never closes is not frontmatter, whatever the opening line looks like; a near miss is not a fence. The text is prose and its settings are not read.</summary>
     /// <param name="text">The Process file.</param>
     [Theory]
     [InlineData("\uFEFF---\ntitle: 'Flow'\n")]
@@ -246,12 +253,12 @@ public sealed class ProcessDocumentTests
     [InlineData("---\ntitle: 'Flow'\n--- x\n")]
     [InlineData("----\ntitle: 'Flow'\n---\n")]
     [InlineData("---\ntitle: 'Flow'\n....\n")]
-    public void TryParse_UnclosedOrNearMiss_IsNotADocument(string text)
+    public void TryParse_UnclosedOrNearMiss_IsProseWithoutSettings(string text)
     {
-        bool ok = ProcessDocument.TryParse(text, out ProcessDocument? document);
+        ProcessDocument document = Parse(text);
 
-        Assert.False(ok);
-        Assert.Null(document);
+        Assert.Equal(string.Empty, document.Title);
+        Assert.Empty(document.Gates);
     }
 
     /// <summary>Rewriting the gates of a BOM / <c>...</c> / indented-fence file keeps the BOM and both fence lines byte for byte and changes only the gates line.</summary>
