@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 88 of 143 tasks Done · 5 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 89 of 143 tasks Done · 5 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -119,7 +119,7 @@ never by hand, so the status line stays true.
 | **D10. P5: overlay files and teaching Prompts** | | | |
 | 10.1.t #84 Shipped prompt files are pinned [Sonnet] | | | ✔ |
 | 10.1.i #85 Load the overlay files [Sonnet] | | | ✔ |
-| 10.2 #86 Write the teaching Prompt texts [Haiku] | ✔ | | |
+| 10.2 #86 Write the teaching Prompt texts [Haiku] | | | ✔ |
 | 10.3.t #87 The summary in every session [Sonnet] | ✔ | | |
 | 10.3.i #88 Add slot 6 [Sonnet] | ✔ | | |
 | 10.4.t #89 The map in `get_help` [Sonnet] | ✔ | | |
@@ -145,7 +145,7 @@ never by hand, so the status line stays true.
 | 11.9.t #106 Onboarding offers the Jobs [Sonnet] | ✔ | | |
 | 11.9.i #107 Add the offers [Sonnet] | ✔ | | |
 | **D12. P6: archive** | | | |
-| 12.1.t #108 Archive a Team (same volume) [Sonnet] | ✔ | | |
+| 12.1.t #108 Archive a Team (same volume) [Sonnet] | | ✔ | |
 | 12.1.i #109 `ArchiveService` (archive) [Sonnet] | ✔ | | |
 | 12.2.t #110 Unarchive a Team [Sonnet] | ✔ | | |
 | 12.2.i #111 Unarchive [Sonnet] | ✔ | | |
