@@ -697,7 +697,7 @@ their required placeholders, not their prose.
 - **Goal:** Make the rest of 6.3.t green.
 - **Read first:** the 6.3.t test; `TeamOnboarding.cs`, `RetroProposalService.cs`, `ProcessTab.razor` and `RoleBlockBuilder.cs` `TeamProcessFile.` lines.
 - **Risk:** `logic`.
-- **Deliverable:** **Independent review.** `TeamOnboarding` reads prose through `TeamProcessFile.Read`; move the retro, `ProcessTab` and `RoleBlockBuilder` callers to the new members (Tasks 55 and 57 retarget their behaviour). Remove `TeamPaths.ProcessFileName`.
+- **Deliverable:** **Independent review.** `TeamOnboarding` reads prose through `TeamProcessFile.Read`; move the retro, `ProcessTab` and `RoleBlockBuilder` callers to the new members (Tasks 55 and 57 retarget their behaviour). Remove `TeamPaths.ProcessFileName`. **Correction C5 (added after the 5.5 review, settled by the manager):** retire the process blocks — remove `systemPrompt.processBlockManager` and `systemPrompt.processBlockMember` from `SystemPromptComposer` (~line 398), `PromptCatalog` and `prompts.default.json` (run `Regenerate-PromptDefaults.ps1`; lower the count pin in `PromptCatalogTests.cs`), remove `RoleBlockBuilder`'s process read if nothing else uses it, delete goldens `systemPrompt.managerProcess.txt` and `systemPrompt.memberProcess.txt` and the `PromptGoldenTests` cases that produce them; the Team's `AGENTS.md` (slot 3) now carries the process for every member (D-47).
 - **Acceptance:** 6.3.t green; full build green; `Process*`, `Cadence*`, `TeamOnboarding*` tests green.
 
 ### Task 52 — 6.4.t Provisioning writes `AGENTS.md` and `_team.md` [Sonnet]
