@@ -20,3 +20,21 @@ allow|prose commit msg|{"tool_input":{"command":"git commit -m \"agents ran find
 BLOCK|sed -i|{"tool_input":{"command":"sed -i s/a/b/ src/x.cs"}}
 BLOCK|x && sed -E -i|{"tool_input":{"command":"cd x && sed -E -i \"s/a/b/\" y"}}
 allow|sed -n pipe grep -i|{"tool_input":{"command":"sed -n 1,5p x | grep -i foo"}}
+BLOCK|cat > src file heredoc|{"tool_input":{"command":"cat > src/Huddle.App/X.cs <<'EOF'\nclass X {}\nEOF"}}
+BLOCK|cat >> tests file|{"tool_input":{"command":"cat >> /e/Repos/Huddle-wt/sb/tests/Huddle.Tests.Agents/XTests.cs"}}
+BLOCK|cat > windows path under src|{"tool_input":{"command":"cat > \"E:\\Repos\\Huddle-wt\\sb\\src\\Huddle.App\\X.cs\""}}
+allow|cat > scratchpad|{"tool_input":{"command":"cat > /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt <<'EOF'\nhi\nEOF"}}
+allow|cat reads src and redirects stderr|{"tool_input":{"command":"cat src/Huddle.App/X.cs 2>/dev/null"}}
+allow|cat > mysrc is not src|{"tool_input":{"command":"cat > mysrc/x.txt"}}
+BLOCK|WriteAllText into src|{"tool_input":{"command":"pwsh -NoProfile -Command \"[IO.File]::WriteAllText('src/Huddle.App/X.cs','x')\""}}
+BLOCK|WriteAllText windows tests path|{"tool_input":{"command":"pwsh -Command \"[System.IO.File]::WriteAllText('E:\\Repos\\Huddle-wt\\sb\\tests\\A\\B.cs', $t)\""}}
+allow|WriteAllText into scratchpad|{"tool_input":{"command":"pwsh -Command \"[IO.File]::WriteAllText('C:\\Users/user\\AppData\\Local\\Temp\\claude\\scratchpad\\x.txt','x')\""}}
+BLOCK|Set-Content under src|{"tool_input":{"command":"pwsh -Command \"Set-Content -Path src/Huddle.App/X.cs -Value x\""}}
+BLOCK|Out-File piped under tests|{"tool_input":{"command":"\"x\" | Out-File tests/Huddle.Tests.Agents/XTests.cs"}}
+allow|Out-File to scratchpad|{"tool_input":{"command":"Get-Date | Out-File C:\\Users/user\\AppData\\Local\\Temp\\claude\\scratchpad\\x.txt"}}
+allow|Set-Content to docs|{"tool_input":{"command":"Set-Content -Path docs/x.md -Value x"}}
+allow|prose mentions Out-File src|{"tool_input":{"command":"git commit -m \"ban Out-File src/ writes\""}}
+BLOCK|pwsh -File from tmp|{"tool_input":{"command":"pwsh -NoProfile -File /tmp/fix.ps1"}}
+BLOCK|chained pwsh -File from tmp|{"tool_input":{"command":"cd /e/Repos/Huddle-wt/sb && pwsh -File /tmp/fix.ps1 -Fix"}}
+BLOCK|bash script from tmp|{"tool_input":{"command":"bash /tmp/fix.sh"}}
+allow|pwsh -File repo script|{"tool_input":{"command":"pwsh -NoProfile -File agents/scripts/Check-Eol.ps1 -Fix"}}

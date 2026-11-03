@@ -4,9 +4,12 @@
 #   - `find /` (or `find /c`, `/e` ...): on Windows, Git Bash's `/` mounts every drive, so it
 #     crawls the whole disk and outlives the tool call as an orphaned find.exe.
 #   - `sed -i` / `--in-place`: rewrites the file with LF endings in this CRLF working copy.
+# It also refuses shell writes that go around the Edit hooks when the target is under src/ or
+# tests/: cat > / >>, File.WriteAll*/AppendAll*, Set-Content, Add-Content, Out-File, and a script
+# file run from /tmp.
 # Uses perl rather than jq (jq is not installed). Everything else passes through untouched.
 # Regression cases: block-disk-wide-and-inplace-edits.cases.txt beside this file, one
-# "BLOCK|allow|name|payload" per line; pipe each payload in and compare with the first field.
+# "BLOCK|allow|name|payload" per line; run them with agents/scripts/Test-HookCases.sh.
 set -uo pipefail
 
 payload=$(cat)
@@ -31,6 +34,33 @@ fi
 # In-place sed.
 if printf '%s' "$payload" | perl -0777 -ne 'exit(m{(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*)sed\b[^|;&\n]*?\s(?:-[a-zA-Z]*i\b|--in-place)} ? 0 : 1)' ; then
     deny "Blocked: sed -i rewrites the file with LF endings in this CRLF repo. Use the Edit tool (replace_all: true for a rename)."
+fi
+
+# File writes that go around the Edit/Write hooks (frozen tests, CRLF repair, C# principles).
+# Conservative on purpose: a command is refused only when the target visibly sits under src/ or
+# tests/ (a segment of that name, so scratchpad paths and mysrc/ pass), or when it runs a script
+# file from /tmp, whose content this hook cannot see. The patterns are handed to perl through the
+# environment so they can be composed here.
+pos='(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*)'
+posc='(?:\x22command\x22\s*:\s*\x22|[;&|({]\s*|\\n\s*|-Command\s+[\x22\x27\\]*)'
+under='(?<=[/\\\x22\x27\s=(])(?:src|tests)(?:/|\\+)'
+same='(?:(?!\\n)[^|;&])*?'
+
+matches() {
+    PAT="$1" perl -0777 -ne 'exit(/$ENV{PAT}/ ? 0 : 1)' <<<"$payload"
+}
+
+if matches "${pos}cat\\b${same}>>?\\s*[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
+    deny "Blocked: cat > into src/ or tests/ skips the Edit hooks and writes LF endings. Use the Edit or Write tool."
+fi
+if matches "(?i)File\\]::(?:WriteAll|AppendAll)\\w*\\(${same}${under}"; then
+    deny "Blocked: File.WriteAll/AppendAll into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
+fi
+if matches "(?i)${posc}(?:Set-Content|Add-Content|Out-File)\\b${same}${under}"; then
+    deny "Blocked: Set-Content, Add-Content and Out-File into src/ or tests/ skip the Edit hooks. Use the Edit or Write tool."
+fi
+if matches "(?i)${pos}(?:(?:pwsh|powershell)(?:\\.exe)?\\b${same}\\s-File\\s+|(?:bash|sh|source|\\.)\\s+)[\\x22\\x27\\\\]*/tmp/"; then
+    deny "Blocked: a script run from /tmp can rewrite src/ or tests/ around the Edit hooks. Use the Edit or Write tool, or keep the script in the repo agents/scripts folder."
 fi
 
 exit 0

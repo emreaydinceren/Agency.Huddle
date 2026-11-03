@@ -9,11 +9,11 @@
 #
 # One process at most: under Git Bash each external process costs seconds under load,
 # so the payload is parsed with bash builtins and a single perl both checks and
-# rewrites. $(</dev/stdin) reads the payload in blocks without a fork; `read -d ''`
-# would read a large Write payload one byte at a time.
+# rewrites. $(cat) reads the payload in blocks ($(</dev/stdin) fails in the harness's
+# Git Bash); `read -d ''` would read a large Write payload one byte at a time.
 set -uo pipefail
 
-payload=$(</dev/stdin)
+payload=$(cat)
 
 # The payload is JSON: Windows paths arrive with escaped backslashes (E:\\Repos\\...).
 # The first "file_path" is the tool's target; a later one could sit inside the content.
