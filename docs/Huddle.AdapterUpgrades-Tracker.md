@@ -12,7 +12,7 @@ never by hand, so the status line stays true.
 - D6 tasks 6.2-6.8 are marked Done as **closed, not built**: the 6.1 spike (2026-11-03) showed advertising compaction removes the token figures the `/compact` outcome uses; see Spec §8.
 - (Paid) tasks spend real tokens on the live adapter; the Human pre-approved all five on 2026-11-03.
 
-**Status:** 52 of 55 tasks Done · 2 of 3 retrospectives done · last updated 2026-11-03.
+**Status:** 54 of 55 tasks Done · 3 of 3 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -70,7 +70,7 @@ never by hand, so the status line stays true.
 | 6.3.t #43 Rename the two compaction kinds [Sonnet] | | | ✔ |
 | 6.3.i #44 Implement the rename [Sonnet] | | | ✔ |
 | 6.4.t #45 Publish `AgentCompaction` [Sonnet] | | | ✔ |
-| 🔁 R3 Retrospective after task 45 [Opus] | ✔ | | |
+| 🔁 R3 Retrospective after task 45 [Opus] | | | ✔ |
 | 6.4.i #46 Implement it [Sonnet] | | | ✔ |
 | 6.5.t #47 `/compact`'s outcome reads the compaction [Sonnet] | | | ✔ |
 | 6.5.i #48 Implement it [Sonnet] | | | ✔ |
@@ -79,6 +79,6 @@ never by hand, so the status line stays true.
 | 6.7 #51 Live: `/compact` with compaction advertised [Sonnet] (Paid) | | | ✔ |
 | 6.8 #52 Turn it on [Sonnet] | | | ✔ |
 | **D7. Close** | | | |
-| 7.1 #53 Index and limits [Haiku] | ✔ | | |
-| 7.2 #54 Final verification [Haiku] | ✔ | | |
-| 7.3 #55 Does Haiku 5.5 offer Effort? (OQ-4) [Haiku] | ✔ | | |
+| 7.1 #53 Index and limits [Haiku] | | | ✔ |
+| 7.2 #54 Final verification [Haiku] | | ✔ | |
+| 7.3 #55 Does Haiku 5.5 offer Effort? (OQ-4) [Haiku] | | | ✔ |
