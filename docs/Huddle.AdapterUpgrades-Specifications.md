@@ -21,7 +21,7 @@ Take the adapter improvements that make Huddle better for the Human, at the lowe
 | §5 | Tool names on tool calls | Memory-tool attribution keys on the tool's name, not on its title |
 | §6 | The model that answered | The context-fill line shows what an alias such as `haiku` resolved to |
 | §7 | Deleting the old session on a fresh start | Answers Long-running Rooms Q-4; old transcripts stop piling up in the Adapter |
-| §8 | Compaction updates | A compaction (manual or automatic) is reported as itself, with its token figures |
+| §8 | Compaction updates | Not taken: advertising the capability would lose the legacy tool call's token figures |
 
 Out of scope, with reasons, in §9.
 
@@ -147,30 +147,33 @@ Adapter. LR §6 line 489 and Q-4 deferred `session/delete` until `IAgentSession`
 - Only a **fresh start** deletes. A Restart, an app restart and a Persona edit keep today's behaviour
   (rules.md row "Restart forgets Room Sessions; an app restart resumes them").
 
-## 8. Compaction updates
+## 8. Compaction updates — not taken (decided 2026-11-03 after the 6.1 spike)
 
-**Today.** `/compact` is a Command Turn (Commands spec §6.5–§6.7). The outcome text reads the
-"Compact conversation" `tool_call_update`'s `rawOutput {preTokens, postTokens, durationMs}`
-(*observed*, Commands §6.6). An automatic compaction during an ordinary Turn is invisible: the next
-`UsageUpdated` simply drops, and traps.md "A compaction is not spend" covers only the Command Turn.
+**Planned.** Advertise `clientCapabilities.session.compaction`, publish an `AgentCompaction` event per
+`compaction_update`, and show a compaction as itself with its token figures.
 
-**Decision, gated on the spike (task 6.1).**
+**Observed** (adapter 0.100.0, Haiku, a `/compact` Command Turn):
 
-- `DotAcpHostOptions.AdvertiseCompaction` and `AcpOptions.AdvertiseCompaction` (`Team:Acp:AdvertiseCompaction`),
-  **default false** until D6 is complete, then true.
-- `NoticeSessionCapabilities` becomes `HuddleSessionCapabilities` with both optional members
-  (`notices`, `compaction`), each serialised only when on.
-- `NdjsonMethodRewriteStream` renames `compaction_update` and `compaction_summary_chunk` to
-  `_session/compaction` and `_session/compaction_chunk`. `DotAcpClientAdapter` publishes
-  `AgentCompaction(SessionId, CompactionId, CompactionStatus Status, string? Error, long? PreTokens, long? PostTokens)`
-  for an update and ignores summary chunks in v1 (marking each dispatched).
-  **Assumed:** pre/post token figures are in `compaction_update._meta`
-  (`contextCompactionMetadataFromBoundary` in `context-compaction.js`). The spike records the exact keys.
-- A Command Turn's outcome text (Commands §8.3) reads figures from the `AgentCompaction` when one
-  arrived in the Turn, else from the tool call as today.
-- An automatic compaction (not a Command Turn) sets `usageBaselinePending`, so the next usage reading
-  is taken as the baseline rather than spend, and is shown as a Notice row "Context compacted".
+| | Advertised | Not advertised |
+| --- | --- | --- |
+| Compaction messages | `compaction_update` `{compactionId, status, summary?}`: `in_progress`, then `completed` with an inline `summary` (text content blocks), then a second `completed` without one | `tool_call` "Compact conversation" (`_meta.claudeCode.toolName: "compact"`) and its updates |
+| Token figures and duration | None: `_meta` is attached only for JetBrains AIR clients, and Huddle must not impersonate AIR (Adapters-Vendors D-V12) | `rawOutput {trigger: "manual", preTokens, postTokens, durationMs}` |
+| `compaction_summary_chunk` | Never sent; the summary rides in `compaction_update.summary` | Not applicable |
+| Legacy `tool_call` | **Removed** | Sent |
+| `usage_update` after it | Sent (`used` falls, e.g. 47224 to 10525) | Sent |
 
+**Why not taken.** Advertising the capability removes the legacy tool call, the only source of the
+before and after token figures and the duration that a `/compact` Command Turn's outcome text
+(Commands §6.6, §8.3) reads. The replacement carries none of them, so the change would lose
+information. Without the capability the legacy path is unchanged, so nothing is built:
+`AdvertiseCompaction`, `HuddleSessionCapabilities`, the `_session/compaction` rewrite and `AgentCompaction`
+are not planned.
+
+**Follow-up (unverified).** The legacy `rawOutput` carries `trigger: "manual"` for `/compact`. An
+automatic compaction during an ordinary Turn was not observed, so whether it shows `trigger: "auto"` is
+unknown. If it does, Huddle could spot automatic compactions without advertising and use them as a usage
+baseline (`usageBaselinePending`) and a "Context compacted" Notice row. Today an automatic compaction is
+invisible: the next `UsageUpdated` simply drops.
 ## 9. Not taken, and why
 
 | Offer | Why not |
@@ -180,6 +183,7 @@ Adapter. LR §6 line 489 and Q-4 deferred `session/delete` until `IAgentSession`
 | Subagent reporting, background tasks, monitors (0.87–0.100) | Behind the unstable subagents RFD and AIR extensions; revisit when stable |
 | Session titles (`session_info_update.title`, 0.95) | Huddle names Rooms itself (Room auto-naming); a second source of titles is a product decision nobody asked for |
 | Thinking display, ultracode, Remote Control (0.93–0.99) | Claude Code features with no Huddle surface; each would be its own decision |
+| Compaction updates (schema 1.25, §8) | Advertising session.compaction removes the legacy tool call and its awOutput figures, and the compaction_update has no _meta figures outside AIR (6.1 spike, 2026-11-03) |
 | Moving to ACP v2 | Still alpha (`schema-v2.0.0-alpha.13`); PromptBlocks §14.16 already records what changes |
 
 ## 10. Configuration
@@ -188,7 +192,6 @@ Adapter. LR §6 line 489 and Q-4 deferred `session/delete` until `IAgentSession`
 | --- | --- | --- |
 | `Library:MaxDocumentsPerTurn` | `2` | §3 |
 | `Library:MaxDocumentBytesPerTurn` | `10485760` | §3 |
-| `Acp:AdvertiseCompaction` | `false`, then `true` at task 6.8 | §8 |
 
 Each key gets a row in the Engineering Guide's configuration table in the same task that adds it.
 
@@ -198,13 +201,12 @@ Each key gets a row in the Engineering Guide's configuration table in the same t
 | --- | --- | --- |
 | OQ-1 | Should a PDF also go to an Adapter with file tools (`readsFiles`)? | No, as PromptBlocks D-1 decided for text |
 | OQ-2 | Spend by model? | Not built (§6) |
-| OQ-3 | Show a compaction's summary text anywhere? | No; summary chunks are ignored in v1 (§8) |
 | OQ-4 | Does Haiku 5.5 now offer Effort levels? The user guide says Haiku has none | Task 7.3 checks with `supportedModels()` and corrects the user guide |
 
 ## 12. Verification
 
 - Unit tests for each mapping, planner rule and option, written first (plan conventions).
 - Live checks behind `TEAM_E2E=1`, a few cheap Haiku turns each: a PDF code word (§3, V-6), the model
-  on usage (§6), `session/delete` (§7), and the compaction spike (§8).
+  on usage (§6), `session/delete` (§7), and the compaction spike (§8, done; not taken).
 - Manual test rows added to the existing pages: `prompt-blocks.md` (a PDF) and `turn-detail.md`
-  ("Context compacted").
+  (dropped with §8).

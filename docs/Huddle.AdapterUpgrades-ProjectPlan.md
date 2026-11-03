@@ -435,6 +435,8 @@ upcoming tasks, and records the change in [Retrospective log](#retrospective-log
 
 ## D6 — Compaction updates (Spec §8)
 
+> **Not taken:** the 6.1 spike (2026-11-03) showed that advertising `session.compaction` removes the legacy "Compact conversation" tool call and its `rawOutput` token figures, and the `compaction_update` that replaces it carries none (no `_meta` outside AIR); see Spec §8. Tasks 6.2-6.8 are closed without being built.
+
 ### Task 6.1 — Spike: record the compaction wire [Sonnet] **Paid**
 
 - **Goal:** Replace Spec §8's **Assumed** token keys with observed ones.
