@@ -423,7 +423,7 @@ missing the work. So routing is **workspace-aware**:
    approves everything else, including any path outside `{DataDir}`. So any Agent can already
    write into any folder its Adapter can reach, workspaces included. Limiting workspace writes to
    a Team's members would be a new deny rule keyed by membership, which no guard does today, and
-   it would still be soft (path arguments only, no shell redirects). That is open question 3,
+   it would still be soft (path arguments only, no shell redirects). That is open question 1,
    for a separate workspace spec. Until then the spec claims no write restriction.
 6. **Making it a watched folder waits for measurement.** A repository has `bin/`, `obj/`,
    `node_modules/` and `.git/`, and a watched folder is scanned on every Turn within
@@ -843,7 +843,7 @@ Names are reserved **at both levels**, always ignoring case:
 | Default Skills | — | `ingest`, `wrap-up` and `brain-check`, shipped in `Overlays/second-brain/skills/` and installed the way `Skills/Defaults/` Skills are today |
 | Team types: `TeamTypes/Builtin/*/processes/`, `Teams/ProcessProvisioner.cs` | 29 process files, one per type (four for `development`) | Each becomes a Team `AGENTS.md` template: its nine headings kept, Identity added first, Editorial Rules added where the type writes for others, nothing about the folders; workspace types say where decisions and specs go in their workspace. The default `Teams/AGENTS.md` carries Preferences, Voice and **Keeping our Second Brain** |
 | Workspace routing (§1.4): `Acp/SystemPromptComposer.cs`, `Acp/DotAcpPersonaHost.cs`, `PromptCatalog` | `workspace` saved, never read | New Prompt `systemPrompt.secondBrainWorkspace`, composed per Team with a readable workspace; a workspace row in `getHelp.secondBrain` |
-| Workspace access: `Library/LibraryRootStore.cs`, `FileChanges/WatchedFolderResolver.cs`, `Acp/WorkDirPermissionHandler.cs` | — | A Library root per workspace for the Team's members. No write restriction and no watched folder in this spec (open question 3) |
+| Workspace access: `Library/LibraryRootStore.cs`, `FileChanges/WatchedFolderResolver.cs`, `Acp/WorkDirPermissionHandler.cs` | — | A Library root per workspace for the Team's members. No write restriction and no watched folder in this spec (open question 1) |
 | Workspace checks: Team page | — | A warning when the workspace path is missing or unreadable |
 | Chief of Staff onboarding: `Skills/Defaults/team-building/` | Greets and interviews | Also offers the review and check Jobs (§1.4), each created only on the Human's yes |
 | `Teams/TeamPaths.cs` | `ProcessFileName = "Process.md"`, the Team card `_team.md`, `Instructions.md` | `AGENTS.md` replaces `Process.md` and `Instructions.md`; `_team.md` stays |
@@ -879,13 +879,10 @@ Names are reserved **at both levels**, always ignoring case:
 
 ## 8. Open questions
 
-1. **Projects already hold documents at their root.** ADR-0032 says a Project folder is the home
-   for its documents and notes. Does `outputs/` replace that, or does it only collect what an
-   Agent produces while the Human's own notes stay at the root?
-2. **Agents of an archived Team.** Every Agent is a running process, capped by
-   `Team:Acp:MaxLiveProcesses`. Should an Agent whose every Team is archived stop until one is
-   unarchived, and should archived Teams' members count toward `Team:Acp:MaxTeammatesPerTeam`?
-3. **Restricting writes into a workspace.** Checked: `WorkDirPermissionHandler` approves every
+Two earlier questions are now decided: a Project's documents (D-45) and Agents of an archived
+Team (D-46). One remains:
+
+1. **Restricting writes into a workspace.** Checked: `WorkDirPermissionHandler` approves every
    write it can't positively identify, including any path outside `{DataDir}`, so today any Agent
    may write into any workspace. Should Huddle add a deny rule keyed by Team membership (new, and
    soft: path arguments only), and should a workspace become a watched folder (needs ignore rules
@@ -939,3 +936,6 @@ Names are reserved **at both levels**, always ignoring case:
 | D-42 | A Task's attachments live in its own Team's or Project's `raw/Tasks/<ID>/`, so they move with an archived Team | One root folder for every Task's attachments, which an archive leaves behind |
 | D-43 | `memory`, `raw` and `outputs` are reserved at Team level as well as Project level, ignoring case | Project level only, which turns `Teams/memory/` into a Team named *memory* |
 | D-44 | Agents can't write the Prompts root; Prompt validation keeps reporting without refusing (ADR-0007) | A writable override folder, which lets any Agent rewrite every Agent's system prompt |
+| D-45 | A Project's root stays the Human's place for notes and documents (ADR-0030 unchanged); Agents save produced documents only to `outputs/`, and only `outputs/` is indexed into prompts | Moving every document into `outputs/`, which amends ADR-0030; indexing the root as well, which grows every prompt with every note |
+| D-46 | An Agent whose every Team is archived keeps running (one-to-one chats and its own Jobs still work); the archive confirmation names such Agents so the Human can remove or stop them | Stopping it until unarchive, which silences its one-to-one Room and costs a session to restart |
+| D-47 | Every member receives the whole Team `AGENTS.md` body, process sections included; the per-file and total caps bound the cost | Keeping today's split (process in full for the manager, a pointer for members), which needs a split by heading |
