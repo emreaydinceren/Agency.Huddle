@@ -2,6 +2,7 @@ namespace Agency.Huddle.Acp.Tests.E2E;
 
 using System;
 using System.IO;
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Threading;
@@ -120,6 +121,25 @@ public sealed class RealAdapterPromptBlockTests
         Assert.Contains("ZEBRA-4821", reply, StringComparison.Ordinal); // contains-ok: model reply text, not markup
     }
 
+    /// <summary>V-6: a one-page PDF sent as an embedded blob resource reaches the model as a document, and the model reads the code word out of its text.</summary>
+    [Fact(Timeout = 240000, SkipUnless = nameof(E2E.Enabled), SkipType = typeof(E2E), Skip = "Set TEAM_E2E=1 to run")]
+    public async Task PdfBlobResource_CodeWord_ReachesTheModel()
+    {
+        await using LiveSession live = await LiveSession.StartAsync(TestContext.Current.CancellationToken, model: "haiku");
+
+        Assert.True(live.Host.Info.PromptCapabilities?.EmbeddedContext, "The adapter did not advertise promptCapabilities.embeddedContext.");
+
+        AgentPrompt prompt = new(
+            "What code word is in the attached PDF? Reply with the word only.",
+            [new AgentBlobResourceBlock("file:///E:/Huddle/code-word.pdf", "application/pdf", TestPdf.OnePage("ZEBRA-4821"))]);
+
+        (PromptResult result, string reply) = await live.PromptAsync(prompt, TestContext.Current.CancellationToken);
+
+        TestContext.Current.SendDiagnosticMessage($"V-6 pdf: stop={result.StopReason} reply='{reply}' usage={live.LastUsage}");
+        Assert.Equal(StopReason.EndTurn, result.StopReason);
+        Assert.Contains("ZEBRA-4821", reply, StringComparison.Ordinal); // contains-ok: model reply text, not markup
+    }
+
     /// <summary>
     /// Appends what a live check observed to <c>prompt-blocks-live.log</c> in the temp folder: the test
     /// runner does not print diagnostic messages, and these figures are the point of the run.
@@ -147,7 +167,7 @@ public sealed class RealAdapterPromptBlockTests
 
         internal string LastUsage { get; private set; } = "none";
 
-        internal static async Task<LiveSession> StartAsync(CancellationToken cancellationToken)
+        internal static async Task<LiveSession> StartAsync(CancellationToken cancellationToken, string? model = null)
         {
             string workingDirectory = Path.Combine(Path.GetTempPath(), "team-acp-e2e-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(workingDirectory);
@@ -159,7 +179,7 @@ public sealed class RealAdapterPromptBlockTests
                 loggerFactory);
             await host.StartAsync(cancellationToken);
             IAgentSession session = await host.StartSessionAsync(
-                new AgentSessionOptions(workingDirectory, new AutoApprovePermissionHandler()),
+                new AgentSessionOptions(workingDirectory, new AutoApprovePermissionHandler(), model: model),
                 cancellationToken);
             return new LiveSession(host, session, workingDirectory);
         }
@@ -202,6 +222,41 @@ public sealed class RealAdapterPromptBlockTests
             {
                 // Same: the folder is under the OS temp directory and is not worth failing a passed check for.
             }
+        }
+    }
+
+    /// <summary>Writes a minimal valid PDF 1.4 (one page, one text object) with a correct cross-reference table.</summary>
+    private static class TestPdf
+    {
+        internal static byte[] OnePage(string text)
+        {
+            string content = $"BT /F1 36 Tf 72 700 Td ({text}) Tj ET";
+            string[] objects =
+            [
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+                $"<< /Length {content.Length} >>\nstream\n{content}\nendstream",
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            ];
+
+            StringBuilder pdf = new("%PDF-1.4\n");
+            int[] offsets = new int[objects.Length];
+            for (int i = 0; i < objects.Length; i++)
+            {
+                offsets[i] = pdf.Length;
+                pdf.Append(CultureInfo.InvariantCulture, $"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+            }
+
+            int xref = pdf.Length;
+            pdf.Append(CultureInfo.InvariantCulture, $"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+            foreach (int offset in offsets)
+            {
+                pdf.Append(CultureInfo.InvariantCulture, $"{offset:D10} 00000 n \n");
+            }
+
+            pdf.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+            return Encoding.ASCII.GetBytes(pdf.ToString());
         }
     }
 

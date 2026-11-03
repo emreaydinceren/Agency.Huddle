@@ -99,7 +99,7 @@ already types them, yet `DotAcpAgentSession.PromptAsync` builds exactly one `Tex
 | P6 | One PNG is 9 MiB, with the default cap of 3 MiB | Not sent, not read past the cap. Path line as today |
 | P7 | A PNG is 9,000 × 9,000 pixels and 200 KiB | Not sent: the edge cap is 8,000. Path line as today |
 | P8 | The Human names `E:\…\mock.svg` | Path line only. An SVG is never an image block (§14.5) |
-| P9 | The Human names `E:\…\report.pdf` | Path line only. PDF is V2 (§3) |
+| P9 | The Human names `E:\…\report.pdf` | Blob resource since 2026-11 (AdapterUpgrades §3), only for an Adapter with no file tools that advertised `embeddedContext`; with file tools (the built-in Claude profile) it stays a path line |
 | P10 | A file named `shot.png` holds HTML | The Library already classifies it `Other` because the magic bytes disagree. Path line only |
 | P11 | `shot.png` was named in an **earlier** Message that now arrives as catch-up | Path line only. Only the Message that started this Turn can put an image in the prompt (D-2) |
 | P12 | The same path is written twice in one Message | One block (the collector already dedupes by resolved path) |
@@ -122,7 +122,7 @@ already types them, yet `DotAcpAgentSession.PromptAsync` builds exactly one `Tex
 | Not in scope | Why |
 | --- | --- |
 | **B: the Human attaches or pastes a file in the composer** | New composer UI, a store for the bytes, a field on `ChatMessage` and a Transcript line format. [Roadmap item 23](engineering/roadmap.md). The cheapest route reuses this design (§14.12) |
-| **PDF and other blob resources** | `claude-agent-acp` **ignores** a blob `resource` *(source, Appendix B.2)*, so a PDF would be dropped without an error. V2, behind a live check (V-6) |
+| **PDF and other blob resources** | PDF is built since 2026-11: a PDF goes as a blob `resource` where the Adapter advertises `embeddedContext` and reads no files itself ([AdapterUpgrades §3](Huddle.AdapterUpgrades-Specifications.md)). Other blob kinds stay out. Before `claude-agent-acp` 0.100.0 a blob `resource` is ignored *(source, Appendix B.2)*, so a PDF there would be dropped without an error (V-6, live check in Task 1.7) |
 | **SVG** | XML that can carry script; most vision models do not accept it as an image; the Library never serves one as an image either. [rules.md](engineering/rules.md) refuses it for avatars on the same argument |
 | **Audio** | No source for it, and the adapter ignores it *(source)* |
 | **`resource_link` blocks** | Baseline for every Adapter, but `claude-agent-acp` reduces one to a link of its URI *(source)*, so it carries nothing the path line does not (D-4) |
@@ -837,7 +837,7 @@ That is the argument for keeping the wire types out of the planner.
 | | V1 (this spec) | V2 and later |
 | --- | --- | --- |
 | Source of a block | A Library file named in the Message that started the Turn | B: the Human attaches a file (roadmap item 23) |
-| Kinds | PNG, JPEG, GIF, WebP; text as a resource on Adapters with no file tools (Phase 5) | PDF as a blob resource (V-6), SVG as text, audio if anything sends it |
+| Kinds | PNG, JPEG, GIF, WebP; text as a resource on Adapters with no file tools (Phase 5) | PDF as a blob resource, built 2026-11 ([AdapterUpgrades §3](Huddle.AdapterUpgrades-Specifications.md); V-6), SVG as text, audio if anything sends it |
 | Capability | `image`, `embeddedContext` | `audio`; ACP v2's object form |
 | Sizing | Cap and refuse | Resize or re-encode, if an image library is ever justified |
 | Repetition | Re-sent when named again | A content-hash "already in this session" check (OQ-5) |
@@ -962,6 +962,8 @@ mcpCapabilities: { http: true, sse: true },
 | `resource` with a `blob` | **Ignored**, with the comment "(unsupported)" |
 | `audio`, anything else | Ignored |
 
+`claude-agent-acp` **0.100.0** adds `blob-resources.js`, which converts an `image`, a `document` (a PDF) and a text blob to Anthropic blocks. A blob `resource` is therefore not ignored on 0.100.0, and the "ignored" row above is the 0.75.1 behaviour.
+
 The message carries `origin: {kind: "human"}`. The conclusions that follow: bytes, not URIs, for an
 image (D-3); no `resource_link` (D-4); a blob resource is a silent drop, so PDF waits for a live check
 (D-5, V-6); and the text block is first and unique in being read for commands (§6.6).
@@ -1005,5 +1007,5 @@ members; T1.4 pins what actually crosses the wire.
 | V-3 | Does `@Nova` with a named PNG work end to end in the real app, on a Claude Persona, with the reply describing the picture? | `manual-tests/prompt-blocks.md` PROMPTBLOCKS-01; about $0.05 | **Answered 2026-10-01**, in the app on a Haiku Agent: `BANANA 4821` and the circle's colour read out of a named PNG with no tool call; and a 4.3 MB PNG fell back to its path with `TooLarge=1` logged. PROMPTBLOCKS-02 (four of six images, `ImageCountCap=2`) and -05 (`PromptBlocks=false` gives `CANNOT SEE`) passed in the app the same day; PROMPTBLOCKS-04, which needs two Agents in one Room, is deferred to user acceptance |
 | V-4 | What does the Adapter do with a corrupt body behind a valid header: a refusal, or a hang? Does the Turn fail cleanly once? | A truncated PNG with a valid `IHDR` | **Answered 2026-10-01.** The Turn did not fail and did not hang: it ended `EndTurn` once, and the reply said `API Error: an image in the conversation could not be processed and was removed.` The Adapter drops the image from the conversation, so it cannot poison later Turns |
 | V-5 | Does `agency-acp` advertise `image` or `embeddedContext`, and does its model accept an image? | Point the harness at `agency-acp`; free | Open. Not a V1 gate |
-| V-6 | Does any Adapter we run honour a blob `resource` (PDF)? | As V-1, with a small PDF | Open. A V2 gate |
+| V-6 | Does any Adapter we run honour a blob `resource` (PDF)? | As V-1, with a small PDF | **Answered 2026-11-03** for `claude-agent-acp` (Haiku alias): a one-page PDF sent as a blob `resource` with `embeddedContext` advertised was read, and the model replied `ZEBRA-4821` (test `PdfBlobResource_CodeWord_ReachesTheModel`). This shows the adapter honours the block when sent; the app sends it only to an Adapter with no file tools, so the built-in Claude profile (`ReadsFiles: true`) still gets a path line. Still open for `agency-acp` |
 | V-7 | Does `agency-acp` or any other Adapter ignore a text `resource` when `embeddedContext` is advertised? | As V-5 | **Answered for `claude-agent-acp` 2026-10-01:** a text resource with `embeddedContext` advertised is read, the model replied `ZEBRA-4821` from it (and remarked that the `file:///` path does not exist on disk, which is expected for a probe). Still open for `agency-acp` |

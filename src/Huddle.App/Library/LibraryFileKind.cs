@@ -17,4 +17,7 @@ public enum LibraryFileKind
 
     /// <summary>Other file type.</summary>
     Other,
+
+    /// <summary>PDF document, recognised by the .pdf extension and the %PDF- magic.</summary>
+    Pdf,
 }

@@ -367,6 +367,8 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Library:MaxImageBytes` | `3145728` | The most bytes of one image sent to an Adapter as a Prompt block (3 MiB, 4 MiB once base64-encoded). Over it, the image is a path line. Zero or less sends none. |
 | `Library:MaxImagesPerTurn` | `4` | The most image Prompt blocks in one Turn's prompt; the rest stay path lines. |
 | `Library:MaxImageBytesPerTurn` | `8388608` | The most raw image bytes in one Turn's prompt, about a third more on the wire. |
+| `Library:MaxDocumentsPerTurn` | `2` | The most document Prompt blocks in one Turn's prompt, sent only to an Adapter without file tools that takes embedded text; the rest stay path lines. |
+| `Library:MaxDocumentBytesPerTurn` | `10485760` | The most raw document bytes in one Turn's prompt; a document past it stays a path line. |
 | `Library:MaxImageEdgePixels` | `8000` | The longest side, in pixels, of an image sent as a Prompt block, read from its header. |
 | `Search:LibraryParallelism` | `4` | How many Library Roots Global Search walks at once; below `1` is raised to `1`. See [the design](Huddle.GlobalSearch-Specifications.md) §10. |
 | `Search:MaxContentFileBytes` | `1048576` | Above this, Global Search matches a Library file by name only and never reads it. |

@@ -80,7 +80,15 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     internal PromptDelivery DeliveryFor(bool readsFiles, bool images, bool embeddedText)
     {
         LibraryOptions library = this.options.Value.Library;
-        return new PromptDelivery(readsFiles, images, embeddedText, library.MaxImagesPerTurn, library.MaxImageBytesPerTurn);
+        return new PromptDelivery(
+            readsFiles,
+            images,
+            embeddedText,
+            library.MaxImagesPerTurn,
+            library.MaxImageBytesPerTurn,
+            embeddedText && !readsFiles,
+            library.MaxDocumentsPerTurn,
+            library.MaxDocumentBytesPerTurn);
     }
 
     private async Task<LibraryDocumentsReport> CollectCoreAsync(IReadOnlyList<string> messageTexts, bool readsFiles, PromptDelivery? delivery, CancellationToken ct)
@@ -123,6 +131,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
                 inputs,
                 delivery,
                 (path, token) => this.files.ReadImageAsync(path, library.MaxImageBytes, library.MaxImageEdgePixels, token),
+                (path, remaining, token) => this.files.ReadDocumentAsync(path, remaining, token),
                 ct).ConfigureAwait(false);
             for (int index = 0; index < items.Count; index++)
             {

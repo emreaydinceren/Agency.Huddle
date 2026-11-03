@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Library;
 /// </summary>
 public sealed class LibraryDocumentCollectorPromptBlockTests
 {
-    private static readonly PromptDelivery ImagesOn = new(ReadsFiles: true, Images: true, EmbeddedText: false, MaxImagesPerTurn: 4, MaxImageBytesPerTurn: 8 * 1024 * 1024);
+    private static readonly PromptDelivery ImagesOn = new(ReadsFiles: true, Images: true, EmbeddedText: false, MaxImagesPerTurn: 4, MaxImageBytesPerTurn: 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
     /// <summary>A path as a <c>file://</c> URL: the one form of an absolute path the collector recognises on every platform, so a test written on Windows also finds its files on Linux.</summary>
     private static string Link(string path) => new Uri(path).AbsoluteUri;
@@ -184,7 +184,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         (LibraryFileServiceFixture fixture, LibraryDocumentCollector collector, string root) = Build();
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "shot.png");
-        PromptDelivery delivery = new(ReadsFiles: false, Images: images, EmbeddedText: false, 4, 8 * 1024 * 1024);
+        PromptDelivery delivery = new(ReadsFiles: false, Images: images, EmbeddedText: false, 4, 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
         LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)}"], delivery, ct);
 
@@ -266,7 +266,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string notes = Path.Combine(root, "notes v2.md");
         File.WriteAllText(notes, "# Notes\nhello");
-        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024);
+        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
         LibraryDocumentsReport report = await collector.CollectAsync([$"`{Link(notes)}`"], delivery, ct);
 
@@ -289,7 +289,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string notes = Path.Combine(root, "long.md");
         File.WriteAllText(notes, new string('x', 40));
-        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024);
+        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
         LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 
@@ -307,7 +307,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string notes = Path.Combine(root, "notes.md");
         File.WriteAllText(notes, "hello");
-        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: false, 4, 8 * 1024 * 1024);
+        PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: false, 4, 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
         LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 
@@ -325,7 +325,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string notes = Path.Combine(root, "notes.md");
         File.WriteAllText(notes, "hello");
-        PromptDelivery delivery = new(ReadsFiles: true, Images: true, EmbeddedText: true, 4, 8 * 1024 * 1024);
+        PromptDelivery delivery = new(ReadsFiles: true, Images: true, EmbeddedText: true, 4, 8 * 1024 * 1024, Documents: false, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
         LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 

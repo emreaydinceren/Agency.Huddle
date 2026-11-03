@@ -2523,7 +2523,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             string summary = string.Join(", ", reasons);
             this.logger.LogInformation(
-                "Persona '{PersonaName}' sent image paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
+                "Persona '{PersonaName}' sent library file paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
                 this.owner.PersonaName,
                 roomId,
                 summary);

@@ -196,6 +196,17 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
                         },
                     });
                     break;
+                case AgentBlobResourceBlock blob:
+                    content.Add(new dotacp.protocol.EmbeddedResource
+                    {
+                        Resource = new dotacp.protocol.BlobResourceContents
+                        {
+                            Uri = blob.Uri,
+                            MimeType = blob.MimeType,
+                            Blob = Convert.ToBase64String(blob.Data.Span),
+                        },
+                    });
+                    break;
                 default:
                     throw new NotSupportedException($"Prompt block type {block.GetType().Name} has no ACP mapping.");
             }

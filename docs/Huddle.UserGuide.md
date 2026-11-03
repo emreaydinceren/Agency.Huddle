@@ -1410,6 +1410,10 @@ it with their own tools.
 - An absolute path to a Library file becomes a link that opens the file in the
   Library, in its own tab. The Agents who answer are also given the list of those files,
   or, for adapters that cannot read files, the text of small ones.
+- A PDF named in a Message goes as the document itself only to an Adapter that cannot
+  read files and accepts embedded documents, up to two per Message; any further PDF is
+  named by its path only. Claude, as set up here, can read files, so for it a PDF stays
+  a path and Claude opens the file itself.
 
 ### Freeing an Agent's memory with `/compact`
 
