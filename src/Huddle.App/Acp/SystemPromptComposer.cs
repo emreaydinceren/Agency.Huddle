@@ -203,7 +203,7 @@ internal static class SystemPromptComposer
     /// Whether a memory file's change reaches the Agent as a File Change at the start of its next Turn, which
     /// needs File Changes on and an Adapter that reads files. When <see langword="false"/> the Memory block leaves
     /// out <c>systemPrompt.memoryChanges</c> and the per-Room closing leaves out <c>systemPrompt.roomSessionsCarry</c>,
-    /// since both name File Changes (Instructions and Memory §6.1). Defaults to <see langword="true"/>.
+    /// since both name File Changes (Memory spec §6.1). Defaults to <see langword="true"/>.
     /// </param>
     /// <param name="warnings">
     /// Warns, once per override text, about a <c>systemPrompt.teamMemory</c> override that still uses the old frame; <see langword="null"/> warns of nothing.
@@ -541,7 +541,7 @@ internal static class SystemPromptComposer
     }
 
     /// <summary>
-    /// Renders the <c>systemPrompt.teamMemory</c> block (Instructions and Memory §6.2): one frame with one heading, holding a
+    /// Renders the <c>systemPrompt.teamMemory</c> block (Memory spec §6.2): one frame with one heading, holding a
     /// paragraph for the Teams the Persona manages and one for the Teams it only belongs to, then the index. Each part is rendered
     /// first and only then handed to the frame as a value: the renderer is one pass and never re-scans a value, so a Team or
     /// Project name containing <c>{{x}}</c> stays literal.

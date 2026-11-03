@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 45 of 141 tasks Done · 2 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 49 of 141 tasks Done · 2 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -64,10 +64,10 @@ never by hand, so the status line stays true.
 | 5.4.t #39 Caps and the total budget [Sonnet] | | | ✔ |
 | 5.4.i #40 Apply the budget [Sonnet] | | | ✔ |
 | 5.5.t #41 The `AGENTS.md` block in the prompt [Sonnet] | | | ✔ |
-| 5.5.i #42 Compose the block; retire Instructions [Sonnet] | | ✔ | |
-| 5.6.t #43 The Agent level is gone [Haiku] | ✔ | | |
-| 5.6.i #44 Remove any Agent-level read [Haiku] | ✔ | | |
-| 5.7 #45 Docs check for D5 [Haiku] | ✔ | | |
+| 5.5.i #42 Compose the block; retire Instructions [Sonnet] | | | ✔ |
+| 5.6.t #43 The Agent level is gone [Haiku] | | | ✔ |
+| 5.6.i #44 Remove any Agent-level read [Haiku] | | | ✔ |
+| 5.7 #45 Docs check for D5 [Haiku] | | | ✔ |
 | 🔁 R3 Retrospective 3 (tasks 31–45): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D6. P2: `_team.md` settings and the process** | | | |
 | 6.1.t #46 `TeamFile` carries the process settings [Sonnet] | | | ✔ |

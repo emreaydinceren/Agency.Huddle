@@ -1,15 +1,19 @@
 namespace Agency.Huddle.Tests.Acp;
 
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
 /// Pins the AGENTS.md block of <see cref="SystemPromptComposer"/> (Spec §8.1, §8.2, correction C5): where it sits,
 /// the levels sentence (T8), and the heading of each section.
 /// </summary>
-public sealed class AgentsMdCompositionTests
+public sealed class AgentsMdCompositionTests : IDisposable
 {
+    private readonly string root = Path.Combine(Path.GetTempPath(), "huddle-agentsmdcomp-" + Guid.NewGuid().ToString("N"));
+
     private const string LevelsSentence =
         "Each level below adds to the one before it. If two rules conflict, follow the more specific one: a Project's over its Team's, a Team's over the Huddle-wide rules.";
 
@@ -89,6 +93,36 @@ public sealed class AgentsMdCompositionTests
         Assert.DoesNotContain("## Huddle-wide", actual, StringComparison.Ordinal);
         Assert.DoesNotContain("## Team ", actual, StringComparison.Ordinal);
         Assert.Equal(Compose(null), actual);
+    }
+
+    /// <summary>
+    /// SB-R10 (Spec §6.2, D-9): an Agent's <c>work/Instructions.md</c> is no level any more, so its text never reaches the composed prompt,
+    /// while the Human's AGENTS.md beside it still does. The session-level twin is <c>SessionStart_ReadsTheThreeAgentsMdFilesInOrder</c>.
+    /// </summary>
+    [Fact]
+    public void Compose_AgentWorkInstructionsFile_NeverReachesThePrompt()
+    {
+        string teamsRoot = Path.Combine(this.root, "Teams");
+        string workDir = Path.Combine(this.root, "Agents", "Nova", "work");
+        Directory.CreateDirectory(Path.Combine(teamsRoot, "A"));
+        Directory.CreateDirectory(workDir);
+        File.WriteAllText(Path.Combine(workDir, "Instructions.md"), "ZEBRA");
+        File.WriteAllText(Path.Combine(teamsRoot, "AGENTS.md"), "Huddle text.");
+        AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
+
+        string actual = Compose(reader.Read(teamsRoot, ["A"]));
+
+        Assert.DoesNotContain("ZEBRA", actual, StringComparison.Ordinal);
+        Assert.Contains("Huddle text.", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Removes the temporary data folder.</summary>
+    public void Dispose()
+    {
+        if (Directory.Exists(this.root))
+        {
+            Directory.Delete(this.root, recursive: true);
+        }
     }
 
     /// <summary>The levels sentence (T8) is the default of <c>systemPrompt.agentsMdLevels</c>.</summary>

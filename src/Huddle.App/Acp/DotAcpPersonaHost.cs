@@ -74,7 +74,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="loggerFactory">Creates the logger a fresh <see cref="WorkDirPermissionHandler"/> needs on every open or resume.</param>
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
-    /// <param name="sources">Reads the Human's Instructions, decides who writes a Team's Memory and warns about malformed memory files.</param>
+    /// <param name="sources">Reads the Human's AGENTS.md files, decides who writes a Team's Memory and warns about malformed memory files.</param>
     /// <param name="mergeGate">Decides the Persona's <c>git merge</c> and <c>git push</c> requests (PR-7); <see langword="null"/> approves them.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
@@ -148,9 +148,9 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.workModePolicy = workModePolicy;
     }
 
-    /// <summary>Guards the collaborators that build the system prompt's role block and Instructions and decide who writes a Team's Memory.</summary>
+    /// <summary>Guards the collaborators that build the system prompt's role block and AGENTS.md block and decide who writes a Team's Memory.</summary>
     /// <param name="roleBlock">The role block factory.</param>
-    /// <param name="sources">The Instructions reader, Team Memory access rules and memory warnings.</param>
+    /// <param name="sources">The AGENTS.md reader, Team Memory access rules and memory warnings.</param>
     private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources)
     {
         ArgumentNullException.ThrowIfNull(roleBlock);
@@ -261,7 +261,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     }
 
     /// <summary>
-    /// Composes the system prompt now, with the memory index and the Instructions read afresh. The Memory and Team Memory blocks are
+    /// Composes the system prompt now, with the memory index and the AGENTS.md files read afresh. The Memory and Team Memory blocks are
     /// built whenever the memory tool is offered, which is always, so an Adapter with no file tools gets them too; only the sentences
     /// that name File Changes depend on <see cref="readsMemory"/> (Instructions spec §6.1).
     /// </summary>
