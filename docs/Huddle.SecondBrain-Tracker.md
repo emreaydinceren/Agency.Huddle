@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 80 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 84 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -104,15 +104,15 @@ never by hand, so the status line stays true.
 | 8.2.i #71 Set every source [Sonnet] | | | ✔ |
 | 8.3.t #72 One snapshot builder for sessions and the preview [Sonnet] | | | ✔ |
 | 8.3.i #73 Extract `SessionPromptInputs` [Sonnet] | | | ✔ |
-| 8.4.t #74 "What this Agent reads" [Sonnet] | ✔ | | |
-| 8.4.i #75 Build the view [Sonnet] | ✔ | | |
+| 8.4.t #74 "What this Agent reads" [Sonnet] | | | ✔ |
+| 8.4.i #75 Build the view [Sonnet] | | | ✔ |
 | 🔁 R5 Retrospective 5 (tasks 61–75): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D9. P4: Prompt override files** | | | |
 | 9.1.t #76 A folder of overrides [Sonnet] | | | ✔ |
 | 9.1.i #77 Folder-backed `PromptStore` [Sonnet] | | | ✔ |
-| 9.2.t #78 Reporting, never refusing [Sonnet] | ✔ | | |
-| 9.2.i #79 Report unknown and broken overrides [Sonnet] | ✔ | | |
-| 9.3.t #80 Agents can't write the Prompts folder [Sonnet] | ✔ | | |
+| 9.2.t #78 Reporting, never refusing [Sonnet] | | | ✔ |
+| 9.2.i #79 Report unknown and broken overrides [Sonnet] | | | ✔ |
+| 9.3.t #80 Agents can't write the Prompts folder [Sonnet] | | ✔ | |
 | 9.3.i #81 `PromptsRootGuard` [Sonnet] | ✔ | | |
 | 9.4.t #82 Relied-on warnings [Sonnet] | | | ✔ |
 | 9.4.i #83 The `Relied` flag [Haiku] | | | ✔ |

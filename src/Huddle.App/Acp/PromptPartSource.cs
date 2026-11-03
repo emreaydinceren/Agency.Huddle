@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>Where a <see cref="PromptPart"/>'s text came from.</summary>
-internal abstract record PromptPartSource
+public abstract record PromptPartSource
 {
     /// <summary>A catalog prompt, possibly overridden by the Human.</summary>
     /// <param name="Key">The prompt's key.</param>

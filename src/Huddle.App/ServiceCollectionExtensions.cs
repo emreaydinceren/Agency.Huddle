@@ -337,7 +337,9 @@ public static class ServiceCollectionExtensions
         // with an in-process fake to drive a real Persona through a real host, session and tool
         // server against a scripted ACP peer, with no process spawned.
         services.AddSingleton<IAgentProcessLauncher, AgentProcessLauncher>();
-        services.AddSingleton<IAgentHostFactory, DotAcpAgentHostFactory>();
+        services.AddSingleton<DotAcpAgentHostFactory>();
+        services.AddSingleton<IAgentHostFactory>(sp => sp.GetRequiredService<DotAcpAgentHostFactory>());
+        services.AddSingleton<PersonaPromptPreview>();
         services.AddSingleton<AdapterCatalog>();
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();

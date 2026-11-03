@@ -583,4 +583,51 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 this.teamCatalog,
                 personaStore.Get);
     }
+
+    /// <summary>
+    /// Composes, as labelled parts, what the Persona's next root session would be told (Spec §6.5). Read-only: it builds the tool
+    /// objects but starts no server or process, creates no folder and spends no Turn.
+    /// </summary>
+    /// <param name="persona">The Persona to preview.</param>
+    /// <returns>The parts in prompt order and the id of the Adapter they were composed for.</returns>
+    internal (IReadOnlyList<PromptPart> Parts, string Adapter) PreviewParts(Persona persona)
+    {
+        ArgumentNullException.ThrowIfNull(persona);
+
+        AdapterProfile profile = this.ResolveProfile(persona);
+        PersonaIdentity? parsed = ParseIdentity(persona);
+        IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
+        SkillResolution skillResolution = this.skills.Resolve(parsed?.Skills ?? []);
+        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels));
+        IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
+        SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
+
+        SessionPromptSnapshot inputs = SessionPromptInputs.Build(
+            sources.AgentsMd,
+            sources.Warnings,
+            this.teamCatalog.Teams,
+            persona.Name,
+            Path.Combine(this.agentPaths.WorkDir(persona.Name), "memory"),
+            this.options.FileChanges.MaxMemoryEntries,
+            teamLabels,
+            this.TeamsRoot(),
+            this.options.Teams.MaxMemoryEntries);
+
+        IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
+            persona,
+            toolSet.Prompts,
+            toolSet.HelpToolName,
+            toolNames,
+            skillResolution.Skills,
+            toolSet.ReadSkillToolName,
+            inputs.Memory,
+            SessionScope.Shared,
+            teamMemory: inputs.TeamMemory,
+            askHumanToolName: toolSet.AskHumanToolName,
+            roleBlock: this.CreateRoleBlock(parsed, skillResolution)(),
+            agentsMd: inputs.AgentsMd,
+            memoryChangesListed: this.ReadsMemory(profile),
+            warnings: sources.Warnings);
+        return (parts, profile.Id);
+    }
 }

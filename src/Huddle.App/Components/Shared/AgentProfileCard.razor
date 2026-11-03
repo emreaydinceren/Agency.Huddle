@@ -36,6 +36,7 @@
 
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Agents
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
@@ -292,6 +293,15 @@
                 <div class="group-label">Work mode</div>
                 <MudText Typo="Typo.body1">@this.WorkModeDisplayText</MudText>
             </section>
+
+            @* Spec §6.5, SB-R16: what the next session will be told, part by part, read-only. Absent where the preview is not registered. *@
+            @if (this.PromptPreview is { } preview)
+            {
+                <section class="agent-profile-card-section agent-profile-card-reads">
+                    <div class="group-label">What this Agent reads</div>
+                    <PromptPartsView Parts="@preview.Parts" Adapter="@preview.Adapter" />
+                </section>
+            }
 
             @if (this.filePath is not null)
             {
@@ -1664,6 +1674,24 @@
     private bool copying;
 
     /// <summary>The registry, when the host registers one.</summary>
+    private (IReadOnlyList<Agency.Huddle.App.Acp.PromptPart> Parts, string Adapter)? promptPreview;
+
+    /// <summary>The next session's prompt parts for this Agent (Spec §6.5), built once on first use; <see langword="null"/> when the preview is not registered or the Persona is gone.</summary>
+    private (IReadOnlyList<Agency.Huddle.App.Acp.PromptPart> Parts, string Adapter)? PromptPreview
+    {
+        get
+        {
+            if (this.promptPreview is null
+                && this.Services.GetService<Agency.Huddle.App.Acp.PersonaPromptPreview>() is { } preview
+                && this.Personas.Get(this.name) is { } persona)
+            {
+                this.promptPreview = preview.Build(persona);
+            }
+
+            return this.promptPreview;
+        }
+    }
+
     private Agency.Huddle.App.SkillSources.SkillRegistry? Registry => this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
 
     /// <summary>Registry Skills Huddle can copy that have no folder in Skills/ yet: not hidden or withdrawn unless selected.</summary>
