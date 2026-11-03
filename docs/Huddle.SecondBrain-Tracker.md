@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 69 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 71 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -100,8 +100,8 @@ never by hand, so the status line stays true.
 | **D8. P3: composer parts and the inspection view** | | | |
 | 8.1.t #68 Parts join to the prompt [Sonnet] | | | ✔ |
 | 8.1.i #69 `ComposeParts` [Sonnet] | | | ✔ |
-| 8.2.t #70 Each part names its source [Sonnet] | ✔ | | |
-| 8.2.i #71 Set every source [Sonnet] | ✔ | | |
+| 8.2.t #70 Each part names its source [Sonnet] | | | ✔ |
+| 8.2.i #71 Set every source [Sonnet] | | | ✔ |
 | 8.3.t #72 One snapshot builder for sessions and the preview [Sonnet] | ✔ | | |
 | 8.3.i #73 Extract `SessionPromptInputs` [Sonnet] | ✔ | | |
 | 8.4.t #74 "What this Agent reads" [Sonnet] | ✔ | | |

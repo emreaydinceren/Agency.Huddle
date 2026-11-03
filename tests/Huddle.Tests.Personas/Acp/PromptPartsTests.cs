@@ -84,6 +84,83 @@ public sealed class PromptPartsTests
         Assert.True(parts.Count > 8, "Role, memory and closing parts follow the five fixed ones.");
     }
 
+    /// <summary>Task 70 (8.2.t): the orientation part names the catalogue prompt and reports it as not overridden by default.</summary>
+    [Fact]
+    public void ComposeParts_Orientation_SourceIsPromptNotOverridden()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.orientation", false), parts.Single(part => part.Label == "Orientation").Source);
+    }
+
+    /// <summary>Task 70 (8.2.t): an override of the orientation key flips <c>Overridden</c> to true.</summary>
+    [Fact]
+    public void ComposeParts_OrientationOverridden_SourceIsOverridden()
+    {
+        FakePromptSource prompts = new();
+        prompts.SetOverride("systemPrompt.orientation", "Custom orientation, ask {{helpTool}}.");
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.orientation", true), parts.Single(part => part.Label == "Orientation").Source);
+    }
+
+    /// <summary>Task 70 (8.2.t): the Persona text part names the Persona; tools part carries the offered count (3 names in <c>ToolNames</c>).</summary>
+    [Fact]
+    public void ComposeParts_PersonaAndTools_SourcesNamePersonaAndToolCount()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        Assert.Equal(new PromptPartSource.Persona("Nova"), parts.Single(part => part.Label == "Persona text").Source);
+        Assert.Equal(new PromptPartSource.Tools(3), parts.Single(part => part.Label == "Tools").Source);
+    }
+
+    /// <summary>Task 70 (8.2.t): the AGENTS.md block is one part per section (three sections), each sourced by the section's path.</summary>
+    [Fact]
+    public void ComposeParts_AgentsMd_OneFilePartPerSection()
+    {
+        AgentsMdSnapshot agentsMd = new(
+            [
+                new AgentsMdSection(AgentsMdLevel.HuddleWide, null, null, "Teams/AGENTS.md", "Be brief everywhere.", false),
+                new AgentsMdSection(AgentsMdLevel.Team, "A", null, "Teams/A/AGENTS.md", "Team A writes in British English.", false),
+                new AgentsMdSection(AgentsMdLevel.Project, "A", "Alpha", "Teams/A/Alpha/AGENTS.md", "Alpha ships on Fridays.", false),
+            ],
+            []);
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, agentsMd: agentsMd);
+
+        Assert.Equal(
+            [
+                new PromptPartSource.File("Teams/AGENTS.md"),
+                new PromptPartSource.File("Teams/A/AGENTS.md"),
+                new PromptPartSource.File("Teams/A/Alpha/AGENTS.md"),
+            ],
+            parts.Where(part => part.Label == "AGENTS.md block" && part.Source is PromptPartSource.File).Select(part => part.Source).ToList());
+        // The block opens with the levels sentence, a catalogue prompt rather than a file.
+        Assert.Equal(
+            new PromptPartSource.Prompt("systemPrompt.agentsMdLevels", false),
+            parts.First(part => part.Label == "AGENTS.md block").Source);
+    }
+
+    /// <summary>Task 70 (8.2.t): the Memory part is an index of "memory" with the one entry listed in the snapshot.</summary>
+    [Fact]
+    public void ComposeParts_Memory_SourceIsIndexWithEntryCount()
+    {
+        MemorySnapshot memory = new(
+            @"E:\Huddle\App_Data\work\Ada\memory",
+            [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Ada\memory\code-language.md")],
+            NotListed: 0);
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Ada", "You are Ada."), new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.PerRoom);
+
+        Assert.Equal(new PromptPartSource.Index("memory", 1), parts.Single(part => part.Label == "Memory").Source);
+    }
+
     /// <summary>Asserts the invariant of SB-R16: the parts joined with a blank line are the composed prompt, and no part is empty.</summary>
     /// <param name="parts">The parts from <c>ComposeParts</c>.</param>
     /// <param name="composed">The text from <c>Compose</c> with the same arguments.</param>
