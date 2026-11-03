@@ -31,6 +31,23 @@ public sealed class ProcessTabGateWriteTests
         Assert.Equal("Nova", folders.File?.Manager);
     }
 
+    /// <summary>When <c>_team.md</c> cannot be saved, the tab shows the settings error and keeps the gate.</summary>
+    [Fact]
+    public async Task GateSwitchOff_SaveFails_ShowsTeamSettingsError()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = new();
+        DiskTeamFolders folders = Arrange(ctx, dir);
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+        folders.TeamFilePath = Path.Combine(dir.Path, "missing-folder", "_team.md"); // the directory does not exist, so the write throws IOException
+
+        _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        await cut.InvokeAsync(() => IElementButton(cut).ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("Team settings could not be saved.", cut.Find(".process-tab-error").TextContent.Trim()));
+    }
+
     /// <summary>With settings in <c>_team.md</c> and no <c>AGENTS.md</c>, the gate switches show and the empty notice does not.</summary>
     [Fact]
     public async Task Tab_GatesButNoAgentsMd_ShowsTheSwitches()

@@ -51,6 +51,8 @@
 </div>
 
 @code {
+    private const string SaveFailed = "Team settings could not be saved.";
+
     private string? text;
     private IReadOnlyList<GateId> gates = [];
     private string? error;
@@ -106,15 +108,15 @@
         {
             this.error = this.Folders.UpdateTeamFile(this.Team, file => file.WithGates([.. file.Process.Gates.Where(existing => existing != gate)]))
                 ? null
-                : "_team.md could not be saved.";
+                : SaveFailed;
         }
         catch (IOException)
         {
-            this.error = "_team.md could not be saved.";
+            this.error = SaveFailed;
         }
         catch (UnauthorizedAccessException)
         {
-            this.error = "_team.md could not be saved.";
+            this.error = SaveFailed;
         }
 
         this.Load();
