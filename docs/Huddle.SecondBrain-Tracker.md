@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 109 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 115 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -136,8 +136,8 @@ never by hand, so the status line stays true.
 | 11.4.i #98 `OverCapNotifier` [Sonnet] | | | ✔ |
 | 11.5.t #99 Default `Teams/AGENTS.md` [Haiku] | | | ✔ |
 | 11.5.i #100 Write the default once [Haiku] | | | ✔ |
-| 11.6.t #101 Conduct leaves the Prompts [Sonnet] | ✔ | | |
-| 11.6.i #102 Move the conduct sentences [Sonnet] | ✔ | | |
+| 11.6.t #101 Conduct leaves the Prompts [Sonnet] | | | ✔ |
+| 11.6.i #102 Move the conduct sentences [Sonnet] | | | ✔ |
 | 11.7 #103 Write the three Skills [Haiku] | ✔ | | |
 | 11.8.t #104 The Skills are installed and granted [Sonnet] | ✔ | | |
 | 11.8.i #105 Install and grant [Sonnet] | ✔ | | |
@@ -151,10 +151,10 @@ never by hand, so the status line stays true.
 | 12.2.i #111 Unarchive [Sonnet] | | | ✔ |
 | 12.3.t #112 Crash-safe cross-volume move [Sonnet] | | | ✔ |
 | 12.3.i #113 `ArchiveMove` [Sonnet] | | | ✔ |
-| 12.4.t #114 Names can't collide [Sonnet] | ✔ | | |
-| 12.4.i #115 Collision checks [Sonnet] | ✔ | | |
-| 12.5.t #116 The provisioner leaves archived Teams alone [Sonnet] | ✔ | | |
-| 12.5.i #117 Skip archived labels [Sonnet] | ✔ | | |
+| 12.4.t #114 Names can't collide [Sonnet] | | | ✔ |
+| 12.4.i #115 Collision checks [Sonnet] | | | ✔ |
+| 12.5.t #116 The provisioner leaves archived Teams alone [Sonnet] | | | ✔ |
+| 12.5.i #117 Skip archived labels [Sonnet] | | | ✔ |
 | 12.6.t #118 Rooms follow the Team [Sonnet] | ✔ | | |
 | 12.6.i #119 Wire the reconciler [Sonnet] | ✔ | | |
 | 12.7.t #120 Read-only fallback [Sonnet] | ✔ | | |

@@ -27,7 +27,6 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Questions;
-using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;

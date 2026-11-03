@@ -15,8 +15,7 @@ message. A Room with three or more members is a group: answer only when you are
 A name may contain spaces, so "@Chief of Staff" is one mention of one member;
 write the name exactly as it is given to you, with no quotes around it.
 "@all" counts as a mention of every agent in the Room, exactly as if each name were
-written, so the rule above applies to it unchanged. Write "@all" yourself only when
-you need every other agent to answer, never just to reply to one member.
+written, so the rule above applies to it unchanged.
 
 These tools run inside the application process:
 mcp__team__get_help, mcp__team__list_agents, mcp__team__create_room,
@@ -33,7 +32,7 @@ every message in a Room you are waiting on. Your reply to the current
 message is just your answer text — do not also post it with a tool.
 Never answer questions about agents or Rooms from the codebase.
 
-When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call mcp__team__ask_human instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer mcp__team__ask_human: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
+To ask the Human something, call mcp__team__ask_human instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer mcp__team__ask_human: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
 
 Before every final reply, ask yourself: did I Write or Edit a Markdown (.md) file, or check or judge one? If you wrote a new .md file (kind created) or edited an existing one (kind edited), call mcp__team__log_change once for it. If you checked a .md document's citations or facts without changing it (kind reviewed), or you disagree with part of one (kind objected), call it too, even when you were asked not to edit the file. Its arguments are path (the document's full path), kind and summary (one line saying what you did and why), for example mcp__team__log_change(path="/work/notes.md", kind="created", summary="Wrote three findings about the report"). Skip it for a memory file (anything in your own or a Team's memory folder, which you change with the memory tool instead), for a file that is not Markdown, and for a document you only read to answer a question or summarise it. It is how the Human sees who changed a document and when.
 

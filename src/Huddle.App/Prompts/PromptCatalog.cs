@@ -156,8 +156,7 @@ internal static class PromptCatalog
                 A name may contain spaces, so "@Chief of Staff" is one mention of one member;
                 write the name exactly as it is given to you, with no quotes around it.
                 "@all" counts as a mention of every agent in the Room, exactly as if each name were
-                written, so the rule above applies to it unchanged. Write "@all" yourself only when
-                you need every other agent to answer, never just to reply to one member.
+                written, so the rule above applies to it unchanged.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -202,7 +201,7 @@ internal static class PromptCatalog
                 "{{askHumanTool}}: the tool's exact, prefixed name is substituted in.",
             Default:
                 """
-                When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
+                To ask the Human something, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
                 """,
             Placeholders: ["{{askHumanTool}}"],
             RequiredPlaceholders: ["{{askHumanTool}}"],
@@ -781,7 +780,7 @@ internal static class PromptCatalog
                 {{roomLabel}}
                 The Human has just started using this application and has not written anything yet. This is
                 your first Message to them, and nothing prompted it. Greet them: if you hold a Skill for
-                this, read it first and follow it. Keep it to one Message that ends with one question.
+                this, read it first and follow it.
                 """,
             Placeholders: ["{{roomLabel}}"],
             RequiredPlaceholders: ["{{roomLabel}}"],
@@ -1368,8 +1367,7 @@ internal static class PromptCatalog
                 restarts, and every copy of you in your other Rooms reads the same folder.
                 Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them. The index below is built from each file's description, so there is no MEMORY.md to keep.
 
-                Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
-                about the people or work you support), write it to the right topic file at once, not at the end.
+                Save as you go. Write to the right topic file at once, not at the end.
                 Assume your context can reset at any moment: what is not written down is lost. When you
                 propose something (an idea, a plan, an option) and the Human takes it, turns it down or puts it
                 off, note the proposal and their answer in one topic file, and read that file before you
@@ -1381,8 +1379,7 @@ internal static class PromptCatalog
                 for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
                 it. When a file outgrows its description, update the description in the same step.
 
-                Do not save what is true only for this conversation, or what you can easily look up again. Never
-                save that something is missing, unknown or was never discussed: when you cannot find a fact, say
+                Never save that something is missing, unknown or was never discussed: when you cannot find a fact, say
                 so in your reply and leave your memory as it is, because a later read would take the gap for the
                 truth. If you are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
                 memory is the source of truth over what you think you remember.{{memoryChanges}} Do not claim to
@@ -1512,8 +1509,7 @@ internal static class PromptCatalog
                 Members propose facts, and Huddle files them through a Helper that decides whether each is worth
                 keeping and where it belongs, so you do not need to file what members tell you. You can still write it
                 yourself with the {{memoryTool}} tool: do so for your own decisions, and to fix or tidy what is there.
-                When a decision is reversed, replace it and note briefly that it changed. Descriptions follow the same
-                rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
+                Descriptions follow the same rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
                 instead.
                 """,
             Placeholders: ["{{managedTeams}}", "{{managedPaths}}", "{{memoryTool}}", "{{proposeTool}}"],
@@ -1533,9 +1529,8 @@ internal static class PromptCatalog
                 {{memberTeams}} keep shared Memory:
                 {{memberPaths}}
                 Read it with the {{memoryTool}} tool, passing the Team or Project as the folder. You do not write it.
-                When you learn something the whole Team should keep, such as a decision and its reason, an agreed way
-                of working or who owns what, propose it with {{proposeTool}}, one fact at a time; Huddle files it and
-                records that you proposed it. Keep your own notes in your own Memory.
+                When you learn something the whole Team should keep, propose it with {{proposeTool}}, one fact at a time; Huddle files it
+                and records that you proposed it. Keep your own notes in your own Memory.
                 """,
             Placeholders: ["{{memberTeams}}", "{{memberPaths}}", "{{memoryTool}}", "{{proposeTool}}"],
             RequiredPlaceholders: ["{{memberTeams}}", "{{memberPaths}}"],
