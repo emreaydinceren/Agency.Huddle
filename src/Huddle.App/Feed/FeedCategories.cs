@@ -5,9 +5,9 @@ internal static class FeedCategories
 {
     private static readonly Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> TypesByCategory = BuildIndex();
 
-    /// <summary>The eight Categories in the order the Category control, the counts and the panel draw them.</summary>
+    /// <summary>The nine Categories in the order the Category control, the counts and the panel draw them.</summary>
     public static IReadOnlyList<FeedCategory> Order { get; } =
-        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers, FeedCategory.Devices];
+        [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers, FeedCategory.Devices, FeedCategory.SecondBrain];
 
     /// <summary>The label a Category carries in the Category control and the panel.</summary>
     /// <param name="category">The Category.</param>
@@ -21,6 +21,7 @@ internal static class FeedCategories
         FeedCategory.Gates => "Gates",
         FeedCategory.Helpers => "Helpers",
         FeedCategory.Devices => "Devices",
+        FeedCategory.SecondBrain => "Second Brain",
         _ => "All",
     };
 
@@ -37,6 +38,7 @@ internal static class FeedCategories
         FeedCategory.Gates => counts.Gates,
         FeedCategory.Helpers => counts.Helpers,
         FeedCategory.Devices => counts.Devices,
+        FeedCategory.SecondBrain => counts.SecondBrain,
         _ => counts.All,
     };
 
@@ -52,6 +54,7 @@ internal static class FeedCategories
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing or FeedSourceType.TeamMemoryNotFiled => FeedCategory.Helpers,
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => FeedCategory.Devices,
+        FeedSourceType.SecondBrainOverCap => FeedCategory.SecondBrain,
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -73,6 +76,7 @@ internal static class FeedCategories
         "gates" => FeedCategory.Gates,
         "helpers" => FeedCategory.Helpers,
         "devices" => FeedCategory.Devices,
+        "second-brain" => FeedCategory.SecondBrain,
         _ => FeedCategory.All,
     };
 
@@ -88,6 +92,7 @@ internal static class FeedCategories
         FeedCategory.Gates => "gates",
         FeedCategory.Helpers => "helpers",
         FeedCategory.Devices => "devices",
+        FeedCategory.SecondBrain => "second-brain",
         _ => "all",
     };
 

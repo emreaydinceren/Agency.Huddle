@@ -4,7 +4,10 @@ using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Feed;
 using Microsoft.Extensions.Logging.Abstractions;
+using OverCapNotifier = Agency.Huddle.App.SecondBrain.OverCapNotifier;
+using SecondBrainOverCapPayload = Agency.Huddle.App.Feed.SecondBrainOverCapPayload;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -98,5 +101,40 @@ public sealed class SessionPromptInputsTests : IDisposable
         Assert.Null(actual.TeamMemory);
         Assert.Empty(actual.Memory.Entries);
         Assert.Empty(actual.AgentsMd.Sections);
+    }
+
+    /// <summary>
+    /// Building session inputs over a Team memory folder and a Huddle-wide memory folder that each hold more files than the cap reports both
+    /// folders to the notifier (SB-R13, Spec §6.8): the one place the indexes are built is the one place overflow is noticed.
+    /// </summary>
+    [Fact]
+    public void Build_FoldersOverCap_ReportsEachToTheNotifier()
+    {
+        string teamsRoot = Path.Combine(this.root, "Teams");
+        string memoryDir = Path.Combine(this.root, "Agents", "nova", "memory");
+        Directory.CreateDirectory(memoryDir);
+        foreach (string folder in new[] { Path.Combine(teamsRoot, "memory"), Path.Combine(teamsRoot, "Business", "memory") })
+        {
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "a.md"), "# A.\n\nOne.");
+            File.WriteAllText(Path.Combine(folder, "b.md"), "# B.\n\nTwo.");
+        }
+
+        AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
+        MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
+        IReadOnlyList<TeamSummary> teams = [new TeamSummary("Business", [], ["nova"], true)];
+        RecordingFeedPublisher feed = new();
+        OverCapNotifier notifier = new(feed);
+
+        _ = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["Business"], teamsRoot, 1, maxHuddleMemoryEntries: 1, maxOutputsEntries: 40, overCap: notifier);
+
+        // Each folder holds 2 files against a cap of 1, so 1 is listed and 1 is not.
+        string[] texts = [.. feed.Posts.Select(post => Assert.IsType<SecondBrainOverCapPayload>(post.Payload).Message).Order(StringComparer.Ordinal)];
+        Assert.Equal(
+            [
+                "Teams/Business/memory has more Memory than Agents are shown (1 of 1 listed). Ask the Team's manager to tidy it.",
+                "Teams/memory has more Memory than Agents are shown (1 of 1 listed). Ask the Team's manager to tidy it.",
+            ],
+            texts);
     }
 }

@@ -537,7 +537,7 @@ from the Activity bar's "Feed" link (`S5a`) and the Notifications panel's "See a
 | `F2a` | Live chip | A small Success-tinted chip in `TitleTrailing` | A filled dot and "Live": new items arrive on their own. One state in v1 |
 | `F2b` | Read-only note | Caption line, Quiet ink, leading `Visibility` icon | "Read-only — the Feed never changes the work and never shows message text." |
 | `F3` | Filter bar | `div`, one row | `F3a` at the left; `F3c` then `F3b` at the right |
-| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, seven segments | All, Needs you, Tasks, Documents, Rooms, Gates, Helpers, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
+| `F3a` | Category | `HuddleSegmentedControl<FeedCategory>`, nine segments | All, Needs you, Tasks, Documents, Rooms, Gates, Helpers, Devices, Second Brain, each with its count. Needs you overlaps the others, so the counts don't add up. Sets `?category=` |
 | `F3b` | Team select | `MudSelect`, Dense, Outlined, the `Groups` icon | "All teams", then each Team. Sets `?team=` |
 | `F3c` | Agent chip | `TaskFilterChip` | Drawn dashed: only when an avatar was clicked. "Agent: Nova ×" |
 | `F4` | Item list (panel) | `NotificationsPanel` over `FeedList`: `F8` day groups of `F9` rows, newest first | The Right sidebar's Feed panel (spec §6.8), with a wrapping Category chip set that opens on Needs you. The Feed Tab draws `F12` cards instead |

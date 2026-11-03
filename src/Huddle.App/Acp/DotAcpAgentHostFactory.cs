@@ -9,6 +9,7 @@ using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
 
@@ -197,7 +198,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
             this.agentPaths,
-            this.options.Outputs.MaxIndexEntries);
+            this.options.Outputs.MaxIndexEntries,
+            this.serviceProvider.GetService<OverCapNotifier>());
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>

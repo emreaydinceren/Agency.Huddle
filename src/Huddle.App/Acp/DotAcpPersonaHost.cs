@@ -279,7 +279,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.teamsRoot,
             this.teamsOptions.MaxMemoryEntries,
             this.teamsOptions.MaxHuddleMemoryEntries,
-            this.sources.MaxOutputsEntries);
+            this.sources.MaxOutputsEntries,
+            this.sources.OverCap);
 
         return SystemPromptComposer.Compose(
             this.persona,

@@ -71,4 +71,7 @@ public enum FeedSourceType
 
     /// <summary>A device was revoked, removed or had its token rotated.</summary>
     DeviceRevoked,
+
+    /// <summary>A Memory or outputs folder holds more files than Agents are shown.</summary>
+    SecondBrainOverCap,
 }

@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 104 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 107 of 143 tasks Done · 6 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -132,8 +132,8 @@ never by hand, so the status line stays true.
 | 11.2.i #94 `OutputsIndex` [Sonnet] | | | ✔ |
 | 11.3.t #95 Outputs in the prompt [Sonnet] | | | ✔ |
 | 11.3.i #96 Add slot 13 [Sonnet] | | | ✔ |
-| 11.4.t #97 Over-cap notifications [Sonnet] | ✔ | | |
-| 11.4.i #98 `OverCapNotifier` [Sonnet] | ✔ | | |
+| 11.4.t #97 Over-cap notifications [Sonnet] | | | ✔ |
+| 11.4.i #98 `OverCapNotifier` [Sonnet] | | | ✔ |
 | 11.5.t #99 Default `Teams/AGENTS.md` [Haiku] | ✔ | | |
 | 11.5.i #100 Write the default once [Haiku] | ✔ | | |
 | 11.6.t #101 Conduct leaves the Prompts [Sonnet] | ✔ | | |
@@ -150,7 +150,7 @@ never by hand, so the status line stays true.
 | 12.2.t #110 Unarchive a Team [Sonnet] | | | ✔ |
 | 12.2.i #111 Unarchive [Sonnet] | | | ✔ |
 | 12.3.t #112 Crash-safe cross-volume move [Sonnet] | | | ✔ |
-| 12.3.i #113 `ArchiveMove` [Sonnet] | | ✔ | |
+| 12.3.i #113 `ArchiveMove` [Sonnet] | | | ✔ |
 | 12.4.t #114 Names can't collide [Sonnet] | ✔ | | |
 | 12.4.i #115 Collision checks [Sonnet] | ✔ | | |
 | 12.5.t #116 The provisioner leaves archived Teams alone [Sonnet] | ✔ | | |

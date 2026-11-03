@@ -32,6 +32,7 @@ internal static class FeedSourceTypes
         FeedSourceType.AdminRequested => "admin-requested",
         FeedSourceType.DevicePaired => "device-paired",
         FeedSourceType.DeviceRevoked => "device-revoked",
+        FeedSourceType.SecondBrainOverCap => "second-brain-over-cap",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

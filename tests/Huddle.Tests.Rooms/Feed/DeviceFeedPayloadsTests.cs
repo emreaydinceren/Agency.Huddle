@@ -99,11 +99,12 @@ public sealed class DeviceFeedPayloadsTests
         Assert.Equal(4, FeedCategories.CountOf(counts, FeedCategory.Devices));
     }
 
-    /// <summary>Devices is the last Category the control draws, labelled "Devices", and its query value round-trips.</summary>
+    /// <summary>Devices is the Category the control draws just before Second Brain, labelled "Devices", and its query value round-trips.</summary>
     [Fact]
-    public void Devices_Category_IsLastLabelledAndParses()
+    public void Devices_Category_IsBeforeSecondBrainLabelledAndParses()
     {
-        Assert.Equal(FeedCategory.Devices, FeedCategories.Order[^1]);
+        Assert.Equal(FeedCategory.Devices, FeedCategories.Order[^2]);
+        Assert.Equal(FeedCategory.SecondBrain, FeedCategories.Order[^1]);
         Assert.Equal("Devices", FeedCategories.Label(FeedCategory.Devices));
         Assert.Equal("devices", FeedCategories.ToWire(FeedCategory.Devices));
         Assert.Equal(FeedCategory.Devices, FeedCategories.Parse("devices"));

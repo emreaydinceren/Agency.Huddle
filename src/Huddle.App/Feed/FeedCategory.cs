@@ -26,4 +26,7 @@ internal enum FeedCategory
 
     /// <summary>Remote access: pairing requests and devices.</summary>
     Devices,
+
+    /// <summary>Upkeep of the Second Brain: a Memory or outputs folder over its cap.</summary>
+    SecondBrain,
 }

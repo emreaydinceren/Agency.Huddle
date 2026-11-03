@@ -22,6 +22,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -628,6 +629,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => TeamMemoryAccess.ForPersonas(sp.GetRequiredService<ITeamCatalog>(), sp.GetRequiredService<PersonaStore>()));
         services.AddSingleton<MemoryFolderGate>();
         services.AddSingleton<MemoryWarnings>();
+        services.AddSingleton<OverCapNotifier>();
 
         // How a memory call's folder and file become a path: File Changes resolves with it to record a memory-tool write as the
         // Agent's own (Instructions and Memory §6.1).

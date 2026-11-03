@@ -44,7 +44,7 @@ public sealed partial class NotificationsPanelTests
 
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 2", "Tasks 1", "Documents 0", "Rooms 0", "Gates 2", "Helpers 0", "Devices 0"], ChipLabels(cut));
+        Assert.Equal(["All 3", "Needs you 2", "Tasks 1", "Documents 0", "Rooms 0", "Gates 2", "Helpers 0", "Devices 0", "Second Brain 0"], ChipLabels(cut));
         IElement selected = Assert.Single(cut.FindAll(".mud-chip[aria-checked='true']"));
         Assert.StartsWith("Needs you", Whitespace().Replace(selected.TextContent, " ").Trim(), StringComparison.Ordinal);
         Assert.Equal(2, cut.FindAll(".feed-row").Count);
