@@ -330,6 +330,42 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>How many times <see cref="DeleteAsync"/> has been called.</summary>
+    public int DeleteCalls { get; private set; }
+
+    /// <summary>Whether <see cref="Disposed"/> was already true when the last <see cref="DeleteAsync"/> call arrived.</summary>
+    public bool DisposedAtDelete { get; private set; }
+
+    /// <summary>When set, <see cref="DeleteAsync"/> counts the call and then throws this.</summary>
+    public Exception? DeleteFailure { get; set; }
+
+    /// <summary>When set, <see cref="DeleteAsync"/> counts the call and then waits for this to complete, ignoring its token, before it finishes.</summary>
+    public TaskCompletionSource? DeleteGate { get; set; }
+
+    /// <summary>Records the call; sends nothing. Waits for <see cref="DeleteGate"/> when set, then throws <see cref="DeleteFailure"/> when set.</summary>
+    /// <param name="cancellationToken">Unused.</param>
+    /// <returns>A task that completes when the gate (if any) is released.</returns>
+    public async Task DeleteAsync(CancellationToken cancellationToken)
+    {
+        Exception? failure;
+        lock (this.gate)
+        {
+            this.DeleteCalls++;
+            this.DisposedAtDelete = this.Disposed;
+            failure = this.DeleteFailure;
+        }
+
+        if (this.DeleteGate is { } deleteGate)
+        {
+            await deleteGate.Task;
+        }
+
+        if (failure is not null)
+        {
+            throw failure;
+        }
+    }
+
     public Task CancelAsync(CancellationToken cancellationToken)
     {
         lock (this.gate)

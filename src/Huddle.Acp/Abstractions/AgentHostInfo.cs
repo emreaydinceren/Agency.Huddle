@@ -7,5 +7,6 @@ using System.Collections.Generic;
 /// is whether the agent advertised <c>agentCapabilities.sessionCapabilities.resume</c> (RS §6.4 A-3).
 /// <c>PromptCapabilities</c> is what the agent said a prompt may carry; a <see langword="null"/> member
 /// means <see cref="AgentPromptCapabilities.None"/>, and a started host always supplies one.
+/// <c>SupportsDeleteSession</c> is whether the agent advertised <c>agentCapabilities.sessionCapabilities.delete</c>.
 /// </summary>
-public sealed record AgentHostInfo(string AgentName, string? AgentVersion, int ProtocolVersion, IReadOnlyList<AuthMethodInfo> AuthMethods, bool SupportsLoadSession, bool SupportsResumeSession = false, AgentPromptCapabilities? PromptCapabilities = null);
+public sealed record AgentHostInfo(string AgentName, string? AgentVersion, int ProtocolVersion, IReadOnlyList<AuthMethodInfo> AuthMethods, bool SupportsLoadSession, bool SupportsResumeSession = false, AgentPromptCapabilities? PromptCapabilities = null, bool SupportsDeleteSession = false);

@@ -37,6 +37,8 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     private bool disposed;
 
+    private readonly bool supportsDelete;
+
     internal DotAcpAgentSession(
         string sessionId,
         dotacp.client.Connection connection,
@@ -44,7 +46,8 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
         Action<string> onDisposed,
         ILogger logger,
         IReadOnlyList<AgentModelOption> models,
-        WireOrderLedger ledger)
+        WireOrderLedger ledger,
+        bool supportsDelete = false)
     {
         ArgumentNullException.ThrowIfNull(ledger);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
@@ -61,6 +64,7 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
         this.logger = logger;
         this.Models = models;
         this.ledger = ledger;
+        this.supportsDelete = supportsDelete;
     }
 
     public string SessionId { get; }
@@ -373,6 +377,42 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Session {SessionId}: not every session/update the agent wrote before its response was dispatched within the {CapMilliseconds}ms barrier cap; publishing TurnCompleted anyway.")]
     private static partial void LogDispatchBarrierCapExceeded(ILogger logger, string sessionId, double capMilliseconds);
+
+    public async Task DeleteAsync(CancellationToken cancellationToken)
+    {
+        if (!this.supportsDelete)
+        {
+            return;
+        }
+
+        try
+        {
+            // Bounded like DisposeAsync's close: dotacp ignores the token when the peer never answers, so the
+            // WaitAsync is what enforces the 2-second bound. No disposed guard: a fresh start closes the session
+            // first and deletes after.
+            await this.connection.DeleteAsync(
+                new dotacp.protocol.DeleteSessionRequest { SessionId = this.SessionId },
+                cancellationToken).WaitAsync(TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);
+        }
+        catch (RemoteInvocationException ex) when (ex.ErrorCode == (int)dotacp.protocol.ErrorCode.ResourceNotFound)
+        {
+            // The agent already forgot the session: the outcome delete wants.
+        }
+        catch (Exception ex) when (
+            ex is IOException
+                or ObjectDisposedException
+                or OperationCanceledException
+                or TimeoutException
+                or RemoteInvocationException
+                or ConnectionLostException)
+        {
+            // Deleting history is a courtesy; a peer that is gone, slow or lacks the method must not fail the caller.
+            DotAcpAgentSession.LogDeleteFailed(this.logger, this.SessionId, ex.GetType().Name);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session {SessionId}: session/delete did not complete ({FailureType}); the agent keeps its stored history.")]
+    private static partial void LogDeleteFailed(ILogger logger, string sessionId, string failureType);
 
     public void Fault(Exception exception)
     {

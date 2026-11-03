@@ -95,6 +95,143 @@ public sealed class DotAcpAgentHostCapabilityTests
         }
     }
 
+    /// <summary>An agent advertising <c>sessionCapabilities.delete</c> makes the host report <c>SupportsDeleteSession</c> true (Spec §7).</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Start_AgentAdvertisesDelete_SupportsDeleteSessionTrue()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        launcher.Agent.OnInitialize = _ => InitializeResponse(new JsonObject
+        {
+            ["delete"] = new JsonObject(),
+        });
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+
+            Assert.True(host.Info.SupportsDeleteSession);
+        }
+        finally
+        {
+            await host.DisposeAsync();
+        }
+    }
+
+    /// <summary>An agent with no <c>sessionCapabilities</c> at all leaves <c>SupportsDeleteSession</c> false, the safe default (Spec §7).</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Start_NoSessionCapabilities_SupportsDeleteSessionFalse()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        launcher.Agent.OnInitialize = _ => InitializeResponse(sessionCapabilities: null);
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+
+            Assert.False(host.Info.SupportsDeleteSession);
+        }
+        finally
+        {
+            await host.DisposeAsync();
+        }
+    }
+
+    /// <summary>An agent advertising only <c>resume</c> reports resume true and delete false: the two flags are read independently (Spec §7).</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Start_AgentAdvertisesResumeOnly_SupportsDeleteSessionFalse()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        launcher.Agent.OnInitialize = _ => InitializeResponse(new JsonObject
+        {
+            ["resume"] = new JsonObject(),
+        });
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+
+            Assert.True(host.Info.SupportsResumeSession);
+            Assert.False(host.Info.SupportsDeleteSession);
+        }
+        finally
+        {
+            await host.DisposeAsync();
+        }
+    }
+
+    /// <summary>An agent advertising both <c>resume</c> and <c>delete</c> reports both flags true (Spec §7).</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Start_AgentAdvertisesResumeAndDelete_BothSupportedTrue()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        launcher.Agent.OnInitialize = _ => InitializeResponse(new JsonObject
+        {
+            ["resume"] = new JsonObject(),
+            ["delete"] = new JsonObject(),
+        });
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+
+            Assert.True(host.Info.SupportsResumeSession);
+            Assert.True(host.Info.SupportsDeleteSession);
+        }
+        finally
+        {
+            await host.DisposeAsync();
+        }
+    }
+
+    /// <summary>Builds an <c>initialize</c> response whose <c>sessionCapabilities</c> is the given object, or absent when <see langword="null"/>.</summary>
+    private static JsonObject InitializeResponse(JsonObject? sessionCapabilities)
+    {
+        JsonObject agentCapabilities = new JsonObject
+        {
+            ["loadSession"] = false,
+        };
+        if (sessionCapabilities is not null)
+        {
+            agentCapabilities["sessionCapabilities"] = sessionCapabilities;
+        }
+
+        return new JsonObject
+        {
+            ["protocolVersion"] = 1,
+            ["agentInfo"] = new JsonObject
+            {
+                ["name"] = "fake-agent",
+                ["version"] = "0.0.1",
+            },
+            ["agentCapabilities"] = agentCapabilities,
+            ["authMethods"] = new JsonArray(),
+        };
+    }
+
     /// <summary>An agent advertising <c>promptCapabilities</c> {image:true, embeddedContext:false} is reported as exactly that.</summary>
     [Fact(Timeout = 10000)]
     public async Task Start_AgentAdvertisesImageOnly_PromptCapabilitiesImageOnly()

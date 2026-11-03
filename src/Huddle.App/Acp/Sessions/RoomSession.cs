@@ -98,6 +98,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private bool freshStartNotePending;
     private bool skipResumeOnNextOpen;
     private Task? pendingFreshTeardown;
+    private Task? pendingDelete;
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
     // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
@@ -490,10 +491,53 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
             this.ForgetStoredState();
+
+            // Published before the teardown is released, so a DisposeAsync that wakes on it always sees the delete.
+            // StartDelete only starts the task: the delete never delays the new session's open.
+            this.StartDelete(taken.Session);
         }
         finally
         {
             done.TrySetResult();
+        }
+    }
+
+    /// <summary>
+    /// Starts deleting a closed session's Adapter-side copy in the background, so a fresh start never waits on it.
+    /// A second fresh start while an earlier delete is pending chains onto it: neither task is lost, and
+    /// <see cref="DisposeAsync"/> awaits the one tracked task exactly once.
+    /// </summary>
+    /// <param name="old">The session that was closed, or <see langword="null"/> when nothing was open.</param>
+    private void StartDelete(IAgentSession? old)
+    {
+        if (old is null)
+        {
+            return;
+        }
+
+        lock (this.gate)
+        {
+            Task? previous = this.pendingDelete;
+            this.pendingDelete = Task.Run(() => this.DeleteOldAsync(old, previous), CancellationToken.None);
+        }
+    }
+
+    /// <summary>Deletes one closed session, logging a failure at Warning, then waits for the delete it was chained behind.</summary>
+    /// <param name="old">The closed session.</param>
+    /// <param name="previous">The earlier pending delete, or <see langword="null"/>.</param>
+    private async Task DeleteOldAsync(IAgentSession old, Task? previous)
+    {
+        try
+        {
+            await old.DeleteAsync(this.runToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' could not delete its old session in room {RoomId}.", this.owner.PersonaName, this.RoomId);
+        }
+        finally
+        {
+            await SafeAwaitAsync(previous).ConfigureAwait(false);
         }
     }
 
@@ -556,13 +600,21 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             return;
         }
 
-        await this.TearDownAsync().ConfigureAwait(false);
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken;
+        lock (this.gate)
+        {
+            taken = this.TakeOpenLocked();
+        }
+
+        await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
         this.ForgetStoredState();
         lock (this.gate)
         {
             this.skipResumeOnNextOpen = true;
             this.freshStartNotePending = true;
         }
+
+        this.StartDelete(taken.Session);
     }
 
     /// <summary>Tells a newly created session that its first ordinary Turn owes a fresh-start note. Called by the pool before the session serves anything.</summary>
@@ -682,7 +734,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private Task CloseAfterRepeatedFailureAsync() => this.TearDownAsync();
 
     /// <summary>
-    /// The teardown shared by the repeated-failure close and a start afresh: moves the session to
+    /// The teardown of the repeated-failure close: moves the session to
     /// <see cref="RoomSessionState.Closed"/> from any state and disposes the open agent session and its reader.
     /// </summary>
     private Task TearDownAsync()
@@ -727,6 +779,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         await SafeAwaitAsync(this.consumerTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.eventReaderTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.pendingFreshTeardown).ConfigureAwait(false);
+        Task? deleting;
+        lock (this.gate)
+        {
+            deleting = this.pendingDelete;
+        }
+
+        await SafeAwaitAsync(deleting).ConfigureAwait(false);
+
 
         if (this.session is not null)
         {

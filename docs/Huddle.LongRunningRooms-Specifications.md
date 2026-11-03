@@ -486,9 +486,7 @@ session is idle):
    UI whether a reread file exists. The notes cache is cleared whenever the store renames or removes a
    folder, or a Room is deleted.
 
-The old session is not deleted from the Adapter in v1. ACP's `session/delete` is stable and
-`claude-agent-acp` advertises it, but `IAgentSession` has no delete today and `Huddle.Acp` belongs
-to the ACP effort (Q-4).
+Since 2026-11 a fresh start deletes the old session (AdapterUpgrades §7).
 
 ### 6.4 Cost
 
@@ -847,7 +845,7 @@ The Engineering Guide's configuration table gains each row in the change that bu
 | Q-1 | Catch-up budget: one global value, or per Persona too? | No | Global first; a later per-Persona value stays out of the `Persona` record |
 | Q-2 | Can `cleanupPeriodDays` be set for an isolated session, and by which route? | Phase 0 | Unknown; V0-2 decides |
 | Q-3 | Does isolation hold live (Task 14.3.m)? | **Phase 2** | Unknown; until it does, the experiment cannot separate Huddle's effect from Claude Code's memory |
-| Q-4 | Should a fresh start delete the old session with ACP `session/delete`? | No | Yes eventually; needs `IAgentSession` support from the ACP effort |
+| Q-4 | Should a fresh start delete the old session with ACP `session/delete`? | No | Answered 2026-11: yes. `IAgentSession.DeleteAsync` exists and a fresh start deletes the old session ([AdapterUpgrades §7](Huddle.AdapterUpgrades-Specifications.md)) |
 | Q-5 | Are 200,000 tokens, a 50 % fall, and 60 minutes with 50,000 tokens the right thresholds? | No | Starting values. Treat 200,000 as a ceiling: OpenClaw's pruning acts from max(50,000, 30 % of the window) and its compaction keeps 20,000 recent tokens (§7.2). Tune down from the experiment and the records of §6.7 |
 | Q-6 | Does a fresh start measurably reduce the rut? | No | The best evidence is about tasks derailing, not repetition; the experiment records it. First run (§9.3, provisional): a fresh start gave **more** repeats than `/compact`, 7 to 2. Closed 2026-10-31 on that result: no automatic fresh starts (§9.3) |
 | Q-7 | Should observing compaction use ACP `compaction_update` instead of the `Used` fall? | No | Later; it needs a mapping in `SessionUpdateMapper` (ACP effort) and a client capability Huddle does not advertise yet |

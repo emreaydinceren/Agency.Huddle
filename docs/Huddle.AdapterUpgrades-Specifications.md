@@ -135,15 +135,19 @@ Adapter. LR §6 line 489 and Q-4 deferred `session/delete` until `IAgentSession`
 
 **Decision.**
 
-- `AgentHostInfo` gains `bool CanDelete`, from `agentCapabilities.sessionCapabilities.delete is not null`
+- `AgentHostInfo` gains `bool SupportsDeleteSession`, from `agentCapabilities.sessionCapabilities.delete is not null`
   (the same shape as `CanResume`).
 - `IAgentSession` gains `Task DeleteAsync(CancellationToken cancellationToken)` as a default interface
   member returning `Task.CompletedTask`, so fakes and other implementers need no change.
-  `DotAcpAgentSession` sends `session/delete` when its host `CanDelete`, and treats `ResourceNotFound`
-  as success.
+  `DotAcpAgentSession` sends `session/delete` when its host's `SupportsDeleteSession` is true, and treats
+  `ResourceNotFound` as success.
 - `RoomSession`'s fresh-start teardown (`RoomSession.cs` :440-560, `pendingFreshTeardown`) calls
   `DeleteAsync` on the old session **after** it is closed. A failure is logged at Warning and never
   fails or delays the fresh start.
+- A session already evicted (closed by idle eviction) before the fresh start is not deleted: only its
+  id remains in the store, so the old id stays in the Adapter. The same holds when a fresh start finds no
+  live `RoomSession` at all (`RoomSessionPool.cs` :386-394, for example after an app restart): the store forgets
+  the id only and nothing is deleted. Accepted.
 - Only a **fresh start** deletes. A Restart, an app restart and a Persona edit keep today's behaviour
   (rules.md row "Restart forgets Room Sessions; an app restart resumes them").
 
@@ -183,7 +187,7 @@ invisible: the next `UsageUpdated` simply drops.
 | Subagent reporting, background tasks, monitors (0.87–0.100) | Behind the unstable subagents RFD and AIR extensions; revisit when stable |
 | Session titles (`session_info_update.title`, 0.95) | Huddle names Rooms itself (Room auto-naming); a second source of titles is a product decision nobody asked for |
 | Thinking display, ultracode, Remote Control (0.93–0.99) | Claude Code features with no Huddle surface; each would be its own decision |
-| Compaction updates (schema 1.25, §8) | Advertising session.compaction removes the legacy tool call and its awOutput figures, and the compaction_update has no _meta figures outside AIR (6.1 spike, 2026-11-03) |
+| Compaction updates (schema 1.25, §8) | Advertising `session.compaction` removes the legacy tool call and its `rawOutput` figures, and the `compaction_update` has no `_meta` figures outside AIR (6.1 spike, 2026-11-03) |
 | Moving to ACP v2 | Still alpha (`schema-v2.0.0-alpha.13`); PromptBlocks §14.16 already records what changes |
 
 ## 10. Configuration

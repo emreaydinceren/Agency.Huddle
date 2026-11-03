@@ -114,7 +114,8 @@ public sealed partial class DotAcpAgentHost(
             DotAcpAgentHost.MapAuthMethods(response.AuthMethods),
             response.AgentCapabilities?.LoadSession ?? false,
             response.AgentCapabilities?.SessionCapabilities?.Resume is not null,
-            DotAcpAgentHost.MapPromptCapabilities(response.AgentCapabilities?.PromptCapabilities));
+            DotAcpAgentHost.MapPromptCapabilities(response.AgentCapabilities?.PromptCapabilities),
+            response.AgentCapabilities?.SessionCapabilities?.Delete is not null);
 
         _ = Task.Run(() => this.WatchForDisconnectAsync(clientAdapter, establishedConnection, launchedProcess), CancellationToken.None);
     }
@@ -228,7 +229,8 @@ public sealed partial class DotAcpAgentHost(
             id => activeAdapter.Unregister(id),
             this.logger,
             models,
-            this.ledger);
+            this.ledger,
+            this.Info.SupportsDeleteSession);
 
         activeAdapter.Register(session);
 

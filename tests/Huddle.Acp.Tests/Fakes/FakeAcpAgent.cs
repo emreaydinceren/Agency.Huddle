@@ -69,6 +69,9 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
     /// </summary>
     internal Func<JsonObject, Task<JsonObject>> OnResumeSession { get; set; } = FakeAcpAgent.DefaultResumeSessionAsync;
 
+    /// <summary>Scripts a <c>session/delete</c> answer. Default: succeeds with an empty result.</summary>
+    internal Func<JsonObject, Task<JsonObject>> OnSessionDelete { get; set; } = FakeAcpAgent.DefaultSessionDeleteAsync;
+
     /// <summary>Gets a value indicating whether the client's <c>initialize</c> advertised <c>clientCapabilities.elicitation.form</c>, the gate the real adapter applies before it sends <c>elicitation/create</c>.</summary>
     internal bool ElicitationFormAdvertised => Volatile.Read(ref this.elicitationFormAdvertised);
 
@@ -283,6 +286,11 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         return Task.FromResult(new JsonObject());
     }
 
+    private static Task<JsonObject> DefaultSessionDeleteAsync(JsonObject _)
+    {
+        return Task.FromResult(new JsonObject());
+    }
+
     private static Task<JsonObject> DefaultResumeSessionAsync(JsonObject _)
     {
         return Task.FromResult(new JsonObject());
@@ -399,6 +407,19 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
 
             case "session/prompt":
                 this.StartPrompt(id, parameters);
+                break;
+
+            case "session/delete":
+                try
+                {
+                    JsonObject result = await this.OnSessionDelete(parameters).ConfigureAwait(false);
+                    await this.WriteResultAsync(id, result).ConfigureAwait(false);
+                }
+                catch (FakeRpcError error)
+                {
+                    await this.WriteErrorAsync(id, error.Code, error.Message).ConfigureAwait(false);
+                }
+
                 break;
 
             case "session/close":
