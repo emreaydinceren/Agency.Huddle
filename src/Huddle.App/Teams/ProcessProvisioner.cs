@@ -73,7 +73,35 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
             return result;
         }
 
-        return folders.UpdateTeamFile(team, current => current with { Process = settings }) ? result : ProvisionResult.Failed;
+        if (folders.UpdateTeamFile(team, current => current with { Process = Merge(current.Process, settings) }))
+        {
+            return result;
+        }
+
+        // Undo the prose this call created, so a retry is not answered with AlreadyExists and the settings are never lost.
+        string? created = ProcessPath(team);
+        if (created is not null)
+        {
+            File.Delete(created);
+        }
+
+        return ProvisionResult.Failed;
+    }
+
+    /// <summary>Fills only the keys the Team's own settings leave unset; a set key, including an unknown gate id, wins.</summary>
+    private static ProcessSettings Merge(ProcessSettings existing, ProcessSettings template)
+    {
+        bool gatesSet = existing.Gates.Count > 0 || existing.UnknownGates.Count > 0;
+        return existing with
+        {
+            Gates = gatesSet ? existing.Gates : template.Gates,
+            UnknownGates = gatesSet ? existing.UnknownGates : template.UnknownGates,
+            Wip = existing.Wip ?? template.Wip,
+            Retro = existing.Retro ?? template.Retro,
+            Digest = existing.Digest ?? template.Digest,
+            CheckCommand = existing.CheckCommand ?? template.CheckCommand,
+            Template = existing.Template ?? template.Template,
+        };
     }
 
     /// <summary>Writes the blank PR-6 outline, with empty sections and no gates, as <c>Process.md</c>.</summary>
