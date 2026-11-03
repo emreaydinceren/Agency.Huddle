@@ -53,7 +53,7 @@
                             <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-remove-button" OnClick="@(() => this.AskRemove(root))">Remove</MudButton>
                         }
                     }
-                    else
+                    else if (root.Kind != LibraryRootKind.Workspace)
                     {
                         @if (root.ReadOnly)
                         {

@@ -164,7 +164,7 @@ never by hand, so the status line stays true.
 | 12.8.i #123 Look up archived Tasks [Sonnet] | | | ✔ |
 | 12.9.t #124 Uploads refused into archived Rooms [Sonnet] | | | ✔ |
 | 12.9.i #125 Refuse the upload [Sonnet] | | | ✔ |
-| 12.10.t #126 The archive UI [Sonnet] | ✔ | | |
+| 12.10.t #126 The archive UI [Sonnet] | | ✔ | |
 | 12.10.i #127 Build the UI [Sonnet] | ✔ | | |
 | **D13. P7: workspace routing** | | | |
 | 13.1.t #128 Repository or folder [Haiku] | | | ✔ |

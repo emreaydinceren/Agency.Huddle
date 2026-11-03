@@ -392,6 +392,21 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Equal("Folder not found", cut.Find("div.library-tree-missing").TextContent.Trim());
     }
 
+    /// <summary>A Team workspace root is not a pinned root: its tree offers no Unpin, and a workspace folder gone from disk shows "Folder not found".</summary>
+    [Fact]
+    public async Task WorkspaceRoot_OffersNoUnpin_AndShowsFolderNotFoundWhenMissing()
+    {
+        string missingDir = Path.Combine(Path.GetTempPath(), "sb-workspace-missing-" + Guid.NewGuid().ToString("N"));
+        LibraryRoot root = new("workspace-business", "Business workspace", missingDir, LibraryRootKind.Workspace);
+        LibraryPath scope = new(root, string.Empty, missingDir, LibraryNodeRole.Root);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [scope]);
+
+        Assert.DoesNotContain("Unpin", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Folder not found", cut.Find("div.library-tree-missing").TextContent.Trim());
+    }
+
     /// <summary>A missing TEAM scope (a Team not yet provisioned on disk) shows an empty tree, never "Folder not found" (item 24).</summary>
     [Fact]
     public async Task MissingTeamScope_ShowsEmptyTree()

@@ -23,4 +23,7 @@ public enum LibraryRootKind
 
     /// <summary>The Prompt override folder, where the Human's Prompt overrides are kept.</summary>
     Prompts,
+
+    /// <summary>A Team's workspace folder: writable and derived from the Team, so it is never saved as a pinned root and is not offered for removal.</summary>
+    Workspace,
 }

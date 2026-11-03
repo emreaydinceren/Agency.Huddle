@@ -89,7 +89,7 @@ public sealed class SecondBrainRootsTests
         // The id is "workspace-" plus the slug of the Team name ("Business" -> "business"); the name is "<Team> workspace".
         LibraryRoot root = Assert.Single(store.Roots, r => string.Equals(r.Id, "workspace-business", StringComparison.Ordinal));
         Assert.Equal("Business workspace", root.DisplayName);
-        Assert.Equal(LibraryRootKind.Pinned, root.Kind);
+        Assert.Equal(LibraryRootKind.Workspace, root.Kind);
         Assert.False(root.ReadOnly);
         Assert.Equal(Path.GetFullPath(workspace), Path.GetFullPath(root.FullPath));
     }

@@ -324,7 +324,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// </summary>
     private async Task<string> ResolveLocationAsync(LibraryPath path, CancellationToken ct)
     {
-        if (path.Root.Kind == LibraryRootKind.Pinned)
+        if (path.Root.Kind is LibraryRootKind.Pinned or LibraryRootKind.Workspace)
         {
             return string.Create(CultureInfo.InvariantCulture, $"pinned root \"{path.Root.DisplayName}\"");
         }

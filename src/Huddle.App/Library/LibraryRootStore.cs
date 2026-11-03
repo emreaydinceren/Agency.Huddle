@@ -484,7 +484,7 @@ internal sealed class LibraryRootStore
             string slug = Slug("workspace-" + team.Name, takenSlugs);
             takenSlugs.Add(slug);
             _ = workspaceIds.Add(slug);
-            roots.Add(new LibraryRoot(slug, team.Name + " workspace", TrimTrailingSeparator(Path.GetFullPath(team.Workspace)), LibraryRootKind.Pinned));
+            roots.Add(new LibraryRoot(slug, team.Name + " workspace", TrimTrailingSeparator(Path.GetFullPath(team.Workspace)), LibraryRootKind.Workspace));
         }
 
         return workspaceIds;
@@ -552,6 +552,6 @@ internal sealed class LibraryRootStore
     {
         public IReadOnlyList<LibraryRoot> VisibleRoots => [.. this.Roots.Where(r => !this.Hidden.Contains(r.Id))];
 
-        public IReadOnlyList<PinnedRootEntry> Pinned => this.PinnedFromFile ?? [.. this.Roots.Where(r => r.Kind == LibraryRootKind.Pinned && !this.WorkspaceIds.Contains(r.Id)).Select(r => new PinnedRootEntry(r.DisplayName, r.FullPath))];
+        public IReadOnlyList<PinnedRootEntry> Pinned => this.PinnedFromFile ?? [.. this.Roots.Where(r => r.Kind == LibraryRootKind.Pinned).Select(r => new PinnedRootEntry(r.DisplayName, r.FullPath))];
     }
 }
