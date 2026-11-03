@@ -52,7 +52,7 @@ namespace Agency.Huddle.App.Acp;
 /// <para>
 /// Two further refusals protect files the Human owns, and both look at the tool call's kind, so a read is never refused
 /// (Instructions spec §3.3, §5.6): an edit, delete or move of an <c>AGENTS.md</c> (<see cref="AgentsMdGuard"/>),
-/// of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>) and of a Raw original (<see cref="RawGuard"/>).
+/// of a Raw original (<see cref="RawGuard"/>) and of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>), consulted in that order.
 /// The permission reply carries no reason text, so the reason is logged.
 /// </para>
 /// </remarks>
@@ -64,7 +64,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
 /// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
 /// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
-/// <param name="guards">The file guards consulted in order (<c>AGENTS.md</c>, Team Memory, Raw); <see langword="null"/> leaves those writes approved.</param>
+/// <param name="guards">The file guards consulted in order (<c>AGENTS.md</c>, Raw, Team Memory; Spec §6.6); <see langword="null"/> leaves those writes approved.</param>
 /// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
 internal sealed class WorkDirPermissionHandler(
     string? protectedDirectory,
@@ -176,15 +176,18 @@ internal sealed class WorkDirPermissionHandler(
             return Task.FromResult(Refuse(context.Options));
         }
 
-        string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName)
-            ?? guards?.Raw.RefusalFor(context.ToolCall);
+        string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.Raw.RefusalFor(context.ToolCall)
+            ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName);
         if (guardReason is not null)
         {
-            logger.LogWarning(
-                "Refused a tool call for '{PersonaName}' on '{Path}': {Reason}",
-                personaName,
-                string.Join(", ", ToolCallPaths.From(context.ToolCall, workDir ?? Directory.GetCurrentDirectory())),
-                guardReason);
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(
+                    "Refused a tool call for '{PersonaName}' on '{Path}': {Reason}",
+                    personaName,
+                    string.Join(", ", ToolCallPaths.From(context.ToolCall, workDir ?? Directory.GetCurrentDirectory())),
+                    guardReason);
+            }
 
             return Task.FromResult(Refuse(context.Options));
         }

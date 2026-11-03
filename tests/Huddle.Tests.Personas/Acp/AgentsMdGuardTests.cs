@@ -3,7 +3,12 @@ namespace Agency.Huddle.Tests.Acp;
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Teams;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
 /// Pins <see cref="AgentsMdGuard"/> (Spec §6.6, SB-R09; corrections-7 §7.1): an Agent's edit, delete or move of an <c>AGENTS.md</c>
@@ -160,6 +165,8 @@ public sealed class AgentsMdGuardTests : IDisposable
     [InlineData("Home/Repairs/Deep/AGENTS.md")]
     [InlineData("Home/Repairs/notes.md")]
     [InlineData("memory/AGENTS.md.bak")]
+    [InlineData("memory/AGENTS.md")]
+    [InlineData("Home/memory/AGENTS.md")]
     public void Write_ToAnythingElse_IsAllowed(string relative)
     {
         ArgumentNullException.ThrowIfNull(relative);
@@ -175,19 +182,97 @@ public sealed class AgentsMdGuardTests : IDisposable
         Assert.Null(this.guard.RefusalFor(Call(ToolKind.Edit, Path.Combine(this.sandbox, "Agents", "Other", "work", "AGENTS.md"))));
     }
 
-    /// <summary>Windows only: a write through an 8.3 short name or a stream name cannot be compared by name, so it is refused.</summary>
+    /// <summary>Windows only: a write through an 8.3 short name or a stream name cannot be compared by name, so it is refused with the alias text and logged.</summary>
     /// <param name="relative">The path under the Teams root.</param>
     [Theory]
     [InlineData("AGENTS.md:stream")]
+    [InlineData("AGENTS~1.MD")]
     [InlineData("HOME~1/AGENTS.md")]
     [InlineData("Home/AGENTS.md:stream")]
-    public void Write_ThroughAnAlias_IsRefused(string relative)
+    [InlineData("Home/AGENTS~1.MD")]
+    [InlineData("Home/Repairs/AGENTS.md:stream")]
+    [InlineData("Home/Repairs/AGENTS~1.MD")]
+    public async Task Write_ThroughAnAlias_IsRefusedAndLogged(string relative)
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
+        ArgumentNullException.ThrowIfNull(relative);
+        string path = this.InTeams(relative);
+        string expected = $"{path} goes through a short name or a stream name, so it cannot be checked. Write the file by its full name.";
+        RecordingLogger<WorkDirPermissionHandler> logger = new();
+
+        string? reason = this.guard.RefusalFor(Call(ToolKind.Edit, path));
+        PermissionDecision decision = await this.Handler(logger, protectedDirectory: Path.Combine(this.sandbox, ".claude"))
+            .DecideAsync(Request(ToolKind.Edit, path), TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, reason);
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(decision).OptionId);
+        Assert.Equal($"Refused a tool call for '' on '{path}': {expected}",Assert.Single(logger.AtExactly(LogLevel.Warning)).Message);
+    }
+
+    /// <summary>Windows only: a short name or a stream outside the guarded positions is an ordinary path, so the edit is allowed.</summary>
+    /// <param name="relative">The path under the Teams root.</param>
+    [Theory]
+    [InlineData("Home/memory/NOTES~1.md")]
+    [InlineData("Home/outputs/RE~1.md")]
+    [InlineData("Home/outputs/x.md:Zone.Identifier")]
+    [InlineData("Home/notes~2.md")]
+    public void Write_ThroughAnAliasOutsideTheGuardedPositions_IsAllowed(string relative)
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
         ArgumentNullException.ThrowIfNull(relative);
 
-        Assert.NotNull(this.guard.RefusalFor(Call(ToolKind.Edit, this.InTeams(relative))));
+        Assert.Null(this.guard.RefusalFor(Call(ToolKind.Edit, this.InTeams(relative))));
+        Assert.Null(this.guard.RefusalFor(Call(ToolKind.Edit, Path.Combine(this.sandbox, "elsewhere", "RUNNER~1", "notes~2.md"))));
     }
+
+    /// <summary>Windows only: deleting a file in a Project folder whose name merely looks like a short name is not an AGENTS.md matter.</summary>
+    [Fact]
+    public void Delete_OfAShortNamedFileInAProject_IsAllowed()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
+
+        Assert.Null(this.guard.RefusalFor(Call(ToolKind.Delete, this.InTeams("Home/Repairs/REPORT~1.PDF"))));
+    }
+
+    /// <summary>With no <c>~/.claude</c> to protect the handler still consults the guards: the <c>AGENTS.md</c> is refused, another file approved.</summary>
+    [Fact]
+    public async Task WithoutAProtectedDirectory_TheGuardStillRefuses()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        WorkDirPermissionHandler handler = this.Handler(NullLogger<WorkDirPermissionHandler>.Instance, protectedDirectory: null);
+
+        PermissionDecision guarded = await handler.DecideAsync(Request(ToolKind.Edit, this.InTeams("Home/AGENTS.md")), ct);
+        PermissionDecision other = await handler.DecideAsync(Request(ToolKind.Edit, this.InTeams("Home/notes.md")), ct);
+
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(guarded).OptionId);
+        Assert.Equal("allow-1", Assert.IsType<SelectedDecision>(other).OptionId);
+    }
+
+    /// <summary>Builds a handler whose guards are this test's <c>AGENTS.md</c> guard plus inert Team Memory and Raw guards.</summary>
+    /// <param name="logger">The handler's logger.</param>
+    /// <param name="protectedDirectory">The directory it protects, or <see langword="null"/>.</param>
+    private WorkDirPermissionHandler Handler(ILogger<WorkDirPermissionHandler> logger, string? protectedDirectory)
+    {
+        FakePromptSource prompts = new();
+        string inert = Path.Combine(this.sandbox, "Inert");
+        PermissionGuards guards = new(
+            this.guard,
+            new TeamMemoryWriteGuard(inert, this.workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
+            new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), this.workDir, prompts));
+        return new WorkDirPermissionHandler(protectedDirectory, logger, workDir: this.workDir, guards: guards);
+    }
+
+    /// <summary>A permission request for a call of one kind carrying one path argument, with an allow and a reject option.</summary>
+    /// <param name="kind">The tool call's kind.</param>
+    /// <param name="path">The path argument.</param>
+    private static PermissionRequestContext Request(ToolKind kind, string path) =>
+        new(
+            "session-1",
+            Call(kind, path),
+            [
+                new PermissionOptionInfo("allow-1", "Allow once", PermissionOptionKind.AllowOnce),
+                new PermissionOptionInfo("reject-1", "Reject once", PermissionOptionKind.RejectOnce),
+            ]);
 
     /// <summary>A path below the Teams root.</summary>
     /// <param name="relative">The path with forward slashes; empty is the root.</param>

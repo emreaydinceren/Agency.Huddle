@@ -40,7 +40,7 @@ internal sealed class AgentsMdGuard(string teamsRoot, string workDir, IPromptSou
         foreach (string resolved in ToolCallPaths.From(toolCall, workDir))
         {
             string path = Path.GetFullPath(resolved.Replace('\\', '/'));
-            if (ToolCallPaths.UsesAliasInside(path, root, MaxDepth, removes ? null : TeamPaths.AgentsMdFileName))
+            if (UsesAlias(path, root, removes))
             {
                 return prompts.Render("systemPrompt.pathAliasRefusal", new Dictionary<string, string> { ["{{path}}"] = path });
             }
@@ -52,6 +52,40 @@ internal sealed class AgentsMdGuard(string teamsRoot, string workDir, IPromptSou
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Whether the path goes through an alias that hides which file it is. Down to the Team folder (depth 2) any alias counts, as a Team folder
+    /// may be deleted or moved; at depth 3 only the exact <c>AGENTS.md</c> position does, by a stream name on it or a short name of it, so a
+    /// Project's other files (<c>REPORT~1.PDF</c>, <c>x.md:Zone.Identifier</c>) are left alone.
+    /// </summary>
+    /// <param name="path">A full path.</param>
+    /// <param name="root">The full Teams root.</param>
+    /// <param name="removes">Whether the call deletes or moves.</param>
+    /// <returns><see langword="true"/> when the path is an alias to refuse.</returns>
+    private static bool UsesAlias(string path, string root, bool removes)
+    {
+        if (ToolCallPaths.UsesAliasInside(path, root, MaxDepth - 1, removes ? null : TeamPaths.AgentsMdFileName))
+        {
+            return true;
+        }
+
+        string[] segments = SegmentsBelow(path, root);
+        if (!OperatingSystem.IsWindows() || segments.Length != MaxDepth)
+        {
+            return false;
+        }
+
+        string last = segments[^1];
+        int stream = last.IndexOf(':', StringComparison.Ordinal);
+        if (stream < 0)
+        {
+            return ToolCallPaths.UsesAliasInside(path, root, MaxDepth, TeamPaths.AgentsMdFileName);
+        }
+
+        string withoutStream = last[..stream];
+        return string.Equals(withoutStream, TeamPaths.AgentsMdFileName, StringComparison.OrdinalIgnoreCase)
+            || ToolCallPaths.UsesAliasInside(Path.Combine(root, segments[0], segments[1], withoutStream), root, MaxDepth, TeamPaths.AgentsMdFileName);
     }
 
     /// <summary>Whether the path is an <c>AGENTS.md</c> at a guarded depth below the Teams root.</summary>
