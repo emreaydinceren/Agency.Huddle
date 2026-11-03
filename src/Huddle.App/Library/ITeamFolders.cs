@@ -35,8 +35,12 @@ internal interface ITeamFolders
     /// </summary>
     /// <param name="team">The Team's name, validated with the Team-name rules.</param>
     /// <param name="file">The team file to write.</param>
+    /// <param name="leaveExistingAlone">
+    /// Only the archive passes <see langword="true"/>: a Team folder that exists already receives its <c>_team.md</c>
+    /// and no Second Brain folders beside it. Everyone else gets <c>raw</c>, <c>memory</c> and <c>outputs</c> ensured.
+    /// </param>
     /// <returns>The outcome and, on success, the path of the written file.</returns>
-    TeamCreateResult CreateTeam(string team, TeamFile file);
+    TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false);
 
     /// <summary>Rewrites a Team's <c>_team.md</c> through <paramref name="change"/>, atomically.</summary>
     /// <param name="team">The Team's name.</param>

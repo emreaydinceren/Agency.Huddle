@@ -245,7 +245,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// already exists without a <c>_team.md</c>. The file is written to a temporary name beside the target and
     /// moved into place without overwriting, so a concurrent writer can never be clobbered. An I/O failure while
     /// writing propagates to the caller.</remarks>
-    public TeamCreateResult CreateTeam(string team, TeamFile file)
+    public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(file);
@@ -263,7 +263,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
         }
 
-        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team, leaveExistingAlone: true);
+        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team, leaveExistingAlone);
         if (folder.Value is null)
         {
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);

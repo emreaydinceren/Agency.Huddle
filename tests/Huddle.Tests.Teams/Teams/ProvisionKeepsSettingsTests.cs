@@ -104,7 +104,7 @@ public sealed class ProvisionKeepsSettingsTests
 
         public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => inner.EnsureProjectIn(team, project);
 
-        public TeamCreateResult CreateTeam(string team, TeamFile file) => inner.CreateTeam(team, file);
+        public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false) => inner.CreateTeam(team, file, leaveExistingAlone);
 
         public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change) => !this.Fail && inner.UpdateTeamFile(team, change);
 

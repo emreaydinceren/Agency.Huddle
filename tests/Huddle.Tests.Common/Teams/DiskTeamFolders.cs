@@ -23,7 +23,7 @@ internal sealed class DiskTeamFolders(string folder) : ITeamFolders
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => this.EnsureTeam(team);
 
     /// <inheritdoc />
-    public TeamCreateResult CreateTeam(string team, TeamFile file) => new(TeamCreateOutcome.AlreadyExists, null);
+    public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false) => new(TeamCreateOutcome.AlreadyExists, null);
 
     /// <summary>Gets or sets a path the composed Team file is also written to on every update; <see langword="null"/> keeps it in memory only.</summary>
     public string? TeamFilePath { get; set; }

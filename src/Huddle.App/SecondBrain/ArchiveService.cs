@@ -201,7 +201,7 @@ internal sealed class ArchiveService : IDisposable
         if (original is null)
         {
             TeamFile fresh = Mark(new TeamFile(VersionedRef.None, null, null, null, string.Empty));
-            return this.folders.CreateTeam(name, fresh).Outcome == TeamCreateOutcome.Created;
+            return this.folders.CreateTeam(name, fresh, leaveExistingAlone: true).Outcome == TeamCreateOutcome.Created;
         }
 
         return this.folders.UpdateTeamFile(name, Mark);
@@ -226,6 +226,8 @@ internal sealed class ArchiveService : IDisposable
         this.files.CreateDirectory(Path.GetDirectoryName(destination) ?? destination);
         if (this.files.ListEntries(destination).Count == 0)
         {
+            // An empty Archive/<T>/ (left by hand or an earlier run) would make a whole-folder rename fail on Windows.
+            this.files.DeleteEmptyFolder(destination);
             return this.files.Move(source, destination);
         }
 

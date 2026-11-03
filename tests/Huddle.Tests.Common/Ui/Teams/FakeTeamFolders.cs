@@ -68,7 +68,7 @@ internal sealed class FakeTeamFolders : ITeamFolders
     public TeamFile? ReadResult { get; set; }
 
     /// <inheritdoc />
-    public TeamCreateResult CreateTeam(string team, TeamFile file)
+    public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false)
     {
         lock (this.gate)
         {

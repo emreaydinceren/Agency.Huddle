@@ -5,6 +5,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.Library;
@@ -14,10 +15,10 @@ namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
 /// Archiving a Team on one volume (Spec 6.7 and 8.4 as settled by corrections-12): the roster is written
-/// into <c>_team.md</c>, the folder moves whole through a dot staging folder, the Team's Rooms are archived
-/// and recorded, and only then are the member labels removed. The fixture is the real
-/// <see cref="TeamFolderProvisioner"/>, <see cref="TaskStore"/>, <see cref="PersonaStore"/> and
-/// <see cref="SqliteTeamDirectory"/> over a temp data directory; the membership is a recording fake.
+/// into <c>_team.md</c>, the folder moves whole, the Team's Rooms are archived and recorded, and only then are
+/// the member labels removed. The fixture is the real <see cref="TeamFolderProvisioner"/>, <see cref="TaskStore"/>,
+/// <see cref="PersonaStore"/> and <see cref="SqliteTeamDirectory"/> over a temp data directory; the membership is a
+/// recording fake except in the rows that ask for the real <see cref="TeamMembership"/>.
 /// </summary>
 public sealed class ArchiveTeamTests
 {
@@ -94,18 +95,50 @@ public sealed class ArchiveTeamTests
         Assert.False(rooms.Single(r => r.Id == otherRoom.Id).Archived);
     }
 
-    /// <summary>No dot staging or deleting folder is left behind in <c>Teams</c> or <c>Archive</c>.</summary>
+    /// <summary>The archive holds exactly the Team's folder afterwards. (Task 113 adds the staging folder and pins that no dot folder is left.)</summary>
     [Fact]
-    public async Task ArchiveTeamAsync_Done_LeavesNoDotFolders()
+    public async Task ArchiveTeamAsync_Done_ArchiveHoldsOnlyTheTeamFolder()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct);
 
         _ = await f.Service.ArchiveTeamAsync(Home, ct);
 
-        Assert.Empty(Directory.GetDirectories(f.TeamsRoot, ".*", SearchOption.TopDirectoryOnly));
-        Assert.Empty(Directory.GetDirectories(f.ArchiveRoot, ".*", SearchOption.TopDirectoryOnly));
         Assert.Equal([Home], Directory.GetDirectories(f.ArchiveRoot).Select(Path.GetFileName));
+    }
+
+    /// <summary>An empty <c>Archive/Home</c> left behind does not block the move: the folder still goes over whole and the archive is done.</summary>
+    [Fact]
+    public async Task ArchiveTeamAsync_EmptyArchiveFolderPresent_StillMoves()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct);
+        Directory.CreateDirectory(f.ArchivedFolder);
+        Dictionary<string, string> before = Fixture.Snapshot(f.TeamFolder);
+
+        ArchiveOutcome outcome = await f.Service.ArchiveTeamAsync(Home, ct);
+
+        Assert.True(outcome.Done);
+        Assert.Null(outcome.Refusal);
+        Assert.False(Directory.Exists(f.TeamFolder));
+        Assert.Equal(before, Fixture.Snapshot(f.ArchivedFolder));
+        Assert.True(File.Exists(Path.Combine(f.ArchivedFolder, TeamPaths.TeamFileName)));
+    }
+
+    /// <summary>Through the real <see cref="TeamMembership"/> the manager loses the label too, and the archived <c>_team.md</c> no longer names a manager.</summary>
+    [Fact]
+    public async Task ArchiveTeamAsync_RealMembership_ManagerLosesLabelAndTeamFileManagerCleared()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct, realMembership: true);
+        Assert.Equal(["Home"], f.TeamLabels("Ada")); // Seeded: Ada's only Team is Home and she is the catalog's manager.
+
+        ArchiveOutcome outcome = await f.Service.ArchiveTeamAsync(Home, ct);
+
+        Assert.True(outcome.Done);
+        Assert.Empty(f.TeamLabels("Ada"));
+        Assert.Equal(["Other"], f.TeamLabels("Nova")); // Seeded [Home, Other]; only Home goes.
+        Assert.Null(f.ReadArchivedTeamFile().Manager);
     }
 
     /// <summary>A Team with a label but no <c>_team.md</c> gets one created in the archive, with no Team type, the roster and the same other files.</summary>
@@ -260,18 +293,23 @@ public sealed class ArchiveTeamTests
         private readonly TempDataDir dir;
         private readonly LibraryFileServiceFixture library;
         private readonly TaskStore tasks;
+        private readonly PersonaStore personas;
 
-        private Fixture(TempDataDir dir, LibraryFileServiceFixture library, PersonaStore personas, SqliteTeamDirectory directory, TaskStore tasks, TeamFolderProvisioner folders, FakeTeamCatalog catalog)
+        private Fixture(TempDataDir dir, LibraryFileServiceFixture library, PersonaStore personas, SqliteTeamDirectory directory, TaskStore tasks, TeamFolderProvisioner folders, FakeTeamCatalog catalog, bool realMembership)
         {
             this.dir = dir;
             this.library = library;
             this.tasks = tasks;
+            this.personas = personas;
             this.Directory = directory;
             this.Membership = new RecordingTeamMembership();
+            ITeamMembership membership = realMembership
+                ? new TeamMembership(personas, catalog, folders, RoleFixtures.Types(dir))
+                : this.Membership;
             this.Service = new ArchiveService(
                 library.RootStore,
                 catalog,
-                this.Membership,
+                membership,
                 folders,
                 tasks,
                 personas,
@@ -298,7 +336,11 @@ public sealed class ArchiveTeamTests
 
         public string ArchivedFolder => Path.Combine(this.ArchiveRoot, Home);
 
-        public static async Task<Fixture> CreateAsync(bool labelOnly, CancellationToken ct)
+        /// <summary>Builds the fixture: the Home and Other Teams on disk, Ada (Home's manager) and Nova as Personas, and Tasks, files and a Room database seeded.</summary>
+        /// <param name="labelOnly">When <see langword="true"/> Home has a folder but no <c>_team.md</c>.</param>
+        /// <param name="ct">Cancels the database set-up.</param>
+        /// <param name="realMembership">When <see langword="true"/> the service removes labels through the real <see cref="TeamMembership"/>.</param>
+        public static async Task<Fixture> CreateAsync(bool labelOnly, CancellationToken ct, bool realMembership = false)
         {
             TempDataDir dir = new();
             LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(dir.Path);
@@ -319,7 +361,7 @@ public sealed class ArchiveTeamTests
 
             _ = personas.Add(new PersonaIdentity("Ada", "Lead", "ada", [Home]), "Leads.");
             _ = personas.Add(new PersonaIdentity("Nova", "Dev", "nova", [Home, "Other"]), "Builds.");
-            catalog.Teams = [new TeamSummary(Home, [], ["Nova", "Ada"], HasFolder: true), new TeamSummary("Other", [], ["Nova"], HasFolder: true)];
+            catalog.Teams = [new TeamSummary(Home, [], ["Nova", "Ada"], HasFolder: true) { Manager = "Ada" }, new TeamSummary("Other", [], ["Nova"], HasFolder: true)];
             SeedFiles(home);
             System.IO.Directory.CreateDirectory(Path.Combine(teamsRoot, "Other"));
             SeedTasks(teamsRoot);
@@ -328,7 +370,7 @@ public sealed class ArchiveTeamTests
             _ = await directory.UpsertAgentUserAsync("Ada", null, ct);
             _ = await directory.UpsertAgentUserAsync("Nova", null, ct);
             TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
-            return new Fixture(dir, library, personas, directory, tasks, folders, catalog);
+            return new Fixture(dir, library, personas, directory, tasks, folders, catalog, realMembership);
         }
 
         /// <summary>Lists every folder and file under <paramref name="root"/> except <c>_team.md</c>, keyed by forward-slash relative path; a file maps to its hex bytes, a folder to a marker.</summary>
@@ -350,12 +392,26 @@ public sealed class ArchiveTeamTests
             return entries;
         }
 
+        /// <summary>Parses <c>Archive/Home/_team.md</c>, failing the test when it is missing or unreadable.</summary>
         public TeamFile ReadArchivedTeamFile()
         {
             Assert.True(TeamFile.TryParse(File.ReadAllText(Path.Combine(this.ArchivedFolder, TeamPaths.TeamFileName)), out TeamFile? file));
             return file;
         }
 
+        /// <summary>The Team labels in the named Persona's definition, as the store holds them now.</summary>
+        /// <param name="name">The Persona's name.</param>
+        public IReadOnlyList<string> TeamLabels(string name)
+        {
+            Persona? persona = this.personas.Get(name);
+            Assert.NotNull(persona);
+            Assert.True(PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _));
+            return identity.Teams;
+        }
+
+        /// <summary>Creates a Room of the Team with the Human and Nova in it.</summary>
+        /// <param name="team">The Team the Room belongs to.</param>
+        /// <param name="ct">Cancels the database write.</param>
         public async Task<Room> CreateRoomAsync(string team, CancellationToken ct)
         {
             User? nova = await this.Directory.FindUserByNameAsync("Nova", ct);

@@ -63,6 +63,8 @@ internal sealed class PhysicalArchiveFileSystem : IArchiveFileSystem
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // A reader holds a file open (Windows reports it as an IO error or access denied): wait and try again.
+                // Synchronous on purpose: the caller runs under the provisioner's folder gate, a plain lock that cannot
+                // be held across an await, and the whole wait is bounded at nine delays of 30 ms.
                 if (attempt >= MoveAttempts)
                 {
                     return ArchiveMoveResult.InUse;

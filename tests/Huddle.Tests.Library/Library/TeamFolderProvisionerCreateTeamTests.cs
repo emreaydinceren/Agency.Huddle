@@ -41,6 +41,39 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         Assert.Equal(file.Compose(), File.ReadAllText(expected, Encoding.UTF8));
     }
 
+    /// <summary>An existing empty Team folder, created the ordinary way (as <c>BuildTeam</c> does), still gets <c>raw</c>, <c>memory</c> and <c>outputs</c>.</summary>
+    [Fact]
+    public void CreateTeam_ExistingEmptyFolder_EnsuresSecondBrainFolders()
+    {
+        using Fixture fixture = new();
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string folder = Path.Combine(fixture.TeamsRoot, "Home");
+        Directory.CreateDirectory(folder);
+
+        TeamCreateResult result = provisioner.CreateTeam("Home", Sample());
+
+        Assert.Equal(TeamCreateOutcome.Created, result.Outcome);
+        Assert.True(Directory.Exists(Path.Combine(folder, "raw")));
+        Assert.True(Directory.Exists(Path.Combine(folder, "memory")));
+        Assert.True(Directory.Exists(Path.Combine(folder, "outputs")));
+    }
+
+    /// <summary>The archive's call (<c>leaveExistingAlone</c>) writes <c>_team.md</c> into an existing folder and adds no folder beside it.</summary>
+    [Fact]
+    public void CreateTeam_LeaveExistingAlone_AddsOnlyTheTeamFile()
+    {
+        using Fixture fixture = new();
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string folder = Path.Combine(fixture.TeamsRoot, "Home");
+        Directory.CreateDirectory(folder);
+
+        TeamCreateResult result = provisioner.CreateTeam("Home", Sample(), leaveExistingAlone: true);
+
+        Assert.Equal(TeamCreateOutcome.Created, result.Outcome);
+        Assert.Empty(Directory.GetDirectories(folder));
+        Assert.True(File.Exists(Path.Combine(folder, TeamPaths.TeamFileName)));
+    }
+
     /// <summary>A second call for the same name returns <c>AlreadyExists</c> and leaves the first file byte-identical.</summary>
     [Fact]
     public void CreateTeam_SecondCall_AlreadyExistsAndFileUntouched()
