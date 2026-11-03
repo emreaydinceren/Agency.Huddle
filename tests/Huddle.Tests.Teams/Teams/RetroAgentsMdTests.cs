@@ -83,6 +83,7 @@ public sealed class RetroAgentsMdTests
 
         // Process.md is neither AGENTS.md, _team.md nor a member's file, so nothing can read it and Apply refuses.
         Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
+        Assert.Equal("The change could not be applied to Process.md.", outcome.Text);
         Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);
         Assert.Equal(RetroProposalFixture.TeamText, fixture.TeamNow);
     }
@@ -114,7 +115,7 @@ public sealed class RetroAgentsMdTests
         string result = await tool.InvokeAsync(Arguments("Process.md"), ct);
 
         // Process.md is not in the allow-list any more, so the proposal is not stored.
-        Assert.NotEqual("Proposal sent to the Human.", result);
+        Assert.Equal("targetFile must be AGENTS.md, _team.md or the file of an Agent (Name.md).", result);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
 }

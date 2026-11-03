@@ -165,6 +165,11 @@ internal sealed class RetroProposalService(
     {
         string file = change.TargetFile;
         string failed = $"The change could not be applied to {file}.";
+        if (string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
+        {
+            return this.ApplyTeamFile(set, change, failed);
+        }
+
         if (!this.TryRead(set.Team, file, out string text, out string? path))
         {
             return Refused(failed);
@@ -183,11 +188,6 @@ internal sealed class RetroProposalService(
         }
 
         string edited = text.Replace(find, RetroDiff.FitLineEndings(text, change.Replace), StringComparison.Ordinal);
-        TeamFile? teamFile = null;
-        if (string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal) && !TeamFile.TryParse(edited, out teamFile))
-        {
-            return Refused($"The edit would leave {file} unreadable; nothing changed.");
-        }
 
         if (path is null
             && this.MemberPersona(set.Team, file) is { } member
@@ -197,14 +197,68 @@ internal sealed class RetroProposalService(
             return Refused($"A retro change cannot rename an Agent; {file} was not changed.");
         }
 
-        if (!this.TryWrite(set.Team, file, path, edited, teamFile))
+        if (!this.TryWrite(set.Team, file, path, edited))
         {
             return Refused(failed);
         }
 
+        return this.Applied(set, change);
+    }
+
+    private RetroChangeOutcome Applied(RetroProposalSet set, RetroChange change)
+    {
         this.Record(set, change);
         _ = proposals.RemoveChange(set.Id, change.Id);
-        return new RetroChangeOutcome(RetroChangeOutcomeKind.Applied, $"Applied '{change.Title}' to {file}.");
+        return new RetroChangeOutcome(RetroChangeOutcomeKind.Applied, $"Applied '{change.Title}' to {change.TargetFile}.");
+    }
+
+    /// <summary>Applies a <c>_team.md</c> change inside the Team-file update, against the value that update hands over, so a key changed since the proposal survives.</summary>
+    private RetroChangeOutcome ApplyTeamFile(RetroProposalSet set, RetroChange change, string failed)
+    {
+        const string File = TeamPaths.TeamFileName;
+        string? refusal = null;
+        bool written;
+        try
+        {
+            written = folders.UpdateTeamFile(set.Team, current =>
+            {
+                string text = current.Compose();
+                string find = RetroDiff.FitLineEndings(text, change.Find);
+                int matches = RetroDiff.CountMatches(text, find);
+                if (matches != 1)
+                {
+                    throw new InvalidOperationException(matches == 0
+                        ? $"The text to replace is not in {File}; nothing changed."
+                        : $"The text to replace occurs more than once in {File}; nothing changed.");
+                }
+
+                string edited = text.Replace(find, RetroDiff.FitLineEndings(text, change.Replace), StringComparison.Ordinal);
+                return TeamFile.TryParse(edited, out TeamFile? parsed)
+                    ? parsed
+                    : throw new InvalidOperationException($"The edit would leave {File} unreadable; nothing changed.");
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Thrown by the callback above before anything is written; its text is the refusal.
+            refusal = ex.Message;
+            written = false;
+        }
+        catch (IOException)
+        {
+            return Refused(failed);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Refused(failed);
+        }
+
+        if (refusal is not null)
+        {
+            return Refused(refusal);
+        }
+
+        return written ? this.Applied(set, change) : Refused(failed);
     }
 
     private void Record(RetroProposalSet set, RetroChange change)
@@ -263,24 +317,8 @@ internal sealed class RetroProposalService(
         return false;
     }
 
-    private bool TryWrite(string team, string file, string? path, string edited, TeamFile? teamFile)
+    private bool TryWrite(string team, string file, string? path, string edited)
     {
-        if (teamFile is not null)
-        {
-            try
-            {
-                return folders.UpdateTeamFile(team, _ => teamFile);
-            }
-            catch (IOException)
-            {
-                return false;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return false;
-            }
-        }
-
         if (path is not null)
         {
             try

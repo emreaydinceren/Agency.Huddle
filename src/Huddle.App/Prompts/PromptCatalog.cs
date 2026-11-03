@@ -1815,7 +1815,7 @@ internal static class PromptCatalog
             Key: "prompt.retro",
             Label: "Retro prompt",
             HelperText:
-                "The retro a Retro agent is asked to run, on demand or on the cadence in AGENTS.md " +
+                "The retro a Retro agent is asked to run, on demand or on the cadence in _team.md (its rules are in AGENTS.md) " +
                 "(RT-2). Takes the Team name and the date the retro covers from.",
             Default:
                 """
