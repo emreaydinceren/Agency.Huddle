@@ -833,14 +833,14 @@ public sealed class TaskStoreTests
         Assert.Equal(["Launch"], projects);
     }
 
-    /// <summary>Spec §6.8: a folder named <c>Uploads</c> under a Team is the Team's visible upload folder, not a Project, in any case; a real Project beside it still is.</summary>
+    /// <summary>Spec §6.8: a folder named <c>raw</c> under a Team is the Team's folder for files brought in, not a Project, in any case; a real Project beside it still is.</summary>
     [Fact]
-    public void Teams_UploadsFolder_IsNotAProject()
+    public void Teams_RawFolder_IsNotAProject()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        Directory.CreateDirectory(Path.Combine(root, "Business", "Uploads"));
-        Directory.CreateDirectory(Path.Combine(root, "Business", "uploads"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "raw"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "RAW"));
         Directory.CreateDirectory(Path.Combine(root, "Business", "Launch"));
         using PersonaStore personas = dir.CreatePersonaStore();
 

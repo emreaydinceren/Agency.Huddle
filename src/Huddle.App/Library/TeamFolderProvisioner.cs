@@ -155,9 +155,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return TeamNames.MemoryReservedProblem;
         }
 
-        if (string.Equals(project, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(project, TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase))
         {
-            return TeamNames.UploadsReservedProblem;
+            return TeamNames.RawReservedProblem;
         }
 
         return null;

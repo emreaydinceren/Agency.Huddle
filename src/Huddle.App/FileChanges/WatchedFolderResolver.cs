@@ -100,7 +100,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
         }
 
         string[] segments = below.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-        return segments.Length >= 2 && string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
+        return segments.Length >= 2 && string.Equals(segments[1], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Resolves <paramref name="entry"/> to a full path, per the ordered rules in FC §6.3, before the containment checks run.</summary>

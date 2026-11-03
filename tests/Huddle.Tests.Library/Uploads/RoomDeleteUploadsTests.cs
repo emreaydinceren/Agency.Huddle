@@ -49,7 +49,7 @@ public sealed class RoomDeleteUploadsTests
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
         Room room = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, harness.Nova.Id], team: "Marketing", ct: ct);
         string rootFolder = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
-        string teamFolder = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "Uploads", room.Id));
+        string teamFolder = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
 
         await CreateChat(harness).DeleteRoomAsync(room.Id, ct);
 
@@ -113,7 +113,7 @@ public sealed class RoomDeleteUploadsTests
 
         _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id));
         _ = Seed(Path.Combine(harness.DataDir, "Uploads", room.Id), "b.txt");
-        _ = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "Uploads", room.Id));
+        _ = Seed(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id));
 
         Assert.Equal(3, chat.CountRoomUploads(room));
     }

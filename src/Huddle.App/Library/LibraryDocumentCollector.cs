@@ -343,7 +343,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
 
         if (path.Root.Kind == LibraryRootKind.Teams)
         {
-            return segments.Length >= 3 && !string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase)
+            return segments.Length >= 3 && !string.Equals(segments[1], TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase)
                 ? string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}, Project {segments[1]}")
                 : string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}");
         }

@@ -34,7 +34,7 @@ internal static class FolderScanner
     /// </param>
     /// <param name="teamsRoot">
     /// The Teams root, when known. Per Chat uploads spec 6.8, a <c>Teams/&lt;Team&gt;/Uploads</c>
-    /// folder (two levels under it, compared with <see cref="TeamNames.UploadsFolder"/>, ordinal
+    /// folder (two levels under it, compared with <see cref="TeamNames.RawFolder"/>, ordinal
     /// ignoring case) is pruned before its contents are enumerated, so its files never count toward
     /// <see cref="FileChangesOptions.MaxFilesPerFolder"/>. <see langword="null"/> prunes nothing.
     /// </param>
@@ -107,7 +107,7 @@ internal static class FolderScanner
     /// <summary>True when <paramref name="subdirectory"/> is named Uploads and sits directly under a Team folder, itself directly under <paramref name="teamsRoot"/>.</summary>
     private static bool IsTeamUploads(string subdirectory, string name, string teamsRoot)
     {
-        if (!string.Equals(name, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(name, TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

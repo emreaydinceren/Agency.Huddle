@@ -246,17 +246,17 @@ public sealed class FolderScannerTests
         Assert.Equal([Path.Combine("a_b", "c.md")], result.Snapshot.Files.Keys);
     }
 
-    /// <summary>Spec 6.8: scanning a Team folder prunes its <c>Uploads</c> folder (any casing) and keeps its other folders.</summary>
+    /// <summary>Spec 6.8: scanning a Team folder prunes its <c>raw</c> folder (any casing) and keeps its other folders.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    public void Scan_TeamUploadsFolder_IsPrunedAndSiblingKept(string uploadsName)
+    [InlineData("raw")]
+    [InlineData("RAW")]
+    public void Scan_TeamRawFolder_IsPrunedAndSiblingKept(string rawName)
     {
         using TempDataDir dataDir = new();
         string teamsRoot = Path.Combine(dataDir.Path, "Teams");
         string team = Path.Combine(teamsRoot, "T");
-        Directory.CreateDirectory(Path.Combine(team, uploadsName, "room1"));
-        File.WriteAllText(Path.Combine(team, uploadsName, "room1", "a.png"), "x");
+        Directory.CreateDirectory(Path.Combine(team, rawName, "room1"));
+        File.WriteAllText(Path.Combine(team, rawName, "room1", "a.png"), "x");
         Directory.CreateDirectory(Path.Combine(team, "Notes"));
         File.WriteAllText(Path.Combine(team, "Notes", "n.md"), "n");
 
@@ -266,14 +266,14 @@ public sealed class FolderScannerTests
         Assert.Equal([Path.Combine("Notes", "n.md")], result.Snapshot.Files.Keys);
     }
 
-    /// <summary>Spec 6.8: scanning the Teams root itself prunes <c>Teams/&lt;Team&gt;/Uploads</c> too.</summary>
+    /// <summary>Spec 6.8: scanning the Teams root itself prunes <c>Teams/&lt;Team&gt;/raw</c> too.</summary>
     [Fact]
-    public void Scan_TeamsRoot_PrunesEachTeamUploads()
+    public void Scan_TeamsRoot_PrunesEachTeamRaw()
     {
         using TempDataDir dataDir = new();
         string teamsRoot = Path.Combine(dataDir.Path, "Teams");
-        Directory.CreateDirectory(Path.Combine(teamsRoot, "T", "Uploads"));
-        File.WriteAllText(Path.Combine(teamsRoot, "T", "Uploads", "a.png"), "x");
+        Directory.CreateDirectory(Path.Combine(teamsRoot, "T", "raw"));
+        File.WriteAllText(Path.Combine(teamsRoot, "T", "raw", "a.png"), "x");
         File.WriteAllText(Path.Combine(teamsRoot, "T", "brief.md"), "b");
 
         ScanResult result = FolderScanner.Scan(teamsRoot, new FileChangesOptions(), pruneUnderscore: true, teamsRoot: teamsRoot);
@@ -310,14 +310,14 @@ public sealed class FolderScannerTests
         Assert.Equal([Path.Combine("Uploads", "a.png")], result.Snapshot.Files.Keys);
     }
 
-    /// <summary>Spec 6.8: pruned upload files never count toward the cap, so 6,000 of them leave the Team folder <see cref="ScanOutcome.Scanned"/>.</summary>
+    /// <summary>Spec 6.8: pruned upload files never count toward the cap, so 6,000 of them under <c>raw</c> leave the Team folder <see cref="ScanOutcome.Scanned"/>.</summary>
     [Fact]
-    public void Scan_SixThousandFilesUnderTeamUploads_DoesNotTripTheCap()
+    public void Scan_SixThousandFilesUnderTeamRaw_DoesNotTripTheCap()
     {
         using TempDataDir dataDir = new();
         string teamsRoot = Path.Combine(dataDir.Path, "Teams");
         string team = Path.Combine(teamsRoot, "T");
-        string uploads = Path.Combine(team, "Uploads", "room1");
+        string uploads = Path.Combine(team, "raw", "room1");
         Directory.CreateDirectory(uploads);
         for (int index = 0; index < 6000; index++)
         {

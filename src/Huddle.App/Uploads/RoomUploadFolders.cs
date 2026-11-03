@@ -25,7 +25,7 @@ internal sealed class RoomUploadFolders(LibraryPathResolver resolver, LibraryFil
 
         if (room.Team is not null
             && LibrarySegments.Check(room.Team) is null
-            && resolver.TryResolve(TeamsRootId, $"{room.Team}/{TeamNames.UploadsFolder}/{room.Id}", out LibraryPath? teamFolder, out _))
+            && resolver.TryResolve(TeamsRootId, $"{room.Team}/{TeamNames.RawFolder}/{room.Id}", out LibraryPath? teamFolder, out _))
         {
             folders.Add(teamFolder);
         }

@@ -33,9 +33,9 @@ public sealed class ChatUploadServiceTests
         Assert.True(File.Exists(expected));
     }
 
-    /// <summary>An upload to a Team's Room is saved under <c>teams:/&lt;Team&gt;/Uploads/&lt;roomId&gt;</c>.</summary>
+    /// <summary>An upload to a Team's Room is saved under <c>teams:/&lt;Team&gt;/raw/&lt;roomId&gt;</c>.</summary>
     [Fact]
-    public async Task SaveAsync_TeamRoom_SavesUnderTeamUploadsFolder()
+    public async Task SaveAsync_TeamRoom_SavesUnderTeamRawFolder()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using UploadServiceHarness harness = await UploadServiceHarness.BuildAsync(ct);
@@ -44,7 +44,7 @@ public sealed class ChatUploadServiceTests
         LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "notes.txt", new MemoryStream("hello"u8.ToArray()), ct);
 
         Assert.NotNull(result.Value);
-        Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "Uploads", room.Id, "notes.txt"), result.Value.File.FullPath);
+        Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id, "notes.txt"), result.Value.File.FullPath);
         Assert.Equal("teams", result.Value.File.Root.Id);
         Assert.False(Directory.Exists(Path.Combine(harness.DataDir, "Uploads", room.Id)));
     }
@@ -61,7 +61,7 @@ public sealed class ChatUploadServiceTests
         LibraryResult<LibraryUpload> result = await harness.Service.SaveAsync(room.Id, "a.txt", new MemoryStream("x"u8.ToArray()), ct);
 
         Assert.NotNull(result.Value);
-        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Teams", "Brand New", "Uploads", room.Id, "a.txt")));
+        Assert.True(File.Exists(Path.Combine(harness.DataDir, "Teams", "Brand New", "raw", room.Id, "a.txt")));
     }
 
     /// <summary>A Room id the directory does not know is refused and nothing is written.</summary>
@@ -146,6 +146,6 @@ public sealed class ChatUploadServiceTests
 
         Assert.Equal(2, folders.Count);
         Assert.Equal(Path.Combine(harness.DataDir, "Uploads", room.Id), folders[0].FullPath);
-        Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "Uploads", room.Id), folders[1].FullPath);
+        Assert.Equal(Path.Combine(harness.DataDir, "Teams", "Marketing", "raw", room.Id), folders[1].FullPath);
     }
 }

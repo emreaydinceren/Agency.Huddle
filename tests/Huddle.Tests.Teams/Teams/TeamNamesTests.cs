@@ -5,13 +5,15 @@ namespace Agency.Huddle.Tests.Teams;
 /// <summary>Tests for TeamNames validation methods and constants.</summary>
 public sealed class TeamNamesTests
 {
-    /// <summary>IsReservedProjectName returns true for reserved folder names: memory and Uploads (case-insensitive), _tasks, _x, .git, .x.</summary>
+    /// <summary>IsReservedProjectName returns true for reserved folder names: memory, raw and outputs (case-insensitive), _tasks, _x, .git, .x.</summary>
     [Theory]
     [InlineData("memory")]
     [InlineData("Memory")]
     [InlineData("MEMORY")]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
+    [InlineData("raw")]
+    [InlineData("Raw")]
+    [InlineData("outputs")]
+    [InlineData("OUTPUTS")]
     [InlineData("_tasks")]
     [InlineData("_x")]
     [InlineData(".git")]
@@ -23,10 +25,12 @@ public sealed class TeamNamesTests
         Assert.True(result);
     }
 
-    /// <summary>IsReservedProjectName returns false for unreserved names.</summary>
+    /// <summary>IsReservedProjectName returns false for unreserved names, including Uploads, which is no longer reserved.</summary>
     [Theory]
     [InlineData("memory-notes")]
     [InlineData("memories")]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
     [InlineData("uploads-notes")]
     [InlineData("Uploaded")]
     [InlineData("mem")]
@@ -50,15 +54,15 @@ public sealed class TeamNamesTests
         Assert.Null(result);
     }
 
-    /// <summary>ValidateTeamName allows "memory" at Team level (it is only reserved for Projects).</summary>
+    /// <summary>ValidateTeamName refuses "memory" at Team level with the Team-reserved text (SB-R02).</summary>
     [Fact]
-    public void ValidateTeamName_MemoryAtTeamLevel_ReturnsNull()
+    public void ValidateTeamName_MemoryAtTeamLevel_ReturnsTeamReservedProblem()
     {
         List<TeamSummary> existing = [Team("Business")];
 
         string? result = TeamNames.ValidateTeamName("memory", existing);
 
-        Assert.Null(result);
+        Assert.Equal(TeamNames.TeamReservedProblem("memory"), result);
     }
 
     /// <summary>ValidateTeamName rejects a Team name that already exists (case-insensitive) using the typed spelling in the message.</summary>
@@ -215,17 +219,17 @@ public sealed class TeamNamesTests
         Assert.Equal(TeamNames.MemoryReservedProblem, result);
     }
 
-    /// <summary>ValidateProjectName rejects "Uploads" (case-insensitive) in Project names with the Uploads text, not the memory text.</summary>
+    /// <summary>ValidateProjectName rejects "raw" (case-insensitive) in Project names with the raw text, not the memory text.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    public void ValidateProjectName_Uploads_ReturnsUploadsReservedMessage(string name)
+    [InlineData("raw")]
+    [InlineData("RAW")]
+    public void ValidateProjectName_Raw_ReturnsRawReservedMessage(string name)
     {
         TeamSummary team = Team("Business", "Marketing Project");
 
         string? result = TeamNames.ValidateProjectName(name, team);
 
-        Assert.Equal(TeamNames.UploadsReservedProblem, result);
+        Assert.Equal(TeamNames.RawReservedProblem, result);
     }
 
     /// <summary>ValidateProjectName rejects names starting with underscore.</summary>
@@ -284,20 +288,6 @@ public sealed class TeamNamesTests
     public void MemoryReservedProblem_Value_EqualsSettledText()
     {
         Assert.Equal("\"memory\" is reserved for the Team's shared Memory.", TeamNames.MemoryReservedProblem);
-    }
-
-    /// <summary>UploadsFolder constant equals "Uploads".</summary>
-    [Fact]
-    public void UploadsFolder_Value_EqualsUploadsString()
-    {
-        Assert.Equal("Uploads", TeamNames.UploadsFolder);
-    }
-
-    /// <summary>UploadsReservedProblem constant equals the settled text.</summary>
-    [Fact]
-    public void UploadsReservedProblem_Value_EqualsSettledText()
-    {
-        Assert.Equal("\"Uploads\" is reserved for files shared in a Team's chats.", TeamNames.UploadsReservedProblem);
     }
 
     /// <summary>Helper factory for a TeamSummary with no members and HasFolder true.</summary>

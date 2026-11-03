@@ -1499,9 +1499,9 @@ internal sealed class TaskService : IDisposable
         {
             problems.Add(TeamNames.MemoryReservedProblem);
         }
-        else if (string.Equals(project, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(project, TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase))
         {
-            problems.Add(TeamNames.UploadsReservedProblem);
+            problems.Add(TeamNames.RawReservedProblem);
         }
         else if (TryGetIllegalFolderNameProblem("Project", project, out string? projectProblem))
         {

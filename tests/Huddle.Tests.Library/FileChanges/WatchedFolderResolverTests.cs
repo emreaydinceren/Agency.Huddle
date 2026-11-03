@@ -248,13 +248,13 @@ public sealed class WatchedFolderResolverTests
         Assert.Equal("Uploads are announced in the chat, not watched.", reason);
     }
 
-    /// <summary>Spec 6.8: a Team's Uploads folder and anything under it is refused with the same text, whichever case and separator.</summary>
+    /// <summary>Spec 6.8: a Team's raw folder and anything under it is refused with the same text, whichever case and separator.</summary>
     [Theory]
-    [InlineData("./Teams/Alpha/Uploads")]
-    [InlineData("./teams/alpha/UPLOADS/room1")]
-    [InlineData("Teams/Alpha/uploads/room1/deeper")]
-    [InlineData("Teams\\Alpha\\Uploads\\room1")]
-    public void TryResolve_TeamUploadsOrUnderIt_IsRefused(string entry)
+    [InlineData("./Teams/Alpha/raw")]
+    [InlineData("./teams/alpha/RAW/room1")]
+    [InlineData("Teams/Alpha/raw/room1/deeper")]
+    [InlineData("Teams\\Alpha\\Raw\\room1")]
+    public void TryResolve_TeamRawOrUnderIt_IsRefused(string entry)
     {
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
@@ -266,12 +266,14 @@ public sealed class WatchedFolderResolverTests
         Assert.Equal("Uploads are announced in the chat, not watched.", reason);
     }
 
-    /// <summary>A Team's other folders, and a folder merely starting with <c>Uploads</c> inside a Team, still resolve.</summary>
+    /// <summary>A Team's other folders, a folder merely starting with <c>raw</c> inside a Team, and a Team folder named <c>Uploads</c> (no longer reserved) still resolve.</summary>
     [Theory]
     [InlineData("./Teams/Alpha")]
     [InlineData("./Teams/Alpha/Docs")]
-    [InlineData("./Teams/Alpha/Uploads-archive")]
-    public void TryResolve_TeamFolderOutsideUploads_Accepted(string entry)
+    [InlineData("./Teams/Alpha/raw-archive")]
+    [InlineData("./Teams/Alpha/Uploads")]
+    [InlineData("./Teams/Alpha/uploads/room1")]
+    public void TryResolve_TeamFolderOutsideRaw_Accepted(string entry)
     {
         using TempDataDir dataDir = new();
         WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));

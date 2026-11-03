@@ -179,11 +179,11 @@ public sealed class TeamFolderProvisionerTests
         Assert.Empty(Directory.GetFileSystemEntries(teamDir));
     }
 
-    /// <summary>Spec §6.8: a Project named <c>Uploads</c> (any case) is the Team's upload folder, so it is refused with the Uploads text and nothing at all is created under the Team folder.</summary>
+    /// <summary>Spec §6.8: a Project named <c>raw</c> (any case) is the Team's folder for files brought in, so it is refused with the raw text and nothing at all is created under the Team folder.</summary>
     [Theory]
-    [InlineData("Uploads")]
-    [InlineData("uploads")]
-    public void EnsureProject_Uploads_RefusedWithUploadsTextAndNothingCreated(string project)
+    [InlineData("raw")]
+    [InlineData("RAW")]
+    public void EnsureProject_Raw_RefusedWithRawTextAndNothingCreated(string project)
     {
         using ProvisionerFixture fixture = new();
         string teamDir = Path.Combine(fixture.TeamsRoot, "Marketing");
@@ -194,7 +194,7 @@ public sealed class TeamFolderProvisionerTests
         LibraryResult<LibraryPath> result = provisioner.EnsureProject(teamFolder!, project);
 
         Assert.Null(result.Value);
-        Assert.Equal(TeamNames.UploadsReservedProblem, result.Error);
+        Assert.Equal(TeamNames.RawReservedProblem, result.Error);
         Assert.Empty(Directory.GetFileSystemEntries(teamDir));
     }
 
@@ -416,7 +416,8 @@ public sealed class TeamFolderProvisionerTests
 
     /// <summary>Each name the Team rules refuse returns that rule's text and creates nothing: the
     /// Library's own problem for <c>a:b</c>, <c>Sales/EMEA</c> and a blank; the underscore text for
-    /// <c>_x</c> and <c>.x</c>; the commas text for <c>Sales, EMEA</c>.</summary>
+    /// <c>_x</c> and <c>.x</c>; the commas text for <c>Sales, EMEA</c>; the Team-reserved text for <c>memory</c>,
+    /// <c>raw</c> and <c>outputs</c> in any case (SB-R02).</summary>
     /// <param name="name">The refused Team name.</param>
     /// <param name="expected">The exact refusal text.</param>
     [Theory]
@@ -426,6 +427,9 @@ public sealed class TeamFolderProvisionerTests
     [InlineData("_x", "Names starting with \"_\" or \".\" are reserved.")]
     [InlineData(".x", "Names starting with \"_\" or \".\" are reserved.")]
     [InlineData("Sales, EMEA", "A Team name can't contain commas, semicolons or square brackets.")]
+    [InlineData("memory", "\"memory\" is reserved for a Team's own folders.")]
+    [InlineData("Raw", "\"Raw\" is reserved for a Team's own folders.")]
+    [InlineData("OUTPUTS", "\"OUTPUTS\" is reserved for a Team's own folders.")]
     public void EnsureTeam_RefusedName_ReturnsTheRuleText_AndCreatesNothing(string name, string expected)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -440,12 +444,12 @@ public sealed class TeamFolderProvisionerTests
         Assert.Empty(Directory.GetFileSystemEntries(fixture.TeamsRoot));
     }
 
-    /// <summary>The neighbours of the refused names are allowed and create their folder: <c>memory</c>
-    /// is a legal Team name (Spec §6.3 restricts Projects only), so is <c>a_b</c> (only a LEADING
-    /// underscore is reserved), and so is a name with a space.</summary>
+    /// <summary>The neighbours of the refused names are allowed and create their folder: <c>a_b</c> (only a
+    /// LEADING underscore is reserved), a name with a space, and <c>memory-notes</c> (only the exact
+    /// reserved names are refused).</summary>
     /// <param name="name">The allowed Team name.</param>
     [Theory]
-    [InlineData("memory")]
+    [InlineData("memory-notes")]
     [InlineData("a_b")]
     [InlineData("Sales EMEA")]
     public void EnsureTeam_AllowedNeighbour_CreatesTheFolder(string name)

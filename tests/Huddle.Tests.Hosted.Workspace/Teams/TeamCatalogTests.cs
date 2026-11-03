@@ -236,13 +236,13 @@ public sealed class TeamCatalogTests
         Assert.Equal([true, true, true, false, false], actual);
     }
 
-    /// <summary>Spec §6.8: a folder named <c>Uploads</c> under a Team is the Team's upload folder, not a Project: it is neither listed nor found, in any case, while a real Project beside it still is.</summary>
+    /// <summary>Spec §6.8: a folder named <c>raw</c> under a Team is the Team's folder for files brought in, not a Project: it is neither listed nor found, in any case, while a real Project beside it still is.</summary>
     [Fact]
-    public void ProjectExists_ReservedUploadsFolder_IsNotAProject()
+    public void ProjectExists_ReservedRawFolder_IsNotAProject()
     {
         using TempDataDir dir = new();
         WritePersona(dir, "Nova", "Ops");
-        CreateFolder(dir, "Ops", "Uploads");
+        CreateFolder(dir, "Ops", "raw");
         CreateFolder(dir, "Ops", "Alpha");
         using PersonaStore personas = dir.CreatePersonaStore();
         using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
@@ -250,8 +250,8 @@ public sealed class TeamCatalogTests
 
         bool[] actual =
         [
-            catalog.ProjectExists("Ops", "Uploads"),
-            catalog.ProjectExists("Ops", "uploads"),
+            catalog.ProjectExists("Ops", "raw"),
+            catalog.ProjectExists("Ops", "RAW"),
             catalog.ProjectExists("Ops", "Alpha")
         ];
 
