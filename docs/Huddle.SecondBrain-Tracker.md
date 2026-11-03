@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 28 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 30 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -49,8 +49,8 @@ never by hand, so the status line stays true.
 | 3.3.t #27 Uploads record a baseline [Sonnet] | | | ✔ |
 | 3.3.i #28 Record on save [Sonnet] | | | ✔ |
 | **D4. P1: seeder and retired files** | | | |
-| 4.1.t #29 The retired-file scan [Sonnet] | ✔ | | |
-| 4.1.i #30 Implement the scan [Sonnet] | ✔ | | |
+| 4.1.t #29 The retired-file scan [Sonnet] | | | ✔ |
+| 4.1.i #30 Implement the scan [Sonnet] | | | ✔ |
 | 🔁 R2 Retrospective 2 (tasks 16–30): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | 4.2.t #31 The seeder writes the new layout [Sonnet] | ✔ | | |
 | 4.2.i #32 Update the seeder [Sonnet] | ✔ | | |

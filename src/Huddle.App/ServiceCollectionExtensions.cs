@@ -781,6 +781,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
+        services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
