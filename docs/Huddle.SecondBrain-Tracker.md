@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 18 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
+**Status:** 20 of 140 tasks Done · 1 of 9 retrospectives done · last updated 2026-11-02.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -37,8 +37,8 @@ never by hand, so the status line stays true.
 | 🔁 R1 Retrospective 1 (tasks 1–15): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
 | 2.4.t #17 Room uploads land in `raw/` [Sonnet] | | | ✔ |
 | 2.4.i #18 Save into `raw/` [Sonnet] | | | ✔ |
-| 2.5.t #19 Task attachments under their Team [Sonnet] | ✔ | | |
-| 2.5.i #20 Resolve the Task's Team [Sonnet] | ✔ | | |
+| 2.5.t #19 Task attachments under their Team [Sonnet] | | | ✔ |
+| 2.5.i #20 Resolve the Task's Team [Sonnet] | | | ✔ |
 | 2.6.t #21 `raw/` is not watched [Sonnet] | ✔ | | |
 | 2.6.i #22 Prune `raw` [Sonnet] | ✔ | | |
 | **D3. P1: raw protection and baselines** | | | |

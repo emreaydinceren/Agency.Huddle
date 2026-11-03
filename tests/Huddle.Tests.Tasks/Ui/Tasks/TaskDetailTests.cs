@@ -592,7 +592,7 @@ public sealed class TaskDetailTests
             ctx.Services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.IProofSource>(new NoProofSource());
             Agency.Huddle.Tests.Library.LibraryFileServiceFixture library = Agency.Huddle.Tests.Library.LibraryFileServiceFixture.Attach(this.dir.Path);
             ctx.Services.AddSingleton(new Agency.Huddle.App.Uploads.TaskUploadService(
-                this.store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver), library.CreateService(), this.options));
+                this.store, new Agency.Huddle.App.Uploads.TaskUploadFolders(library.Resolver, this.store), library.CreateService(), this.options));
             return ctx;
         }
 

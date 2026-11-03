@@ -124,14 +124,14 @@ internal static class SoftwareCoLibrary
 
     /// <summary>
     /// Files the Human uploaded to Tasks: a PNG and a text file on open Tasks, and one on a closed Task, whose folder is still
-    /// <c>Uploads/Tasks/&lt;ID&gt;</c> because closing never moves it. <see cref="SoftwareCoTasks"/> lists each in its Task's
+    /// <c>raw/Tasks/&lt;ID&gt;</c> under its Team and Project because closing never moves it. <see cref="SoftwareCoTasks"/> lists each in its Task's
     /// <see cref="SeedTask.Attachments"/>.
     /// </summary>
     internal static IReadOnlyList<SeedTaskUpload> TaskUploads { get; } =
     [
-        new("GROW-0002", "checklist-mockup.png", SeedImages.Gradient(48, (0x2e, 0x7d, 0x6b), (0xff, 0xff, 0xff))),
-        new("SUPP-0008", "action-items.txt", System.Text.Encoding.UTF8.GetBytes("Postmortem actions for incident 0412:\n- Status page (SUPP-0005)\n- Pager rotation (SUPP-0007)\n- Pool-size alert\n")),
-        new("SUPP-0006", "postmortem-template.txt", System.Text.Encoding.UTF8.GetBytes("Summary\nImpact\nTimeline (UTC)\nCause\nFollow-ups\n")),
+        new("GROW-0002", new("Growth", "Onboarding Revamp"), "checklist-mockup.png", SeedImages.Gradient(48, (0x2e, 0x7d, 0x6b), (0xff, 0xff, 0xff))),
+        new("SUPP-0008", new("Support", "Incident Tooling"), "action-items.txt", System.Text.Encoding.UTF8.GetBytes("Postmortem actions for incident 0412:\n- Status page (SUPP-0005)\n- Pager rotation (SUPP-0007)\n- Pool-size alert\n")),
+        new("SUPP-0006", new("Support", "Incident Tooling"), "postmortem-template.txt", System.Text.Encoding.UTF8.GetBytes("Summary\nImpact\nTimeline (UTC)\nCause\nFollow-ups\n")),
     ];
 
     /// <summary>

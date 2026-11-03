@@ -160,7 +160,7 @@ public sealed class LibraryDocumentCollectorTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
         using LibraryFileServiceFixture _ = fixture;
-        string taskDir = Path.Combine(fixture.DataDir, "Raw", "Tasks", "GROW-0002");
+        string taskDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Growth", "raw", "Tasks", "GROW-0002");
         Directory.CreateDirectory(taskDir);
         string taskFile = Path.Combine(taskDir, "brief.md");
         File.WriteAllText(taskFile, "brief");

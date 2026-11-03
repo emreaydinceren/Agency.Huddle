@@ -334,12 +334,12 @@ public sealed class TaskDetailAttachmentTests
 
     /// <summary>Where an upload named <paramref name="name"/> lands for <paramref name="task"/>.</summary>
     private static string UploadPath(TaskToolHarness harness, TaskItem task, string name) =>
-        Path.Combine(harness.Options.Value.DataDir, "Raw", "Tasks", task.Id.ToString(), name);
+        Path.Combine(harness.Options.Value.DataDir, "Teams", task.Location.Team, "raw", "Tasks", task.Id.ToString(), name);
 
     /// <summary>Registers a real <see cref="TaskUploadService"/> over the harness's data directory.</summary>
     private static void RegisterUploader(MudBunitContext ctx, TaskToolHarness harness, LibraryFileServiceFixture library)
     {
-        TaskUploadFolders folders = new(library.Resolver);
+        TaskUploadFolders folders = new(library.Resolver, harness.Store);
         ctx.Services.AddSingleton(new TaskUploadService(harness.Store, folders, library.CreateService(), harness.Options));
     }
 

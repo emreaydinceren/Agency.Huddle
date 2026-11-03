@@ -224,7 +224,7 @@ internal static class SoftwareCoTasks
             OriginRoom = SoftwareCoRooms.LaunchCrew,
             ExtraLog = [new(Human, "description edited")],
             Body = "Five items, all completable in under ten minutes, with a visible progress bar.",
-            Attachments = ["Teams/Growth/Onboarding Revamp/Onboarding-Brief.md", SeedTaskUpload.PathFor("GROW-0002", "checklist-mockup.png")],
+            Attachments = ["Teams/Growth/Onboarding Revamp/Onboarding-Brief.md", SeedTaskUpload.PathFor(new(Growth, Onboarding), "GROW-0002","checklist-mockup.png")],
         },
         new()
         {
@@ -369,7 +369,7 @@ internal static class SoftwareCoTasks
             Status = "Done", Priority = "Medium", Creator = "Grace", Assignee = "Alan", Closed = true,
             Tags = ["incident", "process"], CreatedDaysAgo = 29, LastTouchedDaysAgo = 15,
             Body = "Template used by the incident-postmortem Skill. Alan works in Platform but owns this for Support.",
-            Attachments = [SeedTaskUpload.PathFor("SUPP-0006", "postmortem-template.txt")],
+            Attachments = [SeedTaskUpload.PathFor(new(Support, IncidentTooling), "SUPP-0006","postmortem-template.txt")],
         },
         new()
         {
@@ -387,7 +387,7 @@ internal static class SoftwareCoTasks
             HumanGate = true,
             ExtraLog = [new(Human, "description edited"), new(SoftwareCoFeed.HelperActor, "human gate on (reason: Sends a follow-up to customers outside the Team)")],
             Body = "Every action from the postmortem, with owners. Alan's draft and the action list are attached.",
-            Attachments = ["Agents/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor("SUPP-0008", "action-items.txt")],
+            Attachments = ["Agents/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor(new(Support, IncidentTooling), "SUPP-0008","action-items.txt")],
         },
 
         // ---- Support team root ----
