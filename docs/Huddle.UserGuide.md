@@ -38,7 +38,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
 | Understand where files go, and use the Second Brain pattern (planned) | [Your Second Brain](#your-second-brain) |
-| Give every Agent, or one Team, standing rules | [Instructions](#instructions) |
+| Give every Agent, or one Team, standing rules | [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
 | Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
@@ -1353,8 +1353,7 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 ### Attaching files
 
 Press the paperclip beside Send, paste a screenshot, or drop files on the
-composer. Each file is saved at once into the Library, and its chip shows above
-the text box. Remove a chip with its close button before you send if you change
+composer. Each file is saved at once, and its chip shows above the text box. Remove a chip with its close button before you send if you change
 your mind; the saved file is then deleted and nothing is posted. When you send,
 each file's path is added to your Message, so the Agents who answer can open
 it with their own tools.
@@ -1367,10 +1366,11 @@ it with their own tools.
 - Send waits while a file is still uploading, and the text you typed stays in the
   box.
 - The paperclip, paste and drop appear only when the Library is on.
-- Files go to **Uploads** in the Library, one folder per Room. In a Team's chat
-  they go to that Team's Library instead, under `Uploads`.
-- Deleting a Room sends its uploaded files to the Recycle Bin. Archiving keeps
-  them.
+- In a Team's chat, files land in that Team's **`raw/`** folder, kept exactly as
+  they arrived. Other Rooms put their files in **Uploads** in the Library, one
+  folder per Room.
+- Deleting a Room sends its files in **Uploads** to the Recycle Bin. Archiving
+  keeps them.
 - The Message that carries a file's path is the only notice of it. File Changes
   does not report uploads, so an Agent is not told of one by a file change.
 - Pending chips do not survive a page reload. Files already saved stay in the
@@ -1485,11 +1485,10 @@ This section explains how Huddle organises what you and your Agents know: where 
 and how to use the pattern day to day. Read it before you set up Teams for areas of your life or
 work, or when you wonder where something should be saved.
 
-> [!IMPORTANT]
-> **Planned, not yet in Huddle.** This section describes the design in
-> [Huddle.SecondBrain.md](Huddle.SecondBrain.md), which is proposed and not built. Until it ships,
-> [Instructions](#instructions), [Memory and file changes](#memory-and-file-changes) and
-> [Attaching files](#attaching-files) describe how Huddle behaves today.
+> [!NOTE]
+> **Two limits.** Jobs have no monthly timetable, so the Chief of Staff's monthly check runs
+> from a weekly Job on Mondays and acts only on the first Monday of the month. And Huddle does
+> not restrict what an Agent writes in a Team's workspace.
 
 ### The principle
 
@@ -1607,18 +1606,19 @@ A Second Brain drifts if nobody looks after it. Huddle can do most of the lookin
 - **Daily reviews.** The Chief of Staff can run a review at times you choose: what's due and
   overdue, what's waiting on you, and what was filed since the last review, with three things to
   do today.
-- **A weekly check** per Team finds Memory over its limit, outputs with no "Read when…" line,
-  broken links and originals that changed after filing. It changes nothing: it files what it
-  finds as Tasks, and rule changes as proposals for you.
+- **A weekly check** per Team, run by the `brain-check` Skill, finds Memory over its limit,
+  outputs with no "Read when…" line, broken links and originals that changed after filing. It
+  changes nothing: it files what it finds as Tasks, and rule changes as proposals for you.
 - **A monthly check** lists Teams and Projects that have gone quiet and suggests keeping or
-  archiving each one.
-- **Wrapping up a session.** Ask an Agent to wrap up, and it proposes the rules, facts, documents
-  and Tasks the session produced, grouped by where each goes, and waits for your OK.
-- **Ingesting new originals.** Ask an Agent to go through new files in `raw/`, and it proposes
-  facts, Tasks and documents from them, each linked back to its source.
+  archiving each one. It runs from the weekly Job and acts only on the first Monday of the month.
+- **Wrapping up a session.** Ask an Agent to wrap up. The `wrap-up` Skill proposes the rules,
+  facts, documents and Tasks the session produced, grouped by where each goes, and waits for your OK.
+- **Ingesting new originals.** Ask an Agent to go through new files in `raw/`. The `ingest` Skill
+  proposes facts, Tasks and documents from them, each linked back to its source.
 
-The reviews and checks are Jobs. The Chief of Staff offers them when you start, and creates each
-one only if you say yes.
+The reviews and checks are Jobs. The Chief of Staff offers the upkeep Jobs when you start, and
+creates each one only if you say yes. The three Skills come with the Second Brain; see
+[Giving Agents Skills](#giving-agents-skills).
 
 When a Memory folder grows past its limit, you get a notification, and the Team's manager moves
 old facts into `memory/archive/`. They're kept, but no longer carried in every session.
@@ -1643,10 +1643,11 @@ Team's code repository, for example. For those Teams the real work lives in the 
 follows its own conventions: specs and decisions in the repository, its own `AGENTS.md` or
 `CLAUDE.md` for rules about the code. The Team's `outputs/` then holds only what isn't part of
 that work, such as status reports and meeting prep. Agents are told which applies to each Team.
+Huddle does not restrict what Agents write in the workspace.
 
 ### Seeing what an Agent reads
 
-An Agent's page shows everything its next session will be told, part by part: Huddle's own
+An Agent's page shows, under **What this Agent reads**, everything its next session will be told, part by part: Huddle's own
 prompts, each `AGENTS.md` level, its Agent file, its Memory and output indexes, and its tools.
 Each part says where it comes from and links to where you change it. Huddle's own prompts can be
 changed on **Settings › Prompts**. A changed prompt is saved as a file in the **Prompts** root,
@@ -1672,32 +1673,8 @@ The full mapping is in [Huddle.SecondBrain.md](Huddle.SecondBrain.md), §2.4.
 
 ## Instructions
 
-**Instructions** are standing rules you write once, in plain Markdown, and every Agent in
-scope starts each session with them: Huddle's version of what a `CLAUDE.md` does for a
-coding agent in a repository. Use them for how you want things done here, so you do not
-edit every Agent's file.
-
-| Level | File | Who reads it |
-| --- | --- | --- |
-| **Huddle-wide** | `Teams/Instructions.md` | Every Agent |
-| **Team** | `Teams/<Team>/Instructions.md` | Every member of that Team. An Agent in several Teams gets each one, in the order of its `Teams:` line. |
-| **Agent** | `Agents/<Name>/work/Instructions.md` | That Agent only |
-
-Create the files in the Library: the first two in the **Teams** root, the third in the
-**Agents** root. Any editor works too. The name is always `Instructions.md` (the capital
-does not matter). It is never `AGENTS.md` or `CLAUDE.md`, which an Adapter loads on its own.
-
-An Agent's prompt carries the levels from general to specific, and where they conflict
-the more specific one wins: the Agent's own over its Team's, its Team's over Huddle's.
-A level with no file, or an empty one, is left out. A file longer than 8,000 characters
-(`Team:Instructions:MaxChars`) is cut, and the cut line says where the rest is.
-
-**When an edit takes effect.** Instructions are read when a session starts. Edit a Team's
-or an Agent's file and a running Agent hears of it as a changed file at the start of its
-next Turn, but only a new session (**Restart** on its card) follows it. An edit to
-`Teams/Instructions.md` applies from each Agent's next session. Agents read their
-Instructions and can never write them: an attempt to edit, delete or move an
-`Instructions.md` is refused.
+Standing rules for your Agents are plain Markdown in `AGENTS.md` files, one for each
+level. See [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 
 ## Memory and file changes
 
