@@ -288,7 +288,7 @@ public sealed class ArchiveTeamTests
     }
 
     /// <summary>Real stores over a temp data directory with the Home Team seeded, and a service wired to them.</summary>
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         private readonly TempDataDir dir;
         private readonly LibraryFileServiceFixture library;
@@ -302,6 +302,7 @@ public sealed class ArchiveTeamTests
             this.tasks = tasks;
             this.personas = personas;
             this.Directory = directory;
+            this.Catalog = catalog;
             this.Membership = new RecordingTeamMembership();
             ITeamMembership membership = realMembership
                 ? new TeamMembership(personas, catalog, folders, RoleFixtures.Types(dir))
@@ -327,6 +328,12 @@ public sealed class ArchiveTeamTests
         public RecordingTeamMembership Membership { get; }
 
         public SqliteTeamDirectory Directory { get; }
+
+        /// <summary>Gets the catalog the service reads; a test edits <see cref="FakeTeamCatalog.Teams"/> to say what the catalog knows after the archive.</summary>
+        public FakeTeamCatalog Catalog { get; }
+
+        /// <summary>Gets the Persona store, so a test can delete a member.</summary>
+        public PersonaStore Personas => this.personas;
 
         public string TeamsRoot { get; }
 

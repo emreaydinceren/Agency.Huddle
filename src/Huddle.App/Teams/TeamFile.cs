@@ -42,6 +42,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private const string TemplateKey = "template";
     private const string ArchivedMembersKey = "archivedMembers";
     private const string ArchivedRoomsKey = "archivedRooms";
+    private const string ArchivedManagerKey = "archivedManager";
 
     /// <summary>
     /// The file's first line as read: <c>---</c>, or the lenient spelling a hand edit left (a leading byte-order mark, surrounding
@@ -75,6 +76,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
 
     /// <summary>The ids of the Rooms archived with the Team; the <c>archivedRooms</c> key is written only while any are, and unarchive restores exactly these.</summary>
     public IReadOnlyList<string> ArchivedRooms { get; init; } = [];
+
+    /// <summary>The Name of the manager the Team had when it was archived; the <c>archivedManager</c> key is written only while one is set, and unarchive puts the manager back.</summary>
+    public string? ArchivedManager { get; init; }
 
     /// <summary>Returns a copy whose gates are <paramref name="gates"/>.</summary>
     /// <param name="gates">The gates the copy lists.</param>
@@ -142,6 +146,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             Process = ProcessSettings.Parse(values),
             ArchivedMembers = values.TryGetValue(ArchivedMembersKey, out string? archived) ? ProcessDocument.SplitList(archived) : [],
             ArchivedRooms = values.TryGetValue(ArchivedRoomsKey, out string? archivedRooms) ? ProcessDocument.SplitList(archivedRooms) : [],
+            ArchivedManager = NullIfBlank(values.GetValueOrDefault(ArchivedManagerKey)),
         };
         return true;
     }
@@ -293,6 +298,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         {
             AppendList(builder, ArchivedRoomsKey, this.ArchivedRooms);
         }
+
+        AppendOptional(builder, ArchivedManagerKey, this.ArchivedManager);
     }
 
     private static void AppendRaw(StringBuilder builder, string key, string? value)
@@ -317,6 +324,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, TemplateKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, ArchivedMembersKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, ArchivedRoomsKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, ArchivedManagerKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, TeamTypeKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, ManagerKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, WorkspaceKey, StringComparison.OrdinalIgnoreCase)

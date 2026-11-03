@@ -106,8 +106,90 @@ internal sealed class ArchiveService : IDisposable
         }
     }
 
+    /// <summary>Unarchives the Team: the folder moves back, the recorded members are added again, the recorded Rooms are restored.</summary>
+    /// <param name="team">The Team, compared ignoring case.</param>
+    /// <param name="ct">Cancels the wait for the gate.</param>
+    /// <returns>Done (with the members skipped because their Persona is gone), or the reason nothing was changed.</returns>
+    public async Task<ArchiveOutcome> UnarchiveTeamAsync(string team, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        await this.gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await this.UnarchiveLockedAsync(team, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ = this.gate.Release();
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose() => this.gate.Dispose();
+
+    private async Task<ArchiveOutcome> UnarchiveLockedAsync(string request, CancellationToken ct)
+    {
+        string teamsRoot = this.RootPath(LibraryRootKind.Teams);
+        string archiveRoot = this.RootPath(LibraryRootKind.Archive);
+        string? archived = this.Spelling(archiveRoot, request);
+        if (archived is null || !this.files.FileExists(Path.Combine(archiveRoot, archived, TeamPaths.TeamFileName)))
+        {
+            return Refuse($"There is no archived Team named \"{request}\".");
+        }
+
+        if (this.Spelling(teamsRoot, archived) is not null || this.catalog.Find(request) is not null || this.catalog.Find(archived) is not null)
+        {
+            return Refuse($"A Team named {request} exists now. Rename one of them first.");
+        }
+
+        string live = Path.Combine(teamsRoot, archived);
+        ArchiveMoveResult moved = this.folders.RunExclusive(() => this.files.Move(Path.Combine(archiveRoot, archived), live));
+        if (moved != ArchiveMoveResult.Moved)
+        {
+            return Refuse($"{archived} has files open in another program. Close them and try again.");
+        }
+
+        TeamFile? file = this.folders.ReadTeamFile(archived);
+        IReadOnlyList<string> skipped = this.AddMembersBack(archived, file?.ArchivedMembers ?? []);
+        foreach (string id in file?.ArchivedRooms ?? [])
+        {
+            await this.directory.SetRoomArchivedAsync(id, false, ct).ConfigureAwait(false);
+        }
+
+        string? manager = file?.ArchivedManager;
+        if (manager is not null && this.personas.Get(manager) is null)
+        {
+            manager = null;
+            skipped = [.. skipped.Append(file?.ArchivedManager ?? string.Empty).Distinct(StringComparer.Ordinal)];
+        }
+
+        _ = this.folders.UpdateTeamFile(
+            archived,
+            f => f with { ArchivedMembers = [], ArchivedRooms = [], ArchivedManager = null, Manager = manager ?? f.Manager });
+        return new ArchiveOutcome(true, null) { Skipped = skipped };
+    }
+
+    private List<string> AddMembersBack(string team, IReadOnlyList<string> recorded)
+    {
+        List<string> skipped = [];
+        foreach (string member in recorded)
+        {
+            if (this.personas.Get(member) is null)
+            {
+                skipped.Add(member);
+                continue;
+            }
+
+            MembershipResult result = this.membership.Add(team, member);
+            if (result.Outcome is not (MembershipOutcome.Added or MembershipOutcome.AlreadyMember))
+            {
+                this.logger.LogWarning("Unarchived {Team}, but {Member} could not be added back.", team, member);
+            }
+        }
+
+        return skipped;
+    }
 
     private async Task<ArchiveOutcome> ArchiveLockedAsync(string request, CancellationToken ct)
     {
@@ -197,7 +279,8 @@ internal sealed class ArchiveService : IDisposable
     /// <summary>Records the roster and Room ids in the Team's <c>_team.md</c>, creating the file first for a Team that has none.</summary>
     private bool WriteRoster(string name, TeamFile? original, IReadOnlyList<string> roster, IReadOnlyList<string> roomIds)
     {
-        TeamFile Mark(TeamFile file) => file with { Manager = null } with { ArchivedMembers = roster, ArchivedRooms = roomIds };
+        string? manager = original?.Manager ?? this.catalog.Find(name)?.Manager;
+        TeamFile Mark(TeamFile file) => file with { Manager = null } with { ArchivedMembers = roster, ArchivedRooms = roomIds, ArchivedManager = manager };
         if (original is null)
         {
             TeamFile fresh = Mark(new TeamFile(VersionedRef.None, null, null, null, string.Empty));
