@@ -25,8 +25,14 @@ internal static class VendoredAdapterFiles
     /// <summary>Gets the path of the adapter's <c>dist/acp-agent.js</c>, or null when it is not installed.</summary>
     internal static string? AcpAgentJs => VendoredAdapterFiles.Find("claude-agent-acp", "dist", "acp-agent.js");
 
-    /// <summary>Gets the path of the ACP SDK's <c>dist/schema/index.js</c>, or null when it is not installed.</summary>
-    internal static string? SdkSchemaJs => VendoredAdapterFiles.Find("sdk", "dist", "schema", "index.js");
+    /// <summary>Gets the path of the adapter's <c>dist/air-extension.js</c>, or null when it is not installed.</summary>
+    internal static string? AirExtensionJs => VendoredAdapterFiles.Find("claude-agent-acp", "dist", "air-extension.js");
+
+    /// <summary>
+    /// Gets the path of the ACP SDK's protocol-v1 <c>dist/v1/schema/index.js</c>, or null when it is not
+    /// installed. SDK 2.x splits the schema by protocol version; the adapter speaks v1 to this client.
+    /// </summary>
+    internal static string? SdkSchemaJs => VendoredAdapterFiles.Find("sdk", "dist", "v1", "schema", "index.js");
 
     private static string? Find(params string[] relativeToPackageScope)
     {

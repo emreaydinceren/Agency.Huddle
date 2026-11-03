@@ -227,20 +227,23 @@ public sealed class FakeAcpAgentElicitationTests
 
     /// <summary>
     /// Pins the facts the fake mirrors to the vendored adapter's source: the AskUserQuestion builder and
-    /// its form-mode envelope in <c>elicitation.js</c>, the <c>elicitation?.form</c> gate in
-    /// <c>acp-agent.js</c>, and the <c>elicitation/create</c> method name in the ACP SDK. Skipped, not
-    /// failed, when the adapter is not installed.
+    /// its form-mode envelope in <c>elicitation.js</c>, the root <c>_meta</c> custom-answer marker it
+    /// still emits (spelled in <c>air-extension.js</c>, the only spelling the app reads), the
+    /// <c>elicitation?.form</c> gate in <c>acp-agent.js</c>, and the <c>elicitation/create</c> method
+    /// name in the ACP SDK. Skipped, not failed, when the adapter is not installed.
     /// </summary>
     [Fact(SkipUnless = nameof(VendoredAdapterFiles.Present), SkipType = typeof(VendoredAdapterFiles), Skip = "The vendored claude-agent-acp adapter is not installed (tools/acp/node_modules).")]
     public void VendoredAdapter_Sources_StillContainWhatTheFakeMirrors()
     {
         string elicitation = File.ReadAllText(VendoredAdapterFiles.ElicitationJs ?? throw new InvalidOperationException("elicitation.js is not installed."));
         string agent = File.ReadAllText(VendoredAdapterFiles.AcpAgentJs ?? throw new InvalidOperationException("acp-agent.js is not installed."));
+        string airExtension = File.ReadAllText(VendoredAdapterFiles.AirExtensionJs ?? throw new InvalidOperationException("air-extension.js is not installed."));
         string schema = File.ReadAllText(VendoredAdapterFiles.SdkSchemaJs ?? throw new InvalidOperationException("The SDK schema is not installed."));
 
         Assert.Contains("export function askUserQuestionsToCreateRequest", elicitation, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
         Assert.Contains("mode: \"form\"", elicitation, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
-        Assert.Contains("_askUserQuestionCustomAnswer", elicitation, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
+        Assert.Contains("[LEGACY_AIR_CUSTOM_ANSWER_KEY]: customAnswer", elicitation, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
+        Assert.Contains("LEGACY_AIR_CUSTOM_ANSWER_KEY = \"_askUserQuestionCustomAnswer\"", airExtension, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
         Assert.Contains("this.clientCapabilities?.elicitation?.form", agent, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
         Assert.Contains("elicitation/create", schema, StringComparison.Ordinal); // contains-ok: JavaScript source text, not markup
     }
