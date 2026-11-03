@@ -1,4 +1,5 @@
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Teams;
@@ -82,13 +83,22 @@ internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, Tea
     private static bool IsHuddleMemory(string fullPath, string root, bool removes)
     {
         string folder = Path.Combine(root, MemoryFolder);
-        if (ToolCallPaths.IsInside(fullPath, folder))
+        if (Inside(fullPath, folder))
         {
             return true;
         }
 
-        return removes && ToolCallPaths.IsAtOrAbove(fullPath, folder);
+        return removes && Inside(folder, fullPath);
     }
+
+    /// <summary>
+    /// Whether <paramref name="path"/> is <paramref name="folder"/> or inside it, ignoring case on every OS: this guard refuses, so
+    /// <c>Teams/MEMORY/x.md</c> on a case-sensitive file system must not slip past it (it did on Linux CI).
+    /// </summary>
+    /// <param name="path">A full path.</param>
+    /// <param name="folder">A full path to a folder.</param>
+    private static bool Inside(string path, string folder) =>
+        PathContainment.IsInside(path, folder, includeRoot: true, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The Teams whose Memory the write reaches: the one whose Memory folder contains (or is) the path and, for a delete or move, every Team whose Memory folder is inside the path.</summary>
     /// <param name="fullPath">A full path.</param>
@@ -104,7 +114,7 @@ internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, Tea
 
         if (removes)
         {
-            affected.AddRange(access.AllTeams.Where(team => MemoryFolders(team, root).Any(folder => ToolCallPaths.IsAtOrAbove(fullPath, folder))));
+            affected.AddRange(access.AllTeams.Where(team => MemoryFolders(team, root).Any(folder => Inside(folder, fullPath))));
         }
 
         return affected;
@@ -128,7 +138,7 @@ internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, Tea
     /// <param name="root">The full path of the Teams root.</param>
     private TeamSummary? TeamMemoryOwner(string fullPath, string root)
     {
-        if (!ToolCallPaths.IsInside(fullPath, root))
+        if (!Inside(fullPath, root))
         {
             return null;
         }

@@ -42,6 +42,7 @@ public sealed class RawGuardEdgeTests : IDisposable
     public void RefusalFor_AStreamNameInRawOrArchive_IsRefusedAsAnAlias(string relative)
     {
         ArgumentNullException.ThrowIfNull(relative);
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Short names and streams are Windows file system features.");
 
         string? refusal = this.Guard().RefusalFor(Call(ToolKind.Edit, this.Full(relative)));
 
