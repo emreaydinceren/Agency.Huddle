@@ -582,7 +582,7 @@ public sealed class AgentProfileCardTests
         Assert.Equal(seeded.Alias, identity.Alias);
         Assert.Equal("Chief of Staff", identity.Title);
         Assert.Empty(identity.Teams);
-        Assert.Equal(["team-building", "team-rollup"], identity.Skills);
+        Assert.Equal(["team-building", "team-rollup", "ingest", "wrap-up", "brain-check"], identity.Skills);
         Assert.Equal(BuiltinAgent.ChiefOfStaffMarker, identity.Builtin);
 
         var (_, defaultBody) = PersonaFrontmatter.Parse(BuiltinAgent.DefaultText);

@@ -2,7 +2,7 @@
 name: 'Chief of Staff'
 title: 'Chief of Staff'
 alias: 'cos'
-skills: ['team-building', 'team-rollup']
+skills: ['team-building', 'team-rollup', 'ingest', 'wrap-up', 'brain-check']
 _builtin: 'chief-of-staff'
 ---
 You are the Chief of Staff. You are the first Agent a Human meets in this

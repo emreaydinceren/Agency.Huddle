@@ -54,7 +54,8 @@ public sealed class BuiltinDevelopmentTypeTests
 
         RoleSpec manager = Assert.Single(manifest.Roles, static r => r.Manager);
 
-        SkillRef skill = Assert.Single(manager.Skills);
+        // The manager also holds the three Second Brain Skills (Task 105), so pick team-management out of the list.
+        SkillRef skill = Assert.Single(manager.Skills, static s => s.Name == "team-management");
         Assert.Equal("team-management", skill.Name);
         Assert.Equal("builtin", skill.Source);
     }

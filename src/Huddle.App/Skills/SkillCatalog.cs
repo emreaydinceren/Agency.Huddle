@@ -16,11 +16,33 @@ internal static class SkillCatalog
 {
     private const string ResourcePrefix = "Skills/Defaults/";
 
+    /// <summary>Where the Second Brain Skills (<c>ingest</c>, <c>wrap-up</c>, <c>brain-check</c>) are embedded.</summary>
+    private const string OverlayResourcePrefix = "Overlays/second-brain/skills/";
+
     /// <summary>Every shipped Skill's file name → text, keyed by Skill name; both levels compare ordinally.</summary>
     internal static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> All { get; } = BuildAll();
 
+    /// <summary>Reads the embedded files under <see cref="ResourcePrefix"/> and <see cref="OverlayResourcePrefix"/> (Spec §6.8).</summary>
+    /// <returns>Each file's path after its prefix (<c>skill/file</c>) → text; ordinal keys.</returns>
+    private static Dictionary<string, string> ReadPrefixes()
+    {
+        Dictionary<string, string> all = new(StringComparer.Ordinal);
+        foreach (string prefix in (string[])[ResourcePrefix, OverlayResourcePrefix])
+        {
+            foreach ((string remainder, string text) in EmbeddedResources.ReadFolder(
+                typeof(SkillCatalog).Assembly,
+                prefix,
+                static remainder => remainder.Contains('/')))
+            {
+                all[remainder] = text;
+            }
+        }
+
+        return all;
+    }
+
     /// <summary>
-    /// Enumerates the assembly's embedded resources under <see cref="ResourcePrefix"/>, splits each
+    /// Enumerates the assembly's embedded resources under both prefixes, splits each
     /// logical name into a Skill name and a file name, and reads every file's text with line endings
     /// normalised to <c>\n</c>.
     /// </summary>
@@ -29,11 +51,7 @@ internal static class SkillCatalog
     {
         Dictionary<string, Dictionary<string, string>> bySkill = new(StringComparer.Ordinal);
 
-        Dictionary<string, string> resources = EmbeddedResources.ReadFolder(
-            typeof(SkillCatalog).Assembly,
-            ResourcePrefix,
-            static remainder => remainder.Contains('/'));
-        foreach ((string remainder, string text) in resources)
+        foreach ((string remainder, string text) in ReadPrefixes())
         {
             int separatorIndex = remainder.IndexOf('/');
             string skillName = remainder[..separatorIndex];

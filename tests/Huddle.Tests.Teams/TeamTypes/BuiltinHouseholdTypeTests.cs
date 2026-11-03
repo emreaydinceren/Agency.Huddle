@@ -137,7 +137,8 @@ public sealed class BuiltinHouseholdTypeTests
         Assert.Equal(1, manager.MaxPerTeam);
         Assert.Equal(ModelTier.Strongest, manager.Model.Tier);
         Assert.Equal(["verify"], manager.Covers);
-        SkillRef skill = Assert.Single(manager.Skills);
+        // The manager also holds the three Second Brain Skills (Task 105), so pick team-management out of the list.
+        SkillRef skill = Assert.Single(manager.Skills, static s => s.Name == "team-management");
         Assert.Equal(new SkillRef("team-management", "builtin", "team-management"), skill);
         Assert.Equal(["Nora", "Ben", "Maya"], manager.SuggestedNames);
     }
