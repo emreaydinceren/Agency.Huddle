@@ -66,3 +66,20 @@ BLOCK|WriteAllText windows src|{"tool_input":{"command":"pwsh -Command \"[System
 BLOCK|scratch-looking path with src segment is still refused|{"tool_input":{"command":"printf x >> /tmp/scratch/src/A.cs"}}
 allow|cd into mysrc then write|{"tool_input":{"command":"cd /e/Repos/mysrc && printf x >> A.cs"}}
 allow|printf quoted pipe to scratchpad|{"tool_input":{"command":"printf 'a|b' >> /c/Users/user/AppData/Local/Temp/claude/scratchpad/x.txt"}}
+BLOCK|PS tool Set-Content quoted JSON-escaped windows path|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path \"E:\\Repos\\Huddle-wt\\sb-d5\\src\\Huddle.App\\X.cs\" -Value $x"}}
+BLOCK|PS tool Set-Content -LiteralPath|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -LiteralPath 'E:\\Repos\\W\\src\\X.cs' -Value $x"}}
+BLOCK|PS tool sc alias|{"tool_name":"PowerShell","tool_input":{"command":"sc E:\\Repos\\W\\src\\X.cs $x"}}
+BLOCK|PS tool ac alias|{"tool_name":"PowerShell","tool_input":{"command":"ac -Path src\\X.cs -Value $x"}}
+BLOCK|PS tool Add-Content positional|{"tool_name":"PowerShell","tool_input":{"command":"Add-Content tests\\Huddle.Tests.Agents\\A.cs $x"}}
+BLOCK|PS tool WriteAllText escaped path|{"tool_name":"PowerShell","tool_input":{"command":"[System.IO.File]::WriteAllText(\"E:\\Repos\\W\\src\\X.cs\", $x)"}}
+BLOCK|PS tool WriteAllText Join-Path quoted src|{"tool_name":"PowerShell","tool_input":{"command":"[IO.File]::WriteAllText((Join-Path $root 'src'), $x)"}}
+BLOCK|PS tool Set-Content Join-Path quoted src|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path (Join-Path $root \"src\") -Value $x"}}
+BLOCK|PS tool Out-File -FilePath|{"tool_name":"PowerShell","tool_input":{"command":"$x | Out-File -FilePath \"E:\\Repos\\W\\tests\\A.cs\""}}
+BLOCK|PS tool redirect variable|{"tool_name":"PowerShell","tool_input":{"command":"$x > src\\X.cs"}}
+BLOCK|PS tool redirect append string|{"tool_name":"PowerShell","tool_input":{"command":"\"x\" >> E:\\Repos\\W\\src\\X.cs"}}
+BLOCK|PS tool redirect cmdlet|{"tool_name":"PowerShell","tool_input":{"command":"Get-Date > tests/A.cs"}}
+allow|PS tool redirect to scratchpad|{"tool_name":"PowerShell","tool_input":{"command":"$x > C:\\Users/user\\scratchpad\\x.txt"}}
+allow|PS tool sc.exe service query|{"tool_name":"PowerShell","tool_input":{"command":"sc.exe query Spooler"}}
+allow|PS tool 2>&1 with src path arg|{"tool_name":"PowerShell","tool_input":{"command":"Get-ChildItem src 2>&1 | Out-Null"}}
+allow|PS tool commit prose redirect src|{"tool_name":"PowerShell","tool_input":{"command":"git commit -m \"route x > src/ later\""}}
+allow|PS tool Set-Content docs escaped path|{"tool_name":"PowerShell","tool_input":{"command":"Set-Content -Path \"E:\\Repos\\W\\docs\\x.md\" -Value $x"}}

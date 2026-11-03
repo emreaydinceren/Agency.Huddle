@@ -48,6 +48,10 @@ fi
 pos='(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*)'
 posc='(?:\x22command\x22\s*:\s*\x22|[;&|({]\s*|\\n\s*|-Command\s+[\x22\x27\\]*)'
 under='(?<=[/\\\x22\x27\s=(])(?:src|tests)(?:/|\\+)'
+# A bare quoted segment is a target too: Join-Path $root 'src'.
+underq='(?:(?<=[/\\\x22\x27\s=(])(?:src|tests)(?:/|\\+)|(?<=[\x22\x27])(?:src|tests)(?=\\*[\x22\x27]))'
+# PowerShell statement start for a redirect: a variable, a string, a paren, a type or a Verb-Noun cmdlet.
+psstart='(?:\$|[\x22\x27(\[]|\\\x22|[A-Z][a-z]+-[A-Z])'
 same='(?:\x27[^\x27]*\x27|\\\x22(?:(?!\\\x22).)*\\\x22|(?!\\n)[^|;&])*?'
 # `cd` into a folder that is itself a src or tests segment (any drive form, either slash), then a
 # writer with a relative target: cd /e/Repos/W/src/App && printf x >> A.cs
@@ -69,10 +73,13 @@ fi
 if matches "${pos}${cdsrc}(?:(?:cat|printf|echo)\\b${same}(?<![0-9&])>>?|(?:[^|;&]*\\|\\s*)?(?:tee|truncate)\\b)"; then
     deny "Blocked: a write after cd into a src or tests folder skips the Edit hooks. Use the Edit or Write tool."
 fi
-if matches "(?i)File\\]::(?:WriteAll|AppendAll)\\w*\\(${same}${under}"; then
+if matches "${pos}${psstart}${same}(?<![0-9&=-])\\*?>>?\\s*[\\x22\\x27\\\\]*(?:[^\\s\\x22\\x27|;&<>]*[/\\\\])?(?:src|tests)(?:/|\\\\+)"; then
+    deny "Blocked: a PowerShell > redirect into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
+fi
+if matches "(?i)File\\]::(?:WriteAll|AppendAll)\\w*\\(${same}${underq}"; then
     deny "Blocked: File.WriteAll/AppendAll into src/ or tests/ skips the Edit hooks. Use the Edit or Write tool."
 fi
-if matches "(?i)${posc}(?:Set-Content|Add-Content|Out-File)\\b${same}${under}"; then
+if matches "(?i)${posc}(?:(?:Set-Content|Add-Content|Out-File)\\b|(?:sc|ac)\\s)${same}${underq}"; then
     deny "Blocked: Set-Content, Add-Content and Out-File into src/ or tests/ skip the Edit hooks. Use the Edit or Write tool."
 fi
 if matches "${pos}truncate\\b${same}${under}"; then
