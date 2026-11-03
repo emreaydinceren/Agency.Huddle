@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 142 of 143 tasks Done · 9 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 143 of 143 tasks Done · 9 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -181,4 +181,4 @@ never by hand, so the status line stays true.
 | 14.4 #137 Reconcile the Spec [Sonnet] | | | ✔ |
 | 14.5 #138 Full verification [Sonnet] | | | ✔ |
 | 14.6 #139 Manual test page [Haiku] | | | ✔ |
-| 14.7 #140 Close the plan [Haiku] | ✔ | | |
+| 14.7 #140 Close the plan [Haiku] | | | ✔ |

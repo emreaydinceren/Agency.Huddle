@@ -11,6 +11,12 @@ the Spec's phases, **P0 to P7** (Spec §14.4, lines 1036–1049).
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**;
 its `.i` partner ends **green**. Chore and docs tasks have no test partner.
 
+> [!NOTE]
+> **Delivered 2026-11-03** on branch `docs/second-brain`: 143 tasks (140 planned plus 3 split:
+> 50b, 51b, 51c) and 9 retrospectives. The final full suite ran 14,877 tests, 0 failed. The
+> reviews and corrections files are in `Conversation/second-brain/` (not committed). The manual
+> acceptance tests are in `docs/engineering/manual-tests/second-brain.md` and have not yet been run.
+
 | Stream | Deliverables | Spec | May start |
 | --- | --- | --- | --- |
 | **A — Setup** | D0 | §14.4 P0 | First |
