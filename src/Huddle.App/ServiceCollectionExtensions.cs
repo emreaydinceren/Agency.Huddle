@@ -342,6 +342,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<CadenceStateStore>();
+        services.AddSingleton<RawBaselineStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaSpendStore>();
