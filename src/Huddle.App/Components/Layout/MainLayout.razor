@@ -103,6 +103,9 @@
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Library)">
                 <LibraryNavLink />
             </div>
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Scheduled)">
+                <ScheduledNav />
+            </div>
         </div>
         <SidebarResizeHandle StorageKey="@SidebarWidthKey" Width="this.sidebarWidth" WidthChanged="this.OnSidebarWidthChanged" Hidden="@(this.sidebarView is null)" />
     </MudDrawer>

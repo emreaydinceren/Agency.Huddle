@@ -126,9 +126,9 @@ public sealed class NeedsYouTrackerFeedTests
         Assert.Contains(new FeedResolution(room.Id, FeedSourceType.RoomBudget), feed.Resolutions);
     }
 
-    /// <summary>Deleting a Room drops its tracker entry, which resolves all four Room reasons for it.</summary>
+    /// <summary>Deleting a Room drops its tracker entry, which resolves every Room reason for it, the Job reason included.</summary>
     [Fact]
-    public async Task DeletedRoom_ResolvesAllFourReasons()
+    public async Task DeletedRoom_ResolvesEveryReason()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         RecordingFeedPublisher feed = new();
@@ -139,13 +139,13 @@ public sealed class NeedsYouTrackerFeedTests
 
         await fixture.Service.DeleteRoomAsync(room.Id, ct);
         DateTime deadline = DateTime.UtcNow.AddSeconds(10);
-        while (feed.Resolutions.Count(resolution => resolution.TargetKey == room.Id && resolution.Type != FeedSourceType.RoomMention) < 3 && DateTime.UtcNow < deadline)
+        while (feed.Resolutions.Count(resolution => resolution.TargetKey == room.Id && resolution.Type != FeedSourceType.RoomMention) < 4 && DateTime.UtcNow < deadline)
         {
             await Task.Delay(10, ct);
         }
 
         Assert.Equal(
-            [FeedSourceType.RoomMention, FeedSourceType.RoomQuestion, FeedSourceType.RoomForm, FeedSourceType.RoomBudget],
+            [FeedSourceType.RoomMention, FeedSourceType.RoomQuestion, FeedSourceType.RoomForm, FeedSourceType.RoomBudget, FeedSourceType.RoomJob],
             feed.Resolutions.Where(resolution => resolution.TargetKey == room.Id).Select(resolution => resolution.Type).Distinct());
     }
 

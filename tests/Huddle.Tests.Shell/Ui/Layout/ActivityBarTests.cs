@@ -25,17 +25,27 @@ public sealed class ActivityBarTests
         Assert.Equal(expected, SidebarViews.Next(current, clicked));
     }
 
-    /// <summary>With Tasks and Library turned off, their buttons are left out and the other three keep their order.</summary>
+    /// <summary>With Tasks, Library and Jobs turned off, their buttons are left out and the other three keep their order.</summary>
     [Fact]
-    public void Available_FeaturesOff_LeavesOutTasksAndLibrary()
+    public void Available_FeaturesOff_LeavesOutTasksLibraryAndScheduled()
     {
         TeamOptions options = new();
         options.Tasks.Enabled = false;
         options.Library.Enabled = false;
+        options.Jobs.Enabled = false;
 
         IEnumerable<SidebarView> views = SidebarViews.Available(options).Select(static item => item.View);
 
         Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Agents], views);
+    }
+
+    /// <summary>With every feature on, Scheduled is the last view button, after Library.</summary>
+    [Fact]
+    public void Available_JobsOn_PutsScheduledLast()
+    {
+        IEnumerable<SidebarView> views = SidebarViews.Available(new TeamOptions()).Select(static item => item.View);
+
+        Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Agents, SidebarView.Tasks, SidebarView.Library, SidebarView.Scheduled], views);
     }
 
     /// <summary>Only the selected view's button is pressed, and every button names the Sidebar it controls.</summary>
@@ -47,7 +57,7 @@ public sealed class ActivityBarTests
         IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p.Add(c => c.Selected, SidebarView.Teams));
 
         IReadOnlyList<IElement> buttons = cut.FindAll("button.activity-bar-item");
-        Assert.Equal(5, buttons.Count);
+        Assert.Equal(6, buttons.Count);
         IElement pressed = Assert.Single(buttons, static b => b.GetAttribute("aria-pressed") == "true");
         Assert.Equal("Teams", pressed.GetAttribute("aria-label"));
         Assert.Contains("activity-bar-item-selected", pressed.ClassList);

@@ -15,10 +15,11 @@ internal static class SidebarViews
         new(SidebarView.Agents, "Agents", Icons.Material.Filled.Group),
         new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.TaskAlt),
         new(SidebarView.Library, "Library", Icons.Material.Filled.MenuBook),
+        new(SidebarView.Scheduled, "Scheduled", Icons.Material.Outlined.Schedule),
     ];
 
     /// <summary>
-    /// The buttons to draw, top to bottom. Tasks and Library are left out when their feature is off, because
+    /// The buttons to draw, top to bottom. Tasks, Library and Scheduled are left out when their feature is off, because
     /// their views would then be empty.
     /// </summary>
     /// <param name="options">The installation's options.</param>
@@ -29,6 +30,7 @@ internal static class SidebarViews
         {
             SidebarView.Tasks => options.Tasks.Enabled,
             SidebarView.Library => options.Library.Enabled,
+            SidebarView.Scheduled => options.Jobs.Enabled,
             _ => true,
         })];
     }
@@ -44,7 +46,7 @@ internal static class SidebarViews
     /// <summary>
     /// The page area a Tab's address belongs to: the first path segment when it names one of the places the
     /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>agents</c>, <c>tasks</c>, <c>library</c>,
-    /// <c>settings</c>), otherwise <see langword="null"/> (the home page, an unknown address).
+    /// <c>scheduled</c>, <c>settings</c>), otherwise <see langword="null"/> (the home page, an unknown address).
     /// </summary>
     /// <param name="url">The site-relative address of the focused pane's active Tab, or <see langword="null"/> when it has none.</param>
     public static string? AreaOf(string? url)
@@ -64,6 +66,7 @@ internal static class SidebarViews
             "agents" => "agents",
             "tasks" => "tasks",
             "library" => "library",
+            "scheduled" => "scheduled",
             "settings" => "settings",
             _ => null,
         };
@@ -84,6 +87,7 @@ internal static class SidebarViews
         "agents" => SidebarView.Agents,
         "tasks" => SidebarView.Tasks,
         "library" => SidebarView.Library,
+        "scheduled" => SidebarView.Scheduled,
         "settings" => null,
         _ => current ?? SidebarView.Chats,
     };

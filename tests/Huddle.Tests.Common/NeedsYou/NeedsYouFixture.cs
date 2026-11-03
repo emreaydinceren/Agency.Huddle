@@ -42,6 +42,9 @@ internal sealed class NeedsYouFixture : IDisposable
         this.Tracker = new NeedsYouTracker(this.Events, this.Questions, this.Forms, this.Team, NullLogger<NeedsYouTracker>.Instance, this.Clock, feed);
     }
 
+    /// <summary>The temporary data directory, for a store a test opens beside the fixture's.</summary>
+    public TempDataDir Directory => this.dir;
+
     /// <summary>The hub everything publishes on.</summary>
     public RoomEvents Events { get; }
 

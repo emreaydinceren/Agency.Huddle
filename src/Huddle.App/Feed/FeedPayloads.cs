@@ -24,7 +24,7 @@ internal static class FeedPayloads
         FeedSourceType.TaskAssignedToYou => typeof(TaskAssignedPayload),
         FeedSourceType.RequestAwaitsYou => typeof(RequestAwaitsPayload),
         FeedSourceType.GateDecisionDue => typeof(GateDecisionPayload),
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget => typeof(RoomWaitPayload),
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob => typeof(RoomWaitPayload),
         FeedSourceType.RoomCreated => typeof(RoomCreatedPayload),
         FeedSourceType.RoomJoined => typeof(RoomJoinedPayload),
         FeedSourceType.RoomArchived => typeof(RoomArchivedPayload),

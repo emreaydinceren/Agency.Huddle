@@ -40,6 +40,7 @@
             'Waiting'         = 'Rooms'
             'Watching'        = 'Rooms'
             'NeedsYou'        = 'Rooms'
+            'Jobs'            = 'Rooms'
             'Helpers'         = 'Rooms'
             'Feed'            = 'Rooms'
             'Ui/Helpers'      = 'Rooms'

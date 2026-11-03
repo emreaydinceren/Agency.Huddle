@@ -827,6 +827,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.CadenceService>();
         services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Teams.CadenceService>());
 
+        // Scheduled Jobs: definitions in each owner's schedule.md, firing state in team.db, run once a minute like the cadences above.
+        services.AddSingleton<Agency.Huddle.App.Jobs.JobStore>();
+        services.AddSingleton<JobStateStore>();
+        services.AddSingleton<JobRoomStore>();
+        services.AddSingleton<Agency.Huddle.App.Jobs.IJobRunner, Agency.Huddle.App.Jobs.JobRunner>();
+        services.AddSingleton<Agency.Huddle.App.Jobs.JobScheduler>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Jobs.JobScheduler>());
+
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
         // must cascade into the Team Directory even when Team:Acp:Enabled is false and no runner is

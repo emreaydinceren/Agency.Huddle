@@ -4,6 +4,7 @@ using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Search;
@@ -61,6 +62,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Tasks feature.</summary>
     public TasksOptions Tasks { get; set; } = new();
+
+    /// <summary>Configuration for scheduled Jobs.</summary>
+    public JobsOptions Jobs { get; set; } = new();
 
     /// <summary>Configuration for the Avatar Library, per Spec §6.1. Unset means no library.</summary>
     public AvatarLibraryOptions AvatarLibrary { get; set; } = new();

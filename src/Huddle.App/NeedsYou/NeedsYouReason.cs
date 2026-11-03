@@ -18,4 +18,7 @@ internal enum NeedsYouReason
 
     /// <summary>The Room's Budget is spent, so it is paused until the Human speaks.</summary>
     Budget = 8,
+
+    /// <summary>A scheduled Job for the Human ran in the Room. Held in memory, like Questions, Forms and Budgets.</summary>
+    Job = 16,
 }

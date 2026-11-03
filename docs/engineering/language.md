@@ -833,6 +833,28 @@ See
 : *Avoid*: kanban in interface copy (fine in prose about the design), swimlane
   board, sprint board (filter a Board to a **Sprint** instead).
 
+## Jobs
+
+See [Huddle.Jobs-Specifications.md](../Huddle.Jobs-Specifications.md) and
+[ADR-0074](../adr/0074-a-job-is-markdown-in-its-owners-folder-and-runs-in-its-own-room.md).
+
+**Job**
+: An instruction that runs on a timetable for the Human or one Agent, its
+  owner. It is a `## ` section of the owner's `schedule.md`. Any Agent may
+  schedule its own; only the Chief of Staff schedules for someone else.
+: *Avoid*: schedule (that is the owner's whole file), task (a **Task** is
+  shared work with a status), reminder, cron job, routine.
+
+**Job Room**
+: The Room a Job runs in, named `⏰` and the Job's title, made on its first
+  run. Huddle posts the instruction there; an Agent's holds the Human and that
+  Agent, the Human's holds the Human alone. Never an Agent's one-to-one.
+: *Avoid*: schedule room, reminder room.
+
+**Scheduled**
+: The Sidebar view and page that list every Job and add one.
+: *Avoid*: schedules, cron, timers.
+
 ## Messages and storage
 
 **Message**

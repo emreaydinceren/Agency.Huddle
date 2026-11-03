@@ -1,0 +1,7 @@
+/* A Job's instruction keeps the line breaks it was written with. */
+.scheduled-instruction-text {
+    white-space: pre-wrap;
+    font-family: var(--mud-typography-body1-family);
+    font-size: var(--mud-typography-body1-size);
+    line-height: var(--mud-typography-body1-lineheight);
+}

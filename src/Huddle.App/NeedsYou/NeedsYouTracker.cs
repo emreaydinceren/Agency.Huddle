@@ -17,7 +17,7 @@ namespace Agency.Huddle.App.NeedsYou;
 /// </summary>
 internal sealed class NeedsYouTracker
 {
-    private static readonly NeedsYouReason[] AllReasons = [NeedsYouReason.Mention, NeedsYouReason.Question, NeedsYouReason.Form, NeedsYouReason.Budget];
+    private static readonly NeedsYouReason[] AllReasons = [NeedsYouReason.Mention, NeedsYouReason.Question, NeedsYouReason.Form, NeedsYouReason.Budget, NeedsYouReason.Job];
 
     private readonly Lock gate = new();
     private readonly IFeedPublisher? feed;
@@ -107,8 +107,26 @@ internal sealed class NeedsYouTracker
         this.Apply(roomId, state =>
         {
             state.Remove(NeedsYouReason.Mention);
+            state.Remove(NeedsYouReason.Job);
             state.Dismissed = true;
         });
+    }
+
+    /// <summary>
+    /// Records that a scheduled Job for the Human ran in its Room, which then waits until the Human posts there or dismisses it.
+    /// Huddle's own post of the instruction changes nothing here, so the Job runner calls this after posting.
+    /// </summary>
+    /// <param name="room">The Job Room.</param>
+    /// <param name="ranAt">When the Job ran.</param>
+    internal void MarkJob(Room room, DateTimeOffset ranAt)
+    {
+        ArgumentNullException.ThrowIfNull(room);
+
+        this.Apply(room.Id, state =>
+        {
+            state.Set(NeedsYouReason.Job, ranAt, FeedActor.Huddle.Name);
+            state.Dismissed = false;
+        }, room: room);
     }
 
     /// <summary>
@@ -140,6 +158,7 @@ internal sealed class NeedsYouTracker
             {
                 state.Remove(NeedsYouReason.Mention);
                 state.Remove(NeedsYouReason.Budget);
+                state.Remove(NeedsYouReason.Job);
             }, room: e.Room);
 
             return;
@@ -359,10 +378,11 @@ internal sealed class NeedsYouTracker
         NeedsYouReason.Mention => FeedSourceType.RoomMention,
         NeedsYouReason.Question => FeedSourceType.RoomQuestion,
         NeedsYouReason.Form => FeedSourceType.RoomForm,
+        NeedsYouReason.Job => FeedSourceType.RoomJob,
         _ => FeedSourceType.RoomBudget,
     };
 
-    /// <summary>Builds the Notification for a reason that has just begun. A Budget pause is Huddle's; the others are the Agent's.</summary>
+    /// <summary>Builds the Notification for a reason that has just begun. A Budget pause and a Job are Huddle's; the others are the Agent's.</summary>
     /// <param name="roomId">The Room.</param>
     /// <param name="room">The Room, when the event carried it; its Name and Team ride along.</param>
     /// <param name="reason">The reason.</param>
@@ -370,7 +390,7 @@ internal sealed class NeedsYouTracker
     private static FeedMessage ToFeedMessage(string roomId, Room? room, NeedsYouReason reason, ReasonInfo info) => new(
         NeedsYouTracker.SourceTypeOf(reason),
         roomId,
-        reason == NeedsYouReason.Budget ? FeedActor.Huddle : new FeedActor(FeedActorKind.Agent, info.By),
+        reason is NeedsYouReason.Budget or NeedsYouReason.Job ? FeedActor.Huddle : new FeedActor(FeedActorKind.Agent, info.By),
         true,
         new RoomWaitPayload(roomId, room?.Name, room?.Team));
 

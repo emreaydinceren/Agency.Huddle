@@ -119,6 +119,11 @@
             icons.Add(new ReasonIcon(Icons.Material.Filled.PauseCircleOutline, StatusColors.For(NeedsYouReason.Budget),"Paused: the Room's Budget is spent"));
         }
 
+        if (entry.Reasons.HasFlag(NeedsYouReason.Job))
+        {
+            icons.Add(new ReasonIcon(Icons.Material.Filled.Schedule, StatusColors.For(NeedsYouReason.Job), "A scheduled Job ran for you"));
+        }
+
         return icons;
     }
 

@@ -90,7 +90,7 @@ internal static class FeedSeeder
             FeedSourceType.DocumentChanged => Document(item, dataDir),
             FeedSourceType.HelperPaused => (HelperTarget(item), new HelperPausedPayload(item.Target, "Needs Human", HelperCap, 0)),
             FeedSourceType.HelperFailing => (HelperTarget(item), new HelperFailingPayload(item.Target, "Needs Human", 3, item.Detail ?? string.Empty)),
-            FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
+            FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
                 or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => Room(plan, item, ids),
             _ => TaskPayload(plan, item),
         };

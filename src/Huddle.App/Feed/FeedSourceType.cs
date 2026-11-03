@@ -36,6 +36,9 @@ public enum FeedSourceType
     /// <summary>A Room ran out of budget.</summary>
     RoomBudget,
 
+    /// <summary>A scheduled Job for the Human ran in its Room.</summary>
+    RoomJob,
+
     /// <summary>A Room was created.</summary>
     RoomCreated,
 

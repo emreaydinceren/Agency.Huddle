@@ -117,7 +117,7 @@ internal static class FeedSummary
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.TeamMemoryNotFiled => "proposals",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };
@@ -147,6 +147,7 @@ internal static class FeedSummary
             FeedSourceType.RoomMention => new([Text("mentioned you in "), room], null),
             FeedSourceType.RoomQuestion => new([Text("asked you a Question in "), room], null),
             FeedSourceType.RoomForm => new([Text("is waiting for you to fill in a Form in "), room], null),
+            FeedSourceType.RoomJob => new([Text("ran a scheduled Job for you in "), room], null),
             _ => new([room, Text(" reached its Budget")], null, OmitActor: false),
         };
     }
