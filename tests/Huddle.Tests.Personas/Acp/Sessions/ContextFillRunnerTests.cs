@@ -1,6 +1,7 @@
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -66,6 +67,38 @@ public sealed class ContextFillRunnerTests
 
         Assert.True(factory.Host?.Disposed);
         Assert.Null(fill.Get("agent-1", "room-a"));
+    }
+
+    /// <summary>
+    /// A later usage update that names no model keeps the model an earlier one named: the reading ends on
+    /// the second update's fill, still answered by the first update's model.
+    /// </summary>
+    [Fact]
+    public async Task UsageUpdates_LaterOneWithoutModel_ReadingKeepsTheEarlierModel()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var ct = cts.Token;
+        await using var server = new PipeRunnerServer("context-fill-model-tests", recordReceived: false);
+        var factory = new FakeAgentHostFactory();
+        string sessionId = factory.Session.SessionId;
+        factory.Session.EnqueueToolActivity(
+            new UsageUpdated(sessionId, 200_000, 30_000, Model: "m1"),
+            new UsageUpdated(sessionId, 200_000, 40_000, Model: null));
+        factory.Session.EnqueueReply("done");
+        var room = GroupRoom("room-a", "Room A");
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
+        ContextFill fill = new();
+
+        await using var runner = new PersonaRunner(
+            TestPersonas.Nova, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, contextFill: fill);
+        await server.HandshakeAsync(runner, [room], ct);
+        await server.SendAsync(Posted(room, "hello"), ct);
+        await server.ReceiveUntilAsync<PostMessage>(null, ct);
+        await Eventually.UntilAsync(() => fill.Get("agent-1", "room-a")?.Used == 40_000, ct, interval: TimeSpan.FromMilliseconds(20));
+
+        ContextFillReading? reading = fill.Get("agent-1", "room-a");
+        Assert.NotNull(reading);
+        Assert.Equal("m1", reading.Model);
     }
 
     private static RoomInfo GroupRoom(string id, string name) =>

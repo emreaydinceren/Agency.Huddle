@@ -125,6 +125,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private bool running;
     private long lastUsed;
 
+    /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
+    private string? lastModel;
+
     // D24: consulted and cleared only from ProcessWorkItemAsync, which the single consumer thread
     // always calls after the open that set them (OpenCoreAsync happens-before ProcessWorkItemAsync
     // in RunConsumerAsync's own sequence), so these need no lock of their own - the same reasoning
@@ -2119,9 +2122,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         // The context meter shows the latest gauge reading, every update, the resume baseline
         // included: that one is the restored context, which is what the meter should show.
+        this.lastModel = usage.Model ?? this.lastModel;
         if (this.agentId is { } id)
         {
-            this.contextFill?.Report(id, this.RoomId, usage.Used, usage.Size);
+            this.contextFill?.Report(id, this.RoomId, usage.Used, usage.Size, this.lastModel);
         }
 
         // Used is how full the context window is, not a running bill - Huddle.Console

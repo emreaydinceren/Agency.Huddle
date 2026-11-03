@@ -26,7 +26,8 @@ internal sealed class ContextFill(ILogger<ContextFill>? logger = null)
     /// <param name="roomId">The Room the session belongs to, or <see langword="null"/> for a shared-mode session.</param>
     /// <param name="used">How full the context window is now.</param>
     /// <param name="size">The size of the context window; zero when the Adapter did not say.</param>
-    public void Report(string agentId, string? roomId, long used, long size)
+    /// <param name="model">The model that answered, or <see langword="null"/> when unknown.</param>
+    public void Report(string agentId, string? roomId, long used, long size, string? model = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         if (roomId is not null)
@@ -47,10 +48,11 @@ internal sealed class ContextFill(ILogger<ContextFill>? logger = null)
             }
 
             string key = roomId ?? string.Empty;
-            changed = !rooms.TryGetValue(key, out ContextFillReading? existing) || existing.Used != used || existing.Size != size;
+            changed = !rooms.TryGetValue(key, out ContextFillReading? existing) || existing.Used != used || existing.Size != size
+                || !string.Equals(existing.Model, model, StringComparison.Ordinal);
             if (changed)
             {
-                rooms[key] = new ContextFillReading(used, size, Shared: false);
+                rooms[key] = new ContextFillReading(used, size, Shared: false, model);
             }
         }
 

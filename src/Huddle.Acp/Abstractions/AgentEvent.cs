@@ -75,7 +75,8 @@ public sealed record PlanUpdated(string SessionId, IReadOnlyList<PlanEntryInfo> 
 /// <param name="Size">The context window size, in tokens.</param>
 /// <param name="Used">The tokens in use.</param>
 /// <param name="Cost">The session's running cost, or <see langword="null"/> when this update carries none.</param>
-public sealed record UsageUpdated(string SessionId, long Size, long Used, UsageCost? Cost = null) : AgentEvent(SessionId);
+/// <param name="Model">The model id that answered, from <c>_meta["_claude/model"]</c>, or <see langword="null"/> when the update names none.</param>
+public sealed record UsageUpdated(string SessionId, long Size, long Used, UsageCost? Cost = null, string? Model = null) : AgentEvent(SessionId);
 
 /// <summary>The agent's current mode changed.</summary>
 public sealed record ModeChanged(string SessionId, string ModeId) : AgentEvent(SessionId);

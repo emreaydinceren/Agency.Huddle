@@ -191,6 +191,52 @@ public sealed class SessionUpdateMapperTests
         Assert.Equal(new UsageUpdated("s", 1000, 250), result);
     }
 
+    /// <summary>A usage update carrying <c>_meta["_claude/model"]</c> maps that model id to <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_MetaClaudeModel_MapsToModel()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate
+        {
+            Size = 1000,
+            Used = 250,
+            Meta = new Dictionary<string, object>
+            {
+                ["_claude/model"] = new Newtonsoft.Json.Linq.JValue("claude-haiku-5-5"),
+            },
+        };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Equal("claude-haiku-5-5", result.Model);
+    }
+
+    /// <summary>A usage update with no <c>_meta</c> maps to a <see langword="null"/> <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_NoMeta_ModelIsNull()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate { Size = 1000, Used = 250 };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(result.Model);
+    }
+
+    /// <summary>A usage update whose <c>_claude/model</c> is not a string maps to a <see langword="null"/> <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_ModelNotAString_ModelIsNull()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate
+        {
+            Size = 1000,
+            Used = 250,
+            Meta = new Dictionary<string, object>
+            {
+                ["_claude/model"] = new Newtonsoft.Json.Linq.JValue(42),
+            },
+        };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(result.Model);
+    }
+
     /// <summary>A tool call's first <c>diff</c> block and first location reach the event, so the Room view can name the file and show the change.</summary>
     [Fact]
     public void Map_ToolCallWithDiffAndLocation_CarriesBoth()

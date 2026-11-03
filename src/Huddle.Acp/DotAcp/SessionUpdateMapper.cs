@@ -80,7 +80,7 @@ internal static class SessionUpdateMapper
             return new PlanUpdated(sessionId, SessionUpdateMapper.MapPlanEntries(plan.Entries));
 
             case dotacp.protocol.UsageUpdate usageUpdate:
-            return new UsageUpdated(sessionId, (long)usageUpdate.Size, (long)usageUpdate.Used, SessionUpdateMapper.MapCost(usageUpdate.Cost));
+            return new UsageUpdated(sessionId, (long)usageUpdate.Size, (long)usageUpdate.Used, SessionUpdateMapper.MapCost(usageUpdate.Cost), SessionUpdateMapper.ReadModel(usageUpdate.Meta));
 
             case dotacp.protocol.CurrentModeUpdate currentModeUpdate:
 #pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
@@ -307,6 +307,29 @@ internal static class SessionUpdateMapper
         }
 
         return fields["toolName"] is Newtonsoft.Json.Linq.JValue { Value: string name } ? name : null;
+    }
+
+    /// <summary>
+    /// Reads the answering model id from <c>_meta["_claude/model"]</c>. dotacp hands each <c>_meta</c> value
+    /// over as a plain <see cref="string"/> on the live wire (Newtonsoft unwraps primitives into an
+    /// <c>object</c> slot) or as a <c>JValue</c> string when built by hand; a number or a missing key yields
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <param name="meta">The usage update's <c>_meta</c>, or <see langword="null"/> when it carries none.</param>
+    /// <returns>The model id, or <see langword="null"/> when it is absent or not a string.</returns>
+    internal static string? ReadModel(Dictionary<string, object>? meta)
+    {
+        if (meta is null || !meta.TryGetValue("_claude/model", out object? model))
+        {
+            return null;
+        }
+
+        return model switch
+        {
+            string text => text,
+            Newtonsoft.Json.Linq.JValue { Value: string name } => name,
+            _ => null,
+        };
     }
 
     /// <summary>
