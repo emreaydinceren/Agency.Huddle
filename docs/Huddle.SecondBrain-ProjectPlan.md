@@ -7,7 +7,7 @@ builds. The *why* behind every rule is in [`Huddle.SecondBrain.md`](Huddle.Secon
 (decisions D-1 to D-47); tasks cite a decision only where it settles a choice. It covers all of
 the Spec's phases, **P0 to P7** (Spec §14.4, lines 1036–1049).
 
-**15 deliverables · 140 tasks · 34 sized for Haiku (24%) · 9 retrospectives.** Every
+**15 deliverables · 141 tasks · 34 sized for Haiku (24%) · 9 retrospectives.** Every
 implementation task (`.i`) follows its test task (`.t`). A `.t` ends **red for the right reason**;
 its `.i` partner ends **green**. Chore and docs tasks have no test partner.
 
@@ -123,7 +123,7 @@ title), at the next pair boundary, the manager stops dispatching and runs a retr
 | House style | [`agents/CSharpPrinciples.md`](../agents/CSharpPrinciples.md). Most-failed rules: `this.` on members; `sealed`; `ConfigureAwait(false)` in `src` (not in `Components/`); one type per file; throw helpers; `StringComparison.Ordinal`; `TimeProvider`, never `DateTime.Now`; events through `EventRaise.Isolated` (HUD0001); hosted lifetimes in a `StopSignal` (HUD0002) |
 | Tests | [`agents/Testing.md`](../agents/Testing.md) (*Where a test goes*: lines 55–80; *Passing on Linux CI*; *Changing prompts and golden files*: lines 369–395). bUnit: [`agents/BlazorTesting.md`](../agents/BlazorTesting.md). Every test has a `///` summary; `TestContext.Current.CancellationToken` on every awaited call |
 | Internals | `Huddle.App` grants `[InternalsVisibleTo]` to every test project; new types are `internal sealed` and tests reach them directly. A new test project would need its own entry (none is planned) |
-| Test projects | Names, folders, reserved names, Team files, process: `tests/Huddle.Tests.Teams`. Library roots, provisioning, resolver, archive move: `tests/Huddle.Tests.Library`. Prompt catalog, composer, readers, indexes: `tests/Huddle.Tests.Personas`. Guards, tools (`list_teams`, `get_help`): `tests/Huddle.Tests.Agents`. Uploads, Rooms, Feed: `tests/Huddle.Tests.Rooms`. Tasks: `tests/Huddle.Tests.Tasks`. Seeder: `tests/Huddle.Tests.Domain`. Start-up and goldens: `tests/Huddle.Tests.Hosted` (goldens in `Acp/Golden/`). Components: `tests/Huddle.Tests.Components`. Skills: `tests/Huddle.Tests.SkillPacks`. When unsure: `agents/scripts/Find-TestProject.ps1` |
+| Test projects | Names, folders, reserved names, Team files, process: `tests/Huddle.Tests.Teams`. Library roots, provisioning, resolver, archive move: `tests/Huddle.Tests.Library`. Prompt catalog, composer, readers, indexes: `tests/Huddle.Tests.Personas`. Guards, tools (`list_teams`, `get_help`): `tests/Huddle.Tests.Agents`. Uploads, Rooms, Feed: `tests/Huddle.Tests.Rooms`. Tasks: `tests/Huddle.Tests.Tasks`. Seeder: `tests/Huddle.Tests.Teams/Seeder/` (there is no `Huddle.Tests.Domain` project). Start-up and goldens: `tests/Huddle.Tests.Hosted` (goldens in `Acp/Golden/`). Components: `tests/Huddle.Tests.Components`. Skills: `tests/Huddle.Tests.SkillPacks`. When unsure: `agents/scripts/Find-TestProject.ps1` |
 | Prompt defaults | After adding or removing a Prompt, run `agents/scripts/Regenerate-PromptDefaults.ps1` (rewrites `src/Huddle.App/prompts.default.json`) |
 | Goldens | Delete the affected golden and run `PromptGoldenTests`; it reseeds and fails once, then passes. Or `agents/scripts/Reseed-Goldens.ps1`. Only tasks that say so reseed |
 | Paths in tests | `Path.Combine`; assert ignoring separators; the temp folder is `/tmp/…` on Linux. Refusing guards compare ignoring case on every OS |
@@ -175,6 +175,11 @@ The manager keeps this section; retrospectives add to it.
 | Reconciler | `src/Huddle.App/Teams/TeamRoomReconciler.cs` line 16 (archives a vanished Team's Rooms, restores them on return) |
 | Goldens today | `tests/Huddle.Tests.Hosted/Acp/Golden/`: `systemPrompt.txt`, `systemPrompt.managerProcess.txt`, `systemPrompt.memberProcess.txt`, `systemPrompt.hiredMember.txt`, `systemPrompt.memory.txt`, `getHelp.txt` and others |
 | Atomic writes | `src/Huddle.App/Library/AtomicFile.cs` line 18 |
+| MA0051 headroom (R2) | The `DotAcpPersonaHost` constructor is at the 40-statement limit; `DotAcpAgentHostFactory.cs` ~line 113 is a method at 60 lines; the `PromptCatalog` `BuildPartNN` methods are near 61 lines. A new Prompt goes in a NEW `BuildPartNN` listed in `BuildAll` |
+| Prompt count pin (R2) | `tests/Huddle.Tests.Personas/PromptCatalogTests.cs` ~line 46 pins the count (now 144); a task that adds or removes a Prompt updates it |
+| Stubs for a new namespace (R2) | Put the throwaway stubs in `src/Huddle.App/Program.cs` (it has no file-scoped namespace), then remove them |
+| Constructor call sites (R2) | They often use target-typed `new(`, so a grep for `new X(` misses them: use `agents/scripts/Find-Constructions.ps1 -Type X` (being added; check it exists) |
+| `AgentsMdOptions` (R2) | `src/Huddle.App/AgentsMdOptions.cs` has both `MaxCharsPerFile` (8000) and `MaxTotalChars` (32000) |
 
 ---
 
@@ -505,15 +510,15 @@ their required placeholders, not their prose.
 ### Task 31 — 4.2.t The seeder writes the new layout [Sonnet]
 
 - **Goal:** Pin D-16: seeded data uses only the new structure (Spec §6.8, §7.1).
-- **Read first:** `src/Huddle.Seeder/Model/SeedTeam.cs`; `src/Huddle.Seeder/Writing/TeamFileWriter.cs`; one seeder test (`grep -rln "TeamFileWriter\|SoftwareCo" tests/Huddle.Tests.Domain`).
+- **Read first:** `src/Huddle.Seeder/Model/SeedTeam.cs`; `src/Huddle.Seeder/Writing/TeamFileWriter.cs`; one seeder test (`grep -rln "TeamFileWriter\|SoftwareCo" tests/Huddle.Tests.Teams/Seeder`).
 - **Risk:** `logic`.
-- **Deliverable:** `tests/Huddle.Tests.Domain/Seeder/SecondBrainSeedTests.cs`: seeding `software-co` produces no `Uploads/`, no `Process.md`, no `Instructions.md`; every Team has `raw/`, `memory/`, `outputs/`; uploads are under `raw/`; no Team or Project name `IsReservedTeamName`/`IsReservedProjectName`. (`AGENTS.md` and `_team.md` settings are pinned in Task 52.)
+- **Deliverable:** `tests/Huddle.Tests.Teams/Seeder/SecondBrainSeedTests.cs`: seeding `software-co` produces no `Uploads/`, no `Process.md`, no `Instructions.md`; every Team has `raw/`, `memory/`, `outputs/`; uploads are under `raw/`; no Team or Project name `IsReservedTeamName`/`IsReservedProjectName`. (`AGENTS.md` and `_team.md` settings are pinned in Task 52.)
 - **Acceptance:** Red on `Uploads/` and the missing folders.
 
 ### Task 32 — 4.2.i Update the seeder [Sonnet]
 
 - **Goal:** Make 4.2.t green.
-- **Read first:** the 4.2.t test; the seeder files above and `grep -rn "Uploads\|Process.md\|Instructions.md" src/Huddle.Seeder`.
+- **Read first:** the 4.2.t test; the seeder files above and `grep -rnE '"Uploads"|/Uploads/|Instructions\.md' src/Huddle.Seeder` (`SeedPlan.Uploads` is a property name, not the folder).
 - **Risk:** `logic`.
 - **Deliverable:** Seed `raw/` instead of `Uploads/` (Room and Task attachments per Spec §7.1); create the three folders per Team and Project; stop writing `Instructions.md` (its text moves to `AGENTS.md` in Task 52). Leave `Process.md` writing to Task 52. **Cascade (R1):** the seeder's output layout changes; run `Find-PinnedTests.ps1 -Pattern "Uploads|Instructions\.md"` and update `SeedRefreshTests` and every other test it lists in this task.
 - **Acceptance:** 4.2.t green except the `Process.md` row, which is marked `[Fact(Skip = "Task 52")]` with that reason.
@@ -553,7 +558,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 5.2.t green (Spec §6.2).
 - **Read first:** the 5.2.t test; `InstructionsReader.cs` (whole, 141 lines).
 - **Risk:** `logic`.
-- **Deliverable:** `src/Huddle.App/Acp/AgentsMdReader.cs`: `internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions options, ILogger<AgentsMdReader> logger)` with `public AgentsMdSnapshot Read(string teamsRoot, IReadOnlyList<string> teamNames)`. Lookup: `File.Exists(Path.Combine(dir, TeamPaths.AgentsMdFileName))` (the file system decides case, D-8). Projects: `Directory.EnumerateDirectories(teamDir)` minus `TeamNames.IsReservedProjectName` names, ordinal sorted. Reuse `InstructionsReader`'s cut logic (copy into the new class; `InstructionsReader` is deleted in Task 41).
+- **Deliverable:** `src/Huddle.App/Acp/AgentsMdReader.cs`: `internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions options, ILogger<AgentsMdReader> logger)` with `public AgentsMdSnapshot Read(string teamsRoot, IReadOnlyList<string> teamNames)`. Lookup: `File.Exists(Path.Combine(dir, TeamPaths.AgentsMdFileName))` (the file system decides case, D-8). Projects: `Directory.EnumerateDirectories(teamDir)` minus `TeamNames.IsReservedProjectName` names, ordinal sorted. Reuse `InstructionsReader`'s cut logic (copy into the new class; `InstructionsReader` is deleted in Task 42).
 - **Acceptance:** 5.2.t green.
 
 ### Task 37 — 5.3.t Frontmatter is stripped and reported [Haiku]
@@ -594,14 +599,15 @@ their required placeholders, not their prose.
 - **Read first:** `src/Huddle.App/Acp/SystemPromptComposer.cs` lines 210–275 and 326–362 (`AddInstructionsPart`); the golden test (`grep -rln "AssertMatchesGolden" tests/Huddle.Tests.Hosted`); Settled text T8.
 - **Risk:** `logic`.
 - **Deliverable:** In the golden test class add a case `AgentsMd_TwoTeamsWithProjects`: an Agent in Teams A and B with Huddle-wide, A, A/Alpha and B files; golden `systemPrompt.agentsMd.txt` (seeded by the run). A unit test in `tests/Huddle.Tests.Personas/Acp/AgentsMdCompositionTests.cs`: the levels sentence (T8) appears once, after the Persona text and before the identity line; each section's heading names its level and path; with an empty snapshot no block and no sentence appear.
+  Also update `tests/Huddle.Tests.Personas/Prompts/InstructionsAndMemoryPromptTests.cs` (~lines 16–37, run `grep -rln "InstructionsAndMemoryPromptTests" tests` for the path) and the Prompt-count pin in `PromptCatalogTests.cs` (~line 46) to the new behaviour. Fix the `PromptCatalog.cs` (~line 2064) Prompt text that says `Team:Instructions:MaxChars` to say `Team:AgentsMd:MaxCharsPerFile`.
 - **Acceptance:** Red: `Compose` has no `agentsMd` parameter.
 
-### Task 42 — 5.5.i Compose the block; retire Instructions [Sonnet]
+### Task 42 — 5.5.i Compose the block; retire Instructions [Sonnet] (independent review)
 
 - **Goal:** Make 5.5.t green.
 - **Read first:** the 5.5.t tests; `SystemPromptComposer.cs` lines 210–275, 326–362; `DotAcpPersonaHost.cs` lines 262–310; `PromptCatalog` definitions `systemPrompt.instructions*` (grep).
 - **Risk:** `logic`.
-- **Deliverable:** Replace `InstructionsSnapshot? instructions` with `AgentsMdSnapshot? agentsMd` in `Compose`; `AddAgentsMdPart` renders T8 (new Prompt `systemPrompt.agentsMdLevels`) then each section under a heading `## <Huddle-wide|Team A|Project A/Alpha> (<path>)`. Remove Prompts `systemPrompt.instructions`, `systemPrompt.instructionsSection`, `systemPrompt.instructionsCut` only if `AgentsMdReader` no longer renders them (it reuses the cut Prompt: rename it `systemPrompt.agentsMdCut`), and rename `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` with T5. `DotAcpPersonaHost.ReadInstructions` becomes `ReadAgentsMd` calling `AgentsMdReader.Read(teamsRoot, teamNames)`; `SessionPromptSources` holds `AgentsMdReader` instead of `InstructionsReader`; delete `InstructionsReader.cs`, `InstructionsSnapshot.cs`, `InstructionsSection.cs` and their tests. Regenerate Prompt defaults; reseed only the goldens this changes.
+- **Deliverable:** **Independent review.** In `Compose`, `instructions` is an optional named parameter (`SystemPromptComposer.cs` ~line 232); only `DotAcpPersonaHost.cs` (~line 296) and `InstructionsComposerTests` pass it. Replace it with `AgentsMdSnapshot? agentsMd` in the same slot, so the other `.Compose(` callers are untouched. No current golden holds Instructions text; only `systemPrompt.agentsMd.txt` is seeded. Replace `InstructionsSnapshot? instructions` with `AgentsMdSnapshot? agentsMd`; `AddAgentsMdPart` renders T8 (new Prompt `systemPrompt.agentsMdLevels`) then each section under a heading `## <Huddle-wide|Team A|Project A/Alpha> (<path>)`. Remove Prompts `systemPrompt.instructions`, `systemPrompt.instructionsSection`, `systemPrompt.instructionsCut` only if `AgentsMdReader` no longer renders them (it reuses the cut Prompt: rename it `systemPrompt.agentsMdCut`). (The `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` rename moves to Task 65: it breaks `InstructionsWriteGuard.cs` ~line 49, which Task 65 replaces.) `DotAcpPersonaHost.ReadInstructions` becomes `ReadAgentsMd` calling `AgentsMdReader.Read(teamsRoot, teamNames)`; `SessionPromptSources` holds `AgentsMdReader` instead of `InstructionsReader`; delete `InstructionsReader.cs`, `InstructionsSnapshot.cs`, `InstructionsSection.cs` and their tests. Regenerate Prompt defaults; reseed only the goldens this changes.
 - **Cascade (R1):** the `Compose` signature changes. Run `grep -rln "InstructionsSnapshot" src tests` and update every caller and test in this task, and regenerate the goldens under `tests/Huddle.Tests.Hosted/Acp/Golden/` that carry the Instructions block.
 - **Acceptance:** 5.5.t green; full suite green.
 
@@ -666,8 +672,8 @@ their required placeholders, not their prose.
 - **Goal:** Make 6.2.t green.
 - **Read first:** the 6.2.t test; `ProcessDocument.cs` (whole).
 - **Risk:** `logic`.
-- **Deliverable:** `TryParse` no longer requires or reads frontmatter (skip a leading block if present); remove `Gates`, `UnknownGates`, `Wip`, retro and digest members from the record (settings live in `TeamFile.Process`); remove `WithGates` (moved in 6.1). Fix callers in the next task.
-- **Acceptance:** 6.2.t green; build may fail only in the callers Task 50/51 fix: run only `ProcessProseTests` here.
+- **Deliverable:** **Independent review.** `TryParse` no longer requires or reads frontmatter (skip a leading block if present). Keep the record members `Gates`, `UnknownGates`, `Wip`, retro and digest and `WithGates` for now: removing them breaks the compile of `Huddle.Tests.Teams`, so Task 51 removes them once the callers have moved (settings live in `TeamFile.Process`).
+- **Acceptance:** 6.2.t green; the build stays green; run `ProcessProseTests` and the `Process*` tests.
 
 ### Task 50 — 6.3.t Gates, cadence and onboarding read the new places [Sonnet]
 
@@ -675,14 +681,23 @@ their required placeholders, not their prose.
 - **Read first:** `src/Huddle.App/Teams/TeamProcessFile.cs` (44 lines); `Teams/ProcessGateService.cs` and `Teams/CadenceService.cs` (grep `TeamProcessFile.` for the lines); `Teams/TeamOnboarding.cs` (same).
 - **Risk:** `logic`.
 - **Deliverable:** `tests/Huddle.Tests.Teams/Teams/ProcessSourcesTests.cs`: a Team with `_team.md` `gates: [proof]` and `AGENTS.md` Done items refuses a Done move until the Proof is complete; `retro:` in `_team.md` schedules the retro; onboarding steps come from `AGENTS.md`; a Team with no `AGENTS.md` has no Done items and no onboarding steps.
+- **Cascade (R2):** run `pwsh -NoProfile -File agents/scripts/Find-PinnedTests.ps1 -Pattern 'Process\.md|ProcessFileName'` and update the pinned tests (about 25 files) to the new behaviour in this `.t`.
 - **Acceptance:** Red (callers still read `Process.md`).
 
-### Task 51 — 6.3.i Point the callers at the new files [Sonnet]
+### Task 51 — 6.3.i-a Point the gates and cadence callers at the new files [Sonnet]
 
-- **Goal:** Make 6.3.t green.
-- **Read first:** the 6.3.t test; the four caller files' `TeamProcessFile.` lines.
+- **Goal:** Make the gates and cadence rows of 6.3.t green.
+- **Read first:** the 6.3.t test; `ProcessGateService.cs` and `CadenceService.cs` `TeamProcessFile.` lines.
 - **Risk:** `logic`.
-- **Deliverable:** `TeamProcessFile.PathOf/Read` locate `Teams/<Team>/AGENTS.md`; add `TeamProcessFile.Settings(ITeamFolders, string team)` returning `TeamFile.Process` from `_team.md`. `ProcessGateService` and `CadenceService` read settings through it; `TeamOnboarding` reads prose through `Read`. Remove `TeamPaths.ProcessFileName`.
+- **Deliverable:** **Independent review.** `TeamProcessFile.PathOf/Read` locate `Teams/<Team>/AGENTS.md`; add `TeamProcessFile.Settings(ITeamFolders, string team)` returning `TeamFile.Process` from `_team.md`. `ProcessGateService` and `CadenceService` read settings through it. Then remove the `ProcessDocument` record members `Gates`, `UnknownGates`, `Wip`, retro and digest and `WithGates` that Task 49 left (moved to `TeamFile.Process` in 6.1), fixing the callers in this task.
+- **Acceptance:** Gates and cadence rows of 6.3.t green; build green; `Process*` and `Cadence*` tests green.
+
+### Task 51b — 6.3.i-b Point the onboarding, retro and ProcessTab callers at the new files [Sonnet]
+
+- **Goal:** Make the rest of 6.3.t green.
+- **Read first:** the 6.3.t test; `TeamOnboarding.cs`, `RetroProposalService.cs`, `ProcessTab.razor` and `RoleBlockBuilder.cs` `TeamProcessFile.` lines.
+- **Risk:** `logic`.
+- **Deliverable:** **Independent review.** `TeamOnboarding` reads prose through `TeamProcessFile.Read`; move the retro, `ProcessTab` and `RoleBlockBuilder` callers to the new members (Tasks 55 and 57 retarget their behaviour). Remove `TeamPaths.ProcessFileName`.
 - **Acceptance:** 6.3.t green; full build green; `Process*`, `Cadence*`, `TeamOnboarding*` tests green.
 
 ### Task 52 — 6.4.t Provisioning writes `AGENTS.md` and `_team.md` [Sonnet]
@@ -698,7 +713,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 6.4.t green.
 - **Read first:** the 6.4.t test; `ProcessProvisioner.cs`; the seeder's process writing (`grep -rn "Process.md" src/Huddle.Seeder`).
 - **Risk:** `logic`.
-- **Deliverable:** `ProcessProvisioner.Provision` splits the template: frontmatter → `TeamFile.Process` (written through the existing `_team.md` write path, `AtomicFile`), body → `AGENTS.md` (only when absent). The seeder does the same.
+- **Deliverable:** **Independent review.** `ProcessProvisioner.Provision` splits the template: frontmatter → `TeamFile.Process` (written through the existing `_team.md` write path, `AtomicFile`), body → `AGENTS.md` (only when absent). The seeder does the same.
 - **Acceptance:** 6.4.t and `SecondBrainSeedTests` green.
 
 ### Task 54 — 6.5.t Huddle never writes `AGENTS.md` unasked [Sonnet]
@@ -714,7 +729,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 6.5.t green.
 - **Read first:** the 6.5.t tests; `ProcessTab.razor`; `TeamFolderProvisioner.cs` lines 330–400 (the `_team.md` write path).
 - **Risk:** `logic`.
-- **Deliverable:** The Process tab saves gates and cadence via `TeamFile.WithGates`/settings through the `_team.md` write path; its prose area becomes a link that opens the Team's `AGENTS.md` in the Library. Error text "Process.md could not be saved" becomes "Team settings could not be saved."
+- **Deliverable:** **Independent review.** The Process tab saves gates and cadence via `TeamFile.WithGates`/settings through the `_team.md` write path; its prose area becomes a link that opens the Team's `AGENTS.md` in the Library. Error text "Process.md could not be saved" becomes "Team settings could not be saved."
 - **Acceptance:** 6.5.t green; `ProcessTab*` tests green.
 
 ### Task 56 — 6.6.t Retro changes target `AGENTS.md` or `_team.md` [Sonnet]
@@ -730,7 +745,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 6.6.t green.
 - **Read first:** the 6.6.t test; `RetroProposalService.cs` lines 160–240; `Acp/Tools/ProposeRetroChangesTool.cs` (its target names).
 - **Risk:** `logic`.
-- **Deliverable:** Replace the `Process.md` target with the Team's `AGENTS.md` in the service and the tool's schema and description (`tool.proposeRetroChanges.description`); regenerate Prompt defaults.
+- **Deliverable:** **Independent review.** Replace the `Process.md` target with the Team's `AGENTS.md` in the service and the tool's schema and description (`tool.proposeRetroChanges.description`); regenerate Prompt defaults.
 - **Acceptance:** 6.6.t green; `Retro*` tests green.
 
 ### Task 58 — 6.7.t Every template has the house headings [Haiku]
@@ -740,6 +755,8 @@ their required placeholders, not their prose.
 - **Risk:** `data`.
 - **Deliverable:** `tests/Huddle.Tests.Teams/TeamTypes/ProcessTemplateHeadingsTests.cs`: a `[Theory]` over every `TeamTypes/Builtin/*/processes/*.md` (enumerate from the source folder the way other template tests do): the first `##` heading is `Identity`; the headings include `When it applies`, `Who does what`, `Stages`, `Gates`, `Escalation`, `If a role is not hired`, `Cadence`, `Onboarding`, `Definition of Done`.
 - **Acceptance:** Red: no template has `## Identity`.
+
+> Note (R2): commit Tasks 58–61 together (their red rows span three pairs); Retrospective 4 waits until Task 61 is committed.
 
 ### Task 59 — 6.7.a Add Identity to templates 1–10 [Haiku]
 
@@ -757,7 +774,7 @@ their required placeholders, not their prose.
 - **Deliverable:** As 6.7.a.
 - **Acceptance:** Those rows green.
 
-> 🔁 **Retrospective 4** runs here (after task #60).
+> 🔁 **Retrospective 4** runs here (after task #61 is committed; see the note at Task 59).
 
 ### Task 61 — 6.7.c Add Identity to templates 21–29 [Haiku]
 
@@ -802,7 +819,7 @@ their required placeholders, not their prose.
 - **Goal:** Make 7.1.t green.
 - **Read first:** the 7.1.t test; `InstructionsWriteGuard.cs`; `WorkDirPermissionHandler.cs` lines 60–90, 175–190; `Acp/DotAcpAgentHostFactory.cs` (where the guard is constructed).
 - **Risk:** `boundary`.
-- **Deliverable:** Rename `InstructionsWriteGuard` → `AgentsMdGuard(string teamsRoot, IPromptSource prompts)` (drop `workDir` and `agentPaths`: no Work Dir level); guarded depths below `teamsRoot`: 1 (`AGENTS.md`), 2 (`<Team>/AGENTS.md`), 3 (`<Team>/<Project>/AGENTS.md`); file name compared ignoring case; keep the 8.3 alias and folder-move checks. Update the handler parameter name and the factory. Delete the old tests.
+- **Deliverable:** Rename `InstructionsWriteGuard` → `AgentsMdGuard(string teamsRoot, IPromptSource prompts)` (drop `workDir` and `agentPaths`: no Work Dir level); guarded depths below `teamsRoot`: 1 (`AGENTS.md`), 2 (`<Team>/AGENTS.md`), 3 (`<Team>/<Project>/AGENTS.md`); file name compared ignoring case; keep the 8.3 alias and folder-move checks. Update the handler parameter name and the factory. Delete the old tests. Also rename the Prompt `systemPrompt.instructionsRefusal` → `systemPrompt.agentsMdRefusal` with T5 (moved from Task 42; the guard at ~line 49 is what uses it).
 - **Acceptance:** 7.1.t green; handler tests green.
 
 ### Task 66 — 7.2.t Huddle-wide Memory is the Chief of Staff's [Sonnet]
@@ -1492,7 +1509,7 @@ their required placeholders, not their prose.
 | # | After task | Date | Main findings | Plan changes |
 | --- | --- | --- | --- | --- |
 | 1 | #15 | 2026-11-02 | Tasks 1–16 done. About 26M subagent tokens for 16 tasks, roughly 70% of it the 71K inherited baseline of general-purpose agents. The frozen-test hook never fired (`$(</dev/stdin)` fails in the harness). Heredoc and `WriteAllText` edits bypassed the hooks. Two stale-test cascades (renames that existing tests pinned). | Implementers switch to a tool-limited agent type. Frozen-test hook fixed, fail-closed, with test cases. Hook extended to heredoc and `WriteAllText` writes. Dispatch rule 12 (cascades). Tasks 17–18 and 21–22 recast as guard test plus comment or rename, tagged Haiku. Tasks 43–44 retagged Sonnet. Cascade greps added to Tasks 20, 28, 32 and 42. New scripts `Find-PinnedTests.ps1` and `Rerun-Failed.ps1`. Delivery facts refreshed. |
-| 2 | #30 | | | |
+| 2 | #30 | 2026-11-02 | Tasks 17–30 done. About 14M subagent tokens for 14 tasks (inherited baseline cut from 71K to 23K through the `secondbrain-dev` agent type). The reviewer on 3.1 found 2 MAJORs the manager missed. | Keep independent reviews on boundary, composer and UI deliverables (marked in Tasks 42, 49–51b, 53, 55, 57). Plan fixes: seeder tests path (`Huddle.Tests.Teams/Seeder`), Task 32 grep narrowed, Task 36 reader deletion is Task 42, Task 41/42 cascade and the refusal rename moved to Task 65, Task 49 keeps record members until Task 51, Task 51 split into 51 and 51b, Tasks 58–61 commit together. New Delivery facts rows (MA0051 headroom, prompt-count pin, stub placement, constructor call sites). Scripts: `Find-Constructions.ps1`, `Remove-Stubs.ps1`, `Run-Tests.ps1` red-gate auto-accept, `Regenerate-PromptDefaults.ps1` pre-build. |
 | 3 | #45 | | | |
 | 4 | #60 | | | |
 | 5 | #75 | | | |
