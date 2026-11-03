@@ -37,6 +37,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
+| Understand where files go, and use the Second Brain pattern (planned) | [Your Second Brain](#your-second-brain) |
 | Give every Agent, or one Team, standing rules | [Instructions](#instructions) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
@@ -1477,6 +1478,197 @@ to. A Team Room has its flag set there too. Huddle creates and fills Team Rooms
 when the list of Teams changes, so a Team made by hand, or from an Agent's
 `teams:` line, gets one as well. A Team Room that you archive stays archived;
 Huddle does not recreate it.
+
+## Your Second Brain
+
+This section explains how Huddle organises what you and your Agents know: where files go, why,
+and how to use the pattern day to day. Read it before you set up Teams for areas of your life or
+work, or when you wonder where something should be saved.
+
+> [!IMPORTANT]
+> **Planned, not yet in Huddle.** This section describes the design in
+> [Huddle.SecondBrain.md](Huddle.SecondBrain.md), which is proposed and not built. Until it ships,
+> [Instructions](#instructions), [Memory and file changes](#memory-and-file-changes) and
+> [Attaching files](#attaching-files) describe how Huddle behaves today.
+
+### The principle
+
+A **Second Brain** is a place outside your head where knowledge is kept so it can be found and
+used again. People who keep one with an AI usually sort everything by what state it is in:
+
+- **What came in:** originals you brought, kept exactly as they arrived.
+- **What lasts:** the facts, decisions and agreements worth remembering, distilled from the
+  originals.
+- **What was made:** the documents produced from them: briefs, plans, reports.
+
+Huddle follows the same idea, and adds one thing: a plain file of **rules** at each level that
+says how Agents should behave there. Your Agents read and write this structure for you, so you
+spend your time on decisions rather than filing.
+
+### The pattern
+
+Every Team, and every Project inside it, has the same folders. The top of the Teams root has
+the same pattern for things that apply to everyone.
+
+```text
+Teams/
+  AGENTS.md     rules for every Agent
+  memory/       facts every Agent keeps
+  Home/                         a Team
+    AGENTS.md   how this Team works
+    raw/        what came in
+    memory/     what lasts
+    outputs/    what was made
+    _tasks/     what is due (Huddle keeps these)
+    Repairs/                    a Project in the Team
+      AGENTS.md
+      raw/  memory/  outputs/  _tasks/
+```
+
+| Folder | What goes in it | Who writes it | Can it change? | Agents read it |
+| --- | --- | --- | --- | --- |
+| `raw/` | Files you attach in chat or to a Task: PDFs, emails, screenshots, statements | You, by attaching | **No.** Kept exactly as it arrived. An Agent may add a derived file beside an original, such as a scan or a transcript | When a Message names a file, or when asked |
+| `memory/` | One fact per file: decisions and their reasons, who owns what, agreed ways of working | Agents, and you | Yes. A fact is corrected in place when it changes | **Every session**, as a short index of one line per fact |
+| `outputs/` | Documents worth reading again: briefs, plans, comparisons, reports, prep notes | Agents, and you | Yes | **Every session**, as an index of each document's "Read when…" line |
+| `_tasks/` | One file per Task | Huddle, through the Tasks screens | Through Tasks | Through the Task tools |
+| `AGENTS.md` | Rules: how to behave here | **You only** | When you edit it | **Every session**, in full |
+
+Two more things complete the picture:
+
+- **What recurs is a Job.** "Every weekday at 09:00, summarise yesterday" lives in the owner's
+  `schedule.md`, not in a Team folder. See [Scheduling jobs](#scheduling-jobs).
+- **An Agent's own rules live in its Agent file** (`Agents/<Name>/<Name>.md`). Use that only for
+  rules about that one Agent; editing it restarts the Agent.
+
+### How it helps
+
+- **Agents know where things go.** Every Agent is taught the same pattern, so a fact one Agent
+  learns is where every other Agent looks for it.
+- **Context stays small.** Agents carry short indexes of Memory and outputs, not every file. They
+  open a file only when its index line says it's relevant.
+- **Originals stay trustworthy.** Nothing in `raw/` is changed after it arrives, and a document
+  built from originals ends with a **Based on** list linking each one, so you can always check a
+  summary against its source.
+- **Rules are in one visible place.** What Agents are told to do is in `AGENTS.md` files you can
+  open, read and edit, in the Library or in any editor such as Obsidian.
+- **Nothing is lost when an area goes quiet.** You can archive a whole Team or Project, and bring
+  it back whole later.
+
+### Writing rules in `AGENTS.md`
+
+`AGENTS.md` is plain Markdown you write. There are three levels, and an Agent reads every level
+that applies to it:
+
+| Level | File | Who reads it |
+| --- | --- | --- |
+| **Huddle-wide** | `Teams/AGENTS.md` | Every Agent |
+| **Team** | `Teams/<Team>/AGENTS.md` | Every member of the Team |
+| **Project** | `Teams/<Team>/<Project>/AGENTS.md` | Every member of the Team |
+
+- **Every level adds.** A Project's rules are read together with its Team's rules, never instead
+  of them. **When two rules conflict, the more specific one wins:** a Project's over its Team's, a
+  Team's over the Huddle-wide rules. Use that to make a deliberate exception, such as one Project
+  that writes in another language.
+- **Put a rule at the broadest level it applies to.** A rule about how a Team works belongs in the
+  Team's file. Editing an `AGENTS.md` restarts nobody.
+- **Agents can't edit `AGENTS.md`.** An Agent that thinks a rule should change proposes it in a
+  retrospective, and you accept or decline.
+- A Team's settings (its type, manager, gates and schedules) are kept by Huddle in the hidden
+  `_team.md` and changed on the Team page, so your `AGENTS.md` holds only your words.
+- A new Team made from a Team type starts with an `AGENTS.md` written from that type: who the
+  Team is and what routes to it, how work moves through it, onboarding and its Definition of Done.
+  Edit it freely.
+
+### Using it day to day
+
+| You want to… | Do this | Where it ends up |
+| --- | --- | --- |
+| **Bring in a document** | Attach it in the Team's Room, or to a Task | `raw/`, unchanged |
+| **Capture something quickly** | Tell the Chief of Staff in a few words, without sorting it | The Chief of Staff routes it to the right Team, as a Task, a fact or a document, and asks you about anything it can't place |
+| **Have something remembered** | Say "remember this" to an Agent | Its own Memory, or its Team's Memory if the whole Team should know |
+| **Keep a document** | Ask the Agent to save it as an output | `outputs/`, with a "Read when…" line and a **Based on** list |
+| **Set a rule** | Edit the right `AGENTS.md` | Read by every Agent at that level |
+| **Track something with a date** | Ask for a Task, or create one | `_tasks/`, on the Board |
+| **Make something happen regularly** | Ask for a Job | The owner's `schedule.md` |
+| **Find something** | Ask. Agents look in their indexes, then Memory, outputs, Tasks and finally the originals, and say which file they used | — |
+
+Agents sort what they learn with two questions:
+
+1. **Does it say how to behave** ("always", "never", "before X, do Y")? Then it's a rule, and
+   belongs in an `AGENTS.md`. Agents propose rules; they don't write them.
+2. **Is it a fact that could change?** Then it's Memory.
+
+When neither question settles it, the Agent asks you.
+
+### Keeping it tidy
+
+A Second Brain drifts if nobody looks after it. Huddle can do most of the looking after:
+
+- **Daily reviews.** The Chief of Staff can run a review at times you choose: what's due and
+  overdue, what's waiting on you, and what was filed since the last review, with three things to
+  do today.
+- **A weekly check** per Team finds Memory over its limit, outputs with no "Read when…" line,
+  broken links and originals that changed after filing. It changes nothing: it files what it
+  finds as Tasks, and rule changes as proposals for you.
+- **A monthly check** lists Teams and Projects that have gone quiet and suggests keeping or
+  archiving each one.
+- **Wrapping up a session.** Ask an Agent to wrap up, and it proposes the rules, facts, documents
+  and Tasks the session produced, grouped by where each goes, and waits for your OK.
+- **Ingesting new originals.** Ask an Agent to go through new files in `raw/`, and it proposes
+  facts, Tasks and documents from them, each linked back to its source.
+
+The reviews and checks are Jobs. The Chief of Staff offers them when you start, and creates each
+one only if you say yes.
+
+When a Memory folder grows past its limit, you get a notification, and the Team's manager moves
+old facts into `memory/archive/`. They're kept, but no longer carried in every session.
+
+### Archiving a Team or a Project
+
+When an area of your life or work goes quiet, archive it from the Team's **Details** tab, or from
+a Project's row. Archiving moves the whole folder, unchanged, into the **Archive** root, which is
+laid out just like Teams.
+
+- It leaves every Agent's prompt and is no longer offered for new work. Its Rooms are archived,
+  and its Tasks leave the Boards. Before archiving, Huddle tells you how many open Tasks it would
+  hide.
+- Nothing is deleted. You can open its files in the Archive root, and links written before the
+  move still open them in Huddle.
+- **Unarchive** puts everything back where it was, members and Rooms included.
+
+### Teams with a workspace
+
+Some Teams work in a folder or repository outside Huddle, their **workspace**: a development
+Team's code repository, for example. For those Teams the real work lives in the workspace and
+follows its own conventions: specs and decisions in the repository, its own `AGENTS.md` or
+`CLAUDE.md` for rules about the code. The Team's `outputs/` then holds only what isn't part of
+that work, such as status reports and meeting prep. Agents are told which applies to each Team.
+
+### Seeing what an Agent reads
+
+An Agent's page shows everything its next session will be told, part by part: Huddle's own
+prompts, each `AGENTS.md` level, its Agent file, its Memory and output indexes, and its tools.
+Each part says where it comes from and links to where you change it. Huddle's own prompts can be
+changed on **Settings › Prompts**. A changed prompt is saved as a file in the **Prompts** root,
+and deleting that file returns it to Huddle's default.
+
+### If you use Jeff Su's system or BrainOS
+
+The pattern maps directly onto it:
+
+| In your vault | In Huddle |
+| --- | --- |
+| Workstation | Team |
+| Root and workstation `CLAUDE.md` | `Teams/AGENTS.md` and the Team's `AGENTS.md` |
+| Root and workstation `MEMORY.md` | `Teams/memory/` and the Team's `memory/` |
+| `raw/` | `raw/` |
+| Knowledge pages and the Resources table | `outputs/` and its "Read when…" index |
+| Inbox | A Message to the Chief of Staff |
+| Kanban board | Tasks |
+| `Archive/` | The Archive root |
+| Weekly and monthly checks | Jobs that run the checks for you |
+
+The full mapping is in [Huddle.SecondBrain.md](Huddle.SecondBrain.md), §2.4.
 
 ## Instructions
 
