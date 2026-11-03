@@ -52,4 +52,23 @@ public sealed class LibraryArchivedChipTests : IDisposable
         liveCut.WaitForAssertion(() => Assert.NotEmpty(liveCut.FindAll(".library-document-copy")));
         Assert.Empty(liveCut.FindAll(".library-document-archived"));
     }
+
+    /// <summary>
+    /// A file opened in the Archive root itself is marked too: a Message's link to an archived Team's file already points at
+    /// <c>root=archive</c>, and the manual run found that file shown with no Archived chip (SB-R20, U12).
+    /// </summary>
+    [Fact]
+    public async Task Viewer_ArchiveRootPath_ShowsArchivedChip()
+    {
+        string archived = Path.Combine(this.fixture.DataDir, "Archive", "Home", "outputs");
+        Directory.CreateDirectory(archived);
+        File.WriteAllText(Path.Combine(archived, "plan.md"), "# Plan");
+        Assert.True(this.fixture.Resolver.TryResolve("archive", "Home/outputs/plan.md", out LibraryPath? archivePath, out _));
+        Assert.NotNull(archivePath);
+        await using MudBunitContext ctx = this.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, archivePath);
+
+        cut.WaitForAssertion(() => Assert.Equal("Archived", cut.Find(".library-document-archived").TextContent.Trim()));
+    }
 }
