@@ -266,18 +266,18 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <returns>The prompt appended to the Adapter's own.</returns>
     private string ComposeSystemPrompt()
     {
-        var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries, this.sources.Warnings);
-        MemorySnapshot memory = new(this.memoryDir, entries, notListed);
-
-        TeamMemorySnapshot? teamMemory = null;
-        if (this.teamLabels.Count > 0)
-        {
-            // Read once into a local: this runs per open or resume, concurrently across Rooms, and
-            // the catalog's snapshot is swapped atomically, so one read is one consistent view.
-            IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
-            TeamMemorySnapshot built = TeamMemoryIndex.Build(this.teamsRoot, this.teamLabels, catalogTeams, this.maxTeamMemoryEntries, this.persona.Name, this.sources.Warnings);
-            teamMemory = built.Groups.Count > 0 ? built : null;
-        }
+        // Read the catalog once into a local: this runs per open or resume, concurrently across Rooms, and
+        // the catalog's snapshot is swapped atomically, so one read is one consistent view.
+        SessionPromptSnapshot inputs = SessionPromptInputs.Build(
+            this.sources.AgentsMd,
+            this.sources.Warnings,
+            this.teamCatalog.Teams,
+            this.persona.Name,
+            this.memoryDir,
+            this.maxMemoryEntries,
+            this.teamLabels,
+            this.teamsRoot,
+            this.maxTeamMemoryEntries);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -286,31 +286,14 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.toolNames,
             this.skills,
             this.readSkillToolName,
-            memory,
+            inputs.Memory,
             this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
-            teamMemory: teamMemory,
+            teamMemory: inputs.TeamMemory,
             askHumanToolName: this.askHumanToolName,
             roleBlock: this.roleBlock(),
-            agentsMd: this.ReadAgentsMd(),
+            agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.readsMemory,
             warnings: this.sources.Warnings);
-    }
-
-    /// <summary>
-    /// Reads the Human's AGENTS.md files now, so an edit made since the last session reaches the next one.
-    /// The Teams are the Persona's own, named by the catalog's folder spelling.
-    /// </summary>
-    /// <returns>The files read, or an empty snapshot.</returns>
-    private AgentsMdSnapshot ReadAgentsMd()
-    {
-        IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
-        List<string> teamNames =
-        [
-            .. this.teamLabels.Select(label =>
-                catalogTeams.FirstOrDefault(team => string.Equals(team.Name, label, StringComparison.OrdinalIgnoreCase))?.Name ?? label),
-        ];
-
-        return this.sources.AgentsMd.Read(this.teamsRoot, teamNames);
     }
 
     /// <summary>
