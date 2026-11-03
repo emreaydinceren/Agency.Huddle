@@ -1,6 +1,8 @@
 # Huddle.SecondBrain — Design Specification (HLD)
 
-**Date:** 2026-11-02 · **Status:** Proposed, not built · **Decisions:**
+**Date:** 2026-11-02 · **Status:** Built 2026-11-03 (branch `docs/second-brain`; this page
+now describes what was built, and where the build differs from the proposal the text says so) ·
+**Decisions:**
 [Huddle.SecondBrain.md](Huddle.SecondBrain.md) (D-1 to D-47; it records *why*, this page records
 *how*) · **Decision record:** ADR-0075, written in phase 0 · **Builds on:**
 [ADR-0007](adr/0007-model-facing-text-is-configuration.md),
@@ -79,7 +81,7 @@ Each requirement has an ID that Appendix A's tests cite.
 | SB-R16 | The Agent page shows the whole prompt by part | Each part shows label, source, default or overridden; the joined parts equal the composed prompt |
 | SB-R17 | A Prompt override is a file | Saving an override writes `Prompts/<key>.md`; deleting it restores the default; a dropped required placeholder is reported, not refused |
 | SB-R18 | A Team or Project can be archived and unarchived | Archive moves the folder to `Archive/` with its structure, removes the Team label from members and records them; unarchive restores both |
-| SB-R19 | Archiving survives a crash | A destination holding the archive marker at start-up is removed and the original is kept |
+| SB-R19 | Archiving survives a crash | A staging folder (`.huddle-archiving-<Team>`) or a move journal found at start-up is recovered: the original is kept or the move is finished, never half of each |
 | SB-R20 | Old paths into an archived area still open, read-only | Opening `Teams/Home/outputs/plan.md` after *Home* is archived opens `Archive/Home/outputs/plan.md`, marked archived; a write to the old path is refused |
 | SB-R21 | Retired files are reported at start-up | A data folder with `Process.md`, `Instructions.md`, `Uploads/` or `prompts.json` logs one warning per item naming it |
 | SB-R22 | The Second Brain text ships as embedded files that tests pin | Every prompt file parses, declares its key and keeps its required placeholders; `prompts.default.json` includes the keys |
@@ -197,7 +199,7 @@ handler, Uploads, Tasks, Jobs and Settings.
          ▼                     ▼
 ┌─────────────────┐ ┌──────────────────────┐ ┌────────────────────┐ ┌─────────────────────────┐
 │ Archive service │ │ Agent page view      │ │ PromptCatalog      │ │ Upkeep                  │
-│  move · marker  │ │ "What this Agent     │ │  code defaults +   │ │ Skills: ingest,         │
+│  move · journal │ │ "What this Agent     │ │  code defaults +   │ │ Skills: ingest,         │
 │  roster · names │ │  reads"              │ │  embedded overlay  │ │  wrap-up, brain-check   │
 │  → reconciler   │ └──────────────────────┘ │  files; PromptStore│ │ Jobs offered by the     │
 │    (Rooms)      │                          │  per-key overrides │ │  Chief of Staff         │
@@ -267,11 +269,17 @@ upload(room|task) ──▶ resolve scope ──▶ RoomUploadFolders / TaskUplo
 - `MemoryFileRules` reuses `IsReservedProjectName` to refuse topic names; it must keep refusing
   only `memory`-style names, so it gets its own list and `raw.md`/`outputs.md` stay valid topics.
 - `TeamFolderProvisioner` creates `Teams/<Label>/` for every Persona label today. It must also
-  skip reserved names and never create a folder for a label whose folder is under `Archive/`
-  (§6.7).
-- Task attachments: `TaskUploadFolders` resolves the Task's location from `TaskStore` and builds
-  the path under that Team or Project. A Task moved between Projects keeps its attachments where
-  they were saved; paths written in the Task stay valid.
+  skip reserved names and never create a folder for a label whose Team is archived (§6.7). A Team
+  is archived when `Archive/<T>/_team.md` exists; a Project archive also creates `Archive/<T>/<P>/`
+  for a live Team, so the folder alone proves nothing. `CreateTeamFolder` and `EnsureProjectIn`
+  refuse an archived Team's name too. A provisioner folder gate serialises `SyncFolders`,
+  `CreateTeamFolder` and the archive move; the archive service releases it before it removes a
+  label, because `PersonasChanged` runs `SyncFolders` synchronously while the membership gate is
+  held.
+- Task attachments: `TaskUploadFolders` takes `TaskStore` as a constructor dependency (C4), looks
+  the Task up and builds the path under its Team or Project; an unknown id returns `null`. A Task
+  moved between Projects keeps its attachments where they were saved; paths written in the Task
+  stay valid.
 
 **Constraints.**
 
@@ -329,9 +337,19 @@ session start (DotAcpPersonaHost)
   (§7.4).
 - `TeamFile` (in `Teams/TeamFile.cs`) gains `ProcessSettings` (`Gates`, `Wip`, `Retro`, `Digest`,
   `CheckCommand`, `Template`) and `ArchivedMembers`. Its writer keeps today's flat, quoted-scalar
-  style and keeps unknown keys verbatim. `TeamFile.TryParse` requires `teamType` today; that
-  requirement is relaxed so a label-born or Blank Team can hold settings (an empty `teamType` is
-  allowed and means "no type").
+  style and keeps unknown keys verbatim. `TeamFile.TryParse` used to require `teamType`; that
+  requirement is relaxed so a label-born or Blank Team can hold settings. A missing `teamType`
+  parses to `VersionedRef.None` and `Compose` omits the key for `None` (C6), so `TeamType` stays
+  non-nullable and callers did not change. Two more keys exist for the archive: `archivedManager`
+  and `archivedRooms` (§7.2); both are known keys, so they survive a rewrite.
+- Provisioning from a Team type writes the type's prose to `AGENTS.md` and its card and settings
+  to `_team.md`. When a `_team.md` already exists (a label-born Team, a re-provision), the
+  template's settings are merged into the settings it already holds: a key the file already sets
+  wins, and the template fills only the keys it leaves unset. A **Blank** Team gets an `AGENTS.md` that holds a heading outline only, no
+  settings and no `Process.md`: "writes neither" means no template prose.
+- An `AGENTS.md` that begins with a `---` rule and has a second `---` later is read as
+  frontmatter, by `AgentsMdReader` and `ProcessDocument` alike; `OnboardingSteps` does not skip
+  such a block. Start such a file with a heading.
 - `ProcessDocument` stops parsing frontmatter. It reads the prose sections (`## Onboarding`, the
   Definition of Done, the outline) from the Team's `AGENTS.md`; settings come from `TeamFile`.
 - `TeamProcessFile` locates the Team's `AGENTS.md` for the prose and `_team.md` for settings.
@@ -412,7 +430,17 @@ and ship the overlay's text as embedded files.
   `systemPrompt.secondBrainWorkspace` per Team with a readable workspace, the Huddle-wide Memory
   block, the outputs index.
 - Retire `systemPrompt.instructions*` and `systemPrompt.processBlockManager`/`Member`; add
-  `systemPrompt.agentsMdLevels` (the tie-break sentence).
+  `systemPrompt.agentsMdLevels` (the tie-break sentence). The retirement is complete (C5, Task
+  51c): the goldens `systemPrompt.managerProcess.txt` and `systemPrompt.memberProcess.txt` and
+  the tests that produced them are deleted, and `systemPrompt.agentsMd.txt` pins the new block. The
+  refusal Prompt `systemPrompt.instructionsRefusal` is renamed `systemPrompt.agentsMdRefusal`
+  with no placeholders (§6.6). Two further refusal and guard Prompts exist: the Prompts-root
+  refusal and the Huddle-wide Memory refusal, each in its own `BuildPartNN` of `PromptCatalog`,
+  and `systemPrompt.rawRefusal` (C8: model-facing text is configuration, ADR-0007, so the raw
+  guard's sentence is a Prompt). The catalog count pin rose to 146.
+- Slot 6 is "Always", yet a session may not offer every tool it names. Each tool name in the
+  summary renders through the session's tool roster: an offered tool shows its bare name, an
+  unoffered one shows `(not available here; tell the Human)`.
 - Load the overlay's prompt files from embedded resources into `PromptCatalog` at start-up (D-40).
 - Add the `getHelp.secondBrain` section to `get_help`'s output, as `getHelp.tasks` is today.
 
@@ -431,7 +459,8 @@ Huddle-wide, Team Memory, outputs, `AGENTS.md`), workspaces, session scope. Outp
   generated from the full catalog, and `PromptDefaultsFileTests` pins it.
 - Workspace kind: a `.git` folder **or file** at the workspace root means a repository.
   Readability is checked at session start (exists and listable); unreadable drops the part and
-  records a Team-page warning.
+  records a Team-page warning. A workspace root is also a Library root of its own kind,
+  `Workspace` (§6.9).
 
 **Constraints.** The composition order (§8.1) is fixed in code. Parts with no content are left
 out, never rendered empty.
@@ -476,9 +505,9 @@ spends a Turn.
 | Guarded path | Refused | Allowed |
 | --- | --- | --- |
 | `Teams/AGENTS.md`, `Teams/<T>/AGENTS.md`, `Teams/<T>/<P>/AGENTS.md` | Edit, Delete, Move | Read |
-| Any file under the Prompts root | Edit, Delete, Move | Read |
-| Under any `raw/` (Team, Project, Archive) or the Raw root | Delete, Move; `Edit` of an existing file | Read; `Edit` whose target does not exist yet |
-| `Teams/memory/` | Edit, Delete, Move by anyone but the Chief of Staff (and the Human) | Read |
+| Any file under the Prompts root; creating a new file there; the Prompts folder itself or an ancestor (`DataDir`); a Move whose destination is in it | Edit, Delete, Move | Read |
+| Under any `raw/` (Team, Project, Archive) or the Raw root; a folder that contains one (the Teams root, its ancestors, Team folders, Project folders) | Delete, Move; `Edit` of an existing file | Read; `Edit` whose target does not exist yet |
+| `Teams/memory/`, and the folder itself | Edit, Delete, Move by anyone but the Chief of Staff (and the Human) | Read |
 
 **Internal flow.**
 
@@ -505,8 +534,25 @@ tool call ─▶ ToolCallPaths.ChangesFiles(kind)? ─no─▶ approve
   `JobsTool` and `ListTeamsTool` do.
 - `RawGuard` matches a `raw` path segment only at a Team or Project position, or under the Raw or
   Archive roots; `Teams/X/outputs/raw/` is not matched.
-- The Library opens raw files and the Prompts root read-only for the Agent-facing paths; the
-  Human can delete or replace a raw file from its menu.
+- The guards travel as one aggregate, `PermissionGuards(AgentsMd, TeamMemory, Raw, Prompts)`,
+  built by the Agent host factory (it has the work dir, the Prompts and the roots) and passed to
+  `DotAcpPersonaHost` and `WorkDirPermissionHandler` in place of separate parameters (a method-length
+  limit forced one object). The handler is built in `DotAcpPersonaHost.CreatePermissionHandler`.
+  `AgentsMdGuard(teamsRoot, workDir, prompts)` keeps `workDir` to resolve relative paths;
+  `PromptsRootGuard(promptsRoot, workDir, prompts)` takes its root from
+  `Team:Library:Prompts:Dir`.
+- Root and path comparisons use `PathContainment.IsInside` ignoring case, as `RawGuard` does, not
+  the case-sensitive helpers in `ToolCallPaths`. Moving or deleting a folder that holds a `raw/`
+  is refused down to Project depth, skipping reserved names; `Teams/memory` itself and
+  `Teams/<T>/memory` are not raw holders. The Huddle-wide Memory check runs before the "fewer
+  than two segments" early return so the folder itself is covered.
+- Refusal texts are Prompts: `systemPrompt.agentsMdRefusal` (T5, no `{{path}}`; the handler logs
+  the refused path beside the reason), the Prompts-root and Huddle-wide Memory refusals, and
+  `systemPrompt.rawRefusal` (C8).
+- The Prompts root is an ordinary writable Library root (C3): the Library has no per-user access,
+  so the Human edits it there and Agents are kept out by the permission guard alone, never
+  through the Library. Raw files are read-only for Agent-facing paths; the Human can delete or
+  replace a raw file from its menu.
 
 **Constraints.** Soft by design: path arguments only; a shell redirect bypasses every guard; a
 Work Mode that never asks never reaches the handler. The `File.Exists` check races the write
@@ -537,24 +583,53 @@ Archive(team)
  1. lock ArchiveGate (one archive operation at a time)
  2. pre-checks: Archive/<team> absent (ignore case); team exists
  3. confirmation data: open Tasks, Needs You Tasks, Agents whose only Team this is
- 4. write _team.md: archivedMembers = current members (from catalog)
- 5. move folder (§8.4): same volume → Directory.Move; else marker + copy + delete + unmark
- 6. for each member: remove team from teams frontmatter (PersonaStore.Update → restart)
- 7. catalog rebuilds (PersonasChanged) → Team vanished → TeamRoomReconciler archives its Rooms
- 8. Feed: "Team <team> archived"
+ 4. write _team.md through ITeamFolders.UpdateTeamFile: archivedMembers = current members,
+    archivedManager = the manager, archivedRooms = the Team's Rooms (a label-only Team with no
+    _team.md gets one first, teamType = none)
+ 5. move folder (§8.4): staged, journalled, crash-safe
+ 6. for each member: ITeamMembership.Remove(team, name) (C1); the manager's label goes through
+    RemoveForArchive, which skips the "not the manager" refusal
+ 7. ArchiveService archives the Team's Rooms directly (it records their ids in archivedRooms);
+    the catalog rebuilds and TeamRoomReconciler leaves them alone
+ 8. Feed: "Team <team> archived" (Second Brain source type)
 ```
 
-Unarchive reverses: move back (step 5), restore labels to recorded members that still exist,
-remove `archivedMembers`, the reconciler unarchives exactly the Rooms it archived.
+Unarchive reverses: move back (step 5), restore labels with `Add(team, name)` for recorded members
+that still exist (using the folder's exact spelling), set `manager` back from `archivedManager`
+when that Persona exists, unarchive exactly the Rooms in `archivedRooms`, and remove the three
+keys. `Add` runs **before** `archivedMembers` is cleared, so a crash re-runs safely. Unarchive
+also refuses when the catalog already has a Team of that name (a label-only Team can exist with no
+folder).
 
 **Implementation notes.**
 
 - Ordering matters: the roster is written **before** the move (so it travels with the folder)
   and labels are removed **after** the move succeeds (so a failed move leaves members intact).
-- `TeamFolderProvisioner` must not re-create a folder for a label whose folder exists under
-  `Archive/`. Between steps 5 and 6 the label still exists; without this rule the provisioner
-  would race the move.
+- Membership goes through `ITeamMembership` (C1), the service that already edits `teams`
+  frontmatter for the Team page, not `PersonaStore.Update` directly. Removing a label restarts the
+  session but does not stop it (D-46): an Agent left with no Team keeps running. The
+  confirmation's "will have no Team" names are the members whose Persona Teams minus this one is
+  empty, computed before any label is removed. Jobs need nothing: they live under the Persona's or
+  Human's folder.
+- "Team archived" means `Archive/<T>/_team.md` exists. A Team archive merges the Team's
+  already-archived Projects into its staging folder and refuses on a Project name clash.
+- Names come from the folder as it is on disk, never from the request string, and every
+  ignore-case existence check lists the parent folder (on Linux `Directory.Exists` would miss
+  `Archive/Home` for `Archive/home`).
+- `TaskStore` would re-create `Teams/<T>/_tasks` mid-move, so Task writes pause for the duration
+  of the move and a write whose `Teams/<T>` folder is missing is refused.
+- `RawBaselineStore` rows are not rewritten. They sit unused while the Team is archived and match
+  again on unarchive because the folder keeps its exact spelling.
+- Start-up recovery (§8.4) also converges a crash between the roster write and the move: the live
+  `_team.md` has its `manager` removed and `archivedMembers` set while the folder is still in
+  `Teams/`, so the manager is restored from the roster and the roster cleared; a crash in the
+  other direction removes labels again for any `Archive/<T>/_team.md` that still carries them.
+- A move can be refused: `{Team} has files open in another program. Close them and try again.`
+  (a sharing or lock violation, after the rename retried with back-off; labels untouched), or
+  `{Team} could not be moved: {reason}` for any other IO error.
 - Project archive: no roster, no labels, no Rooms; move `Teams/<T>/<P>/` to `Archive/<T>/<P>/`.
+  Unarchive of a Project moves it back through the same staged move, and refuses when a Project of
+  that name already exists.
 - Cadences (`retro:`, `digest:`) stop because the Team leaves the catalog; on unarchive their
   next run is worked out from now, never caught up (ADR-0042).
 
@@ -570,19 +645,23 @@ moves of Team and Project folders; the archive service is the only mover.
 | Component | Trigger | Does |
 | --- | --- | --- |
 | Over-cap notifier | An index builder reports overflow | One Feed Notification per folder per UTC day, category *Second Brain*; a line in the Team manager's next prompt via the Memory block |
-| Retired-file scan | Start-up, once | Logs a warning per retired item found: any `Process.md`, `Instructions.md` under `Teams/` or a Work Dir, an `Uploads/` folder, `{DataDir}/prompts.json` |
+| Retired-file scan | Start-up, once (a one-shot `RetiredFileScanService : IHostedService` whose `StartAsync` scans and returns, C7) | Logs a warning per retired item found: any `Process.md`, `Instructions.md` under `Teams/` or a Work Dir, an `Uploads/` folder, `{DataDir}/prompts.json` |
 | Skill `ingest` | The Human asks | For new raw files, propose Memory, Tasks and outputs, each with a Based-on link; wait for OK |
 | Skill `wrap-up` | The Human asks | Propose rules, Memory, outputs and Tasks from the session, grouped by destination; wait for OK |
 | Skill `brain-check` | A weekly or monthly Job | Report caps, outputs with no description, broken links, raw files changed since their baseline, rules in Memory and facts in `AGENTS.md`, quiet Teams and Projects (no file change in 60 days); file findings as Tasks and rule changes as retro proposals; change nothing |
-| Offered Jobs | Chief of Staff onboarding | Offer daily reviews (Chief of Staff Jobs), a weekly `brain-check` per manager, a monthly `brain-check` for the Chief of Staff; create each only on the Human's yes |
+| Offered Jobs | Chief of Staff onboarding | Offer daily reviews (Chief of Staff Jobs), a weekly `brain-check` per manager (`weekly on fri at 16:00`), a monthly `brain-check` for the Chief of Staff (`weekly on mon at 09:00`, acting only on the first Monday: the Jobs timetable has no monthly preset); create each only on the Human's yes |
 
 **Implementation notes.**
 
 - Skills ship under `Overlays/second-brain/skills/` and install the way `Skills/Defaults/` Skills
   do today (`SkillCatalog`); they are granted to managers and the Chief of Staff.
-- "Changed since baseline" compares the file's size and modification time with its
-  `raw_baselines` row (§7.6). A raw file with no row (added by an Agent beside an original, or
-  copied in by hand) is not flagged.
+- "Changed since baseline" is computed by Huddle, not by the Skill (C9): a Skill runs as Agent
+  instructions and cannot read `team.db`. Huddle compares each file's size and modification time
+  with its `raw_baselines` row (§7.6) and `get_help` lists the changed files under **Raw files
+  changed since filing**; `brain-check` reads that list. A raw file with no row (added by an
+  Agent beside an original, or copied in by hand) is not flagged. The heading is a code constant
+  today; ADR-0007 would have it be a Prompt.
+- A Chief of Staff Persona file already on disk does not gain the three Skills (no migration).
 - "Quiet for 60 days" uses the newest file modification time under the Team or Project folder,
   excluding `_tasks/_closed/`.
 - The over-cap dedup key is `(folder, UTC date)`, held in memory; a restart may repeat one
@@ -598,16 +677,20 @@ attachment chip.
 **Responsibilities.**
 
 - New Library roots: **Raw** (`{DataDir}/Raw`), **Archive** (`{DataDir}/Archive`), **Prompts**
-  (`{DataDir}/Prompts`), each with a reserved slug in `LibraryRootStore`.
+  (`{DataDir}/Prompts`), each with a reserved slug in `LibraryRootStore`. The Archive root is built
+  with `LibraryRoot(..., ReadOnly: true)` (C2), so "read-only" is true in the Library editor as well
+  as in the fallback. A Team's workspace folder is a root of its own kind, `Workspace`, which
+  offers no Remove or Hide.
 - Resolver fallback: a missing `Teams/…` path resolves to the same relative path under `Archive/`,
-  read-only, marked *archived*; writes never fall back.
+  read-only, marked *archived*; writes never fall back (`TryResolveForRead`, §8.5).
 - The copy line on the Raw root and every `raw/` folder (§7.7).
 - Settings › Prompts edits per-key override files; the relied-on Prompts show a warning.
 - Team page: **Archive**/**Unarchive**, **Archived Teams** in the sidebar, **Archived Projects**
   on the Team page, the missing-workspace warning, and the `AGENTS.md` frontmatter warning.
 
-**Implementation notes.** `LibraryRootKind` gains `Raw`, `Archive` and `Prompts` and loses
-`Uploads`. `LibraryProtection` gains a read-only hook used for raw files and the Prompts root.
+**Implementation notes.** `LibraryRootKind` gains `Raw`, `Archive`, `Prompts` and `Workspace` and
+loses `Uploads`. `LibraryProtection` gains a read-only hook used for raw files; the Prompts root
+stays writable (C3).
 `PromptStore` becomes a folder-backed store: one file per override, a debounced folder watcher
 raising `PromptsChanged`, synchronous reads from an immutable snapshot (as today).
 
@@ -636,9 +719,12 @@ raising `PromptsChanged`, synchronous reads from an immutable snapshot (as today
       <Project>/
         AGENTS.md  raw/  memory/  outputs/  _tasks/
   Raw/<roomId>/…                        Library root "Raw": uploads from root Rooms
-  Archive/                              Library root "Archive", mirrors Teams/
-    <Team>/…                            an archived Team, structure unchanged
+  Archive/                              Library root "Archive" (read-only), mirrors Teams/
+    <Team>/…                            an archived Team, structure unchanged; it is archived
+                                        when <Team>/_team.md exists
     <Team>/<Project>/…                  an archived Project of a live Team
+    .huddle-archiving-<Team>/           staging while a move runs; removed at start-up
+    .huddle-move-<Team>.json            step journal of a move in flight (§8.4)
   Prompts/<key>.md                      Library root "Prompts": overrides only
   Agents/<Name>/
     <Name>.md                           Persona (+ the Agent's own rules)
@@ -653,7 +739,7 @@ Frontmatter only; the body is ignored (kept verbatim). Flat keys, single-quoted 
 
 | Key | Type | Required | Written by | Notes |
 | --- | --- | --- | --- | --- |
-| `teamType` | `id@version` or empty | No (was yes) | Provisioner | Empty for Blank or label-born Teams |
+| `teamType` | `id@version` or absent | No (was yes) | Provisioner | Absent for Blank or label-born Teams; parses to `VersionedRef.None` and is omitted on write (C6) |
 | `manager` | Agent Name | No | Team page, hire | |
 | `workspace` | Absolute path | No | Build a team, Details | Read for workspace routing (§6.4) |
 | `owns` | String | No | Details ("What it's for") | The routing line returned by `list_teams` |
@@ -665,6 +751,8 @@ Frontmatter only; the body is ignored (kept verbatim). Flat keys, single-quoted 
 | `checkCommand` | String | No | Process tab | Moved |
 | `template` | Process template id | No | Provisioner | Moved |
 | `archivedMembers` | `[Name, …]` | Only while archived | Archive service | Removed on unarchive |
+| `archivedManager` | Agent Name | Only while archived | Archive service | The manager at archive time; unarchive sets `manager` back when that Persona still exists, then removes the key |
+| `archivedRooms` | `[roomId, …]` | Only while archived | Archive service | The Rooms the archive archived; unarchive restores exactly those, then removes the key |
 
 ### 7.3 Overlay prompt file format
 
@@ -713,10 +801,18 @@ roughly 6,000 tokens; 32,000 leaves room for a few Projects before anything is d
 ### 7.5 Prompt override files
 
 `{DataDir}/Prompts/<key>.md`. The whole file is the text, no frontmatter. Line endings are
-normalised to `\n` on read; a UTF-8 BOM is stripped; trailing whitespace is trimmed. A file whose
+normalised to `\n` on read; a UTF-8 BOM is stripped; trailing whitespace is trimmed, and the
+default is trimmed the same way, so text that differs from the default only in trailing
+whitespace is not an override (saving text equal to the default deletes the file). A file whose
 name is not a known key is listed on Settings as *unknown override* and ignored. A file that drops
 a required placeholder is used as written and its Settings row shows the error (ADR-0007).
-`prompts.json` is no longer read; the retired-file scan reports it.
+File names match keys ignoring case (on Linux, two files differing only by case: the exact-case
+match wins); only `.md` files count, and `AtomicFile` temp files (`<name>.<guid>.tmp`) are
+skipped. If a file cannot be read mid-write the previous snapshot is kept; a transient read
+failure never drops a key back to its default. `SaveMany` writes every file, publishes once and
+raises `PromptsChanged` once; it is not atomic across keys, so a crash can leave some written.
+There is **no migration**: `prompts.json` is no longer read and its overrides are not carried
+over (nothing was in production); the retired-file scan reports the file.
 
 ### 7.6 `team.db`: raw baselines
 
@@ -731,9 +827,10 @@ CREATE TABLE IF NOT EXISTS raw_baselines (
 );
 ```
 
-Written by the upload writers after the bytes land; read by `brain-check`. Rows are not moved when
-a Team is archived: `brain-check` skips archived paths. A row whose file no longer exists is
-ignored.
+Written by the upload writers after the bytes land; read by Huddle when it lists changed raw files
+for `brain-check` (C9). Rows are never rewritten when a Team is archived: they sit unused and match
+again on unarchive because the folder keeps its exact spelling. A row whose file no longer exists
+is ignored.
 
 ### 7.7 Interface copy
 
@@ -769,7 +866,7 @@ ignored.
 | 3 | `AGENTS.md` block | `systemPrompt.agentsMdLevels`, then Huddle-wide, each Team (in `teams` order), each of its Projects (ordinal) | Any file exists |
 | 4 | Identity, chat rules, tools | Prompts | Always |
 | 5 | Tool paragraphs (ask the Human, log changes) | Prompts | Tool offered |
-| 6 | Second Brain summary | Prompt `systemPrompt.secondBrain` | Always |
+| 6 | Second Brain summary | Prompt `systemPrompt.secondBrain` | Always; a tool the session does not offer renders as `(not available here; tell the Human)` |
 | 7 | Workspace parts | Prompt `systemPrompt.secondBrainWorkspace` per Team | Team has a readable workspace |
 | 8 | Role block | Prompt `systemPrompt.roleBlock` | Hired into a role |
 | 9 | Skills | Prompt `systemPrompt.skills` | Holds a Skill |
@@ -779,8 +876,8 @@ ignored.
 | 13 | Outputs index | Prompt `systemPrompt.outputsIndex` + index | A member Team has outputs |
 | 14 | Closing (Room sessions, scope, carry line) | Prompts | Always |
 
-The process blocks (`processBlockManager`, `processBlockMember`) are retired: the process is part
-of the Team body in slot 3, which every member receives (D-47).
+The process blocks (`processBlockManager`, `processBlockMember`) are retired, goldens and tests
+included (C5): the process is part of the Team body in slot 3, which every member receives (D-47).
 
 ### 8.2 Building the `AGENTS.md` block
 
@@ -822,28 +919,38 @@ Does it prescribe behaviour ("always", "never", "before X do Y")?
 ### 8.4 Archive move
 
 ```text
-Move(src, dst):
-  if Path.GetPathRoot(src) == Path.GetPathRoot(dst) (same volume):
-      Directory.Move(src, dst)                         -- atomic rename
-      return
-  mkdir dst; write dst/.huddle-archiving {"source": src, "startedUtc": now}
-  copy tree src → dst (files and folders, preserving names; skip nothing)
-  verify: file count and total bytes equal
-  delete src (recursively)
-  delete dst/.huddle-archiving
-On any exception before "delete src": delete dst; rethrow; src untouched.
-Start-up recovery: for each folder under Archive/ and Teams/ containing .huddle-archiving:
-  the move did not finish → delete that folder (the marker is only ever in a destination).
+Move(src, dst):                       -- dst is Archive/<T> (archive) or Teams/<T> (unarchive)
+  journal ← Archive/.huddle-move-<T>.json   -- one step recorded after each step below
+  stage   ← Archive/.huddle-archiving-<T>   (unarchive: Teams/.huddle-unarchiving-<T>)
+  merge into an existing destination (a Team's archived Projects) is staged whole, never entry
+  by entry
+  1. try Directory.Move(src, stage)                  -- atomic rename
+     on IOException that means "different volume" -> copy tree src → stage
+     (different volume = different path roots, or HResult 0x80070011, or errno 18 / EXDEV)
+  2. verify: file count and total bytes of stage equal src's
+  3. rename stage → dst                              -- the only rename the watchers see
+  4. rename src → <parent>/.huddle-deleting-<T>; delete it
+  5. delete the journal
+Rename retries with back-off (as AtomicFile does); a sharing or lock violation that persists
+→ refusal "{Team} has files open in another program. Close them and try again."; any other
+IO error → "{Team} could not be moved: {reason}". Either way src is untouched until step 4.
+Start-up Recover: for each journal, read the last completed step and converge (finish or undo);
+  delete every .huddle-archiving-*, .huddle-unarchiving-* and .huddle-deleting-* folder.
 ```
 
-The marker name starts with `.`, so `TaskLayout`, the catalog and the Library ignore it.
+The cross-volume test does not compare `Path.GetPathRoot` alone: it also catches the IO error,
+which is what a mount point or a bind mount raises. The fallback lives in
+`PhysicalArchiveFileSystem`. The dot-prefixed names are ignored by `TaskLayout`, the catalog and
+the Library (`TaskLayout.IsReservedFolderName`), so a half-staged folder never looks like a Team.
+A merge into an existing archive folder goes through staging so that a half-moved `_team.md`
+cannot make the Team look archived.
 
 ### 8.5 Archive fallback in the resolver
 
 ```text
-Resolve(path, intent):
+TryResolveForRead(path):              -- the read-only entry point; Resolve (writes) never falls back
   r ← resolve normally
-  if r.exists or intent ≠ Read: return r
+  if r.exists: return r
   if path is under Teams/: alt ← Archive/ + relative(path, Teams/)
       if exists(alt): return alt with Archived = true, ReadOnly = true
   return r (not found)
@@ -851,7 +958,9 @@ Resolve(path, intent):
 
 Task ids (`GROW-0002`) resolve the same way: `TaskStore` misses, then the archived-Task lookup scans
 `Archive/**/_tasks/` for the id. The scan runs only on a miss and caches a found id until the next
-archive operation.
+archive operation. An archived Task id is read-only: reading it works, and a write (edit, comment,
+finish) is refused with a sentence saying the Task is archived and its Team or Project must be
+unarchived first.
 
 ### 8.6 Raw guard decision
 
@@ -859,7 +968,8 @@ archive operation.
 IsRawPath(p): segments of p relative to Teams/, Raw/ or Archive/ contain "raw" (ignore case) at
               position Team+1 or Team+Project+1, or p is under the Raw root.
 Decide(kind, p):
-  Delete | Move          → refuse "raw files are kept as they arrived; add a new file beside it"
+  Delete | Move          → refuse with Prompt systemPrompt.rawRefusal (C8), default "raw files are
+                           kept as they arrived; add a new file beside it"
   Edit and File.Exists(p) → refuse (same message)
   Edit and not exists     → allow
 ```
@@ -872,8 +982,11 @@ Decide(kind, p):
 | `_team.md` unparseable | Catalog keeps the last good snapshot; Team page shows the problem (as today) |
 | Overlay prompt file broken | Impossible at run time: tests fail the build (SB-R22) |
 | Override file unknown key | Ignored and listed |
-| Archive move fails mid-copy | Destination removed; source intact; error shown with the reason |
+| Archive move fails mid-copy | Staging folder removed; source intact; error shown: "has files open in another program" for a lock, else "could not be moved: {reason}" |
+| Process dies mid-move | Start-up `Recover` reads the step journal and converges; dot-prefixed staging and deleting folders are removed |
 | Label removal fails for one member | Logged and shown; the others proceed; unarchive restores whatever was recorded |
+| Task write to an archived Task id | Refused; reads work |
+| Override file unreadable mid-write | Previous prompt snapshot kept |
 | Workspace unreadable | Part dropped; Team-page warning |
 
 ---
@@ -952,7 +1065,7 @@ view makes the cost visible.
 | Archive of a Team with a Human-gated Task in Needs You | The confirmation names it; after archive it leaves Needs You; unarchive restores it |
 | Unarchive when a new Team took the name | Refused; the Human renames one first |
 | Unarchive when a recorded member was deleted | That member is skipped and named in the result |
-| Crash after copy, before delete (cross volume) | Start-up finds the marker in the destination, deletes the destination; the source is complete |
+| Crash after copy, before delete (cross volume) | Start-up reads the step journal `Archive/.huddle-move-<T>.json` and converges: the staged copy is verified and renamed in, or removed with the source kept; dot-prefixed leftovers are deleted |
 | Crash mid-rename (same volume) | The rename is atomic: either moved or not |
 | An Agent creates `raw/x.md`, then edits it | The second write is an `Edit` of an existing file: refused. Agents put working files in `outputs/` |
 | Windows path with `\` stored, read on Linux | Paths are stored with `/`; readers normalise `\` before `Path.GetFileName` (Testing.md) |
@@ -1178,7 +1291,7 @@ fail). Tests go in the project named; every test has a `///` summary (`Check-Tes
 | P6-I1 | Impl | Archive service (same-volume path) | | |
 | P6-T2 | Functional | Unarchive restores the folder and the labels; a deleted member is skipped and named | Huddle.Tests.Teams | SB-R18 |
 | P6-I2 | Impl | Unarchive | | |
-| P6-T3 | Unit | Cross-volume move with a failing file system: destination removed, source intact; a leftover marker is cleaned at start-up | Huddle.Tests.Library | SB-R19 |
+| P6-T3 | Unit | Cross-volume move with a failing file system: destination removed, source intact; leftover staging folders and the journal are recovered at start-up | Huddle.Tests.Library | SB-R19 |
 | P6-I3 | Impl | Marker-guarded copy and start-up recovery | | |
 | P6-T4 | Unit | Name collisions refused both ways, ignoring case | Huddle.Tests.Teams | §6.7 |
 | P6-I4 | Impl | Collision checks under `ArchiveGate` | | |

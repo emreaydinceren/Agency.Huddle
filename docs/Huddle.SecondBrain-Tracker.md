@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 138 of 143 tasks Done · 8 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 141 of 143 tasks Done · 8 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -165,7 +165,7 @@ never by hand, so the status line stays true.
 | 12.9.t #124 Uploads refused into archived Rooms [Sonnet] | | | ✔ |
 | 12.9.i #125 Refuse the upload [Sonnet] | | | ✔ |
 | 12.10.t #126 The archive UI [Sonnet] | | | ✔ |
-| 12.10.i #127 Build the UI [Sonnet] | | ✔ | |
+| 12.10.i #127 Build the UI [Sonnet] | | | ✔ |
 | **D13. P7: workspace routing** | | | |
 | 13.1.t #128 Repository or folder [Haiku] | | | ✔ |
 | 13.1.i #129 `WorkspaceProbe` [Haiku] | | | ✔ |
@@ -175,10 +175,10 @@ never by hand, so the status line stays true.
 | 13.3.i #133 Show the warning, add the root [Sonnet] | | | ✔ |
 | **D14. Close** | | | |
 | 14.1 #134 Glossary and limits [Haiku] | | | ✔ |
-| 14.2 #135 Engineering guide and code map [Haiku] | ✔ | | |
+| 14.2 #135 Engineering guide and code map [Haiku] | | | ✔ |
 | 🔁 R9 Retrospective 9 (tasks 121–135): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | 14.3 #136 User Guide [Haiku] | | | ✔ |
-| 14.4 #137 Reconcile the Spec [Sonnet] | ✔ | | |
+| 14.4 #137 Reconcile the Spec [Sonnet] | | | ✔ |
 | 14.5 #138 Full verification [Sonnet] | ✔ | | |
 | 14.6 #139 Manual test page [Haiku] | | | ✔ |
 | 14.7 #140 Close the plan [Haiku] | ✔ | | |
