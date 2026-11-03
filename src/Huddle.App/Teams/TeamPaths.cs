@@ -24,6 +24,9 @@ internal static class TeamPaths
     /// <summary>The Human's standing Instructions, at the Teams root, in a Team folder or in an Agent's Work Dir (Instructions and Memory §3.1).</summary>
     public const string InstructionsFileName = "Instructions.md";
 
+    /// <summary>The agent-guide file name, which a memory folder never takes as a topic.</summary>
+    public const string AgentsMdFileName = "AGENTS.md";
+
     /// <summary>A Team's retrospective register.</summary>
     public const string RetroRegisterFileName = "Retro register.md";
 

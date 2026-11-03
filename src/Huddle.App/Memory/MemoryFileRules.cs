@@ -57,12 +57,24 @@ internal static partial class MemoryFileRules
         return stem.Length > 0
             && !stem.EndsWith(' ')
             && !stem.EndsWith('.')
-            && !stem.StartsWith('_')
             && !DeviceNames.Contains(stem, StringComparer.OrdinalIgnoreCase)
             && !string.Equals(file, TeamPaths.InstructionsFileName, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(file, TeamPaths.AgentsMdFileName, StringComparison.OrdinalIgnoreCase)
             && !IsIndexFileName(file)
-            && !TeamNames.IsReservedProjectName(stem);
+            && !IsReservedTopicStem(stem);
     }
+
+    /// <summary>
+    /// Whether <paramref name="stem"/> is refused as a topic name: a name starting with <c>_</c> or <c>.</c> is a draft or
+    /// hidden file, and <c>memory</c> is the Memory folder's own name, ignoring case. Project folder names such as
+    /// <c>raw</c> and <c>outputs</c> are topics like any other.
+    /// </summary>
+    /// <param name="stem">The file name without its <c>.md</c> extension.</param>
+    /// <returns><see langword="true"/> when the stem is reserved and must not be written as a topic.</returns>
+    private static bool IsReservedTopicStem(string stem) =>
+        stem.StartsWith('_')
+        || stem.StartsWith('.')
+        || string.Equals(stem, "memory", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Whether <paramref name="file"/> is <see cref="IndexFileName"/>, ignoring case.</summary>
     /// <param name="file">A file name, without a folder.</param>
