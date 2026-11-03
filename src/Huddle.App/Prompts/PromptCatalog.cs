@@ -94,6 +94,7 @@ internal static class PromptCatalog
         ..BuildPart46(),
         ..BuildPart47(),
         ..BuildPart48(),
+        ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
     ];
 

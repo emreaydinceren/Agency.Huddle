@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 84 of 143 tasks Done · 5 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 88 of 143 tasks Done · 5 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -112,13 +112,13 @@ never by hand, so the status line stays true.
 | 9.1.i #77 Folder-backed `PromptStore` [Sonnet] | | | ✔ |
 | 9.2.t #78 Reporting, never refusing [Sonnet] | | | ✔ |
 | 9.2.i #79 Report unknown and broken overrides [Sonnet] | | | ✔ |
-| 9.3.t #80 Agents can't write the Prompts folder [Sonnet] | | ✔ | |
-| 9.3.i #81 `PromptsRootGuard` [Sonnet] | ✔ | | |
+| 9.3.t #80 Agents can't write the Prompts folder [Sonnet] | | | ✔ |
+| 9.3.i #81 `PromptsRootGuard` [Sonnet] | | | ✔ |
 | 9.4.t #82 Relied-on warnings [Sonnet] | | | ✔ |
 | 9.4.i #83 The `Relied` flag [Haiku] | | | ✔ |
 | **D10. P5: overlay files and teaching Prompts** | | | |
-| 10.1.t #84 Shipped prompt files are pinned [Sonnet] | ✔ | | |
-| 10.1.i #85 Load the overlay files [Sonnet] | ✔ | | |
+| 10.1.t #84 Shipped prompt files are pinned [Sonnet] | | | ✔ |
+| 10.1.i #85 Load the overlay files [Sonnet] | | | ✔ |
 | 10.2 #86 Write the teaching Prompt texts [Haiku] | ✔ | | |
 | 10.3.t #87 The summary in every session [Sonnet] | ✔ | | |
 | 10.3.i #88 Add slot 6 [Sonnet] | ✔ | | |

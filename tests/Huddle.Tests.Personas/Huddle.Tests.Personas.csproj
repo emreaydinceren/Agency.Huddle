@@ -1,3 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Huddle.Tests.Feature.props" />
+  <ItemGroup>
+    <EmbeddedResource Include="Prompts\Fixtures\test.md" LogicalName="OverlayFixtures/test.md" />
+  </ItemGroup>
 </Project>

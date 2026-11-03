@@ -52,6 +52,7 @@
     <EmbeddedResource Include="Themes\Skins\*.json" LogicalName="Themes/Skins/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Builtin\*.md" LogicalName="Builtin/%(Filename)%(Extension)" />
     <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Overlays\second-brain\**\*.md" LogicalName="Overlays/second-brain/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\hiringpool.json" LogicalName="HiringPool/hiringpool.json" />
     <EmbeddedResource Include="HiringPool\personas\*.md" LogicalName="HiringPool/personas/%(Filename)%(Extension)" />
   </ItemGroup>
