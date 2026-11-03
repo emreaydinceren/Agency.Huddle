@@ -298,7 +298,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             memoryChangesListed: this.readsMemory,
             warnings: this.sources.Warnings,
             huddleMemory: inputs.HuddleMemory,
-            outputs: inputs.Outputs);
+            outputs: inputs.Outputs,
+            workspaces: inputs.Workspaces);
     }
 
     /// <summary>

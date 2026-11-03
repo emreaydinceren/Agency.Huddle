@@ -64,7 +64,26 @@ internal static class SessionPromptInputs
             ReportOverCap(overCap, personaName, memory, teamMemory, huddleMemory, outputs, (maxMemoryEntries, maxTeamMemoryEntries, maxHuddleMemoryEntries, maxOutputsEntries));
         }
 
-        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs);
+        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs, ReadableWorkspaces(catalogTeams, teamNames));
+    }
+
+    /// <summary>Lists, in the given order, each Team whose catalog entry names a workspace that is a repository or a readable folder (Spec §6.4).</summary>
+    /// <param name="catalogTeams">The catalog's Teams.</param>
+    /// <param name="teamNames">The Persona's Teams, in the order written, spelled as the catalog spells them.</param>
+    /// <returns>The <c>(team, path)</c> pairs; a Team without a workspace or with an unreadable one is left out.</returns>
+    private static List<(string Team, string Path)> ReadableWorkspaces(IReadOnlyList<TeamSummary> catalogTeams, IReadOnlyList<string> teamNames)
+    {
+        List<(string Team, string Path)> workspaces = [];
+        foreach (string name in teamNames)
+        {
+            string? path = catalogTeams.FirstOrDefault(team => string.Equals(team.Name, name, StringComparison.OrdinalIgnoreCase))?.Workspace;
+            if (path is not null && WorkspaceProbe.StateOf(path) != WorkspaceState.Unreadable)
+            {
+                workspaces.Add((name, path));
+            }
+        }
+
+        return workspaces;
     }
 
     /// <summary>Tells the notifier about every folder whose index left files out (SB-R13, Spec §6.8). Spec T14 is the one text for all four indexes.</summary>

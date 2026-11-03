@@ -648,7 +648,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             memoryChangesListed: this.ReadsMemory(profile),
             warnings: sources.Warnings,
             huddleMemory: inputs.HuddleMemory,
-            outputs: inputs.Outputs);
+            outputs: inputs.Outputs,
+            workspaces: inputs.Workspaces);
         return (parts, profile.Id);
     }
 }

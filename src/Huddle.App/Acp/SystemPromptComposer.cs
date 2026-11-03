@@ -216,6 +216,10 @@ internal static class SystemPromptComposer
     /// The outputs index of the Persona's Teams, or <see langword="null"/> or an empty one for none; either leaves the output byte-identical to a
     /// call without it. Otherwise <c>systemPrompt.outputsIndex</c> follows Team Memory and precedes the closing part.
     /// </param>
+    /// <param name="workspaces">
+    /// The <c>(team, path)</c> of each Team with a readable workspace, in the Persona's <c>teams</c> order, or <see langword="null"/> for none;
+    /// each adds one <c>systemPrompt.secondBrainWorkspace</c> part after the Second Brain summary.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -241,16 +245,17 @@ internal static class SystemPromptComposer
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null,
         MemorySnapshot? huddleMemory = null,
-        OutputsSnapshot? outputs = null)
+        OutputsSnapshot? outputs = null,
+        IReadOnlyList<(string Team, string Path)>? workspaces = null)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -269,6 +274,7 @@ internal static class SystemPromptComposer
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     /// <param name="huddleMemory">The Huddle-wide Memory index (<c>Teams/memory/</c>), or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.huddleMemory</c> between Memory and Team Memory.</param>
     /// <param name="outputs">The outputs index of the Persona's Teams, or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.outputsIndex</c> after Team Memory.</param>
+    /// <param name="workspaces">The <c>(team, path)</c> of each Team with a readable workspace, in the Persona's <c>teams</c> order, or <see langword="null"/> for none; each adds one <c>systemPrompt.secondBrainWorkspace</c> part after the Second Brain summary.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -286,7 +292,8 @@ internal static class SystemPromptComposer
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null,
         MemorySnapshot? huddleMemory = null,
-        OutputsSnapshot? outputs = null)
+        OutputsSnapshot? outputs = null,
+        IReadOnlyList<(string Team, string Path)>? workspaces = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -309,6 +316,7 @@ internal static class SystemPromptComposer
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
 
         AddSecondBrainPart(parts, prompts, toolNames);
+        AddWorkspaceParts(parts, prompts, workspaces);
 
         if (roleBlock is not null)
         {
@@ -417,6 +425,24 @@ internal static class SystemPromptComposer
                     ["{{jobsTool}}"] = FindJobsTool(toolNames) ?? ToolUnavailable,
                     ["{{logChangeTool}}"] = FindLogChangeTool(toolNames) ?? ToolUnavailable,
                 })));
+
+    /// <summary>Adds one workspace part per Team with a readable workspace (slot 7, Spec 8.1), in the order given.</summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="workspaces">The <c>(team, path)</c> pairs, or <see langword="null"/> for none.</param>
+    private static void AddWorkspaceParts(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<(string Team, string Path)>? workspaces)
+    {
+        foreach ((string team, string path) in workspaces ?? [])
+        {
+            parts.Add(PromptOf(
+                prompts,
+                $"Workspace ({team})",
+                "systemPrompt.secondBrainWorkspace",
+                prompts.Render(
+                    "systemPrompt.secondBrainWorkspace",
+                    new Dictionary<string, string> { ["{{team}}"] = team, ["{{workspacePath}}"] = path })));
+        }
+    }
 
     /// <summary>Adds the Memory block, then the Team Memory block, when their snapshots exist.</summary>
     /// <param name="parts">The prompt parts so far.</param>

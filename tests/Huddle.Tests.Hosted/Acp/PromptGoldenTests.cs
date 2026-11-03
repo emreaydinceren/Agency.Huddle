@@ -374,6 +374,24 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.secondBrain.txt", actual);
     }
 
+    /// <summary>
+    /// Task 130 (SB-R15, Spec 8.1 slot 7): a member of one Team whose workspace is a readable repository gets the
+    /// <c>systemPrompt.secondBrainWorkspace</c> paragraph straight after the Second Brain summary. Pins the whole text.
+    /// The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void Workspace_Repository()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        IReadOnlyList<string> offered = [.. ToolNames, "mcp__team__propose_team_memory", "mcp__team__jobs", "mcp__team__log_change"];
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", offered, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human",
+            workspaces: [("Alpha", "/work/alpha")]);
+
+        AssertMatchesGolden("systemPrompt.workspace.txt", actual);
+    }
+
     /// <summary>Without an <c>ask_human</c> name the composed prompt is the existing golden, byte for byte: an Adapter session that does not offer the tool says nothing about it.</summary>
     [Fact]
     public void SystemPrompt_WithoutAskHumanName_UnchangedFromExistingGolden()

@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 122 of 143 tasks Done · 7 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 128 of 143 tasks Done · 8 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -157,20 +157,20 @@ never by hand, so the status line stays true.
 | 12.5.i #117 Skip archived labels [Sonnet] | | | ✔ |
 | 12.6.t #118 Rooms follow the Team [Sonnet] | | | ✔ |
 | 12.6.i #119 Wire the reconciler [Sonnet] | | | ✔ |
-| 12.7.t #120 Read-only fallback [Sonnet] | | ✔ | |
-| 12.7.i #121 The fallback [Sonnet] | ✔ | | |
-| 🔁 R8 Retrospective 8 (tasks 106–120): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
-| 12.8.t #122 Archived Task ids resolve [Sonnet] | ✔ | | |
+| 12.7.t #120 Read-only fallback [Sonnet] | | | ✔ |
+| 12.7.i #121 The fallback [Sonnet] | | | ✔ |
+| 🔁 R8 Retrospective 8 (tasks 106–120): token tally, top-3 agents grepped, plan updated [Opus] | | | ✔ |
+| 12.8.t #122 Archived Task ids resolve [Sonnet] | | ✔ | |
 | 12.8.i #123 Look up archived Tasks [Sonnet] | ✔ | | |
 | 12.9.t #124 Uploads refused into archived Rooms [Sonnet] | ✔ | | |
 | 12.9.i #125 Refuse the upload [Sonnet] | ✔ | | |
 | 12.10.t #126 The archive UI [Sonnet] | ✔ | | |
 | 12.10.i #127 Build the UI [Sonnet] | ✔ | | |
 | **D13. P7: workspace routing** | | | |
-| 13.1.t #128 Repository or folder [Haiku] | ✔ | | |
-| 13.1.i #129 `WorkspaceProbe` [Haiku] | ✔ | | |
-| 13.2.t #130 The workspace part [Sonnet] | ✔ | | |
-| 13.2.i #131 Add slot 7 [Sonnet] | ✔ | | |
+| 13.1.t #128 Repository or folder [Haiku] | | | ✔ |
+| 13.1.i #129 `WorkspaceProbe` [Haiku] | | | ✔ |
+| 13.2.t #130 The workspace part [Sonnet] | | | ✔ |
+| 13.2.i #131 Add slot 7 [Sonnet] | | | ✔ |
 | 13.3.t #132 Warning and Library root [Sonnet] | ✔ | | |
 | 13.3.i #133 Show the warning, add the root [Sonnet] | ✔ | | |
 | **D14. Close** | | | |

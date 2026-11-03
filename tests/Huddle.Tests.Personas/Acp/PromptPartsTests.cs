@@ -217,6 +217,83 @@ public sealed class PromptPartsTests
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
     }
 
+    /// <summary>Whether a part is rendered from the workspace Prompt.</summary>
+    /// <param name="part">The part.</param>
+    private static bool IsWorkspacePart(PromptPart part) =>
+        part.Source is PromptPartSource.Prompt { Key: "systemPrompt.secondBrainWorkspace" };
+
+    /// <summary>Task 130 (SB-R15, Spec 8.1 slot 7): a Team with a readable workspace adds one part from the Prompt, not overridden, with both placeholders filled and none left open.</summary>
+    [Fact]
+    public void ComposeParts_OneWorkspace_AddsOnePartWithTeamAndPathFilled()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared,
+            workspaces: [("Alpha", "/work/alpha")]);
+
+        PromptPart part = Assert.Single(parts, IsWorkspacePart);
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.secondBrainWorkspace", false), part.Source);
+        Assert.StartsWith("Alpha works in /work/alpha.", part.Text, StringComparison.Ordinal); // Default text opens "{{team}} works in {{workspacePath}}."
+        Assert.DoesNotContain("{{", part.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Task 130: the workspace part comes straight after the Second Brain summary (slot 7 follows slot 6).</summary>
+    [Fact]
+    public void ComposeParts_Workspace_FollowsTheSecondBrainSummary()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared,
+            workspaces: [("Alpha", "/work/alpha")]);
+
+        int summary = parts.ToList().FindIndex(p => p.Label == "Second Brain");
+        Assert.True(summary >= 0);
+        Assert.True(IsWorkspacePart(parts[summary + 1]), "The part after the summary is the workspace part.");
+    }
+
+    /// <summary>Task 130: two Teams add two parts, in the order given (the Persona's <c>teams</c> order), each with its own Team and path.</summary>
+    [Fact]
+    public void ComposeParts_TwoWorkspaces_AddsTwoPartsInGivenOrder()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared,
+            workspaces: [("Zed", "/work/zed"), ("Alpha", "/work/alpha")]);
+
+        List<PromptPart> found = [.. parts.Where(IsWorkspacePart)];
+        Assert.Equal(2, found.Count);
+        Assert.StartsWith("Zed works in /work/zed.", found[0].Text, StringComparison.Ordinal); // Given first, so first, not sorted.
+        Assert.StartsWith("Alpha works in /work/alpha.", found[1].Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Task 130: no workspaces, or none given, adds no part, and the prompt equals the one composed without the argument.</summary>
+    [Fact]
+    public void ComposeParts_NoWorkspaces_AddsNoPartAndLeavesOutputUnchanged()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+
+        string without = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+        string empty = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared, workspaces: []);
+        var parts = SystemPromptComposer.ComposeParts(persona, prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared, workspaces: []);
+
+        Assert.Equal(without, empty);
+        Assert.DoesNotContain(parts, IsWorkspacePart);
+    }
+
+    /// <summary>Task 130: an override of the Prompt flips <c>Overridden</c> and the override text is filled in.</summary>
+    [Fact]
+    public void ComposeParts_WorkspaceOverridden_SourceIsOverriddenAndTextIsOverride()
+    {
+        FakePromptSource prompts = new();
+        prompts.SetOverride("systemPrompt.secondBrainWorkspace", "{{team}} lives at {{workspacePath}}.");
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared,
+            workspaces: [("Alpha", "/work/alpha")]);
+
+        PromptPart part = Assert.Single(parts, IsWorkspacePart);
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.secondBrainWorkspace", true), part.Source);
+        Assert.Equal("Alpha lives at /work/alpha.", part.Text);
+    }
+
     /// <summary>
     /// Task 87: Spec 8.1 slot 6 is present "Always", so a session that offers none of the five tools still gets the part,
     /// with each placeholder filled by "(not available here; tell the Human)" and no bare tool name the model might try to call.

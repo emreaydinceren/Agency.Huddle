@@ -85,6 +85,34 @@ public sealed class SessionPromptInputsTests : IDisposable
             Compose(actual.Memory, actual.TeamMemory, actual.AgentsMd));
     }
 
+    /// <summary>Task 130 (SB-R15): the snapshot lists <c>(team, path)</c> in the Persona's <c>teams</c> order for a Team whose workspace is a readable folder or repository, and leaves out an unreadable one, a missing one and a Team with none.</summary>
+    [Fact]
+    public void Build_Workspaces_ListsReadableOnesInTeamsOrder()
+    {
+        string teamsRoot = Path.Combine(this.root, "Teams");
+        string memoryDir = Path.Combine(this.root, "Agents", "nova", "memory");
+        string repo = Path.Combine(this.root, "repo");
+        string folder = Path.Combine(this.root, "folder");
+        Directory.CreateDirectory(Path.Combine(repo, ".git"));
+        Directory.CreateDirectory(folder);
+        Directory.CreateDirectory(teamsRoot);
+        Directory.CreateDirectory(memoryDir);
+        AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
+        MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
+        IReadOnlyList<TeamSummary> teams =
+        [
+            new TeamSummary("Alpha", [], ["nova"], true) { Workspace = repo },
+            new TeamSummary("Beta", [], ["nova"], true) { Workspace = Path.Combine(this.root, "gone") },
+            new TeamSummary("Gamma", [], ["nova"], true),
+            new TeamSummary("Delta", [], ["nova"], true) { Workspace = folder },
+        ];
+
+        // The label order is Delta, Alpha, Beta, Gamma: the result follows it, minus Beta (missing path) and Gamma (no workspace).
+        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["Delta", "Alpha", "Beta", "Gamma"], teamsRoot, 50, maxHuddleMemoryEntries: 30, maxOutputsEntries: 40);
+
+        Assert.Equal([("Delta", folder), ("Alpha", repo)], actual.Workspaces);
+    }
+
     /// <summary>A Persona in no Team gets no Team Memory snapshot and no Team AGENTS.md section.</summary>
     [Fact]
     public void Build_PersonaInNoTeam_HasNoTeamMemory()
