@@ -1122,16 +1122,16 @@ Second Brain: the use cases as a Human's checklist — [area file](second-brain.
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [SB-01](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder) |  | Active |  | not yet run by a person |
-| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Active |  | not yet run by a person |
-| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Active |  | not yet run by a person |
-| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Active |  | not yet run by a person |
-| [SB-05](second-brain.md#sb-05--nova-prompt-parts-show-their-source) |  | Active |  | not yet run by a person |
-| [SB-06](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file) |  | Active |  | not yet run by a person |
-| [SB-07](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder) |  | Active |  | not yet run by a person |
-| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Active |  | not yet run by a person |
-| [SB-09](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up) |  | Active |  | not yet run by a person |
-| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Active |  | not yet run by a person |
+| [SB-01](second-brain.md#sb-01--a-dropped-file-lands-in-the-team-raw-folder) |  | Pass |  | 2026-11-03: path, size and path line held; modified time is not kept, which the Spec does not ask for |
+| [SB-02](second-brain.md#sb-02--a-fact-the-human-states-is-proposed-to-team-memory) | 💰 | Fail |  | 2026-11-03: Haiku passed the wrong arguments, the refusal named an empty Team, the Agent said "Done"; issue not filed yet |
+| [SB-03](second-brain.md#sb-03--a-standing-rule-is-proposed-as-an-agentsmd-change) | 💰 | Fail |  | 2026-11-03: no AGENTS.md proposal on Haiku, with or without the retrospective Skill; issue not filed yet |
+| [SB-04](second-brain.md#sb-04--an-edit-to-home-agentsmd-reaches-the-next-session) | 💰 | Fail |  | 2026-11-03: File Change seen; Stop does not open a new session, so the step cannot pass as written; run on Finances (Nova Offline) |
+| [SB-05](second-brain.md#sb-05--nova-prompt-parts-show-their-source) |  | Pass |  | 2026-11-03: every part sourced; three rows share the label "AGENTS.md block" |
+| [SB-06](second-brain.md#sb-06--chat-rules-overridden-on-settings-and-restored-by-deleting-the-file) |  | Pass |  | 2026-11-03 |
+| [SB-07](second-brain.md#sb-07--archiving-a-team-counts-its-open-tasks-and-moves-the-folder) |  | Active |  | Blocked: the Team had no Room (its Agent stays Offline), so the Room half was not seen; count, Agents and move held |
+| [SB-08](second-brain.md#sb-08--an-archived-file-opens-read-only-and-unarchiving-restores-the-team) |  | Active |  | Blocked: Rooms not seen (Agent Offline); read-only and unarchive held; no *archived* label beyond the path |
+| [SB-09](second-brain.md#sb-09--an-old-data-folder-logs-warnings-at-start-up) |  | Pass |  | 2026-11-03 |
+| [SB-10](second-brain.md#sb-10--an-agent-cannot-overwrite-a-raw-file-and-writes-an-extract-beside-it) | 💰 | Pass |  | 2026-11-03: hash unchanged, extract written; the Agent refused itself, so the permission handler was not reached |
 
 ## doc-history
 
