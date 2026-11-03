@@ -33,6 +33,10 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     private static readonly UTF8Encoding TeamFileEncoding = new(encoderShouldEmitUTF8Identifier: false);
 
     private readonly Lock teamFileGate = new();
+
+    // Serialises label-driven folder creation with an archive move. Held by SyncFolders, CreateTeamFolder and
+    // RunExclusive; never held while a membership change is made (PersonasChanged runs SyncFolders under the membership gate).
+    private readonly Lock folderGate = new();
     private readonly PersonaStore personas;
     private readonly LibraryRootStore roots;
     private readonly LibraryPathResolver resolver;
@@ -259,7 +263,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
         }
 
-        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team);
+        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team, leaveExistingAlone: true);
         if (folder.Value is null)
         {
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
@@ -459,7 +463,57 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     }
 
     /// <summary>Creates <c>Teams/&lt;name&gt;/</c> through the resolver (which must classify it as a Team folder) and re-resolves it; never renames or deletes.</summary>
-    private LibraryResult<LibraryPath> CreateTeamFolder(string name)
+    private LibraryResult<LibraryPath> CreateTeamFolder(string name, bool leaveExistingAlone = false)
+    {
+        lock (this.folderGate)
+        {
+            return this.ArchivedTeamExists(name)
+                ? new LibraryResult<LibraryPath>(null, $"The Team \"{name}\" is archived.")
+                : this.CreateTeamFolderLocked(name, leaveExistingAlone);
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Holds the gate <see cref="SyncFolders"/> and the folder creation also take, so a label sync cannot recreate the folder mid-move.</remarks>
+    public T RunExclusive<T>(Func<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        lock (this.folderGate)
+        {
+            return action();
+        }
+    }
+
+    /// <summary>Whether <c>Archive/&lt;name&gt;/_team.md</c> exists, the folder matched ignoring case by listing the Archive root. A Project archive alone (no <c>_team.md</c>) does not count.</summary>
+    /// <param name="name">The Team's name.</param>
+    private bool ArchivedTeamExists(string name)
+    {
+        LibraryRoot? archive = this.roots.Roots.FirstOrDefault(r => r.Kind == LibraryRootKind.Archive);
+        if (archive is null || !Directory.Exists(archive.FullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(archive.FullPath)
+                .Any(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(Path.Combine(d, TeamPaths.TeamFileName)));
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+    }
+
+    private LibraryResult<LibraryPath> CreateTeamFolderLocked(string name, bool leaveExistingAlone)
     {
         if (!this.resolver.TryResolve(TeamsRootId, name, out LibraryPath? teamPath, out string? resolveError) ||
             teamPath.Role != LibraryNodeRole.TeamFolder)
@@ -469,8 +523,14 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
         try
         {
+            // A folder that exists already was set up when it was made (or is the Human's); the archive adds a
+            // _team.md to such a folder and must not add folders beside it.
+            bool existed = Directory.Exists(teamPath.FullPath);
             Directory.CreateDirectory(teamPath.FullPath);
-            SecondBrainFolders.Ensure(teamPath.FullPath);
+            if (!existed || !leaveExistingAlone)
+            {
+                SecondBrainFolders.Ensure(teamPath.FullPath);
+            }
         }
         catch (IOException)
         {
@@ -524,6 +584,35 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// or deletes.</summary>
     private void SyncFolders()
     {
+        lock (this.folderGate)
+        {
+            this.SyncFoldersLocked();
+        }
+    }
+
+    /// <summary>Whether a label can be a Team folder name; logs the reason when it cannot.</summary>
+    /// <param name="label">The Team label.</param>
+    private bool LabelIsFolderName(string label)
+    {
+        string? nameError = LibraryNames.Validate(label);
+        if (nameError is not null)
+        {
+            this.LogLabelSkipped(label, nameError);
+            return false;
+        }
+
+        if (TaskLayout.IsReservedFolderName(label) || TeamNames.IsReservedTeamName(label))
+        {
+            this.LogLabelSkipped(label, "That folder is reserved.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary><see cref="SyncFolders"/> with <see cref="folderGate"/> already held.</summary>
+    private void SyncFoldersLocked()
+    {
         LibraryRoot? teamsRoot = this.roots.Roots.FirstOrDefault(r => string.Equals(r.Id, TeamsRootId, StringComparison.Ordinal));
         if (teamsRoot is null)
         {
@@ -545,21 +634,15 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
                 continue;
             }
 
-            string? nameError = LibraryNames.Validate(label);
-            if (nameError is not null)
+            if (!this.LabelIsFolderName(label)
+                || Array.Exists(existing, d => string.Equals(Path.GetFileName(d), label, StringComparison.OrdinalIgnoreCase)))
             {
-                this.LogLabelSkipped(label, nameError);
                 continue;
             }
 
-            if (TaskLayout.IsReservedFolderName(label) || TeamNames.IsReservedTeamName(label))
+            if (this.ArchivedTeamExists(label))
             {
-                this.LogLabelSkipped(label, "That folder is reserved.");
-                continue;
-            }
-
-            if (Array.Exists(existing, d => string.Equals(Path.GetFileName(d), label, StringComparison.OrdinalIgnoreCase)))
-            {
+                this.LogLabelSkipped(label, "That Team is archived.");
                 continue;
             }
 

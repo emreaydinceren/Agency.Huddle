@@ -56,7 +56,12 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
     }
 
     /// <inheritdoc />
-    public MembershipResult Remove(string team, string personaName)
+    public MembershipResult Remove(string team, string personaName) => this.RemoveLabel(team, personaName, guardManager: true);
+
+    /// <inheritdoc />
+    public MembershipResult RemoveForArchive(string team, string personaName) => this.RemoveLabel(team, personaName, guardManager: false);
+
+    private MembershipResult RemoveLabel(string team, string personaName, bool guardManager)
     {
         lock (this.gate)
         {
@@ -65,7 +70,7 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
                 return failure;
             }
 
-            if (string.Equals(catalog.Find(team)?.Manager, personaName, StringComparison.OrdinalIgnoreCase))
+            if (guardManager && string.Equals(catalog.Find(team)?.Manager, personaName, StringComparison.OrdinalIgnoreCase))
             {
                 return new MembershipResult(MembershipOutcome.IsManager);
             }

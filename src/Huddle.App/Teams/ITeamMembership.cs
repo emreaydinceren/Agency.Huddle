@@ -15,6 +15,12 @@ internal interface ITeamMembership
     /// <returns>Removed, IsManager (the Team's manager is never removed; nothing is written), NotMember, NotFound (no such Persona) or Rejected (a failed write).</returns>
     MembershipResult Remove(string team, string personaName);
 
+    /// <summary>Removes the Persona's label for an archived Team; unlike <see cref="Remove"/> it does not refuse the Team's manager.</summary>
+    /// <param name="team">The Team being archived, compared ignoring case.</param>
+    /// <param name="personaName">The member's Name.</param>
+    /// <returns>Removed, NotMember, NotFound (no such Persona) or Rejected (a failed write).</returns>
+    MembershipResult RemoveForArchive(string team, string personaName);
+
     /// <summary>Makes a member of the Team its manager by rewriting the <c>manager</c> field of the Team's <c>_team.md</c>.</summary>
     /// <param name="team">The Team, compared ignoring case.</param>
     /// <param name="newManager">The member's Name; their <c>_role</c> must be a manager role of the Team's type.</param>

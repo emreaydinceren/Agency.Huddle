@@ -27,6 +27,7 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Questions;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
@@ -638,6 +639,8 @@ public static class ServiceCollectionExtensions
         // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.
         services.AddSingleton<ITeamMembership, TeamMembership>();
+        services.AddSingleton<IArchiveFileSystem, PhysicalArchiveFileSystem>();
+        services.AddSingleton<ArchiveService>();
 
         // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
         // to the very provisioner instance the host runs (no cycle: it needs the catalog above).

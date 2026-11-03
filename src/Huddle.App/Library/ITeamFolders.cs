@@ -44,6 +44,12 @@ internal interface ITeamFolders
     /// <returns><see langword="false"/> when the Team has no readable <c>_team.md</c>; <paramref name="change"/> is then not called.</returns>
     bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change);
 
+    /// <summary>Runs <paramref name="action"/> while no label sync or folder creation can touch the Teams root. The default runs it unguarded.</summary>
+    /// <typeparam name="T">The action's result.</typeparam>
+    /// <param name="action">The folder move; it must not call <c>ITeamMembership</c>.</param>
+    /// <returns>What <paramref name="action"/> returned.</returns>
+    T RunExclusive<T>(Func<T> action) => action();
+
     /// <summary>Reads a Team's <c>_team.md</c>.</summary>
     /// <param name="team">The Team's name.</param>
     /// <returns>The parsed file, or <see langword="null"/> when the Team or its file is missing or unreadable.</returns>
