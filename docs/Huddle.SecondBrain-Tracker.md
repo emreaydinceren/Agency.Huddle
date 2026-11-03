@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task above them.
 - Tasks 5.6.t, 6.8.t and 12.6.t may be accepted green as guard tests (the plan says so in each); their `.i` partner is then a no-op marked Done.
 
-**Status:** 71 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
+**Status:** 74 of 143 tasks Done · 4 of 9 retrospectives done · last updated 2026-11-03.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -94,8 +94,8 @@ never by hand, so the status line stays true.
 | 6.8.i #63 Keep `list_teams` card-only [Haiku] | | | ✔ |
 | **D7. P2: write guards** | | | |
 | 7.1.t #64 `AgentsMdGuard` [Sonnet] | | | ✔ |
-| 7.1.i #65 Replace the Instructions guard [Sonnet] | | ✔ | |
-| 7.2.t #66 Huddle-wide Memory is the Chief of Staff's [Sonnet] | ✔ | | |
+| 7.1.i #65 Replace the Instructions guard [Sonnet] | | | ✔ |
+| 7.2.t #66 Huddle-wide Memory is the Chief of Staff's [Sonnet] | | ✔ | |
 | 7.2.i #67 Guard `Teams/memory/` [Sonnet] | ✔ | | |
 | **D8. P3: composer parts and the inspection view** | | | |
 | 8.1.t #68 Parts join to the prompt [Sonnet] | | | ✔ |
@@ -108,8 +108,8 @@ never by hand, so the status line stays true.
 | 8.4.i #75 Build the view [Sonnet] | ✔ | | |
 | 🔁 R5 Retrospective 5 (tasks 61–75): token tally, top-3 agents grepped, plan updated [Opus] | ✔ | | |
 | **D9. P4: Prompt override files** | | | |
-| 9.1.t #76 A folder of overrides [Sonnet] | ✔ | | |
-| 9.1.i #77 Folder-backed `PromptStore` [Sonnet] | ✔ | | |
+| 9.1.t #76 A folder of overrides [Sonnet] | | | ✔ |
+| 9.1.i #77 Folder-backed `PromptStore` [Sonnet] | | | ✔ |
 | 9.2.t #78 Reporting, never refusing [Sonnet] | ✔ | | |
 | 9.2.i #79 Report unknown and broken overrides [Sonnet] | ✔ | | |
 | 9.3.t #80 Agents can't write the Prompts folder [Sonnet] | ✔ | | |

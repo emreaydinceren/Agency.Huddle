@@ -378,7 +378,7 @@ public static class ServiceCollectionExtensions
 
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
-        // would mean a second file handle on prompts.json now and (once T4.1 adds one) a second
+        // would mean a second file handle on the Prompts folder now and (once T4.1 adds one) a second
         // FileSystemWatcher on it, the same class of intermittent test flake PersonaStore's remarks
         // already document for the closely related PersonaSupervisor case.
         services.AddSingleton<PromptStore>();
