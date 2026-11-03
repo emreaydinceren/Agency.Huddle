@@ -241,6 +241,10 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
         {
             throw new AgentDisconnectedException(ex);
         }
+        catch (RemoteInvocationException ex) when (ex.ErrorCode == (int)dotacp.protocol.ErrorCode.AuthenticationRequired)
+        {
+            throw new AgentAuthenticationRequiredException([], ex.Message);
+        }
         catch (RemoteInvocationException ex)
         {
             throw new AgentException($"session/prompt failed: {ex.Message}", ex);

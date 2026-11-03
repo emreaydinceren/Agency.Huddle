@@ -2514,3 +2514,4 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | A Task I edited by hand went back to its old status | A gate refused the new status; the Change log says `outside edit refused by gate`. |
 | An imported Skill says it already exists | The name belongs to a built-in Skill or to one from another source. Nothing was changed. |
 | A card says **Needs setup** for a connector | List it in `connectors.json` in the data folder, then select **I connected it**. |
+| An Agent shows Offline with *Claude needs you to sign in again* | Your Claude sign-in has expired or was never made. Run `claude` in a terminal, sign in, then send the Message again. |

@@ -1046,7 +1046,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
         else
         {
-            this.owner.ReportTurnFailure(head.Item.RoomName, ex.Message);
+            this.owner.ReportTurnFailure(head.Item.RoomName, RoomSession.DescribeTurnFailure(ex));
 
             // D26, finding P-14: an open/resume failure counts toward THIS
             // session's own streak; no store.Put ever ran for this item (no Turn
@@ -1566,11 +1566,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // so this escalates on repetition alone, never on message content. Stays Degraded rather
             // than Offline: the session and the pipe may both be healthy while the model provider is
             // refusing, and Offline would be a claim this runner cannot support.
-            this.owner.ReportTurnFailure(run.Item.RoomName, ex.Message);
+            this.owner.ReportTurnFailure(run.Item.RoomName, RoomSession.DescribeTurnFailure(ex));
             run.RoomFailureThisTurn = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
     }
+
+    /// <summary>The reason a failed Turn reports: the Human's sign-in instruction for an authentication failure, the exception text otherwise.</summary>
+    /// <param name="ex">The exception the Turn failed with.</param>
+    /// <returns>The reason passed to <see cref="IRoomSessionOwner.ReportTurnFailure"/>.</returns>
+    private static string DescribeTurnFailure(Exception ex) =>
+        ex is AgentAuthenticationRequiredException ? PersonaSupervisor.SignInAgainReason : ex.Message;
 
     /// <summary>Reports a Turn the idle-timeout watchdog abandoned: tells the Room and logs the silence that triggered it.</summary>
     /// <param name="run">The abandoned Turn.</param>

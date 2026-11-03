@@ -511,6 +511,50 @@ public sealed class DotAcpAgentSessionTests
         }
     }
 
+    /// <summary>Spec §4: <c>session/prompt</c> failing with <c>-32000</c> (authRequired) surfaces as an authentication exception that carries the adapter's own message and no auth methods.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_AuthRequired_ThrowsAuthenticationRequired()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnPrompt = _ => throw new FakeRpcError(-32000, "Run /login to sign in again.");
+
+            AgentAuthenticationRequiredException exception = await Assert.ThrowsAsync<AgentAuthenticationRequiredException>(
+                () => harness.Session.PromptAsync("hello", cancellationToken));
+
+            Assert.Equal("Run /login to sign in again.", exception.Message);
+            Assert.Empty(exception.AuthMethods);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §4: only <c>-32000</c> is an authentication failure; any other RPC error stays a plain <see cref="AgentException"/> and not the authentication subtype.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_OtherRpcError_StillAgentException()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnPrompt = _ => throw new FakeRpcError(-32603, "internal failure");
+
+            AgentException exception = await Assert.ThrowsAsync<AgentException>(
+                () => harness.Session.PromptAsync("hello", cancellationToken));
+
+            Assert.IsNotType<AgentAuthenticationRequiredException>(exception);
+            Assert.Contains("internal failure", exception.Message, StringComparison.Ordinal); // contains-ok: the host prefixes the adapter's text with "session/prompt failed:".
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
     [Fact(Timeout = 10000)]
     public async Task AgentClosesStdout_PromptFaultsWithAgentDisconnected_AndChannelCompletes()
     {

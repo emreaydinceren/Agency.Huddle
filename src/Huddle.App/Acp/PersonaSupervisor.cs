@@ -385,6 +385,9 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private static bool NeedsRestart(Persona persona, Persona? started) =>
         started is null || persona != started;
 
+    /// <summary>Spec §4 Human copy for an expired or missing sign-in, shared by the start path and the Turn path.</summary>
+    internal const string SignInAgainReason = "Claude needs you to sign in again. Run claude in a terminal and sign in, then send the Message again.";
+
     /// <summary>
     /// Classifies a start failure into interface copy for <see cref="PersonaHealth.Report"/> —
     /// read by the Human, so <c>docs/engineering/language.md</c> is binding for it. Order matters:
@@ -399,7 +402,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     {
         AgentAuthenticationRequiredException authEx => authEx.AuthMethods.Count > 0
             ? $"The Adapter needs authentication: {string.Join(", ", authEx.AuthMethods.Select(m => m.Name))}."
-            : "The Adapter needs authentication.",
+            : PersonaSupervisor.SignInAgainReason,
         AgentProcessStartException processEx => processEx.Message,
         InvalidOperationException invalidOperationEx => invalidOperationEx.Message,
         AgentException agentEx => agentEx.Message,
