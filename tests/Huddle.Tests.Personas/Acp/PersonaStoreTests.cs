@@ -702,6 +702,29 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
+    /// The whole Agents folder deleted under a running store leaves an empty index and raises PersonaRemoved, and the debounce
+    /// does not throw. A throw here runs on the timer thread and ends the process; the full suite crashed a test host that way
+    /// when a fixture deleted its temp folder between the rescan's existence check and its listing. That window cannot be hit
+    /// on demand, so this pins the outcome the listing's catch now shares with a folder that is already gone.
+    /// </summary>
+    [Fact]
+    public void AgentsFolderDeleted_FollowedByTheDebounce_EmptiesTheIndexWithoutThrowing()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(TestPersonas.Identity("coo"), "first");
+        store.OnDebounceElapsed(null);
+        List<string> removed = [];
+        store.PersonaRemoved += persona => removed.Add(persona.Name);
+
+        Directory.Delete(Path.Combine(dir.Path, "Agents"), recursive: true);
+        store.OnDebounceElapsed(null);
+
+        Assert.Null(store.Get("coo"));
+        Assert.Equal(["coo"], removed);
+    }
+
+    /// <summary>
     /// The other door: a file hand-edited outside the app (an editor, a script) bypasses
     /// <see cref="PersonaStore.Update"/> entirely and reaches only the debounced FileSystemWatcher
     /// path, where no old Name is recorded anywhere else - this drives the real watcher, rather than

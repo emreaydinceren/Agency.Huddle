@@ -705,15 +705,39 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
         var candidates = new List<(string Path, string Text)>();
         var preRejected = new List<RejectedPersonaFile>();
+        string[] rootFiles;
+        string[] folders;
+        try
+        {
+            rootFiles = Directory.GetFiles(this.Paths.DefinitionsRoot, "*.md", SearchOption.TopDirectoryOnly);
+            folders = Directory.GetDirectories(this.Paths.DefinitionsRoot);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // Deleted between the Exists check and the listing: the same as a missing folder. Thrown from the debounce
+            // timer, this used to end the process (seen as a crashed test host on the full suite, 2026-11-03).
+            return (PersonaIndex.Build([]), []);
+        }
 
-        foreach (var rootFile in Directory.GetFiles(this.Paths.DefinitionsRoot, "*.md", SearchOption.TopDirectoryOnly))
+        foreach (var rootFile in rootFiles)
         {
             preRejected.Add(new RejectedPersonaFile(rootFile, "A definition must be inside its agent's folder."));
         }
 
-        foreach (var folder in Directory.GetDirectories(this.Paths.DefinitionsRoot))
+        foreach (var folder in folders)
         {
-            if (!this.TryScanAgentFolder(folder, isInitialScan, candidates, preRejected))
+            bool scanned;
+            try
+            {
+                scanned = this.TryScanAgentFolder(folder, isInitialScan, candidates, preRejected);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // The Agent folder was deleted after the listing: it holds no definition any more, so it is skipped.
+                continue;
+            }
+
+            if (!scanned)
             {
                 return null;
             }
