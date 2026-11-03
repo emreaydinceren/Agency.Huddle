@@ -161,6 +161,113 @@ public sealed class PromptPartsTests
         Assert.Equal(new PromptPartSource.Index("memory", 1), parts.Single(part => part.Label == "Memory").Source);
     }
 
+    /// <summary>The prefixed names of every tool the Second Brain summary names, as a full session offers them (<c>JobsTool.Name</c>, <c>CreateTaskTool.Name</c>, <c>LogChangeTool.Name</c>, <c>ProposeTeamMemoryTool.ToolName</c>, <c>MemoryTool.ToolName</c>).</summary>
+    private static readonly IReadOnlyList<string> SummaryToolNames =
+    [
+        "mcp__team__get_help",
+        "mcp__team__ask_human",
+        "mcp__team__memory",
+        "mcp__team__propose_team_memory",
+        "mcp__team__create_task",
+        "mcp__team__jobs",
+        "mcp__team__log_change",
+    ];
+
+    /// <summary>Task 87 (SB-R14, Spec 8.1 slot 6): the summary part is the Prompt <c>systemPrompt.secondBrain</c>, not overridden by default, labelled "Second Brain".</summary>
+    [Fact]
+    public void ComposeParts_SecondBrain_SourceIsPromptNotOverridden()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        PromptPart part = Assert.Single(parts, p => p.Label == "Second Brain");
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.secondBrain", false), part.Source);
+    }
+
+    /// <summary>Task 87: an override of the key flips <c>Overridden</c>, and the override text is what the part holds.</summary>
+    [Fact]
+    public void ComposeParts_SecondBrainOverridden_SourceIsOverriddenAndTextIsOverride()
+    {
+        FakePromptSource prompts = new();
+        prompts.SetOverride("systemPrompt.secondBrain", "Custom summary: {{memoryTool}}.");
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        PromptPart part = Assert.Single(parts, p => p.Label == "Second Brain");
+        Assert.Equal(new PromptPartSource.Prompt("systemPrompt.secondBrain", true), part.Source);
+        Assert.Equal("Custom summary: mcp__team__memory.", part.Text);
+    }
+
+    /// <summary>Task 87: every placeholder is filled with the offered prefixed name (one each in the shipped text, so each name appears once) and none is left open.</summary>
+    [Fact]
+    public void ComposeParts_SecondBrain_FillsPlaceholdersWithOfferedPrefixedNames()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        string text = Assert.Single(parts, p => p.Label == "Second Brain").Text;
+
+        Assert.Contains("with mcp__team__memory;", text, StringComparison.Ordinal);
+        Assert.Contains("goes to mcp__team__propose_team_memory;", text, StringComparison.Ordinal);
+        Assert.Contains("Due by a date: mcp__team__create_task.", text, StringComparison.Ordinal);
+        Assert.Contains("Recurs: mcp__team__jobs.", text, StringComparison.Ordinal);
+        Assert.Contains("then mcp__team__log_change.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Task 87: Spec 8.1 slot 6 is present "Always", so a session that offers none of the five tools still gets the part,
+    /// with each placeholder filled by "(not available here; tell the Human)" and no bare tool name the model might try to call.
+    /// </summary>
+    [Fact]
+    public void ComposeParts_SecondBrainToolsNotOffered_RendersUnavailablePhrase()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ["mcp__team__get_help"], [], string.Empty, memory: null, SessionScope.Shared);
+
+        string text = Assert.Single(parts, p => p.Label == "Second Brain").Text;
+
+        const string Unavailable = "(not available here; tell the Human)";
+        Assert.Contains($"with {Unavailable};", text, StringComparison.Ordinal);
+        Assert.Contains($"goes to {Unavailable};", text, StringComparison.Ordinal);
+        Assert.Contains($"Due by a date: {Unavailable}.", text, StringComparison.Ordinal);
+        Assert.Contains($"Recurs: {Unavailable}.", text, StringComparison.Ordinal);
+        Assert.Contains($"then {Unavailable}.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("create_task", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("propose_team_memory", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("log_change", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Task 87: with the tool paragraphs (ask_human and log_change offered, so two) and a role block, the part sits straight after the last paragraph and straight before the role block.</summary>
+    [Fact]
+    public void ComposeParts_SecondBrain_FollowsToolParagraphsAndPrecedesRoleBlock()
+    {
+        RoleBlockInput roleBlock = new("Ada", "Developer", "Apollo", [], []);
+
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Ada", "You are Ada."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human", roleBlock: roleBlock);
+
+        List<string> labels = parts.Select(p => p.Label).ToList();
+        int summary = labels.IndexOf("Second Brain");
+        Assert.Equal(2, labels.Count(label => label == "Tool paragraphs"));
+        Assert.Equal(labels.LastIndexOf("Tool paragraphs") + 1, summary);
+        Assert.Equal("Role block", labels[summary + 1]);
+    }
+
+    /// <summary>Task 87: with no tool paragraph at all the part follows the Tools part of slot 4, and with no role block the next part is not a role block.</summary>
+    [Fact]
+    public void ComposeParts_SecondBrainNoParagraphsNoRole_FollowsToolsPart()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ["mcp__team__get_help"], [], string.Empty, memory: null, SessionScope.Shared);
+
+        List<string> labels = parts.Select(p => p.Label).ToList();
+        Assert.Equal(labels.IndexOf("Tools") + 1, labels.IndexOf("Second Brain"));
+        Assert.DoesNotContain("Role block", labels);
+    }
+
     /// <summary>Asserts the invariant of SB-R16: the parts joined with a blank line are the composed prompt, and no part is empty.</summary>
     /// <param name="parts">The parts from <c>ComposeParts</c>.</param>
     /// <param name="composed">The text from <c>Compose</c> with the same arguments.</param>

@@ -294,6 +294,8 @@ internal static class SystemPromptComposer
 
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
 
+        AddSecondBrainPart(parts, prompts, toolNames);
+
         if (roleBlock is not null)
         {
             AddRoleParts(parts, prompts, roleBlock);
@@ -356,6 +358,50 @@ internal static class SystemPromptComposer
         ArgumentNullException.ThrowIfNull(toolNames);
         return toolNames.FirstOrDefault(ProposeTeamMemoryTool.IsToolName) ?? ProposeTeamMemoryTool.ToolName;
     }
+
+    /// <summary>What the Second Brain summary says in place of a tool the session does not offer.</summary>
+    private const string ToolUnavailable = "(not available here; tell the Human)";
+
+    /// <summary>The offered <c>create_task</c> tool's prefixed name, or <see langword="null"/> when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered.</returns>
+    internal static string? FindCreateTaskTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "create_task"));
+    }
+
+    /// <summary>The offered <c>jobs</c> tool's prefixed name, or <see langword="null"/> when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered.</returns>
+    internal static string? FindJobsTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "jobs"));
+    }
+
+    /// <summary>
+    /// Adds the Second Brain summary (slot 6, Spec 8.1): present in every session, so a tool the session does not
+    /// offer reads <see cref="ToolUnavailable"/> rather than a name the model might try to call.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    private static void AddSecondBrainPart(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<string> toolNames) =>
+        parts.Add(PromptOf(
+            prompts,
+            "Second Brain",
+            "systemPrompt.secondBrain",
+            prompts.Render(
+                "systemPrompt.secondBrain",
+                new Dictionary<string, string>
+                {
+                    ["{{memoryTool}}"] = toolNames.FirstOrDefault(MemoryTool.IsToolName) ?? ToolUnavailable,
+                    ["{{proposeTool}}"] = toolNames.FirstOrDefault(ProposeTeamMemoryTool.IsToolName) ?? ToolUnavailable,
+                    ["{{createTaskTool}}"] = FindCreateTaskTool(toolNames) ?? ToolUnavailable,
+                    ["{{jobsTool}}"] = FindJobsTool(toolNames) ?? ToolUnavailable,
+                    ["{{logChangeTool}}"] = FindLogChangeTool(toolNames) ?? ToolUnavailable,
+                })));
 
     /// <summary>Adds the Memory block, then the Team Memory block, when their snapshots exist.</summary>
     /// <param name="parts">The prompt parts so far.</param>

@@ -310,6 +310,23 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.askHuman.txt", actual);
     }
 
+    /// <summary>
+    /// Task 87 (SB-R14, Spec 8.1 slot 6): a session offering every tool the summary names carries the
+    /// <c>systemPrompt.secondBrain</c> paragraph after the tool paragraphs, each placeholder filled with
+    /// the prefixed tool name. Pins the whole text.
+    /// </summary>
+    [Fact]
+    public void SecondBrain_Summary_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        IReadOnlyList<string> offered = [.. ToolNames, "mcp__team__propose_team_memory", "mcp__team__jobs", "mcp__team__log_change"];
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", offered, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human");
+
+        AssertMatchesGolden("systemPrompt.secondBrain.txt", actual);
+    }
+
     /// <summary>Without an <c>ask_human</c> name the composed prompt is the existing golden, byte for byte: an Adapter session that does not offer the tool says nothing about it.</summary>
     [Fact]
     public void SystemPrompt_WithoutAskHumanName_UnchangedFromExistingGolden()
