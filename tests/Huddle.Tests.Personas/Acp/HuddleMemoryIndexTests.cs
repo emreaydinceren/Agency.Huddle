@@ -61,7 +61,7 @@ public sealed class HuddleMemoryIndexTests : IDisposable
         AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
         MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
         return SessionPromptInputs.Build(
-            reader, warnings, [], "nova", Path.Combine(this.root, "nova-memory"), 50, teamLabels, teamsRoot, 50, maxHuddleMemoryEntries: max);
+            reader, warnings, [], "nova", Path.Combine(this.root, "nova-memory"), 50, teamLabels, teamsRoot, 50, maxHuddleMemoryEntries: max, maxOutputsEntries: 40);
     }
 
     /// <summary>Writes <c>Teams/memory/&lt;name&gt;.md</c> (or under <paramref name="sub"/>) holding one heading line.</summary>

@@ -278,7 +278,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.teamLabels,
             this.teamsRoot,
             this.teamsOptions.MaxMemoryEntries,
-            this.teamsOptions.MaxHuddleMemoryEntries);
+            this.teamsOptions.MaxHuddleMemoryEntries,
+            this.sources.MaxOutputsEntries);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -295,7 +296,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.readsMemory,
             warnings: this.sources.Warnings,
-            huddleMemory: inputs.HuddleMemory);
+            huddleMemory: inputs.HuddleMemory,
+            outputs: inputs.Outputs);
     }
 
     /// <summary>

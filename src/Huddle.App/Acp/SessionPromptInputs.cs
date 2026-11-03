@@ -18,7 +18,8 @@ internal static class SessionPromptInputs
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
     /// <param name="maxTeamMemoryEntries">The cap on Team Memory entries across all of the Persona's Teams.</param>
     /// <param name="maxHuddleMemoryEntries">The cap on the Huddle-wide Memory entries of <c>Teams/memory/</c>, which every Persona gets.</param>
-    /// <returns>The four snapshots.</returns>
+    /// <param name="maxOutputsEntries">The cap on the outputs index across the Persona's Teams, in the order they are listed.</param>
+    /// <returns>The five snapshots.</returns>
     internal static SessionPromptSnapshot Build(
         AgentsMdReader agentsMd,
         MemoryWarnings warnings,
@@ -29,7 +30,8 @@ internal static class SessionPromptInputs
         IReadOnlyList<string> teamLabels,
         string teamsRoot,
         int maxTeamMemoryEntries,
-        int maxHuddleMemoryEntries)
+        int maxHuddleMemoryEntries,
+        int maxOutputsEntries)
     {
         var (entries, notListed) = MemoryIndex.Build(memoryDir, maxMemoryEntries, warnings);
         MemorySnapshot memory = new(memoryDir, entries, notListed);
@@ -52,6 +54,8 @@ internal static class SessionPromptInputs
         var (huddleEntries, huddleNotListed) = MemoryIndex.Build(huddleMemoryDir, maxHuddleMemoryEntries, warnings);
         MemorySnapshot huddleMemory = new(huddleMemoryDir, huddleEntries, huddleNotListed);
 
-        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory);
+        OutputsSnapshot outputs = OutputsIndex.Build(teamsRoot, teamNames, maxOutputsEntries, warnings);
+
+        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs);
     }
 }

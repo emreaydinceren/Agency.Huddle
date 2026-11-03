@@ -8,4 +8,5 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="TeamMemory">The Persona's Team Memory, or <see langword="null"/> when it has none.</param>
 /// <param name="AgentsMd">The Human's AGENTS.md files for the Persona's Teams.</param>
 /// <param name="HuddleMemory">The Huddle-wide Memory index of <c>Teams/memory/</c>, which every Persona gets; its entries are empty when the folder has no topics (Spec §6.3).</param>
-internal sealed record SessionPromptSnapshot(MemorySnapshot Memory, TeamMemorySnapshot? TeamMemory, AgentsMdSnapshot AgentsMd, MemorySnapshot HuddleMemory);
+/// <param name="Outputs">The outputs index of the Persona's Teams, capped by <c>Team:Outputs:MaxIndexEntries</c>; its entries are empty when no Team has outputs (Spec §6.3, §8.1 slot 13).</param>
+internal sealed record SessionPromptSnapshot(MemorySnapshot Memory, TeamMemorySnapshot? TeamMemory, AgentsMdSnapshot AgentsMd, MemorySnapshot HuddleMemory, OutputsSnapshot Outputs);

@@ -12,6 +12,7 @@ using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
@@ -172,6 +173,29 @@ public sealed class PromptGoldenTests
             persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.Shared, huddleMemory: huddleMemory);
 
         AssertMatchesGolden("systemPrompt.huddleMemory.txt", actual);
+    }
+
+    /// <summary>
+    /// 11.3.t (SB-R12, Spec §8.1 slot 13): pins the outputs index block between the Agent's own Memory and the closing part: one document with a
+    /// description, one without, and one more left out of <c>B/outputs</c>. The golden is seeded by the first green run.
+    /// </summary>
+    [Fact]
+    public void Outputs_Index()
+    {
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md")], NotListed: 0);
+        OutputsSnapshot outputs = new(
+            [
+                new OutputsEntry("A/outputs/report.md", "Read when judging how the Q3 launch went."),
+                new OutputsEntry("A/outputs/sub/notes.md", null),
+            ],
+            1,
+            [new OutputsOverflow("B/outputs", 1)]);
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory, SessionScope.Shared, outputs: outputs);
+
+        AssertMatchesGolden("systemPrompt.outputsIndex.txt", actual);
     }
 
     /// <summary>

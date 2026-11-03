@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -266,6 +267,106 @@ public sealed class PromptPartsTests
         List<string> labels = parts.Select(p => p.Label).ToList();
         Assert.Equal(labels.IndexOf("Tools") + 1, labels.IndexOf("Second Brain"));
         Assert.DoesNotContain("Role block", labels);
+    }
+
+    /// <summary>Task 95 (11.3.t, Spec §8.1 slot 13): the outputs index follows Team Memory and precedes the closing part, with the source <c>Index("outputs", n)</c> for n entries.</summary>
+    [Fact]
+    public void ComposeParts_WithOutputs_IndexFollowsTeamMemoryAndPrecedesClosing()
+    {
+        OutputsSnapshot outputs = new(
+            [new OutputsEntry("A/outputs/sub/y.md", null), new OutputsEntry("A/outputs/z.md", "Read when Z")],
+            0);
+
+        IReadOnlyList<PromptPart> parts = ComposeWithOutputs(outputs, withMemories: true);
+
+        List<string> labels = [.. parts.Select(static part => part.Label)];
+        int at = labels.IndexOf("Outputs index");
+        Assert.True(at > 0, "The outputs part is present.");
+        Assert.Equal(labels.IndexOf("Team Memory") + 1, at); // Slot 13 directly follows slot 12.
+        Assert.Equal("Closing", labels[at + 1]); // Slot 14 follows.
+        Assert.Equal(new PromptPartSource.Index("outputs", 2), parts[at].Source); // Two entries in the snapshot.
+    }
+
+    /// <summary>The part carries the shipped Prompt's heading and one line per entry: <c>- path - description</c>, or the bare <c>- path</c> without a description.</summary>
+    [Fact]
+    public void ComposeParts_WithOutputs_RendersOneLinePerEntry()
+    {
+        OutputsSnapshot outputs = new(
+            [new OutputsEntry("A/outputs/sub/y.md", null), new OutputsEntry("A/outputs/z.md", "Read when Z")],
+            0);
+
+        PromptPart part = ComposeWithOutputs(outputs, withMemories: false).Single(static part => part.Label == "Outputs index");
+
+        Assert.Contains("## Outputs", part.Text, StringComparison.Ordinal); // The heading of systemPrompt.outputsIndex.
+        Assert.EndsWith("- A/outputs/sub/y.md\n- A/outputs/z.md - Read when Z", part.Text.ReplaceLineEndings("\n").TrimEnd(), StringComparison.Ordinal); // systemPrompt.memoryEntry: "- {{file}} - {{summary}}".
+    }
+
+    /// <summary>Over the cap each overflow ends the list with the existing "…and N more in {folder}." line, naming the Team's outputs folder.</summary>
+    [Fact]
+    public void ComposeParts_OutputsOverflow_EndsWithAMoreLinePerFolder()
+    {
+        OutputsSnapshot outputs = new(
+            [new OutputsEntry("A/outputs/z.md", "Read when Z")],
+            3,
+            [new OutputsOverflow("A/outputs", 1), new OutputsOverflow("B/outputs", 2)]);
+
+        PromptPart part = ComposeWithOutputs(outputs, withMemories: false).Single(static part => part.Label == "Outputs index");
+
+        // systemPrompt.memoryMore: "…and {{count}} more in {{memoryPath}}."
+        Assert.EndsWith("- A/outputs/z.md - Read when Z\n…and 1 more in A/outputs.\n…and 2 more in B/outputs.", part.Text.ReplaceLineEndings("\n").TrimEnd(), StringComparison.Ordinal);
+    }
+
+    /// <summary>No snapshot and an empty one add no outputs part, and the composed prompt is the same as without the argument.</summary>
+    [Fact]
+    public void ComposeParts_NullOrEmptyOutputs_AddsNoPart()
+    {
+        IReadOnlyList<PromptPart> withNull = ComposeWithOutputs(null, withMemories: true);
+        IReadOnlyList<PromptPart> withEmpty = ComposeWithOutputs(new OutputsSnapshot([], 0), withMemories: true);
+
+        Assert.DoesNotContain(withNull, static part => part.Source is PromptPartSource.Index { Kind: "outputs" });
+        Assert.Equal(withNull.Select(static part => part.Text), withEmpty.Select(static part => part.Text));
+    }
+
+    /// <summary>The joined parts still equal <c>Compose</c> when an outputs index is present.</summary>
+    [Fact]
+    public void ComposeParts_WithOutputs_JoinEqualsCompose()
+    {
+        OutputsSnapshot outputs = new([new OutputsEntry("A/outputs/z.md", "Read when Z")], 0);
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+
+        var parts = SystemPromptComposer.ComposeParts(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, outputs: outputs);
+        var composed = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, outputs: outputs);
+
+        AssertJoinsAndNonEmpty(parts, composed);
+        Assert.Contains(parts, static part => part.Source is PromptPartSource.Index { Kind: "outputs" });
+    }
+
+    /// <summary>Composes Nova's parts with an outputs snapshot, and optionally the three Memory snapshots that precede it.</summary>
+    /// <param name="outputs">The outputs index, or null.</param>
+    /// <param name="withMemories">Whether Memory, Huddle-wide Memory and Team Memory are present too.</param>
+    private static IReadOnlyList<PromptPart> ComposeWithOutputs(OutputsSnapshot? outputs, bool withMemories)
+    {
+        MemorySnapshot? memory = withMemories ? new("own", [new MemoryEntry("My fact.", "own/mine.md")], 0) : null;
+        MemorySnapshot? huddle = withMemories ? new("huddle", [new MemoryEntry("Alpha rule.", "huddle/a.md")], 0) : null;
+        TeamMemorySnapshot? team = withMemories
+            ? new([new TeamMemoryGroup("A", "A/memory", new MemorySnapshot("A/memory", [new MemoryEntry("Team fact.", "A/memory/t.md")], 0), [])], 0)
+            : null;
+
+        return SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."),
+            new FakePromptSource(),
+            "mcp__team__get_help",
+            ToolNames,
+            [],
+            string.Empty,
+            memory,
+            SessionScope.Shared,
+            teamMemory: team,
+            huddleMemory: huddle,
+            outputs: outputs);
     }
 
     /// <summary>Asserts the invariant of SB-R16: the parts joined with a blank line are the composed prompt, and no part is empty.</summary>

@@ -212,6 +212,10 @@ internal static class SystemPromptComposer
     /// The Huddle-wide Memory index (<c>Teams/memory/</c>), or <see langword="null"/> or an empty one for none; either leaves the output
     /// byte-identical to a call without it. Otherwise <c>systemPrompt.huddleMemory</c> follows the Memory block and precedes Team Memory.
     /// </param>
+    /// <param name="outputs">
+    /// The outputs index of the Persona's Teams, or <see langword="null"/> or an empty one for none; either leaves the output byte-identical to a
+    /// call without it. Otherwise <c>systemPrompt.outputsIndex</c> follows Team Memory and precedes the closing part.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -236,16 +240,17 @@ internal static class SystemPromptComposer
         AgentsMdSnapshot? agentsMd = null,
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null,
-        MemorySnapshot? huddleMemory = null)
+        MemorySnapshot? huddleMemory = null,
+        OutputsSnapshot? outputs = null)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -263,6 +268,7 @@ internal static class SystemPromptComposer
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     /// <param name="huddleMemory">The Huddle-wide Memory index (<c>Teams/memory/</c>), or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.huddleMemory</c> between Memory and Team Memory.</param>
+    /// <param name="outputs">The outputs index of the Persona's Teams, or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.outputsIndex</c> after Team Memory.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -279,7 +285,8 @@ internal static class SystemPromptComposer
         AgentsMdSnapshot? agentsMd = null,
         bool memoryChangesListed = true,
         MemoryWarnings? warnings = null,
-        MemorySnapshot? huddleMemory = null)
+        MemorySnapshot? huddleMemory = null,
+        OutputsSnapshot? outputs = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -311,6 +318,7 @@ internal static class SystemPromptComposer
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
         AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings, huddleMemory);
+        AddOutputsPart(parts, prompts, outputs);
 
         AddClosingParts(parts, prompts, scope, memory is not null && memoryChangesListed);
 
@@ -468,6 +476,42 @@ internal static class SystemPromptComposer
             prompts.Render(
                 "systemPrompt.huddleMemory",
                 new Dictionary<string, string> { ["{{memoryIndex}}"] = RenderMemoryIndex(prompts, huddleMemory) })));
+    }
+
+    /// <summary>
+    /// Adds the outputs index (slot 13, Spec §8.1) after Team Memory when a member Team has documents: one line per entry, the bare path
+    /// when it has no description, then one "…and N more in {folder}." line per folder the cap left documents out of.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="outputs">The outputs index, or <see langword="null"/> for none.</param>
+    private static void AddOutputsPart(List<PromptPart> parts, IPromptSource prompts, OutputsSnapshot? outputs)
+    {
+        if (outputs is null || (outputs.Entries.Count == 0 && outputs.NotListed == 0))
+        {
+            return;
+        }
+
+        List<string> lines =
+        [
+            .. outputs.Entries.Select(entry => entry.Description is null
+                ? $"- {entry.RelativePath}"
+                : prompts.Render(
+                    "systemPrompt.memoryEntry",
+                    new Dictionary<string, string> { ["{{file}}"] = entry.RelativePath, ["{{summary}}"] = entry.Description })),
+            .. outputs.Overflows.Select(overflow => prompts.Render(
+                "systemPrompt.memoryMore",
+                new Dictionary<string, string>
+                {
+                    ["{{count}}"] = overflow.Count.ToString(CultureInfo.InvariantCulture),
+                    ["{{memoryPath}}"] = overflow.Folder,
+                })),
+        ];
+
+        parts.Add(new PromptPart(
+            "Outputs index",
+            new PromptPartSource.Index("outputs", outputs.Entries.Count),
+            prompts.Render("systemPrompt.outputsIndex", new Dictionary<string, string> { ["{{outputsIndex}}"] = string.Join('\n', lines) })));
     }
 
     /// <summary>

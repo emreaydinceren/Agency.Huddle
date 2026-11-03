@@ -55,6 +55,19 @@ public sealed class PromptPartsViewTests
         Assert.Equal(["Prompt · default", "Prompt · overridden", file, "12 topics", "3 tools"], sources);
     }
 
+    /// <summary>Task 95: the outputs index part says how many documents it lists, not "Teams" or "topics".</summary>
+    [Fact]
+    public async Task View_OutputsIndexPart_ShowsTheDocumentCount()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        IReadOnlyList<PromptPart> parts = [new("Outputs index", new PromptPartSource.Index("outputs", 7), "- a.md")];
+
+        var cut = ctx.Render<PromptPartsView>(p => p.Add(v => v.Parts, parts).Add(v => v.Adapter, "claude"));
+
+        Assert.Equal("7 documents", cut.Find(".prompt-part-source").TextContent.Trim());
+    }
+
     /// <summary>A Prompt row links to its row on the Prompts tab of Settings, by key.</summary>
     [Fact]
     public async Task PromptRow_LinksToTheSettingsPromptsRow()

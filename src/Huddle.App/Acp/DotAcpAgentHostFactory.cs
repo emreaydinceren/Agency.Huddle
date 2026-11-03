@@ -196,7 +196,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             new AgentsMdReader(prompts, this.options.AgentsMd, this.loggerFactory.CreateLogger<AgentsMdReader>()),
             this.serviceProvider.GetRequiredService<TeamMemoryAccess>(),
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
-            this.agentPaths);
+            this.agentPaths,
+            this.options.Outputs.MaxIndexEntries);
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
@@ -626,7 +627,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             teamLabels,
             this.TeamsRoot(),
             this.options.Teams.MaxMemoryEntries,
-            this.options.Teams.MaxHuddleMemoryEntries);
+            this.options.Teams.MaxHuddleMemoryEntries,
+            sources.MaxOutputsEntries);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -643,7 +645,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             agentsMd: inputs.AgentsMd,
             memoryChangesListed: this.ReadsMemory(profile),
             warnings: sources.Warnings,
-            huddleMemory: inputs.HuddleMemory);
+            huddleMemory: inputs.HuddleMemory,
+            outputs: inputs.Outputs);
         return (parts, profile.Id);
     }
 }
