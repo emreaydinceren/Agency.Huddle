@@ -1495,13 +1495,9 @@ internal sealed class TaskService : IDisposable
                 CultureInfo.InvariantCulture,
                 $"The Project name '{project}' cannot be a folder name on this computer (it starts with '_')."));
         }
-        else if (string.Equals(project, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        else if (TeamNames.ReservedProjectProblem(project) is { } reservedProblem)
         {
-            problems.Add(TeamNames.MemoryReservedProblem);
-        }
-        else if (string.Equals(project, TeamNames.RawFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            problems.Add(TeamNames.RawReservedProblem);
+            problems.Add(reservedProblem);
         }
         else if (TryGetIllegalFolderNameProblem("Project", project, out string? projectProblem))
         {

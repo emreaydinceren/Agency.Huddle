@@ -36,6 +36,24 @@ internal static class TeamNames
         || string.Equals(name, RawFolder, StringComparison.OrdinalIgnoreCase)
         || string.Equals(name, OutputsFolder, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Returns the refusal text for a Project name that is the memory, raw or outputs folder (case-insensitive).</summary>
+    /// <param name="project">The proposed Project name.</param>
+    /// <returns>The matching reserved-name problem, or <see langword="null"/> when the name is none of the three.</returns>
+    internal static string? ReservedProjectProblem(string project)
+    {
+        if (string.Equals(project, MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return MemoryReservedProblem;
+        }
+
+        if (string.Equals(project, RawFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return RawReservedProblem;
+        }
+
+        return string.Equals(project, OutputsFolder, StringComparison.OrdinalIgnoreCase) ? OutputsReservedProblem : null;
+    }
+
     /// <summary>Checks if a name is one of the folders reserved for a Team's own use: memory, raw or outputs (case-insensitive).</summary>
     /// <param name="name">The Team name to check.</param>
     /// <returns>True when the name is reserved for a Team's own folders.</returns>
@@ -110,21 +128,11 @@ internal static class TeamNames
             return libraryProblem;
         }
 
-        // 2. Check if the name is the reserved memory folder (case-insensitive)
-        if (string.Equals(name, MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        // 2. Check if the name is the reserved memory, raw or outputs folder (case-insensitive)
+        string? reservedProblem = ReservedProjectProblem(name);
+        if (reservedProblem is not null)
         {
-            return MemoryReservedProblem;
-        }
-
-        // 2b. Check if the name is the reserved raw or outputs folder (case-insensitive)
-        if (string.Equals(name, RawFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            return RawReservedProblem;
-        }
-
-        if (string.Equals(name, OutputsFolder, StringComparison.OrdinalIgnoreCase))
-        {
-            return OutputsReservedProblem;
+            return reservedProblem;
         }
 
         // 3. Check for reserved Project-level prefixes
