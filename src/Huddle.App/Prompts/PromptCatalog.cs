@@ -159,7 +159,8 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to avoid replying to every message in group Rooms."),
 
         new PromptDefinition(
             Key: "systemPrompt.tools",
@@ -1587,7 +1588,8 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.roomSessionsCarry</c> to <c>systemPrompt.sharedSession</c>.</summary>
@@ -1631,7 +1633,8 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>task.wake.message</c> to <c>tool.getTask.description</c>.</summary>

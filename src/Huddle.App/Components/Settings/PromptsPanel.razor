@@ -61,6 +61,11 @@
                               Class="long-text-field markdown-field"
                               Immediate="true" />
 
+                @if (field.ReliedWarning is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">@field.ReliedWarning</MudAlert>
+                }
+
                 @if (field.Placeholders.Count > 0)
                 {
                     <p class="prompts-field-placeholders">
