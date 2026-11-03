@@ -259,7 +259,7 @@ public sealed class ArchiveTeamTests
         Assert.Equal(1, confirmation.NeedsYou);
         Assert.Equal(["Ada"], confirmation.NoTeamNames);
         Assert.Equal(
-            "Archive Home? 2 open Tasks and 1 waiting on you will leave the Boards. These Agents will have no Team: Ada.",
+            "Archive Home? 2 open Tasks and 1 waiting on you will leave the Boards. This Agent will have no Team: Ada.",
             confirmation.Text(Home));
     }
 
@@ -272,6 +272,19 @@ public sealed class ArchiveTeamTests
         string text = confirmation.Text("Home");
 
         Assert.Equal("Archive Home? 0 open Tasks and 0 waiting on you will leave the Boards.", text);
+    }
+
+    /// <summary>One open Task and one Agent read in the singular: the manual run read "1 open Tasks … These Agents will have no Team: Pia."</summary>
+    [Fact]
+    public void Text_OneTaskAndOneAgent_ReadsInTheSingular()
+    {
+        ArchiveConfirmation confirmation = new(1, 0, ["Pia"]);
+
+        string text = confirmation.Text("Property Investment");
+
+        Assert.Equal(
+            "Archive Property Investment? 1 open Task and 0 waiting on you will leave the Boards. This Agent will have no Team: Pia.",
+            text);
     }
 
     /// <summary>Several Agents are listed comma-separated, in the order given.</summary>

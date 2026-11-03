@@ -12,11 +12,13 @@ internal sealed record ArchiveConfirmation(int OpenTasks, int NeedsYou, IReadOnl
     /// <param name="team">The Team's display name.</param>
     public string Text(string team)
     {
+        string tasks = this.OpenTasks == 1 ? "Task" : "Tasks";
         string text = string.Create(
             CultureInfo.InvariantCulture,
-            $"Archive {team}? {this.OpenTasks} open Tasks and {this.NeedsYou} waiting on you will leave the Boards.");
+            $"Archive {team}? {this.OpenTasks} open {tasks} and {this.NeedsYou} waiting on you will leave the Boards.");
+        string agents = this.NoTeamNames.Count == 1 ? "This Agent" : "These Agents";
         return this.NoTeamNames.Count == 0
             ? text
-            : text + " These Agents will have no Team: " + string.Join(", ", this.NoTeamNames) + ".";
+            : $"{text} {agents} will have no Team: {string.Join(", ", this.NoTeamNames)}.";
     }
 }
