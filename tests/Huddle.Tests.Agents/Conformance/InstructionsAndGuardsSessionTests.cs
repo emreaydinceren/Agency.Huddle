@@ -138,19 +138,21 @@ public sealed class InstructionsAndGuardsSessionTests
         Assert.Equal("allow", edit);
     }
 
-    /// <summary>An Agent's edit of an Instructions file is rejected at the Teams root and in its own Work Dir; a read is allowed.</summary>
+    /// <summary>An Agent's edit of an AGENTS.md is rejected at the Teams root and in a Team folder, but not in its own Work Dir; a read is allowed.</summary>
     [Fact]
-    public async Task Permission_EditOfAnInstructionsFile_IsRejected_AndReadAllowed()
+    public async Task Permission_EditOfAnAgentsMdFile_IsRejected_AndReadAllowed()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
-        string huddle = Path.Combine(dataDir.Path, "Teams", "Instructions.md");
-        string own = Path.Combine(dataDir.Path, "Agents", "nova", "work", "Instructions.md");
+        string huddle = Path.Combine(dataDir.Path, "Teams", "AGENTS.md");
+        string team = Path.Combine(dataDir.Path, "Teams", "Business", "AGENTS.md");
+        string own = Path.Combine(dataDir.Path, "Agents", "nova", "work", "AGENTS.md");
 
         await using MockAdapterFixture fixture = await StartAsync(dataDir, "boss", ct);
 
         Assert.Equal("reject", await DecideAsync(fixture, "edit", huddle, ct));
-        Assert.Equal("reject", await DecideAsync(fixture, "edit", own, ct));
+        Assert.Equal("reject", await DecideAsync(fixture, "edit", team, ct));
+        Assert.Equal("allow", await DecideAsync(fixture, "edit", own, ct));
         Assert.Equal("allow", await DecideAsync(fixture, "read", huddle, ct));
     }
 }

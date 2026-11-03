@@ -37,7 +37,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<string> teamLabels;
     private readonly ITeamCatalog teamCatalog;
     private readonly string teamsRoot;
-    private readonly RawGuard rawGuard;
+    private readonly PermissionGuards guards;
     private readonly int maxTeamMemoryEntries;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
@@ -65,8 +65,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
     /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
-    /// <param name="rawRoot">The full path of the Raw root folder, which the Raw guard keeps unedited.</param>
-    /// <param name="archiveRoot">The full path of the Archive root folder, whose <c>raw</c> folders the Raw guard keeps unedited.</param>
+    /// <param name="guards">The file guards every opened session's permission handler consults.</param>
     /// <param name="maxTeamMemoryEntries">The cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams when <paramref name="readsMemory"/>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
@@ -93,8 +92,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyList<string> teamLabels,
         ITeamCatalog teamCatalog,
         string teamsRoot,
-        string rawRoot,
-        string archiveRoot,
+        PermissionGuards guards,
         int maxTeamMemoryEntries,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
@@ -106,7 +104,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IMergeGate? mergeGate = null)
     {
         this.mergeGate = mergeGate;
-        ValidateSessionPromptSources(roleBlock, sources);
+        ValidateSessionPromptSources(roleBlock, sources, guards);
         this.sources = sources;
         this.roleBlock = roleBlock;
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
@@ -139,7 +137,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.teamLabels = teamLabels;
         this.teamCatalog = teamCatalog;
         this.teamsRoot = teamsRoot;
-        this.rawGuard = new RawGuard(teamsRoot, rawRoot, archiveRoot, workDir, prompts);
+        this.guards = guards;
         this.maxTeamMemoryEntries = maxTeamMemoryEntries;
         this.workDir = workDir;
         this.toolServerEndpoint = toolServerEndpoint;
@@ -151,10 +149,12 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <summary>Guards the collaborators that build the system prompt's role block and AGENTS.md block and decide who writes a Team's Memory.</summary>
     /// <param name="roleBlock">The role block factory.</param>
     /// <param name="sources">The AGENTS.md reader, Team Memory access rules and memory warnings.</param>
-    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources)
+    /// <param name="guards">The file guards the permission handler consults.</param>
+    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources, PermissionGuards guards)
     {
         ArgumentNullException.ThrowIfNull(roleBlock);
         ArgumentNullException.ThrowIfNull(sources);
+        ArgumentNullException.ThrowIfNull(guards);
     }
 
     /// <summary>Guards the constructor's collaborator arguments, in declaration order.</summary>
@@ -254,10 +254,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(),
             this.mergeGate,
             this.persona.Name,
-            new InstructionsWriteGuard(this.teamsRoot, this.workDir, this.prompts, this.sources.AgentPaths),
-            new TeamMemoryWriteGuard(this.teamsRoot, this.workDir, this.sources.TeamMemory, this.prompts),
-            this.workDir,
-            rawGuard: this.rawGuard);
+            this.guards,
+            this.workDir);
     }
 
     /// <summary>

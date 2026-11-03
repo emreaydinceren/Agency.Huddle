@@ -2014,14 +2014,14 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
-            Key: "systemPrompt.instructionsRefusal",
-            Label: "Instructions write refused",
+            Key: "systemPrompt.agentsMdRefusal",
+            Label: "AGENTS.md write refused",
             HelperText:
-                "The reason logged when an Agent's tool call that edits, deletes or moves an Instructions " +
-                "file is refused (Instructions and Memory §3.3). Must keep {{path}}.",
-            Default: "Instructions files are written by the Human. Ask the Human to change {{path}}.",
-            Placeholders: ["{{path}}"],
-            RequiredPlaceholders: ["{{path}}"],
+                "The reason logged when an Agent's tool call that edits, deletes or moves an AGENTS.md " +
+                "file is refused (Second Brain §6.6).",
+            Default: "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(

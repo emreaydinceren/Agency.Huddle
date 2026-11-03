@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.Acp;
 /// An Agent adds a new file beside the original instead.
 /// </summary>
 /// <remarks>
-/// Like <see cref="InstructionsWriteGuard"/> it sees path arguments only, so a shell command gets past it: that boundary is soft and documented.
+/// Like <see cref="AgentsMdGuard"/> it sees path arguments only, so a shell command gets past it: that boundary is soft and documented.
 /// A read is never refused, and neither is the creation of a file that does not exist yet.
 /// </remarks>
 /// <param name="teamsRoot">The Teams root folder.</param>

@@ -141,6 +141,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile);
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
+        SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
         return new DotAcpPersonaHost(
             innerHost,
@@ -159,8 +160,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             teamLabels,
             this.teamCatalog,
             this.TeamsRoot(),
-            this.RawRoot(),
-            this.ArchiveRoot(),
+            this.CreateGuards(toolSet.Prompts, workDir, sources),
             this.options.Teams.MaxMemoryEntries,
             workDir,
             toolServer.Endpoint,
@@ -168,8 +168,22 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
-            this.CreatePromptSources(toolSet.Prompts),
+            sources,
             this.serviceProvider.GetService<IMergeGate>());
+    }
+
+    /// <summary>Builds the file guards one Persona's permission handler consults.</summary>
+    /// <param name="prompts">Renders each guard's refusal reason.</param>
+    /// <param name="workDir">The Persona's Work Dir, where a relative path resolves.</param>
+    /// <param name="sources">Supplies the Team Memory access rules.</param>
+    /// <returns>The guards.</returns>
+    private PermissionGuards CreateGuards(IPromptSource prompts, string workDir, SessionPromptSources sources)
+    {
+        string teamsRoot = this.TeamsRoot();
+        return new PermissionGuards(
+            new AgentsMdGuard(teamsRoot, workDir, prompts),
+            new TeamMemoryWriteGuard(teamsRoot, workDir, sources.TeamMemory, prompts),
+            new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>

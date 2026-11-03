@@ -13,7 +13,6 @@ public sealed class InstructionsAndMemoryPromptTests
     /// <param name="placeholders">The placeholders it declares and requires, comma separated.</param>
     [Theory]
     [InlineData("systemPrompt.agentsMdCut", "{{max}},{{path}}")]
-    [InlineData("systemPrompt.instructionsRefusal", "{{path}}")]
     public void InstructionsPrompts_DeclareTheirPlaceholders(string key, string placeholders)
     {
         ArgumentNullException.ThrowIfNull(placeholders);
@@ -29,9 +28,6 @@ public sealed class InstructionsAndMemoryPromptTests
     public void InstructionsPrompts_CarryTheSpecWording()
     {
         Assert.Equal("…cut at {{max}} characters; the rest is in {{path}}.", PromptCatalog.Get("systemPrompt.agentsMdCut").Default);
-        Assert.Equal(
-            "Instructions files are written by the Human. Ask the Human to change {{path}}.",
-            PromptCatalog.Get("systemPrompt.instructionsRefusal").Default);
     }
 
     /// <summary>The levels Prompt (T8) takes no placeholders and applies at the next session.</summary>

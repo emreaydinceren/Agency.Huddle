@@ -2,7 +2,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -24,13 +26,18 @@ public sealed class RawGuardWiringTests
         string workDir = Path.Combine(root, "Agents", "Nova", "work");
         FakePromptSource prompts = new();
         RawGuard guard = new(teamsRoot, Path.Combine(root, "Raw"), Path.Combine(root, "Archive"), workDir, prompts);
+        string inert = Path.Combine(root, "Inert");
+        PermissionGuards guards = new(
+            new AgentsMdGuard(inert, workDir, prompts),
+            new TeamMemoryWriteGuard(inert, workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
+            guard);
         string path = Path.Combine(teamsRoot, "Home", "raw", "r1", "a.pdf");
         PermissionRequestContext request = new(
             "session-1",
             new ToolCallInfo("call-1", "Tool", ToolKind.Delete, ToolCallStatus.Pending, $$"""{"file_path":{{JsonSerializer.Serialize(path)}}}"""),
             BothKinds);
 
-        WorkDirPermissionHandler guarded = new(Path.Combine(root, ".claude"), NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir, rawGuard: guard);
+        WorkDirPermissionHandler guarded = new(Path.Combine(root, ".claude"), NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir, guards: guards);
         WorkDirPermissionHandler unguarded = new(Path.Combine(root, ".claude"), NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir);
 
         PermissionDecision refused = await guarded.DecideAsync(request, TestContext.Current.CancellationToken);
