@@ -39,4 +39,24 @@ public sealed class TeamFolderCatalogReservedTests
         TeamFolder folder = Assert.Single(folders);
         Assert.Equal("Home", folder.Name, StringComparer.Ordinal);
     }
+
+    /// <summary>
+    /// <see cref="TaskStore.Teams"/>, which the Team catalog reads, lists no reserved folder either: the Huddle-wide
+    /// <c>Teams/memory/</c> showed in the sidebar and the Task form as a Team called "memory".
+    /// </summary>
+    [Fact]
+    public void TaskStoreTeams_ReservedFolders_AreNotTeams()
+    {
+        using TempDataDir dir = new();
+        string teamsPath = Path.Combine(dir.Path, "Teams");
+        Directory.CreateDirectory(Path.Combine(teamsPath, "memory"));
+        Directory.CreateDirectory(Path.Combine(teamsPath, "Outputs"));
+        Directory.CreateDirectory(Path.Combine(teamsPath, "Home"));
+        PersonaStore personas = dir.CreatePersonaStore();
+
+        TaskStore taskStore = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder folder = Assert.Single(taskStore.Teams);
+        Assert.Equal("Home", folder.Name, StringComparer.Ordinal);
+    }
 }

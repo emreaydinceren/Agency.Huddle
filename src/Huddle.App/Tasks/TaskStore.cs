@@ -1302,8 +1302,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>The full paths of <see cref="RootDirectory"/>'s non-reserved Team folders, every case
-    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list).</summary>
-    private List<string> RawTeamDirectories() => this.RawSubfolders(this.RootDirectory);
+    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list). The Second Brain
+    /// folders (<see cref="TeamNames.IsReservedTeamName"/>) are not Teams either: <c>Teams/memory/</c> is the Huddle-wide Memory.</summary>
+    private List<string> RawTeamDirectories() =>
+        [.. this.RawSubfolders(this.RootDirectory).Where(static dir => !TeamNames.IsReservedTeamName(Path.GetFileName(dir)))];
 
     /// <summary>
     /// Enumerates Team folders directly under <see cref="RootDirectory"/> with their Project

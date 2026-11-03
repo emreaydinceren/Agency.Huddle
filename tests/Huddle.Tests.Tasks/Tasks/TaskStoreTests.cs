@@ -870,10 +870,10 @@ public sealed class TaskStoreTests
         Assert.Equal(["Marketing", "memories", "Memory-Notes"], projects);
     }
 
-    /// <summary>A Team folder named <c>memory</c> is still a Team: the reserved name applies to
-    /// Projects only.</summary>
+    /// <summary>A folder named <c>memory</c> directly under <c>Teams/</c> is not a Team: since the Second Brain it is the
+    /// Huddle-wide Memory, and <c>memory</c> is a reserved Team name (Spec §6.1, SB-R02).</summary>
     [Fact]
-    public void Teams_TeamNamedMemory_IsStillATeam()
+    public void Teams_FolderNamedMemory_IsNotATeam()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
@@ -882,8 +882,7 @@ public sealed class TaskStoreTests
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
-        TeamFolder memory = Assert.Single(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.Ordinal));
-        Assert.Equal(["Marketing"], memory.Projects);
+        Assert.DoesNotContain(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>A Task file under <c>Business/memory/_tasks</c> is neither indexed nor rejected: the
