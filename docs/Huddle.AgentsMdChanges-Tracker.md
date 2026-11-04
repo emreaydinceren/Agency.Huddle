@@ -11,29 +11,29 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task count they name.
 - Task 1.8 is a gate: if it fails, work stops for the Human before D2. Paid tasks need the Human's approval each time.
 
-**Status:** 1 of 76 tasks Done · 0 of 4 retrospectives done · last updated 2026-11-04.
+**Status:** 24 of 76 tasks Done · 1 of 4 retrospectives done · last updated 2026-11-04.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
 | **D0. Setup** | | | |
 | 0.1 Branch and baseline | | | ✔ |
 | **D1. The Turn Hook pattern, with File Changes moved onto it** | | | |
-| 1.1.t Hook contract types and ordering | ✔ | | |
-| 1.1.i The types and the pipeline's happy path | ✔ | | |
-| 1.2.t The pipeline's failure rules | ✔ | | |
-| 1.2.i Failure rules | ✔ | | |
-| 1.3.t `FileChangesTurnHook` on its own | ✔ | | |
-| 1.3.i `FileChangesTurnHook` | ✔ | | |
-| 1.4.t `HookBlocks` reach the prompt | ✔ | | |
-| 1.4.i `WorkItem.HookBlocks` | ✔ | | |
-| 1.5.t `RoomSession` runs a pipeline | ✔ | | |
-| 1.5.i Wire the pipeline in, beside the old path | ✔ | | |
-| 1.6.t The Persona's pipeline is built once | ✔ | | |
-| 1.6.i Thread the pipeline through | ✔ | | |
-| 1.7 Delete the old path, Personas tests | ✔ | | |
+| 1.1.t Hook contract types and ordering | | | ✔ |
+| 1.1.i The types and the pipeline's happy path | | | ✔ |
+| 1.2.t The pipeline's failure rules | | | ✔ |
+| 1.2.i Failure rules | | | ✔ |
+| 1.3.t `FileChangesTurnHook` on its own | | | ✔ |
+| 1.3.i `FileChangesTurnHook` | | | ✔ |
+| 1.4.t `HookBlocks` reach the prompt | | | ✔ |
+| 1.4.i `WorkItem.HookBlocks` | | | ✔ |
+| 1.5.t `RoomSession` runs a pipeline | | | ✔ |
+| 1.5.i Wire the pipeline in, beside the old path | | | ✔ |
+| 1.6.t The Persona's pipeline is built once | | | ✔ |
+| 1.6.i Thread the pipeline through | | | ✔ |
+| 1.7 Delete the old path, Personas tests | | ✔ | |
 | 1.8 Delete the old path, Agents and Hosted tests; the gate | ✔ | | |
 | **D2. Session state for hooks** | | | |
-| 🔁 R1 Retrospective after task 15 | ✔ | | |
+| 🔁 R1 Retrospective after task 15 | | | ✔ |
 | 2.1.t `HookState` on the entry | ✔ | | |
 | 2.1.i `HookState` and `UpdateHookState` | ✔ | | |
 | 2.2.t Opening runs at the right moment | ✔ | | |
@@ -43,20 +43,20 @@ never by hand, so the status line stays true.
 | 2.4.t Stop ends a waiting hook | ✔ | | |
 | 2.4.i The Stop token | ✔ | | |
 | **D3. What a file is, and who it applies to** | | | |
-| 3.1.t The locator | ✔ | | |
-| 3.1.i `AgentsMdLocator` and `AgentsMdFile` | ✔ | | |
-| 3.2.t The body and its hash | ✔ | | |
-| 3.2.i `AgentsMdBody` and the shared strip | ✔ | | |
-| 3.3.t The line comparison | ✔ | | |
-| 3.3.i `AgentsMdComparison` | ✔ | | |
-| 3.4.t Options | ✔ | | |
-| 3.4.i The option keys | ✔ | | |
+| 3.1.t The locator | | | ✔ |
+| 3.1.i `AgentsMdLocator` and `AgentsMdFile` | | | ✔ |
+| 3.2.t The body and its hash | | | ✔ |
+| 3.2.i `AgentsMdBody` and the shared strip | | | ✔ |
+| 3.3.t The line comparison | | | ✔ |
+| 3.3.i `AgentsMdComparison` | | | ✔ |
+| 3.4.t Options | | | ✔ |
+| 3.4.i The option keys | | | ✔ |
 | 🔁 R2 Retrospective after task 30 | ✔ | | |
-| 3.5.t `AgentsMdScopes` | ✔ | | |
-| 3.5.i `AgentsMdScopes` | ✔ | | |
+| 3.5.t `AgentsMdScopes` | | | ✔ |
+| 3.5.i `AgentsMdScopes` | | | ✔ |
 | **D4. The ledger** | | | |
-| 4.1.t Observing a file | ✔ | | |
-| 4.1.i Ledger storage and `Observe` | ✔ | | |
+| 4.1.t Observing a file | | | ✔ |
+| 4.1.i Ledger storage and `Observe` | | ✔ | |
 | 4.2.t Starting a judgement | ✔ | | |
 | 4.2.i `TryStartJudgement` | ✔ | | |
 | 4.3.t Settling an edit | ✔ | | |

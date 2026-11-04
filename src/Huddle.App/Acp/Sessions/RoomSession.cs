@@ -1,4 +1,5 @@
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
@@ -126,6 +127,16 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private bool running;
     private long lastUsed;
 
+    private readonly TurnHookPipeline? hooks;
+
+    /// <summary>
+    /// The per-hook state the Turn hooks keep, keyed by hook name. Consumer-only: both uses
+    /// (the Before point in <c>ProcessWorkItemAsync</c> and the After point in <c>FinishTurnAsync</c>)
+    /// run on the consumer.
+    /// <c>OpenAsync</c> is reachable outside the consumer, so an eager open must not write this without the gate.
+    /// </summary>
+    private readonly Dictionary<string, string?> hookState = new(StringComparer.Ordinal);
+
     /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
     private string? lastModel;
 
@@ -182,6 +193,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
+    /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -206,7 +218,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
-        LastCatchUpStore? lastCatchUp = null)
+        LastCatchUpStore? lastCatchUp = null,
+        TurnHookPipeline? hooks = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -238,6 +251,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
         this.libraryDocs = libraryDocs;
+        this.hooks = hooks;
         this.references = references;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
@@ -1204,13 +1218,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // Adapter cannot read files). It is carried on the TurnRun so the finally block can see it
         // (FC §6.8, finding P-17).
         (item, CollectedChanges? collected) = await this.CollectFileChangesAsync(item, ct).ConfigureAwait(false);
+        (item, TurnHookBeforeResult? hookResult) = await this.RunBeforeHooksAsync(item, ct).ConfigureAwait(false);
         item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
         item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
         item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
 
         // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
         this.WriteLastCatchUp(item);
-        TurnRun? run = this.TryPublishTurn(item, collected, sequence, ct);
+        TurnRun? run = this.TryPublishTurn(item, collected, hookResult, sequence, ct);
         if (run is null)
         {
             return;
@@ -1243,6 +1258,27 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     }
 
     /// <summary>
+    /// Runs the Turn hooks' Before points for a Message Turn and attaches their blocks to the item.
+    /// Runs before the Turn, the cancellation source and the watchdog exist, so a slow hook is never
+    /// counted as Adapter silence.
+    /// </summary>
+    /// <param name="item">The item being prepared.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>The item with its hook blocks set, and the result, or <see langword="null"/> when no hook ran.</returns>
+    private async Task<(WorkItem Item, TurnHookBeforeResult? Result)> RunBeforeHooksAsync(WorkItem item, CancellationToken ct)
+    {
+        if (this.hooks is null || item.Kind != WorkItemKind.Message)
+        {
+            return (item, null);
+        }
+
+        TurnHookBeforeResult result = await this.hooks
+            .BeforeTurnAsync(item.RoomId, this.hookState, ct, CancellationToken.None)
+            .ConfigureAwait(false);
+        return (result.Blocks.Count > 0 ? item with { HookBlocks = result.Blocks } : item, result);
+    }
+
+    /// <summary>
     /// Collects the Room's File Changes at Turn start and attaches the report to the item.
     /// </summary>
     /// <remarks>
@@ -1258,7 +1294,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         CollectedChanges? collected = null;
 
-        if (item.Kind == WorkItemKind.Message && this.fileChanges is not null)
+        if (item.Kind == WorkItemKind.Message && this.fileChanges is not null && this.hooks is null)
         {
             try
             {
@@ -1502,10 +1538,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// </remarks>
     /// <param name="item">The fully prepared item.</param>
     /// <param name="collected">What the File Changes collect returned, if anything.</param>
+    /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     /// <param name="sequence">The item's scheduler sequence, compared against the Room's Stop mark.</param>
     /// <param name="ct">The run's own cancellation token, which the Turn's token is linked to.</param>
     /// <returns>The published Turn's state, or <see langword="null"/> when nothing was published and nothing was committed.</returns>
-    private TurnRun? TryPublishTurn(WorkItem item, CollectedChanges? collected, long sequence, CancellationToken ct)
+    private TurnRun? TryPublishTurn(WorkItem item, CollectedChanges? collected, TurnHookBeforeResult? hookResult, long sequence, CancellationToken ct)
     {
         var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1537,7 +1574,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // the question source linked to turnCancellation that EndUserInput must dispose.
             ActiveTurn turn = new(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
             this.activeTurn = turn;
-            return new TurnRun(item, collected, messageId, completion, turnCancellation, turn, opened);
+            return new TurnRun(item, collected, messageId, completion, turnCancellation, turn, opened, hookResult);
         }
     }
 
@@ -1786,6 +1823,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         await this.WriteFinalDeltaAsync(run, ct).ConfigureAwait(false);
         await this.CommitFileChangesAsync(run, ct).ConfigureAwait(false);
+        await this.RunAfterHooksAsync(run, ct).ConfigureAwait(false);
         this.StoreSessionEntry(run, ct);
 
         run.TurnCancellation.Dispose();
@@ -1838,7 +1876,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="ct">The run's own cancellation token.</param>
     private async Task CommitFileChangesAsync(TurnRun run, CancellationToken ct)
     {
-        if (this.fileChanges is not null && run.Collected is not null && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
+        if (this.fileChanges is not null && this.hooks is null && run.Collected is not null && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
         {
             HashSet<string> touched;
             lock (this.gate)
@@ -1855,6 +1893,28 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                 this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to commit File Changes for room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
             }
         }
+    }
+
+    /// <summary>
+    /// Runs the Turn hooks' After points under the File Changes commit's own condition. The token is
+    /// <paramref name="ct"/>, never the Turn's: a stopped Turn has already cancelled its own and must still commit.
+    /// </summary>
+    /// <param name="run">The Turn that ended.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task RunAfterHooksAsync(TurnRun run, CancellationToken ct)
+    {
+        if (this.hooks is null || run.HookResult is null || ct.IsCancellationRequested || !(run.PromptReturned || run.Turn.SawActivity))
+        {
+            return;
+        }
+
+        HashSet<string> touched;
+        lock (this.gate)
+        {
+            touched = [.. run.Turn.Touched];
+        }
+
+        await this.hooks.AfterTurnAsync(run.Item.RoomId, this.hookState, run.HookResult, touched, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1902,6 +1962,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="turnCancellation">The Turn's own cancellation source, disposed last.</param>
     /// <param name="turn">The Turn published as the active one.</param>
     /// <param name="activeSession">The session the Turn was published against.</param>
+    /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     private sealed class TurnRun(
         WorkItem item,
         CollectedChanges? collected,
@@ -1909,10 +1970,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         TaskCompletionSource<TurnOutcome> completion,
         CancellationTokenSource turnCancellation,
         ActiveTurn turn,
-        IAgentSession activeSession)
+        IAgentSession activeSession,
+        TurnHookBeforeResult? hookResult)
     {
         /// <summary>Gets the fully prepared item.</summary>
         public WorkItem Item { get; } = item;
+
+        /// <summary>Gets what the Turn hooks' Before points produced, or <see langword="null"/> when none ran (a Greeting, a Command, or no pipeline).</summary>
+        public TurnHookBeforeResult? HookResult { get; } = hookResult;
 
         /// <summary>Gets what the File Changes collect returned.</summary>
         public CollectedChanges? Collected { get; } = collected;
@@ -2606,6 +2671,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
 
         var builder = new StringBuilder();
+
+        // Spec 6.7: hook blocks lead the framed prompt, ahead of the File Changes block, each followed by a blank line.
+        if (item.HookBlocks is { } hookBlocks)
+        {
+            foreach (string hookBlock in hookBlocks)
+            {
+                builder.Append(hookBlock);
+                builder.Append("\n\n");
+            }
+        }
+
         RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
         RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
 

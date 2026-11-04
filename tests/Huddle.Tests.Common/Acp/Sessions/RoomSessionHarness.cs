@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -53,6 +54,12 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>The store the first Turn after a fresh start writes its whole prompt text to, or <see langword="null"/> for none (no file is written).</summary>
     public LastCatchUpStore? LastCatchUp { get; init; }
+
+    /// <summary>The Turn hook pipeline the session runs around each Message Turn, or <see langword="null"/> for none.</summary>
+    public TurnHookPipeline? Hooks { get; init; }
+
+    /// <summary>The clock the session and its watchdog use, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</summary>
+    public TimeProvider? Time { get; init; }
 }
 
 /// <summary>
@@ -114,7 +121,9 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             roomSessions: settings.RoomSessions,
             host: settings.Host,
             sessionSettings: settings.SessionSettings,
-            lastCatchUp: settings.LastCatchUp);
+            lastCatchUp: settings.LastCatchUp,
+            time: settings.Time,
+            hooks: settings.Hooks);
         return new RoomSessionHarness(session, runCts);
     }
 

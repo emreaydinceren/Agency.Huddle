@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Pipes;
@@ -488,6 +489,54 @@ public sealed class PersonaRunnerFileChangesTests
         Assert.Equal(2, factory.Session.Prompts.Count);
         Assert.Equal(expected1, factory.Session.Prompts[0]);
         Assert.Equal(expected2, factory.Session.Prompts[1]);
+    }
+
+    /// <summary>Spec §6.10: a runner given a pipeline passes it to its session, so a file changed between two Turns is listed and the block opens the prompt.</summary>
+    [Fact]
+    public async Task PersonaRunner_PassesThePipelineToTheSession()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var workDir = OwnWorkDir(options.Value, "nova");
+        Directory.CreateDirectory(workDir);
+        var filePath = Path.Combine(workDir, "a.txt");
+        File.WriteAllText(filePath, "v1");
+
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("first");
+        factory.Session.EnqueueReply("second");
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        var prompts = new FakePromptSource();
+        var fileChangesHook = new FileChangesTurnHook(tracker, prompts, fixture.Services.GetRequiredService<ILogger<FileChangesTurnHook>>());
+        var hooks = TurnHookPipeline.ForPersona(
+            new TurnHookScope("nova", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+            fileChangesHook,
+            fixture.Services.GetRequiredService<ILogger<PersonaRunner>>());
+
+        await using var agentHost = new PersonaRunner(
+            TestPersonas.Nova, options, factory, prompts, new RoomFollows(), fixture.Services.GetRequiredService<ILogger<PersonaRunner>>(), tracker, hooks: hooks);
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
+
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
+        File.WriteAllText(filePath, "v1 changed");
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
+        await Eventually.HistoryCountAsync(store, roomId, 4, ct);
+
+        var header = prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>());
+
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.StartsWith(header, factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
     /// <summary>Builds a <see cref="PersonaRunner"/> over <paramref name="fixture"/>'s real pipe, with the given (or absent) File Changes tracker.</summary>

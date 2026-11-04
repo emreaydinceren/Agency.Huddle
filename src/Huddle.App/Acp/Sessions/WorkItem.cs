@@ -35,6 +35,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <param name="Command">The command to run, in the Adapter's own casing; set exactly when <paramref name="Kind"/> is <see cref="WorkItemKind.Command"/>.</param>
 /// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room; it names the Team in the Room label.</param>
 /// <param name="ReferencedItems">The Referenced items header built from the triggering Message's references (spec section 9.1), or <see langword="null"/> when there is none; it follows the Library documents block.</param>
+/// <param name="HookBlocks">The prompt blocks the Turn's hooks produced, in hook order, or <see langword="null"/> when there are none; each is followed by a blank line and they lead the framed prompt, before the File Changes block.</param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -49,4 +50,5 @@ internal sealed record WorkItem(
     LibraryDocumentsReport? LibraryDocuments = null,
     AdapterCommandCall? Command = null,
     string? Team = null,
-    string? ReferencedItems = null);
+    string? ReferencedItems = null,
+    IReadOnlyList<string>? HookBlocks = null);

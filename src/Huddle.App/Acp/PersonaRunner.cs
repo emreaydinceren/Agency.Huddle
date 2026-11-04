@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
@@ -100,6 +101,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly ContextFill? contextFill;
     private readonly ISessionSettings? sessionSettings;
     private readonly LastCatchUpStore? lastCatchUp;
+    private readonly TurnHookPipeline? hooks;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
@@ -156,8 +158,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
-        LastCatchUpStore? lastCatchUp = null)
-    {
+        LastCatchUpStore? lastCatchUp = null,
+        TurnHookPipeline? hooks = null)    {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(factory);
@@ -179,6 +181,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
+        this.hooks = hooks;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -566,7 +569,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.references,
             this.contextFill,
             this.sessionSettings,
-            this.lastCatchUp);
+            this.lastCatchUp,
+            this.hooks);
     }
 
     /// <summary>Queues the Greeting for a Chief of Staff with an empty Human Room, at most once per runner lifetime.</summary>

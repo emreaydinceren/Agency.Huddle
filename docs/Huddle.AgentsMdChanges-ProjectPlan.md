@@ -76,8 +76,8 @@ do), with one fix each. The manager then **edits this plan** and records the cha
 
 | Topic | The fact | Where |
 | --- | --- | --- |
-| Build | `dotnet build Huddle.slnx` from the repo root. Warnings are errors | `CLAUDE.md` "C# code" |
-| Test | `dotnet test Huddle.slnx --`: the trailing `--` is required. One class: `pwsh agents/scripts/Run-Tests.ps1 -FilterClass <X>` | `CLAUDE.md`; `agents/Testing.md` lines 12–45 |
+| Build | `pwsh -NoProfile -File agents/scripts/Build.ps1` from the repo root. Warnings are errors | `CLAUDE.md` "C# code" |
+| Test | One class: `pwsh -NoProfile -File agents/scripts/Run-Tests.ps1 -FilterClass "*<X>"`; the leading `*` is required. Full suite: the same with no filter | `CLAUDE.md`; `agents/Testing.md` lines 12–45 |
 | House style | `this.` on members, file-scoped namespaces, `sealed`, explicit type on the left with `new()`, no `!`, guards with throw helpers, `///` on every type and member, one top-level type per file named after it, methods at most 60 lines, `ConfigureAwait(false)` in `src` | `agents/CSharpPrinciples.md` "Rules that fail the build most often" |
 | Logging | `Huddle.App`: direct `this.logger.LogX` with a constant template; guard with `IsEnabled` when an argument is computed | `agents/CSharpPrinciples.md` "Logging" |
 | Tests | Every test has a `///` summary, `TestContext.Current.CancellationToken`, exact asserts (`Assert.Equal` on text, whole collections), and a `// contains-ok:` comment on any `Contains` over non-markup text | `agents/Testing.md` lines 117–157 |
@@ -762,3 +762,4 @@ unregistered id. Use `FiringTimeProvider`.
 
 | After task | Date | Finding | Change made |
 | --- | --- | --- | --- |
+| 15 | 2026-11-04 | Every agent starts at 71K, about two-thirds of its cost, probably from tool schemas it never uses. Agents repeated stub, red-recording and Edit-before-Read mistakes. The first-review architect found 4 blockers in D1's plan text | Added a restricted `amd-dev` agent type; added the repeated facts to the delivery facts file; corrected the Build and Test conventions; D1's findings went into a corrections file |
