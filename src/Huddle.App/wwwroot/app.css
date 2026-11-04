@@ -5591,6 +5591,22 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* The Read | Edit | Split labels are control text, 13px. */
+/* The path gives way in a narrow pane, never the controls: squeezed, the toggle's three labels run together. */
+.library-document-toolbar .library-document-mode-toggle,
+.library-document-toolbar .library-document-save {
+    flex-shrink: 0;
+}
+
+.library-document-toolbar.mud-toolbar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+}
+
+.library-document-toolbar .library-document-path-inline {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
 .library-document-mode-toggle .mud-toggle-item,
 .library-document-mode-toggle .mud-toggle-item .mud-typography {
     font-size: var(--mud-typography-body2-size);
