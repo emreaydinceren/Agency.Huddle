@@ -166,6 +166,7 @@ public sealed class TaskDecisionCardTests
     [Theory]
     [InlineData(null, "Accepting marks it Done; nothing is sent or published.")]
     [InlineData(SomeAction, "Accepting lets Nova send the press release.")]
+    [InlineData("Nova: run the tests", "Accepting lets Nova run the tests.")]
     public async Task AcceptSentence_NamesWhatAcceptDoes(string? action, string expected)
     {
         using TaskToolHarness harness = new(proof: new CompleteProofSource());

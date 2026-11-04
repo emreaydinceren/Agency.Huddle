@@ -31,6 +31,7 @@ namespace Agency.Huddle.App.Components.Shared;
 /// <param name="modelCatalog">The model catalog, read cache-only for Model and Effort names and warmed in the background when it has none.</param>
 /// <param name="logger">Reports a failed background warm-up.</param>
 /// <param name="human">The Human's live identity, so the Human's own avatar opens their profile too; <see langword="null"/> treats every name as an Agent's.</param>
+/// <param name="hire">Names the models of each tier, so the tier chip follows a Model the Human picked; <see langword="null"/> leaves no map to check, so a chosen Model shows no chip.</param>
 internal sealed class AgentProfiles(
     PersonaStore personas,
     TeamTypeCatalog types,
@@ -43,7 +44,8 @@ internal sealed class AgentProfiles(
     AdapterCatalog adapters,
     IModelCatalog modelCatalog,
     ILogger<AgentProfiles> logger,
-    IHumanIdentity? human = null)
+    IHumanIdentity? human = null,
+    IHireContext? hire = null)
 {
     /// <summary>Appended to a name the Agent has not chosen but runs on anyway.</summary>
     private const string DefaultSuffix = " (default)";
@@ -101,7 +103,7 @@ internal sealed class AgentProfiles(
         {
             State = state,
             Runtime = runtime,
-            Tier = job?.Model.Tier ?? role?.Model?.Tier,
+            Tier = TierOfModel.Of(job?.Model.Tier ?? role?.Model?.Tier, persona.Model, hire?.TierMap ?? new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>()),
             SkillNames = identity?.Skills ?? [],
         };
         return new AgentProfileView(profile, manager, member ? ProfileMembership.Member : ProfileMembership.None, agent, team) { RuntimeWarmUp = warm };

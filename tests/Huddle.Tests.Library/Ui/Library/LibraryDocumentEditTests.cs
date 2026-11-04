@@ -84,6 +84,29 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Equal($"{LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}")} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
+    /// <summary>The toolbar's Save is off until there is something to save, and then writes the file as Ctrl+S does.</summary>
+    [Fact]
+    public async Task SaveButton_EnabledByAnEdit_WritesTheFile()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        string file = Path.Combine(root, "plan.md");
+        File.WriteAllText(file, "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "plan.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        SetupEditorModule(ctx, "edited");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+        Assert.True(cut.Find(".library-document-save").HasAttribute("disabled"));
+
+        LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
+        await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
+        Assert.False(cut.Find(".library-document-save").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find(".library-document-save").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("edited", File.ReadAllText(file)));
+    }
+
     /// <summary>A file under the Teams root shows its root-relative path with forward slashes (the breadcrumb's own trail, never the drive path), keeps the absolute path in the tooltip, and draws no breadcrumbs.</summary>
     [Fact]
     public async Task TeamsRootFile_ShowsItsLibraryRelativePath()

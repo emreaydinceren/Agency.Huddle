@@ -47,7 +47,7 @@ internal static class FeedCategories
     /// <returns>The segment.</returns>
     public static FeedCategory Of(FeedSourceType type) => type switch
     {
-        FeedSourceType.TaskCreated or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou => FeedCategory.Tasks,
+        FeedSourceType.TaskCreated or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.TaskWakesPaused => FeedCategory.Tasks,
         FeedSourceType.TaskGateOn or FeedSourceType.TaskNeedsYou or FeedSourceType.GateDecisionDue => FeedCategory.Gates,
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => FeedCategory.Rooms,

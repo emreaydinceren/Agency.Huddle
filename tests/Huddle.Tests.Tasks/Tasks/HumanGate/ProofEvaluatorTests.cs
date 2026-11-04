@@ -105,6 +105,18 @@ public sealed class ProofEvaluatorTests
         Assert.Null(item.Detail);
     }
 
+    /// <summary>A run the Agent added a note to still meets the item, read back from the line as a Task file holds it.</summary>
+    [Fact]
+    public void CommandExits_RunWithANote_IsMet()
+    {
+        EvidenceLine stored = new(Noon, Dev, "dotnet test", 0, null, null, string.Empty, "14 tests on the merged branch");
+        Assert.True(EvidenceLine.TryParse(stored.Format(), out EvidenceLine? parsed));
+        Assert.NotNull(parsed);
+        ProofContext context = Context([Item(new DoneRule.CommandExits("dotnet test"))], evidence: [parsed]);
+
+        Assert.True(Single(context).Met);
+    }
+
     /// <summary>A command never run leaves the item open, owned by the assignee, with the detail <c>not run</c>.</summary>
     [Fact]
     public void CommandExits_Open_OwnerAndDetail()

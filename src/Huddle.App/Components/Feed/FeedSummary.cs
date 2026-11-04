@@ -25,6 +25,9 @@ internal static class FeedSummary
             TaskGatePayload p => TaskGate(p),
             TaskNeedsYouPayload p => new([Text("stopped to wait for your approval on "), TaskChip(p.Id, p.Title)], InTeam(p.Team)),
             TaskAssignedPayload p => new([Text("assigned you "), TaskChip(p.Id, p.Title)], null),
+            TaskWakesPausedPayload p => new(
+                [Text("paused wake-ups on "), TaskChip(p.Id, p.Title), Text(": Agents changed it too many times")],
+                $"The hand-off to {p.Waiting} waits until you allow more"),
             RequestAwaitsPayload p => new([Text("finished the Request "), TaskChip(p.Id, p.Title), Text(" from "), Strong(p.FromTeam)], "only you can confirm it"),
             GateDecisionPayload p => new([Text("was stopped by a gate moving "), TaskChip(p.Id, p.Title), Text(" to " + p.ToStatus)], p.Message),
             RoomWaitPayload p => RoomWait(item.SourceType, p),
@@ -68,7 +71,7 @@ internal static class FeedSummary
 
         string opening = item.SourceType switch
         {
-            FeedSourceType.RoomBudget or FeedSourceType.HelperPaused => "Paused ",
+            FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused => "Paused ",
             FeedSourceType.HelperFailing => "Since ",
             _ => "Asked ",
         } + Clock(item.At, zone);
@@ -84,6 +87,7 @@ internal static class FeedSummary
             RoomWaitPayload when item.SourceType == FeedSourceType.RoomBudget => " · waiting for you to continue or wrap up",
             TaskGatePayload => " · you can turn it off on the Task",
             HelperPausedPayload => " · Continue is on the Helper's card",
+            TaskWakesPausedPayload => " · Allow more is on the Task",
             HelperFailingPayload => " · Tasks are not being judged",
             _ => " · waiting for you",
         });
@@ -97,6 +101,7 @@ internal static class FeedSummary
         TaskCreatedPayload p => p.Team,
         TaskGatePayload p => p.Team,
         TaskNeedsYouPayload p => p.Team,
+        TaskWakesPausedPayload p => p.Team,
         TaskAssignedPayload p => p.Team,
         RequestAwaitsPayload p => p.Team,
         GateDecisionPayload p => p.Team,
@@ -114,7 +119,7 @@ internal static class FeedSummary
     public static string NounOf(FeedSourceType? type) => type switch
     {
         FeedSourceType.TaskCreated or FeedSourceType.TaskGateOn or FeedSourceType.TaskNeedsYou
-            or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue => "Tasks",
+            or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue or FeedSourceType.TaskWakesPaused => "Tasks",
         FeedSourceType.DocumentChanged => "documents",
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.TeamMemoryNotFiled => "proposals",

@@ -73,6 +73,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private readonly Dictionary<string, DateTimeOffset> requestWakes = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly HashSet<Task> inFlight = [];
+
+    /// <summary>The hand-offs refused for a spent budget, delivered when the Human lifts the pause. Keyed by Task and Name, so a repeat merges. In memory, like the budgets that refuse them.</summary>
+    private readonly Dictionary<(TaskId TaskId, string Name), HeldWake> heldWakes = [];
+
+    /// <summary>The Tasks with an open <see cref="FeedSourceType.TaskWakesPaused"/> Notification, so a pause posts once.</summary>
+    private readonly HashSet<TaskId> pausedOpen = [];
+    private readonly RoomEvents? roomEvents;
+    private readonly IFeedPublisher? feed;
     private OutsideWindow? outsideWindow;
     private bool subscribed;
     private bool stopped;
@@ -95,6 +103,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="ownPosts">Records a wake posted as an Agent as that Agent's own post, so its session in the Room gets the catch-up line (corrections-B3 D9 item 17).</param>
     /// <param name="teams">Names a Team's manager, who is woken alongside the assignee (OR-2); <see langword="null"/> wakes the assignee only.</param>
     /// <param name="human">The Human's live identity, whose Name or Alias is never woken (guard 3); <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
+    /// <param name="roomEvents">Says when a paused Room can take Messages again, which delivers the hand-offs it refused; <see langword="null"/> leaves them waiting for the next change.</param>
+    /// <param name="feed">Tells the Human a Task's wake-ups are paused; <see langword="null"/> shows that on the Task only.</param>
     public TaskTriggerService(
         TaskEvents events,
         TaskStore store,
@@ -111,7 +121,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         ILogger<TaskTriggerService> logger,
         OwnPosts ownPosts,
         ITeamCatalog? teams = null,
-        IHumanIdentity? human = null)
+        IHumanIdentity? human = null,
+        RoomEvents? roomEvents = null,
+        IFeedPublisher? feed = null)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(store);
@@ -144,6 +156,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         this.ownPosts = ownPosts;
         this.teams = teams;
         this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
+        this.roomEvents = roomEvents;
+        this.feed = feed;
     }
 
     /// <summary>
@@ -208,6 +222,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             if (!this.subscribed)
             {
                 this.events.TaskChanged += this.OnTaskChanged;
+                this.activity.WakesGranted += this.OnWakesGranted;
+                if (this.roomEvents is { } rooms)
+                {
+                    rooms.MessagePosted += this.OnRoomMessage;
+                    rooms.MessageRedelivered += this.OnRoomMessage;
+                }
+
                 this.subscribed = true;
             }
         }
@@ -285,6 +306,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             if (this.subscribed)
             {
                 this.events.TaskChanged -= this.OnTaskChanged;
+                this.activity.WakesGranted -= this.OnWakesGranted;
+                if (this.roomEvents is { } rooms)
+                {
+                    rooms.MessagePosted -= this.OnRoomMessage;
+                    rooms.MessageRedelivered -= this.OnRoomMessage;
+                }
+
                 this.subscribed = false;
             }
 
@@ -326,6 +354,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             // Corrections-B3 D9 item 15: on receipt, before any guard - a Human change resets the Task's
             // wake budget even when it wakes nobody. An OutsideHuddle actor never resets it (item 18).
             this.activity.ResetForHuman(change.After.Id);
+
+            // The Human's own change wakes whoever it concerns, so what was waiting is covered, and a pause it ended is over.
+            this.ForgetHeld(change.After.Id);
         }
 
         if (change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done)
@@ -819,6 +850,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogBlocked(this.logger, id, preview.Block);
             this.RecordOutcome(id, pausedAssignee, null, WakeOutcome.WakePaused);
+            this.HoldForWakeBudget(batch, latest, pausedAssignee);
             return;
         }
 
@@ -910,12 +942,209 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.WakePaused);
+            this.HoldForWakeBudget(batch, latest, assigneeName);
             return false;
         }
 
         WakeOutcome outcome = await this.PostWakeAsync(batch, latest, assigneeName, senderId, room, ct).ConfigureAwait(false);
         this.RecordOutcome(id, assigneeName, room, outcome);
+        if (outcome == WakeOutcome.BudgetSpent)
+        {
+            // The Room's Continue already asks the Human (a Budget Notification), and re-delivers only the Room's last Message.
+            this.Hold(batch, latest, assigneeName, room.Id);
+        }
+
         return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
+    }
+
+    /// <summary>Keeps a hand-off refused by the Task's spent wake budget and tells the Human, once per pause.</summary>
+    /// <param name="batch">The batch that was refused.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="name">The Agent the hand-off is for.</param>
+    private void HoldForWakeBudget(Batch batch, TaskItem latest, string name)
+    {
+        this.Hold(batch, latest, name, null);
+        bool first;
+        lock (this.gate)
+        {
+            first = this.pausedOpen.Add(latest.Id);
+        }
+
+        if (first)
+        {
+            string id = latest.Id.ToString();
+            this.feed?.Post(new FeedMessage(FeedSourceType.TaskWakesPaused, id, FeedActor.Huddle, true, new TaskWakesPausedPayload(id, latest.Title, latest.Location.Team, name)));
+        }
+    }
+
+    /// <summary>Keeps a refused hand-off until the pause is lifted, merged with any earlier one for the same Task and Name so nothing it reports is lost.</summary>
+    /// <param name="batch">The batch that was refused.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="name">The Agent the hand-off is for.</param>
+    /// <param name="roomId">The paused Room that refused it, or <see langword="null"/> when the Task's wake budget did.</param>
+    private void Hold(Batch batch, TaskItem latest, string name, string? roomId)
+    {
+        (TaskId, string) key = (latest.Id, name);
+        Batch held = new(batch.Key)
+        {
+            Actor = batch.Actor,
+            FirstChangeAt = batch.FirstChangeAt,
+            Decision = batch.Decision,
+            Note = batch.Note,
+            StatusChanged = batch.StatusChanged,
+        };
+        held.Entries.AddRange(batch.Entries);
+        bool forAssignee = string.Equals(name, latest.Assignee, StringComparison.OrdinalIgnoreCase);
+        lock (this.gate)
+        {
+            if (this.stopped)
+            {
+                return;
+            }
+
+            if (this.heldWakes.Remove(key, out HeldWake? earlier))
+            {
+                held.Entries.InsertRange(0, earlier.Batch.Entries);
+                held.Decision ??= earlier.Batch.Decision;
+                held.Note ??= earlier.Batch.Note;
+            }
+
+            this.heldWakes[key] = new HeldWake(latest.Id, name, roomId, forAssignee, held);
+        }
+    }
+
+    /// <summary>A Human changed the Task: drops what was waiting on it and closes its pause Notification.</summary>
+    /// <param name="id">The Task.</param>
+    private void ForgetHeld(TaskId id)
+    {
+        bool wasPaused;
+        lock (this.gate)
+        {
+            foreach ((TaskId TaskId, string Name) key in this.heldWakes.Keys.Where(key => key.TaskId == id).ToList())
+            {
+                _ = this.heldWakes.Remove(key);
+            }
+
+            wasPaused = this.pausedOpen.Remove(id);
+        }
+
+        if (wasPaused)
+        {
+            this.feed?.Resolve(id.ToString(), FeedSourceType.TaskWakesPaused);
+        }
+    }
+
+    /// <summary>The Human allowed more wakes on a Task: closes its Notification and delivers what its budget refused.</summary>
+    /// <param name="id">The Task.</param>
+    private void OnWakesGranted(TaskId id)
+    {
+        bool wasPaused;
+        lock (this.gate)
+        {
+            wasPaused = this.pausedOpen.Remove(id);
+        }
+
+        if (wasPaused)
+        {
+            this.feed?.Resolve(id.ToString(), FeedSourceType.TaskWakesPaused);
+        }
+
+        this.ReleaseHeld(held => held.RoomId is null && held.TaskId == id);
+    }
+
+    /// <summary>A Message reached a Room or was re-delivered by Continue: a Room with Budget again takes what it refused.</summary>
+    /// <param name="posted">The Message and the Room's Budget after it.</param>
+    private void OnRoomMessage(MessagePostedEvent posted)
+    {
+        if (!posted.Budget.Exhausted)
+        {
+            this.ReleaseHeld(held => string.Equals(held.RoomId, posted.Room.Id, StringComparison.Ordinal));
+        }
+    }
+
+    /// <summary>Takes the hand-offs <paramref name="due"/> selects and delivers them behind the fire gate, tracked for <see cref="WhenIdleAsync"/>.</summary>
+    /// <param name="due">Selects the hand-offs whose pause was lifted.</param>
+    private void ReleaseHeld(Func<HeldWake, bool> due)
+    {
+        List<HeldWake> released;
+        lock (this.gate)
+        {
+            if (this.stopped || this.heldWakes.Count == 0)
+            {
+                return;
+            }
+
+            released = [.. this.heldWakes.Values.Where(due)];
+            foreach (HeldWake held in released)
+            {
+                _ = this.heldWakes.Remove((held.TaskId, held.Name));
+            }
+        }
+
+        if (released.Count == 0)
+        {
+            return;
+        }
+
+        Task delivery = this.DeliverHeldAsync(released);
+        lock (this.gate)
+        {
+            this.inFlight.RemoveWhere(static done => done.IsCompleted);
+            this.inFlight.Add(delivery);
+        }
+    }
+
+    /// <summary>Delivers released hand-offs, skipping one whose Task is gone or was reassigned since. Catches and logs everything, like <see cref="FireAsync"/>.</summary>
+    /// <param name="released">The hand-offs.</param>
+    /// <returns>A task that completes when they are delivered; it never faults.</returns>
+    private async Task DeliverHeldAsync(List<HeldWake> released)
+    {
+        TaskId first = released[0].TaskId;
+        try
+        {
+            // The events that release these are raised by the post and Grant paths, which must not wait for this delivery.
+            await Task.Yield();
+            CancellationToken ct;
+            lock (this.gate)
+            {
+                if (this.stopped)
+                {
+                    return;
+                }
+
+                ct = this.lifetime.Token;
+            }
+
+            await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                foreach (HeldWake held in released)
+                {
+                    TaskItem? latest = this.store.Get(held.TaskId);
+                    if (latest is null)
+                    {
+                        LogTaskGone(this.logger, held.TaskId);
+                    }
+                    else if (!held.ForAssignee || string.Equals(held.Name, latest.Assignee, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _ = await this.DeliverAsync(held.Batch, latest, held.Name, ct).ConfigureAwait(false);
+                    }
+                }
+            }
+            finally
+            {
+                this.fireGate.Release();
+            }
+        }
+        catch (OperationCanceledException ex) when (this.stopped)
+        {
+            LogFireCancelled(this.logger, first, ex);
+        }
+        catch (Exception ex)
+        {
+            // Nothing awaits this but WhenIdleAsync, so an exception here would go unobserved: log it, as a fire does.
+            LogFireFailed(this.logger, first, ex);
+        }
     }
 
     /// <summary>Posts the wake text in <paramref name="room"/>; an Agent's wake budget is refunded unless the post went through.</summary>
@@ -1259,6 +1488,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="TaskId">The Task.</param>
     /// <param name="ActorName">The actor's Name.</param>
     private readonly record struct BatchKey(TaskId TaskId, string ActorName);
+
+    /// <summary>A hand-off refused for a spent budget, waiting for the Human to lift the pause.</summary>
+    /// <param name="TaskId">The Task.</param>
+    /// <param name="Name">The Agent it is for.</param>
+    /// <param name="RoomId">The paused Room that refused it, or <see langword="null"/> when the Task's wake budget did.</param>
+    /// <param name="ForAssignee">Whether it was for the assignee at the time; a reassignment since makes it stale.</param>
+    /// <param name="Batch">The changes to report.</param>
+    private sealed record HeldWake(TaskId TaskId, string Name, string? RoomId, bool ForAssignee, Batch Batch);
 
     /// <summary>One coalescing batch. Mutated only under <see cref="gate"/> until its fire removes it.</summary>
     /// <param name="key">The batch's key.</param>

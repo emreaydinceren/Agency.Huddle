@@ -1708,8 +1708,15 @@
 
     /// <summary>Skills this card holds or its draft came with that are neither installed nor copyable; a draft's stay listed after an untick, so it can be undone.</summary>
     private IReadOnlyList<string> HeldUnavailableSkills =>
-        [.. this.skills.Concat(this.DraftSkills ?? []).Distinct(StringComparer.Ordinal)
+        [.. KeptSkillOrder(this.skills, this.DraftSkills)
             .Where(name => this.Skills.Get(name) is null && !this.CopyableSkills.Any(entry => string.Equals(entry.Name, name, StringComparison.Ordinal)))];
+
+    /// <summary>The kept rows' order: the draft's own first, because it never changes. Led by the ticked ones, an untick would move the row under the pointer, and the next click would re-tick another.</summary>
+    /// <param name="ticked">The Skills ticked now.</param>
+    /// <param name="draft">The Skills the draft came with, if any.</param>
+    /// <returns>Each name once.</returns>
+    internal static IEnumerable<string> KeptSkillOrder(IReadOnlyList<string> ticked, IReadOnlyList<string>? draft) =>
+        (draft ?? []).Concat(ticked).Distinct(StringComparer.Ordinal);
 
     /// <summary>Registry Skills with no folder on this computer, for the collapsed list.</summary>
     private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> NotDownloadedSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded);

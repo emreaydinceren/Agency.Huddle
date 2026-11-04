@@ -182,6 +182,25 @@ public sealed class TaskPanelsTests
         Assert.Empty(cut.FindAll(".task-activity-budget-exhausted"));
     }
 
+    /// <summary>A hand-off a spent budget refused says who is waiting and why, and never reads as "Woken in Room".</summary>
+    [Fact]
+    public async Task Activity_AWakeWasRefused_SaysItIsWaitingAndNotWoken()
+    {
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        TaskItem task = CreateTask(harness, "Refused");
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = Render<TaskActivityPanel>(ctx, new SidebarPanelContext(), task.Id);
+
+        harness.TaskActivity.Record(new WakeRecord(task.Id, "Nova", "room-1", "General", WakeOutcome.BudgetSpent, DateTimeOffset.UtcNow));
+
+        cut.WaitForAssertion(() => Assert.Equal("Waiting to wake Nova: Room General is paused", cut.Find(".task-activity-held a").TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".task-activity-woken"));
+
+        harness.TaskActivity.Record(new WakeRecord(task.Id, "Nova", null, null, WakeOutcome.WakePaused, DateTimeOffset.UtcNow));
+
+        cut.WaitForAssertion(() => Assert.Equal("Waiting to wake Nova: Allow more on this Task", cut.Find(".task-activity-held .sidebar-row-text").TextContent.Trim()));
+    }
+
     /// <summary>A spent budget is marked, so the row can wear Error ink.</summary>
     [Fact]
     public async Task Activity_BudgetSpent_IsMarkedExhausted()

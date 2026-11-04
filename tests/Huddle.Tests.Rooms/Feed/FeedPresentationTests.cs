@@ -132,6 +132,7 @@ public sealed class FeedPresentationTests
         Assert.Equal("Asked 16:00 · you can turn it off on the Task", FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null, "r"), true, at), Utc)?.Text);
         Assert.Equal("Paused 16:00 · Continue is on the Helper's card", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at), Utc)?.Text);
         Assert.Equal("Since 16:00 · Tasks are not being judged", FeedSummary.StatusOf(Item(FeedSourceType.HelperFailing, new HelperFailingPayload("H", "H", 3, "x"), true, at), Utc)?.Text);
+        Assert.Equal("Paused 16:00 · Allow more is on the Task", FeedSummary.StatusOf(Item(FeedSourceType.TaskWakesPaused, new TaskWakesPausedPayload("G-1", "T", "G", "Nova"), true, at), Utc)?.Text);
         Assert.Equal("Paused 16:00 · done 16:20", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at, resolved), Utc)?.Text);
         Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null)), Utc));
     }

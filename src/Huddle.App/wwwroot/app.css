@@ -7370,13 +7370,25 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: color-mix(in srgb, var(--mud-palette-success) 16%, var(--mud-palette-surface));
 }
 
+/* Wraps, because a draft's Copy prompt, Re-roll, Edit and Remove do not fit a narrow card: without it they overlap. */
 .roster-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     padding-top: 8px;
     border-top: 1px solid var(--ink-rule);
+}
+
+/* A confirm that swaps in for one action (Start afresh) carries a sentence, so it takes a line of its own. */
+.roster-actions > .inline-confirm {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.roster-actions > .inline-confirm > .inline-confirm-prompt {
+    flex: 1 0 100%;
 }
 
 /* The roster's more-actions menu pushes to the end of the row; its destructive item is last, after a divider, in Error ink

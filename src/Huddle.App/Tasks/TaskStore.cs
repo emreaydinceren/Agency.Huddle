@@ -845,7 +845,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// one found, then publishes the new snapshot and raises <see cref="IndexChanged"/> - but only when
     /// something actually changed, unless <see cref="forcedRebuildPending"/> says otherwise (Settled
     /// corrections-B2 D5 item 7). <c>internal</c>, not <c>private</c>, so a test can drive the rebuild
-    /// core directly rather than only through the real watcher and its debounce.
+    /// core directly rather than only through the real watcher and its debounce. It is also how
+    /// <see cref="Agency.Huddle.App.Library.TeamFolderProvisioner"/> publishes a Team folder it just made, because the sessions
+    /// of the Agents hired next read the Team catalog before the debounce would have elapsed.
     /// </summary>
     internal void RebuildFromWatcher()
     {

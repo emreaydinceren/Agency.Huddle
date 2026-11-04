@@ -33,6 +33,7 @@ internal static class FeedSourceTypes
         FeedSourceType.DevicePaired => "device-paired",
         FeedSourceType.DeviceRevoked => "device-revoked",
         FeedSourceType.SecondBrainOverCap => "second-brain-over-cap",
+        FeedSourceType.TaskWakesPaused => "task-wakes-paused",
         FeedSourceType.TeamArchived => "team-archived",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };

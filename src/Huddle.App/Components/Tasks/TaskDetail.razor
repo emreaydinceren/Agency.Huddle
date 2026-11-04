@@ -157,14 +157,6 @@ else if (this.loaded is { } task)
         </MudAlert>
     }
 
-    @if (this.HasPending)
-    {
-        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
-            <span class="task-detail-unsaved-text">Unsaved edits</span>
-            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
-        </MudAlert>
-    }
-
     IReadOnlyList<GateId> teamGates = this.Gates?.EnabledGates(effective.Location.Team) ?? [];
 
     RenderFragment titleIcons = @<text>
@@ -588,6 +580,15 @@ else if (this.loaded is { } task)
     @if (this.Header is not null)
     {
         @this.Header(new TaskDetailHeaderParts(this.titleEditing && !this.createMode ? titleEditor : null, titleIcons))
+    }
+
+    @* Below the Header, which holds Save: above it, the notice's arrival moved Save out from under the pointer. *@
+    @if (this.HasPending)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
+            <span class="task-detail-unsaved-text">Unsaved edits</span>
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
+        </MudAlert>
     }
 
     <MudGrid Class="task-detail-grid">

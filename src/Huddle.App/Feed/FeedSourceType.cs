@@ -75,6 +75,9 @@ public enum FeedSourceType
     /// <summary>A Memory or outputs folder holds more files than Agents are shown.</summary>
     SecondBrainOverCap,
 
+    /// <summary>A Task reached its limit of wake-ups made by Agents, so a hand-off waits until the Human allows more.</summary>
+    TaskWakesPaused,
+
     /// <summary>A Team was archived.</summary>
     TeamArchived,
 }

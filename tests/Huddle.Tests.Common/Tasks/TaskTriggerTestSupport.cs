@@ -15,6 +15,7 @@ using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Acp.Fakes;
 using FakeAgentGateway = Agency.Huddle.Tests.Acp.Tools.FakeAgentGateway;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Feed;
 
 namespace Agency.Huddle.Tests.Tasks;
 
@@ -175,13 +176,15 @@ internal static class TaskTriggerTestSupport
         FiringTimeProvider clock = new();
         RecordingLogger<TaskTriggerService> logger = new();
 
+        RecordingFeedPublisher feed = new();
         TaskTriggerService trigger = new(
             events, store, activity, turns, chat, directory, personas, gateway, health, prompts,
-            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams);
+            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams, roomEvents: roomEvents, feed: feed);
 
         Harness harness = new()
         {
             Trigger = trigger,
+            Feed = feed,
             Activity = activity,
             Gateway = gateway,
             Directory = directory,
@@ -227,6 +230,9 @@ internal static class TaskTriggerTestSupport
 
         /// <summary>The service under test.</summary>
         public required TaskTriggerService Trigger { get; init; }
+
+        /// <summary>What <see cref="Trigger"/> told the Feed.</summary>
+        public required RecordingFeedPublisher Feed { get; init; }
 
         /// <summary>The wake budget backing <see cref="Trigger"/>.</summary>
         public required TaskActivity Activity { get; init; }

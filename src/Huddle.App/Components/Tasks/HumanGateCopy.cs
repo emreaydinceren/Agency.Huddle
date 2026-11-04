@@ -70,7 +70,13 @@ internal static class HumanGateCopy
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     public static string AcceptSentence(string assignee, string? action) => string.IsNullOrWhiteSpace(action)
         ? "Accepting marks it Done; nothing is sent or published."
-        : $"Accepting lets {assignee} {action.Trim()}.";
+        : $"Accepting lets {assignee} {WithoutOwnName(assignee, action.Trim())}.";
+
+    /// <summary>An Action an Agent wrote as "Quinn: run the tests" loses that name, because the sentence already says who.</summary>
+    /// <param name="assignee">The assignee's name.</param>
+    /// <param name="action">The trimmed Action.</param>
+    private static string WithoutOwnName(string assignee, string action) =>
+        action.StartsWith(assignee + ":", StringComparison.OrdinalIgnoreCase) ? action[(assignee.Length + 1)..].TrimStart() : action;
 
     /// <summary>The locked notice (row 17); a missing owner or detail drops its comma, and with both missing the parentheses go.</summary>
     /// <param name="met">How many items are met.</param>

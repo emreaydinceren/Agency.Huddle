@@ -164,8 +164,8 @@ internal sealed class AddEvidenceTool(
             logLine = found?.Line;
         }
 
-        string text = cleanNote.Length == 0 ? cleanCommand : string.Create(CultureInfo.InvariantCulture, $"{cleanCommand} ({cleanNote})");
-        return new EvidenceLine(clock.GetUtcNow(), actorName, text, exitCode, logPath, logLine, string.Empty);
+        // The note stays out of the command: a Proof compares the command to what the Definition of Done names, character for character.
+        return new EvidenceLine(clock.GetUtcNow(), actorName, cleanCommand, exitCode, logPath, logLine, string.Empty, cleanNote);
     }
 
     /// <summary>Collapses line breaks and replaces the Evidence field separator so the text stays one field of one line.</summary>

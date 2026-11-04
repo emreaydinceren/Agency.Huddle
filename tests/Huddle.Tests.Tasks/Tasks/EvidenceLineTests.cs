@@ -30,6 +30,20 @@ public sealed class EvidenceLineTests
         Assert.Equal(SpecExample, line.Format());
     }
 
+    /// <summary>A note is a field of its own: the line round-trips, the command stays exact, and the note may come with or without a log reference.</summary>
+    [Theory]
+    [InlineData("2026-10-08T17:04Z | Maya | dotnet test | exit 0 | logs/a.jsonl#L2 | note: 14 tests, green")]
+    [InlineData("2026-10-08T17:04Z | Maya | dotnet test | exit 0 | note: 14 tests, green")]
+    public void TryParse_LineWithANote_KeepsTheCommandExact(string text)
+    {
+        EvidenceLine line = Parsed(text);
+
+        Assert.Equal("dotnet test", line.Command);
+        Assert.Equal(0, line.ExitCode);
+        Assert.Equal("14 tests, green", line.Note);
+        Assert.Equal(text, line.Format());
+    }
+
     /// <summary>A failing check records its non-zero exit code.</summary>
     [Fact]
     public void TryParse_FailingTest_RecordsExitOne()
