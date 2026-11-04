@@ -109,8 +109,8 @@ Stop mark is set at :644.
 - **Goal:** Start from a green `main`.
 - **Read first:** this plan's Conventions table.
 - **Risk:** `data`.
-- **Deliverable:** `git fetch origin`; create `feat/agentsmd-changes` from `origin/main`. Build and run the full suite. Record the pass and skip counts in the report. Add `AgentsMdChanges` to `agents/scripts/test-split-map.psd1`, mapped to the `Personas` feature, and confirm with `pwsh -NoProfile -File agents/scripts/Split-TestProject.ps1 -Report`.
-- **Acceptance:** build 0 warnings; suite `failed: 0`; the report shows nothing unmapped.
+- **Deliverable:** `git fetch origin`; create `feat/agentsmd-changes` from `origin/main`. Build and run the full suite. Record the pass and skip counts in the report.
+- **Acceptance:** build 0 warnings; suite `failed: 0`.
 
 ---
 
