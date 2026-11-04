@@ -5,8 +5,9 @@ documents to learn, and prove those documents became lasting memory that later s
 also builds a small working app. This page is for a Human running the whole product end to end. Every chat text is
 ready to paste and nothing is seeded.
 
-**27 tests** · 4 free, 23 paid · about 7.8 hours. Written 2026-11-03 against `main` at `8f6c43dc`. Not yet run by a
-person. The Team setup steps were dry-run on the free mock Adapter on 2026-11-03, after the Build a team fixes; no paid Turn has run this script.
+**27 tests** · 3 free, 24 paid · budget about 7.8 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
+all 27 with paid Turns on 2026-11-03, on Route B, in about 1 hour 45 minutes and about $6.20 of visible Team spend. The
+[Run log](run-log.md) holds each result, and this page carries the script fixes that run found. No person has run it yet.
 
 This page covers the whole journey. For single features in more depth, see [Second Brain](second-brain.md),
 [Team Memory Helper](team-memory-helper.md) and [Jobs](jobs.md). Terminals `T-A` and `T-B` are defined in
@@ -229,7 +230,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
    ```
 
 2. Click **Agents**, open **Hana**, and click **Edit**. Open **Skills**, and also tick `retrospective`, which ZERO-20 needs. Click an empty part of the card to close the list, then click **Save**. Hana restarts.
-3. Under **Process** on the same card, click **Use this process**. It must say `This Team already has a process. Edit it on the Process tab.` and change nothing.
+3. Click **Edit** on the card again, because **Process** is only in the edit form. Under **Process**, click **Use this process**. It must say `This Team already has a process. Edit it on the Process tab.` and change nothing.
 4. Open Hana's page again and find **What this Agent reads**. Check it lists `Teams/AGENTS.md`, `Teams/Family/AGENTS.md` and Hana's own file.
 
 **Expect**: no Team needs a Skill or a process added by hand. **What this Agent reads** names each part's source.
@@ -366,12 +367,13 @@ Select-String '^skills' "$data\Agents\Bea\Bea.md"
 memory
 outputs
 raw
+_tasks
 _team.md
 AGENTS.md
 C:\HuddleZero\data\Agents\Bea\Bea.md:7:skills: ['ingest', 'wrap-up', 'brain-check', 'team-management']
 ```
 
-Bea takes her onboarding Turn in her one-to-one Room with you, as Hana did. Do not answer her there. ZERO-09 gives her what she needs.
+`_tasks` appears only once Bea has filed a starter Task during onboarding, so it may be missing at first. Bea takes her onboarding Turn in her one-to-one Room with you, as Hana did. Do not answer her there. ZERO-09 gives her what she needs.
 
 **Pass if**: **Approve & hire** works despite the connector warning, all three Agents go online, and the listing matches.
 **Fail if**: the connector warning blocks the hire, or a Team Room does not appear.
@@ -462,7 +464,7 @@ session in a new Room.
 2. Click **Message** on **Fern**, and send:
 
    ```text
-   What do our monthly bills add up to? And what is the monthly figure if you spread the semiannual and annual bills across the year? Which two bills overlap? Say which file you used.
+   What do our monthly bills add up to? And what is the monthly figure if you spread the semiannual and annual bills across the year? Which two bills pay for the same kind of service, so that we could drop one? Say which file you used.
    ```
 
 **Expect**:
@@ -470,7 +472,7 @@ session in a new Room.
 | Who | Must say |
 | --- | --- |
 | Milo | No walnut, cashew, pecan, almond, pistachio or hazelnut. Peanuts may appear. Dairy has a swap for Theo. No pork for Alex. Each dinner takes 30 minutes or less. Under $180 |
-| Fern | Monthly **$659.47**. Spread **$867.22**. Streamline Video and CineBox overlap, together $27.98 |
+| Fern | Monthly **$659.47**. Spread **$867.22**. Streamline Video and CineBox are both streaming, together $27.98 |
 
 **Pass if**: every limit and figure holds, and each cites a file under `Teams/Family/`.
 **Fail if**: a tree nut appears, or Milo asks you what the allergies are.
@@ -546,16 +548,16 @@ session in a new Room.
 
 ### ZERO-13 — A gate refuses Done with no evidence
 
-**Free** · about 10 min
+**Paid** 💰 · about 10 min. Creating the Task wakes the Team's manager, Devon, for one Turn. That is by design: an unassigned Task is the manager's to pick up.
 
 1. On the Dev Team's **Tasks** tab, click **New task**. Set the title to `Gate check, cancel me`, leave it unassigned, and save.
 2. Switch to the Board and drag the card to **Done**.
 3. Open the Task, set its status to **Done**, and save. Read the warning, but do not press **Move anyway**. Then set the status to **Cancelled** and save.
 
-**Expect**: the card snaps back with `Could not move` and the reason. The Task panel warns that it names `qa-evidence-before-done`, and offers **Move anyway**. No Agent takes a Turn.
+**Expect**: the card snaps back with `Could not move` and the reason. The Task panel warns that it names `qa-evidence-before-done`, and offers **Move anyway**. Devon may try to close the Task from its title; the gate refuses that too.
 
 **Pass if**: both moves are refused and name the gate.
-**Fail if**: the Task reaches Done, or an Agent is woken.
+**Fail if**: the Task reaches Done without **Move anyway**.
 
 ### ZERO-14 — Ingest the spec and the Team's conventions
 
@@ -631,7 +633,8 @@ Do not take the Team's word for it. In `T-B`:
 
 ```powershell
 git -C $bake switch main
-dotnet test $bake --nologo 2>&1 | Select-Object -Last 2
+# Run it from inside the repository: from a Huddle checkout, Huddle's global.json would decide how dotnet test runs.
+Push-Location $bake; dotnet test --nologo 2>&1 | Select-Object -Last 2; Pop-Location
 $cases = 'sourdough=40 croissant=60','sourdough=10','baguette=100 cinnamon-roll=40','baguette=50','baguette=25','croissant=30','muffin=3','sourdough=0','sourdough=abc',''
 foreach ($c in $cases) {
   $out = dotnet run --project "$bake\src\BakeryQuote" --no-launch-profile -- ($c -split ' ' | Where-Object { $_ }) 2>&1
@@ -691,7 +694,7 @@ The tennis club fees went up.
 
 | Capture | Where it should go |
 | --- | --- |
-| Yogurt | A Task in **Family**, due Saturday, unassigned so that no one is woken |
+| Yogurt | A Task in **Family**, due Saturday. Hana, the manager, is woken for one Turn whether it is unassigned or hers |
 | Hugo Brandt | A fact for **Harbor Lane Bakery**'s Memory, or a question about where it goes |
 | Subscription box | A note or Task in **Harbor Lane Bakery** |
 | Millstone notice | Answered: 1 December 2026, with its source |
@@ -700,8 +703,10 @@ The tennis club fees went up.
 Check in `T-B`:
 
 ```powershell
-Select-String -Path "$data\Teams\*\_tasks\*.md","$data\Teams\*\memory\*.md","$data\Teams\*\outputs\*" -Pattern 'yogurt|Hugo Brandt|subscription box' | ForEach-Object Path
+Select-String -Path "$data\Teams\*\_tasks\*.md","$data\Teams\*\memory\*.md","$data\Teams\*\outputs\*","$data\Agents\*\work\memory\*.md" -Pattern 'yogurt|Hugo Brandt|subscription box' | ForEach-Object Path
 ```
+
+A path under `Agents\Chief of Staff\work\memory` means the capture stayed private to the Chief of Staff, which does not meet the table above.
 
 This also answers an open question: can the Chief of Staff file a Task into a Team it is not a member of? Record the answer in your notes.
 
@@ -725,7 +730,7 @@ This also answers an open question: can the Chief of Staff file a Task into a Te
    Select-String -Path "$data\Teams\memory\*.md" -Pattern 'Pacific'
    ```
 
-3. In the sidebar's **Teams** view, open the More (⋮) menu on **Harbor Lane Bakery**, click **New chat**, and choose only **Cole**. A new Room means a new session with a fresh index. Send:
+3. Open Cole's Room from ZERO-10, click Cole's avatar in the Room header, then **Start afresh**, and confirm. **New chat** with only Cole would reopen the same Room and session, and a fresh session is what reads a fresh index. Send:
 
    ```text
    Using only your instructions and memory index, with no tools: what time zone does Sam work in? Where do you know that from?
@@ -789,7 +794,7 @@ lactose topic if there is one. The History shows **Team Memory (Helper)** and na
    From now on, put the invoice number first in every line about an invoice.
    ```
 
-5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`. No Agent restarts. Then ask Cole in a **New chat**:
+5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`, and press Ctrl+S to save, because the editor has no Save button. No Agent restarts. **New chat** with only Cole reopens the same Room and session, so open that Room, click Cole's avatar in the Room header, then **Start afresh**, and confirm. Then ask Cole:
 
    ```text
    Are there any rules in your instructions about how to write a line about an invoice? Quote them.
@@ -843,7 +848,7 @@ hold that Skill. Cole tells you the rule belongs in `AGENTS.md`. A new session q
 2. Read the proposal. It should be grouped by destination, and wait for you. Send:
 
    ```text
-   @bea File the decision and the Task. Decline everything else.
+   @bea File the decision, and a Task for Sam's letter to Ruth Abara due 20 November. Decline everything else.
    ```
 
 3. In `T-B`:
@@ -868,7 +873,7 @@ hold that Skill. Cole tells you the rule belongs in `AGENTS.md`. A new session q
    Set-Content "$data\Teams\Family\memory\always-text.md" "---`ndescription: A standing rule.`n---`n`nAlways text Alex before booking anything."
    ```
 
-2. Click **Scheduled**, then **New job**. Set **For** to **Hana**, **Title** to `Weekly brain check`, and the repeat to weekly on Friday at 16:00. Paste this as the instruction, then click **Schedule**:
+2. Click **Scheduled**, then **New job**. Set **For** to **Hana**, **Title** to `Weekly brain check`, **Repeats** to **On chosen days** with only Friday picked, and the time to 16:00. Paste this as the instruction, then click **Schedule**:
 
    ```text
    Run your brain-check Skill on the Family Team. Change nothing: file what you find as Tasks, and rule changes as proposals for me.
@@ -921,7 +926,7 @@ slip and the 1 December notice, what waits in **Needs you**, what was filed sinc
 
 1. In `T-A`, stop the app, and run the paid launch again.
 2. Check that the three Teams, their Tasks and the Scheduled jobs are all there.
-3. In the sidebar's **Teams** view, open the More (⋮) menu on **Family**, click **New chat**, and choose only **Fern**. Send:
+3. Open Fern's Room from ZERO-11, click Fern's avatar in the Room header, then **Start afresh**, and confirm. Send:
 
    ```text
    What is the date of the Science Museum trip, when is the permission slip due, and when is Ines's allergy review? Say where you found each one.
@@ -955,7 +960,7 @@ Skip this if the budget is tight. It is a second development cycle.
 
    ```powershell
    git -C $bake switch main
-   dotnet test $bake --nologo 2>&1 | Select-Object -Last 1
+   Push-Location $bake; dotnet test --nologo 2>&1 | Select-Object -Last 1; Pop-Location
    dotnet run --project "$bake\src\BakeryQuote" --no-launch-profile -- sourdough=40 croissant=60 --rush
    dotnet run --project "$bake\src\BakeryQuote" --no-launch-profile -- sourdough=40 croissant=60
    ```
@@ -1014,6 +1019,8 @@ Stop the app first. This deletes the whole test, and only the test.
 
 ```powershell
 Remove-Item -Recurse -Force C:\HuddleZero
+# The Agents' session logs are kept outside the lane, under your Claude profile.
+Remove-Item -Recurse -Force "$HOME\.claude\projects\C--HuddleZero-*"
 ```
 
 The Skills from Route A are under that folder as well, or beside the clone your AI tool chose. Delete that clone by
@@ -1025,5 +1032,5 @@ hand if it is elsewhere.
 - **Agent wording varies.** Judge the facts and figures in each table, never the exact sentences.
 - **Some file output varies.** The order of Skills, and the line number on a `skills:` match, depend on your clicks and the Agent's Adapter.
 - **The dates are fixed.** The documents are written around November 2026, and Cole's question states its "as of" date for that reason.
-- **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **New chat** where the step says so.
+- **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New chat** with the same Members reopens the existing Room and session.
 - **The mock Adapter cannot run this.** It echoes its prompt, so it only proves the Team setup steps.
