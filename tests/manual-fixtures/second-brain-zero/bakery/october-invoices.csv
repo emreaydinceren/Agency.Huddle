@@ -1,0 +1,11 @@
+invoice,customer,issued,due,amount_usd,status,paid_on
+INV-2041,Tidewater Cafe,2026-10-01,2026-10-15,412.50,paid,2026-10-14
+INV-2042,Pier 9 Grocer,2026-10-02,2026-10-16,268.00,paid,2026-10-20
+INV-2043,The Copper Kettle,2026-10-06,2026-10-20,530.25,unpaid,
+INV-2044,Tidewater Cafe,2026-10-08,2026-10-22,390.00,paid,2026-10-21
+INV-2045,Morning Tide Hotel,2026-10-13,2026-10-27,1184.75,unpaid,
+INV-2046,Pier 9 Grocer,2026-10-16,2026-10-30,245.50,paid,2026-10-30
+INV-2047,The Copper Kettle,2026-10-20,2026-11-03,488.00,unpaid,
+INV-2048,Tidewater Cafe,2026-10-22,2026-11-05,405.25,unpaid,
+INV-2049,Morning Tide Hotel,2026-10-27,2026-11-10,976.50,unpaid,
+INV-2050,Harborview School,2026-10-29,2026-11-12,150.00,void,

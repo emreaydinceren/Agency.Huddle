@@ -1,0 +1,2 @@
+# These PDFs are mostly ASCII, so git would otherwise treat them as text and rewrite their line endings.
+*.pdf binary
