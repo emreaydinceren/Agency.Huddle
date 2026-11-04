@@ -16,3 +16,4 @@ Fictional test data for a from-zero Huddle run.
 - Money is held in `decimal`, never `double`.
 - The app uses no NuGet package at run time. Only the test project has packages.
 - The repository's `README.md` says how to run the app and how to run the tests.
+- Specs live in docs/.
