@@ -102,6 +102,16 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.NotNull(this.avatars.Get("Ada").Image);
     }
 
+    /// <summary>A draft with no text is refused before anything is written, because the Agent's own write would refuse it only after a new Team exists.</summary>
+    [Fact]
+    public void CheckDrafts_BlankText_IsRefused()
+    {
+        string? refusal = this.service.CheckDrafts("Garden", [Draft("Ada") with { Text = "  " }]);
+
+        Assert.Equal("Ada has no instructions. Edit the draft and write what it should do.", refusal);
+        Assert.Empty(this.personas.Entries);
+    }
+
     /// <summary>A repeated name, or one an existing Agent has, is refused before anything is written.</summary>
     [Fact]
     public void CheckDrafts_RepeatedOrUsedName_IsRefused()

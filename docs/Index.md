@@ -281,6 +281,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [agent-profile-card.md](engineering/manual-tests/agent-profile-card.md) | Agent card: create, edit, delete |
 | [agents-library.md](engineering/manual-tests/agents-library.md) | Agents page, file mirroring, Team grouping, filter, watcher |
 | [turn-detail.md](engineering/manual-tests/turn-detail.md) | Turn detail, tool-call rows, Edit preview, Spend |
+| [second-brain-zero.md](engineering/manual-tests/second-brain-zero.md) | Second Brain from zero: three Teams hired by hand, documents ingested into memory, a Development Team building an app; documents in `../tests/manual-fixtures/second-brain-zero` |
 | [work-mode.md](engineering/manual-tests/work-mode.md) | Work Mode selection, adapter modes, permission handling, restart |
 
 ## 6. Records, not instructions

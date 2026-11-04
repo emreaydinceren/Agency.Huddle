@@ -717,9 +717,10 @@ Select **Teams** in the Activity bar, then **Build a team** at the bottom of the
 see [Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
 Approving the last step creates the Team folder and hires the Agents you drafted.
 
-**In the background:** Huddle creates the folder `Teams/<Team>/`. Nothing else
-is written and no Agent restarts. The new Team shows **No members** until you
-add someone.
+**In the background:** Huddle creates the folder `Teams/<Team>/`, with `raw/`,
+`memory/` and `outputs/`, and writes the Team's `_team.md`. A Team of a type also
+gets the type's process as `AGENTS.md`, and its gates and schedules in `_team.md`.
+No other Agent restarts.
 
 Team names cannot contain `,` `;` `[` `]`, cannot start with `_` or `.`, and
 must follow the Library file-name rules (no `/ \ : < > " | ? *`, no trailing dot
@@ -842,10 +843,14 @@ To set up the Team:
 2. **Set the Team name.** It starts as the type's name; a name an existing Team has is
    refused.
 3. **Set What it's for.** It starts as the type's description.
-4. **Set the Library folder.** It starts as the Teams folder under your data folder. You
-   may clear it, and a folder you type must exist. The folder button at the end of the
-   field opens a folder picker: walk the folders, or type a path and press Enter, then
-   press **Select**.
+4. **Set the Library folder**, if the Team works in a folder or repository outside Huddle. It
+   starts empty, and whatever you put here becomes the Team's
+   [workspace](#teams-with-a-workspace). Leave it empty for a Team that has none, such as a
+   Household. A type that needs one, such as **Development Team**, asks for it before you can go
+   on, and a folder you type must exist. The folder button at the end of the field opens a folder
+   picker: walk the folders, or type a path and press Enter, then press **Select**.
+5. **Choose the Process**, if the type offers more than one. It starts on the type's default, and
+   becomes the Team's `AGENTS.md`.
 
 Nothing is created yet; the later steps do that.
 
@@ -874,14 +879,21 @@ hired until you approve. An Agent who already exists has a solid ring.
 
 The **Add** (+) card opens a form (title, what it does, instructions, model strength); the
 role is saved in `custom-roles.json` in your data folder and stays on the page for next
-time. A role you wrote has **Edit** and **Delete** buttons; Delete asks first.
+time. A role you wrote has **Edit** and **Delete** buttons; Delete asks first. An Agent in a role
+with no instructions works from what the role does, or else from its title, so write instructions
+for anything more than a sketch.
 
 **Approve & hire**, the last step, is off until the team details are complete and the
 roster has at least one Agent; a hint beside it says which is missing. Pressing it
-creates the Team (its type, Library folder and purpose), hires every draft Agent into
-it with the avatar drawn for it, makes the draft in the type's manager role the Team's
-manager, and opens the Team. If a draft's name is already taken, you are told before
-anything is created.
+creates the Team (its type, Library folder and purpose), gives it the chosen process, hires every
+draft Agent into it with the avatar drawn for it, makes the draft in the type's manager role the
+Team's manager, and opens the Team. If a draft's name is already taken, you are told before
+anything is created. The manager also carries the `ingest`, `wrap-up` and `brain-check` Skills.
+
+**Hiring starts work, and that costs money.** Once the manager is running, Huddle posts the
+process's onboarding steps to it in your one-to-one Room with it, once, and the manager takes a
+Turn. So set each draft's **Model** before you approve. With Adapters off the manager never starts,
+so a Team hired then is not onboarded; ask the manager to work through the steps yourself.
 
 Each draft card shows how many **Skills** the role brings (hover for the names) and, when
 something is missing, **Needs setup** with the reason, such as "connector email:read not
@@ -892,8 +904,10 @@ A card that names such a Skill already shows **Needs setup** with a **Copy promp
 tool, and the card turns ready by itself when the tool finishes. A hired Agent runs on the adapter and
 model its role's strength resolved to and carries the role's Skills and packs. **Edit** on a draft can
 change them: its **Skills** list shows the Skills Huddle has or can copy, and Skills that are not on this
-computer yet are listed below it, each with **Copy prompt**. The role form for your own roles has the
-same **Skills** field.
+computer yet are listed below it, each with **Copy prompt**. A Skill the draft brought that is not on this
+computer is in the list too, so you can untick it and hire without downloading it. The role form for your own
+roles has the same **Skills** field.
+
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Agents that fill
@@ -981,8 +995,9 @@ A Team's **process** says how its work is done, in two files in the Team folder:
     `retro: { every: 10, unit: 'done-tasks' }`. See
     [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
 
-A Team gets its process from the **Process** step on the manager's card, or by
-writing the files yourself. **Start blank** writes an `AGENTS.md` with a heading
+A Team of a type gets its process when you hire it in **Build a team**. A Team that has
+none, such as a Blank Team or one that began as a label, gets it from the **Process** step on
+the manager's card, or by writing the files yourself. **Start blank** writes an `AGENTS.md` with a heading
 outline and no settings; **Use this process** writes the type's prose to `AGENTS.md`
 and its settings to `_team.md`. Neither overwrites an existing `AGENTS.md`, and a
 setting `_team.md` already holds is kept. The team types ship several templates,

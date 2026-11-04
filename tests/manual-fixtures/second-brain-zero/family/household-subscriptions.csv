@@ -1,0 +1,12 @@
+name,category,amount_usd,cycle,next_due,owner
+Streamline Video,entertainment,15.99,monthly,2026-11-12,Sam
+CineBox,entertainment,11.99,monthly,2026-11-20,Sam
+Northwind Power,utilities,84.00,monthly,2026-11-18,Sam
+City Water,utilities,42.50,monthly,2026-11-25,Alex
+FiberLine Internet,utilities,65.00,monthly,2026-11-09,Alex
+Little Sprouts Piano,kids,120.00,monthly,2026-12-01,Alex
+Lakeside Aftercare,kids,310.00,monthly,2026-12-05,Alex
+CloudVault Storage,software,9.99,monthly,2026-11-15,Sam
+Acorn Mutual Car,insurance,612.00,semiannual,2027-01-10,Sam
+Acorn Mutual Home,insurance,1140.00,annual,2027-03-01,Sam
+Harbor Zoo Membership,family,129.00,annual,2026-12-01,Alex

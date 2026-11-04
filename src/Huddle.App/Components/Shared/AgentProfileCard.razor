@@ -384,6 +384,15 @@
                         <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-copy-caption">@(this.OnDraftSaved.HasDelegate ? "Huddle copies it into Skills/ when you approve." : "Huddle copies it into Skills/ when you save.")</MudText>
                     </MudSelectItem>
                 }
+                @* A Skill this card already holds but that is not on this computer: an option only so it can be unticked, or a role
+                   that brought one could never be hired without downloading it. *@
+                @foreach (string kept in this.HeldUnavailableSkills)
+                {
+                    <MudSelectItem T="string" Value="@kept">
+                        <MudText>@kept</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-unavailable-caption">Not on this computer yet. Untick it to go without it.</MudText>
+                    </MudSelectItem>
+                }
             </MudSelect>
 
             @* Skills a catalog or Pack lists but that have no folder on this computer: not choosable, but visible with their
@@ -1696,6 +1705,11 @@
 
     /// <summary>Registry Skills Huddle can copy that have no folder in Skills/ yet: not hidden or withdrawn unless selected.</summary>
     private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> CopyableSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.Copyable);
+
+    /// <summary>Skills this card holds or its draft came with that are neither installed nor copyable; a draft's stay listed after an untick, so it can be undone.</summary>
+    private IReadOnlyList<string> HeldUnavailableSkills =>
+        [.. this.skills.Concat(this.DraftSkills ?? []).Distinct(StringComparer.Ordinal)
+            .Where(name => this.Skills.Get(name) is null && !this.CopyableSkills.Any(entry => string.Equals(entry.Name, name, StringComparison.Ordinal)))];
 
     /// <summary>Registry Skills with no folder on this computer, for the collapsed list.</summary>
     private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> NotDownloadedSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded);

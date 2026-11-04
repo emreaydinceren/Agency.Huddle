@@ -253,6 +253,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Team Memory Helper](manual-tests/team-memory-helper.md): proposals filed by a Helper into Team Memory, the History, the Feed record, the membership check and the daily cap.
 - [Long-running Rooms](manual-tests/long-running-rooms.md): the experiment on a real Room that decides whether phase 2b and phase 4 are built.
 - [Second Brain](manual-tests/second-brain.md): the Second Brain use cases as a Human's checklist: raw uploads, Team Memory, AGENTS.md, prompt sources, chat rules, archive and unarchive, an old data folder and a protected raw file.
+- [Second Brain from zero](manual-tests/second-brain-zero.md): an empty data folder to three hand-built Teams (family, small business, development), with copy-paste chat texts, test documents ingested into memory, and a Development Team building an app.
 
 Two pages exist for the run around the run, and neither is needed while executing:
 [**Planning**](manual-tests/planning.md) to pick what to run — the areas with their estimates,

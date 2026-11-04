@@ -5808,6 +5808,197 @@ File: [`docs/engineering/manual-tests/second-brain.md`](second-brain.md#sb-10--a
 | 2026-11-03 | Pass | `d7a9de8d` |  | The SHA-256 of `statement.pdf` was unchanged and `statement - extract.md` was written beside it. Finn first asked where the file was, then said "I can't modify files in the `raw/` folder"; told to try anyway, it wrote the extract with no visible overwrite attempt, so the permission handler's refusal was not seen. An Adapter error ("API Error: a document in the conversation could not be processed…") leaked into the chat Message. |
 | 2026-11-03 | Pass | `7c882730` |  | Rerun of the guard on a readable original: asked to read `raw\<roomId>\balance.txt` and Write over it, Finn quoted "User refused permission to run tool"; the log reads "Refused a tool call for 'Finn' on '…\raw\…\balance.txt': Files in raw/ are kept as they arrived…" and the SHA-256 was unchanged. The stand-in `statement.pdf` is not a valid PDF, so Read failed on it first; use a real PDF or a text original. |
 
+## Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app
+
+### ZERO-01 — An empty folder starts on the Profile page
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-01--an-empty-folder-starts-on-the-profile-page)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-02 — The Chief of Staff greets a new Human
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-02--the-chief-of-staff-greets-a-new-human)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-03 — Hire the Family Team
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-03--hire-the-family-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-04 — The manager starts with its process and Second Brain Skills
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-04--the-manager-starts-with-its-process-and-second-brain-skills)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-05 — Onboard the Family Team from a profile document
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-05--onboard-the-family-team-from-a-profile-document)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-06 — Ingest the family's documents
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-06--ingest-the-familys-documents)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-07 — A later document corrects a fact in place
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-07--a-later-document-corrects-a-fact-in-place)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-08 — Hire and set up the Bakery Team
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-08--hire-and-set-up-the-bakery-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-09 — Ingest the bakery's documents
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-09--ingest-the-bakerys-documents)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-10 — A member who never saw the files uses what was filed
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-10--a-member-who-never-saw-the-files-uses-what-was-filed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-11 — Family members use the filed memory too
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-11--family-members-use-the-filed-memory-too)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-12 — Prepare a repository and hire the Dev Team
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-12--prepare-a-repository-and-hire-the-dev-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-13 — A gate refuses Done with no evidence
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-13--a-gate-refuses-done-with-no-evidence)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-14 — Ingest the spec and the Team's conventions
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-14--ingest-the-spec-and-the-teams-conventions)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-15 — The Dev Team builds the app
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-15--the-dev-team-builds-the-app)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-16 — Run the app yourself
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-16--run-the-app-yourself)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-17 — Capture through the Chief of Staff
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-17--capture-through-the-chief-of-staff)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-18 — A Huddle-wide fact reaches every Team, and other Teams' facts do not
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-18--a-huddle-wide-fact-reaches-every-team-and-other-teams-facts-do-not)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-19 — A member proposes a fact and the Helper files it
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-19--a-member-proposes-a-fact-and-the-helper-files-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-20 — A rule goes to AGENTS.md through you
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-20--a-rule-goes-to-agentsmd-through-you)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-21 — An Agent cannot change an original
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-21--an-agent-cannot-change-an-original)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-22 — Wrapping up a session
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-22--wrapping-up-a-session)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-23 — The weekly check finds planted drift
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-23--the-weekly-check-finds-planted-drift)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-24 — The Chief of Staff offers upkeep and runs a daily review
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-24--the-chief-of-staff-offers-upkeep-and-runs-a-daily-review)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-25 — Everything survives a restart
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-25--everything-survives-a-restart)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-26 — A Request carries work between Teams
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-26--a-request-carries-work-between-teams)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### ZERO-27 — Find it all, and add up the cost
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen

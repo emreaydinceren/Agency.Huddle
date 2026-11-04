@@ -8,6 +8,8 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **A Team hired with Adapters off is not onboarded, and nothing tries again.**
+  `HireService.OnboardManagerAsync` waits a minute for the manager to run, then logs a warning and gives up; `onboarded` stays unset, but no later start posts the steps. The Team keeps its process, so the Human can ask the manager to work through its `## Onboarding`.
 - **Huddle does not advertise `session.compaction`, so an automatic compaction stays invisible.**
   Advertising it removes the "Compact conversation" tool call whose `rawOutput` gives `/compact` its token figures, and the replacement `compaction_update` carries none outside JetBrains AIR, as a paid spike showed on 2026-11-03. See [Adapter Upgrades §8](../Huddle.AdapterUpgrades-Specifications.md), which names the follow-up on the legacy `trigger` field.
 - **An Agent on a model without auto mode may open its first reply with an Adapter notice. Resolved 2026-11-03.**

@@ -115,6 +115,30 @@ public sealed class AgentProfileCardSkillPacksTests : IDisposable
         Assert.Equal("ghost", cut.Find(".agent-profile-card-not-here-row").GetAttribute("data-skill"));
     }
 
+    /// <summary>A Skill the Agent holds that is not on this computer is an option only so it can be unticked: without this a role that brought one could not be hired without downloading it.</summary>
+    [Fact]
+    public async Task SkillsSelect_HeldSkillNotOnThisComputer_CanBeUnticked()
+    {
+        this.host.Source();
+        string catalog = this.host.Catalog("extra", ["ghost"], _ => null);
+        this.host.SkillsMd([], [catalog]);
+        await this.host.ReadAsync();
+        await using TeamWebApplicationFactory factory = new();
+        await factory.WriteDefinitionAsync("Dev", Dev("skills: [ghost]\n"), CancellationToken.None);
+        await using MudBunitContext ctx = this.NewCardContext(factory);
+        IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(ctx, factory);
+
+        await cut.InvokeAsync(() => cut.FindAll(".mud-select .mud-select-input")[0].MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".agent-profile-card-unavailable-caption")));
+        AngleSharp.Dom.IElement? option = cut.Find(".agent-profile-card-unavailable-caption").Closest(".mud-list-item");
+        Assert.NotNull(option);
+
+        await cut.InvokeAsync(() => option.ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".agent-profile-card-unavailable-caption")));
+        Assert.Equal(string.Empty, cut.FindAll(".mud-select .mud-select-input input")[0].GetAttribute("value") ?? string.Empty);
+    }
+
     /// <summary>Save copies a copyable Skill before the Agent file is written; the file names it only afterwards.</summary>
     [Fact]
     public async Task Save_CopiesBeforeTheWrite()
