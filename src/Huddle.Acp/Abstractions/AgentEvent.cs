@@ -43,7 +43,8 @@ public sealed record UsageCost(decimal Amount, string Currency);
 /// <param name="RawInputJson">The tool call's raw input, as JSON, when this notification carries it.</param>
 /// <param name="Location">The first entry of the call's <c>locations</c>, or <see langword="null"/> when this notification has none.</param>
 /// <param name="Diff">The first <c>diff</c> content block, or <see langword="null"/> when this notification has none.</param>
-public sealed record ToolCallStarted(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawInputJson, ToolCallLocationInfo? Location = null, ToolCallDiffInfo? Diff = null) : AgentEvent(SessionId);
+/// <param name="ToolName">The Adapter's own name for the tool (<c>_meta.claudeCode.toolName</c>), or <see langword="null"/> when the Adapter sends none. Stable across display text, unlike <paramref name="Title"/>.</param>
+public sealed record ToolCallStarted(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawInputJson, ToolCallLocationInfo? Location = null, ToolCallDiffInfo? Diff = null, string? ToolName = null) : AgentEvent(SessionId);
 
 /// <summary>An existing tool call has been updated.</summary>
 /// <param name="SessionId">The id of the session this update belongs to.</param>
@@ -60,7 +61,8 @@ public sealed record ToolCallStarted(string SessionId, string ToolCallId, string
 /// </param>
 /// <param name="Location">The first entry of the call's <c>locations</c>, or <see langword="null"/> when this update omits it (ACP: omitted means unchanged).</param>
 /// <param name="Diff">The first <c>diff</c> content block, or <see langword="null"/> when this update omits it (ACP: omitted means unchanged).</param>
-public sealed record ToolCallUpdated(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawOutputJson, string? RawInputJson = null, ToolCallLocationInfo? Location = null, ToolCallDiffInfo? Diff = null) : AgentEvent(SessionId);
+/// <param name="ToolName">The Adapter's own name for the tool (<c>_meta.claudeCode.toolName</c>), or <see langword="null"/> when this update carries none.</param>
+public sealed record ToolCallUpdated(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawOutputJson, string? RawInputJson = null, ToolCallLocationInfo? Location = null, ToolCallDiffInfo? Diff = null, string? ToolName = null) : AgentEvent(SessionId);
 
 /// <summary>Describes a single entry within a plan.</summary>
 public sealed record PlanEntryInfo(string Content, PlanEntryPriority Priority, PlanEntryStatus Status);
@@ -73,7 +75,8 @@ public sealed record PlanUpdated(string SessionId, IReadOnlyList<PlanEntryInfo> 
 /// <param name="Size">The context window size, in tokens.</param>
 /// <param name="Used">The tokens in use.</param>
 /// <param name="Cost">The session's running cost, or <see langword="null"/> when this update carries none.</param>
-public sealed record UsageUpdated(string SessionId, long Size, long Used, UsageCost? Cost = null) : AgentEvent(SessionId);
+/// <param name="Model">The model id that answered, from <c>_meta["_claude/model"]</c>, or <see langword="null"/> when the update names none.</param>
+public sealed record UsageUpdated(string SessionId, long Size, long Used, UsageCost? Cost = null, string? Model = null) : AgentEvent(SessionId);
 
 /// <summary>The agent's current mode changed.</summary>
 public sealed record ModeChanged(string SessionId, string ModeId) : AgentEvent(SessionId);

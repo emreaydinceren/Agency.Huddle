@@ -29,8 +29,11 @@ internal static class ContextFillText
 
         string used = reading.Used.ToString("N0", CultureInfo.InvariantCulture);
         string size = reading.Size.ToString("N0", CultureInfo.InvariantCulture);
-        return reading.Shared
+        string text = reading.Shared
             ? $"{used} of {size} tokens used, shared across all of {agentName}'s Rooms"
             : $"{used} of {size} tokens used in this Room";
+        return string.IsNullOrWhiteSpace(reading.Model)
+            ? text
+            : text + string.Create(CultureInfo.InvariantCulture, $" Answered by {reading.Model}.");
     }
 }

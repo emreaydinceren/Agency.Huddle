@@ -309,11 +309,24 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // Room already carries D16's " #xxxxxx" disambiguating suffix in roomName, which is what
         // actually tells the Human which one failed.
         var count = Interlocked.Increment(ref this.consecutiveTurnFailures);
-        var message = count >= 3
-            ? string.Create(
+        string message;
+        if (string.Equals(reason, PersonaSupervisor.SignInAgainReason, StringComparison.Ordinal))
+        {
+            // Spec §4: the sign-in instruction is the whole reason; the Room prefix and the
+            // repeated-failure wording would bury the one thing the Human has to do.
+            message = reason;
+        }
+        else if (count >= 3)
+        {
+            message = string.Create(
                 CultureInfo.InvariantCulture,
-                $"{count} consecutive Turns have failed; this is unlikely to be transient — the last, in Room '{roomName}': {reason}")
-            : $"A Turn in Room '{roomName}' failed — {reason}";
+                $"{count} consecutive Turns have failed; this is unlikely to be transient — the last, in Room '{roomName}': {reason}");
+        }
+        else
+        {
+            message = $"A Turn in Room '{roomName}' failed — {reason}";
+        }
+
         this.RaiseStatusChanged(PersonaState.Degraded, message);
     }
 

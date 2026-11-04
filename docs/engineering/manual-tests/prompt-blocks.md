@@ -46,7 +46,7 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100 -- `
    Agent not to use any tool, so that "it read the file with a tool" cannot pass for "it was sent the
    image".
 4. `O-LOG` shows the app log; the Information line this page looks for reads
-   `Persona '<Name>' sent image paths in room <id> as path lines instead of blocks: <Reason>=<n>.`
+   `Persona '<Name>' sent library file paths in room <id> as path lines instead of blocks: <Reason>=<n>.`
    (`RoomSession.cs:1763-1767`). It ends with a full stop and holds counts, never a path.
 5. [`O-TOOLCALLS`](common.md#o-toolcalls) is the tool-call oracle: the folder
    `<data>\logs\tool-calls\<Name>\` does not exist until the Agent's first tool call, and a Turn
@@ -225,7 +225,7 @@ Turn still runs, and the reason is logged.*
 - A reply arrives, and the echoed prompt contains the text you sent and the path
   `C:\scratch\design\checkout.png` as plain text.
 - Your Message shows the path as a Library link.
-- `O-LOG` has no line `sent image paths in room`.
+- `O-LOG` has no line `sent library file paths in room`.
 
 **Fail if — any of these**
 

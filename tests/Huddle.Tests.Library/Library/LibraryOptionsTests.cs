@@ -59,6 +59,16 @@ public sealed class LibraryOptionsTests
         Assert.Equal(8000, options.MaxImageEdgePixels);
     }
 
+    /// <summary>The document caps default to the spec §3 values: two documents and 10 MiB per Turn.</summary>
+    [Fact]
+    public void LibraryOptions_DocumentDefaults()
+    {
+        LibraryOptions options = new TeamOptions().Library;
+
+        Assert.Equal(2, options.MaxDocumentsPerTurn);
+        Assert.Equal(10485760, options.MaxDocumentBytesPerTurn);
+    }
+
     /// <summary>The chat-upload limits and the Uploads folder default to the spec 6.6 values.</summary>
     [Fact]
     public void UploadLimits_Defaults_MatchSpec()

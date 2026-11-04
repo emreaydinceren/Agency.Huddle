@@ -38,6 +38,12 @@ public sealed class LibraryOptions
     /// <summary>The most raw image bytes in one Turn's prompt, about a third more on the wire. Zero or less sends none.</summary>
     public int MaxImageBytesPerTurn { get; set; } = 8388608;
 
+    /// <summary>The most document Prompt blocks in one Turn's prompt; the rest stay path lines. Zero or less sends none.</summary>
+    public int MaxDocumentsPerTurn { get; set; } = 2;
+
+    /// <summary>The most raw document bytes in one Turn's prompt, 10 MiB by default. A document past it stays a path line. Zero or less sends none.</summary>
+    public int MaxDocumentBytesPerTurn { get; set; } = 10485760;
+
     /// <summary>The longest side, in pixels, of an image sent as a Prompt block. Anthropic documents 8,000 as its limit.</summary>
     public int MaxImageEdgePixels { get; set; } = 8000;
 

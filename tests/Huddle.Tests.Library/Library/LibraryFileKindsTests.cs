@@ -68,6 +68,33 @@ public sealed class LibraryFileKindsTests
         Assert.Equal(LibraryFileKind.Other, kind);
     }
 
+    /// <summary>A .pdf file whose content starts with the %PDF- magic is detected as Pdf.</summary>
+    [Fact]
+    public void Detect_PdfWithMagic_IsPdf()
+    {
+        ReadOnlySpan<byte> head = "%PDF-1.7\n"u8;
+        LibraryFileKind kind = LibraryFileKinds.Detect("report.pdf", head);
+        Assert.Equal(LibraryFileKind.Pdf, kind);
+    }
+
+    /// <summary>The .pdf extension is matched case-insensitively, so REPORT.PDF with the magic is Pdf.</summary>
+    [Fact]
+    public void Detect_PdfUpperCaseExtension_IsPdf()
+    {
+        ReadOnlySpan<byte> head = "%PDF-1.7\n"u8;
+        LibraryFileKind kind = LibraryFileKinds.Detect("REPORT.PDF", head);
+        Assert.Equal(LibraryFileKind.Pdf, kind);
+    }
+
+    /// <summary>A .pdf file without the %PDF- magic is detected as Other, not as text.</summary>
+    [Fact]
+    public void Detect_PdfWithoutMagic_IsOther()
+    {
+        ReadOnlySpan<byte> head = "hello"u8;
+        LibraryFileKind kind = LibraryFileKinds.Detect("report.pdf", head);
+        Assert.Equal(LibraryFileKind.Other, kind);
+    }
+
     /// <summary>PNG files with PNG magic bytes are detected as Image.</summary>
     [Fact]
     public void Detect_PngFileWithMagic_ReturnsImage()

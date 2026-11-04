@@ -2522,6 +2522,36 @@ public sealed class PersonaRunnerTests
             ct);
     }
 
+    /// <summary>Spec §4: a Turn that fails because the adapter needs a sign-in reports Degraded with the Human-facing instruction as the whole reason, not the adapter's raw text.</summary>
+    [Fact]
+    public async Task TurnFails_AuthenticationRequired_ReasonSaysSignInAgain()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new AgentAuthenticationRequiredException([], "Run /login"));
+        var persona = TestPersonas.Nova;
+        StatusRecorder statuses = new();
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Record;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded
+                && string.Equals(
+                    s.Reason,
+                    "Claude needs you to sign in again. Run claude in a terminal and sign in, then send the Message again.",
+                    StringComparison.Ordinal),
+            ct);
+    }
+
     /// <summary>
     /// The third consecutive Turn failure escalates the reason's wording, without ever matching on the
     /// Adapter's own (changeable) message text.

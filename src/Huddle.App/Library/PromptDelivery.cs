@@ -10,4 +10,7 @@ namespace Agency.Huddle.App.Library;
 /// <param name="EmbeddedText">Whether a document's text may go as an embedded resource: the Adapter advertised <c>embeddedContext</c>, the profile allows blocks, and it has no file tools.</param>
 /// <param name="MaxImagesPerTurn">The most image blocks in one prompt; zero or less sends none.</param>
 /// <param name="MaxImageBytesPerTurn">The most raw image bytes in one prompt; zero or less sends none.</param>
-internal sealed record PromptDelivery(bool ReadsFiles, bool Images, bool EmbeddedText, int MaxImagesPerTurn, long MaxImageBytesPerTurn);
+/// <param name="Documents">Whether a PDF may go as an embedded blob resource: <c>EmbeddedText</c> and no file tools, so the Adapter does not read the file itself. <c>EmbeddedText</c> is the gate for text.</param>
+/// <param name="MaxDocumentsPerTurn">The most document blocks in one prompt; zero or less sends none.</param>
+/// <param name="MaxDocumentBytesPerTurn">The most raw document bytes in one prompt; zero or less sends none.</param>
+internal sealed record PromptDelivery(bool ReadsFiles, bool Images, bool EmbeddedText, int MaxImagesPerTurn, long MaxImageBytesPerTurn, bool Documents, int MaxDocumentsPerTurn, long MaxDocumentBytesPerTurn);

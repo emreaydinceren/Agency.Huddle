@@ -98,6 +98,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private bool freshStartNotePending;
     private bool skipResumeOnNextOpen;
     private Task? pendingFreshTeardown;
+    private Task? pendingDelete;
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
     // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
@@ -124,6 +125,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private Task? pendingStopCancel;
     private bool running;
     private long lastUsed;
+
+    /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
+    private string? lastModel;
 
     // D24: consulted and cleared only from ProcessWorkItemAsync, which the single consumer thread
     // always calls after the open that set them (OpenCoreAsync happens-before ProcessWorkItemAsync
@@ -487,10 +491,53 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
             this.ForgetStoredState();
+
+            // Published before the teardown is released, so a DisposeAsync that wakes on it always sees the delete.
+            // StartDelete only starts the task: the delete never delays the new session's open.
+            this.StartDelete(taken.Session);
         }
         finally
         {
             done.TrySetResult();
+        }
+    }
+
+    /// <summary>
+    /// Starts deleting a closed session's Adapter-side copy in the background, so a fresh start never waits on it.
+    /// A second fresh start while an earlier delete is pending chains onto it: neither task is lost, and
+    /// <see cref="DisposeAsync"/> awaits the one tracked task exactly once.
+    /// </summary>
+    /// <param name="old">The session that was closed, or <see langword="null"/> when nothing was open.</param>
+    private void StartDelete(IAgentSession? old)
+    {
+        if (old is null)
+        {
+            return;
+        }
+
+        lock (this.gate)
+        {
+            Task? previous = this.pendingDelete;
+            this.pendingDelete = Task.Run(() => this.DeleteOldAsync(old, previous), CancellationToken.None);
+        }
+    }
+
+    /// <summary>Deletes one closed session, logging a failure at Warning, then waits for the delete it was chained behind.</summary>
+    /// <param name="old">The closed session.</param>
+    /// <param name="previous">The earlier pending delete, or <see langword="null"/>.</param>
+    private async Task DeleteOldAsync(IAgentSession old, Task? previous)
+    {
+        try
+        {
+            await old.DeleteAsync(this.runToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' could not delete its old session in room {RoomId}.", this.owner.PersonaName, this.RoomId);
+        }
+        finally
+        {
+            await SafeAwaitAsync(previous).ConfigureAwait(false);
         }
     }
 
@@ -553,13 +600,21 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             return;
         }
 
-        await this.TearDownAsync().ConfigureAwait(false);
+        (IAgentSession? Session, CancellationTokenSource? ReaderCts, Task? ReaderTask) taken;
+        lock (this.gate)
+        {
+            taken = this.TakeOpenLocked();
+        }
+
+        await DisposeOpenAsync(taken.Session, taken.ReaderCts, taken.ReaderTask).ConfigureAwait(false);
         this.ForgetStoredState();
         lock (this.gate)
         {
             this.skipResumeOnNextOpen = true;
             this.freshStartNotePending = true;
         }
+
+        this.StartDelete(taken.Session);
     }
 
     /// <summary>Tells a newly created session that its first ordinary Turn owes a fresh-start note. Called by the pool before the session serves anything.</summary>
@@ -679,7 +734,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private Task CloseAfterRepeatedFailureAsync() => this.TearDownAsync();
 
     /// <summary>
-    /// The teardown shared by the repeated-failure close and a start afresh: moves the session to
+    /// The teardown of the repeated-failure close: moves the session to
     /// <see cref="RoomSessionState.Closed"/> from any state and disposes the open agent session and its reader.
     /// </summary>
     private Task TearDownAsync()
@@ -724,6 +779,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         await SafeAwaitAsync(this.consumerTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.eventReaderTask).ConfigureAwait(false);
         await SafeAwaitAsync(this.pendingFreshTeardown).ConfigureAwait(false);
+        Task? deleting;
+        lock (this.gate)
+        {
+            deleting = this.pendingDelete;
+        }
+
+        await SafeAwaitAsync(deleting).ConfigureAwait(false);
+
 
         if (this.session is not null)
         {
@@ -1046,7 +1109,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
         else
         {
-            this.owner.ReportTurnFailure(head.Item.RoomName, ex.Message);
+            this.owner.ReportTurnFailure(head.Item.RoomName, RoomSession.DescribeTurnFailure(ex));
 
             // D26, finding P-14: an open/resume failure counts toward THIS
             // session's own streak; no store.Put ever ran for this item (no Turn
@@ -1566,11 +1629,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // so this escalates on repetition alone, never on message content. Stays Degraded rather
             // than Offline: the session and the pipe may both be healthy while the model provider is
             // refusing, and Offline would be a claim this runner cannot support.
-            this.owner.ReportTurnFailure(run.Item.RoomName, ex.Message);
+            this.owner.ReportTurnFailure(run.Item.RoomName, RoomSession.DescribeTurnFailure(ex));
             run.RoomFailureThisTurn = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
     }
+
+    /// <summary>The reason a failed Turn reports: the Human's sign-in instruction for an authentication failure, the exception text otherwise.</summary>
+    /// <param name="ex">The exception the Turn failed with.</param>
+    /// <returns>The reason passed to <see cref="IRoomSessionOwner.ReportTurnFailure"/>.</returns>
+    private static string DescribeTurnFailure(Exception ex) =>
+        ex is AgentAuthenticationRequiredException ? PersonaSupervisor.SignInAgainReason : ex.Message;
 
     /// <summary>Reports a Turn the idle-timeout watchdog abandoned: tells the Room and logs the silence that triggered it.</summary>
     /// <param name="run">The abandoned Turn.</param>
@@ -2037,14 +2106,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
             this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.RawInputJson);
+            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.ToolName, started.RawInputJson);
             await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
             this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
             this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.RawInputJson);
+            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.ToolName, updated.RawInputJson);
             await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, memoryFile, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
@@ -2113,9 +2182,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         // The context meter shows the latest gauge reading, every update, the resume baseline
         // included: that one is the restored context, which is what the meter should show.
+        this.lastModel = usage.Model ?? this.lastModel;
         if (this.agentId is { } id)
         {
-            this.contextFill?.Report(id, this.RoomId, usage.Used, usage.Size);
+            this.contextFill?.Report(id, this.RoomId, usage.Used, usage.Size, this.lastModel);
         }
 
         // Used is how full the context window is, not a running bill - Huddle.Console
@@ -2384,8 +2454,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// returns the file any <c>memory</c> call names, which is the only argument the tool-call log would otherwise lose.
     /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
     /// <c>claude-agent-acp</c> 0.75.1 has no case for an MCP tool in <c>toolInfoFromToolUse</c> (<c>dist/tools.js</c>), so it
-    /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>;
-    /// the name arrives nowhere else in a <see cref="ToolCallStarted"/> or <see cref="ToolCallUpdated"/>. A live run saw it there:
+    /// reports the call with <c>kind: "other"</c> and the tool's prefixed name, <c>mcp__team__memory</c>, as its <c>title</c>.
+    /// The name is read from <c>_meta.claudeCode.toolName</c> (<see cref="ToolCallStarted.ToolName"/>) when the Adapter sends it,
+    /// with the title as the fallback for an Adapter that sends no <c>_meta</c>. A live run saw it in the title:
     /// the tool-activity line, which shows the title, read <c>mcp__team__list_agents</c> (manual-tests run log, 2026-09-15). Only <c>write</c>,
     /// <c>append</c>, <c>replace</c> and <c>delete</c> count. A call the tool then refuses is recorded too, harmlessly:
     /// <c>FileChangeTracker.CommitAsync</c> stores a touched file's state as it is on disk, which a refusal left unchanged.
@@ -2393,16 +2464,18 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// </summary>
     /// <param name="kind">The tool call's category, as ACP reported it.</param>
     /// <param name="title">The tool call's title, which carries the tool's name for an App Tool.</param>
+    /// <param name="toolName">The Adapter's own tool name, when it sends one; it wins over <paramref name="title"/> (Spec §5).</param>
     /// <param name="rawInputJson">The tool call's raw input, if any.</param>
     /// <returns>
     /// The file the call names, for every command that names one (a <c>read</c> as well as a <c>write</c>), so the tool-call log
     /// and the tool-activity line say which memory file was used; <see langword="null"/> for any other call.
     /// </returns>
-    private string? RecordMemoryToolPath(ToolKind kind, string? title, string? rawInputJson)
+    private string? RecordMemoryToolPath(ToolKind kind, string? title, string? toolName, string? rawInputJson)
     {
+        string? name = toolName ?? title;
         if (kind != ToolKind.Other
-            || title is null
-            || !MemoryTool.IsToolName(title)
+            || name is null
+            || !MemoryTool.IsToolName(name)
             || this.fileChanges?.MemoryPaths is not { } memoryPaths
             || MemoryRequest.FromJson(rawInputJson) is not { } request
             || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
@@ -2510,7 +2583,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             string summary = string.Join(", ", reasons);
             this.logger.LogInformation(
-                "Persona '{PersonaName}' sent image paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
+                "Persona '{PersonaName}' sent library file paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
                 this.owner.PersonaName,
                 roomId,
                 summary);

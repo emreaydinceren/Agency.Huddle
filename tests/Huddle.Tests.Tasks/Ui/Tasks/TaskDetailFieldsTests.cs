@@ -279,7 +279,7 @@ public sealed class TaskDetailFieldsTests
     // Dates (Spec §13.6, corrections-B5 D14 item 11).
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>Start and Due each round-trip through their own <c>MudDatePicker</c> (corrections-B5 D14 item 11: <c>DateChanged.InvokeAsync(new DateTime(...))</c>, assert <c>Instance.Date</c>).</summary>
+    /// <summary>Start and Due each round-trip through their own <c>MudDatePicker</c> (corrections-B5 D14 item 11: <c>DateChanged.InvokeAsync(new DateTime(...))</c>, assert <c>Instance.Date</c>). The picked date is far in the future: a past Due date adds <c>task-overdue</c> to the picker's class, so the exact-class lookup after the pick would miss it once the calendar passed a fixed date.</summary>
     /// <param name="which">"start" or "due".</param>
     [Theory]
     [MemberData(nameof(TaskDetailFieldsTestSupport.DateFields), MemberType = typeof(TaskDetailFieldsTestSupport))]
@@ -291,7 +291,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id);
         string cssClass = which == "start" ? "task-detail-start-date" : "task-detail-due-date";
         IRenderedComponent<MudDatePicker> picker = cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal));
-        DateTime picked = new(2026, 11, 3, 0, 0, 0, DateTimeKind.Unspecified);
+        DateTime picked = new(2999, 11, 3, 0, 0, 0, DateTimeKind.Unspecified);
 
         await cut.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(picked));
 

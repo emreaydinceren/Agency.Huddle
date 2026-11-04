@@ -191,6 +191,52 @@ public sealed class SessionUpdateMapperTests
         Assert.Equal(new UsageUpdated("s", 1000, 250), result);
     }
 
+    /// <summary>A usage update carrying <c>_meta["_claude/model"]</c> maps that model id to <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_MetaClaudeModel_MapsToModel()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate
+        {
+            Size = 1000,
+            Used = 250,
+            Meta = new Dictionary<string, object>
+            {
+                ["_claude/model"] = new Newtonsoft.Json.Linq.JValue("claude-haiku-5-5"),
+            },
+        };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Equal("claude-haiku-5-5", result.Model);
+    }
+
+    /// <summary>A usage update with no <c>_meta</c> maps to a <see langword="null"/> <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_NoMeta_ModelIsNull()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate { Size = 1000, Used = 250 };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(result.Model);
+    }
+
+    /// <summary>A usage update whose <c>_claude/model</c> is not a string maps to a <see langword="null"/> <see cref="UsageUpdated.Model"/>.</summary>
+    [Fact]
+    public void UsageUpdate_ModelNotAString_ModelIsNull()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate
+        {
+            Size = 1000,
+            Used = 250,
+            Meta = new Dictionary<string, object>
+            {
+                ["_claude/model"] = new Newtonsoft.Json.Linq.JValue(42),
+            },
+        };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(result.Model);
+    }
+
     /// <summary>A tool call's first <c>diff</c> block and first location reach the event, so the Room view can name the file and show the change.</summary>
     [Fact]
     public void Map_ToolCallWithDiffAndLocation_CarriesBoth()
@@ -686,5 +732,157 @@ public sealed class SessionUpdateMapperTests
         ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(result);
         Assert.Equal("{\"file_path\":\"a.md\"}", updated.RawInputJson);
         Assert.Equal("{\"result\":\"ok\"}", updated.RawOutputJson);
+    }
+
+    /// <summary>A <c>tool_call</c> carrying <c>_meta.claudeCode.toolName</c> maps that name to <see cref="ToolCallStarted.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCall_MetaClaudeCodeToolName_MapsToToolName()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Pending,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JObject { ["toolName"] = "Bash" },
+            },
+        };
+
+        ToolCallStarted started = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+        Assert.Equal("Bash", started.ToolName);
+    }
+
+    /// <summary>A <c>tool_call</c> with no <c>_meta</c> maps to a <see langword="null"/> <see cref="ToolCallStarted.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCall_NoMeta_ToolNameIsNull()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Pending,
+        };
+
+        ToolCallStarted started = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(started.ToolName);
+    }
+
+    /// <summary>A <c>tool_call</c> whose <c>_meta.claudeCode</c> is not an object maps to a <see langword="null"/> <see cref="ToolCallStarted.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCall_ClaudeCodeNotAnObject_ToolNameIsNull()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Pending,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JValue("Bash"),
+            },
+        };
+
+        ToolCallStarted started = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(started.ToolName);
+    }
+
+    /// <summary>A <c>tool_call</c> whose <c>toolName</c> is a number maps to a <see langword="null"/> <see cref="ToolCallStarted.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCall_ToolNameNotAString_ToolNameIsNull()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Pending,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JObject { ["toolName"] = 42 },
+            },
+        };
+
+        ToolCallStarted started = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(started.ToolName);
+    }
+
+    /// <summary>A <c>tool_call_update</c> carrying <c>_meta.claudeCode.toolName</c> maps that name to <see cref="ToolCallUpdated.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCallUpdate_MetaClaudeCodeToolName_MapsToToolName()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JObject { ["toolName"] = "Bash" },
+            },
+        };
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Equal("Bash", updated.ToolName);
+    }
+
+    /// <summary>A <c>tool_call_update</c> with no <c>_meta</c> maps to a <see langword="null"/> <see cref="ToolCallUpdated.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCallUpdate_NoMeta_ToolNameIsNull()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+        };
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(updated.ToolName);
+    }
+
+    /// <summary>A <c>tool_call_update</c> whose <c>_meta.claudeCode</c> is not an object maps to a <see langword="null"/> <see cref="ToolCallUpdated.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCallUpdate_ClaudeCodeNotAnObject_ToolNameIsNull()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JValue("Bash"),
+            },
+        };
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(updated.ToolName);
+    }
+
+    /// <summary>A <c>tool_call_update</c> whose <c>toolName</c> is a number maps to a <see langword="null"/> <see cref="ToolCallUpdated.ToolName"/>.</summary>
+    [Fact]
+    public void ToolCallUpdate_ToolNameNotAString_ToolNameIsNull()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Terminal",
+            Kind = dotacp.protocol.ToolKind.Execute,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+            Meta = new Dictionary<string, object>
+            {
+                ["claudeCode"] = new Newtonsoft.Json.Linq.JObject { ["toolName"] = 42 },
+            },
+        };
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+        Assert.Null(updated.ToolName);
     }
 }

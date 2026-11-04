@@ -26,6 +26,29 @@ public sealed class LibraryDocumentCollectorTests
         return (fixture, Options.Create(captured));
     }
 
+    /// <summary>A document's text goes embedded only when the Adapter accepts embedded text and has no file
+    /// tools; the document caps are copied from the options into the delivery.</summary>
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    public void DeliveryFor_Documents_FollowEmbeddedTextAndNotReadsFiles(bool readsFiles, bool embeddedText, bool expected)
+    {
+        (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture(configured =>
+        {
+            configured.Library.MaxDocumentsPerTurn = 3;
+            configured.Library.MaxDocumentBytesPerTurn = 4096;
+        });
+        using LibraryFileServiceFixture _ = fixture;
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), options);
+
+        PromptDelivery delivery = collector.DeliveryFor(readsFiles, images: false, embeddedText);
+
+        Assert.Equal(expected, delivery.Documents);
+        Assert.Equal(3, delivery.MaxDocumentsPerTurn);
+        Assert.Equal(4096L, delivery.MaxDocumentBytesPerTurn);
+    }
+
     /// <summary>Documents mentioned in several messages, in the order and text form given, are collected
     /// once each in first-seen order.</summary>
     [Fact]

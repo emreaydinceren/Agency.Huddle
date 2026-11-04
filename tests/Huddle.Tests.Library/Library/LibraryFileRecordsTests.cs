@@ -5,11 +5,11 @@ namespace Agency.Huddle.Tests.Library;
 /// <summary>Tests for Library file and document records (Spec §6.4, §6.11).</summary>
 public sealed class LibraryFileRecordsTests
 {
-    /// <summary>LibraryFileKind has exactly Markdown, Text, Image, Svg, Other members.</summary>
+    /// <summary>LibraryFileKind has exactly Markdown, Text, Image, Svg, Other, Pdf members.</summary>
     [Fact]
     public void LibraryFileKind_Members_MatchTypeMap()
     {
-        string[] expected = ["Markdown", "Text", "Image", "Svg", "Other"];
+        string[] expected = ["Markdown", "Text", "Image", "Svg", "Other", "Pdf"];
 
         Assert.Equal(expected, Enum.GetNames<LibraryFileKind>());
     }

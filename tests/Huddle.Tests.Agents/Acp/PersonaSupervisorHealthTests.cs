@@ -267,6 +267,65 @@ public sealed class PersonaSupervisorHealthTests
         Assert.Contains("tools/acp/install.ps1", status.Reason, StringComparison.Ordinal);
     }
 
+    /// <summary>Spec §4: a start failure for authentication with no offered methods is recorded as Offline with the sign-in-again instruction, the same copy a failed Turn shows.</summary>
+    [Fact]
+    public async Task Start_AuthenticationRequiredWithoutMethods_ReasonSaysSignInAgain()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", new AgentAuthenticationRequiredException([]));
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        PersonaStatus? status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(
+            "Claude needs you to sign in again. Run claude in a terminal and sign in, then send the Message again.",
+            status.Reason);
+    }
+
+    /// <summary>Spec §4: a start-up failure whose own message names the fix reaches the Human unchanged, without a generic prefix or a replacement reason.</summary>
+    [Fact]
+    public async Task StartFails_AdapterNamesTheFix_MessagePassesThrough()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        const string adapterMessage = "session/new failed: Invalid proxy URL in HTTPS_PROXY: x. Fix or unset HTTPS_PROXY and restart Claude Code.";
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = ScriptedAgentHostFactory.FailFor(new FakeAgentHostFactory(), "nova", new AgentException(adapterMessage));
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        PersonaStatus? status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(adapterMessage, status.Reason);
+    }
+
     /// <summary>A host that failed to start reports not-running to the start gate at once, instead of the gate waiting out its whole timeout.</summary>
     [Fact]
     public async Task WaitUntilRunningAsync_HostFailedToStart_ReturnsFalseBeforeTheTimeout()

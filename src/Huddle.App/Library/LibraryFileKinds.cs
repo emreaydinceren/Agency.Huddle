@@ -22,6 +22,9 @@ internal static class LibraryFileKinds
     /// <summary>The Spec §6.11 SVG extension, shared by <see cref="HasKnownExtension"/> and <see cref="Detect"/>.</summary>
     private const string SvgExtension = ".svg";
 
+    /// <summary>The PDF extension, shared by <see cref="HasKnownExtension"/> and <see cref="Detect"/>.</summary>
+    private const string PdfExtension = ".pdf";
+
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     /// <summary>
@@ -70,6 +73,7 @@ internal static class LibraryFileKinds
         return MarkdownExtensions.Contains(extension)
             || extension.Equals(SvgExtension, StringComparison.OrdinalIgnoreCase)
             || IsImageExtension(extension)
+            || extension.Equals(PdfExtension, StringComparison.OrdinalIgnoreCase)
             || TextExtensions.Contains(extension);
     }
 
@@ -87,6 +91,12 @@ internal static class LibraryFileKinds
         if (extension.Equals(SvgExtension, StringComparison.OrdinalIgnoreCase))
         {
             return LibraryFileKind.Svg;
+        }
+
+        // A .pdf is a PDF only when its content carries the %PDF- magic; without it the file is Other
+        if (extension.Equals(PdfExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            return head.StartsWith("%PDF-"u8) ? LibraryFileKind.Pdf : LibraryFileKind.Other;
         }
 
         // Check for image extensions

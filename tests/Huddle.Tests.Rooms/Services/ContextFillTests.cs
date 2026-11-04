@@ -21,6 +21,19 @@ public sealed class ContextFillTests
         Assert.False(reading.Shared);
     }
 
+    /// <summary>A reading reported with a model hands the same model back; one reported without has none.</summary>
+    [Fact]
+    public void Report_WithModel_ReadingRoundTripsIt()
+    {
+        ContextFill fill = new();
+
+        fill.Report("agent-1", "room-a", 10, 100, model: "claude-haiku-5-5");
+        fill.Report("agent-2", "room-a", 10, 100);
+
+        Assert.Equal("claude-haiku-5-5", fill.Get("agent-1", "room-a")?.Model);
+        Assert.Null(fill.Get("agent-2", "room-a")?.Model);
+    }
+
     /// <summary>An Adapter that does not report a window size gives no percentage.</summary>
     [Fact]
     public void Report_SizeZero_PercentIsNull()

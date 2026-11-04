@@ -537,7 +537,7 @@ internal sealed class LibraryFileService(
             string fileName = Path.GetFileName(fresh.FullPath);
             (byte[] head, LibraryFileKind kind) = await DetectKindAsync(stream, fileName, length, ct).ConfigureAwait(false);
 
-            if (kind == LibraryFileKind.Image
+            if (kind is LibraryFileKind.Image or LibraryFileKind.Pdf
                 || (kind == LibraryFileKind.Other && !LibraryFileKinds.IsTextExtension(fileName)))
             {
                 return new LibraryDocumentContent(fresh, kind, null, null, false, null, length, lastWriteUtc);
@@ -636,6 +636,67 @@ internal sealed class LibraryFileService(
         catch (UnauthorizedAccessException)
         {
             return new LibraryImageRefused(LibraryImageRefusal.Unreadable);
+        }
+    }
+
+    /// <summary>
+    /// Reads a PDF whole for a Prompt block: re-resolves <paramref name="path"/> under the configured
+    /// roots, refuses it over <paramref name="maxBytes"/> before reading it and again while reading, and
+    /// confirms the <c>%PDF-</c> magic on the bytes read.
+    /// </summary>
+    /// <param name="path">The file to read; re-resolved before use, so a stale path is never trusted.</param>
+    /// <param name="maxBytes">The most bytes accepted; zero or less accepts nothing.</param>
+    /// <param name="ct">Cancels the read; cancellation propagates and is not a refusal.</param>
+    /// <returns>The bytes, or a refusal saying why the document will not be sent.</returns>
+    internal async Task<LibraryDocumentResult> ReadDocumentAsync(LibraryPath path, long maxBytes, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ct.ThrowIfCancellationRequested();
+
+        if (maxBytes < 1)
+        {
+            return new LibraryDocumentRefused(LibraryDocumentRefusal.TooLarge);
+        }
+
+        if (!this.resolver.TryResolve(path.Root.Id, path.RelativePath, out LibraryPath? fresh, out _) || !fresh.IsFile)
+        {
+            return new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable);
+        }
+
+        try
+        {
+            FileStream stream = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            await using var streamScope = stream.ConfigureAwait(false);
+            if (stream.Length > maxBytes)
+            {
+                return new LibraryDocumentRefused(LibraryDocumentRefusal.TooLarge);
+            }
+
+            using MemoryStream buffer = new((int)stream.Length);
+            byte[] chunk = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(chunk, ct).ConfigureAwait(false)) > 0)
+            {
+                if (buffer.Length + read > maxBytes)
+                {
+                    return new LibraryDocumentRefused(LibraryDocumentRefusal.TooLarge);
+                }
+
+                await buffer.WriteAsync(chunk.AsMemory(0, read), ct).ConfigureAwait(false);
+            }
+
+            byte[] bytes = buffer.ToArray();
+            return bytes.AsSpan().StartsWith("%PDF-"u8)
+                ? new LibraryDocumentRead(bytes)
+                : new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable);
+        }
+        catch (IOException)
+        {
+            return new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable);
         }
     }
 

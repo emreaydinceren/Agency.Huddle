@@ -141,6 +141,43 @@ public sealed class DotAcpAgentSessionTests
         }
     }
 
+    /// <summary>
+    /// A blob resource arrives as <c>type:"resource"</c> carrying the URI, the MIME type and the base64 of
+    /// the bytes in <c>blob</c>, and no <c>text</c>: the resource object's keys are exactly
+    /// <c>uri</c>, <c>mimeType</c> and <c>blob</c> (Spec §3 "Block").
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_BlobBlock_SentAsEmbeddedBlobResource()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            byte[] bytes = [0x25, 0x50, 0x44, 0x46];
+            AgentPrompt prompt = new("see attached", [new AgentBlobResourceBlock("file:///E:/r.pdf", "application/pdf", bytes)]);
+
+            _ = await harness.Session.PromptAsync(prompt, cancellationToken);
+
+            JsonObject request = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(request["params"]!["prompt"]);
+            Assert.Equal(2, promptBlocks.Count);
+            Assert.Equal("text", (string?)promptBlocks[0]!["type"]);
+            Assert.Equal("see attached", (string?)promptBlocks[0]!["text"]);
+            Assert.Equal("resource", (string?)promptBlocks[1]!["type"]);
+            JsonObject resource = Assert.IsType<JsonObject>(Assert.IsType<JsonObject>(promptBlocks[1])["resource"]);
+            Assert.Equal("file:///E:/r.pdf", (string?)resource["uri"]);
+            Assert.Equal("application/pdf", (string?)resource["mimeType"]);
+            Assert.Equal("JVBERg==", (string?)resource["blob"]);
+            Assert.Null(resource["text"]);
+            string[] keys = [.. resource.Select(pair => pair.Key).Where(key => key is not ("_meta" or "annotations")).Order(StringComparer.Ordinal)];
+            Assert.Equal(["blob", "mimeType", "uri"], keys);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
     /// <summary>Several blocks keep the order they were given in, after the text.</summary>
     [Fact(Timeout = 10000)]
     public async Task PromptAsync_TwoImageBlocks_KeepsGivenOrder()
@@ -504,6 +541,50 @@ public sealed class DotAcpAgentSessionTests
                 () => harness.Session.PromptAsync("hello", cancellationToken));
 
             Assert.Contains("boom", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §4: <c>session/prompt</c> failing with <c>-32000</c> (authRequired) surfaces as an authentication exception that carries the adapter's own message and no auth methods.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_AuthRequired_ThrowsAuthenticationRequired()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnPrompt = _ => throw new FakeRpcError(-32000, "Run /login to sign in again.");
+
+            AgentAuthenticationRequiredException exception = await Assert.ThrowsAsync<AgentAuthenticationRequiredException>(
+                () => harness.Session.PromptAsync("hello", cancellationToken));
+
+            Assert.Equal("Run /login to sign in again.", exception.Message);
+            Assert.Empty(exception.AuthMethods);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §4: only <c>-32000</c> is an authentication failure; any other RPC error stays a plain <see cref="AgentException"/> and not the authentication subtype.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_OtherRpcError_StillAgentException()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnPrompt = _ => throw new FakeRpcError(-32603, "internal failure");
+
+            AgentException exception = await Assert.ThrowsAsync<AgentException>(
+                () => harness.Session.PromptAsync("hello", cancellationToken));
+
+            Assert.IsNotType<AgentAuthenticationRequiredException>(exception);
+            Assert.Contains("internal failure", exception.Message, StringComparison.Ordinal); // contains-ok: the host prefixes the adapter's text with "session/prompt failed:".
         }
         finally
         {

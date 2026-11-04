@@ -17,7 +17,7 @@ public sealed class PromptBlockPlannerTests
         bool images = true,
         bool embeddedText = false,
         int maxImages = 4,
-        long maxBytes = 8 * 1024 * 1024) => new(readsFiles, images, embeddedText, maxImages, maxBytes);
+        long maxBytes = 8 * 1024 * 1024) => new(readsFiles, images, embeddedText, maxImages, maxBytes, false, 2, 10485760);
 
     private static LibraryPath PathOf(string name) => new(Root, name, @"E:\Docs\" + name, LibraryNodeRole.File);
 
@@ -40,6 +40,7 @@ public sealed class PromptBlockPlannerTests
                 reads?.Add(path.RelativePath);
                 return Task.FromResult(read is null ? Png() : read(path));
             },
+            (_, _, _) => Task.FromResult<LibraryDocumentResult>(new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable)),
             TestContext.Current.CancellationToken);
     }
 
@@ -245,6 +246,7 @@ public sealed class PromptBlockPlannerTests
             (path, _) => path.RelativePath == "a.png"
                 ? throw new IOException("locked")
                 : Task.FromResult<LibraryImageResult>(Png()),
+            (_, _, _) => Task.FromResult<LibraryDocumentResult>(new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable)),
             TestContext.Current.CancellationToken);
 
         Assert.Equal([LibraryDocumentDelivery.Path, LibraryDocumentDelivery.Block], plan.Select(document => document.Delivery));
@@ -315,6 +317,7 @@ public sealed class PromptBlockPlannerTests
                 [Input("a.png")],
                 Delivery(),
                 (_, token) => Task.FromResult<LibraryImageResult>(Png()).WaitAsync(token),
+                (_, _, _) => Task.FromResult<LibraryDocumentResult>(new LibraryDocumentRefused(LibraryDocumentRefusal.Unreadable)),
                 cancelled.Token));
     }
 

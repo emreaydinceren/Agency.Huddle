@@ -23,3 +23,9 @@ public sealed record AgentImageBlock(string MimeType, ReadOnlyMemory<byte> Data)
 /// <param name="MimeType">The text's MIME type.</param>
 /// <param name="Text">The text itself.</param>
 public sealed record AgentTextResourceBlock(string Uri, string MimeType, string Text) : AgentPromptBlock;
+
+/// <summary>A document's bytes, sent as an ACP embedded <c>resource</c> block carrying a base64 <c>blob</c>.</summary>
+/// <param name="Uri">The resource's URI, for example <c>file:///E:/report.pdf</c>.</param>
+/// <param name="MimeType">The document's MIME type, for example <c>application/pdf</c>.</param>
+/// <param name="Data">The raw bytes, never base64.</param>
+public sealed record AgentBlobResourceBlock(string Uri, string MimeType, ReadOnlyMemory<byte> Data) : AgentPromptBlock;
