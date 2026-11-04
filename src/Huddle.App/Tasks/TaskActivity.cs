@@ -33,6 +33,9 @@ internal sealed class TaskActivity
     /// <summary>Raised after a Task's budget changes (drives badges).</summary>
     public event Action? Changed;
 
+    /// <summary>Raised after the Human allowed more wakes on a spent Task, carrying that Task (delivers the hand-offs that were waiting).</summary>
+    public event Action<TaskId>? WakesGranted;
+
     /// <summary>The most recent recorded wake for <paramref name="id"/>, or <see langword="null"/> if none.</summary>
     /// <param name="id">The Task to look up.</param>
     public WakeRecord? LastWake(TaskId id)
@@ -150,6 +153,7 @@ internal sealed class TaskActivity
         if (changed)
         {
             EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
+            EventRaise.Isolated(this.WakesGranted, id, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.WakesGranted)));
         }
     }
 

@@ -502,7 +502,7 @@
     private AgentProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
     {
         State = draft.Existing && this.MemberState is { } stateOf ? stateOf(draft.Name) : null,
-        Tier = draft.RoleId.Length > 0 ? draft.Tier : null,
+        Tier = draft.RoleId.Length > 0 ? TierOfModel.Of(draft.Tier, draft.Model, this.HireContext.TierMap) : null,
         SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
         SetupReasons = draft.Reasons,
         PendingImage = draft.Image,

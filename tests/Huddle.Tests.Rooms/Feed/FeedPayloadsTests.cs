@@ -53,6 +53,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.DevicePaired, "device-paired"),
             (FeedSourceType.DeviceRevoked, "device-revoked"),
             (FeedSourceType.SecondBrainOverCap, "second-brain-over-cap"),
+            (FeedSourceType.TaskWakesPaused, "task-wakes-paused"),
             (FeedSourceType.TeamArchived, "team-archived"),
         ];
 
@@ -209,6 +210,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.HelperFailing, FeedCategory.Helpers),
             (FeedSourceType.TeamMemoryNotFiled, FeedCategory.Helpers),
             (FeedSourceType.SecondBrainOverCap, FeedCategory.SecondBrain),
+            (FeedSourceType.TaskWakesPaused, FeedCategory.Tasks),
             (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),
         ];
 

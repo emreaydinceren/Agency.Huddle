@@ -42,6 +42,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     private readonly LibraryPathResolver resolver;
     private readonly ILogger<TeamFolderProvisioner> logger;
     private readonly ITeamCatalog catalog;
+    private readonly TaskStore? tasks;
     private bool subscribed = true;
 
     /// <param name="personas">The source of Team labels (<see cref="PersonaStore.Teams"/>) and the
@@ -53,7 +54,8 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// <param name="logger">Logs a warning for a skipped label or a failed create.</param>
     /// <param name="catalog">The Teams as the pages see them, read by <see cref="EnsureTeam"/> and
     /// <see cref="EnsureProjectIn"/>. It lags the disk by the Task store's ~500 ms rebuild.</param>
-    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog)
+    /// <param name="tasks">Rebuilt as soon as <see cref="CreateTeam"/> has made a Team, so that lag cannot reach the sessions of the Agents hired into it; <see langword="null"/> leaves it to the store's watcher.</param>
+    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog, TaskStore? tasks = null)
     {
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(roots);
@@ -66,6 +68,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         this.resolver = resolver;
         this.logger = logger;
         this.catalog = catalog;
+        this.tasks = tasks;
         this.personas.PersonasChanged += this.OnPersonasChanged;
     }
 
@@ -290,6 +293,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             DeleteQuietly(temp);
         }
 
+        // A session reads "has a Team folder" once, as it starts: that decides whether its Agent is offered propose_team_memory.
+        // The hires follow at once, well inside the store's debounce, so the catalog must know this Team before this returns.
+        this.tasks?.RebuildFromWatcher();
         return new TeamCreateResult(TeamCreateOutcome.Created, target);
     }
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using static Agency.Huddle.Tests.Tasks.TaskTriggerTestSupport;
@@ -202,6 +203,125 @@ public sealed class TaskTriggerOutcomeTests
         Assert.Null(record.RoomName);
     }
 
+    /// <summary>
+    /// A hand-off refused by a Task's spent wake budget is not lost: the Human gets one Notification for the pause however many
+    /// changes it refuses, and allowing more delivers the hand-off and closes the Notification.
+    /// </summary>
+    [Fact]
+    public async Task WakeBudgetSpent_AllowMore_DeliversTheHandOffAndClosesTheNotification()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+        harness.Raise(task, cast.KaiActor, "Status: In Progress → Review");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+        FeedMessage notice = Assert.Single(harness.Feed.Posts);
+        Assert.Equal(FeedSourceType.TaskWakesPaused, notice.SourceType);
+        Assert.True(notice.Notify);
+        Assert.Equal(task.Id.ToString(), notice.TargetKey);
+
+        harness.Activity.Grant(task.Id);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(task.Id.ToString(), post.Message.Text);
+        Assert.Equal(cast.Kai.Id, post.Message.SenderId);
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
+        Assert.Equal(WakeOutcome.Offline, harness.Activity.LastWake(task.Id)?.Outcome);
+    }
+
+    /// <summary>A Human's change wakes the assignee itself, so the hand-off that was waiting is dropped, not delivered as a second wake, and the pause is over.</summary>
+    [Fact]
+    public async Task WakeBudgetSpent_HumanChange_WakesOnceAndClosesTheNotification()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        harness.Raise(task, HumanActor, "Status: In Progress → To Do");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        // Spent again, because Grant does nothing on a Task with budget left: a hand-off still held would go out here.
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+        harness.Activity.Grant(task.Id);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(KnownIds.Human, post.Message.SenderId);
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
+    }
+
+    /// <summary>A hand-off refused by a paused Room is delivered when the Human presses Continue, which itself re-delivers only the Room's last Message.</summary>
+    [Fact]
+    public async Task RoomBudgetSpent_Continue_DeliversTheHandOff()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You", AgentMessageBudget = 1 };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
+        _ = await harness.Chat.PostAsync(cast.Room.Id, cast.Kai.Id, "Working on it.", ct: ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+        Assert.Equal(WakeOutcome.BudgetSpent, harness.Activity.LastWake(task.Id)?.Outcome);
+        Assert.Single(harness.Posts);
+
+        _ = await harness.Chat.ExtendBudgetAsync(cast.Room.Id, ct);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(2, harness.Posts.Count);
+        Assert.Equal(task.Id.ToString(), harness.Posts[^1].Message.Text);
+        Assert.Equal(WakeOutcome.Offline, harness.Activity.LastWake(task.Id)?.Outcome);
+    }
+
+    /// <summary>A waiting hand-off goes stale when the Task is reassigned: allowing more does not wake the previous assignee.</summary>
+    [Fact]
+    public async Task WakeBudgetSpent_ReassignedMeanwhile_DoesNotWakeThePreviousAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        _ = harness.Replace(task with { Assignee = "Kai" });
+        harness.Activity.Grant(task.Id);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+    }
+
     /// <summary>Spec §10.6: ten Agent-made wakes are posted; the eleventh change is still saved, but is <see cref="WakeOutcome.WakePaused"/> and posts nothing.</summary>
     [Fact]
     public async Task TenAgentWakes_EleventhPaused_ChangeStillSaved()
@@ -243,7 +363,7 @@ public sealed class TaskTriggerOutcomeTests
         await RaiseAndFireAsync(harness, task, cast.KaiActor, "Paused");
         WakeRecord? paused = harness.Activity.LastWake(task.Id);
         harness.Activity.Grant(task.Id);
-        await RaiseAndFireAsync(harness, task, cast.KaiActor, "Resumed");
+        await harness.Trigger.WhenIdleAsync();
 
         Assert.Equal(2, harness.Posts.Count);
         Assert.Equal(WakeOutcome.WakePaused, paused?.Outcome);

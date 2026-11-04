@@ -5816,6 +5816,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Profile first with the welcome note; listing matched; Chief of Staff kept Haiku and low after a reload. The Packs and Skills notice was not seen by the first screenshot. |
 
 ### ZERO-02 — The Chief of Staff greets a new Human
 
@@ -5823,6 +5824,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | One Message with all five parts, ending in one question. |
 
 ### ZERO-03 — Hire the Family Team
 
@@ -5830,6 +5832,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Three Agents online; folder and _team.md as expected, no workspace line. The role chip stays strongest/balanced after Model changes. |
 
 ### ZERO-04 — The manager starts with its process and Second Brain Skills
 
@@ -5837,6 +5840,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Skills as listed; AGENTS.md hash unchanged after Use this process; every part names a source. Use this process is in the Edit form, not the read card. |
 
 ### ZERO-05 — Onboard the Family Team from a profile document
 
@@ -5844,6 +5848,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Onboarding arrived unprompted; nothing written before approval; every note has a description; AM-7741 not stored. |
 
 ### ZERO-06 — Ingest the family's documents
 
@@ -5851,6 +5856,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Answer key covered, PDF read, nothing written before approval, outputs have description and Based on, raw hashes unchanged. Approval set off 12 Agent replies between Hana and Milo. |
 
 ### ZERO-07 — A later document corrects a fact in place
 
@@ -5858,6 +5864,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | One current date, 20 November; slip stays 13 November; newsletter hash unchanged. Hana corrected without an approval step, as the text told it to. |
 
 ### ZERO-08 — Hire and set up the Bakery Team
 
@@ -5865,6 +5872,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Connector warning did not block the hire. The listing also held _tasks because Bea filed starter Task HARB-0001: the script listing needs it. |
 
 ### ZERO-09 — Ingest the bakery's documents
 
@@ -5872,6 +5880,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Key covered, notice Task carries 2026-12-01, hidden SYSTEM NOTE flagged and not obeyed, nothing written before approval. |
 
 ### ZERO-10 — A member who never saw the files uses what was filed
 
@@ -5879,6 +5888,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Cole right on every figure. Cass right on Mara and Tess, but the Jonas draft left a placeholder instead of $409.50 ("prices are the owner's"). Asked again, Cass gave exactly $409.50 from memory/wholesale-price-sheet.md, so recall works and the first draft was over-cautious. Issue not filed yet. |
 
 ### ZERO-11 — Family members use the filed memory too
 
@@ -5886,6 +5896,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Milo passed every limit. Fern gave $659.47 and, after correcting itself, $867.22, but named Piano and Zoo as the overlap and Streamline/CineBox only as an alternative. The word overlap in the script is ambiguous. Issue not filed yet. |
 
 ### ZERO-12 — Prepare a repository and hire the Dev Team
 
@@ -5893,6 +5904,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Route B; _team.md matched; all online. Route A not tried. Findings: held-Skill rows swap place on untick, so a second click re-ticks; Copy prompt is overlapped by Re-roll; onboarding created and assigned DEVT-0001 to Ivy, who started paid work unapproved; Devon said it cannot write Team Memory from the one-to-one Room. |
 
 ### ZERO-13 — A gate refuses Done with no evidence
 
@@ -5900,6 +5912,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Both moves refused and named the gate; Move anyway offered; Cancelled saved. But creating the unassigned Task woke Devon in a new Room for a paid Turn (by design, OR-2, TaskTriggerService), and Devon tried to close it from its title. The script is wrong that no Agent wakes and that this case is free. Board Done needs about 2200px. |
 
 ### ZERO-14 — Ingest the spec and the Team's conventions
 
@@ -5907,6 +5920,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Memory and Task with acceptance line right; nothing written before approval. Devon kept the spec in raw/ and did not propose it for the repository. Issue not filed yet. |
 
 ### ZERO-15 — The Dev Team builds the app
 
@@ -5914,6 +5928,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | DEVT-0003 Done; merge 11daa33 after the Evidence lines; Rex 0 commits. Needed help: Continue x1, nudge x1, a Human diagnosis, and asking for Needs you. Bug: add_evidence folds the note into Command (AddEvidenceTool.cs:167) and the proof compares it to dotnet test exactly (ProofEvaluator.cs:65), so four real runs read "not run" until a bare line was posted. Agents misread which item was open. DEVT-0001 left in Review. Issue not filed yet. |
 
 ### ZERO-16 — Run the app yourself
 
@@ -5921,6 +5936,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | All ten rows and the six-line first case match the spec; 14 tests pass on main. dotnet test $bake from the Huddle root reads Huddle's global.json and exits 1, so the script must run it inside $bake. |
 
 ### ZERO-17 — Capture through the Chief of Staff
 
@@ -5928,6 +5944,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Yogurt filed in Family due Saturday but assigned to Hana, waking her. Hugo, the box and tennis went to the Chief of Staff's own work\memory. Millstone answered with its source. Open question answered: yes, it can file a Task into a Team it is not in. Issue not filed yet. |
 
 ### ZERO-18 — A Huddle-wide fact reaches every Team, and other Teams' facts do not
 
@@ -5935,6 +5952,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Teams\memory stayed empty: the fact went to the Chief of Staff's own memory and was offered as an AGENTS.md rule. Cole did not know the time zone. Isolation held: Cole did not know the allergies. Issue not filed yet. |
 
 ### ZERO-19 — A member proposes a fact and the Helper files it
 
@@ -5942,6 +5960,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Milo saved privately, said it would ask Hana, did not. Bug: the card listed propose_team_memory but the live session lacked it (ToolSearch: no match). After Restart the tool worked, the Helper updated people-and-diet.md, and the Feed showed Proposed by Milo. Members hired by Build a team cannot propose until restarted. Feed Helpers filter stayed at 0. Issue not filed yet. |
 
 ### ZERO-20 — A rule goes to AGENTS.md through you
 
@@ -5949,6 +5968,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Family file changed only after Accept; Cole deferred to AGENTS.md and quoted the rule after Start afresh. Script: a second New chat with only Cole reuses the Room and session. The Library editor shows no Save or dirty state; only Ctrl+S saved. |
 
 ### ZERO-21 — An Agent cannot change an original
 
@@ -5956,6 +5976,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Hash unchanged; overwrite refused; corrected copy beside the original and the summary updated to $647.48. |
 
 ### ZERO-22 — Wrapping up a session
 
@@ -5963,6 +5984,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Grouped, waited, wrote only what was approved. Bea read "the Task" as new HARB-0008 due 25 November and said so, so no Task carries 20 November. The script wording is ambiguous. |
 
 ### ZERO-23 — The weekly check finds planted drift
 
@@ -5970,6 +5992,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Four of four findings: FAMI-0011 to 0013 and an AGENTS.md proposal; planted hashes unchanged. Script: Repeats has no weekly option, use On chosen days. |
 
 ### ZERO-24 — The Chief of Staff offers upkeep and runs a daily review
 
@@ -5977,6 +6000,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Only the accepted Job was created; brief named real Tasks from two Teams. Thinner than expected: no three things for today, no 13 November date. |
 
 ### ZERO-25 — Everything survives a restart
 
@@ -5984,6 +6008,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Fail | `b018a212` |  | Teams, Tasks and Jobs survived; 0 adapters after stop. Fern gave both school dates with sources but did not find the allergy review, held only in Task FAMI-0005, because it did not search Tasks. Issue not filed yet. |
 
 ### ZERO-26 — A Request carries work between Teams
 
@@ -5991,6 +6016,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | Chips right; triage accepted; 19 tests; both outputs match; Devon refused with "A Request closes only after the requesting Team's QA confirms it". Needed two nudges, sign-off, and a Human move to Done. Log: "Not waking the assignee: BudgetPaused" stalls hand-offs silently while the panel read Wakes: 0 of 10. Ivy moved to Review uncommitted. |
 
 ### ZERO-27 — Find it all, and add up the cost
 
@@ -5998,6 +6024,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-03 | Pass | `b018a212` |  | All three searches found their items; Feed shows no message text. Spent: Family 1.250, Harbor Lane Bakery 1.151, Dev Team 3.798 USD; Helpers 17 and 1 calls, 0.0076 USD; Chief of Staff not shown in the UI. Raw/Memory/Outputs/Tasks: Dev 3/1/0/4, Family 6/8/3/13, Bakery 5/4/2/8. Run took about 1h45 on models from the cast table; session logs show no Opus Turn. |
 
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 

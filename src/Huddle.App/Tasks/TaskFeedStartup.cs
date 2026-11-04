@@ -23,6 +23,9 @@ internal sealed class TaskFeedStartup(
         FeedSourceType.TaskAssignedToYou,
         FeedSourceType.RequestAwaitsYou,
         FeedSourceType.GateDecisionDue,
+
+        // A wake budget is in memory and starts fresh, so TaskFeedRules.Holds says a pause from before the restart is over.
+        FeedSourceType.TaskWakesPaused,
     ];
 
     /// <summary>Resolves every unresolved Task Notification whose Task is gone or no longer meets its condition.</summary>

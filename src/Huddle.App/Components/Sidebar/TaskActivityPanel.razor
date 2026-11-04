@@ -28,7 +28,22 @@
     }
     else
     {
-        @if (lastWake is { RoomId: { } roomId, RoomName: { } roomName })
+        @if (lastWake is { Outcome: WakeOutcome.WakePaused })
+        {
+            <div class="sidebar-row task-activity-row task-activity-held">
+                <span class="sidebar-row-text">@($"Waiting to wake {lastWake.Assignee}: Allow more on this Task")</span>
+                <span class="sidebar-row-meta">@TaskDates.HumanMoment(lastWake.At, this.Clock)</span>
+            </div>
+        }
+        else if (lastWake is { Outcome: WakeOutcome.BudgetSpent, RoomId: { } pausedRoomId, RoomName: { } pausedRoomName })
+        {
+            <div class="sidebar-row task-activity-row task-activity-held">
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@($"/rooms/{pausedRoomId}")"
+                         title="@($"Waiting to wake {lastWake.Assignee}: Room {pausedRoomName} is paused")">@($"Waiting to wake {lastWake.Assignee}: Room {pausedRoomName} is paused")</MudLink>
+                <span class="sidebar-row-meta">@TaskDates.HumanMoment(lastWake.At, this.Clock)</span>
+            </div>
+        }
+        else if (lastWake is { Outcome: WakeOutcome.Woken or WakeOutcome.Offline, RoomId: { } roomId, RoomName: { } roomName })
         {
             <div class="sidebar-row task-activity-row task-activity-woken">
                 <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@($"/rooms/{roomId}")"

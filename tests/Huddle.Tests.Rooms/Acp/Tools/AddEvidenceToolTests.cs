@@ -118,20 +118,25 @@ public sealed class AddEvidenceToolTests
         Assert.Equal(string.Empty, line.Command);
     }
 
-    /// <summary>A command with a note carries the note in the command field, with any field separator in it replaced.</summary>
+    /// <summary>
+    /// A command with a note keeps the command exactly as run, so a "Tests pass" Proof comparing it to <c>dotnet test</c> still matches,
+    /// and keeps the note in its own field, with any field separator in it replaced.
+    /// </summary>
     [Fact]
-    public async Task InvokeAsync_CommandAndNote_NoteJoinsCommand()
+    public async Task InvokeAsync_CommandAndNote_KeepsTheCommandExactAndTheNoteApart()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
         TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
-        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["note"] = "green | on CI" };
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["exitCode"] = 0, ["note"] = "green | on CI" };
 
         _ = await tool.InvokeAsync(arguments, ct);
 
         EvidenceLine line = Assert.Single(Evidence(harness, task));
-        Assert.Equal("dotnet test (green / on CI)", line.Command);
+        Assert.Equal("dotnet test", line.Command);
+        Assert.Equal(0, line.ExitCode);
+        Assert.Equal("green / on CI", line.Note);
     }
 
     /// <summary>An unknown Task id is refused and nothing is written.</summary>

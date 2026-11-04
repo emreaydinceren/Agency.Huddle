@@ -45,7 +45,7 @@ internal static class FeedCardText
         FeedSourceType.TaskNeedsYou => new("check", Icons.Material.Filled.Check),
         FeedSourceType.DocumentChanged or FeedSourceType.TeamMemoryNotFiled => new("document", Icons.Material.Filled.Description),
         FeedSourceType.TaskAssignedToYou => new("person", Icons.Material.Filled.Person),
-        FeedSourceType.RoomBudget or FeedSourceType.HelperPaused => new("gauge", Icons.Material.Filled.Speed),
+        FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused => new("gauge", Icons.Material.Filled.Speed),
         FeedSourceType.HelperFailing => new("alert", Icons.Material.Outlined.ErrorOutline),
         FeedSourceType.TaskGateOn or FeedSourceType.GateDecisionDue => new("lock", Icons.Material.Filled.Lock),
         FeedSourceType.RoomMention => new("mention", Icons.Material.Filled.AlternateEmail),

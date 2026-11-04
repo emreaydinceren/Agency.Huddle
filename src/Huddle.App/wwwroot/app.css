@@ -4760,6 +4760,8 @@ body.sidebar-resizing {
     box-sizing: border-box;
     height: auto;
     min-height: 61px;
+    flex-wrap: wrap;
+    row-gap: 4px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--hu-line-region);
 }
@@ -5591,6 +5593,17 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* The Read | Edit | Split labels are control text, 13px. */
+/* The path gives way in a narrow pane, never the controls: squeezed, the toggle's three labels run together. */
+.library-document-toolbar .library-document-mode-toggle,
+.library-document-toolbar .library-document-save {
+    flex-shrink: 0;
+}
+
+.library-document-toolbar .library-document-path-inline {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
 .library-document-mode-toggle .mud-toggle-item,
 .library-document-mode-toggle .mud-toggle-item .mud-typography {
     font-size: var(--mud-typography-body2-size);
@@ -7370,13 +7383,25 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: color-mix(in srgb, var(--mud-palette-success) 16%, var(--mud-palette-surface));
 }
 
+/* Wraps, because a draft's Copy prompt, Re-roll, Edit and Remove do not fit a narrow card: without it they overlap. */
 .roster-actions {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     padding-top: 8px;
     border-top: 1px solid var(--ink-rule);
+}
+
+/* A confirm that swaps in for one action (Start afresh) carries a sentence, so it takes a line of its own. */
+.roster-actions > .inline-confirm {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.roster-actions > .inline-confirm > .inline-confirm-prompt {
+    flex: 1 0 100%;
 }
 
 /* The roster's more-actions menu pushes to the end of the row; its destructive item is last, after a divider, in Error ink

@@ -62,6 +62,22 @@ public sealed class SecondBrainFoldersTests
         Assert.Equal(SubFolders, Names(Path.Combine(fixture.TeamsRoot, "Alpha")));
     }
 
+    /// <summary>
+    /// The catalog knows a new Team's folder when <see cref="ITeamFolders.CreateTeam"/> returns, not a debounce later. A session reads it
+    /// once as it starts, so an Agent hired straight after would otherwise never be offered <c>propose_team_memory</c>.
+    /// </summary>
+    [Fact]
+    public void CreateTeam_NewName_CatalogKnowsTheFolderAtOnce()
+    {
+        using Fixture fixture = new();
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        TeamFile file = new(new VersionedRef("development", "1"), null, null, "The alpha product", "\n");
+
+        Assert.Equal(TeamCreateOutcome.Created, provisioner.CreateTeam("Alpha", file).Outcome);
+
+        Assert.True(fixture.Catalog.Find("Alpha")?.HasFolder);
+    }
+
     /// <summary><see cref="TeamFolderProvisioner.EnsureProject"/> for Home/Repairs creates <c>Repairs/raw|memory|outputs</c>.</summary>
     [Fact]
     public void EnsureProject_Repairs_CreatesThreeSubFolders()
@@ -190,7 +206,7 @@ public sealed class SecondBrainFoldersTests
         public string TeamsRoot => Path.Combine(this.dir.Path, "Teams");
 
         public TeamFolderProvisioner CreateProvisioner() =>
-            new(this.Personas, this.Roots, this.Resolver, this.logger, catalog: this.Catalog);
+            new(this.Personas, this.Roots, this.Resolver, this.logger, catalog: this.Catalog, tasks: this.Tasks);
 
         public void Dispose()
         {

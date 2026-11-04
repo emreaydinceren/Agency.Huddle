@@ -724,7 +724,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     every assignee with wake-ups the moment the app comes up.
   - **Wake budgets reset on restart.** The per-Task budget of 10 Agent-made wake-ups (D-14,
     `Allow 10 more` on the TaskDetail banner) is in-memory state, like the Room Budget it
-    parallels — a restart un-pauses every Task over a Change log that already spent one.
+    parallels — a restart un-pauses every Task over a Change log that already spent one. A
+    hand-off a spent budget refused waits in memory too, and is delivered by `Allow 10 more` or
+    the paused Room's Continue; a restart loses it, and only the next change to the Task wakes anyone.
   - **Tags can't contain `,` or `;`.** `TaskFileFormat` reuses `PersonaFrontmatter`'s list-join
     convention (`"; "`), so a tag containing either character would corrupt the round trip (D-18).
   - **A Task link reflects the index when the Message was last rendered.** `MarkdownRenderer`

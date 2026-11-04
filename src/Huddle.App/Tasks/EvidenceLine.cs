@@ -7,11 +7,14 @@ namespace Agency.Huddle.App.Tasks;
 /// One line of a Task's "## Evidence" section: when, who, which command, its exit code and where the tool-call log entry is.
 /// A line that is not a structured Evidence line (a human note, or a line with a malformed time) is kept with an empty
 /// <see cref="Command"/> and its text in <see cref="RawText"/>, and its <see cref="Time"/> is the default value.
+/// <see cref="Note"/> is what the author said about a structured line's run; it is a field of its own because a Proof compares
+/// <see cref="Command"/> to the Definition of Done's command exactly.
 /// </summary>
-internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, string Command, int? ExitCode, string? LogPath, int? LogLine, string RawText)
+internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, string Command, int? ExitCode, string? LogPath, int? LogLine, string RawText, string Note = "")
 {
     private const string TimeFormat = "yyyy-MM-dd'T'HH:mm'Z'";
     private const string Separator = " | ";
+    private const string NotePrefix = "note: ";
     private const string EvidenceHeading = "## Evidence";
 
     /// <summary>Parses one Evidence line. Free text without a separator becomes a note; a line with separators must have a valid time, an author and a command.</summary>
@@ -43,11 +46,16 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
         int? exitCode = null;
         string? logPath = null;
         int? logLine = null;
+        string note = string.Empty;
         for (int index = 3; index < fields.Length; index++)
         {
             Match exit = ExitField().Match(fields[index]);
             Match log = LogField().Match(fields[index]);
-            if (exit.Success && exitCode is null && logPath is null && TryParseNumber(exit.Groups[1].Value, out int code))
+            if (note.Length == 0 && fields[index].StartsWith(NotePrefix, StringComparison.Ordinal))
+            {
+                note = fields[index][NotePrefix.Length..];
+            }
+            else if (exit.Success && exitCode is null && logPath is null && TryParseNumber(exit.Groups[1].Value, out int code))
             {
                 exitCode = code;
             }
@@ -63,7 +71,7 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
             }
         }
 
-        evidence = new EvidenceLine(time, fields[1], fields[2], exitCode, logPath, logLine, text);
+        evidence = new EvidenceLine(time, fields[1], fields[2], exitCode, logPath, logLine, text, note);
         return true;
     }
 
@@ -90,6 +98,11 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
         if (this.LogPath is not null && this.LogLine is int line)
         {
             parts.Add(string.Create(CultureInfo.InvariantCulture, $"{this.LogPath}#L{line}"));
+        }
+
+        if (this.Note.Length > 0)
+        {
+            parts.Add(NotePrefix + this.Note);
         }
 
         return string.Join(Separator, parts);
