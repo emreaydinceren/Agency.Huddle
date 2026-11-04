@@ -14,6 +14,8 @@ public sealed class LibraryDocumentCollectorPdfTests
 {
     private static readonly PromptDelivery DocumentsOn = new(ReadsFiles: false, Images: false, EmbeddedText: false, MaxImagesPerTurn: 4, MaxImageBytesPerTurn: 8 * 1024 * 1024, Documents: true, MaxDocumentsPerTurn: 2, MaxDocumentBytesPerTurn: 10485760);
 
+    private const string WindowsPathOnly = "Plain text finds only a drive, UNC or file:// path mid-line; a POSIX absolute path is found only in a code span.";
+
     private static string Link(string path) => new Uri(path).AbsoluteUri;
 
     private static (LibraryFileServiceFixture Fixture, LibraryDocumentCollector Collector, string Root) Build(Action<TeamOptions>? configure = null)
@@ -51,6 +53,7 @@ public sealed class LibraryDocumentCollectorPdfTests
     [Fact]
     public async Task Collect_PdfNamedMidLine_IsABlobBlock()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), WindowsPathOnly);
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, LibraryDocumentCollector collector, string root) = Build();
         using LibraryFileServiceFixture _ = fixture;
@@ -68,6 +71,7 @@ public sealed class LibraryDocumentCollectorPdfTests
     [Fact]
     public async Task Collect_MissingPdfNamedMidLine_CollectsNothing()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), WindowsPathOnly);
         CancellationToken ct = TestContext.Current.CancellationToken;
         (LibraryFileServiceFixture fixture, LibraryDocumentCollector collector, string root) = Build();
         using LibraryFileServiceFixture _ = fixture;
