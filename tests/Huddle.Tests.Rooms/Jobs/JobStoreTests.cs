@@ -146,8 +146,9 @@ public sealed class JobStoreTests : IDisposable
 
         await File.WriteAllTextAsync(Path.Combine(this.dir.Path, "Human", JobFiles.FileName), "## Stretch\n- id: job-9\n- when: every 2 hours\n\nStand up.\n", ct);
 
-        await Eventually.UntilAsync(() => this.store.Find("job-9") is not null, ct, TestBudgets.Slow);
-        Assert.True(Volatile.Read(ref changes) > 0);
+        // Both are waited for: the store publishes the new snapshot first and raises Changed after it, on the watcher's thread.
+        await Eventually.UntilAsync(() => this.store.Find("job-9") is not null && Volatile.Read(ref changes) > 0, ct, TestBudgets.Slow);
+        Assert.NotNull(this.store.Find("job-9"));
     }
 
     private static Job Draft(JobOwner owner) =>
