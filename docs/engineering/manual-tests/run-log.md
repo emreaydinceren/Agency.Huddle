@@ -5888,7 +5888,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Cole right on every figure. Cass right on Mara and Tess, but the Jonas draft left a placeholder instead of $409.50 ("prices are the owner's"). Asked again, Cass gave exactly $409.50 from memory/wholesale-price-sheet.md, so recall works and the first draft was over-cautious. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #341 | Cole right on every figure. Cass right on Mara and Tess, but the Jonas draft left a placeholder instead of $409.50 ("prices are the owner's"). Asked again, Cass gave exactly $409.50 from memory/wholesale-price-sheet.md, so recall works and the first draft was over-cautious. |
 
 ### ZERO-11 — Family members use the filed memory too
 
@@ -5896,7 +5896,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Milo passed every limit. Fern gave $659.47 and, after correcting itself, $867.22, but named Piano and Zoo as the overlap and Streamline/CineBox only as an alternative. The word overlap in the script is ambiguous. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #346 | Milo passed every limit. Fern gave $659.47 and, after correcting itself, $867.22, but named Piano and Zoo as the overlap and Streamline/CineBox only as an alternative. The word overlap in the script is ambiguous. |
 
 ### ZERO-12 — Prepare a repository and hire the Dev Team
 
@@ -5912,7 +5912,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Both moves refused and named the gate; Move anyway offered; Cancelled saved. But creating the unassigned Task woke Devon in a new Room for a paid Turn (by design, OR-2, TaskTriggerService), and Devon tried to close it from its title. The script is wrong that no Agent wakes and that this case is free. Board Done needs about 2200px. |
+| 2026-11-03 | Fail | `b018a212` | #346 | Both moves refused and named the gate; Move anyway offered; Cancelled saved. But creating the unassigned Task woke Devon in a new Room for a paid Turn (by design, OR-2, TaskTriggerService), and Devon tried to close it from its title. The script is wrong that no Agent wakes and that this case is free. Board Done needs about 2200px. |
 
 ### ZERO-14 — Ingest the spec and the Team's conventions
 
@@ -5920,7 +5920,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Memory and Task with acceptance line right; nothing written before approval. Devon kept the spec in raw/ and did not propose it for the repository. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #342 | Memory and Task with acceptance line right; nothing written before approval. Devon kept the spec in raw/ and did not propose it for the repository. |
 
 ### ZERO-15 — The Dev Team builds the app
 
@@ -5928,7 +5928,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Pass | `b018a212` |  | DEVT-0003 Done; merge 11daa33 after the Evidence lines; Rex 0 commits. Needed help: Continue x1, nudge x1, a Human diagnosis, and asking for Needs you. Bug: add_evidence folds the note into Command (AddEvidenceTool.cs:167) and the proof compares it to dotnet test exactly (ProofEvaluator.cs:65), so four real runs read "not run" until a bare line was posted. Agents misread which item was open. DEVT-0001 left in Review. Issue not filed yet. |
+| 2026-11-03 | Pass | `b018a212` |  | DEVT-0003 Done; merge 11daa33 after the Evidence lines; Rex 0 commits. Needed help: Continue x1, nudge x1, a Human diagnosis, and asking for Needs you. Bug: add_evidence folds the note into Command (AddEvidenceTool.cs:167) and the proof compares it to dotnet test exactly (ProofEvaluator.cs:65), so four real runs read "not run" until a bare line was posted. Agents misread which item was open. DEVT-0001 left in Review. |
 
 ### ZERO-16 — Run the app yourself
 
@@ -5944,7 +5944,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Yogurt filed in Family due Saturday but assigned to Hana, waking her. Hugo, the box and tennis went to the Chief of Staff's own work\memory. Millstone answered with its source. Open question answered: yes, it can file a Task into a Team it is not in. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #343 | Yogurt filed in Family due Saturday but assigned to Hana, waking her. Hugo, the box and tennis went to the Chief of Staff's own work\memory. Millstone answered with its source. Open question answered: yes, it can file a Task into a Team it is not in. |
 
 ### ZERO-18 — A Huddle-wide fact reaches every Team, and other Teams' facts do not
 
@@ -5952,7 +5952,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Teams\memory stayed empty: the fact went to the Chief of Staff's own memory and was offered as an AGENTS.md rule. Cole did not know the time zone. Isolation held: Cole did not know the allergies. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #344 | Teams\memory stayed empty: the fact went to the Chief of Staff's own memory and was offered as an AGENTS.md rule. Cole did not know the time zone. Isolation held: Cole did not know the allergies. |
 
 ### ZERO-19 — A member proposes a fact and the Helper files it
 
@@ -5960,7 +5960,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Milo saved privately, said it would ask Hana, did not. Bug: the card listed propose_team_memory but the live session lacked it (ToolSearch: no match). After Restart the tool worked, the Helper updated people-and-diet.md, and the Feed showed Proposed by Milo. Members hired by Build a team cannot propose until restarted. Feed Helpers filter stayed at 0. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #346 | Milo saved privately, said it would ask Hana, did not. Bug: the card listed propose_team_memory but the live session lacked it (ToolSearch: no match). After Restart the tool worked, the Helper updated people-and-diet.md, and the Feed showed Proposed by Milo. Members hired by Build a team cannot propose until restarted. Feed Helpers filter stayed at 0. |
 
 ### ZERO-20 — A rule goes to AGENTS.md through you
 
@@ -5984,7 +5984,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Grouped, waited, wrote only what was approved. Bea read "the Task" as new HARB-0008 due 25 November and said so, so no Task carries 20 November. The script wording is ambiguous. |
+| 2026-11-03 | Fail | `b018a212` | #346 | Grouped, waited, wrote only what was approved. Bea read "the Task" as new HARB-0008 due 25 November and said so, so no Task carries 20 November. The script wording is ambiguous. |
 
 ### ZERO-23 — The weekly check finds planted drift
 
@@ -6008,7 +6008,7 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-03 | Fail | `b018a212` |  | Teams, Tasks and Jobs survived; 0 adapters after stop. Fern gave both school dates with sources but did not find the allergy review, held only in Task FAMI-0005, because it did not search Tasks. Issue not filed yet. |
+| 2026-11-03 | Fail | `b018a212` | #345 | Teams, Tasks and Jobs survived; 0 adapters after stop. Fern gave both school dates with sources but did not find the allergy review, held only in Task FAMI-0005, because it did not search Tasks. |
 
 ### ZERO-26 — A Request carries work between Teams
 
