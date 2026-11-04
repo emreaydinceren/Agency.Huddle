@@ -1,7 +1,6 @@
 using System.Globalization;
-using Agency.Huddle.App.Library;
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -26,22 +25,9 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
 
         List<AgentsMdSection> sections = [];
         List<string> omitted = [];
-        this.AddSection(sections, omitted, AgentsMdLevel.HuddleWide, null, null, teamsRoot);
-
-        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string team in teamNames)
+        foreach (AgentsMdFile file in AgentsMdLocator.Enumerate(teamsRoot, teamNames))
         {
-            if (LibraryNames.Validate(team) is not null || !seen.Add(team))
-            {
-                continue;
-            }
-
-            string teamDir = Path.Combine(teamsRoot, team);
-            this.AddSection(sections, omitted, AgentsMdLevel.Team, team, null, teamDir);
-            foreach (string project in ProjectNames(teamDir))
-            {
-                this.AddSection(sections, omitted, AgentsMdLevel.Project, team, project, Path.Combine(teamDir, project));
-            }
+            this.AddSection(sections, omitted, file);
         }
 
         this.ApplyBudget(sections, omitted);
@@ -81,42 +67,13 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
         }
     }
 
-    /// <summary>Lists a Team's Project folder names, minus reserved names, sorted ordinally.</summary>
-    /// <param name="teamDir">The Team's folder.</param>
-    private static List<string> ProjectNames(string teamDir)
-    {
-        List<string> names = [];
-        try
-        {
-            foreach (string dir in Directory.EnumerateDirectories(teamDir))
-            {
-                string name = Path.GetFileName(dir);
-                if (!TeamNames.IsReservedProjectName(name))
-                {
-                    names.Add(name);
-                }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // A missing or locked Team folder has no readable Projects; they are simply absent.
-            return [];
-        }
-
-        names.Sort(StringComparer.Ordinal);
-        return names;
-    }
-
     /// <summary>Adds the level's section when its file holds any text.</summary>
     /// <param name="sections">The sections so far.</param>
     /// <param name="omitted">The files left out with a reason.</param>
-    /// <param name="level">The level.</param>
-    /// <param name="team">The Team name, or <see langword="null"/> for Huddle-wide.</param>
-    /// <param name="project">The Project name, or <see langword="null"/> above Project level.</param>
-    /// <param name="folder">The folder that holds the level's file.</param>
-    private void AddSection(List<AgentsMdSection> sections, List<string> omitted, AgentsMdLevel level, string? team, string? project, string folder)
+    /// <param name="file">The level's file, as the locator found it.</param>
+    private void AddSection(List<AgentsMdSection> sections, List<string> omitted, AgentsMdFile file)
     {
-        string path = Path.Combine(folder, TeamPaths.AgentsMdFileName);
+        string path = file.FullPath;
         if (!File.Exists(path))
         {
             return;
@@ -138,7 +95,7 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             return;
         }
 
-        (string body, bool had) = StripFrontmatter(text);
+        (string body, bool had) = AgentsMdFrontmatter.Strip(text);
         if (had)
         {
             if (logger.IsEnabled(LogLevel.Information))
@@ -153,30 +110,7 @@ internal sealed class AgentsMdReader(IPromptSource prompts, AgentsMdOptions opti
             }
         }
 
-        sections.Add(new AgentsMdSection(level, team, project, path, this.Cut(body, path, options.MaxCharsPerFile), had));
-    }
-
-    /// <summary>Strips a leading frontmatter block: the first line is exactly <c>---</c> and a later line is too.</summary>
-    /// <param name="text">The file's whole text.</param>
-    /// <returns>The body after the closing line without leading blank lines, and whether a block was stripped.</returns>
-    private static (string Body, bool Had) StripFrontmatter(string text)
-    {
-        string[] lines = text.Split('\n');
-        if (lines[0].TrimEnd('\r') != "---")
-        {
-            return (text, false);
-        }
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            if (lines[i].TrimEnd('\r') == "---")
-            {
-                string body = string.Join('\n', lines[(i + 1)..]);
-                return (body.TrimStart('\r', '\n'), true);
-            }
-        }
-
-        return (text, false);
+        sections.Add(new AgentsMdSection(file.Level, file.Team, file.Project, path, this.Cut(body, path, options.MaxCharsPerFile), had));
     }
 
     /// <summary>Cuts <paramref name="text"/> at the cap and appends the cut line naming the file.</summary>

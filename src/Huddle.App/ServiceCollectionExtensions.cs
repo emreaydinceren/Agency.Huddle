@@ -627,6 +627,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
 
+        // Which AGENTS.md files apply to a named Agent, from its Team labels and the catalog's spelling (AGENTS.md changes §6.7).
+        services.AddSingleton<Agency.Huddle.App.AgentsMdChanges.AgentsMdScopes>();
+
         // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
         // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).
         services.AddSingleton(sp => TeamMemoryAccess.ForPersonas(sp.GetRequiredService<ITeamCatalog>(), sp.GetRequiredService<PersonaStore>()));
