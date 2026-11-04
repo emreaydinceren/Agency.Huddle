@@ -4760,6 +4760,8 @@ body.sidebar-resizing {
     box-sizing: border-box;
     height: auto;
     min-height: 61px;
+    flex-wrap: wrap;
+    row-gap: 4px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--hu-line-region);
 }
@@ -5595,11 +5597,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-document-toolbar .library-document-mode-toggle,
 .library-document-toolbar .library-document-save {
     flex-shrink: 0;
-}
-
-.library-document-toolbar.mud-toolbar {
-    flex-wrap: wrap;
-    row-gap: 4px;
 }
 
 .library-document-toolbar .library-document-path-inline {

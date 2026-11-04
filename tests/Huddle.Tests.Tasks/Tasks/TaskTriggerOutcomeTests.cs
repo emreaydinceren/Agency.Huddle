@@ -262,6 +262,9 @@ public sealed class TaskTriggerOutcomeTests
         harness.Raise(task, HumanActor, "Status: In Progress → To Do");
         harness.Clock.Advance(DefaultWindow);
         await harness.Trigger.WhenIdleAsync();
+
+        // Spent again, because Grant does nothing on a Task with budget left: a hand-off still held would go out here.
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
         harness.Activity.Grant(task.Id);
         await harness.Trigger.WhenIdleAsync();
 
