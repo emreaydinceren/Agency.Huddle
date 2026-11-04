@@ -523,6 +523,68 @@ public sealed class HireServiceStartTests
         Assert.True(result.Ok);
         Assert.False(folders.File?.Onboarded);
     }
+
+    /// <summary>Build a team's onboarding waits for the manager, posts the steps once, and a second call finds the marker and posts nothing.</summary>
+    [Fact]
+    public async Task OnboardManagerAsync_ManagerRuns_PostsOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService service = Create(dir, out _, out _, out FakeStartGate gate, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        bool first = await service.OnboardManagerAsync(TeamName, "Lee", ct);
+        bool second = await service.OnboardManagerAsync(TeamName, "Lee", ct);
+
+        Assert.True(first);
+        Assert.False(second);
+        Assert.Equal("Lee", Assert.Single(poster.Posts).Manager);
+        Assert.Equal(["Lee", "Lee"], gate.Waited);
+    }
+
+    /// <summary>A manager that does not start posts nothing and leaves the Team not onboarded; a wait that throws does the same, because nothing awaits this call.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OnboardManagerAsync_ManagerDoesNotStart_PostsNothing(bool waitThrows)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService service = Create(dir, out _, out _, out FakeStartGate gate, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+        gate.Running = false;
+        gate.Cancel = waitThrows;
+
+        bool posted = await service.OnboardManagerAsync(TeamName, "Lee", ct);
+
+        Assert.False(posted);
+        Assert.Empty(poster.Posts);
+        Assert.False(folders.File?.Onboarded);
+    }
+
+    /// <summary>A chosen process is the one written; with no choice the type's default is.</summary>
+    [Theory]
+    [InlineData("flow", true)]
+    [InlineData(null, true)]
+    [InlineData("nope", false)]
+    public void ProvisionProcess_WritesTheChosenOrDefaultProcess(string? processId, bool written)
+    {
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        DiskTeamFolders folders = new(teamFolder.Path);
+        HireService service = Create(dir, out _, out _, out _, makeProvisioner: types => new ProcessProvisioner(types, folders));
+
+        ProvisionResult result = service.ProvisionProcess(TeamName, processId);
+
+        Assert.Equal(written ? ProvisionResult.Created : ProvisionResult.UnknownProcess, result);
+        Assert.Equal(written, File.Exists(Path.Combine(teamFolder.Path, TeamPaths.AgentsMdFileName)));
+    }
 }
 
 /// <summary>An onboarding poster that records what it was asked to post.</summary>

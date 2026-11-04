@@ -88,7 +88,8 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
             this.personas.Teams,
             [.. this.personas.Entries.Select(static e => (e.Name, e.Teams))],
             this.tasks.Teams,
-            this.ReadTeamFiles());
+            this.ReadTeamFiles(),
+            this.tasks.RootDirectory);
 
     /// <summary>Reads the <c>_team.md</c> of every Team folder; a missing or malformed file is simply absent.</summary>
     private Dictionary<string, TeamFile> ReadTeamFiles()
@@ -159,12 +160,14 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <param name="members">Persona team memberships.</param>
     /// <param name="folders">Team folders on disk.</param>
     /// <param name="teamFiles">Parsed <c>_team.md</c> files by Team name; a Team without an entry has no team card.</param>
+    /// <param name="teamsRoot">The Teams folder; a card naming it as its workspace has none, or <see langword="null"/> to take every card as written.</param>
     /// <returns>Sorted list of team summaries.</returns>
     internal static IReadOnlyList<TeamSummary> Build(
         IReadOnlyList<string> labels,
         IReadOnlyList<(string Persona, IReadOnlyList<string> Teams)> members,
         IReadOnlyList<TeamFolder> folders,
-        IReadOnlyDictionary<string, TeamFile>? teamFiles = null)
+        IReadOnlyDictionary<string, TeamFile>? teamFiles = null,
+        string? teamsRoot = null)
     {
         ArgumentNullException.ThrowIfNull(labels);
         ArgumentNullException.ThrowIfNull(members);
@@ -180,7 +183,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         AddMembers(byName, members);
         FinalizeDisplayNames(byName);
 
-        return BuildSummaries(byName, cards);
+        return BuildSummaries(byName, cards, teamsRoot);
     }
 
     /// <summary>Adds the Team folders first; their spelling wins for the display name.</summary>
@@ -293,8 +296,9 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <summary>Builds the result list with filtering, deduplication and sorting.</summary>
     /// <param name="byName">The teams gathered, compared without case.</param>
     /// <param name="cards">Parsed <c>_team.md</c> files by Team name.</param>
+    /// <param name="teamsRoot">The Teams folder, which is never a Team's workspace, or <see langword="null"/>.</param>
     /// <returns>The team summaries, sorted by name.</returns>
-    private static List<TeamSummary> BuildSummaries(Dictionary<string, TeamData> byName, Dictionary<string, TeamFile> cards)
+    private static List<TeamSummary> BuildSummaries(Dictionary<string, TeamData> byName, Dictionary<string, TeamFile> cards, string? teamsRoot)
     {
         List<TeamSummary> result = byName.Values
             .Select(data => new TeamSummary(
@@ -312,7 +316,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
             {
                 TeamType = cards.GetValueOrDefault(data.DisplayName)?.TeamType,
                 Manager = cards.GetValueOrDefault(data.DisplayName)?.Manager,
-                Workspace = cards.GetValueOrDefault(data.DisplayName)?.Workspace,
+                Workspace = cards.GetValueOrDefault(data.DisplayName)?.Workspace is { } workspace && (teamsRoot is null || !WorkspaceProbe.IsTeamsRoot(workspace, teamsRoot)) ? workspace : null,
                 Owns = cards.GetValueOrDefault(data.DisplayName)?.Owns,
                 Avatar = cards.GetValueOrDefault(data.DisplayName)?.Avatar ?? Avatar.None,
             })

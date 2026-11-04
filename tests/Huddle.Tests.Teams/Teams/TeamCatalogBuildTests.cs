@@ -206,6 +206,24 @@ public sealed class TeamCatalogBuildTests
         Assert.Equal("Invoices", summary.Owns);
     }
 
+    /// <summary>A card naming the Teams folder, as Build a team used to fill in by default, has no workspace, whatever the case or a trailing separator; any other folder is kept.</summary>
+    [Theory]
+    [InlineData("C:/data/Teams", null)]
+    [InlineData("c:/DATA/teams/", null)]
+    [InlineData("C:/data/Teams/Home", "C:/data/Teams/Home")]
+    public void Build_WorkspaceIsTheTeamsFolder_HasNone(string written, string? expected)
+    {
+        IReadOnlyList<TeamFolder> folders = [new("Home", (IReadOnlyList<string>)[], false)];
+        Dictionary<string, TeamFile> teamFiles = new(StringComparer.Ordinal)
+        {
+            ["Home"] = new TeamFile(new VersionedRef("household", "1"), null, written, null, string.Empty),
+        };
+
+        IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles, "C:/data/Teams");
+
+        Assert.Equal(expected, Assert.Single(result).Workspace);
+    }
+
     /// <summary>A Team with no team file has null for all four card fields.</summary>
     [Fact]
     public void Build_TeamWithoutTeamFile_HasNullCardFields()

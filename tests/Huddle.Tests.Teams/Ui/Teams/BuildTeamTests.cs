@@ -16,6 +16,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Teams;
 
@@ -233,21 +234,20 @@ public sealed class BuildTeamTests
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
     }
 
-    /// <summary>Every type shows the same "Library folder" field, filled with the Teams folder under the data folder; a missing folder is refused, a blank one is allowed, and an existing one is accepted.</summary>
+    /// <summary>The "Library folder" field starts empty even with a Teams folder on disk, because whatever it holds becomes the Team's workspace; a missing folder is refused, and a blank or existing one is allowed.</summary>
     [Fact]
-    public async Task Details_LibraryFolder_IsUniformDefaultedAndValidated()
+    public async Task Details_LibraryFolder_StartsEmptyAndIsValidated()
     {
         using Fixture fixture = new(typeCount: 3);
-        string teamsFolder = Path.GetFullPath(Path.Combine(fixture.DirPath, new TeamOptions().Teams.Dir));
-        Directory.CreateDirectory(teamsFolder);
+        Directory.CreateDirectory(Path.GetFullPath(Path.Combine(fixture.DirPath, new TeamOptions().Teams.Dir)));
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.InvokeAsync(() => cut.FindAll(Card)[2].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
 
         Assert.Equal("Library folder", cut.Find(".build-team-workspace label").TextContent.Trim());
-        Assert.Equal(teamsFolder, cut.Find(".build-team-workspace input").GetAttribute("value"));
+        Assert.Equal(string.Empty, cut.Find(".build-team-workspace input").GetAttribute("value") ?? string.Empty);
         Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
 
         await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(Path.Combine(fixture.DirPath, "nowhere")));
@@ -255,10 +255,103 @@ public sealed class BuildTeamTests
         Assert.Equal("That folder does not exist.", cut.Find(".build-team-workspace .mud-input-helper-text").TextContent.Trim());
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
 
-        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(string.Empty));
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
 
         Assert.Empty(cut.FindAll(".build-team-workspace .mud-input-helper-text"));
         Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>A type that requires a workspace keeps step 2 open, and says what it needs by the type's own word, until a folder is named.</summary>
+    [Fact]
+    public async Task Details_TypeRequiringAWorkspace_NeedsAFolder()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.FindAll(Card)[2].ClickAsync());
+
+        Assert.Equal("Choose this Team's project folder.", cut.Find(".build-team-workspace .mud-input-helper-text").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+        Assert.Empty(cut.FindAll(".build-team-hire"));
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
+
+        Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>A type offering several processes lets the Human choose one, starting on its default; a type with one asks nothing.</summary>
+    [Fact]
+    public async Task Details_ProcessChoice_ShowsOnlyWhenTheTypeOffersSeveral()
+    {
+        using Fixture fixture = new(typeCount: 1, managedJob: true);
+        await using MudBunitContext one = fixture.NewContext();
+        one.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t01");
+        IRenderedComponent<ContainerFragment> single = Render(one);
+        Assert.Empty(single.FindAll(".build-team-process"));
+
+        await using MudBunitContext two = fixture.NewContext();
+        two.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t97");
+        IRenderedComponent<ContainerFragment> several = Render(two);
+
+        Assert.Equal("flow", several.Find(".build-team-process input").GetAttribute("value"));
+    }
+
+    /// <summary>Approving a typed Team gives it the type's process before anyone is hired, and its manager the onboarding steps once it runs: the two things a Team needs that used to wait on the manager's card.</summary>
+    [Fact]
+    public async Task Approve_ProvisionsTheProcessAndOnboardsTheManager()
+    {
+        using Fixture fixture = new(typeCount: 1, managedJob: true);
+        fixture.PointFoldersAtDisk(new VersionedRef("t97", "1.0.0"));
+        fixture.Gate.OnWait = _ => Assert.True(File.Exists(fixture.AgentsMdPath));
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t97");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        string manager = cut.Find(".roster-name").TextContent.Trim();
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.StartsWith("# Flow", File.ReadAllText(fixture.AgentsMdPath), StringComparison.Ordinal); // contains-ok: haystack is the written process file, whose settings are split off
+        cut.WaitForAssertion(() => Assert.Equal(manager, Assert.Single(fixture.Poster.Posts).Manager));
+    }
+
+    /// <summary>A manager drafted from a type carries the role's Skills, which add the Second Brain's to the job's; the same job on a Blank Team carries only its own.</summary>
+    [Fact]
+    public async Task Approve_ManagerRole_CarriesTheSecondBrainSkills()
+    {
+        using Fixture fixture = new(typeCount: 1, managedJob: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t97");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Count > 0);
+        Assert.True(PersonaFrontmatter.TryReadIdentity(hired.Text, out PersonaIdentity? identity, out _));
+        Assert.Equal(["ext-skill", "ingest", "wrap-up", "brain-check"], identity.Skills);
+    }
+
+    /// <summary>A custom role with no instructions hires an Agent with text to work from, not a half-created Team: the role's description, or else its title.</summary>
+    [Theory]
+    [InlineData("Grows things.", "Grows things.")]
+    [InlineData("", "Gardener")]
+    public async Task Approve_CustomRoleWithoutInstructions_StillHires(string description, string expected)
+    {
+        using Fixture fixture = new(typeCount: 3);
+        _ = fixture.Roles.Add("Gardener", description, string.Empty, ModelTier.Fast);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Gardener']").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+        Assert.EndsWith(expected, hired.Text.TrimEnd(), StringComparison.Ordinal); // contains-ok: haystack is the Persona file, whose frontmatter comes first
     }
 
     /// <summary>The hard-coded Blank Team is the first card, says you decide everything, and is not counted among the types.</summary>
@@ -1133,7 +1226,10 @@ public sealed class BuildTeamTests
     {
         private readonly TempDataDir dir = new();
 
-        public Fixture(int typeCount, bool filterTypes = false)
+        /// <param name="typeCount">How many plain team types to make.</param>
+        /// <param name="filterTypes">Whether to add the two types the role filter tests use.</param>
+        /// <param name="managedJob">Whether to add Type 97, whose manager is the pool's Bookkeeper by job and which offers two processes, one with onboarding steps.</param>
+        public Fixture(int typeCount, bool filterTypes = false, bool managedJob = false)
         {
             this.Personas = this.dir.CreatePersonaStore();
             this.Catalog = new FakeTeamCatalog();
@@ -1158,6 +1254,18 @@ public sealed class BuildTeamTests
                 builtins["t99/processes/flow.md"] = "# Flow";
             }
 
+            if (managedJob)
+            {
+                builtins["t97/team-type.json"] = """
+                    { "schemaVersion": 1, "id": "t97", "version": "1.0.0", "displayName": "Type 97", "order": 97,
+                      "workspace": { "kind": "none", "label": "None", "required": false },
+                      "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }, { "id": "other", "file": "processes/other.md" }],
+                      "roles": [{ "id": "bookkeeper", "job": "bookkeeper", "manager": true, "required": true }] }
+                    """;
+                builtins["t97/processes/flow.md"] = "# Flow\n\n## Onboarding\n\n- Read the books.\n";
+                builtins["t97/processes/other.md"] = "# Other";
+            }
+
             this.Roles = new CustomRoleStore(this.dir.Options());
             this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
             {
@@ -1168,7 +1276,7 @@ public sealed class BuildTeamTests
 
             // With the pool behind it the catalog pads every type with the pool jobs it does not list, as Pooled roles,
             // which the team type filter must not count as the type's own. Left off otherwise, so the other tests keep the roles they list.
-            this.Types = filterTypes
+            this.Types = filterTypes || managedJob
                 ? new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, this.Pool)
                 : new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
             FakeSkillAvailability packs = new();
@@ -1176,8 +1284,37 @@ public sealed class BuildTeamTests
             HireLimitHarness harness = new(this.dir.Options());
             this.Packs = packs;
             this.Skills = new SkillStore(this.dir.Options(), NullLogger<SkillStore>.Instance);
-            this.Hire = new HireService(this.Personas, this.Types, packs, this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Hire = new HireService(
+                this.Personas,
+                this.Types,
+                packs,
+                this.Avatars,
+                harness.Guard,
+                this.Installer,
+                this.Gate,
+                NullLogger<HireService>.Instance,
+                new ProcessProvisioner(this.Types, this.Folders),
+                new TeamOnboarding(this.Folders, new FakePromptSource(), this.Poster));
             this.Membership = new TeamMembership(this.Personas, this.Catalog, this.Folders, this.Types);
+        }
+
+        /// <summary>The start gate the hire service waits on.</summary>
+        public FakeStartGate Gate { get; } = new();
+
+        /// <summary>Records the onboarding steps posted to a manager.</summary>
+        public FakeOnboardingPoster Poster { get; } = new();
+
+        /// <summary>Where <see cref="PointFoldersAtDisk"/> puts a new Team's <c>AGENTS.md</c>.</summary>
+        public string AgentsMdPath => Path.Combine(this.dir.Path, TeamPaths.AgentsMdFileName);
+
+        /// <summary>Makes the Team folder the data folder and gives the new Team a card, so a process can really be written.</summary>
+        /// <param name="type">The new Team's type.</param>
+        public void PointFoldersAtDisk(VersionedRef type)
+        {
+            LibraryRoot root = new("teams", "Teams", this.dir.Path, LibraryRootKind.Teams);
+            this.Folders.TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, string.Empty, this.dir.Path, LibraryNodeRole.TeamFolder));
+            this.Folders.ReadResult = new TeamFile(type, null, null, null, string.Empty);
+            this.Folders.UpdateResult = true;
         }
 
         public AvatarStore Avatars { get; }

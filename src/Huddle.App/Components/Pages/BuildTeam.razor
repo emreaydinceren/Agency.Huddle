@@ -15,13 +15,11 @@
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
 @using Microsoft.AspNetCore.WebUtilities
-@using Microsoft.Extensions.Options
 @inject TeamTypeCatalog Types
 @inject ITeamCatalog Catalog
 @inject PersonaStore Personas
 @inject NavigationManager Navigation
 @inject IDialogService Dialogs
-@inject IOptions<TeamOptions> Options
 @inject HiringPoolCatalog Pool
 @inject CustomRoleStore CustomRoles
 @inject IAvatarLibraryLoader AvatarLibrary
@@ -123,7 +121,16 @@
                                   Adornment="@(this.RemoteAccess.IsConfigured ? Adornment.None : Adornment.End)" AdornmentIcon="@Icons.Material.Outlined.Folder"
                                   AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
-
+                    @if (!this.EditMode && this.selected is { Processes.Count: > 1 } multiple)
+                    {
+                        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Process" Value="this.processId" ValueChanged="this.OnProcessChanged"
+                                   HelperText="How this Team works. It becomes the Team's AGENTS.md, which you can edit afterwards." Class="build-team-process">
+                            @foreach (ProcessRef process in multiple.Processes)
+                            {
+                                <MudSelectItem T="string" Value="@process.Id">@process.Id</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
                 </MudStack>
             </MudPaper>
         </section>
@@ -528,6 +535,9 @@
     private string name = string.Empty;
     private string purpose = string.Empty;
     private string workspace = string.Empty;
+
+    /// <summary>The process a new Team starts with; offered as a choice only when its type has more than one.</summary>
+    private string? processId;
     private readonly List<DraftMember> drafts = [];
     private string? approveError;
     private bool skillsBlocked;
@@ -570,18 +580,20 @@
         }
     }
 
-    /// <summary>The refusal for the Library folder, or <see langword="null"/>; every team type has one, it is optional, and a typed folder must exist.</summary>
+    /// <summary>The refusal for the Library folder, or <see langword="null"/>: a typed folder must exist, and a new Team of a type that works in a folder must name one.</summary>
     private string? WorkspaceProblem
     {
         get
         {
             string trimmed = this.workspace.Trim();
-            if (trimmed.Length == 0 || Directory.Exists(trimmed))
+            if (trimmed.Length == 0)
             {
-                return null;
+                return !this.EditMode && this.selected is { Workspace: { Required: true } required }
+                    ? $"Choose this Team's {required.Label.ToLowerInvariant()}."
+                    : null;
             }
 
-            return "That folder does not exist.";
+            return Directory.Exists(trimmed) ? null : "That folder does not exist.";
         }
     }
 
@@ -632,16 +644,6 @@
 
     /// <summary>Whether step 2 is complete: a valid, unused name and a Library folder that is allowed.</summary>
     private bool DetailsReady => this.TrimmedName.Length > 0 && this.NameProblem is null && this.WorkspaceProblem is null;
-
-    /// <summary>The Teams folder under the app's data folder, the Library folder a new Team starts with; empty when it does not exist yet.</summary>
-    private string DefaultLibraryFolder
-    {
-        get
-        {
-            string folder = Path.GetFullPath(Path.Combine(this.Options.Value.DataDir, this.Options.Value.Teams.Dir));
-            return Directory.Exists(folder) ? folder : string.Empty;
-        }
-    }
 
     private int CurrentStep
     {
@@ -800,10 +802,11 @@
             role?.Manager ?? false, entry.Name, string.Empty, [], this.Avatars.Get(entry.Name), [], null, null, null, skills, identity?.Packs ?? [], persona.Adapter, persona.Model, persona.Effort, [], Existing: true);
     }
 
-    /// <summary>Starts the details from the chosen type: its name and description, unless the Human has already typed their own; the Library folder is always reset to the default.</summary>
+    /// <summary>Starts the details from the chosen type: its name and description, unless the Human has already typed their own; the Library folder starts empty, because whatever it holds becomes the Team's workspace, and the process starts on the type's default.</summary>
     private void ApplyDefaults()
     {
-        this.workspace = this.DefaultLibraryFolder;
+        this.workspace = string.Empty;
+        this.processId = this.selected?.Processes.FirstOrDefault(static process => process.Default)?.Id ?? this.selected?.Processes.FirstOrDefault()?.Id;
         bool blank = this.selected is { } chosen && IsBlank(chosen);
         if (!this.nameEdited)
         {
@@ -966,14 +969,20 @@
         {
             string drawn = this.FreeName([], null);
             RoleSpec spec = new(custom.Id, custom.Title, string.Empty, Model: new ModelSpec(custom.Tier), Skills: [.. custom.Skills.Select(this.SkillRefFor)]);
-            draft = this.NewDraft(custom.Id, custom.Title, custom.Description, custom.Tier, false, drawn, custom.Instructions, [], [], spec);
+
+            // Instructions are optional on the form and an Agent's text may not be blank, so fall back as a pool job does.
+            string text = new[] { custom.Instructions, custom.Description }.FirstOrDefault(static candidate => !string.IsNullOrWhiteSpace(candidate)) ?? custom.Title;
+            draft = this.NewDraft(custom.Id, custom.Title, custom.Description, custom.Tier, false, drawn, text, [], [], spec);
             draft = await this.WithLibraryAvatarAsync(draft);
         }
         else if (this.Pool.FindJob(roleId) is { } job)
         {
             string text = this.Pool.ReadPersona(job.Id)?.Stance ?? job.Description;
             string drawn = this.FreeName(job.SuggestedNames, null);
-            RoleSpec spec = new(job.Id, job.Title, job.Persona, Model: job.Model, Skills: job.SkillRefs, Packs: job.Packs, Requires: job.Requires, SuggestedNames: job.SuggestedNames, Job: job.Id, Pooled: true);
+
+            // The type's role, not the job, says what this draft carries: a manager's role adds the Second Brain Skills.
+            IReadOnlyList<SkillRef>? roleSkills = this.selected is { } type ? TypeRole(type, job.Id)?.Skills : null;
+            RoleSpec spec = new(job.Id, job.Title, job.Persona, Model: job.Model, Skills: roleSkills ?? job.SkillRefs, Packs: job.Packs, Requires: job.Requires, SuggestedNames: job.SuggestedNames, Job: job.Id, Pooled: true);
             draft = this.NewDraft(job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), drawn, text, job.SuggestedNames, job.Avatars, spec);
             draft = await this.WithLibraryAvatarAsync(draft);
         }
@@ -1300,6 +1309,8 @@
             return;
         }
 
+        // Before the hires, so each Agent's first session already reads the Team's AGENTS.md.
+        _ = this.Hiring.ProvisionProcess(team, this.processId);
         DraftHireResult result = this.Hiring.HireDrafts(team, hires);
         string? manager = this.drafts.FirstOrDefault(draft => draft.Manager && result.Hired.Contains(draft.Name, StringComparer.Ordinal))?.Name;
         if (manager is not null)
@@ -1312,6 +1323,12 @@
             this.approveError = $"The Team was created, but not every Agent was hired. {result.Error}";
             this.continueTeam = team;
             return;
+        }
+
+        if (manager is not null)
+        {
+            // Not awaited, and not tied to this page: the wait can take a minute, and the Team's onboarding outlives the navigation.
+            _ = this.Hiring.OnboardManagerAsync(team, manager, CancellationToken.None);
         }
 
         this.Navigation.NavigateTo(this.TeamHref(team));
@@ -1483,6 +1500,8 @@
     }
 
     private void OnWorkspaceChanged(string? value) => this.workspace = value ?? string.Empty;
+
+    private void OnProcessChanged(string value) => this.processId = value;
 
     /// <summary>Stops listening to the catalogs.</summary>
     public void Dispose()

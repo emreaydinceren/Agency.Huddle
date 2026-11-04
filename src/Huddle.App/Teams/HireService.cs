@@ -106,6 +106,58 @@ internal sealed class HireService(
         return new StartTeamResult(true, null, started);
     }
 
+    /// <summary>Gives a Team just created by Build a team a process: the one chosen, or the type's default when none was.</summary>
+    /// <param name="team">The Team.</param>
+    /// <param name="processId">The chosen process, or <see langword="null"/> for the default.</param>
+    /// <returns>How the call ended; <see cref="ProvisionResult.UnknownProcess"/> when the type offers no process, as a Blank Team's does not.</returns>
+    public ProvisionResult ProvisionProcess(string team, string? processId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+
+        if (processProvisioner is null)
+        {
+            return ProvisionResult.UnknownProcess;
+        }
+
+        return processId is null ? processProvisioner.ProvisionDefault(team) : processProvisioner.Provision(team, processId);
+    }
+
+    /// <summary>
+    /// Posts a new Team's onboarding steps to its manager once the manager runs. Build a team does not wait for this, so it
+    /// never throws: a manager that does not start in time, as with Adapters off, leaves the Team not onboarded and logged.
+    /// </summary>
+    /// <param name="team">The Team.</param>
+    /// <param name="manager">The manager's Name.</param>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns><see langword="true"/> when the steps were posted.</returns>
+    public async Task<bool> OnboardManagerAsync(string team, string manager, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(manager);
+
+        if (onboarding is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!await startGate.WaitUntilRunningAsync(manager, HireService.ManagerStartTimeout, ct).ConfigureAwait(false))
+            {
+                logger.LogWarning("{PersonaName} did not start in time, so Team {Team} was not onboarded.", manager, team);
+                return false;
+            }
+
+            return await onboarding.PostIfDueAsync(team, manager, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Nothing awaits this call: the Team is already hired, and a failure here must only cost its onboarding Turn.
+            logger.LogWarning(ex, "Team {Team} could not be onboarded.", team);
+            return false;
+        }
+    }
+
     /// <summary>Waits until the hired manager runs.</summary>
     /// <param name="manager">The manager's hire request.</param>
     /// <param name="started">The Agents hired so far.</param>
@@ -324,6 +376,12 @@ internal sealed class HireService(
             HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
             foreach (DraftHire draft in drafts)
             {
+                // PersonaStore refuses blank text at the write, which for a new Team comes after the Team exists.
+                if (string.IsNullOrWhiteSpace(draft.Text))
+                {
+                    return $"{draft.Name} has no instructions. Edit the draft and write what it should do.";
+                }
+
                 if (!seen.Add(draft.Name) || personas.ResolveByNameOrAlias(draft.Name) is not null || personas.ResolveByNameOrAlias(draft.Name.ToLowerInvariant()) is not null)
                 {
                     return $"The name '{draft.Name}' is already in use.";
