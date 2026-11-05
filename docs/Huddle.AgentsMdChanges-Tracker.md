@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task count they name.
 - Task 1.8 is a gate: if it fails, work stops for the Human before D2. Paid tasks need the Human's approval each time.
 
-**Status:** 75 of 76 tasks Done · 4 of 4 retrospectives done · last updated 2026-11-04.
+**Status:** 76 of 76 tasks Done · 4 of 4 retrospectives done · last updated 2026-11-05.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -103,5 +103,5 @@ never by hand, so the status line stays true.
 | 9.1 The ADR | | | ✔ |
 | 9.2 The references | | | ✔ |
 | 9.3 The manual test page | | | ✔ |
-| 9.4 Run the manual page (Paid) | ✔ | | |
+| 9.4 Run the manual page (Paid) | | | ✔ |
 | 9.5 Final verification | | | ✔ |

@@ -1,6 +1,6 @@
 # AGENTS.md changes
 
-Prove, against the real Claude Adapter, that a running Agent follows an edit to an `AGENTS.md` at its next Turn in each Room: that a new Team rule and a new Huddle-wide rule both arrive in two Rooms, that a typo fix is skipped and the Feed lists it, that the notice's wording is followed rather than argued with, that `@Nova /compact` makes the next Turn hear the notices again, that with the Helper off the comparison arrives, that a real restart and resume still tells what was missed, and that saving in a loop makes few Helper calls. It also settles two questions the design does not depend on: whether a cold resume honours the changed prompt, and what a Turn that waits on the Helper does to the Agent's other Room. The automated suite proves the parts with a fake Helper process and a scripted clock; this page proves what only a real model, a real restart and a browser show. **Written 2026-11-04; not yet run by a person.**
+Prove, against the real Claude Adapter, that a running Agent follows an edit to an `AGENTS.md` at its next Turn in each Room: that a new Team rule and a new Huddle-wide rule both arrive in two Rooms, that a typo fix is skipped and the Feed lists it, that the notice's wording is followed rather than argued with, that `@Nova /compact` makes the next Turn hear the notices again, that with the Helper off the comparison arrives, that a real restart and resume still tells what was missed, and that saving in a loop makes few Helper calls. It also settles two questions the design does not depend on: whether a cold resume honours the changed prompt, and what a Turn that waits on the Helper does to the Agent's other Room. The automated suite proves the parts with a fake Helper process and a scripted clock; this page proves what only a real model, a real restart and a browser show. **Written 2026-11-04; run 2026-11-04 to 05 by an agent (Haiku 5.5 at low, the real Claude Adapter, a separate data folder, branch `feat/agentsmd-changes`): all pass but one open clause in test 11. A person should still eyeball the card in test 01, the Feed item in test 04, and the Stop control in test 11, including a Stop just after the prompt was sent.**
 
 **11 tests** · 1 free, 10 paid 💰 · about 3.1 hours. Paid steps are marked **Paid 💰** in each test: an Agent's Turn on Haiku costs a fraction of a cent, and the Helper's call is one more.
 
@@ -24,7 +24,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md#p-launch-paid-). Use the **real** Claude Adapter, Haiku at `low` as [§0.3](../manual-tests.md#03-the-model-and-effort-convention) says. This area adds:
 
-1. Make a Team `Research` with `Ada` as its manager and `Leo` and `Miriam` as members, with [`P-NEW-PERSONA`](common.md#p-new-persona). Give `Leo` two Rooms, **Room A** and **Room B**, each with a first Turn already done, so that both have an open session.
+1. Make a Team `Research` with `Ada` as its manager and `Leo` and `Miriam` as members, with [`P-NEW-PERSONA`](common.md#p-new-persona). Huddle has no Team-manager control, so give Ada the title `Research Manager`. Give `Leo` two Rooms, **Room A** and **Room B**, each with a first Turn already done, so that both have an open session. A Direct Room reopens, so Room C in test 05 needs a second member (Ada).
+   Create `<data>\Teams\Research\AGENTS.md` with one line and let it settle **before** the tests: an edit of a file that did not exist settles free with no Helper call, by design, so test 02 would count 0.
+   Keep each test's rule separate, or remove the old ones. Rules that conflict confuse the Agent ("Endings conflict... Which should I use?").
+   The Helper judges a file at most once in 5 minutes. A 90-second wait only holds when the file's last judgement was over 5 minutes ago, so add that wait to each paid test that edits the same file again.
 2. `<data>` is the data folder of the lane. The files are `<data>\Teams\AGENTS.md` (Huddle-wide) and `<data>\Teams\Research\AGENTS.md` (the Team). Edit them in any text editor and save. Do not restart Leo between steps unless a step says so.
 3. The watcher checks the files every 10 seconds, and a Turn compares at its start. Wait 15 seconds after a save before reading a Feed result, unless a step says otherwise.
 4. The Helper's card is in **Settings › Helpers**, named **AGENTS.md Changes**. Its Daily cap is 20 calls.
@@ -94,6 +97,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - AGENTSMDCHANGES-02 passed. Leo's sessions are still the same ones.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
@@ -116,13 +120,14 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - AGENTSMDCHANGES-02 passed. Note the Feed's count of Helpers items.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
 1. In `<data>\Teams\Research\AGENTS.md`, change one word's spelling only, such as "recieve" to "receive" in a sentence you added. Save.
 2. Wait 90 seconds.
 3. Open the **Feed**, Category **Helpers**. Read the newest item.
-4. In Room A, send `@Leo does anything in your rules look different from before? Answer yes or no, then say why.`
+4. In Room A, send `@Leo since your last reply, were you told of any change to your rules? Answer yes or no, then say what.` The old wording mixed in earlier rules.
 
 **Pass if — all of these**
 
@@ -143,6 +148,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - Setup is done. Use a new Room C with Leo, so that the session is fresh and has its own history.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
@@ -169,6 +175,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - AGENTSMDCHANGES-02 and AGENTSMDCHANGES-03 passed, so Leo's Room A has heard two changes.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
@@ -216,6 +223,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - Leo's Room A session is open, and its last Turn is done.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
@@ -248,7 +256,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 1. Stop the app. While it is stopped, add this line to `<data>\Teams\Research\AGENTS.md` and save: `Always call the Research Team "the lab".`.
 2. Launch again and send nothing.
 3. In Room A, send `@Leo what do you call the Research Team?`. Read the reply.
-4. Write down whether the reply says "the lab", and what the Turn detail shows as sent (open the Turn detail on the reply).
+4. Write down whether the reply says "the lab". The UI has no Turn detail control, so check the ledger in `<data>\agents-md-ledger` for the notice and the tool log for a Read in that Turn.
 5. Switch the Helper on again.
 
 **Pass if — all of these**
@@ -270,6 +278,7 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 **Before you start**
 
 - The Helper is on. Write down the card's `calls today`.
+- This test edits the same file again: the file's last judgement must be over 5 minutes old, or a 90-second wait does not hold.
 
 **Steps**
 
@@ -301,16 +310,18 @@ Run [`P-BUILD`](common.md#p-build), then launch with [`P-LAUNCH-PAID`](common.md
 
 **Steps**
 
-1. Add a new rule line to `<data>\Teams\Research\AGENTS.md` and save. Do not wait.
+1. Add a new rule line to `<data>\Teams\Research\AGENTS.md` and save. Do not wait. Use a larger edit (several lines) for a longer wait.
 2. In Room A, send `@Leo name a metal.` and, within 2 seconds, in Room B send `@Leo name a gas.`.
 3. Watch both Rooms. Write down how long Room A shows no activity before Leo starts, and when Room B starts.
-4. Repeat step 1 with another new line. In Room A, send `@Leo name a stone.` and, as soon as it shows no activity, press **Stop** in Room A.
+4. Repeat step 1 with a larger edit. In Room A, send `@Leo name a stone.` and, while the Stop control is shown during the wait, press **Stop** in Room A.
+5. Repeat step 1 once more. Send a prompt that takes a few seconds to answer and press **Stop** just after it was sent, then send `@Leo name a bridge.`. **Open clause, not settled:** the run could not land a Stop mid-reply.
 
 **Pass if — all of these**
 
 - In step 3, Room A starts within 30 seconds, and Room B does not start until Room A's Turn is under way.
 - At step 4, the Stop ends the wait at once, and Leo's Turn does not start, or starts with the comparison.
 - Neither Room is left stuck.
+- Open: after a Stop just after the prompt (step 5), the next Turn follows the new rule, or the notice is told again.
 
 **Notes for the run log**
 

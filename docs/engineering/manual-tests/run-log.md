@@ -6416,6 +6416,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | The Helpers tab showed three cards: Needs Human, Team Memory and AGENTS.md Changes. The AGENTS.md Changes card showed the On chip and switch, Haiku 5.5, Low, the Daily cap and `0 of 20 calls today` (the cap value 20 was read only through "0 of 20"). Edit the prompt opened `/settings/prompts?highlight=helper.agentsMdChange.system`, "AGENTS.md Changes: system prompt". Run by an agent. |
 
 ### AGENTSMDCHANGES-02 — A running session follows a new Team rule in two Rooms
 
@@ -6423,6 +6424,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | First run (22:20): the Research file did not exist; the line settled free in 2 s as a Comparison with no Helper call and the card stayed at 0, by design. Replies: Room A "4\n\nNoted, Research.", Room B "Teal.\n\nNoted, Research.", Room A "Owl\n\nNoted, Research." with no mention of a file change. Rerun with an existing file: added `Keep every reply under twenty words.` at 22:26:00; settled 22:27:15 as a Summary ("Replies must now stay under twenty words."). Card 0 -> 1 of 20 (0.0005 USD). Room A `@Leo what is 5 + 5?` -> "10\n\nNoted, Research."; Room B `@Leo name a shape.` -> "Circle.\n\nNoted, Research." |
 
 ### AGENTSMDCHANGES-03 — A running session follows a new Huddle-wide rule
 
@@ -6430,6 +6432,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Teams\AGENTS.md was non-empty (2040 chars). Settled 22:30:07 ("Every reply must start with the word Understood."); card 2 of 20. Room A `@Leo what is 3 + 3?` -> "Understood. 6\n\nNoted, Research."; Room B `@Leo name a fruit.` -> "Understood. Apple.\n\nNoted, Research." Both start with Understood. and both keep the Team ending. |
 
 ### AGENTSMDCHANGES-04 — A typo fix is skipped and the Feed lists it
 
@@ -6437,6 +6440,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Feed clause: "recieve" -> "receive" at 22:38:30, settled 22:39:54 as Skipped ("Only a spelling correction, recieve to receive; meaning unchanged."); the Feed item read "didn't tell Agents about Research/AGENTS.md: ...". Run 2: `shrt` -> `short` at 01:04:35, judged 01:05:57, Skipped ("Only a spelling fix: 'shrt' became 'short', same meaning."), Feed Helpers count 3; the Turn log showed "added 0 characters". An earlier run (00:01:53) got `{"meaningful": true, ... "changes": []}` with a reason saying not meaningful; `Validate` rejected it, the next Turn got a Comparison with the spelling lines and Leo said "Yes: the typo conciese was corrected". The Helper prompt now rules that answer out. The page's question was reworded to `since your last reply, were you told of any change to your rules?`, since the old wording mixed in earlier rules. |
 
 ### AGENTSMDCHANGES-05 — The notice's wording is followed
 
@@ -6444,6 +6448,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Room C (Leo + Ada, as a Direct Room reopens). Step 1 "Understood. Canada. Noted, Research." Rounds 1 to 3 each ended with the new words ("Wording check.", "... two.", "... three."), no pushback, no "injection" or "untrusted". Edits at 22:45:00, 22:51:30, 22:57:59, each 5+ minutes after the last judgement; settled 22:46:25, 22:52:54, 22:59:14. Card 7 of 20 after this test. The replies were doubled (see test 11 and the plan's Retrospective log); fixed by the DocHistory hook exemption. |
 
 ### AGENTSMDCHANGES-06 — After /compact the next Turn hears the notices again
 
@@ -6451,6 +6456,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | `@Leo /compact` -> "Compacted my conversation: 33,791 -> 5,021 tokens in 5 s." `name a planet.` -> "Understood. Mars. Noted, Research."; `name a moon.` -> "Understood. Europa. Noted, Research."; step 4 -> "Understood. Start with "Understood." End with "Noted, Research." Keep replies under twenty words. Noted, Research." Not observable from the UI: whether the notices were re-told at step 2. |
 
 ### AGENTSMDCHANGES-07 — With the Helper off the comparison arrives
 
@@ -6458,6 +6464,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Card Off, 8 of 20. Added `Never use the word "very".` at 23:09:55; sent 23:10:35, reply in 6 s: "Understood. The sky is clear, mild, and breezy today. Noted, Research." (doubled before the hook fix). Ledger settled the instant the Turn was sent, kind Comparison, lines ["+Never use the word \"very\"."]. Step 4 -> "Understood. Line 4: "Never use the word "very"." Noted, Research." Card 8 of 20, unmoved. Switched On. |
 
 ### AGENTSMDCHANGES-08 — A real restart then resume still tells what was missed
 
@@ -6465,6 +6472,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Appended `Add the word "Restart-ok" to the end of every reply.` at 23:12:13 with the app stopped; started 23:16:15; settled 07:17:33 UTC (Summary). Room A `name a tree.` -> "Understood. Oak. Noted, Research. Restart-ok" (3 s); Room B `name a flower.` -> "Understood. Rose. Noted, Research. Restart-ok" (11 s); Room A `name a bird.` -> "Understood. Robin. Noted, Research. Restart-ok" (2 s). Card 8 -> 9 of 20 (+1). |
 
 ### AGENTSMDCHANGES-09 — Does a cold resume honour the changed prompt
 
@@ -6472,6 +6480,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Helper Off, app stopped, appended `Always call the Research Team "the lab".` at 23:48:46 and started. Room A 23:49:05 `@Leo what do you call the Research Team?` -> 23:49:07 "Understood. I call the Research Team "the lab." Noted, Research. Restart-ok". Ledger entry settled at the send, Comparison, `+Always call the Research Team "the lab".`; the tool log shows no Read in that Turn. There is no Turn-detail control in the UI, so the ledger and the tool log were checked instead. |
 
 ### AGENTSMDCHANGES-10 — A save loop and the card's call count
 
@@ -6479,6 +6488,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Baseline 9 of 20. Card at 23:22:45, 23:23:45, 23:24:48 = 9; at 23:27:25 (100 s after the last save) = 10 (0.0059 USD). One ledger entry, settled 07:27:01 UTC (77 s after the last save), Summary "Feedback handling changed from receiving it gracefully to receiving it honestly36." Step 4 -> "Understood. Feedback now: "receive honestly36," not "gracefully." Noted, Research. Restart-ok" (one net change). |
 
 ### AGENTSMDCHANGES-11 — A waiting Turn holds the Agent's other Room
 
@@ -6486,6 +6496,7 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | `0d3dbabe` + uncommitted `feat/agentsmd-changes` | | Holding: edit 23:37:49; Room A `name a metal.` sent 07:37:51.5, reply 07:38:00.2 ("Understood. Copper. Noted, Research. Restart-ok"), a wait of 8.7 s; Room B `name a gas.` sent 3.2 s after A, reply 07:38:02.5 ("Understood. Oxygen. ..."), 2.3 s after A's reply. Stop during a wait: first build, no Stop shown (a stuck path); after the fix (early empty Draft) the Stop was present 0.8 s after Return, clicked 00:33:07.2; no Leo reply, no Turn hook line, Room free within 11 s. The Helper call ran to its end (ledger 00:33:14.7) and was not cancelled. Next `name a metal.` -> "Understood. Iron. Noted, Research. Restart-ok Stone-check." Open: Stop just after publishing could not be landed (Leo replies in 2 to 4 s); in the one case seen earlier the hook added 472 characters and the next Turn 0, so heard moved. Card 13 of 20 on the first day, 9 after rollover. |
 
 ---
 

@@ -88,6 +88,12 @@ keyed by hook name. File Changes moved onto the pattern first, with no change to
 - The manual test ZERO-20 is unchanged. [agents-md-changes.md](../engineering/manual-tests/agents-md-changes.md) covers
   running sessions, and settles whether a resumed session also honours the changed prompt.
 
+## Measured after building
+
+The manual run of 2026-11-05 (Haiku 5.5, low, the real Claude Adapter) found no pushback on the notice's wording in three
+rounds. On a cold resume with the Helper off, the Agent followed a rule added while the app was stopped, and the ledger
+held the comparison notice with no file Read in that Turn: the notice, not the system prompt, carried it.
+
 ## Rejected
 
 | Alternative | Why not |

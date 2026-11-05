@@ -22,6 +22,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Turn started just after an edit may wait up to 30 seconds, with its Room silent, and the Agent's Turns in other Rooms
   queue behind it. A Stop in the waiting Room ends the wait. A visible "reading a rule change" row would need a new Turn
   state (O-12 of the [AgentsMd Changes spec](../Huddle.AgentsMdChanges-Specifications.md)).
+- **A Turn stopped just after its prompt was sent counts the notice as told.** Heard moved in the one case seen: the hook
+  added 472 characters, and the next Turn added 0. Whether the Agent keeps the notice is not established. The rule's next
+  edit or a `/compact` tells it again.
+- **Text before and after a tool call or a Stop-hook continuation in one Turn runs together, with no break in the Room.**
+  This is general behaviour, seen here through the DocHistory hook.
 - **A removed Team keeps its `AGENTS.md` ledger head.** Creating a Team with the same name costs one Helper call, to
   compare the new file with the old head.
 - **A short edit can talk its way into a skip.** The Helper's prompt does not escape the file's text, so words in a small

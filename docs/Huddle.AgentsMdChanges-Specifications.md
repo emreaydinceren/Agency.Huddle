@@ -1,6 +1,6 @@
 # Huddle.AgentsMdChanges — Design Specification
 
-**Date:** 2026-11-04 · **Status:** Built 2026-11-04 on `feat/agentsmd-changes`; the manual page is not yet run · **Source:** Gitea issue #361 and the owner's decision comment on
+**Date:** 2026-11-04 · **Status:** Built 2026-11-04 on `feat/agentsmd-changes`; the manual page ran 2026-11-05: all pass but one open clause in test 11 · **Source:** Gitea issue #361 and the owner's decision comment on
 it · **Decision record:** a new ADR when this is built (next free number 0076), amending
 [ADR-0070](adr/0070-an-agent-reads-the-instructions-the-human-writes.md) and
 [ADR-0075](adr/0075-a-second-brain-layout-in-every-team.md); builds on
@@ -1184,8 +1184,8 @@ the rename and removal cascade, the DI precedent, and [rules.md](engineering/rul
 | # | Assumption | Why it matters | How to settle it |
 | --- | --- | --- | --- |
 | C-1 | A judgement finishes inside the 25-second timeout | The Team Memory manual tests wait about 20 seconds with a 10-second debounce, which suggests about 10 seconds a call, but on a smaller input than this Helper's largest. If it misses often, the Human mostly gets the comparison, and each miss spends a call | Settled 2026-11-04 by plan Task 5.6, on Haiku at low Effort: 1 KB about 8 seconds, 8 KB 10 to 13, a rewrite at the 16,000-character cap 11 to 32, failing when the answer listed more than 12 changes. With the limit stated in the system prompt, the cap case took 10 to 13 seconds and all three answers parsed. The defaults stay |
-| C-2 | The system prompt survives `/compact` | The re-telling sets heard back to the session's start hashes. If the prompt were lost too, it would need the file's whole text | The paid manual run after `/compact` |
-| C-3 | Agents follow the notice's wording | Claude Code's documentation warns that commanding text can trigger prompt-injection defences | The paid manual run; the wording is a Prompt, so it changes without code |
+| C-2 | The system prompt survives `/compact` | The re-telling sets heard back to the session's start hashes. If the prompt were lost too, it would need the file's whole text | The paid manual run after `/compact`. Settled 2026-11-05 (AGENTSMDCHANGES-06): after `/compact` the Agent started and ended replies by both rules and named both; the notices were not seen to be re-told, which the UI cannot show |
+| C-3 | Agents follow the notice's wording | Claude Code's documentation warns that commanding text can trigger prompt-injection defences | The paid manual run; the wording is a Prompt, so it changes without code. Settled 2026-11-05 (AGENTSMDCHANGES-05): no pushback across 3 rounds on Haiku 5.5 at low; the wording stays |
 | C-4 | Huddle cannot add context beside a tool result | Only rules out a fourth hook point; nothing depends on it being possible | Not needed for this delivery |
 | C-5 | The Turn Hook contract fits File Changes | The whole pattern rests on it. The review traced it by hand and expects it to hold, but nothing has run | TH-2, which stops and reports if not |
 
@@ -1203,4 +1203,8 @@ Where the build differs from the sections above, the build is right. Only what c
 - **The File Changes filter is wider than the scope list.** It leaves out any `AGENTS.md` at a level path under one of the Agent's Teams (`<Team>/AGENTS.md`, `<Team>/<Project>/AGENTS.md`), in or out of the current scope, so a deleted Project is not told twice.
 - **`UpdateHookState` checks the session id.** It writes only onto the entry of the session that ran the Turn, so a fresh session's first `/compact` cannot write onto an older session's entry.
 - **`StoreSessionEntry` tolerates a failed write.** A finished Turn is not failed by a store write that throws `IOException` or `UnauthorizedAccessException`; it logs a Warning and the next Turn retells.
+- **An early empty Draft makes Stop reachable during a wait.** The Turn posts an empty Draft before it waits on the Helper, so the Stop control is shown while the Turn waits (AGENTSMDCHANGES-11).
+- **`turn.agentsMdFileWins` is softened.** Its wording no longer sets the file against the notice, because conflicting wording made the Agent ask which rule to follow.
+- **The DocHistory hook exempts a read of `AGENTS.md`.** Its Read branch no longer reminds an Agent to log a read of that file; before, the reminder made the Agent reply twice in one Turn, run together with no break.
+- **The cold-resume question (C-2 beside it) is answered.** With the Helper off and the app restarted, Leo said "the lab" for a rule added while the app was stopped; the ledger held the Comparison notice and the tool log showed no Read in that Turn, so the notice, not the system prompt, explains it (AGENTSMDCHANGES-09).
 - **Not covered end to end.** A real restart followed by a resume is proved only on the manual page, not by an automated test. A real-supervisor end-to-end test is not run, because `MockAdapterFixture` removes the supervisor as a hosted service and builds the pipeline by hand.
