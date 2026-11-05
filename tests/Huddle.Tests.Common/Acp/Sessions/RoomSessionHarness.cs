@@ -108,8 +108,6 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             scheduler: settings.Scheduler ?? new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: settings.Acp ?? new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: NullLogger.Instance,
             runToken: runCts.Token,
             persona: settings.Persona,

@@ -517,7 +517,7 @@ public sealed class PersonaRunnerFileChangesTests
             fixture.Services.GetRequiredService<ILogger<PersonaRunner>>());
 
         await using var agentHost = new PersonaRunner(
-            TestPersonas.Nova, options, factory, prompts, new RoomFollows(), fixture.Services.GetRequiredService<ILogger<PersonaRunner>>(), tracker, hooks: hooks);
+            TestPersonas.Nova, options, factory, prompts, new RoomFollows(), fixture.Services.GetRequiredService<ILogger<PersonaRunner>>(), hooks: hooks, memoryPaths: tracker.MemoryPaths);
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
@@ -536,6 +536,7 @@ public sealed class PersonaRunnerFileChangesTests
         var header = prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>());
 
         Assert.Equal(2, factory.Session.Prompts.Count);
+        // contains-ok: prompt text, not markup; the block's start shows the pipeline path listed the change.
         Assert.StartsWith(header, factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
@@ -550,7 +551,20 @@ public sealed class PersonaRunnerFileChangesTests
         // host, and NullLogger would silently discard every entry a test like
         // CommitFails_TurnStillPostsAndConsumerLives needs to assert against.
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger, fileChanges, commands: commands);
+        FakePromptSource prompts = new();
+        TurnHookPipeline? hooks = null;
+        if (fileChanges is not null)
+        {
+            // The fixture's logger factory, so the hook's commit Warning reaches fixture.LogEntries.
+            ILoggerFactory loggerFactory = fixture.Services.GetRequiredService<ILoggerFactory>();
+            FileChangesTurnHook hook = new(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>());
+            hooks = TurnHookPipeline.ForPersona(
+                new TurnHookScope(persona.Name, ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+                hook,
+                loggerFactory.CreateLogger<TurnHookPipeline>());
+        }
+
+        return new PersonaRunner(persona, options, factory, prompts, new RoomFollows(), logger, commands: commands, hooks: hooks, memoryPaths: fileChanges?.MemoryPaths);
     }
 
     /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>

@@ -1,6 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
@@ -24,8 +24,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
     private readonly TimeProvider time;
-    private readonly FileChangeTracker? fileChanges;
-    private readonly IReadOnlyList<string> declaredWatches;
+    private readonly MemoryPaths? memoryPaths;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly RoomSessionStore? roomSessions;
@@ -62,8 +61,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="prompts">Resolves every <c>turn.*</c> prompt's current text.</param>
     /// <param name="options">The Persona's current ACP options.</param>
     /// <param name="time">Drives idle eviction and the sweep timer.</param>
-    /// <param name="fileChanges">The Persona's File Changes tracker, or <see langword="null"/> when File Changes is off.</param>
-    /// <param name="declaredWatches">The Persona's declared Watched Folders.</param>
     /// <param name="logger">Where this pool logs.</param>
     /// <param name="runToken">The runner's own run token; cancelled means shutdown.</param>
     /// <param name="roomSessions">
@@ -80,7 +77,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings passed to every Room Session, for the first Turn's Transcript catch-up. <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">The store every Room Session writes its first post-fresh-start prompt to. <see langword="null"/> writes no file.</param>
-    /// <param name="hooks">The Turn hook pipeline every Room Session runs. <see langword="null"/> runs none, and the old File Changes path stays.</param>
+    /// <param name="hooks">The Turn hook pipeline every Room Session runs. <see langword="null"/> runs none.</param>
+    /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes, passed to every Room Session this pool creates. <see langword="null"/> records none.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -88,8 +86,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         IPromptSource prompts,
         AcpOptions options,
         TimeProvider time,
-        FileChangeTracker? fileChanges,
-        IReadOnlyList<string> declaredWatches,
         ILogger logger,
         CancellationToken runToken,
         RoomSessionStore? roomSessions = null,
@@ -103,7 +99,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
-        TurnHooks.TurnHookPipeline? hooks = null)
+        TurnHooks.TurnHookPipeline? hooks = null,
+        MemoryPaths? memoryPaths = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -111,7 +108,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(time);
-        ArgumentNullException.ThrowIfNull(declaredWatches);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.host = host;
@@ -120,8 +116,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.prompts = prompts;
         this.options = options;
         this.time = time;
-        this.fileChanges = fileChanges;
-        this.declaredWatches = declaredWatches;
+        this.memoryPaths = memoryPaths;
         this.logger = logger;
         this.runToken = runToken;
         this.roomSessions = roomSessions;
@@ -444,8 +439,6 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             scheduler: this,
             prompts: this.prompts,
             options: this.options,
-            fileChanges: this.fileChanges,
-            declaredWatches: this.declaredWatches,
             logger: this.logger,
             runToken: this.runToken,
             time: this.time,
@@ -462,7 +455,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             contextFill: this.contextFill,
             sessionSettings: this.sessionSettings,
             lastCatchUp: this.lastCatchUp,
-            hooks: this.hooks);
+            hooks: this.hooks,
+            memoryPaths: this.memoryPaths);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

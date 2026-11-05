@@ -40,8 +40,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private readonly ITurnScheduler scheduler;
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
-    private readonly FileChangeTracker? fileChanges;
-    private readonly IReadOnlyList<string> declaredWatches;
+    private readonly MemoryPaths? memoryPaths;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -136,7 +135,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <c>OpenAsync</c> is reachable outside the consumer, so an eager open must not write this without the gate.
     /// </summary>
     private readonly Dictionary<string, string?> hookState = new(StringComparer.Ordinal);
-
     /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
     private string? lastModel;
 
@@ -171,8 +169,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="scheduler">The ticket protocol this session's consumer runs its Turns through.</param>
     /// <param name="prompts">Resolves every <c>turn.*</c> prompt's current text.</param>
     /// <param name="options">The Persona's current ACP options, read live for the idle-timeout bound.</param>
-    /// <param name="fileChanges">The Persona's File Changes tracker, or <see langword="null"/> when File Changes is off.</param>
-    /// <param name="declaredWatches">The Persona's declared Watched Folders.</param>
     /// <param name="logger">Where this session logs.</param>
     /// <param name="runToken">The runner's own run token; cancelled means shutdown, never a Stop.</param>
     /// <param name="time">
@@ -194,6 +190,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
     /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
+    /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes to paths for <c>Touched</c>. <see langword="null"/> records none, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -201,8 +198,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ITurnScheduler scheduler,
         IPromptSource prompts,
         AcpOptions options,
-        FileChangeTracker? fileChanges,
-        IReadOnlyList<string> declaredWatches,
         ILogger logger,
         CancellationToken runToken,
         TimeProvider? time = null,
@@ -219,14 +214,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
-        TurnHookPipeline? hooks = null)
+        TurnHookPipeline? hooks = null,
+        MemoryPaths? memoryPaths = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(scheduler);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(declaredWatches);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.RoomId = roomId;
@@ -235,8 +230,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.scheduler = scheduler;
         this.prompts = prompts;
         this.options = options;
-        this.fileChanges = fileChanges;
-        this.declaredWatches = declaredWatches;
+        this.memoryPaths = memoryPaths;
         this.logger = logger;
         this.runToken = runToken;
         this.time = time ?? TimeProvider.System;
@@ -1212,12 +1206,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // The token-Budget check (D22 correction 11) runs in the consumer, before this method is
         // ever called - and before this session opens - so an item drained for a spent Budget never
         // pays for opening a session it will not prompt.
-        //
-        // collected stays null for a Greeting (FC §6.8: a Greeting neither collects nor commits, the
-        // trigger is the prompt itself, not a delivered Message) and for a null tracker (§6.11: the
-        // Adapter cannot read files). It is carried on the TurnRun so the finally block can see it
-        // (FC §6.8, finding P-17).
-        (item, CollectedChanges? collected) = await this.CollectFileChangesAsync(item, ct).ConfigureAwait(false);
         (item, TurnHookBeforeResult? hookResult) = await this.RunBeforeHooksAsync(item, ct).ConfigureAwait(false);
         item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
         item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
@@ -1225,7 +1213,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
         this.WriteLastCatchUp(item);
-        TurnRun? run = this.TryPublishTurn(item, collected, hookResult, sequence, ct);
+        TurnRun? run = this.TryPublishTurn(item, hookResult, sequence, ct);
         if (run is null)
         {
             return;
@@ -1276,39 +1264,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             .BeforeTurnAsync(item.RoomId, this.hookState, ct, CancellationToken.None)
             .ConfigureAwait(false);
         return (result.Blocks.Count > 0 ? item with { HookBlocks = result.Blocks } : item, result);
-    }
-
-    /// <summary>
-    /// Collects the Room's File Changes at Turn start and attaches the report to the item.
-    /// </summary>
-    /// <remarks>
-    /// Collected before the Turn/cancellation/watchdog exists, so a slow disk scan is never counted
-    /// as Adapter silence (rules.md TRAP 1/TRAP 2 ordering) and so a Turn that waited in the queue
-    /// lists changes made while it waited. A scan or directory failure must not kill the consumer
-    /// loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item (with <see cref="WorkItem.FileChanges"/> set for a Message when a tracker exists) and what was collected, or <see langword="null"/> when nothing was.</returns>
-    private async Task<(WorkItem Item, CollectedChanges? Collected)> CollectFileChangesAsync(WorkItem item, CancellationToken ct)
-    {
-        CollectedChanges? collected = null;
-
-        if (item.Kind == WorkItemKind.Message && this.fileChanges is not null && this.hooks is null)
-        {
-            try
-            {
-                collected = await this.fileChanges.CollectAsync(this.owner.PersonaName, item.RoomId, this.declaredWatches, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to collect File Changes for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-
-            item = item with { FileChanges = collected?.Report };
-        }
-
-        return (item, collected);
     }
 
     /// <summary>
@@ -1537,12 +1492,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// RelatedMessageId, and later a MessageDelta, correlate back to this Turn.
     /// </remarks>
     /// <param name="item">The fully prepared item.</param>
-    /// <param name="collected">What the File Changes collect returned, if anything.</param>
     /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     /// <param name="sequence">The item's scheduler sequence, compared against the Room's Stop mark.</param>
     /// <param name="ct">The run's own cancellation token, which the Turn's token is linked to.</param>
     /// <returns>The published Turn's state, or <see langword="null"/> when nothing was published and nothing was committed.</returns>
-    private TurnRun? TryPublishTurn(WorkItem item, CollectedChanges? collected, TurnHookBeforeResult? hookResult, long sequence, CancellationToken ct)
+    private TurnRun? TryPublishTurn(WorkItem item, TurnHookBeforeResult? hookResult, long sequence, CancellationToken ct)
     {
         var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1574,7 +1528,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // the question source linked to turnCancellation that EndUserInput must dispose.
             ActiveTurn turn = new(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
             this.activeTurn = turn;
-            return new TurnRun(item, collected, messageId, completion, turnCancellation, turn, opened, hookResult);
+            return new TurnRun(item, messageId, completion, turnCancellation, turn, opened, hookResult);
         }
     }
 
@@ -1822,7 +1776,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
 
         await this.WriteFinalDeltaAsync(run, ct).ConfigureAwait(false);
-        await this.CommitFileChangesAsync(run, ct).ConfigureAwait(false);
         await this.RunAfterHooksAsync(run, ct).ConfigureAwait(false);
         this.StoreSessionEntry(run, ct);
 
@@ -1861,42 +1814,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     }
 
     /// <summary>
-    /// Commits the File Changes the Turn collected, after the Draft terminator so a slow or failing
-    /// commit never delays the Turn's own MessageDelta reaching the Room.
-    /// </summary>
-    /// <remarks>
-    /// Uses the Turn's own state, never this.activeTurn - already nulled - and copies Touched under
-    /// gate since the event reader can still be writing to it concurrently with this method's own
-    /// thread. Gated on !ct.IsCancellationRequested (shutdown) and, per finding P-17, on the Turn
-    /// having either returned from PromptAsync or shown activity: a prompt refused outright before
-    /// any event (E-5) saw neither and must not commit, so the Room's list repeats next Turn; a Stop
-    /// after activity (E-6) still commits.
-    /// </remarks>
-    /// <param name="run">The Turn that ended.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    private async Task CommitFileChangesAsync(TurnRun run, CancellationToken ct)
-    {
-        if (this.fileChanges is not null && this.hooks is null && run.Collected is not null && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
-        {
-            HashSet<string> touched;
-            lock (this.gate)
-            {
-                touched = [.. run.Turn.Touched];
-            }
-
-            try
-            {
-                await this.fileChanges.CommitAsync(this.owner.PersonaName, run.Item.RoomId, run.Collected, touched, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to commit File Changes for room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Runs the Turn hooks' After points under the File Changes commit's own condition. The token is
+    /// Runs the Turn hooks' After points, after the Draft terminator so a slow or failing hook never delays
+    /// the Turn's own MessageDelta reaching the Room. Gated on shutdown and, per finding P-17, on the Turn
+    /// having either returned from PromptAsync or shown activity. The token is
     /// <paramref name="ct"/>, never the Turn's: a stopped Turn has already cancelled its own and must still commit.
     /// </summary>
     /// <param name="run">The Turn that ended.</param>
@@ -1956,7 +1876,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// phases: what the Turn is, and the latches its phases write for the later ones to read.
     /// </summary>
     /// <param name="item">The fully prepared item.</param>
-    /// <param name="collected">What the File Changes collect returned, null for a Greeting or without a tracker.</param>
     /// <param name="messageId">The Message id minted for this Turn.</param>
     /// <param name="completion">Completed by the event reader when the Turn's outcome arrives.</param>
     /// <param name="turnCancellation">The Turn's own cancellation source, disposed last.</param>
@@ -1965,7 +1884,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     private sealed class TurnRun(
         WorkItem item,
-        CollectedChanges? collected,
         string messageId,
         TaskCompletionSource<TurnOutcome> completion,
         CancellationTokenSource turnCancellation,
@@ -1978,9 +1896,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         /// <summary>Gets what the Turn hooks' Before points produced, or <see langword="null"/> when none ran (a Greeting, a Command, or no pipeline).</summary>
         public TurnHookBeforeResult? HookResult { get; } = hookResult;
-
-        /// <summary>Gets what the File Changes collect returned.</summary>
-        public CollectedChanges? Collected { get; } = collected;
 
         /// <summary>Gets the Message id minted for this Turn.</summary>
         public string MessageId { get; } = messageId;
@@ -2541,9 +2456,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         if (kind != ToolKind.Other
             || name is null
             || !MemoryTool.IsToolName(name)
-            || this.fileChanges?.MemoryPaths is not { } memoryPaths
+            || this.memoryPaths is not { } resolver
             || MemoryRequest.FromJson(rawInputJson) is not { } request
-            || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
+            || !resolver.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
         {
             return null;
         }
@@ -2672,7 +2587,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         var builder = new StringBuilder();
 
-        // Spec 6.7: hook blocks lead the framed prompt, ahead of the File Changes block, each followed by a blank line.
+        // Spec 6.7: hook blocks (File Changes is one of them) lead the framed prompt, each followed by a blank line.
         if (item.HookBlocks is { } hookBlocks)
         {
             foreach (string hookBlock in hookBlocks)
@@ -2682,7 +2597,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             }
         }
 
-        RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
         RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
 
         // Spec section 9.3: after the Library documents block and before any catch-up or the Message.
@@ -2779,65 +2693,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             builder.Append(prompts.Render(
                 "turn.catchUpLine",
                 new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>
-    /// FC §6.8: with a non-empty <paramref name="report"/>, writes the File Changes block ahead of
-    /// everything else — the header, one line per change, one line per unchecked folder, an
-    /// "…and N more." line when the cap left some out, then a blank line. Writes nothing for a
-    /// <see langword="null"/> or empty report: "absent means unchanged".
-    /// </summary>
-    private static void AppendFileChangesBlock(StringBuilder builder, FileChangesReport? report, IPromptSource prompts)
-    {
-        if (report is null || report.IsEmpty)
-        {
-            return;
-        }
-
-        builder.Append(prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>()));
-        builder.Append('\n');
-
-        foreach (var change in report.Changes)
-        {
-            var key = change.Kind switch
-            {
-                FileChangeKind.Added => "turn.fileAdded",
-                FileChangeKind.Changed => "turn.fileChanged",
-                FileChangeKind.Deleted => "turn.fileDeleted",
-                _ => throw new InvalidOperationException($"Unknown File Change kind '{change.Kind}'."),
-            };
-
-            builder.Append(prompts.Render(key, new Dictionary<string, string> { ["{{path}}"] = change.FullPath }));
-
-            if (change.ByYouRoomName is not null)
-            {
-                builder.Append(prompts.Render("turn.fileByYouSuffix", new Dictionary<string, string> { ["{{roomName}}"] = change.ByYouRoomName }));
-            }
-
-            builder.Append('\n');
-        }
-
-        foreach (var uncheckedFolder in report.Unchecked)
-        {
-            builder.Append(prompts.Render(
-                "turn.folderUnchecked",
-                new Dictionary<string, string>
-                {
-                    ["{{path}}"] = uncheckedFolder,
-                    ["{{max}}"] = report.MaxFilesPerFolder.ToString(CultureInfo.InvariantCulture),
-                }));
-            builder.Append('\n');
-        }
-
-        if (report.NotListed > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.fileChangesMore",
-                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
             builder.Append('\n');
         }
 

@@ -10,8 +10,10 @@ using Agency.Huddle.Acp.Tests.Fakes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
-using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.Tests.Pipes;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -176,7 +178,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
+        (TurnHookPipeline hooks, MemoryPaths? memoryPaths) = TurnHookTestFactory.ForPersona(host.Services, persona);
         RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
         OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
@@ -184,7 +186,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         // container registered, so a container with no bridge answers every agent form as cancelled.
         IElicitationBridge? elicitationBridge = host.Services.GetService<IElicitationBridge>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts, elicitationBridge: elicitationBridge);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts, elicitationBridge: elicitationBridge, hooks: hooks, memoryPaths: memoryPaths);
 
         try
         {

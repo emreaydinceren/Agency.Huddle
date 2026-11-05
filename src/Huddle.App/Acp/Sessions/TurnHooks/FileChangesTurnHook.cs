@@ -30,18 +30,20 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
     {
         ArgumentNullException.ThrowIfNull(turn);
 
+        CollectedChanges collected;
         try
         {
-            CollectedChanges collected = await tracker
+            collected = await tracker
                 .CollectAsync(turn.Scope.PersonaName, turn.RoomId, turn.Scope.DeclaredWatches, cancellationToken)
                 .ConfigureAwait(false);
-            return new TurnAddition(Render(collected.Report, prompts), collected);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Persona '{PersonaName}' failed to collect File Changes for room {RoomId}.", turn.Scope.PersonaName, turn.RoomId);
             return null;
         }
+
+        return new TurnAddition(Render(collected.Report, prompts), collected);
     }
 
     /// <inheritdoc />

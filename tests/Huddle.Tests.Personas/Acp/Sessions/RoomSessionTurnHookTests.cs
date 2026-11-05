@@ -243,13 +243,88 @@ public sealed class RoomSessionTurnHookTests
         Assert.Equal(session.SessionId, store.Get("nova", RoomId)?.SessionId);
     }
 
+    /// <summary>The state After returned in one Turn is what the next Turn's Before and After are handed (Spec §6.10, state is per session).</summary>
+    [Fact]
+    public async Task TwoTurns_SecondSeesTheStateTheFirstAfterReturned()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        StatefulHook hook = new();
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, hook);
+
+        await RunTurnAsync(harness, session, hook, 1, ct);
+        await RunTurnAsync(harness, session, hook, 2, ct);
+
+        Assert.Null(hook.Starting[0].State);
+        Assert.Equal("after-of-carry-1", hook.Starting[1].State);
+        Assert.Null(hook.Ended[0].State);
+        Assert.Equal("after-of-carry-1", hook.Ended[1].State);
+    }
+
+    /// <summary>The carry a Turn's Before returned reaches that Turn's After, and no other Turn's.</summary>
+    [Fact]
+    public async Task TwoTurns_EachAfterGetsItsOwnCarry()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        StatefulHook hook = new();
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, hook);
+
+        await RunTurnAsync(harness, session, hook, 1, ct);
+        await RunTurnAsync(harness, session, hook, 2, ct);
+
+        Assert.Equal(["carry-1", "carry-2"], hook.Carries);
+    }
+
+    /// <summary>Two sessions that share one pipeline keep separate state: the second session's first Turn sees none of the first's.</summary>
+    [Fact]
+    public async Task TwoSessionsOverOnePipeline_StateIsSeparate()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        StatefulHook hook = new();
+        TurnHookPipeline pipeline = new([hook], Scope, NullLogger.Instance);
+        FakeAgentSession sessionA = new();
+        FakeAgentSession sessionB = new();
+        await using RoomSessionHarness harnessA = BuildOn(pipeline, new FakeRoomSessionOwner(), sessionA);
+        await using RoomSessionHarness harnessB = BuildOn(pipeline, new FakeRoomSessionOwner(), sessionB);
+
+        await RunTurnAsync(harnessA, sessionA, hook, 1, ct);
+        await RunTurnAsync(harnessB, sessionB, hook, 1, ct);
+        await RunTurnAsync(harnessA, sessionA, hook, 2, ct);
+        await RunTurnAsync(harnessB, sessionB, hook, 2, ct);
+
+        Assert.Null(hook.Starting[1].State);
+        Assert.Null(hook.Ended[1].State);
+        Assert.Equal("after-of-carry-1", hook.Starting[2].State);
+        Assert.Equal("after-of-carry-2", hook.Starting[3].State);
+    }
+
+    /// <summary>Enqueues one Message Turn and waits until its After has run.</summary>
+    private static async Task RunTurnAsync(
+        RoomSessionHarness harness,
+        FakeAgentSession session,
+        StatefulHook hook,
+        long sequence,
+        CancellationToken ct)
+    {
+        session.EnqueueReply("ok");
+        int endedBefore = hook.Ended.Count;
+        harness.Room.Enqueue(new QueuedWork(sequence, MessageItem("turn-" + sequence)));
+        await Eventually.UntilAsync(() => hook.Ended.Count == endedBefore + 1, ct, timeout: TestBudgets.Standard);
+    }
+
+    private static RoomSessionHarness BuildOn(TurnHookPipeline pipeline, FakeRoomSessionOwner owner, FakeAgentSession session) =>
+        RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new RoomSessionHarnessOptions { Hooks = pipeline });
+
     private static WorkItem MessageItem(string text) =>
         new(RoomId, "Room 1", "You", text, [], TriggerMessageId: "trig-" + text);
 
     private static RoomSessionHarness Build(
         FakeRoomSessionOwner owner,
         FakeAgentSession session,
-        RecordingHook hook,
+        ITurnHook hook,
         RoomSessionHarnessOptions? options = null,
         Func<CancellationToken, Task<IAgentSession>>? open = null)
     {
@@ -288,6 +363,86 @@ public sealed class RoomSessionTurnHookTests
         ReadsFiles: true,
         IsolateUserSettings: true,
         SessionPerRoom: true);
+
+    /// <summary>A hook that numbers its Before calls, carries "carry-N" to After, and answers After with "after-of-" plus that carry.</summary>
+    private sealed class StatefulHook : ITurnHook
+    {
+        private readonly Lock gate = new();
+        private readonly List<TurnStarting> starting = [];
+        private readonly List<TurnEnded> ended = [];
+        private readonly List<string?> carries = [];
+        private int calls;
+
+        /// <summary>Every Before call so far.</summary>
+        public IReadOnlyList<TurnStarting> Starting
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return [.. this.starting];
+                }
+            }
+        }
+
+        /// <summary>Every After call so far.</summary>
+        public IReadOnlyList<TurnEnded> Ended
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return [.. this.ended];
+                }
+            }
+        }
+
+        /// <summary>The carry each After was handed, in order.</summary>
+        public IReadOnlyList<string?> Carries
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return [.. this.carries];
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        public string Name => "stateful";
+
+        /// <inheritdoc />
+        public bool AppliesTo(TurnHookScope scope) => true;
+
+        /// <inheritdoc />
+        public Task<string?> OnSessionOpeningAsync(SessionOpening opening, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
+
+        /// <inheritdoc />
+        public Task<TurnAddition?> BeforeTurnAsync(TurnStarting turn, CancellationToken cancellationToken)
+        {
+            lock (this.gate)
+            {
+                this.starting.Add(turn);
+                this.calls++;
+                return Task.FromResult<TurnAddition?>(new TurnAddition(null, "carry-" + this.calls));
+            }
+        }
+
+        /// <inheritdoc />
+        public Task<string?> AfterTurnAsync(TurnEnded turn, TurnAddition? addition, CancellationToken cancellationToken)
+        {
+            string? carry = addition?.Carry as string;
+            lock (this.gate)
+            {
+                this.ended.Add(turn);
+                this.carries.Add(carry);
+            }
+
+            return Task.FromResult<string?>("after-of-" + carry);
+        }
+    }
 
     /// <summary>A hook that records every call and answers Before with <see cref="Block"/>; a gate can hold either point.</summary>
     private sealed class RecordingHook : ITurnHook

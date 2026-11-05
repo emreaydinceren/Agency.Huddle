@@ -41,6 +41,7 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
         Dictionary<string, TurnAddition> additions = new(StringComparer.Ordinal);
         foreach (ITurnHook hook in this.applicable)
         {
+            runToken.ThrowIfCancellationRequested();
             if (stopToken.IsCancellationRequested)
             {
                 break;
@@ -70,7 +71,7 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
             }
 
             additions[hook.Name] = addition;
-            if (addition.Text is not null)
+            if (!string.IsNullOrEmpty(addition.Text))
             {
                 blocks.Add(addition.Text);
             }
@@ -169,9 +170,16 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
                 _ = state.TryGetValue(hook.Name, out stored);
             }
 
-            state[hook.Name] = await hook
-                .OnSessionOpeningAsync(new SessionOpening(scope, reason, stored), cancellationToken)
-                .ConfigureAwait(false);
+            try
+            {
+                state[hook.Name] = await hook
+                    .OnSessionOpeningAsync(new SessionOpening(scope, reason, stored), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Turn hook {HookName} failed while the session opened; its state is unchanged.", hook.Name);
+            }
         }
     }
 }

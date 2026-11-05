@@ -473,6 +473,64 @@ public sealed class PersonaSupervisorFileChangesTests
         Assert.Equal([$"Watched folder 'Nope' is not an Agent or a folder inside {dataDirName}."], plan.Warnings);
     }
 
+    /// <summary>Spec §6.10: with File Changes on, the plan carries the tracker's own Memory Tool path resolver.</summary>
+    [Fact]
+    public async Task Supervisor_PlanCarriesTheTrackersMemoryPaths()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+
+        var plan = PlanFor(fixture, TestPersonas.Nova, withTracker: true);
+
+        Assert.NotNull(plan.MemoryPaths);
+        Assert.Same(tracker.MemoryPaths, plan.MemoryPaths);
+    }
+
+    /// <summary>Spec §6.10: with File Changes off the plan carries no Memory Tool path resolver.</summary>
+    [Fact]
+    public async Task Supervisor_PlanCarriesNoMemoryPaths_WhenFileChangesOff()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:FileChanges:Enabled"] = "false" }, cts);
+
+        var plan = PlanFor(fixture, TestPersonas.Nova, withTracker: true);
+
+        Assert.Null(plan.MemoryPaths);
+    }
+
+    /// <summary>
+    /// A Watched Folder the Persona declares, outside its default scope, reaches the tracker through the plan's pipeline:
+    /// a file added there after the first Turn is listed on the next.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_PlanHooks_DeclaredWatches_ReachTheTracker()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        var room = await directory.CreateRoomAsync("RoomA", [KnownIds.Human], ct);
+        var shared = Path.Combine(options.Value.DataDir, "Shared");
+        Directory.CreateDirectory(shared);
+        var persona = new Persona("nova", "---\nName: nova\nTitle: nova\nAlias: nova\nWatches: Shared\n---\nYou are Nova.");
+        var plan = PlanFor(fixture, persona, withTracker: true);
+        Dictionary<string, string?> state = new(StringComparer.Ordinal);
+        var first = await plan.Hooks.BeforeTurnAsync(room.Id, state, ct, ct);
+        await plan.Hooks.AfterTurnAsync(room.Id, state, first, [], ct);
+        var added = Path.Combine(shared, "new.md");
+        File.WriteAllText(added, "x");
+
+        var second = await plan.Hooks.BeforeTurnAsync(room.Id, state, ct, ct);
+
+        var block = Assert.Single(second.Blocks);
+        Assert.Contains(added, block, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
     /// <summary>Calls <c>PlanStart</c> on a hand-built supervisor over <paramref name="fixture"/>, with or without its File Changes tracker.</summary>
     private static PersonaSupervisor.StartPlan PlanFor(PipeHostFixture fixture, Persona persona, bool withTracker)
     {

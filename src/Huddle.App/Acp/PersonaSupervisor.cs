@@ -633,16 +633,14 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         }
     }
 
-    /// <summary>What <see cref="PlanStart"/> decided for one start: the file-reading flag, the tracker and the Degraded warnings.</summary>
+    /// <summary>What <see cref="PlanStart"/> decided for one start: the file-reading flag, the hooks, the memory paths and the Degraded warnings.</summary>
     /// <param name="ReadsFiles">Whether the resolved Adapter Profile can read files.</param>
     /// <param name="Warnings">The Adapter, Skill and watch warnings to report as one Degraded reason; empty when there are none.</param>
-    /// <param name="Tracker">The File Changes tracker the runner gets, or <see langword="null"/> when File Changes is off for it.</param>
     /// <param name="Hooks">The Turn hook pipeline the runner gets.</param>
     /// <param name="MemoryPaths">The Memory Tool's path resolver while File Changes is on; otherwise <see langword="null"/>.</param>
     internal readonly record struct StartPlan(
         bool ReadsFiles,
         IReadOnlyList<string> Warnings,
-        FileChangeTracker? Tracker,
         TurnHookPipeline Hooks,
         MemoryPaths? MemoryPaths);
 
@@ -736,7 +734,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         // FC §6.10, §6.11: File Changes is off for this Persona when the tracker itself is
         // absent (finding P-13), Team:FileChanges:Enabled is false, or the resolved Adapter
-        // Profile cannot read files - any of the three, the runner gets no tracker.
+        // Profile cannot read files - any of the three, the pipeline holds no File Changes hook
+        // and the plan carries no Memory Tool paths.
         bool fileChangesOn = this.options.FileChanges.Enabled && profile.ReadsFiles && this.fileChanges is not null;
         FileChangeTracker? tracker = fileChangesOn ? this.fileChanges : null;
         IReadOnlyList<string> declaredWatches = identity?.Watches ?? [];
@@ -765,7 +764,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         TurnHookScope scope = new(persona.Name, profile.ReadsFiles, fileChangesOn, declaredWatches);
         TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>());
-        return new StartPlan(profile.ReadsFiles, warnings, tracker, hooks, tracker?.MemoryPaths);
+        return new StartPlan(profile.ReadsFiles, warnings, hooks, tracker?.MemoryPaths);
     }
 
     /// <summary>Creates the runner for a Persona from its start plan.</summary>
@@ -779,7 +778,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         // Library reaches every runner as a null collector, the same "absent means off" shape
         // File Changes and every other optional collaborator here already use.
         return new PersonaRunner(
-            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), plan.Tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references, contextFill: this.contextFill, sessionSettings: this.sessionSettings, lastCatchUp: this.lastCatchUp, hooks: plan.Hooks);
+            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references, contextFill: this.contextFill, sessionSettings: this.sessionSettings, lastCatchUp: this.lastCatchUp, hooks: plan.Hooks, memoryPaths: plan.MemoryPaths);
     }
 
     /// <summary>Reports Starting, then any Degraded warnings, then starts the runner; a start failure is reported Offline and the runner disposed.</summary>

@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task count they name.
 - Task 1.8 is a gate: if it fails, work stops for the Human before D2. Paid tasks need the Human's approval each time.
 
-**Status:** 24 of 76 tasks Done · 1 of 4 retrospectives done · last updated 2026-11-04.
+**Status:** 31 of 76 tasks Done · 1 of 4 retrospectives done · last updated 2026-11-04.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -30,8 +30,8 @@ never by hand, so the status line stays true.
 | 1.5.i Wire the pipeline in, beside the old path | | | ✔ |
 | 1.6.t The Persona's pipeline is built once | | | ✔ |
 | 1.6.i Thread the pipeline through | | | ✔ |
-| 1.7 Delete the old path, Personas tests | | ✔ | |
-| 1.8 Delete the old path, Agents and Hosted tests; the gate | ✔ | | |
+| 1.7 Delete the old path, Personas tests | | | ✔ |
+| 1.8 Delete the old path, Agents and Hosted tests; the gate | | | ✔ |
 | **D2. Session state for hooks** | | | |
 | 🔁 R1 Retrospective after task 15 | | | ✔ |
 | 2.1.t `HookState` on the entry | ✔ | | |
@@ -56,12 +56,12 @@ never by hand, so the status line stays true.
 | 3.5.i `AgentsMdScopes` | | | ✔ |
 | **D4. The ledger** | | | |
 | 4.1.t Observing a file | | | ✔ |
-| 4.1.i Ledger storage and `Observe` | | ✔ | |
-| 4.2.t Starting a judgement | ✔ | | |
-| 4.2.i `TryStartJudgement` | ✔ | | |
-| 4.3.t Settling an edit | ✔ | | |
-| 4.3.i The commits and the wait | ✔ | | |
-| 4.4.t `Since` and pruning | ✔ | | |
+| 4.1.i Ledger storage and `Observe` | | | ✔ |
+| 4.2.t Starting a judgement | | | ✔ |
+| 4.2.i `TryStartJudgement` | | | ✔ |
+| 4.3.t Settling an edit | | | ✔ |
+| 4.3.i The commits and the wait | | | ✔ |
+| 4.4.t `Since` and pruning | | ✔ | |
 | 4.4.i `Since`, pruning, `FirstSightHash` | ✔ | | |
 | **D5. The Helper** | | | |
 | 5.1.t The Feed record | ✔ | | |

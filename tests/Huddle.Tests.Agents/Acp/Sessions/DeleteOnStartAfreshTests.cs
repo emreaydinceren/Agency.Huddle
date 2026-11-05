@@ -354,8 +354,6 @@ public sealed class DeleteOnStartAfreshTests
                 scheduler: new ImmediateTurnScheduler(),
                 prompts: new FakePromptSource(),
                 options: new AcpOptions(),
-                fileChanges: null,
-                declaredWatches: [],
                 logger: logger ?? NullLogger.Instance,
                 runToken: runCts.Token,
                 persona: Nova,

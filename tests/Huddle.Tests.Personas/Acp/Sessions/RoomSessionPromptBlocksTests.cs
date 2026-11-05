@@ -55,8 +55,6 @@ public sealed class RoomSessionPromptBlocksTests
             scheduler: new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
             runToken: runCts.Token,
             persona: Nova,

@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Elicitation;
@@ -14,7 +15,7 @@ namespace Agency.Huddle.Tests.FileChanges;
 
 /// <summary>
 /// Pins <see cref="FileChangesTurnHook"/> on its own, per Spec §6.7 "WorkItem" and §6.10 "Which steps use it": it renders
-/// the same bytes as the block <c>RoomSession.AppendFileChangesBlock</c> writes today, applies exactly when File Changes
+/// the bytes the Room Session's old File Changes step wrote into the prompt, applies exactly when File Changes
 /// are on, carries the collected scan from Before to After, and owns the error handling the Room Session had.
 /// </summary>
 public sealed class FileChangesTurnHookTests
@@ -147,6 +148,78 @@ public sealed class FileChangesTurnHookTests
         Assert.Equal($"Persona '{PersonaName}' failed to commit File Changes for room  .", entry.Message);
     }
 
+    /// <summary>A cancelled token is not logged as a collect failure: it escapes Before so the Turn stops.</summary>
+    [Fact]
+    public async Task BeforeTurn_Cancelled_Propagates()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingLogger<FileChangesTurnHook> logger = new();
+        using Fixture fixture = await CreateFixtureAsync(ct, logger);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            fixture.Hook.BeforeTurnAsync(new TurnStarting(Scope(), roomId, null), cancelled.Token));
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>A cancelled token is not logged as a commit failure: it escapes After.</summary>
+    [Fact]
+    public async Task AfterTurn_Cancelled_Propagates()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingLogger<FileChangesTurnHook> logger = new();
+        using Fixture fixture = await CreateFixtureAsync(ct, logger);
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string roomB = await CreateRoomAsync(fixture, "RoomB", ct);
+
+        // The commit consults the token only to check the Persona's other Rooms still exist, so a Turn in Room A
+        // is committed first and the cancelled commit is the one in Room B.
+        TurnAddition? first = await fixture.Hook.BeforeTurnAsync(new TurnStarting(Scope(), roomA, null), ct);
+        await ((ITurnHook)fixture.Hook).AfterTurnAsync(new TurnEnded(Scope(), roomA, null, []), first, ct);
+        TurnAddition? before = await fixture.Hook.BeforeTurnAsync(new TurnStarting(Scope(), roomB, null), ct);
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ((ITurnHook)fixture.Hook).AfterTurnAsync(new TurnEnded(Scope(), roomB, null, []), before, cancelled.Token));
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>A rendering bug escapes Before (the pipeline logs it by hook name) and is not reported as a failed collect.</summary>
+    [Fact]
+    public async Task BeforeTurn_RenderThrows_Propagates_AndIsNotLoggedAsACollectFailure()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingLogger<FileChangesTurnHook> logger = new();
+        using Fixture fixture = await CreateFixtureAsync(ct, logger, new ThrowingPrompts());
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        string workDir = Path.Combine(fixture.DataDir.Path, "Agents", PersonaName, "work");
+        Directory.CreateDirectory(workDir);
+        TurnAddition? first = await fixture.Hook.BeforeTurnAsync(new TurnStarting(Scope(), roomId, null), ct);
+        await ((ITurnHook)fixture.Hook).AfterTurnAsync(new TurnEnded(Scope(), roomId, null, []), first, ct);
+        File.WriteAllText(Path.Combine(workDir, "new.md"), "x");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fixture.Hook.BeforeTurnAsync(new TurnStarting(Scope(), roomId, null), ct));
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>A prompt source whose every render fails, for a rendering bug.</summary>
+    private sealed class ThrowingPrompts : IPromptSource
+    {
+        /// <inheritdoc />
+        public string Render(string key, IReadOnlyDictionary<string, string> values) =>
+            throw new InvalidOperationException("render failed");
+
+        /// <inheritdoc />
+        public string Raw(string key) => throw new InvalidOperationException("render failed");
+
+        /// <inheritdoc />
+        public bool IsOverridden(string key) => false;
+    }
+
     /// <summary>The scope of the Persona under test: reads files, File Changes on, no declared watches.</summary>
     private static TurnHookScope Scope() => new(PersonaName, true, true, []);
 
@@ -161,7 +234,7 @@ public sealed class FileChangesTurnHookTests
     /// Builds a real tracker over a temp data directory holding a Persona "Nova", as <c>FileChangeTrackerTests</c> does,
     /// and the hook under test over it.
     /// </summary>
-    private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct, ILogger<FileChangesTurnHook>? logger = null)
+    private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct, ILogger<FileChangesTurnHook>? logger = null, IPromptSource? prompts = null)
     {
         TempDataDir dataDir = new();
         IOptions<TeamOptions> options = dataDir.Options();
@@ -180,7 +253,7 @@ public sealed class FileChangesTurnHookTests
         FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
         WatchedFolderResolver resolver = new(options, agentPaths);
         FileChangeTracker tracker = new(store, personas, directory, resolver, options, agentPaths, NullLogger<FileChangeTracker>.Instance);
-        FileChangesTurnHook hook = new(tracker, new FakePromptSource(), logger ?? NullLogger<FileChangesTurnHook>.Instance);
+        FileChangesTurnHook hook = new(tracker, prompts ?? new FakePromptSource(), logger ?? NullLogger<FileChangesTurnHook>.Instance);
 
         return new Fixture(dataDir, directory, personas, tracker, hook);
     }

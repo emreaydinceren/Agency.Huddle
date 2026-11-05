@@ -37,5 +37,5 @@ internal abstract class TurnHook<TCarry> : ITurnHook
 
     /// <inheritdoc />
     Task<string?> ITurnHook.AfterTurnAsync(TurnEnded turn, TurnAddition? addition, CancellationToken cancellationToken) =>
-        this.AfterTurnAsync(turn, addition?.Carry as TCarry, cancellationToken);
+        this.AfterTurnAsync(turn, (TCarry?)addition?.Carry,cancellationToken);
 }

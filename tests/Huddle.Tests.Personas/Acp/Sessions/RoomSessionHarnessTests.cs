@@ -37,8 +37,6 @@ public sealed class RoomSessionHarnessTests
             scheduler: new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: new Agency.Huddle.App.Acp.AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
             runToken: runCts.Token);
         RoomSessionHarness harness = RoomSessionHarness.Adopt(session, runCts);
@@ -62,8 +60,6 @@ public sealed class RoomSessionHarnessTests
             scheduler: new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: new Agency.Huddle.App.Acp.AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
             runToken: runCts.Token);
 
