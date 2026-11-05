@@ -179,16 +179,26 @@ internal sealed class TaskService : IDisposable
         ArgumentNullException.ThrowIfNull(actor);
 
         TaskChange? change;
+        TaskChange? moved = null;
         TaskResult result;
         RefusedMove? refusedMove;
         lock (this.mutateGate)
         {
             (result, change) = this.UpdateCore(id, patch, baseVersion, actor, humanOverridesGates, out refusedMove);
+            if (change is not null && change.Changes.Any(static field => field.Field is TaskField.Status or TaskField.HumanGate))
+            {
+                moved = this.MoveReadyToNeedsYou(change.After, actor);
+            }
         }
 
         if (change is not null)
         {
             this.RaiseChange(change);
+        }
+
+        if (moved is not null)
+        {
+            this.RaiseChange(moved);
         }
 
         if (refusedMove is not null)
@@ -445,10 +455,15 @@ internal sealed class TaskService : IDisposable
         ArgumentNullException.ThrowIfNull(actor);
 
         TaskChange? change;
+        TaskChange? moved = null;
         TaskResult result;
         lock (this.mutateGate)
         {
             (result, change) = this.AddEvidenceCore(id, line, actor);
+            if (change is not null)
+            {
+                moved = this.MoveReadyToNeedsYou(change.After, actor);
+            }
         }
 
         if (change is not null)
@@ -456,7 +471,51 @@ internal sealed class TaskService : IDisposable
             this.RaiseChange(change);
         }
 
+        if (moved is not null)
+        {
+            this.RaiseChange(moved);
+        }
+
         return result;
+    }
+
+    /// <summary>
+    /// Moves a gated Task that is in Review with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
+    /// <see cref="HumanGateRules.Check"/> with Huddle as the actor. It does nothing for the Human's own change, for a Task
+    /// that is not gated, not in Review, closed or already accepted, or whose Proof is open. The caller raises the returned change
+    /// after it has left the lock, as every other mutation does.
+    /// </summary>
+    /// <param name="task">The Task as just written.</param>
+    /// <param name="by">Who made the write that may have made the Task ready.</param>
+    /// <returns>The change that was written, or <see langword="null"/> when the Task did not move.</returns>
+    private TaskChange? MoveReadyToNeedsYou(TaskItem task, TaskActor by)
+    {
+        if (by.Kind == TaskActorKind.Human
+            || !task.IsGated
+            || task.Status != TaskState.Review
+            || task.Location.Closed
+            || Acceptance.Of(task).State == AcceptanceState.Valid)
+        {
+            return null;
+        }
+
+        Proof proof = this.ProofOf(task);
+        TaskItem candidate = task with { Status = TaskState.NeedsYou };
+        if (!proof.IsComplete
+            || HumanGateRules.Check(task, candidate, TaskActors.Huddle, proof, this.human.Name) is not null
+            || this.store.ReadText(task.Id) is not { } text)
+        {
+            return null;
+        }
+
+        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(task, candidate);
+        string counts = string.Create(CultureInfo.InvariantCulture, $"{proof.MetCount}/{proof.Total}");
+        string summary = TaskDiff.Summarise(diff).Replace(" → Needs You", $" → Needs You (Proof {counts})", StringComparison.Ordinal);
+        ChangeLogEntry entry = new(TruncateToSeconds(this.clock.GetUtcNow()), TaskActors.Huddle.Name, summary);
+        string finalText = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, candidate), entry);
+
+        TaskItem? written = this.store.Write(task, task.Version, finalText);
+        return written is null ? null : new TaskChange(task, written, diff, TaskActors.Huddle, entry);
     }
 
     /// <summary>The body of <see cref="AddEvidence"/>, run under <see cref="mutateGate"/>.</summary>
