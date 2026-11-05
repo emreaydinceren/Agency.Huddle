@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
@@ -11,6 +12,7 @@ using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Helpers.AgentsMdChange;
 using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
@@ -100,6 +102,23 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TeamMemoryHelper>(),
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>>()));
+
+        // AGENTS.md Changes spec §6.2: the ledger reaches the dispatcher and the Helper through factories, because the dispatcher
+        // depends on this Helper's invoker, the Helper on the ledger, and the registry on every Helper.
+        services.AddSingleton(static sp => new AgentsMdLedger(
+            sp.GetRequiredService<HelperDispatcher>,
+            sp.GetRequiredService<AgentsMdChangeHelper>,
+            sp.GetRequiredService<HelperSettingsResolver>(),
+            sp.GetRequiredService<HelperBudget>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<ILogger<AgentsMdLedger>>(),
+            sp.GetService<TimeProvider>()));
+        services.AddSingleton<AgentsMdChangeHelper>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<AgentsMdChangeHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>(
+            sp.GetRequiredService<AgentsMdChangeHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>>()));
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 
@@ -628,7 +647,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
 
         // Which AGENTS.md files apply to a named Agent, from its Team labels and the catalog's spelling (AGENTS.md changes §6.7).
-        services.AddSingleton<Agency.Huddle.App.AgentsMdChanges.AgentsMdScopes>();
+        services.AddSingleton<AgentsMdScopes>();
 
         // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
         // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).
