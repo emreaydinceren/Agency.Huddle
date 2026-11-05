@@ -2164,14 +2164,15 @@ replies, and a job for you puts its Room on [Needs you](#needs-you) until you po
 To schedule one, click **Scheduled** in the Activity bar, then **New job**:
 
 1. Choose who it is for, and give it a title and an instruction.
-2. Choose how it repeats: once, every day, every weekday, on chosen days, or every few hours.
+2. Choose how it repeats: once, every day, every weekday, on chosen days, every month on a day you pick (the 1st to the 31st), or every few hours. A day that a month does not have, such as the 31st in April, runs on that month's last day.
 3. Check the **Next runs** preview, then click **Schedule**.
 
 A job's page shows when it runs next and how its last run went, with **Edit…**, **Pause**, **Run now**, **Open Room** and
 **Delete job…**. Deleting a job keeps its Room.
 
-Agents schedule their own jobs with the `jobs` tool. Only the Chief of Staff can schedule a job for another Agent or for
-you, so you can ask it: "remind me every Friday at 16:00 to send the weekly update".
+Agents schedule their own jobs with the `jobs` tool. A manager can also schedule a job for a member of its Team. Only the
+Chief of Staff can schedule a job for any other Agent or for you, so you can ask it: "remind me every Friday at 16:00 to
+send the weekly update".
 
 Jobs are kept in `schedule.md`: beside each Agent's definition in its Agent folder, and in `Human/schedule.md` under
 the data folder for yours. You can edit the file by hand; a line Huddle cannot read is listed on the Scheduled page and

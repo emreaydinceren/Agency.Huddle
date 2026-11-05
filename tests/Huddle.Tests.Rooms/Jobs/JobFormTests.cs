@@ -13,12 +13,12 @@ public sealed class JobFormTests
     [Fact]
     public void WhenText_EachPreset_UsesTheSharedGrammar()
     {
-        JobForm form = new() { Date = "2026-11-05", Time = "14:30", Hours = 6 };
+        JobForm form = new() { Date = "2026-11-05", Time = "14:30", Hours = 6, DayOfMonth = 15 };
         form.Set(DayOfWeek.Monday, true);
         form.Set(DayOfWeek.Thursday, true);
 
         Assert.Equal(
-            ["once on 2026-11-05 at 14:30", "daily at 14:30", "weekdays at 14:30", "weekly on mon,thu at 14:30", "every 6 hours"],
+            ["once on 2026-11-05 at 14:30", "daily at 14:30", "weekdays at 14:30", "weekly on mon,thu at 14:30", "monthly on 15 at 14:30", "every 6 hours"],
             Enum.GetValues<JobCadence>().Select(cadence =>
             {
                 form.Cadence = cadence;
@@ -56,6 +56,44 @@ public sealed class JobFormTests
 
         Assert.False(form.TryBuild(out _, out string? error));
         Assert.Equal("Choose at least one day.", error);
+    }
+
+    /// <summary>A monthly Job's timetable fills the form (day and time) and reads back unchanged, including the 31st.</summary>
+    [Fact]
+    public void From_Monthly_RoundTripsThroughWhenText()
+    {
+        JobRecurrence monthly = JobRecurrence.Monthly(31, new TimeOnly(9, 30));
+
+        JobForm form = JobForm.From(monthly);
+
+        Assert.Equal(31, form.DayOfMonth);
+        Assert.Equal("monthly on 31 at 09:30", form.WhenText());
+        Assert.True(form.TryBuild(out JobRecurrence? built, out _));
+        Assert.Equal(monthly, built);
+    }
+
+    /// <summary>A monthly form with no day (zero) or one past 31 is refused with the grammar's message.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(32)]
+    public void TryBuild_MonthlyWithoutAValidDay_IsRefused(int day)
+    {
+        JobForm form = new() { Cadence = JobCadence.Monthly, DayOfMonth = day };
+
+        Assert.False(form.TryBuild(out JobRecurrence? when, out string? error));
+        Assert.Null(when);
+        Assert.Equal("A monthly Job runs on day 1 to 31.", error);
+    }
+
+    /// <summary>A form for any other preset ignores its day of month, and a new form's day is not zero.</summary>
+    [Fact]
+    public void DayOfMonth_OtherPresets_AreUnaffected()
+    {
+        JobForm form = new() { Cadence = JobCadence.Daily, Time = "08:00" };
+
+        Assert.InRange(form.DayOfMonth, 1, 31);
+        Assert.Equal("daily at 08:00", form.WhenText());
+        Assert.Equal(1, JobForm.From(JobRecurrence.Daily(new TimeOnly(8, 0))).DayOfMonth);
     }
 
     /// <summary>A new form starts on today's date in the Human's zone.</summary>

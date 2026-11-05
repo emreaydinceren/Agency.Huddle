@@ -15,7 +15,7 @@ Built 2026-11-02 on `feat/schedules`. Applies while `Team:Jobs:Enabled` is `true
 | **owner** | Who it is for, which is also whose `schedule.md` holds it: an Agent, or the Human |
 | **title** | The section heading; names the Job Room |
 | **instruction** | Posted into the Job Room on every run |
-| **when** | One of five presets (§2) |
+| **when** | One of six presets (§2) |
 | **timezone** | An IANA or Windows id; absent means this machine's zone |
 | **by** | Who scheduled it, by Name |
 | **paused** | A paused Job never runs |
@@ -31,11 +31,15 @@ spelled in full.
 | Every day | `daily at 09:00` |
 | Monday to Friday | `weekdays at 09:00` |
 | Chosen days | `weekly on mon,thu at 09:00` |
+| Every month, on a day (1 to 31) | `monthly on 15 at 09:00` |
 | Every N hours (1 to 168) | `every 4 hours` |
 
 A time of day is wall-clock time in the Job's zone. A time skipped by a daylight-saving jump runs as far past the jump
 as it was set past its start (02:30 on a 02:00-to-03:00 night runs at 03:30); a time that happens twice runs at the
 first. An interval counts from the run before.
+
+A monthly Job runs on its day in every month. A day past that month's end runs on the last day of the month: the 31st
+runs on 30 April and on 28 or 29 February, so no month is skipped.
 
 ## 3. Where Jobs are kept
 
@@ -100,15 +104,20 @@ Summarise yesterday's Room activity for the Human and list anything waiting on t
 | Action | Takes | Does |
 | --- | --- | --- |
 | `create` | `title`, `instruction`, `when`, optional `timezone` and `target` | Adds a Job; the answer names its id and next run |
-| `list` | nothing | The caller's Jobs as JSON; every Job for the Chief of Staff |
+| `list` | nothing | The Jobs the caller may manage, as JSON: its own, a manager's Team members' and, for the Chief of Staff, every Job |
 | `update` | `id`, any of the create fields | Changes only the fields given; `target` moves the Job |
 | `pause`, `resume` | `id` | |
 | `delete` | `id` | Its Room stays |
 | `run_now` | `id` | Runs it at once |
 
-`target` is an Agent's Name or Alias, or the Human's Name, and defaults to the caller. Acting on a Job whose owner is not
-the caller, or creating one for someone else, is refused unless the caller is the built-in Chief of Staff:
-"You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human."
+`target` is an Agent's Name or Alias, or the Human's Name, and defaults to the caller. Acting on a Job, or creating one, for
+an owner other than the caller is allowed in two cases: a manager may act for a member of a Team it manages (an Agent
+only, never the Human or another Team's Agent), and the built-in Chief of Staff may act for any Agent or the Human. Any
+other case is refused: "You can schedule Jobs for yourself and for members of a Team you manage. Ask the Chief of Staff
+to schedule one for anyone else or for the Human." A manager's Job keeps `by:` as the manager who scheduled it.
+
+An Agent schedules exactly what was approved. If it can't, because of who the Job is for or when it runs, it says what it
+cannot do and asks; it does not pick something close. A Job's title must match its schedule.
 
 ## 7. The Scheduled view
 
@@ -119,7 +128,7 @@ the caller, or creating one for someone else, is refused unless the caller is th
   (`J3`). New job opens the editor.
 - **A Job's page (`J4`)**: its owner and timetable, next and last run with the last outcome, its time zone and author, the
   instruction, and Edit…, Pause or Resume, Run now, Open Room and Delete job….
-- **New job / Edit job (`O1`)**: For, Title, Instruction, Repeats (the five presets) with Date, Time, Days or Every (hours),
+- **New job / Edit job (`O1`)**: For, Title, Instruction, Repeats (the six presets) with Date, Time, Days, Day of the month or Every (hours),
   Time zone, and a preview of the next three runs.
 
 ## 8. Not covered

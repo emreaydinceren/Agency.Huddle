@@ -14,6 +14,9 @@ public sealed class JobRecurrenceTests
     [InlineData("daily at 09:00")]
     [InlineData("weekdays at 07:15")]
     [InlineData("weekly on mon,thu at 09:00")]
+    [InlineData("monthly on 15 at 09:00")]
+    [InlineData("monthly on 1 at 00:00")]
+    [InlineData("monthly on 31 at 23:59")]
     [InlineData("every 4 hours")]
     public void TryParse_EachPreset_RoundTrips(string text)
     {
@@ -37,8 +40,8 @@ public sealed class JobRecurrenceTests
     /// <param name="text">The bad text.</param>
     /// <param name="expected">The reason.</param>
     [Theory]
-    [InlineData("", "A Job needs a time: 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00' or 'every 4 hours'.")]
-    [InlineData("monthly", "'monthly' is not a time Huddle can read. Use one of: 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00' or 'every 4 hours'.")]
+    [InlineData("", "A Job needs a time: 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00', 'monthly on 15 at 09:00' or 'every 4 hours'.")]
+    [InlineData("monthly", "'monthly' is not a time Huddle can read. Use one of: 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00', 'monthly on 15 at 09:00' or 'every 4 hours'.")]
     [InlineData("daily at 25:00", "'25:00' is not a time of day; write it as HH:mm, for example 09:00.")]
     [InlineData("once on 05/11/2026 at 09:00", "'05/11/2026' is not a date; write it as yyyy-MM-dd.")]
     [InlineData("weekly on mon,xyz at 09:00", "'xyz' is not a day; use mon, tue, wed, thu, fri, sat or sun.")]
@@ -135,6 +138,112 @@ public sealed class JobRecurrenceTests
         Assert.Equal("Mon, Thu at 09:00", JobRecurrence.Weekly(JobWeekdays.Monday | JobWeekdays.Thursday, new TimeOnly(9, 0)).Describe());
         Assert.Equal("Every hour", JobRecurrence.EveryHours(1).Describe());
         Assert.Equal("Every 4 hours", JobRecurrence.EveryHours(4).Describe());
+    }
+
+    /// <summary>Day 0, day 32 and a day that is not a number are refused with the allowed range.</summary>
+    /// <param name="text">The bad text.</param>
+    [Theory]
+    [InlineData("monthly on 0 at 09:00")]
+    [InlineData("monthly on 32 at 09:00")]
+    [InlineData("monthly on 100 at 09:00")]
+    public void TryParse_MonthlyDayOutOfRange_IsRefused(string text)
+    {
+        Assert.False(JobRecurrence.TryParse(text, out _, out string? error));
+
+        Assert.Equal("A monthly Job runs on day 1 to 31.", error);
+    }
+
+    /// <summary>A monthly Job with no day is not a time Huddle can read, and the reason quotes the monthly form.</summary>
+    [Fact]
+    public void TryParse_MonthlyWithoutDay_IsRefused()
+    {
+        Assert.False(JobRecurrence.TryParse("monthly at 09:00", out _, out string? error));
+
+        Assert.Equal(
+            "'monthly at 09:00' is not a time Huddle can read. Use one of: 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00', 'monthly on 15 at 09:00' or 'every 4 hours'.",
+            error);
+    }
+
+    /// <summary>The monthly text reads into a Monthly recurrence holding the day and the time, ignoring case and spaces.</summary>
+    [Fact]
+    public void TryParse_Monthly_HoldsTheDayAndTime()
+    {
+        Assert.True(JobRecurrence.TryParse("  Monthly  on 15 at 9:00 ", out JobRecurrence? recurrence, out _));
+
+        Assert.Equal(JobRecurrence.Monthly(15, new TimeOnly(9, 0)), recurrence);
+        Assert.Equal(JobCadence.Monthly, recurrence.Cadence);
+        Assert.Equal(15, recurrence.DayOfMonth);
+    }
+
+    /// <summary>Before the 15th a monthly Job runs this month; at the run and after it, next month.</summary>
+    [Fact]
+    public void NextAfter_Monthly_RunsThisMonthBeforeTheDayAndNextMonthAfter()
+    {
+        JobRecurrence monthly = JobRecurrence.Monthly(15, new TimeOnly(9, 0));
+
+        Assert.Equal(Utc(2026, 11, 15, 9, 0), monthly.NextAfter(Utc(2026, 11, 10, 12, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2026, 11, 15, 9, 0), monthly.NextAfter(Utc(2026, 11, 15, 8, 59), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2026, 12, 15, 9, 0), monthly.NextAfter(Utc(2026, 11, 15, 9, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2026, 12, 15, 9, 0), monthly.NextAfter(Utc(2026, 11, 20, 12, 0), TimeZoneInfo.Utc));
+    }
+
+    /// <summary>The 31st runs on the last day of a 30-day month and never skips it.</summary>
+    [Fact]
+    public void NextAfter_MonthlyOn31_RunsOnTheLastDayOfAShortMonth()
+    {
+        JobRecurrence monthly = JobRecurrence.Monthly(31, new TimeOnly(9, 0));
+
+        Assert.Equal(Utc(2026, 4, 30, 9, 0), monthly.NextAfter(Utc(2026, 4, 1, 0, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2026, 5, 31, 9, 0), monthly.NextAfter(Utc(2026, 4, 30, 9, 0), TimeZoneInfo.Utc));
+    }
+
+    /// <summary>The 31st runs on 28 February in a common year, so January's run is followed by February's.</summary>
+    [Fact]
+    public void NextAfter_MonthlyOn31_RunsOn28FebruaryInACommonYear()
+    {
+        JobRecurrence monthly = JobRecurrence.Monthly(31, new TimeOnly(9, 0));
+
+        Assert.Equal(Utc(2027, 2, 28, 9, 0), monthly.NextAfter(Utc(2027, 1, 31, 9, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2027, 3, 31, 9, 0), monthly.NextAfter(Utc(2027, 2, 28, 9, 0), TimeZoneInfo.Utc));
+    }
+
+    /// <summary>The 30th and the 31st run on 29 February in a leap year.</summary>
+    [Fact]
+    public void NextAfter_MonthlyOn30And31_RunOn29FebruaryInALeapYear()
+    {
+        Assert.Equal(Utc(2028, 2, 29, 9, 0), JobRecurrence.Monthly(31, new TimeOnly(9, 0)).NextAfter(Utc(2028, 2, 1, 0, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2028, 2, 29, 9, 0), JobRecurrence.Monthly(30, new TimeOnly(9, 0)).NextAfter(Utc(2028, 2, 1, 0, 0), TimeZoneInfo.Utc));
+    }
+
+    /// <summary>After this year's last run the next one is in January of the next year.</summary>
+    [Fact]
+    public void NextAfter_MonthlyAcrossTheYearEnd_RollsIntoJanuary()
+    {
+        Assert.Equal(Utc(2027, 1, 15, 9, 0), JobRecurrence.Monthly(15, new TimeOnly(9, 0)).NextAfter(Utc(2026, 12, 20, 0, 0), TimeZoneInfo.Utc));
+        Assert.Equal(Utc(2027, 1, 31, 9, 0), JobRecurrence.Monthly(31, new TimeOnly(9, 0)).NextAfter(Utc(2026, 12, 31, 9, 0), TimeZoneInfo.Utc));
+    }
+
+    /// <summary>A 09:00 monthly Job in Berlin is 08:00 UTC before the spring change and 07:00 UTC after it.</summary>
+    [Fact]
+    public void NextAfter_MonthlyAcrossDaylightSaving_KeepsTheWallClockTime()
+    {
+        Assert.Equal(Utc(2026, 3, 15, 8, 0), JobRecurrence.Monthly(15, new TimeOnly(9, 0)).NextAfter(Utc(2026, 3, 1, 0, 0), Berlin));
+        Assert.Equal(Utc(2026, 4, 15, 7, 0), JobRecurrence.Monthly(15, new TimeOnly(9, 0)).NextAfter(Utc(2026, 3, 15, 8, 0), Berlin));
+    }
+
+    /// <summary>A monthly Job set for 02:30 on the day of the spring jump runs at 03:30 local, as a daily Job does.</summary>
+    [Fact]
+    public void NextAfter_MonthlyOnTheJumpDay_RunsAsFarPastTheJump()
+    {
+        Assert.Equal(Utc(2026, 3, 29, 1, 30), JobRecurrence.Monthly(29, new TimeOnly(2, 30)).NextAfter(Utc(2026, 3, 1, 0, 0), Berlin));
+    }
+
+    /// <summary>The Scheduled view says "Monthly on day 15 at 09:00", and the day is clamped only in the run, not in the text.</summary>
+    [Fact]
+    public void Describe_Monthly_ReadsForTheHuman()
+    {
+        Assert.Equal("Monthly on day 15 at 09:00", JobRecurrence.Monthly(15, new TimeOnly(9, 0)).Describe());
+        Assert.Equal("Monthly on day 31 at 18:30", JobRecurrence.Monthly(31, new TimeOnly(18, 30)).Describe());
     }
 
     private static DateTimeOffset Utc(int year, int month, int day, int hour, int minute) => new(year, month, day, hour, minute, 0, TimeSpan.Zero);

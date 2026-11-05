@@ -649,7 +649,7 @@ moves of Team and Project folders; the archive service is the only mover.
 | Skill `ingest` | The Human asks | For new raw files, propose Memory, Tasks and outputs, each with a Based-on link; wait for OK |
 | Skill `wrap-up` | The Human asks | Propose rules, Memory, outputs and Tasks from the session, grouped by destination; wait for OK |
 | Skill `brain-check` | A weekly or monthly Job | Report caps, outputs with no description, broken links, raw files changed since their baseline, rules in Memory and facts in `AGENTS.md`, quiet Teams and Projects (no file change in 60 days); file findings as Tasks and rule changes as retro proposals; change nothing |
-| Offered Jobs | Chief of Staff onboarding | Offer daily reviews (Chief of Staff Jobs), a weekly `brain-check` per manager (`weekly on fri at 16:00`), a monthly `brain-check` for the Chief of Staff (`weekly on mon at 09:00`, acting only on the first Monday: the Jobs timetable has no monthly preset); create each only on the Human's yes |
+| Offered Jobs | Chief of Staff onboarding | Offer daily reviews (Chief of Staff Jobs), a weekly `brain-check` per manager (`weekly on fri at 16:00`), a monthly `brain-check` for the Chief of Staff (`weekly on mon at 09:00`, acting only on the first Monday: this offer was written before the Jobs timetable gained `monthly on` in #355, and hasn't moved to it); create each only on the Human's yes |
 
 **Implementation notes.**
 

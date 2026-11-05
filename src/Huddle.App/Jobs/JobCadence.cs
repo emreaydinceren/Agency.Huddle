@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Jobs;
 
-/// <summary>The five shapes of a Job's timetable, one per preset the Scheduled view and <c>schedule.md</c> offer.</summary>
+/// <summary>The six shapes of a Job's timetable, one per preset the Scheduled view and <c>schedule.md</c> offer.</summary>
 internal enum JobCadence
 {
     /// <summary>Once, on one date at one time.</summary>
@@ -14,6 +14,9 @@ internal enum JobCadence
 
     /// <summary>On the chosen days of the week at one time.</summary>
     Weekly,
+
+    /// <summary>On one day of every month at one time; a day past the month's end runs on its last day.</summary>
+    Monthly,
 
     /// <summary>Every so many hours.</summary>
     EveryHours,

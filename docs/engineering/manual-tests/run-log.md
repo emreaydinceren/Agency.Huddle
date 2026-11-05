@@ -5370,6 +5370,20 @@ File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-05--only-the-chief-
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Pass | `8c89c795` + uncommitted `feat/schedules` | | Same run. In Ravi's one-to-one, asked for a daily 09:00 Job for the Chief of Staff: Ravi called `jobs` and quoted `You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human.` Nothing was written. In the Chief of Staff's one-to-one, asked for a weekday 09:00 Job for Ravi: the tool answered `Scheduled job-cd16de "Bins check" for Ravi: weekdays at 09:00. It runs next on Tue 3 Nov 2026 at 09:00 (Pacific Standard Time).`; `Agents/Ravi/schedule.md` held it with `by: Chief of Staff`; Scheduled listed `Bins check · Ravi`. The zone in the answer was the Windows id; fixed after the run to name the IANA zone. Both test Jobs were then deleted by removing their files, and the view emptied within a second. Two Turns. |
 
+### JOBS-06 — A monthly Job runs on its day, or on the last day of a short month
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-06--a-monthly-job-runs-on-its-day-or-on-the-last-day-of-a-short-month)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### JOBS-07 — A manager schedules for its Team, and for no one else
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-07--a-manager-schedules-for-its-team-and-for-no-one-else)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Right sidebar: the panels by Subject, Outline, collapse and focus
 
 ### RSIDE-01 — A Room shows Members, Tasks and Documents

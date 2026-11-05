@@ -5,16 +5,18 @@ using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
 /// <summary>
 /// Schedules Jobs: instructions that run on a timetable in their own Job Room. Every Agent may schedule, change and remove its
-/// own Jobs; only the Chief of Staff may do so for another Agent or for the Human. Offered to every Persona while Jobs are on.
+/// own Jobs, a manager may also do so for the members of its Team, and only the Chief of Staff may do so for anyone else or for the Human. Offered to every Persona while Jobs are on.
 /// </summary>
 /// <param name="store">Holds the Jobs.</param>
 /// <param name="scheduler">Works out next runs, runs a Job now and deletes one.</param>
 /// <param name="personas">Resolves a target's Name or Alias and recognises the Chief of Staff.</param>
+/// <param name="teams">Tells which Teams a manager manages and who belongs to them.</param>
 /// <param name="human">The Human's current Name, accepted as a target.</param>
 /// <param name="prompts">Supplies the description.</param>
 /// <param name="personaName">The calling Persona's Name.</param>
@@ -22,12 +24,13 @@ internal sealed class JobsTool(
     JobStore store,
     JobScheduler scheduler,
     PersonaStore personas,
+    ITeamCatalog teams,
     IHumanIdentity human,
     IPromptSource prompts,
     string personaName) : IAppTool
 {
     /// <summary>Said when a Persona other than the Chief of Staff acts on a Job that is not its own.</summary>
-    internal const string Refusal = "You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human.";
+    internal const string Refusal = "You can schedule Jobs for yourself and for members of a Team you manage. Ask the Chief of Staff to schedule one for anyone else or for the Human.";
 
     private static readonly string[] Actions = ["create", "list", "update", "pause", "resume", "delete", "run_now"];
 
@@ -50,7 +53,7 @@ internal sealed class JobsTool(
             ["target"] = Text("Who the Job is for: an Agent's Name or Alias, or the Human's Name. Defaults to you."),
             ["title"] = Text("A short title; it names the Job's Room."),
             ["instruction"] = Text("What to do when the Job runs; posted into its Room."),
-            ["when"] = Text("'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00' or 'every 4 hours'."),
+            ["when"] = Text("One of " + JobRecurrence.Grammar),
             ["timezone"] = Text("An IANA time zone such as Europe/Berlin. Defaults to this machine's."),
         },
         ["required"] = new JsonArray("action"),
@@ -207,7 +210,7 @@ internal sealed class JobsTool(
     {
         bool all = this.IsChiefOfStaff();
         JsonArray rows = [];
-        foreach (Job job in store.Jobs.Where(job => all || job.Owner.IsAgent(personaName)))
+        foreach (Job job in store.Jobs.Where(job => all || this.MayManage(job.Owner)))
         {
             rows.Add(new JsonObject
             {
@@ -252,7 +255,13 @@ internal sealed class JobsTool(
         return false;
     }
 
-    private bool MayManage(JobOwner owner) => owner.IsAgent(personaName) || this.IsChiefOfStaff();
+    private bool MayManage(JobOwner owner) => owner.IsAgent(personaName) || this.IsChiefOfStaff() || this.ManagesTeamOf(owner);
+
+    private bool ManagesTeamOf(JobOwner owner) =>
+        owner.AgentName is { } member
+        && teams.Teams.Any(team =>
+            string.Equals(team.Manager, personaName, StringComparison.OrdinalIgnoreCase)
+            && team.Members.Contains(member, StringComparer.OrdinalIgnoreCase));
 
     private bool IsChiefOfStaff() => personas.Entries.Any(entry =>
         string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal)

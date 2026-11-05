@@ -1116,6 +1116,8 @@ Jobs: scheduled instructions in their own Rooms — [area file](jobs.md)
 | [JOBS-03](jobs.md#jobs-03--the-file-is-the-source-of-truth) |  | Active |  | | not yet run by a person |
 | [JOBS-04](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late) |  | Active |  | | not yet run by a person |
 | [JOBS-05](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others) | 💰 | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Ravi was refused with the exact text; the Chief of Staff scheduled `Bins check` for Ravi (`by: Chief of Staff`) |
+| [JOBS-06](jobs.md#jobs-06--a-monthly-job-runs-on-its-day-or-on-the-last-day-of-a-short-month) |  | Active |  | | added 2026-11-04, not yet run by a person |
+| [JOBS-07](jobs.md#jobs-07--a-manager-schedules-for-its-team-and-for-no-one-else) | 💰 | Active |  | | added 2026-11-04, not yet run by a person |
 
 ## second-brain
 
