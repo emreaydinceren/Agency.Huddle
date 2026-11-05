@@ -317,6 +317,18 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Team:AgentsMd:MaxCharsPerFile` | `8000` | The most characters one `AGENTS.md` contributes to a session's system prompt; a longer file is cut and the cut line names the file. Replaces `Team:Instructions:MaxChars`. Second Brain Spec §7.4. |
 | `Team:AgentsMd:MaxTotalChars` | `32000` | The budget for the whole `AGENTS.md` block; Project files are dropped from the end first, then the rest are cut. Second Brain Spec §7.4. |
+| `Team:AgentsMd:NoticeWaitSeconds` | `30` | How long a Turn waits after the judgement of the current text started. `0` never waits. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:DebounceSeconds` | `60` | How long a file must stay unchanged before a judgement starts with no Turn asking. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MinJudgeSeconds` | `300` | The least time between two judgements of one file, whoever asks. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:PollSeconds` | `10` | How often the watcher checks the files. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxSkipChangedChars` | `200` | The largest edit a "not meaningful" Verdict may skip. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxRevisionsKept` | `20` | Revisions kept per file. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxNoticesPerFile` | `5` | Revisions told per file in one Turn. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxNoticeChars` | `8000` | The cap on one Turn's change-notice block. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxComparisonChars` | `4000` | The cap on one fallback's changed lines. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxHelperComparisonChars` | `12000` | The cap on the comparison the change Helper sees. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxHelperFileChars` | `16000` | The largest new text shown to the change Helper. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxLedgerChars` | `256000` | The largest body whose text the change ledger keeps. AgentsMd Changes Spec §6.9. |
 | `Team:Teams:MaxHuddleMemoryEntries` | `30` | The cap on the Huddle-wide Memory index (`Teams/memory/`) in a session's system prompt. Second Brain Spec §7.4. |
 | `Team:Outputs:MaxIndexEntries` | `40` | The cap on the outputs index, shared across an Agent's Teams; the rest are counted as "N more in folder". Second Brain Spec §7.4. |
 | `Team:SecondBrain:QuietDays` | `60` | The days without a change after which `brain-check` calls a Team or Project quiet. Second Brain Spec §7.4. |

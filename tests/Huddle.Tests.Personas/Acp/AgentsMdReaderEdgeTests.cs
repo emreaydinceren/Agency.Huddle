@@ -121,4 +121,15 @@ public sealed class AgentsMdReaderEdgeTests : IDisposable
         AgentsMdSection section = Assert.Single(snapshot.Sections);
         Assert.Equal("A", section.Team);
     }
+
+    /// <summary>A CRLF file's section keeps its bytes: the reader does not normalise line endings (Spec §6.1).</summary>
+    [Fact]
+    public void Read_CrLfFile_KeepsItsBytes()
+    {
+        Write(Path.Combine(this.TeamsRoot, "A"), "Rule one.\r\nRule two.\r\n");
+
+        AgentsMdSnapshot snapshot = Reader(new()).Read(this.TeamsRoot, ["A"]);
+
+        Assert.Equal("Rule one.\r\nRule two.\r\n", Assert.Single(snapshot.Sections).Text);
+    }
 }

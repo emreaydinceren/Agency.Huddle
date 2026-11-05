@@ -28,6 +28,7 @@ internal static class FeedSourceTypes
         FeedSourceType.HelperPaused => "helper-paused",
         FeedSourceType.HelperFailing => "helper-failing",
         FeedSourceType.TeamMemoryNotFiled => "team-memory-not-filed",
+        FeedSourceType.AgentsMdChangeSkipped => "agents-md-change-skipped",
         FeedSourceType.PairingRequested => "pairing-requested",
         FeedSourceType.AdminRequested => "admin-requested",
         FeedSourceType.DevicePaired => "device-paired",

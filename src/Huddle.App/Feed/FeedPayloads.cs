@@ -33,6 +33,7 @@ internal static class FeedPayloads
         FeedSourceType.HelperPaused => typeof(HelperPausedPayload),
         FeedSourceType.HelperFailing => typeof(HelperFailingPayload),
         FeedSourceType.TeamMemoryNotFiled => typeof(TeamMemoryNotFiledPayload),
+        FeedSourceType.AgentsMdChangeSkipped => typeof(AgentsMdChangeSkippedPayload),
         FeedSourceType.PairingRequested => typeof(PairingRequestedPayload),
         FeedSourceType.AdminRequested => typeof(AdminRequestedPayload),
         FeedSourceType.DevicePaired => typeof(DevicePairedPayload),
