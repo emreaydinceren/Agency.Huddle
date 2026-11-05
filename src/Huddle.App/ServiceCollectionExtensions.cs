@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<HelperDispatcher>();
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
+        services.AddHostedService<AgentsMdWatcher>();
         services.AddSingleton<NeedsHumanTrigger>();
         services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
         return services;
