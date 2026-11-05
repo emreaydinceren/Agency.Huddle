@@ -625,10 +625,10 @@ Select-String -Path "$data\logs\*.log" -Pattern 'checks-before-merge|merge gate'
 
 **Expect**: Ivy writes the code and tests on a branch and moves the Task to **Review**. Rex reports on the diff without
 editing files. Quinn runs the tests and posts an Evidence line with `dotnet test` and exit code 0. The branch is merged
-into `main` only after that line exists. The Task's Change log tells the story.
+into `main` only after that line exists and you have pressed **Accept**. When the Proof is complete Huddle moves the Task to **Needs you** by itself; you do not have to ask, and no Agent asks you for sign-off in chat. The Task's Change log tells the story.
 
-**Pass if**: the merge follows the Evidence line, a Task ends in **Done**, and Rex's commit count is 0.
-**Fail if**: the Task reaches Done with no Evidence, the merge comes before the Evidence, or anyone edits the repository's `main` without a merge.
+**Pass if**: the merge follows the Evidence line and your **Accept**, a Task ends in **Done**, and Rex's commit count is 0.
+**Fail if**: the Task reaches Done with no Evidence, the merge comes before the Evidence, the merge comes before the Accept, you had to tell an Agent to move the Task to **Needs you**, or anyone edits the repository's `main` without a merge.
 
 ### ZERO-16 — Run the app yourself
 

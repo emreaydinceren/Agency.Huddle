@@ -46,6 +46,21 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(172,PromptCatalog.All.Count);
     }
 
+    /// <summary>The Task prompts tell an Agent that Huddle moves a ready gated Task to Needs You, never to use the Action for hand-offs, and not to ask for approval in chat; the status list names Needs You.</summary>
+    [Fact]
+    public void TaskPrompts_NameNeedsYouAndWhoMovesIt()
+    {
+        string update = PromptCatalog.All.Single(p => p.Key == "tool.updateTask.description").Default;
+        string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
+        string help = PromptCatalog.All.Single(p => p.Key == "getHelp.tasks").Default;
+
+        Assert.Contains("Review to Needs You; Huddle moves it there", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("Never use it for hand-offs or status", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("don't ask for approval in chat", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("Huddle moves a Task in Review to Needs You", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("Huddle does not move the Task then, so move it yourself", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+    }
+
     /// <summary>3.3.t (LR-R12, correction C10): <c>turn.transcriptOmittedOwn</c> is in the catalog directly after <c>turn.transcriptOmitted</c>.</summary>
     [Fact]
     public void TranscriptOmittedOwn_FollowsTranscriptOmitted()

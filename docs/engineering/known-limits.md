@@ -8,6 +8,8 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **Huddle does not always move a ready gated Task to Needs You.**
+  It moves a Task in Review when a write to the Task completes the Proof. A Proof item fed by role coverage or by an attached document's History can complete with no Task write, so the Task stays in Review until the assignee moves it; the Agent prompts (`tool.updateTask.description`, `getHelp.tasks`) say so, and the card says Accept unlocks when the Task moves.
 - **A Team hired with Adapters off is not onboarded, and nothing tries again.**
   `HireService.OnboardManagerAsync` waits a minute for the manager to run, then logs a warning and gives up; `onboarded` stays unset, but no later start posts the steps. The Team keeps its process, so the Human can ask the manager to work through its `## Onboarding`.
 - **Huddle does not advertise `session.compaction`, so an automatic compaction stays invisible.**
