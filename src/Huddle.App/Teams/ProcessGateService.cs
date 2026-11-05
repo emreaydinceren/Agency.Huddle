@@ -79,7 +79,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
         string command = settings.CheckCommand.Trim();
         EvidenceLine? latest = teamEvidence
-            .Where(line => line.ExitCode is not null && string.Equals(line.Command.Trim(), command, StringComparison.Ordinal))
+            .Where(line => line.ExitCode is not null && line.RunsCommand(command))
             .OrderBy(static line => line.Time)
             .LastOrDefault();
         return latest?.ExitCode == 0
