@@ -98,7 +98,13 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
+        ..BuildAgentsMdNoticeParts(),
     ];
+
+    /// <summary>Builds the <c>turn.agentsMd*</c> change-notice prompts, which span four slices.</summary>
+    /// <returns>The prompt definitions of those slices, in catalog order.</returns>
+    private static PromptDefinition[] BuildAgentsMdNoticeParts() =>
+        [.. BuildPart55(), .. BuildPart56(), .. BuildPart57(), .. BuildPart58()];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
@@ -2033,6 +2039,167 @@ internal static class PromptCatalog
                 "The reason logged when an Agent's tool call that changes an original in a raw/ folder is refused (§8.6).",
             Default: "Files in raw/ are kept as they arrived. Add a new file beside the original instead, for example \"<name> - extract.md\".",
             Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the <c>turn.agentsMd*</c> change-notice prompts (AgentsMdChanges Spec §6.6).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart55() =>
+    [
+        new PromptDefinition(
+            Key: "turn.agentsMdHeader",
+            Label: "AGENTS.md change: header",
+            HelperText: "Opens a block telling an Agent that its AGENTS.md rules changed. Said once per block.",
+            Default:
+                "The rules in AGENTS.md changed. What follows applies from now on, in place of what you\n" +
+                "started with. Each level still adds to the one before it, and the more specific rule still wins.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdFile",
+            Label: "AGENTS.md change: file line",
+            HelperText: "Names the file a summary is about. {{displayPath}} is Teams/ plus the file's relative path.",
+            Default: "In {{displayPath}}:",
+            Placeholders: ["{{displayPath}}"], RequiredPlaceholders: ["{{displayPath}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdChange",
+            Label: "AGENTS.md change: added or changed rule",
+            HelperText: "One added or changed rule. {{kind}} is Added or Changed, {{summary}} the rule, {{quote}} the file's own words.",
+            Default: "- {{kind}}: {{summary}}\n  The file says: \"{{quote}}\"",
+            Placeholders: ["{{kind}}", "{{summary}}", "{{quote}}"],
+            RequiredPlaceholders: ["{{kind}}", "{{summary}}", "{{quote}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdRemoved",
+            Label: "AGENTS.md change: removed rule",
+            HelperText: "One removed rule. {{summary}} is the rule, {{quote}} the file's words before the edit.",
+            Default: "- Removed: {{summary}}\n  The file said: \"{{quote}}\"",
+            Placeholders: ["{{summary}}", "{{quote}}"], RequiredPlaceholders: ["{{summary}}", "{{quote}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdFileWins",
+            Label: "AGENTS.md change: the file wins",
+            HelperText: "Ends a summary. {{path}} is the file's full path.",
+            Default: "This is a summary. The file's text wins: {{path}}",
+            Placeholders: ["{{path}}"], RequiredPlaceholders: ["{{path}}"], Timing: PromptTiming.Live),
+
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the summary-ending and fallback <c>turn.agentsMd*</c> prompts.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart56() =>
+    [
+        new PromptDefinition(
+            Key: "turn.agentsMdFileWinsNoFiles",
+            Label: "AGENTS.md change: the file wins (no file tools)",
+            HelperText: "Ends a summary for an Adapter with no file tools.",
+            Default: "This is a summary. The file's text wins.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdComparison",
+            Label: "AGENTS.md change: changed lines",
+            HelperText:
+                "The fallback when no summary is available. {{displayPath}} and {{path}} name the file, {{fence}} is the fence " +
+                "(tildes, longer if a line holds a run of them) and {{lines}} the changed lines.",
+            Default:
+                "In {{displayPath}}, these lines changed. Read the file before you rely on this: {{path}}\n" +
+                "{{fence}}diff\n{{lines}}\n{{fence}}",
+            Placeholders: ["{{displayPath}}", "{{path}}", "{{fence}}", "{{lines}}"],
+            RequiredPlaceholders: ["{{displayPath}}", "{{path}}", "{{fence}}", "{{lines}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdNotShown",
+            Label: "AGENTS.md change: lines left out",
+            HelperText: "Follows the changed lines when the cap cut some. {{count}} is how many were left out.",
+            Default: "…and {{count}} more changed lines.",
+            Placeholders: ["{{count}}"], RequiredPlaceholders: ["{{count}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdMore",
+            Label: "AGENTS.md change: more may have changed",
+            HelperText: "Follows a file's list when it holds exactly 12 changes, the Helper's limit, so the list may be incomplete.",
+            Default: "More rules may have changed: read the file.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
+
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the no-file-tools and whole-file <c>turn.agentsMd*</c> prompts.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart57() =>
+    [
+        new PromptDefinition(
+            Key: "turn.agentsMdComparisonNoFiles",
+            Label: "AGENTS.md change: changed lines (no file tools)",
+            HelperText:
+                "As the changed-lines prompt, for an Adapter with no file tools. {{displayPath}} names the file, {{fence}} is the fence " +
+                "and {{lines}} the changed lines.",
+            Default: "In {{displayPath}}, these lines changed:\n{{fence}}diff\n{{lines}}\n{{fence}}",
+            Placeholders: ["{{displayPath}}", "{{fence}}", "{{lines}}"],
+            RequiredPlaceholders: ["{{displayPath}}", "{{fence}}", "{{lines}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdOlder",
+            Label: "AGENTS.md change: earlier changes",
+            HelperText: "Stands for revisions the caps collapsed. {{count}} is how many, {{displayPath}} names the file.",
+            Default: "…and {{count}} earlier changes to {{displayPath}}; read the file.",
+            Placeholders: ["{{count}}", "{{displayPath}}"], RequiredPlaceholders: ["{{count}}", "{{displayPath}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdOlderNoFiles",
+            Label: "AGENTS.md change: earlier changes (no file tools)",
+            HelperText:
+                "As the earlier-changes prompt, for an Adapter with no file tools. {{fence}} and {{text}} give the file's text now, " +
+                "cut at Team:AgentsMd:MaxCharsPerFile.",
+            Default: "…and {{count}} earlier changes to {{displayPath}}. It now says:\n{{fence}}\n{{text}}\n{{fence}}",
+            Placeholders: ["{{count}}", "{{displayPath}}", "{{fence}}", "{{text}}"],
+            RequiredPlaceholders: ["{{count}}", "{{displayPath}}", "{{fence}}", "{{text}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdNowFollow",
+            Label: "AGENTS.md change: a file now followed",
+            HelperText:
+                "Tells an Agent it now also follows a file. {{path}} is the full path, {{fence}} and {{text}} the file's text, " +
+                "cut at Team:AgentsMd:MaxCharsPerFile.",
+            Default: "You now also follow {{path}}:\n{{fence}}\n{{text}}\n{{fence}}",
+            Placeholders: ["{{path}}", "{{fence}}", "{{text}}"],
+            RequiredPlaceholders: ["{{path}}", "{{fence}}", "{{text}}"],
+            Timing: PromptTiming.Live),
+
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the no-longer and unknown <c>turn.agentsMd*</c> prompts.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart58() =>
+    [
+        new PromptDefinition(
+            Key: "turn.agentsMdNoLonger",
+            Label: "AGENTS.md change: a file no longer applies",
+            HelperText: "Tells an Agent a file no longer applies to it. {{displayPath}} names the file.",
+            Default: "{{displayPath}} no longer applies to you.",
+            Placeholders: ["{{displayPath}}"], RequiredPlaceholders: ["{{displayPath}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdUnknown",
+            Label: "AGENTS.md change: a file changed, nothing known",
+            HelperText: "Tells an Agent a file changed in a way nothing is known about. {{path}} is the full path.",
+            Default: "{{path}} changed since you last heard of it. Read it before you rely on what you started with.",
+            Placeholders: ["{{path}}"], RequiredPlaceholders: ["{{path}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdUnknownNoFiles",
+            Label: "AGENTS.md change: a file changed, nothing known (no file tools)",
+            HelperText:
+                "As the previous prompt, for an Adapter with no file tools. {{displayPath}} names the file, {{fence}} and {{text}} " +
+                "give its text, cut at Team:AgentsMd:MaxCharsPerFile.",
+            Default: "{{displayPath}} changed since you last heard of it. It now says:\n{{fence}}\n{{text}}\n{{fence}}",
+            Placeholders: ["{{displayPath}}", "{{fence}}", "{{text}}"],
+            RequiredPlaceholders: ["{{displayPath}}", "{{fence}}", "{{text}}"],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.agentsMdLevels</c>.</summary>
