@@ -68,6 +68,18 @@ public sealed class BuiltinAgentTests
         Assert.Contains("where each part went", text, StringComparison.Ordinal); // contains-ok: key term of model-facing text
     }
 
+    /// <summary>#384: an undecided idea or plan becomes a Task to decide it, and an instruction on how Agents behave is a rule even inside a fact, with its exact line given to the Human.</summary>
+    [Fact]
+    public void ChiefOfStaff_FilesUndecidedIdeasAsTasksAndRulesInsideFacts()
+    {
+        string text = BuiltinAgent.DefaultText.ReplaceLineEndings(" ");
+
+        Assert.Contains("not yet decided becomes a Task", text, StringComparison.Ordinal); // contains-ok: key term of model-facing text
+        Assert.Contains("the Helper declines an undecided idea", text, StringComparison.Ordinal); // contains-ok: key term of model-facing text
+        Assert.Contains("is a rule even inside a fact", text, StringComparison.Ordinal); // contains-ok: key term of model-facing text
+        Assert.Contains("the exact line to add to AGENTS.md", text, StringComparison.Ordinal); // contains-ok: key term of model-facing text
+    }
+
     /// <summary>#343 and #344: the Chief of Staff's own memory is for its own coordination only, never a fact a Team or every Agent needs.</summary>
     [Fact]
     public void ChiefOfStaff_OwnMemoryIsForCoordinationOnly()

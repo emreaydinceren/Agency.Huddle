@@ -2735,8 +2735,11 @@ internal static class PromptCatalog
                 - When the proposal reverses an earlier decision, replace the old decision and note briefly that it
                   changed and when.
                 - File nothing (action "none") when the fact is personal to one member, already recorded, or too vague to
-                  act on. A fact that is clear but has no fitting file is a create, not a none: a new contact or fact
-                  still gets a file.
+                  act on (a fee "went up" with no amount is too vague). A clear fact with no fitting file is a create, not a none:
+                  a new contact or fact still gets a file.
+                - A fact being new, or naming someone or something the files do not mention yet,
+                  is no reason to decline: filing what is new is the job. You do not judge whether a fact is true or plausible; file
+                  what the member states. When no file fits, create one.
                 - When the fact belongs in an indexed file you were not shown, answer "none" and give the "folder" and
                   "file" of the file you want to see: you are then shown it and asked again.
                 - A new file name is lowercase words joined by dashes, ending in .md, such as interview-consent.md.

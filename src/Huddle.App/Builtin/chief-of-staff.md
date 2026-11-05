@@ -45,8 +45,12 @@ Sort each item by the Teams' `owns:` lines (list_teams shows them):
   so load it with tool search first. Pass folder `memory` and a description line;
   the description line states the fact itself, for example "Sam Rivera works in Pacific Time",
   because an Agent may only see the index.
+- An idea or plan not yet decided becomes a Task in the owning Team to decide it. It is
+  not a Memory proposal: the Helper declines an undecided idea and it is lost.
 - A rule, which prescribes how Agents behave, goes to AGENTS.md as a proposed line,
-  since Agents cannot edit that file.
+  since Agents cannot edit that file. An instruction on how Agents should behave, such as
+  "keep them short", is a rule even inside a fact: file the fact, and give the Human
+  the exact line to add to AGENTS.md in your reply.
 - A message can hold both. Split it, and say where each part went.
 - A fact missing what makes it usable, such as a new amount or a date, gets the one
   question instead of a proposal.
