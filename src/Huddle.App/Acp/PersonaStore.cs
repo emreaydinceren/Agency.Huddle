@@ -455,6 +455,46 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
+    /// Replaces a Persona's file text only if the file still holds <paramref name="expectedText"/>,
+    /// leaving its stored Model, Effort and Work Mode untouched. The compare and the write run under
+    /// the same lock as <see cref="Add"/> and <see cref="Update"/>, and the write is atomic, so a
+    /// Human's edit that lands first is never overwritten and a crash never leaves half a file.
+    /// </summary>
+    /// <param name="name">The Persona's current Name.</param>
+    /// <param name="expectedText">The text the caller judged safe to replace.</param>
+    /// <param name="newText">The text to write; it must load cleanly under the same Name.</param>
+    /// <returns><see langword="true"/> if the file was replaced; <see langword="false"/> if it changed in the meantime or vanished.</returns>
+    /// <exception cref="ChatException"><paramref name="newText"/> would not load cleanly.</exception>
+    public bool TryReplaceText(string name, string expectedText, string newText)
+    {
+        ArgumentNullException.ThrowIfNull(expectedText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newText);
+
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
+        lock (this.writeGate)
+        {
+            var current = this.index.ByName(name);
+            if (current is null || !File.Exists(current.Path)
+                || !string.Equals(File.ReadAllText(current.Path), expectedText, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var entry = this.ValidateCandidate(current.Path, newText, excludingPath: current.Path);
+            if (!string.Equals(entry.Name, current.Name, StringComparison.Ordinal))
+            {
+                throw new ChatException(ErrorCodes.BadMessage, "Replacing the text must not rename the Persona.");
+            }
+
+            AtomicFile.WriteText(current.Path, newText);
+            change = this.PublishFreshIndex();
+        }
+
+        this.NotifyChanged(change);
+        return true;
+    }
+
+    /// <summary>
     /// Deletes a Persona's file, which stops its runner the next time
     /// <see cref="PersonasChanged"/> is observed. This intentionally does NOT cascade: the Agent,
     /// its Rooms, its memberships and its Transcripts all remain in the Team Directory untouched (a

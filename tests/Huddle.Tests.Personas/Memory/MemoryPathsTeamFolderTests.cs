@@ -71,6 +71,46 @@ public sealed class MemoryPathsTeamFolderTests
         }
     }
 
+    /// <summary>Huddle-wide Memory, <c>Teams/memory</c>, resolves to nothing when that folder is a junction or link.</summary>
+    [Fact]
+    public void ResolveFolder_JunctionedHuddleWideMemory_DoesNotResolve()
+    {
+        using TeamMemoryHarness harness = new(supportsReparsePoints: true);
+        string teams = Path.GetDirectoryName(Path.GetDirectoryName(harness.Folder())) ?? string.Empty;
+        string target = Path.Combine(Path.GetDirectoryName(teams) ?? string.Empty, "elsewhere-memory");
+        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(teams);
+        string link = Path.Combine(teams, "memory");
+        CreateLink(link, target);
+        try
+        {
+            Assert.Null(harness.Paths.ResolveFolder("Chief", "memory"));
+        }
+        finally
+        {
+            Directory.Delete(link, recursive: false);
+        }
+    }
+
+    /// <summary>Huddle-wide Memory resolves to nothing when the Teams root itself is a junction or link.</summary>
+    [Fact]
+    public void ResolveFolder_JunctionedTeamsRoot_DoesNotResolve()
+    {
+        using TeamMemoryHarness harness = new(supportsReparsePoints: true);
+        string teams = Path.GetDirectoryName(Path.GetDirectoryName(harness.Folder())) ?? string.Empty;
+        string target = Path.Combine(Path.GetDirectoryName(teams) ?? string.Empty, "elsewhere-teams");
+        Directory.CreateDirectory(Path.Combine(target, "memory"));
+        CreateLink(teams, target);
+        try
+        {
+            Assert.Null(harness.Paths.ResolveFolder("Chief", "memory"));
+        }
+        finally
+        {
+            Directory.Delete(teams, recursive: false);
+        }
+    }
+
     /// <summary>Creates a directory junction on Windows, or a symbolic link elsewhere, from <paramref name="link"/> to <paramref name="target"/>.</summary>
     /// <param name="link">The link to create.</param>
     /// <param name="target">The existing folder it points at.</param>

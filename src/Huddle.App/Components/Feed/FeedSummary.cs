@@ -54,6 +54,7 @@ internal static class FeedSummary
             DeviceRevokedPayload p => new([DeviceChip(p.DeviceName), Text(DeviceEnded(p.Action))], null, OmitActor: true),
             SecondBrainOverCapPayload p => new([Text(p.Message)], null, OmitActor: true),
             TeamArchivedPayload p => new([Text(p.Message)], null, OmitActor: true),
+            BuiltinAgentUpdatePayload p => new([Text(p.Message)], null, OmitActor: true),
             _ => new([Text("Something happened")], null, OmitActor: true),
         };
     }

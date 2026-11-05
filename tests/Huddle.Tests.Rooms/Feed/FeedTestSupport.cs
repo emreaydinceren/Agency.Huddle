@@ -67,6 +67,7 @@ internal static class FeedTestSupport
         FeedSourceType.SecondBrainOverCap => new SecondBrainOverCapPayload("Teams/Home/memory", "Teams/Home/memory has more Memory than Agents are shown (50 of 50 listed). Ask the Team's manager to tidy it."),
         FeedSourceType.TaskWakesPaused => new TaskWakesPausedPayload("GRO-44", "Ship the page", team, "Nova"),
         FeedSourceType.TeamArchived => new TeamArchivedPayload(team, "Team " + team + " archived"),
+        FeedSourceType.BuiltinAgentUpdateAvailable => new BuiltinAgentUpdatePayload(team, "An update exists for " + team),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 

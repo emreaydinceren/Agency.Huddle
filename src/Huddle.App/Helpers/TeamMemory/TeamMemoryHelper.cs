@@ -145,8 +145,12 @@ internal sealed class TeamMemoryHelper(
         TeamMemoryAction? action = ActionOf(verdict);
         if (action is not (TeamMemoryAction.Create or TeamMemoryAction.Update))
         {
-            this.NotFiled(input.Proposal, reason);
-            return new HelperApplied.NoChange();
+            if (this.TryReJudgeWithFile(input, verdict) is { } rejudged)
+            {
+                return rejudged;
+            }
+
+            return this.PlainNone(input.Proposal, reason);
         }
 
         string label = (verdict.Folder ?? string.Empty).Trim();
@@ -177,6 +181,44 @@ internal sealed class TeamMemoryHelper(
         // The candidates are shown in full, frontmatter included, so a model may echo it: the writer strips the echo.
         MemoryWriteResult result = await writer.WriteAsync(folder, file, verdict.Description, verdict.Text, expectedVersion, cancellationToken).ConfigureAwait(false);
         return this.Settle(input, folder, file, reason, result);
+    }
+
+    /// <summary>A none: nothing filed, and a Feed record saying why.</summary>
+    /// <param name="proposal">The proposal.</param>
+    /// <param name="reason">The Verdict's reason, cut.</param>
+    private HelperApplied.NoChange PlainNone(TeamMemoryProposal proposal, string reason)
+    {
+        this.NotFiled(proposal, reason);
+        return new HelperApplied.NoChange();
+    }
+
+    /// <summary>
+    /// A first-attempt none that names a file of the proposal's own Team that is in the index but was not shown: the Helper asked to see
+    /// it, so it is judged once more with that file forced in. Anything else, a second attempt, a name outside the index or a file
+    /// already shown, returns <see langword="null"/> and stays a plain none. Nothing is read here: the name is only compared with the index.
+    /// </summary>
+    /// <param name="input">The input the Verdict was made on.</param>
+    /// <param name="verdict">The none Verdict.</param>
+    private HelperApplied.Dropped? TryReJudgeWithFile(TeamMemoryInput input, TeamMemoryVerdict verdict)
+    {
+        string label = (verdict.Folder ?? string.Empty).Trim();
+        string file = (verdict.File ?? string.Empty).Trim();
+        if (input.Attempt >= 2 || label.Length == 0 || file.Length == 0 || !paths.TryResolveTeamFolder(input.Proposal.Team, label, out MemoryFolder? folder))
+        {
+            return null;
+        }
+
+        string prefix = $"{folder.Label}/{file} ";
+        bool indexed = input.Index.Any(line => line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        bool shown = input.Candidates.Any(candidate =>
+            string.Equals(candidate.Folder, folder.Label, StringComparison.OrdinalIgnoreCase) && string.Equals(candidate.File, file, StringComparison.OrdinalIgnoreCase));
+        if (!indexed || shown)
+        {
+            return null;
+        }
+
+        trigger.Rejudge(input.Proposal, folder.Label, file);
+        return new HelperApplied.Dropped($"re-judging: {folder.Label}/{file} was not shown");
     }
 
     /// <summary>The action a Verdict names, ignoring case, or <see langword="null"/> when it names none of the three.</summary>

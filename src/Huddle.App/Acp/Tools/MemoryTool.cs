@@ -138,7 +138,7 @@ internal sealed class MemoryTool(
     /// <summary>The <c>folder</c> values the caller may use: its own, then each readable Team and each of that Team's Projects.</summary>
     private List<string> UsableFolders()
     {
-        List<string> folders = [MemoryPaths.OwnFolder];
+        List<string> folders = [MemoryPaths.OwnFolder, TeamNames.MemoryFolder];
         foreach (TeamSummary team in access.Readable(personaName))
         {
             folders.Add(team.Name);
@@ -152,6 +152,17 @@ internal sealed class MemoryTool(
     /// <param name="folder">The resolved folder.</param>
     private string? WriteRefusal(MemoryFolder folder)
     {
+        if (folder.HuddleWide)
+        {
+            if (access.IsChiefOfStaff(personaName))
+            {
+                return null;
+            }
+
+            logger.LogWarning("Refused a change to Huddle-wide Memory by '{Caller}': only the Chief of Staff writes it.", personaName);
+            return this.Say("systemPrompt.huddleMemoryRefusal");
+        }
+
         if (folder.Team is not { } team || access.CanWrite(personaName, team))
         {
             return null;
@@ -176,7 +187,7 @@ internal sealed class MemoryTool(
             : string.Join('\n', files.Select(file => $"{Path.GetFileName(file)} - {MemoryIndex.SummaryFor(file, warnings)}"));
 
         string result = $"{body}\nfolder: {folder.Path}";
-        if (folder.Team is not null)
+        if (folder.Team is not null || folder.HuddleWide)
         {
             return result;
         }

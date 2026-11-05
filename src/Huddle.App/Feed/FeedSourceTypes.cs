@@ -35,6 +35,7 @@ internal static class FeedSourceTypes
         FeedSourceType.SecondBrainOverCap => "second-brain-over-cap",
         FeedSourceType.TaskWakesPaused => "task-wakes-paused",
         FeedSourceType.TeamArchived => "team-archived",
+        FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
