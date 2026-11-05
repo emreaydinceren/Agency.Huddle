@@ -78,6 +78,30 @@ public sealed class AgentsMdChangesEndToEndTests
         Assert.Equal(1, scenario.Fixture.HelperProcess.Calls);
     }
 
+    /// <summary>
+    /// An AGENTS.md edit and another file's change in one Turn reach the Agent in one order: the AGENTS.md block, then the File
+    /// Changes block (which lists the other file and not the AGENTS.md), then the Room frame.
+    /// </summary>
+    [Fact]
+    public async Task SameTurn_AgentsMdEditAndAnotherFile_BlocksInOrder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using CancellationTokenSource bound = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bound.CancelAfter(TimeSpan.FromSeconds(60));
+
+        await using Scenario scenario = await Scenario.StartAsync(waitSeconds: 20, helperEnabled: false, bound.Token);
+        await scenario.OpenBothSessionsAsync(bound.Token);
+
+        scenario.Edit();
+        string note = scenario.AddNote();
+        string prompt = await scenario.TurnAsync(scenario.RoomA, "after both changes", bound.Token);
+
+        string fileChanges = "Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:\nadded " + note;
+        Assert.Equal(0, prompt.IndexOf(scenario.ExpectedComparison, StringComparison.Ordinal));
+        Assert.Equal(scenario.ExpectedComparison.Length, prompt.IndexOf(fileChanges, StringComparison.Ordinal));
+        Assert.Equal(scenario.ExpectedComparison.Length + fileChanges.Length + 2, prompt.IndexOf("[Room:", StringComparison.Ordinal));
+    }
+
     /// <summary>With the Helper off, the Turn does not wait and the Agent is told by a plain comparison of the lines; no Helper call is made.</summary>
     [Fact]
     public async Task HelperOff_Comparison()
@@ -559,6 +583,16 @@ public sealed class AgentsMdChangesEndToEndTests
 
         /// <summary>Replaces the file with its second version.</summary>
         internal void Edit() => File.WriteAllText(this.AgentsMdPath, "# Rules\n" + NewRule + "\n");
+
+        /// <summary>Adds a note to the Agent's own Work Dir, which File Changes always watches, and returns its path.</summary>
+        internal string AddNote()
+        {
+            string workDir = this.Fixture.Services.GetRequiredService<AgentPaths>().WorkDir("nova");
+            Directory.CreateDirectory(workDir);
+            string path = Path.Combine(workDir, "notes.md");
+            File.WriteAllText(path, "A note.\n");
+            return path;
+        }
 
         /// <summary>Posts a Human message to a Room, waits for the Agent's reply, and returns the prompt the Agent was sent for it.</summary>
         /// <param name="roomId">The Room.</param>

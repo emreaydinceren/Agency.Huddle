@@ -1,6 +1,6 @@
 # Huddle.AgentsMdChanges — Design Specification
 
-**Date:** 2026-11-04 · **Status:** Designed, not built · **Source:** Gitea issue #361 and the owner's decision comment on
+**Date:** 2026-11-04 · **Status:** Built 2026-11-04 on `feat/agentsmd-changes`; the manual page is not yet run · **Source:** Gitea issue #361 and the owner's decision comment on
 it · **Decision record:** a new ADR when this is built (next free number 0076), amending
 [ADR-0070](adr/0070-an-agent-reads-the-instructions-the-human-writes.md) and
 [ADR-0075](adr/0075-a-second-brain-layout-in-every-team.md); builds on
@@ -1188,3 +1188,19 @@ the rename and removal cascade, the DI precedent, and [rules.md](engineering/rul
 | C-3 | Agents follow the notice's wording | Claude Code's documentation warns that commanding text can trigger prompt-injection defences | The paid manual run; the wording is a Prompt, so it changes without code |
 | C-4 | Huddle cannot add context beside a tool result | Only rules out a fourth hook point; nothing depends on it being possible | Not needed for this delivery |
 | C-5 | The Turn Hook contract fits File Changes | The whole pattern rests on it. The review traced it by hand and expects it to hold, but nothing has run | TH-2, which stops and reports if not |
+
+## Appendix: What the build did differently
+
+Where the build differs from the sections above, the build is right. Only what changes this Spec's picture is listed.
+
+- **Spacing binds a paused Helper.** A paused enqueue records the spacing time and the judged hash and still returns false, so the Turn falls back to a comparison, and at most one call falls in a spacing window after Continue.
+- **A disk move restarts the debounce.** If the file on disk differs from the pending hash when a judgement would start, it counts as a new save: the debounce restarts and a Turn that asks gets no call.
+- **A head without text settles free.** An edit from a ledger head that holds no text settles as `Unknown`, with no Helper call; an emptied, whitespace-only or just-deleted file settles as a comparison, also free.
+- **The Helper lists at most 12 changes.** The system prompt states the limit. A Summary with exactly 12 changes adds `turn.agentsMdMore` ("More rules may have changed: read the file.") so the Agent knows the list may be incomplete.
+- **An Adapter without file tools never gets a pointer it cannot follow.** Its incomplete notices carry the file's whole text. A file whose newest revision alone is over `MaxNoticeChars` renders `turn.agentsMdTooLong` instead ("changed, too much to show here; read the file"), and the whole text for an Adapter without file tools.
+- **`started` stays null on a legacy session.** A session stored before this feature has no start hashes; writing `{}` would make `/compact` tell every file as `NowFollow`, so After keeps null.
+- **An empty heard hash means "not heard".** It never produces `NoLonger`, so deleting an empty level file, or upgrading a session, does not tell the Agent a rule no longer applies.
+- **The File Changes filter is wider than the scope list.** It leaves out any `AGENTS.md` at a level path under one of the Agent's Teams (`<Team>/AGENTS.md`, `<Team>/<Project>/AGENTS.md`), in or out of the current scope, so a deleted Project is not told twice.
+- **`UpdateHookState` checks the session id.** It writes only onto the entry of the session that ran the Turn, so a fresh session's first `/compact` cannot write onto an older session's entry.
+- **`StoreSessionEntry` tolerates a failed write.** A finished Turn is not failed by a store write that throws `IOException` or `UnauthorizedAccessException`; it logs a Warning and the next Turn retells.
+- **Not covered end to end.** A real restart followed by a resume is proved only on the manual page, not by an automated test. A real-supervisor end-to-end test is not run, because `MockAdapterFixture` removes the supervisor as a hosted service and builds the pipeline by hand.
