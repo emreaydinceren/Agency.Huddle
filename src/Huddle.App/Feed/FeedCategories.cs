@@ -54,7 +54,7 @@ internal static class FeedCategories
         FeedSourceType.DocumentChanged => FeedCategory.Documents,
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing or FeedSourceType.TeamMemoryNotFiled or FeedSourceType.AgentsMdChangeSkipped => FeedCategory.Helpers,
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => FeedCategory.Devices,
-        FeedSourceType.SecondBrainOverCap or FeedSourceType.TeamArchived => FeedCategory.SecondBrain,
+        FeedSourceType.SecondBrainOverCap or FeedSourceType.TeamArchived or FeedSourceType.BuiltinAgentUpdateAvailable => FeedCategory.SecondBrain,
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

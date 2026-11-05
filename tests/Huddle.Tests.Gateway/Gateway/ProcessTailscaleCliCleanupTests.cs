@@ -25,13 +25,22 @@ public sealed class ProcessTailscaleCliCleanupTests
         File.Delete(pidFile);
     }
 
+    /// <summary>
+    /// Polls for the pid the child writes. It reads with full sharing because the child may still hold the file open for writing, which a plain
+    /// read refuses with a sharing violation on Windows; a file with nothing in it yet fails the parse and is polled again.
+    /// </summary>
     private static async Task<int> WaitForPidAsync(string file, CancellationToken ct)
     {
         for (int i = 0; i < 100; i++)
         {
-            if (File.Exists(file) && int.TryParse(await File.ReadAllTextAsync(file, ct), out int pid))
+            if (File.Exists(file))
             {
-                return pid;
+                await using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using StreamReader reader = new(stream);
+                if (int.TryParse(await reader.ReadToEndAsync(ct), out int pid))
+                {
+                    return pid;
+                }
             }
 
             await Task.Delay(100, ct);

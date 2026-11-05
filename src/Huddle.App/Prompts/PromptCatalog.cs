@@ -2334,7 +2334,7 @@ internal static class PromptCatalog
                 "The job description a model reads for the memory tool. Takes no placeholders.",
             Default:
                 """
-                Reads and writes Markdown memory files, one topic per file. Use this tool, never your file, edit or shell tools, for every memory file, even when you know its path. 'command' is one of: list (the files in a folder, each with its description), read (the whole file and its version), write (create a file, or replace one by passing the version read before; needs 'description', a single line of 20 to 200 characters that says when to read the file, and 'text', the body without frontmatter), append (add 'text' as a new line at the end), replace (swap 'old' for 'new'; 'old' must occur exactly once) and delete (needs the version, and is only for when the Human asked you to delete the file). 'folder' is 'me' (your own memory, the default), or a Team or 'Team/Project' whose shared Memory you may read; only a Team's manager writes it. 'file' is a bare file name ending in .md. Always read a file before you write over it.
+                Reads and writes Markdown memory files, one topic per file. Use this tool, never your file, edit or shell tools, for every memory file, even when you know its path. 'command' is one of: list (the files in a folder, each with its description), read (the whole file and its version), write (create a file, or replace one by passing the version read before; needs 'description', a single line of 20 to 200 characters that says when to read the file (in folder 'memory' it states the fact itself, because Agents see only the index), and 'text', the body without frontmatter), append (add 'text' as a new line at the end), replace (swap 'old' for 'new'; 'old' must occur exactly once) and delete (needs the version, and is only for when the Human asked you to delete the file). 'folder' is 'me' (your own memory, the default), 'memory' (Huddle-wide Memory: every Agent reads it, and the Chief of Staff writes it), or a Team or 'Team/Project' whose shared Memory you may read; a Team's own Memory is written by that Team's manager, and anyone else adds a fact to it with propose_team_memory. 'file' is a bare file name ending in .md. Always read a file before you write over it.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2656,8 +2656,11 @@ internal static class PromptCatalog
                   is still true, change what the proposal changes, and keep it short.
                 - When the proposal reverses an earlier decision, replace the old decision and note briefly that it
                   changed and when.
-                - File nothing (action "none") when the fact is personal to one member, already recorded, too vague to
-                  act on, or belongs in a file you were not shown; then say in the reason which file you meant.
+                - File nothing (action "none") when the fact is personal to one member, already recorded, or too vague to
+                  act on. A fact that is clear but has no fitting file is a create, not a none: a new contact or fact
+                  still gets a file.
+                - When the fact belongs in an indexed file you were not shown, answer "none" and give the "folder" and
+                  "file" of the file you want to see: you are then shown it and asked again.
                 - A new file name is lowercase words joined by dashes, ending in .md, such as interview-consent.md.
                 - The description is one line of 20 to 200 characters: name the specifics and say when to read the
                   file, such as "Interview recording rules: consent required; read before scheduling or recording an
@@ -2669,7 +2672,7 @@ internal static class PromptCatalog
 
                 Answer:
                 {"action": "none" | "create" | "update", "folder": "...", "file": "...", "description": "...", "text": "...", "reason": "at most 15 words, why"}
-                For "none", give only action and reason.
+                For "none", give action and reason, and "folder" and "file" only to ask to see an indexed file.
                 """;
 
     /// <summary>Builds the <c>propose_team_memory</c> tool's description and refusals (Team Memory Helper spec §6.1).</summary>
@@ -2682,7 +2685,7 @@ internal static class PromptCatalog
             HelperText: "The job description a model reads for the propose_team_memory tool. Takes no placeholders.",
             Default:
                 """
-                Propose a fact for a Team's shared Memory: a decision and the reason for it, an agreed way of working, who owns what, or a lesson the whole Team should keep. Huddle files it: a Helper decides whether it is worth keeping and whether it belongs in an existing topic file, and records that you proposed it. 'team' is a Team you belong to. 'fact' is one fact in your own words, with enough context to stand alone. 'why' (optional) says where it was decided or learned. Propose one fact at a time. Do not propose personal preferences or anything only you need: keep those in your own Memory.
+                Propose a fact for a Team's shared Memory: a decision and the reason for it, an agreed way of working, who owns what, or a lesson the whole Team should keep. Huddle files it: a Helper decides whether it is worth keeping and whether it belongs in an existing topic file, and records that you proposed it. 'team' is a Team you belong to; the Chief of Staff may propose to any Team. 'fact' is one fact in your own words, with enough context to stand alone. 'why' (optional) says where it was decided or learned. Propose one fact at a time. Do not propose personal preferences or anything only you need: keep those in your own Memory.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

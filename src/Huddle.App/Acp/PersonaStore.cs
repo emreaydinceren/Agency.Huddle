@@ -455,6 +455,46 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
+    /// Replaces a Persona's file text only if the file still holds <paramref name="expectedText"/>,
+    /// leaving its stored Model, Effort and Work Mode untouched. The compare and the write run under
+    /// the same lock as <see cref="Add"/> and <see cref="Update"/>, and the write is atomic, so a
+    /// Human's edit that lands first is never overwritten and a crash never leaves half a file.
+    /// </summary>
+    /// <param name="name">The Persona's current Name.</param>
+    /// <param name="expectedText">The text the caller judged safe to replace.</param>
+    /// <param name="newText">The text to write; it must load cleanly under the same Name.</param>
+    /// <returns><see langword="true"/> if the file was replaced; <see langword="false"/> if it changed in the meantime or vanished.</returns>
+    /// <exception cref="ChatException"><paramref name="newText"/> would not load cleanly.</exception>
+    public bool TryReplaceText(string name, string expectedText, string newText)
+    {
+        ArgumentNullException.ThrowIfNull(expectedText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newText);
+
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
+        lock (this.writeGate)
+        {
+            var current = this.index.ByName(name);
+            if (current is null || !File.Exists(current.Path)
+                || !string.Equals(File.ReadAllText(current.Path), expectedText, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var entry = this.ValidateCandidate(current.Path, newText, excludingPath: current.Path);
+            if (!string.Equals(entry.Name, current.Name, StringComparison.Ordinal))
+            {
+                throw new ChatException(ErrorCodes.BadMessage, "Replacing the text must not rename the Persona.");
+            }
+
+            AtomicFile.WriteText(current.Path, newText);
+            change = this.PublishFreshIndex();
+        }
+
+        this.NotifyChanged(change);
+        return true;
+    }
+
+    /// <summary>
     /// Deletes a Persona's file, which stops its runner the next time
     /// <see cref="PersonasChanged"/> is observed. This intentionally does NOT cascade: the Agent,
     /// its Rooms, its memberships and its Transcripts all remain in the Team Directory untouched (a
@@ -757,29 +797,21 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             // timer, this used to end the process (seen as a crashed test host on the full suite, 2026-11-03).
             return (PersonaIndex.Build([]), []);
         }
+        catch (Exception ex) when (!isInitialScan && ex is IOException or UnauthorizedAccessException)
+        {
+            // Still there but unreadable says nothing about any Agent, so a rescan keeps what it has. At startup it stays an error: the watcher on this folder could not start either.
+            this.logger.LogWarning(ex, "PersonaStore couldn't list '{Path}'; the current index is kept and the rebuild will retry.", this.Paths.DefinitionsRoot);
+            return null;
+        }
 
         foreach (var rootFile in rootFiles)
         {
             preRejected.Add(new RejectedPersonaFile(rootFile, "A definition must be inside its agent's folder."));
         }
 
-        foreach (var folder in folders)
+        if (!this.TryScanAgentFolders(folders, isInitialScan, candidates, preRejected))
         {
-            bool scanned;
-            try
-            {
-                scanned = this.TryScanAgentFolder(folder, isInitialScan, candidates, preRejected);
-            }
-            catch (DirectoryNotFoundException)
-            {
-                // The Agent folder was deleted after the listing: it holds no definition any more, so it is skipped.
-                continue;
-            }
-
-            if (!scanned)
-            {
-                return null;
-            }
+            return null;
         }
 
         var built = PersonaIndex.Build(candidates);
@@ -789,6 +821,48 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             .ToList();
 
         return (new PersonaIndex(built.Entries, rejected, built.Teams), FolderWarningsFor(built.Entries));
+    }
+
+    /// <summary>Scans each agent folder under the definitions root, surviving one that is deleted or cannot be listed.</summary>
+    /// <param name="folders">The agent folders' full paths.</param>
+    /// <param name="isInitialScan">See <see cref="RebuildIndexFromDisk"/>.</param>
+    /// <param name="candidates">Receives each folder's definition file and its text.</param>
+    /// <param name="preRejected">Receives the files and folders rejected without being parsed.</param>
+    /// <returns><see langword="false"/> when something locked or unlistable aborts a rescan; otherwise <see langword="true"/>.</returns>
+    private bool TryScanAgentFolders(
+        string[] folders,
+        bool isInitialScan,
+        List<(string Path, string Text)> candidates,
+        List<RejectedPersonaFile> preRejected)
+    {
+        foreach (var folder in folders)
+        {
+            try
+            {
+                if (!this.TryScanAgentFolder(folder, isInitialScan, candidates, preRejected))
+                {
+                    return false;
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // The Agent folder was deleted after the listing: it holds no definition any more, so it is skipped.
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A folder being deleted lists as "access denied" on Windows. Treated as a locked file: thrown from the debounce timer this
+                // ended the process, and skipping it on a rescan would raise a false PersonaRemoved for an Agent that may still be there.
+                if (!isInitialScan)
+                {
+                    this.logger.LogWarning(ex, "PersonaStore couldn't list '{Path}'; the current index is kept and the rebuild will retry.", folder);
+                    return false;
+                }
+
+                preRejected.Add(new RejectedPersonaFile(folder, "Couldn't read this folder; it's in use."));
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

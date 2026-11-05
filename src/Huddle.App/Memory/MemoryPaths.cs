@@ -33,6 +33,11 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
             return new MemoryFolder(Path.Combine(agentPaths.WorkDir(personaName), "memory"), OwnFolder, null);
         }
 
+        if (string.Equals(name, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return this.HuddleWide();
+        }
+
         string[] parts = name.Split('/');
         if (parts.Length > 2 || Array.Exists(parts, static part => string.IsNullOrWhiteSpace(part)))
         {
@@ -152,6 +157,19 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
         }
 
         return new MemoryFolder(memory, project is null ? team.Name : $"{team.Name}/{project}", team);
+    }
+
+    /// <summary>
+    /// Huddle-wide Memory, <c>Teams/memory</c>, built from the reserved name and never from the argument; <see langword="null"/> when
+    /// the Teams root or the folder is a junction or link. <c>memory</c> is a reserved Team name, so no Team can clash with it.
+    /// </summary>
+    private MemoryFolder? HuddleWide()
+    {
+        string root = this.TeamsRoot();
+        string memory = Path.Combine(root, TeamNames.MemoryFolder);
+        return TeamMemoryIndex.IsSkipped(root) || TeamMemoryIndex.IsSkipped(memory)
+            ? null
+            : new MemoryFolder(memory, TeamNames.MemoryFolder, null, HuddleWide: true);
     }
 
     /// <summary>The Teams root folder.</summary>

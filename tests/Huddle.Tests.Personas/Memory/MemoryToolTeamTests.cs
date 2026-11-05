@@ -59,7 +59,7 @@ public sealed class MemoryToolTeamTests
         string content = $"---\ndescription: {GoodDescription}\n---\n\nTuesdays.\n";
         Assert.Equal($"release-process.md - {GoodDescription}\nfolder: {harness.TeamMemoryDir("Dev")}", listed);
         Assert.Equal($"{content}\nversion: {MemoryVersion.Of(Encoding.UTF8.GetBytes(content))}", read);
-        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Leo")}\nfolders you may use: me, Dev, Dev/Apollo, Ops", mine);
+        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Leo")}\nfolders you may use: me, memory, Dev, Dev/Apollo, Ops", mine);
         Assert.DoesNotContain("Hidden", mine, StringComparison.Ordinal);
     }
 
@@ -140,7 +140,7 @@ public sealed class MemoryToolTeamTests
         string listed = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("list"), ct);
 
         Assert.Equal(Written("cross-team.md", "Decision."), written);
-        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Chief")}\nfolders you may use: me, Dev, Dev/Apollo, Hidden, Ops", listed);
+        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Chief")}\nfolders you may use: me, memory, Dev, Dev/Apollo, Hidden, Ops", listed);
     }
 
     /// <summary>A Team with no manager is written by an Agent only through the Chief of Staff; a member is told the Human writes it.</summary>
@@ -181,7 +181,7 @@ public sealed class MemoryToolTeamTests
 
         string result = await harness.RunAsAsync("Leo", MemoryToolHarness.Args("write", ("folder", folder), ("file", "x.md"), ("description", GoodDescription), ("text", "x")), ct);
 
-        Assert.Equal($"'{folder}' is not a Memory folder you can use. Use one of: me, Dev, Dev/Apollo, Ops.", result);
+        Assert.Equal($"'{folder}' is not a Memory folder you can use. Use one of: me, memory, Dev, Dev/Apollo, Ops.", result);
         Assert.False(Directory.Exists(Path.Combine(harness.TeamsRoot, "Hidden", "memory")));
     }
 
@@ -208,7 +208,121 @@ public sealed class MemoryToolTeamTests
 
         string result = await harness.RunAsAsync("Ada", MemoryToolHarness.Args("write", ("folder", "Ghost"), ("file", "x.md"), ("description", GoodDescription), ("text", "x")), ct);
 
-        Assert.Equal("'Ghost' is not a Memory folder you can use. Use one of: me.", result);
+        Assert.Equal("'Ghost' is not a Memory folder you can use. Use one of: me, memory.", result);
+    }
+
+    /// <summary>The Chief of Staff writes Huddle-wide Memory through the <c>memory</c> folder, and the file lands in <c>Teams/memory</c> with its description (#344).</summary>
+    [Fact]
+    public async Task ChiefOfStaff_WritesHuddleWideMemory_WithADescription()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        harness.MakeChiefOfStaff("Chief");
+
+        string result = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("write", ("folder", "memory"), ("file", "sam-time-zone.md"), ("description", GoodDescription), ("text", "Sam works in Pacific Time.")), ct);
+
+        string path = Path.Combine(harness.TeamsRoot, "memory", "sam-time-zone.md");
+        Assert.Equal(Written("sam-time-zone.md", "Sam works in Pacific Time."), result);
+        Assert.Equal(Compose("Sam works in Pacific Time."), await File.ReadAllTextAsync(path, ct));
+    }
+
+    /// <summary>A write to Huddle-wide Memory still needs an acceptable description, because the index lists it.</summary>
+    [Fact]
+    public async Task ChiefOfStaff_HuddleWideWrite_WithoutADescription_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        harness.MakeChiefOfStaff("Chief");
+
+        string result = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("write", ("folder", "memory"), ("file", "x.md"), ("text", "x")), ct);
+
+        Assert.Equal("The description is not acceptable: it is missing. Give one line of 20 to 200 characters (about 100 to 150 is best) that names the specific people, projects, places or events inside and says when to read the file, such as \"Read for...\" or \"Check before...\". Put no facts and nothing sensitive in it.", result);
+        Assert.False(File.Exists(Path.Combine(harness.TeamsRoot, "memory", "x.md")));
+    }
+
+    /// <summary>The folder name matches ignoring case and surrounding space, and the path is built from the reserved name.</summary>
+    /// <param name="folder">The folder as passed.</param>
+    [Theory]
+    [InlineData("MEMORY")]
+    [InlineData(" Memory ")]
+    public async Task HuddleWideFolder_MatchesIgnoringCase(string folder)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        harness.MakeChiefOfStaff("Chief");
+
+        _ = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("write", ("folder", folder), ("file", "x.md"), ("description", GoodDescription), ("text", "x")), ct);
+
+        Assert.True(File.Exists(Path.Combine(harness.TeamsRoot, "memory", "x.md")));
+    }
+
+    /// <summary>Every Agent reads Huddle-wide Memory, a Team member and an Agent in no Team alike, and an absent folder lists as empty.</summary>
+    [Fact]
+    public async Task EveryAgent_ReadsHuddleWideMemory()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        string folder = Path.Combine(harness.TeamsRoot, "memory");
+        string empty = await harness.RunAsAsync("Nova", MemoryToolHarness.Args("list", ("folder", "memory")), ct);
+        string content = Compose("Sam works in Pacific Time.");
+        _ = MemoryToolHarness.Put(folder, "sam-time-zone.md", content);
+
+        string member = await harness.RunAsAsync("Leo", MemoryToolHarness.Args("read", ("folder", "memory"), ("file", "sam-time-zone.md")), ct);
+        string outsider = await harness.RunAsAsync("Nova", MemoryToolHarness.Args("list", ("folder", "memory")), ct);
+
+        Assert.Equal($"Nothing yet.\nfolder: {folder}", empty);
+        Assert.Equal($"{content}\nversion: {MemoryVersion.Of(Encoding.UTF8.GetBytes(content))}", member);
+        Assert.Equal($"sam-time-zone.md - {GoodDescription}\nfolder: {folder}", outsider);
+    }
+
+    /// <summary>Any Agent but the Chief of Staff is refused every change to Huddle-wide Memory, even a Team's manager, and nothing is written (#344).</summary>
+    /// <param name="command">The command.</param>
+    [Theory]
+    [InlineData("write")]
+    [InlineData("append")]
+    [InlineData("replace")]
+    [InlineData("delete")]
+    public async Task OtherAgent_HuddleWideMutation_IsRefused(string command)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        string path = MemoryToolHarness.Put(Path.Combine(harness.TeamsRoot, "memory"), "x.md", "Original.");
+
+        string result = await harness.RunAsAsync("Ada", MemoryToolHarness.Args(command, ("folder", "memory"), ("file", "x.md"), ("description", GoodDescription), ("text", "y"), ("old", "Original"), ("new", "Changed"), ("version", "abc")), ct);
+
+        Assert.Equal("Huddle-wide Memory is kept by the Chief of Staff. Ask the Chief of Staff to record it.", result);
+        Assert.Equal("Original.", await File.ReadAllTextAsync(path, ct));
+    }
+
+    /// <summary>Huddle-wide Memory is one folder: a Project path under it, a traversal or a file name that escapes it is refused, even for the Chief of Staff.</summary>
+    /// <param name="folder">The folder as passed.</param>
+    /// <param name="file">The file as passed.</param>
+    [Theory]
+    [InlineData("memory/x", "x.md")]
+    [InlineData("memory/..", "x.md")]
+    [InlineData("memory/", "x.md")]
+    [InlineData("../memory", "x.md")]
+    [InlineData("memory", "../escape.md")]
+    [InlineData("memory", "..\\escape.md")]
+    [InlineData("memory", "sub/escape.md")]
+    public async Task HuddleWideFolder_Traversal_IsRefused(string folder, string file)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        Seed(harness);
+        harness.MakeChiefOfStaff("Chief");
+
+        string result = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("write", ("folder", folder), ("file", file), ("description", GoodDescription), ("text", "x")), ct);
+
+        Assert.DoesNotContain("written", result, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(harness.TeamsRoot, "escape.md")));
+        Assert.False(File.Exists(Path.Combine(harness.TeamsRoot, "memory", "x.md")));
+        Assert.False(File.Exists(Path.Combine(harness.TeamsRoot, "memory", "escape.md")));
     }
 
     /// <summary>A Team's folder is created on the first write when the Team has none yet.</summary>

@@ -40,6 +40,7 @@ internal static class FeedPayloads
         FeedSourceType.DeviceRevoked => typeof(DeviceRevokedPayload),
         FeedSourceType.SecondBrainOverCap => typeof(SecondBrainOverCapPayload),
         FeedSourceType.TeamArchived => typeof(TeamArchivedPayload),
+        FeedSourceType.BuiltinAgentUpdateAvailable => typeof(BuiltinAgentUpdatePayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

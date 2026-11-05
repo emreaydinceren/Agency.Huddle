@@ -21,7 +21,7 @@ namespace Agency.Huddle.App.Watching;
 /// A callback that cannot rebuild (every read attempt failed) simply returns without swapping or
 /// raising, keeping the previous snapshot; see <see cref="RetryingFileRead"/>. An exception escaping the
 /// callback is unhandled on a timer thread and terminates the process, so it must catch whatever it
-/// can expect.
+/// can expect. This class logs a file-system exception that escapes anyway, as a last guard.
 /// </para>
 /// <para>
 /// <b>Why Error reschedules.</b> <see cref="FileSystemWatcher"/> drops events with no exception and no
@@ -159,7 +159,12 @@ internal sealed class DebouncedFileWatcher : IDisposable
         }
     }
 
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// The debounce timer's callback. <c>internal</c> rather than <c>private</c> only so a test can fire it directly: a throw on the real timer thread
+    /// would end the test process rather than fail the test.
+    /// </summary>
+    /// <param name="state">Unused; required by the <see cref="TimerCallback"/> shape.</param>
+    internal void OnDebounceElapsed(object? state)
     {
         lock (this.gate)
         {
@@ -169,6 +174,14 @@ internal sealed class DebouncedFileWatcher : IDisposable
             }
         }
 
-        this.onSettled();
+        try
+        {
+            this.onSettled();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Last guard for every store on this watcher: unhandled on a timer thread this ends the process. The store keeps its snapshot, and its next change rebuilds it.
+            this.logger.LogWarning(ex, "{Owner} could not rebuild after a file change; it keeps what it has until the next change.", this.ownerName);
+        }
     }
 }

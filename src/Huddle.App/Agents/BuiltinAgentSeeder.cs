@@ -1,4 +1,6 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Agents;
@@ -13,7 +15,7 @@ namespace Agency.Huddle.App.Agents;
 /// </summary>
 /// <remarks>
 /// Runs regardless of <c>Team:Acp:Enabled</c> - writing a file is free; only starting a session
-/// spends. Never reverts an edit: only an absent marker triggers a write, and the check runs
+/// spends. Never reverts an edit: only an absent marker, or an untouched earlier shipped version (see <see cref="BuiltinAgentVersions"/>), triggers a write, and the check runs
 /// once, at startup, never on <c>PersonaRemoved</c> (Spec §6.12 Constraints). A failed write -
 /// no free (Name, Alias) pair within <see cref="MaxFreeNameAttempts"/> attempts, or
 /// <see cref="PersonaStore.Add"/> itself throwing - logs an Error and lets startup continue
@@ -21,8 +23,16 @@ namespace Agency.Huddle.App.Agents;
 /// </remarks>
 /// <param name="personas">The Persona library to check and seed.</param>
 /// <param name="logger">Logs a failed parse, a failed free-name search, or a failed write, as an Error, without stopping the host.</param>
-internal sealed class BuiltinAgentSeeder(PersonaStore personas, ILogger<BuiltinAgentSeeder> logger) : IHostedService
+/// <param name="feed">Where the "update available" Notification goes; <see langword="null"/> posts none.</param>
+/// <param name="knownVersions">The earlier shipped versions by hash; defaults to the list embedded in the assembly.</param>
+internal sealed class BuiltinAgentSeeder(
+    PersonaStore personas,
+    ILogger<BuiltinAgentSeeder> logger,
+    IFeedPublisher? feed = null,
+    BuiltinAgentVersions? knownVersions = null) : IHostedService
 {
+    private readonly BuiltinAgentVersions versions = knownVersions ?? BuiltinAgentVersions.Embedded;
+
     /// <summary>The default Chief of Staff Name the free-name search starts from (Spec §8.6).</summary>
     private const string DefaultName = "Chief of Staff";
 
@@ -44,10 +54,11 @@ internal sealed class BuiltinAgentSeeder(PersonaStore personas, ILogger<BuiltinA
     /// <param name="cancellationToken">Unused; the write is synchronous local file I/O.</param>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var alreadySeeded = personas.Entries.Any(
+        var existing = personas.Entries.FirstOrDefault(
             entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal));
-        if (alreadySeeded)
+        if (existing is not null)
         {
+            this.UpdateExisting(existing);
             return Task.CompletedTask;
         }
 
@@ -82,6 +93,71 @@ internal sealed class BuiltinAgentSeeder(PersonaStore personas, ILogger<BuiltinA
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Brings an existing Chief of Staff up to the shipped text when it is an untouched earlier
+    /// version: the file is replaced atomically with the default under its current Name and Alias, and
+    /// its stored Model, Effort and Work Mode stay as they are. A file the Human edited is left
+    /// byte-identical and, once per shipped version, a Notification says an update exists. The
+    /// replacement checks the file is still the text just judged, so a Human's edit that lands
+    /// between the check and the write wins.
+    /// </summary>
+    /// <param name="entry">The Persona carrying the marker.</param>
+    private void UpdateExisting(PersonaEntry entry)
+    {
+        try
+        {
+            var fileText = File.ReadAllText(entry.Path);
+            var currentHash = BuiltinAgentVersions.CurrentHash;
+            if (string.Equals(BuiltinAgentVersions.Hash(fileText), currentHash, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (this.versions.IsEarlierVersion(fileText))
+            {
+                var text = PersonaFrontmatter.WriteScalarField(BuiltinAgent.DefaultText, "name", entry.Name);
+                text = PersonaFrontmatter.WriteScalarField(text, "alias", entry.Alias);
+                if (personas.TryReplaceText(entry.Name, fileText, text))
+                {
+                    return;
+                }
+            }
+
+            this.NotifyOnce(entry.Name, currentHash);
+        }
+        catch (Exception ex) when (ex is ChatException or IOException or UnauthorizedAccessException)
+        {
+            logger.LogError(ex, "Could not update the Chief of Staff '{Name}': {Reason}.", entry.Name, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Posts the "update available" Notification unless one was already posted for this shipped
+    /// version; the version is remembered in a small file in the data folder so a restart, or the
+    /// Feed's own clean-up of old items, never brings it back.
+    /// </summary>
+    /// <param name="name">The Chief of Staff's current Name.</param>
+    /// <param name="currentHash">The hash of the version this build ships.</param>
+    private void NotifyOnce(string name, string currentHash)
+    {
+        if (feed is null or NullFeedPublisher)
+        {
+            // Nothing can be shown while the Feed is off, so remember nothing: a later enable still gets the notice.
+            return;
+        }
+
+        var markerPath = Path.Combine(personas.Paths.DataDir, "chief-of-staff-notified.txt");
+        if (File.Exists(markerPath) && string.Equals(File.ReadAllText(markerPath).Trim(), currentHash, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var message = $"A new version of {name} is available. Your {name} has edits of its own, so it was left as it is. "
+            + "Choose Reset to default on its profile to take the new version; that replaces your edits.";
+        feed.Post(new FeedMessage(FeedSourceType.BuiltinAgentUpdateAvailable, "builtin:" + BuiltinAgent.ChiefOfStaffMarker, FeedActor.Huddle, true, new BuiltinAgentUpdatePayload(name, message)));
+        AtomicFile.WriteText(markerPath, currentHash);
     }
 
     /// <summary>Does nothing; the seeder has no state to release.</summary>

@@ -50,7 +50,7 @@
     <EmbeddedResource Include="Skills\SkillsCatalog.json" LogicalName="Skills/SkillsCatalog.json" />
     <EmbeddedResource Include="Agents\AgentNames.json" LogicalName="Agents/AgentNames.json" />
     <EmbeddedResource Include="Themes\Skins\*.json" LogicalName="Themes/Skins/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="Builtin\*.md" LogicalName="Builtin/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Builtin\*.md;Builtin\*.txt" LogicalName="Builtin/%(Filename)%(Extension)" />
     <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Overlays\second-brain\**\*.md" LogicalName="Overlays/second-brain/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\hiringpool.json" LogicalName="HiringPool/hiringpool.json" />
