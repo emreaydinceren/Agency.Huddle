@@ -9,17 +9,21 @@ namespace Agency.Huddle.App.Jobs;
 /// 09:00 Job stays at 09:00 across a daylight-saving change. The text form is the <c>when:</c> line of <c>schedule.md</c>
 /// and the <c>when</c> argument of the <c>jobs</c> tool, so both read one grammar:
 /// <c>once on 2026-11-05 at 14:30</c>, <c>daily at 09:00</c>, <c>weekdays at 09:00</c>,
-/// <c>weekly on mon,thu at 09:00</c> and <c>every 4 hours</c>.
+/// <c>weekly on mon,thu at 09:00</c>, <c>monthly on 15 at 09:00</c> and <c>every 4 hours</c>.
 /// </summary>
 /// <param name="Cadence">The preset.</param>
 /// <param name="At">The time of day; unused by <see cref="JobCadence.EveryHours"/>.</param>
 /// <param name="Days">The days of a <see cref="JobCadence.Weekly"/> Job; <see cref="JobWeekdays.None"/> otherwise.</param>
 /// <param name="Hours">The interval of an <see cref="JobCadence.EveryHours"/> Job; 0 otherwise.</param>
 /// <param name="On">The date of a <see cref="JobCadence.Once"/> Job; <see langword="null"/> otherwise.</param>
-internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, JobWeekdays Days, int Hours, DateOnly? On)
+/// <param name="DayOfMonth">The day of a <see cref="JobCadence.Monthly"/> Job, 1 to 31; 0 otherwise. A day past the month's end runs on its last day.</param>
+internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, JobWeekdays Days, int Hours, DateOnly? On, int DayOfMonth = 0)
 {
     /// <summary>The longest interval an <see cref="JobCadence.EveryHours"/> Job may have: one week.</summary>
     public const int MaxHours = 168;
+
+    /// <summary>The last day a <see cref="JobCadence.Monthly"/> Job may name.</summary>
+    public const int MaxDayOfMonth = 31;
 
     private static readonly (string Short, DayOfWeek Day, JobWeekdays Flag)[] DayNames =
     [
@@ -53,6 +57,12 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
     /// <param name="at">The time of day.</param>
     /// <returns>The recurrence.</returns>
     public static JobRecurrence Weekly(JobWeekdays days, TimeOnly at) => new(JobCadence.Weekly, at, days, 0, null);
+
+    /// <summary>A Job on one day of every month; a day past the month's end runs on its last day.</summary>
+    /// <param name="dayOfMonth">The day, 1 to <see cref="MaxDayOfMonth"/>.</param>
+    /// <param name="at">The time of day.</param>
+    /// <returns>The recurrence.</returns>
+    public static JobRecurrence Monthly(int dayOfMonth, TimeOnly at) => new(JobCadence.Monthly, at, JobWeekdays.None, 0, null, dayOfMonth);
 
     /// <summary>A Job every so many hours.</summary>
     /// <param name="hours">The interval, 1 to <see cref="MaxHours"/>.</param>
@@ -117,6 +127,7 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
             JobCadence.Daily => $"daily at {at}",
             JobCadence.Weekdays => $"weekdays at {at}",
             JobCadence.Weekly => $"weekly on {days} at {at}",
+            JobCadence.Monthly => string.Create(CultureInfo.InvariantCulture, $"monthly on {this.DayOfMonth} at {at}"),
             _ => string.Create(CultureInfo.InvariantCulture, $"every {this.Hours} hours"),
         };
     }
@@ -147,6 +158,11 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
         }
 
         DateOnly start = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(after, zone).DateTime);
+        if (this.Cadence == JobCadence.Monthly)
+        {
+            return this.NextMonthly(start, after, zone);
+        }
+
         for (int offset = 0; offset <= 8; offset++)
         {
             DateOnly day = start.AddDays(offset);
@@ -178,6 +194,7 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
             JobCadence.Daily => $"Daily at {at}",
             JobCadence.Weekdays => $"Weekdays at {at}",
             JobCadence.Weekly => $"{days} at {at}",
+            JobCadence.Monthly => string.Create(CultureInfo.InvariantCulture, $"Monthly on day {this.DayOfMonth} at {at}"),
             _ => this.Hours == 1 ? "Every hour" : string.Create(CultureInfo.InvariantCulture, $"Every {this.Hours} hours"),
         };
     }
@@ -188,7 +205,7 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
     public static JobWeekdays FlagOf(DayOfWeek day) => DayNames.First(entry => entry.Day == day).Flag;
 
     /// <summary>The grammar, quoted in every parse error so a model can correct itself in one Turn.</summary>
-    private const string Grammar = "'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00' or 'every 4 hours'.";
+    internal const string Grammar = "'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00', 'monthly on 15 at 09:00' or 'every 4 hours'.";
 
     private static bool TryBuild(Match match, TimeOnly at, [NotNullWhen(true)] out JobRecurrence? recurrence, [NotNullWhen(false)] out string? error)
     {
@@ -201,6 +218,16 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
                 return true;
             case "weekdays":
                 recurrence = Weekdays(at);
+                return true;
+            case "monthly":
+                int day = int.Parse(match.Groups["day"].Value, CultureInfo.InvariantCulture);
+                if (day is < 1 or > MaxDayOfMonth)
+                {
+                    error = $"A monthly Job runs on day 1 to {MaxDayOfMonth}.";
+                    return false;
+                }
+
+                recurrence = Monthly(day, at);
                 return true;
             case "once":
                 if (!DateOnly.TryParseExact(match.Groups["on"].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly on))
@@ -243,6 +270,21 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
         return true;
     }
 
+    /// <summary>This month's day, clamped to the month's length, when still ahead; otherwise next month's.</summary>
+    private DateTimeOffset NextMonthly(DateOnly start, DateTimeOffset after, TimeZoneInfo zone)
+    {
+        DateOnly month = new(start.Year, start.Month, 1);
+        DateTimeOffset candidate = ToInstant(this.DayIn(month), this.At, zone);
+        if (candidate > after)
+        {
+            return candidate;
+        }
+
+        return ToInstant(this.DayIn(month.AddMonths(1)), this.At, zone);
+    }
+
+    private DateOnly DayIn(DateOnly month) => new(month.Year, month.Month, Math.Min(this.DayOfMonth, DateTime.DaysInMonth(month.Year, month.Month)));
+
     private bool RunsOn(DayOfWeek day) => this.Cadence switch
     {
         JobCadence.Daily => true,
@@ -274,7 +316,7 @@ internal sealed partial record JobRecurrence(JobCadence Cadence, TimeOnly At, Jo
     }
 
     [GeneratedRegex(
-        @"\A(?:(?<kind>once) on (?<on>\S+) at (?<at>\S+)|(?<kind>daily|weekdays) at (?<at>\S+)|(?<kind>weekly) on (?<days>[a-z, ]+?) at (?<at>\S+)|every (?<hours>\d{1,3}) hours?)\z",
+        @"\A(?:(?<kind>once) on (?<on>\S+) at (?<at>\S+)|(?<kind>daily|weekdays) at (?<at>\S+)|(?<kind>weekly) on (?<days>[a-z, ]+?) at (?<at>\S+)|(?<kind>monthly) on (?<day>\d{1,3}) at (?<at>\S+)|every (?<hours>\d{1,3}) hours?)\z",
         RegexOptions.CultureInvariant)]
     private static partial Regex WhenPattern();
 }

@@ -2456,7 +2456,7 @@ internal static class PromptCatalog
                 "timetable. Takes no placeholders.",
             Default:
                 """
-                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule only for yourself; the Chief of Staff may also schedule for another Agent or for the Human, by passing 'target'.
+                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule for yourself; a manager may also schedule for the members of its Team, and the Chief of Staff may also schedule for any other Agent or for the Human, by passing 'target'. Schedule exactly what was approved. If you can't, because of who it is for or when it runs, don't pick something close: say what you can't do and ask. A Job's title must match its schedule.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

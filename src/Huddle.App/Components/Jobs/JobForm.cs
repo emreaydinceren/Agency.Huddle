@@ -30,6 +30,9 @@ internal sealed class JobForm
     /// <summary>The interval of an every-so-many-hours Job.</summary>
     public int Hours { get; set; } = 4;
 
+    /// <summary>The day of the month of a monthly Job, 1 to 31; 0 is refused. A day past a month's end runs on its last day.</summary>
+    public int DayOfMonth { get; set; } = 1;
+
     /// <summary>A form filled from a Job's timetable.</summary>
     /// <param name="when">The timetable.</param>
     /// <returns>The form.</returns>
@@ -43,6 +46,7 @@ internal sealed class JobForm
             Time = when.At.ToString("HH:mm", CultureInfo.InvariantCulture),
             Days = when.Days == JobWeekdays.None ? JobWeekdays.Monday : when.Days,
             Hours = when.Hours > 0 ? when.Hours : 4,
+            DayOfMonth = when.DayOfMonth > 0 ? when.DayOfMonth : 1,
         };
     }
 
@@ -84,6 +88,7 @@ internal sealed class JobForm
             JobCadence.Daily => $"daily at {at}",
             JobCadence.Weekdays => $"weekdays at {at}",
             JobCadence.Weekly => $"weekly on {days} at {at}",
+            JobCadence.Monthly => string.Create(CultureInfo.InvariantCulture, $"monthly on {this.DayOfMonth} at {at}"),
             _ => string.Create(CultureInfo.InvariantCulture, $"every {this.Hours} hours"),
         };
     }
