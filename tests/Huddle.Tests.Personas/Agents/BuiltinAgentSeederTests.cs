@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Elicitation;
 
@@ -85,6 +86,28 @@ public sealed class BuiltinAgentSeederTests
 
         PersonaEntry? entry = personas.Entries.SingleOrDefault(e => string.Equals(e.Name, "Chief of Staff 2", StringComparison.Ordinal));
         Assert.NotNull(entry);
+        Assert.Equal("cos2", entry.Alias);
+        Assert.Equal("chief-of-staff", entry.Builtin);
+    }
+
+    /// <summary>
+    /// Issue 351: a Human named "Chief of Staff" owns the default Name, so the seeder moves on to
+    /// the next free pair ("Chief of Staff 2" / "cos2") instead of failing and leaving no Chief of Staff.
+    /// </summary>
+    [Fact]
+    public async Task Start_HumanIsNamedChiefOfStaff_WritesTheNextPair()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = new(
+            new AgentPaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()),
+            NullLogger<PersonaStore>.Instance, new ConfiguredHumanIdentity("chief of staff"));
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        PersonaEntry entry = Assert.Single(personas.Entries);
+        Assert.Equal("Chief of Staff 2", entry.Name);
         Assert.Equal("cos2", entry.Alias);
         Assert.Equal("chief-of-staff", entry.Builtin);
     }

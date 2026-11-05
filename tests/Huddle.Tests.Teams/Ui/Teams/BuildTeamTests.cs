@@ -1,3 +1,4 @@
+using System.Globalization;
 using Agency.Huddle.Tests.Factories;
 using AngleSharp.Dom;
 using Bunit;
@@ -8,11 +9,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -1189,6 +1192,53 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find(item).ClickAsync());
     }
 
+    /// <summary>A role whose only suggested Name is the Human's gets a different Name: the suggestion is skipped, not offered.</summary>
+    [Fact]
+    public async Task Hire_RoleSuggestsOnlyTheHumansName_DraftIsNotNamedAfterTheHuman()
+    {
+        using Fixture fixture = new(typeCount: 3, tutorSuggestedName: "Sam");
+        fixture.ExtraServices = services => services.AddSingleton<IHumanIdentity>(new AliasedHumanIdentity("Sam"));
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+
+        string drafted = cut.Find(".roster-name").TextContent.Trim();
+        Assert.NotEqual(string.Empty, drafted);
+        Assert.NotEqual("Sam", drafted, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The Human's Alias is skipped too. The pool is arranged so the Human's Alias is the only free pool Name (every
+    /// other Name belongs to an Agent), which makes the draw deterministic: the unfixed draw can only return the Alias,
+    /// and the fixed one falls back to a numbered Name.
+    /// </summary>
+    [Fact]
+    public async Task Hire_OnlyFreePoolNameIsTheHumansAlias_DraftGetsANumberedName()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        string humanAlias = AgentNamePool.Names[0];
+        fixture.ExtraServices = services => services.AddSingleton<IHumanIdentity>(new AliasedHumanIdentity("Zed Human", humanAlias));
+        for (int i = 1; i < AgentNamePool.Names.Count; i++)
+        {
+            string name = AgentNamePool.Names[i];
+            _ = fixture.Personas.Add(new PersonaIdentity(name, "Other", string.Create(CultureInfo.InvariantCulture, $"pool{i}"), Teams: []), "You are other.");
+        }
+
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        string drafted = cut.Find(".roster-name").TextContent.Trim();
+        Assert.NotEqual(humanAlias, drafted, StringComparer.OrdinalIgnoreCase);
+        Assert.Matches(@"^.+ \d+$", drafted);
+    }
+
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx)
     {
         return ctx.RenderWithPopovers(builder =>
@@ -1229,8 +1279,10 @@ public sealed class BuildTeamTests
         /// <param name="typeCount">How many plain team types to make.</param>
         /// <param name="filterTypes">Whether to add the two types the role filter tests use.</param>
         /// <param name="managedJob">Whether to add Type 97, whose manager is the pool's Bookkeeper by job and which offers two processes, one with onboarding steps.</param>
-        public Fixture(int typeCount, bool filterTypes = false, bool managedJob = false)
+        /// <param name="tutorSuggestedName">A Name the pool's Tutor suggests for itself, or <see langword="null"/> for none.</param>
+        public Fixture(int typeCount, bool filterTypes = false, bool managedJob = false, string? tutorSuggestedName = null)
         {
+            string tutorNames = tutorSuggestedName is null ? string.Empty : $", \"suggestedNames\": [ \"{tutorSuggestedName}\" ]";
             this.Personas = this.dir.CreatePersonaStore();
             this.Catalog = new FakeTeamCatalog();
             Dictionary<string, string> builtins = new(StringComparer.Ordinal);
@@ -1269,7 +1321,7 @@ public sealed class BuildTeamTests
             this.Roles = new CustomRoleStore(this.dir.Options());
             this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches.", "requires": [ "email:read" ] }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ], "skillRefs": [ { "name": "ext-skill", "source": "acme/skills", "path": "skills/ext-skill" } ] } ] }""",
+                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches.", "requires": [ "email:read" ]""" + tutorNames + """ }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ], "skillRefs": [ { "name": "ext-skill", "source": "acme/skills", "path": "skills/ext-skill" } ] } ] }""",
                 ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
             });
@@ -1361,6 +1413,7 @@ public sealed class BuildTeamTests
         public MudBunitContext NewContext()
         {
             MudBunitContext ctx = new();
+            ctx.Services.AddSingleton<IHumanIdentity>(new ConfiguredHumanIdentity("You"));
             ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
             ctx.Services.AddSingleton(this.Types);
             ctx.Services.AddSingleton(this.Personas);

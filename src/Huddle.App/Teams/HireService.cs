@@ -382,6 +382,12 @@ internal sealed class HireService(
                     return $"{draft.Name} has no instructions. Edit the draft and write what it should do.";
                 }
 
+                // PersonaStore refuses the Human's Name at the write, which for a new Team also comes after the Team exists.
+                if (personas.IsHuman(draft.Name))
+                {
+                    return $"'{draft.Name}' is your own name. Choose another for this Agent.";
+                }
+
                 if (!seen.Add(draft.Name) || personas.ResolveByNameOrAlias(draft.Name) is not null || personas.ResolveByNameOrAlias(draft.Name.ToLowerInvariant()) is not null)
                 {
                     return $"The name '{draft.Name}' is already in use.";

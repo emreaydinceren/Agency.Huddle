@@ -18,6 +18,7 @@
 @inject TeamTypeCatalog Types
 @inject ITeamCatalog Catalog
 @inject PersonaStore Personas
+@inject IHumanIdentity Human
 @inject NavigationManager Navigation
 @inject IDialogService Dialogs
 @inject HiringPoolCatalog Pool
@@ -949,12 +950,17 @@
     private bool IsManagerRole(string jobId) => this.selected?.Roles.Any(role =>
         role.Manager && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
 
-    /// <summary>A Name no Agent and no other draft has: one of the role's own suggestions when one is free, otherwise from the shared pool.</summary>
+    /// <summary>A Name no Agent, no other draft and not the Human has (Name or Alias): one of the role's own suggestions when one is free, otherwise from the shared pool.</summary>
     /// <param name="choices">The role's suggested names.</param>
     /// <param name="current">The Name now showing, which is not drawn again, or <see langword="null"/>.</param>
     private string FreeName(IReadOnlyList<string> choices, string? current)
     {
-        List<string> taken = [.. this.Personas.Entries.Select(static entry => entry.Name), .. this.drafts.Select(static draft => draft.Name)];
+        List<string> taken = [.. this.Personas.Entries.Select(static entry => entry.Name), .. this.drafts.Select(static draft => draft.Name), this.Human.Current.Name];
+        if (this.Human.Current.Alias is { Length: > 0 } humanAlias)
+        {
+            taken.Add(humanAlias);
+        }
+
         string[] free = [.. choices.Where(choice => !taken.Contains(choice, StringComparer.OrdinalIgnoreCase)
             && !string.Equals(choice, current, StringComparison.OrdinalIgnoreCase))];
         return free.Length > 0 ? free[Random.Shared.Next(free.Length)] : AgentNamePool.Pick(Random.Shared, taken, current);
