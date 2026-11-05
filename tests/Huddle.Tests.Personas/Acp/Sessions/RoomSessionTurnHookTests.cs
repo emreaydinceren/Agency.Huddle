@@ -922,8 +922,8 @@ public sealed class RoomSessionTurnHookTests
     public async Task StoppedTurn_StillRunsAfter_WithTheRunToken()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        bool[] afterTokenCancelled = [true];
-        RecordingHook hook = new() { AfterGate = token => { afterTokenCancelled[0] = token.IsCancellationRequested; return Task.CompletedTask; } };
+        TaskCompletionSource<bool> afterTokenCancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingHook hook = new() { AfterGate = token => { afterTokenCancelled.TrySetResult(token.IsCancellationRequested); return Task.CompletedTask; } };
         FakeAgentSession session = new();
         session.EnqueueReplyThenHang("partial");
         FakeRoomSessionOwner owner = new();
@@ -934,9 +934,9 @@ public sealed class RoomSessionTurnHookTests
         // Stop only once the reply's activity has reached the owner: a Stop before it correctly runs no After (E-5).
         await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(), ct, timeout: TestBudgets.Standard);
         await harness.Room.StopAsync(RoomId, 1, ct);
-        await Eventually.UntilAsync(() => hook.Ended.Count == 1, ct, timeout: TestBudgets.Standard);
 
-        Assert.False(afterTokenCancelled[0]);
+        // The fake records Ended before it runs AfterGate, so wait on the value itself, not on Ended.
+        Assert.False(await afterTokenCancelled.Task.WaitAsync(TestBudgets.Standard, ct));
     }
 
     /// <summary>

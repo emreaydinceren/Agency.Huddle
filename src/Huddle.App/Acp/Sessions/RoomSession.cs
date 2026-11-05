@@ -2016,12 +2016,22 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // The meter's latest reading rides along, so a restart can show it again before this
             // Room's session reopens. Read after the Turn's usage updates, which precede its outcome.
             ContextFillReading? context = this.agentId is { } id ? this.contextFill?.Get(id, storeRoomId) : null;
-            this.roomSessionStore.Put(
-                this.owner.PersonaName,
-                storeRoomId,
-                new RoomSessionEntry(
-                    run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode,
-                    context?.Used, context?.Size ?? 0, new Dictionary<string, string?>(this.hookState, StringComparer.Ordinal)));
+            try
+            {
+                this.roomSessionStore.Put(
+                    this.owner.PersonaName,
+                    storeRoomId,
+                    new RoomSessionEntry(
+                        run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode,
+                        context?.Used, context?.Size ?? 0, new Dictionary<string, string?>(this.hookState, StringComparer.Ordinal)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The Turn is finished and its reply posted: a store that cannot be written must not fail it. The stored entry
+                // stays as it was, so a resumed session hears again what this one has already heard.
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' could not store the session entry after a turn in room {RoomId}.", this.owner.PersonaName, storeRoomId);
+            }
         }
     }
 

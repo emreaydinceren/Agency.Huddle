@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task count they name.
 - Task 1.8 is a gate: if it fails, work stops for the Human before D2. Paid tasks need the Human's approval each time.
 
-**Status:** 66 of 76 tasks Done · 4 of 4 retrospectives done · last updated 2026-11-04.
+**Status:** 71 of 76 tasks Done · 4 of 4 retrospectives done · last updated 2026-11-04.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -94,11 +94,11 @@ never by hand, so the status line stays true.
 | **D8. Together** | | | |
 | 8.1.t `AgentsMdTurnHook` | | | ✔ |
 | 8.1.i `AgentsMdTurnHook` | | | ✔ |
-| 8.2.t The list and the filter | | ✔ | |
-| 8.2.i The production list and the filter | ✔ | | |
-| 8.3.t End to end | ✔ | | |
-| 8.3.i Wire it | ✔ | | |
-| 8.4 The call-count table | ✔ | | |
+| 8.2.t The list and the filter | | | ✔ |
+| 8.2.i The production list and the filter | | | ✔ |
+| 8.3.t End to end | | | ✔ |
+| 8.3.i Wire it | | | ✔ |
+| 8.4 The call-count table | | | ✔ |
 | **D9. Close** | | | |
 | 9.1 The ADR | ✔ | | |
 | 9.2 The references | ✔ | | |
