@@ -94,6 +94,44 @@ Every Persona must already be Haiku / low before the first Message. After the la
 paid test of a session, run `O-ADAPTERS` expecting `0`; any survivor is an orphaned
 Adapter holding a live session open, so stop it with `Stop-Process -Id <ProcessId>`.
 
+### P-CHECKPOINT
+
+Saves a lane at a point, so a later run can go back there instead of rebuilding it. A checkpoint holds the lane's
+data folder, its repositories folder and its Adapter session logs (`$HOME\.claude\projects\<lane>-*`). Two scripts
+do it: [Save-LaneCheckpoint.ps1](../../../agents/scripts/Save-LaneCheckpoint.ps1) and
+[Restore-LaneCheckpoint.ps1](../../../agents/scripts/Restore-LaneCheckpoint.ps1).
+
+**Stop the app first** (`P-STOP`, then wait five seconds). Both scripts refuse while port 5100 answers, while `team.db`
+is held open, or while any running process names the lane in its command line, because copying a live `team.db` is
+unsafe. Run them in `T-B`, from `<repo>`. Name a checkpoint after the test that just
+passed, for example `after-ZERO-16`.
+
+Save:
+
+```powershell
+pwsh -NoProfile -File agents/scripts/Save-LaneCheckpoint.ps1 -LaneRoot C:\HuddleZero -Port 5100 -Name after-ZERO-16
+```
+
+Restore:
+
+```powershell
+pwsh -NoProfile -File agents/scripts/Restore-LaneCheckpoint.ps1 -LaneRoot C:\HuddleZero -Port 5100 -Name after-ZERO-16 -Force
+```
+
+**Expect**: save prints `Saved checkpoint 'after-ZERO-16'` with the folder it wrote. Restore prints
+`Restored C:\HuddleZero to checkpoint 'after-ZERO-16'`.
+
+- **Restore discards everything in the lane since the checkpoint was saved**: data, repositories and session logs. It
+  refuses without `-Force`, so the flag is the acknowledgement. Nothing outside the lane comes back, and no real-world
+  effect is undone, such as spend already charged.
+- **Restore only to the same absolute path** the checkpoint was saved from. `-LaneRoot` must match it exactly. The
+  Adapter names its project folders after that path, so a restore elsewhere would not resume the Agents' sessions.
+- Checkpoints go to `$HOME\HuddleLaneCheckpoints\<lane>\<Name>` by default, outside the lane. `-CheckpointRoot` moves
+  them, but never inside `C:\HuddleZero`.
+- Saving an existing name refuses unless you pass `-Force`, which replaces that checkpoint.
+- If a restore was interrupted, `restore-in-progress.json` stays in the lane and both scripts refuse, because the lane
+  may be mixed. Restore again with `-Force -ResumeInterrupted`.
+
 ### P-LAUNCH-UAT
 
 The free lane with someone to talk to. **Explicit opt-in:** nothing a normal install does

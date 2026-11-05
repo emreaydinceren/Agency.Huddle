@@ -1032,6 +1032,9 @@ Remove-Item -Recurse -Force "$HOME\.claude\projects\C--HuddleZero-*"
 The Skills from Route A are under that folder as well, or beside the clone your AI tool chose. Delete that clone by
 hand if it is elsewhere.
 
+Checkpoints saved with [P-CHECKPOINT](common.md#p-checkpoint) are kept outside the lane, so this does not delete them.
+To go back to a saved case instead, restore it with `P-CHECKPOINT`, which needs `-Force`.
+
 ## Notes
 
 - **A test depends on the ones before it.** Run them in order. Each paid test assumes the app is on the paid launch.
@@ -1040,3 +1043,6 @@ hand if it is elsewhere.
 - **The dates are fixed.** The documents are written around November 2026, and Cole's question states its "as of" date for that reason.
 - **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New chat** with the same Members reopens the existing Room and session.
 - **The mock Adapter cannot run this.** It echoes its prompt, so it only proves the Team setup steps.
+- **Save a checkpoint after each case.** Once a case has passed and its result is in the Run log, stop the app and run
+  `P-CHECKPOINT` under the test's id, for example `after-ZERO-16`. A later run can then restore that point and carry on,
+  instead of rebuilding from ZERO-01. Saving uses no Agent Turns, so it spends nothing.
