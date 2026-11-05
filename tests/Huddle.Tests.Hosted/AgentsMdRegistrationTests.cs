@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.AgentsMdChange;
@@ -47,5 +48,16 @@ public sealed class AgentsMdRegistrationTests
 
         IHelperInvoker invoker = Assert.Single(invokers, static candidate => candidate.Helper.Id == AgentsMdChangeHelper.HelperId);
         Assert.IsType<AgentsMdChangeHelper>(invoker.Helper);
+    }
+
+    /// <summary>The watcher runs as a hosted service; without the registration the feature is silently dead.</summary>
+    [Fact]
+    public async Task Container_RegistersTheWatcherAsAHostedService()
+    {
+        await using TeamWebApplicationFactory factory = new();
+
+        IEnumerable<IHostedService> hosted = factory.Services.GetServices<IHostedService>();
+
+        Assert.Single(hosted, static service => service is AgentsMdWatcher);
     }
 }

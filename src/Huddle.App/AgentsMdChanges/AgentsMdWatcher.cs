@@ -65,16 +65,32 @@ internal sealed class AgentsMdWatcher(
             names.Add(summary.Name);
         }
 
+        HashSet<string> enumerated = new(StringComparer.Ordinal);
         foreach (AgentsMdFile file in AgentsMdLocator.Enumerate(teamsRoot, names))
         {
             ct.ThrowIfCancellationRequested();
-            this.CheckFile(file);
+            _ = enumerated.Add(file.RelativePath);
+            try
+            {
+                this.CheckFile(file);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                // One file's failure (anything the ledger did not handle) must not end the pass: an unrecorded stamp would make the
+                // same file fail first on every tick and starve the later files and every offer. Log it and go on.
+                logger.LogWarning(ex, "Observing {File} failed.", file.RelativePath);
+            }
+        }
+
+        foreach (string gone in this.seen.Keys.Where(key => !enumerated.Contains(key)).ToList())
+        {
+            _ = this.seen.Remove(gone);
         }
 
         foreach (AgentsMdPendingEdit edit in ledger.PendingEdits())
         {
             ct.ThrowIfCancellationRequested();
-            this.Offer(edit.File);
+            this.Offer(edit.File, ct);
         }
 
         return Task.CompletedTask;
@@ -88,13 +104,14 @@ internal sealed class AgentsMdWatcher(
 
     /// <summary>Asks the ledger to start a judgement once the debounce has passed. A failure is logged and the next pending edit is still offered.</summary>
     /// <param name="file">The file with a pending edit.</param>
-    private void Offer(AgentsMdFile file)
+    /// <param name="ct">The pass's token; a failure while it is cancelled is not swallowed.</param>
+    private void Offer(AgentsMdFile file, CancellationToken ct)
     {
         try
         {
             _ = ledger.TryStartJudgement(file, JudgementReason.Debounced);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             // One file's failed offer (an unreachable Helper, a locked ledger) must not stop the others: log it and go on.
             logger.LogWarning(ex, "Offering {File} for judgement failed.", file.RelativePath);
@@ -119,9 +136,25 @@ internal sealed class AgentsMdWatcher(
         }
 
         AgentsMdObservation observation = ledger.Observe(file);
-        if (stamp == FileStamp.Absent || observation.Hash.Length > 0)
+        if (stamp == FileStamp.Absent || observation.Hash.Length > 0 || CanRead(file.FullPath))
         {
             this.seen[file.RelativePath] = stamp;
+        }
+    }
+
+    /// <summary>Tells an empty or whitespace-only file (read fine, hashes to nothing) from a failed read, which has the same empty hash.</summary>
+    /// <param name="path">The file's full path.</param>
+    private static bool CanRead(string path)
+    {
+        try
+        {
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Locked or vanished: the read failed, so the stamp stays unrecorded and the next pass tries again.
+            return false;
         }
     }
 
@@ -140,7 +173,7 @@ internal sealed class AgentsMdWatcher(
                 {
                     await this.TickAsync(ct).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (!ct.IsCancellationRequested)
                 {
                     // The loop must not die: log and try again on the next period.
                     logger.LogError(ex, "The AGENTS.md watcher pass failed.");

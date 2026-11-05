@@ -50,7 +50,7 @@ public sealed class AgentsMdWatcherDebounceTests : IDisposable
         });
         FakePromptSource prompts = new();
         prompts.SetOverride("helper.agentsMdChange.system", "You judge.");
-        prompts.SetOverride("helper.agentsMdChange.edit", "Judge.");
+        prompts.SetOverride("helper.agentsMdChange.edit", "{{newText}}");
         this.settingsStore = new HelperSettingsStore(this.options);
         HelperSettingsResolver settings = new(this.settingsStore, this.options, NullLogger<HelperSettingsResolver>.Instance);
         HelperUsageStore usage = new(this.options);
@@ -173,6 +173,7 @@ public sealed class AgentsMdWatcherDebounceTests : IDisposable
         Assert.Equal(0, this.clock.ScheduledTimerCount);
         Assert.Equal(1, this.process.Calls);
         Assert.Equal(HashOf(last), Assert.Single(this.ledger.PendingEdits()).Hash);
+        Assert.Equal(last.TrimEnd(), this.process.Requests[0].Prompt);
     }
 
     /// <summary>A save 50 seconds into the wait starts it again: the file is not judged 61 seconds after the first save.</summary>

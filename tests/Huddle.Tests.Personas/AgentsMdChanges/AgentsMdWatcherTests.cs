@@ -90,6 +90,44 @@ public sealed class AgentsMdWatcherTests : IDisposable
         Assert.Single(this.fixture.Ledger.PendingEdits());
     }
 
+    /// <summary>A file that grew but kept its modified time is read again: the size alone marks it moved.</summary>
+    [Fact]
+    public async Task Tick_LongerText_SameMtime_IsPending()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        this.catalog.Teams = [new TeamSummary("Home", [], [], true)];
+        this.Save(Home, "# Rules\n\nAAAA\n");
+        using AgentsMdWatcher watcher = this.NewWatcher();
+        await watcher.TickAsync(ct);
+        string path = Path.Combine(this.TeamsRoot, Home);
+        DateTime stamp = File.GetLastWriteTimeUtc(path);
+
+        File.WriteAllText(path, "# Rules\n\nAAAA, and a longer rule.\n");
+        File.SetLastWriteTimeUtc(path, stamp);
+        await watcher.TickAsync(ct);
+
+        Assert.Single(this.fixture.Ledger.PendingEdits());
+    }
+
+    /// <summary>An existing whitespace-only file hashes to nothing but was read fine, so it is not read again on the next pass.</summary>
+    [Fact]
+    public async Task Tick_EmptyFile_NotReadAgain()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        this.catalog.Teams = [new TeamSummary("Home", [], [], true)];
+        this.Save(Home, "  \n");
+        using AgentsMdWatcher watcher = this.NewWatcher();
+        await watcher.TickAsync(ct);
+        string path = Path.Combine(this.TeamsRoot, Home);
+        DateTime stamp = File.GetLastWriteTimeUtc(path);
+
+        File.WriteAllText(path, "ab\n");
+        File.SetLastWriteTimeUtc(path, stamp);
+        await watcher.TickAsync(ct);
+
+        Assert.Empty(this.fixture.Ledger.PendingEdits());
+    }
+
     /// <summary>A folder that is not a Team (Teams/memory) is never observed, so it spends no ledger entry.</summary>
     [Fact]
     public async Task Tick_NonTeamFolderIsIgnored()
@@ -165,10 +203,10 @@ public sealed class AgentsMdWatcherTests : IDisposable
         // A negative has no event to wait for: a running loop yields, sweeps and arms its timer within moments, so hold for one short budget.
         await Task.Delay(TestBudgets.Short, ct);
         this.clock.Advance(TimeSpan.FromSeconds(60));
+        int timers = this.clock.ScheduledTimerCount;
         await watcher.StopAsync(ct);
 
-        Assert.Equal(0, this.clock.ScheduledTimerCount);
-        Assert.False(Directory.Exists(Path.Combine(off.Value.DataDir, "agents-md-ledger")));
+        Assert.Equal(0, timers);
         Assert.False(Directory.Exists(Path.Combine(this.DataDir, "agents-md-ledger")));
     }
 
