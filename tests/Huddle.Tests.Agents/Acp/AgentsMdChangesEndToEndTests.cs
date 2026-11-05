@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Data;
@@ -451,10 +452,16 @@ public sealed class AgentsMdChangesEndToEndTests
             }
         }
 
-        /// <summary>Waits until the Room Session store has written the Agent's file, which follows the reply of a Turn.</summary>
+        /// <summary>
+        /// Waits until the Room Session store has finished writing Room A's entry, which follows the reply of a Turn. It asks the store, whose lock
+        /// spans the whole write: on Windows the file's name appears just before the rename lets go of it, so seeing the file does not mean it can be opened.
+        /// </summary>
         /// <param name="cancellationToken">Bounds the wait.</param>
         internal Task StoreWrittenAsync(CancellationToken cancellationToken)
-            => Eventually.UntilAsync(() => File.Exists(this.StorePath), cancellationToken, TestBudgets.Slowest);
+        {
+            RoomSessionStore store = this.Fixture.Services.GetRequiredService<RoomSessionStore>();
+            return Eventually.UntilAsync(() => store.Get("nova", this.RoomA) is not null, cancellationToken, TestBudgets.Slowest);
+        }
 
         /// <summary>Makes the fake Helper wait for the returned source before it answers.</summary>
         internal TaskCompletionSource HoldHelper()
