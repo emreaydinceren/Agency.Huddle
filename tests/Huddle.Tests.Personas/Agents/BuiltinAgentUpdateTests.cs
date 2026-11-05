@@ -242,6 +242,7 @@ public sealed class BuiltinAgentUpdateTests
             "dfe6b09862daf03a332688154807157ae31a14ec4cdce232bc6c19ff9438a0fc",
             "33d40e97eb332f31971b731d8e4a1b1c89bea81e8f7ef98d8cbf4b4571e27652",
             "755dc8a7df35902466f3a9c3c38af2a6b5e2186676c384eaf058a7170e00bfd7",
+            "a0ce89479e032ea66c5317845cc95d3c262b7e688722abd1c1e395dcfe6f3574",
         ];
         string[] lines = [.. EmbeddedResources.ReadText(typeof(BuiltinAgentVersions).Assembly, "Builtin/chief-of-staff.hashes.txt")
             .Split('\n').Select(static line => line.Trim()).Where(static line => line.Length >= 64 && !line.StartsWith('#')).Select(static line => line[..64])];
