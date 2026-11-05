@@ -11,7 +11,7 @@ never by hand, so the status line stays true.
 - 🔁 rows are the retrospectives, run at the next pair boundary after the task count they name.
 - Task 1.8 is a gate: if it fails, work stops for the Human before D2. Paid tasks need the Human's approval each time.
 
-**Status:** 31 of 76 tasks Done · 1 of 4 retrospectives done · last updated 2026-11-04.
+**Status:** 51 of 76 tasks Done · 3 of 4 retrospectives done · last updated 2026-11-04.
 
 | Deliverable / Task | Active | In Progress | Done |
 | --- | --- | --- | --- |
@@ -34,14 +34,14 @@ never by hand, so the status line stays true.
 | 1.8 Delete the old path, Agents and Hosted tests; the gate | | | ✔ |
 | **D2. Session state for hooks** | | | |
 | 🔁 R1 Retrospective after task 15 | | | ✔ |
-| 2.1.t `HookState` on the entry | ✔ | | |
-| 2.1.i `HookState` and `UpdateHookState` | ✔ | | |
-| 2.2.t Opening runs at the right moment | ✔ | | |
-| 2.2.i Run Opening; store the state | ✔ | | |
-| 2.3.t A completed `/compact` | ✔ | | |
-| 2.3.i Run Opening on compaction | ✔ | | |
-| 2.4.t Stop ends a waiting hook | ✔ | | |
-| 2.4.i The Stop token | ✔ | | |
+| 2.1.t `HookState` on the entry | | | ✔ |
+| 2.1.i `HookState` and `UpdateHookState` | | | ✔ |
+| 2.2.t Opening runs at the right moment | | | ✔ |
+| 2.2.i Run Opening; store the state | | | ✔ |
+| 2.3.t A completed `/compact` | | | ✔ |
+| 2.3.i Run Opening on compaction | | | ✔ |
+| 2.4.t Stop ends a waiting hook | | | ✔ |
+| 2.4.i The Stop token | | | ✔ |
 | **D3. What a file is, and who it applies to** | | | |
 | 3.1.t The locator | | | ✔ |
 | 3.1.i `AgentsMdLocator` and `AgentsMdFile` | | | ✔ |
@@ -51,7 +51,7 @@ never by hand, so the status line stays true.
 | 3.3.i `AgentsMdComparison` | | | ✔ |
 | 3.4.t Options | | | ✔ |
 | 3.4.i The option keys | | | ✔ |
-| 🔁 R2 Retrospective after task 30 | ✔ | | |
+| 🔁 R2 Retrospective after task 30 | | | ✔ |
 | 3.5.t `AgentsMdScopes` | | | ✔ |
 | 3.5.i `AgentsMdScopes` | | | ✔ |
 | **D4. The ledger** | | | |
@@ -61,21 +61,21 @@ never by hand, so the status line stays true.
 | 4.2.i `TryStartJudgement` | | | ✔ |
 | 4.3.t Settling an edit | | | ✔ |
 | 4.3.i The commits and the wait | | | ✔ |
-| 4.4.t `Since` and pruning | | ✔ | |
-| 4.4.i `Since`, pruning, `FirstSightHash` | ✔ | | |
+| 4.4.t `Since` and pruning | | | ✔ |
+| 4.4.i `Since`, pruning, `FirstSightHash` | | | ✔ |
 | **D5. The Helper** | | | |
-| 5.1.t The Feed record | ✔ | | |
-| 5.1.i `AgentsMdChangeSkipped` | ✔ | | |
-| 5.2.t The Verdict | ✔ | | |
-| 5.2.i Verdict, context, `Validate` | ✔ | | |
-| 🔁 R3 Retrospective after task 45 | ✔ | | |
-| 5.3.t Prompts and fingerprint | ✔ | | |
-| 5.3.i The prompts | ✔ | | |
-| 5.4.t Applying a Verdict | ✔ | | |
-| 5.4.i `ApplyAsync` | ✔ | | |
-| 5.5.t Registration resolves | ✔ | | |
-| 5.5.i Registration | ✔ | | |
-| 5.6 Measure a judgement (Paid) | ✔ | | |
+| 5.1.t The Feed record | | | ✔ |
+| 5.1.i `AgentsMdChangeSkipped` | | | ✔ |
+| 5.2.t The Verdict | | | ✔ |
+| 5.2.i Verdict, context, `Validate` | | | ✔ |
+| 🔁 R3 Retrospective after task 45 | | | ✔ |
+| 5.3.t Prompts and fingerprint | | | ✔ |
+| 5.3.i The prompts | | | ✔ |
+| 5.4.t Applying a Verdict | | | ✔ |
+| 5.4.i `ApplyAsync` | | | ✔ |
+| 5.5.t Registration resolves | | | ✔ |
+| 5.5.i Registration | | | ✔ |
+| 5.6 Measure a judgement (Paid) | | ✔ | |
 | **D6. The watcher** | | | |
 | 6.1.t Sweep and tick | ✔ | | |
 | 6.1.i `AgentsMdWatcher` | ✔ | | |

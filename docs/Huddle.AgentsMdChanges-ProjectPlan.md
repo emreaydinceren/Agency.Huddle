@@ -557,7 +557,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin Spec §6.3.
 - **Read first:** Spec §6.3 lines 293–329; `tests/Huddle.Tests.Teams/Teams/CadenceServiceTests.cs` (first test); `src/Huddle.App/Teams/CadenceService.cs` :75–100.
 - **Risk:** `boundary`.
-- **Deliverable:** New `AgentsMdWatcherTests`: `Start_SweepFindsAnEditMadeWhileClosed`, `Tick_ReadsOnlyMovedFiles`, `Tick_NonTeamFolderIsIgnored` (`Teams/memory/AGENTS.md`), `Tick_ExceptionDoesNotEndTheLoop`, `StopAndDisposeOnTwoThreads_DoNotThrow`, `AdaptersOff_DoesNotRun_AndWritesNoLedger`.
+- **Deliverable:** New `AgentsMdWatcherTests`: `Start_SweepFindsAnEditMadeWhileClosed`, `Tick_ReadsOnlyMovedFiles`, `Tick_NonTeamFolderIsIgnored` (`Teams/memory/AGENTS.md`), `Tick_ExceptionDoesNotEndTheLoop`, `StopAndDisposeOnTwoThreads_DoNotThrow`, `AdaptersOff_DoesNotRun_AndWritesNoLedger` (advance several ticks first), `Tick_FileVanishesAfterEnumeration_OthersObserved`.
 - **Acceptance:** Red with `CS0246`.
 
 ### Task 6.1.i — `AgentsMdWatcher` [Sonnet]
@@ -573,7 +573,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin O-10 through the watcher.
 - **Read first:** Spec §8.6 table (~line 932); `AgentsMdWatcherTests.cs`.
 - **Risk:** `boundary`.
-- **Deliverable:** With `FiringTimeProvider` and `FakeHelperProcessRunner`: `SaveLoop_NoCallWhileSaving_OneCallAfterQuiet_OnTheNetChange`, `EachSaveRestartsTheDebounce`, `PausedHelper_PostsItsFeedItem`.
+- **Deliverable:** With `FiringTimeProvider` and `FakeHelperProcessRunner`: `SaveLoop_NoCallWhileSaving_OneCallAfterQuiet_OnTheNetChange`, `EachSaveRestartsTheDebounce`, `PausedHelper_PostsItsFeedItem`, `PausedHelper_SecondTickInsideSpacing_NoSecondEnqueue`, `OfferThrows_OtherFilesStillOffered`.
 - **Acceptance:** Red: the watcher does not start judgements.
 
 ### Task 6.2.i — Offer pending edits each tick [Sonnet]
@@ -625,7 +625,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin Spec §8.3 without the wait.
 - **Read first:** Spec §8.3 lines 823–876; §7.2 lines 730–745.
 - **Risk:** `boundary`.
-- **Deliverable:** New `AgentsMdNoticeSourceTests`: `UpToDate_NoBlock_HeardUnchanged`, `NullHeard_TellsEveryEditSinceFirstSight`, `NullHeard_NoLedgerEntry_CountsAsCurrent`, `Behind_TellsRevisionsOldestFirst`, `SkippedOnly_NoBlock_HeardMoves`, `Heard_IsTheLastRevisionRead_NotTheHead` (a commit between `Since` and the return is told next Turn), `NewFile_NowFollow`, `Moved_TellsNothing_HeardMoves`, `Deleted_IsAComparison`, `OutOfScope_NoLonger_OnceThenDropped`, `TeamWithNoFile_IsNotBehind`, `Unknown_ReadTheFile`, `SecondTurn_SaysNothing_AfterEach` (a `[Theory]` over the cases above), `ReadFails_LeftOutAndHeardKept`.
+- **Deliverable:** New `AgentsMdNoticeSourceTests`: `UpToDate_NoBlock_HeardUnchanged`, `NullHeard_TellsEveryEditSinceFirstSight`, `NullHeard_NoLedgerEntry_CountsAsCurrent`, `Behind_TellsRevisionsOldestFirst`, `SkippedOnly_NoBlock_HeardMoves`, `Heard_IsTheLastRevisionRead_NotTheHead` (a commit between `Since` and the return is told next Turn), `NewFile_NowFollow`, `Moved_TellsNothing_HeardMoves`, `Deleted_IsAComparison`, `OutOfScope_NoLonger_OnceThenDropped`, `TeamWithNoFile_IsNotBehind`, `Unknown_ReadTheFile`, `SecondTurn_SaysNothing_AfterEach` (a `[Theory]` over the cases above), `ReadFails_LeftOutAndHeardKept`, `TextlessHead_Unknown_NoCall`.
 - **Acceptance:** Red with `CS0246`.
 
 ### Task 7.3.i — `AgentsMdNoticeSource` [Sonnet]
@@ -641,7 +641,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin O-8.
 - **Read first:** Spec §8.3 "wait:" lines; `AgentsMdNoticeSourceTests.cs`.
 - **Risk:** `boundary`.
-- **Deliverable:** With `FiringTimeProvider`: `TurnAsks_WaitsForTheSummary`, `DeadlinePasses_Comparison`, `ThenVerdictLands_LaterRoomGetsTheSummary`, `InsideSpacing_NoWait_Comparison`, `HelperOff_NoWait`, `Paused_NoWait`, `JudgementFailedEarlier_NoWait_NextTurn`, `Cancelled_EndsTheWait`.
+- **Deliverable:** With `FiringTimeProvider`: `TurnAsks_WaitsForTheSummary`, `DeadlinePasses_Comparison`, `ThenVerdictLands_LaterRoomGetsTheSummary`, `InsideSpacing_NoWait_Comparison`, `HelperOff_NoWait`, `Paused_NoWait`, `JudgementFailedEarlier_NoWait_NextTurn`, `Cancelled_EndsTheWait`, `TextChangedDuringTheWait_NoOldSummary`, `Cancelled_HeardNotMoved`.
 - **Acceptance:** Red.
 
 ### Task 7.4.i — Add the wait [Sonnet]
@@ -661,7 +661,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin Spec §6.10 "Telling again after `/compact`" and §8.5.
 - **Read first:** Spec §6.10 lines 660–668; §8.5 lines 887–900.
 - **Risk:** `boundary`.
-- **Deliverable:** New `AgentsMdTurnHookTests`: `Opening_Fresh_HashesStartedAndHeard`, `Opening_Resumed_KeepsTheEntrysMaps`, `Opening_Compacted_SetsHeardToStarted`, `State_RoundTripsAsJson`, `After_StoresTheCarriedHeard`, `Compacted_NextTurnTellsEverythingSinceTheStart_ThenNothing`, `Compacted_SurvivesAClosedAndResumedSession`.
+- **Deliverable:** New `AgentsMdTurnHookTests`: `Opening_Fresh_HashesStartedAndHeard`, `Opening_Resumed_KeepsTheEntrysMaps`, `Opening_Compacted_SetsHeardToStarted`, `State_RoundTripsAsJson`, `After_StoresTheCarriedHeard`, `Compacted_NextTurnTellsEverythingSinceTheStart_ThenNothing`, `Compacted_SurvivesAClosedAndResumedSession`, `After_StoreWriteFails_TurnSucceeds_NextTurnRetells`.
 - **Acceptance:** Red with `CS0246`.
 
 ### Task 8.1.i — `AgentsMdTurnHook` [Sonnet]
@@ -677,7 +677,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin O-12's neighbours: the order and Spec §6.7 "Filtering File Changes".
 - **Read first:** Spec §6.7 lines 501–531; `FileChangesTurnHook.cs`.
 - **Risk:** `logic`.
-- **Deliverable:** `ForPersona_PutsAgentsMdBeforeFileChanges` (swap them in the production list and show the red, then restore by inverse edit), `FileChanges_LeavesOutInScopeAgentsMd`, `FileChanges_KeepsAgentsMdOutOfScope`, `FileChanges_BaselineStillRecordsTheFile`.
+- **Deliverable:** `ForPersona_PutsAgentsMdBeforeFileChanges` (swap them in the production list and show the red, then restore by inverse edit), `FileChanges_LeavesOutInScopeAgentsMd`, `FileChanges_KeepsAgentsMdOutOfScope`, `FileChanges_BaselineStillRecordsTheFile`, `FileChanges_OnlyAgentsMdTouched_NoBlock`.
 - **Acceptance:** Red.
 
 ### Task 8.2.i — The production list and the filter [Sonnet]
@@ -693,7 +693,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Goal:** Pin Spec §13.
 - **Read first:** Spec §13 lines 1032–1054; `tests/Huddle.Tests.Agents/Acp/PersonaRunnerFileChangesTests.cs` (first test).
 - **Risk:** `boundary`.
-- **Deliverable:** New `tests/Huddle.Tests.Agents/Acp/AgentsMdChangesEndToEndTests.cs` with a fake Helper process: `Edit_RoomGetsTheSummary_SecondRoomSameWords_NoSecondCall_ThirdTurnNothing`, `HelperOff_Comparison`, `Typo_Skipped_InTheFeed`, `WaitingTurn_HoldsThatAgentsOtherRoom` (O-12), `StopDuringTheWait_FreesTheOtherRoom`, `FreshStart_HearsNothing`, `RestartThenResume_StillTells`.
+- **Deliverable:** New `tests/Huddle.Tests.Agents/Acp/AgentsMdChangesEndToEndTests.cs` with a fake Helper process: `Edit_RoomGetsTheSummary_SecondRoomSameWords_NoSecondCall_ThirdTurnNothing`, `HelperOff_Comparison`, `Typo_Skipped_InTheFeed`, `WaitingTurn_HoldsThatAgentsOtherRoom` (O-12), `StopDuringTheWait_FreesTheOtherRoom`, `FreshStart_HearsNothing`, `RestartThenResume_StillTells`, `StopDuringTheWait_NextTurnStillTells`, `StopInOtherRoom_WaitContinues`.
 - **Acceptance:** Red.
 
 ### Task 8.3.i — Wire it [Sonnet]
@@ -710,7 +710,7 @@ unregistered id. Use `FiringTimeProvider`.
 - **Read first:** Spec §8.6 table (~line 932).
 - **Risk:** `logic`.
 - **Deliverable:** In `AgentsMdChangesEndToEndTests`, on `FiringTimeProvider`, count calls on the fake runner: saves every 3 s for 10 minutes is exactly 1; saves every 90 s for 30 minutes is at most 7; saves and Messages every 30 s for 10 minutes is at most 3. The Turn count in the last case equals the number of Messages, and each hears.
-- **Acceptance:** Green, and each test shown able to fail by setting `MinJudgeSeconds` to 0 and restoring it by inverse edit.
+- **Acceptance:** Green, and each test shown able to fail, restored by inverse edit: the 3-second loop by setting `DebounceSeconds` to 0 (the debounce holds that loop, per Spec §8.6), the other two by setting `MinJudgeSeconds` to 0.
 
 ---
 
@@ -762,4 +762,6 @@ unregistered id. Use `FiringTimeProvider`.
 
 | After task | Date | Finding | Change made |
 | --- | --- | --- | --- |
+| 45 | 2026-11-04 | The biggest cost is now rework: post-code reviews found blockers in D2 and D4, about 4.7M tokens per fix round. Seven recurring defect classes, led by tests that pass on arrival and cannot fail. 8.4's mutation would not have failed for the 3-second loop | Added scenarios to tasks 6.1 to 8.3; fixed 8.4's Acceptance; the brief requires a guard-line mutation per rule; an architect review of D6 to D8 runs before coding, and post-code reviews stay |
+| 30 | 2026-11-04 | Agents now start at 22K, but grow to about 130K over 50 calls: 40% their own output, 30% reads of whole test files. One hung test held the machine-wide test lock for 63 minutes. Line ranges in D2 went stale | Delivery facts gained `RoomSession` anchors, harness and dispatcher facts, and a no-unbounded-wait rule; the brief forbids whole-file reads of tests; the manager budgets 40 calls per agent |
 | 15 | 2026-11-04 | Every agent starts at 71K, about two-thirds of its cost, probably from tool schemas it never uses. Agents repeated stub, red-recording and Edit-before-Read mistakes. The first-review architect found 4 blockers in D1's plan text | Added a restricted `amd-dev` agent type; added the repeated facts to the delivery facts file; corrected the Build and Test conventions; D1's findings went into a corrections file |

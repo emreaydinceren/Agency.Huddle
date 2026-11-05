@@ -507,7 +507,7 @@ a block past `MaxNoticeChars`.
 | `RoomSession` | A new field, `Dictionary<string, string?> hookState`, holds each hook's state for this session. It is set at Opening and updated by After |
 | `RoomSession.ProcessWorkItemAsync` | `TurnHookPipeline.BeforeTurnAsync` replaces `CollectFileChangesAsync`, in the same place: before `TryPublishTurn`, and only for `WorkItemKind.Message` |
 | `BuildFramedPrompt` | Writes `HookBlocks` in order where the File Changes block goes today. `AgentsMdTurnHook` is first in the list, so its block comes first. Absent means byte-identical |
-| `RoomSessionEntry` | Trailing `IReadOnlyDictionary<string, string>? HookState = null`: hook name to that hook's own text. An older file loads as null, like `WorkMode` |
+| `RoomSessionEntry` | Trailing `IReadOnlyDictionary<string, string?>? HookState = null`: hook name to that hook's own text. An older file loads as null, like `WorkMode` |
 | `OpenOrResumeAsync` | Runs `OnSessionOpeningAsync`: a resume passes `entry.HookState`, and a fresh open runs it **before** `this.open`, which is when `AgentsMdTurnHook` captures the hashes |
 | `FinishTurnAsync` | `TurnHookPipeline.AfterTurnAsync` replaces `CommitFileChangesAsync`, in the same place, under the same gate |
 | `StoreSessionEntry` | Stores `hookState` as it stands, under its existing gate. Taken from the field, not from After's return, because a Greeting stores an entry and runs no After |
@@ -868,7 +868,9 @@ another Turn then committed `A→B`, and this Turn stored the head, it would rec
 out-of-scope path. A Team with no file is not behind, because its current hash and its missing heard hash are both `""`.
 
 `Since` walks back from the end to the **last** revision whose `toHash` equals the heard hash. The last one, because a revert
-makes a hash appear twice. A heard hash equal to the head returns before this (U-14).
+makes a hash appear twice. When no `toHash` matches, the heard hash can still be the `fromHash` of the first revision kept:
+everything after it is retained, so `Since` returns the whole chain. Otherwise pruning has passed it, and `Since` returns
+null. A heard hash equal to the head returns before this (U-14).
 
 The wait never exceeds `NoticeWaitSeconds`, because each `judgementStarted` is at most now. A Turn long after a judgement does not wait
 at all. That is how a failed Helper costs at most one wait per judgement: once the deadline has passed for a text, every later Turn
@@ -922,7 +924,8 @@ TryStartJudgement(file, reason):
     this (fromHash, toHash) is running or done          ──► true when running, else false
     now - lastJudgement(file) < MinJudgeSeconds         ──► false
     Helper off or Adapters off                          ──► false
-    the Helper is paused ──► Enqueue, so the run reaches OverBudget and the Feed hears once ──► false
+    the Helper is paused ──► Enqueue, so the run reaches OverBudget and the Feed hears once;
+                             lastJudgement(file) = now, so one call at most after Continue ──► false
     Enqueue(AgentsMdChange, ledger key, input(head → current))     outside the lock
     lastJudgement(file) = now;  judgementStarted = now
     ──► true

@@ -53,6 +53,32 @@ internal sealed class RoomSessionStore(IOptions<TeamOptions> options, ILogger<Ro
         }
     }
 
+    /// <summary>Replaces only the Hook State of <paramref name="roomId"/>'s existing entry for <paramref name="name"/>, leaving every other field as it is. Does nothing when there is no entry, or when the entry is of another session.</summary>
+    /// <param name="name">The Agent's Name.</param>
+    /// <param name="roomId">The Room id.</param>
+    /// <param name="sessionId">The session the state belongs to; an entry of another session is left alone.</param>
+    /// <param name="state">The Hook State to store, keyed by hook name.</param>
+    internal void UpdateHookState(string name, string roomId, string sessionId, IReadOnlyDictionary<string, string?> state)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentNullException.ThrowIfNull(state);
+
+        lock (this.gate)
+        {
+            RoomSessionDocument? document = this.LoadCore(name);
+            if (document is null || !document.Rooms.TryGetValue(roomId, out RoomSessionEntry? entry)
+                || !string.Equals(entry.SessionId, sessionId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            document.Rooms[roomId] = entry with { HookState = state };
+            this.SaveCore(name, document);
+        }
+    }
+
     /// <summary>Removes <paramref name="roomId"/>'s entry for <paramref name="name"/>, if any, keeping the rest.</summary>
     /// <param name="name">The Agent's Name.</param>
     /// <param name="roomId">The Room id to forget.</param>
