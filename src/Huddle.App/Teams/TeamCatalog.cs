@@ -72,6 +72,15 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         this.Find(team) is { } found
         && found.Projects.Any(p => string.Equals(p, project, StringComparison.OrdinalIgnoreCase));
 
+    /// <inheritdoc />
+    public void Refresh()
+    {
+        if (!this.disposed)
+        {
+            this.OnSourceChanged();
+        }
+    }
+
     /// <summary>Unsubscribes from both change signals and stops the team-file watcher. Safe to call more than once.</summary>
     public void Dispose()
     {

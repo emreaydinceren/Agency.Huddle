@@ -19,4 +19,13 @@ internal interface ITeamCatalog
     /// <param name="project">The Project name.</param>
     /// <returns><see langword="true"/> when the Team exists and lists that Project.</returns>
     bool ProjectExists(string team, string project);
+
+    /// <summary>
+    /// Rebuilds <see cref="Teams"/> from the stores now, then raises <see cref="Changed"/>, instead of waiting for the debounce that follows a
+    /// <c>_team.md</c> edit. A caller whose next step reads the catalog at once (the session of an Agent just hired) calls this after writing the file.
+    /// A catalog that is always current has nothing to do.
+    /// </summary>
+    void Refresh()
+    {
+    }
 }

@@ -6389,6 +6389,14 @@ File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TMHELP-08 — A new manager writes Team Memory during onboarding
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-08--a-new-manager-writes-team-memory-during-onboarding)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | f2874883 |  | Agent, isolated lane, Haiku. One-role Development Team (manager only) on a repo with two conventions. Manager wrote `Teams\Tm8Dev\memory\tm8-repo-conventions-and-build.md` with a description and both conventions, proposed a starter Task and created none; only its Room had a Turn. 0.008 USD. Effort stayed Agent default in the draft |
+
 ## Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush
 
 ### LONGROOMS-01 — Claude Code's own memory stays off for the Chief of Staff

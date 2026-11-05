@@ -110,18 +110,24 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// that needs to drive the idle sweep deterministically passes a settable clock instead of waiting
     /// out real wall-clock minutes (D30 correction 17).
     /// </param>
-    /// <param name="cancellationToken">Cancels startup.</param>
     /// <param name="scriptAgent">
     /// Called with the scripted peer BEFORE the Persona's runner starts, so a test can set its
     /// <c>On*</c> handlers (the <c>session/new</c> answer, for one) in time for the session the runner
     /// opens during startup. <see langword="null"/> leaves the peer's defaults.
     /// </param>
+    /// <param name="beforeRunnerStart">
+    /// Called with the started host's services right before the runner opens its session, so a test can
+    /// do what the app does at that moment (a hire, say) and have the session start straight after it,
+    /// as the supervisor's does, with no wait. <see langword="null"/> does nothing.
+    /// </param>
+    /// <param name="cancellationToken">Cancels startup.</param>
     /// <returns>The started fixture.</returns>
     internal static async Task<MockAdapterFixture> StartAsync(
         Persona persona,
         IReadOnlyDictionary<string, string?>? additionalConfig = null,
         TimeProvider? timeProvider = null,
         Action<FakeAcpAgent>? scriptAgent = null,
+        Action<IServiceProvider>? beforeRunnerStart = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -188,6 +194,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
 
         try
         {
+            beforeRunnerStart?.Invoke(host.Services);
             await runner.StartAsync(cancellationToken).ConfigureAwait(false);
         }
         catch

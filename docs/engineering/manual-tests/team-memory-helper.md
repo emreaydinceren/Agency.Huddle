@@ -1,8 +1,8 @@
 # Team Memory Helper
 
-Prove, in a real browser against the real Claude Adapter, that a member's proposal reaches its Team's shared Memory without the manager: that `propose_team_memory` answers at once, that the Team Memory Helper files a decision as a topic file with a description and records the proposer in the file's History, that a later proposal updates the same topic instead of creating a second one, that a personal preference is not filed and the Feed says why, that a Team the member is not in is refused, that instructions hidden in a proposal cannot move the write outside the Team, and that the daily cap pauses the Helper and the tool says so. The automated suite proves the parts with a scripted Helper; this page proves a real model judges well enough. **Written 2026-10-30; not yet run by a person.**
+Prove, in a real browser against the real Claude Adapter, that a member's proposal reaches its Team's shared Memory without the manager: that `propose_team_memory` answers at once, that the Team Memory Helper files a decision as a topic file with a description and records the proposer in the file's History, that a later proposal updates the same topic instead of creating a second one, that a personal preference is not filed and the Feed says why, that a Team the member is not in is refused, that instructions hidden in a proposal cannot move the write outside the Team, that the daily cap pauses the Helper and the tool says so, and that a new manager writes Team Memory during its onboarding Turn. The automated suite proves the parts with a scripted Helper; this page proves a real model judges well enough. **Written 2026-10-30; not yet run by a person.**
 
-**7 tests** · 1 free, 6 paid 💰 · about 1.5 hours.
+**8 tests** · 1 free, 7 paid 💰 · about 1.75 hours.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below. The design is [the Team Memory Helper spec](../../Huddle.TeamMemoryHelper-Specifications.md) (§2 lists the use cases U-1 to U-10 these tests name) and [ADR-0073](../../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 
@@ -15,6 +15,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 | TMHELP-05 | U-7 | Paid 💰 |
 | TMHELP-06 | U-6 | Paid 💰 |
 | TMHELP-07 | U-8 | Paid 💰 |
+| TMHELP-08 | Manager writes Team Memory in onboarding | Paid 💰 |
 
 ## Setup
 
@@ -202,3 +203,33 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test. This area a
 - Step 2 says `Proposed…` while the card shows Paused -> the tool does not read the budget.
 
 Reset the card to defaults when done.
+
+### TMHELP-08 — A new manager writes Team Memory during onboarding
+
+**Paid** 💰 · about 15 min
+
+*Proves a manager on its first onboarding Turn knows it writes its Team's Memory and how, so what it learns reaches the Team and not only its own Memory. #348.*
+
+**Before you start**
+
+- Make a git repository with a `README.md` and a `CONTRIBUTING.md` that states two made-up conventions, for example: "Branches are named `feat/<ticket>`" and "Every public method has a test named `Method_Scenario_Expectation`."
+- `P-LAUNCH-PAID` with an empty data folder.
+
+**Steps**
+
+1. Hire a Development Team on that repository, following "Hiring a Team" in [`second-brain-zero.md`](second-brain-zero.md), with Route B.
+2. Send nothing. Wait for the manager's onboarding Turn in its one-to-one Room.
+3. Open `<data>\Teams\<Team>\memory\` and `<data>\Agents\<manager>\work\memory\` in the Library.
+
+**Pass if — all of these**
+
+- A file exists in `<data>\Teams\<Team>\memory\` with a `description` and at least one of the two conventions.
+- The reply does not say it cannot write Team Memory.
+- No Task file was created during that Turn, and no other Agent took a Turn (#347).
+
+**Fail if — any of these**
+
+- The conventions land only in `<data>\Agents\<manager>\work\memory\` -> the manager did not read its paragraph or the folder instruction.
+- The reply says it cannot write there -> the manager was told it is a member (the hire order) or never told how to write.
+
+If it fails once, read the session before rerunning: the model's wording varies. Record the result in [`run-log.md`](run-log.md).

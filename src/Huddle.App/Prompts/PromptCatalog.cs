@@ -1509,7 +1509,8 @@ internal static class PromptCatalog
                 {{managedPaths}}
                 Members propose facts, and Huddle files them through a Helper that decides whether each is worth
                 keeping and where it belongs, so you do not need to file what members tell you. You can still write it
-                yourself with the {{memoryTool}} tool: do so for your own decisions, and to fix or tidy what is there.
+                yourself with the {{memoryTool}} tool, passing the Team or Project as the folder: do so for your own
+                decisions, and to fix or tidy what is there.
                 Descriptions follow the same rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
                 instead.
                 """,
