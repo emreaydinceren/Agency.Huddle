@@ -1,0 +1,84 @@
+using System.Text.Json.Nodes;
+using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Acp.Tools;
+using static Agency.Huddle.Tests.Tasks.TaskGateText;
+
+namespace Agency.Huddle.Tests.Tasks.HumanGate;
+
+/// <summary>
+/// The <c>add_evidence</c> tool and <see cref="TaskService"/> driven together (#349, finding 15.5): a gated Task in Review on a
+/// Team whose Definition of Done says "Tests pass: command <c>dotnet test</c> exits 0" moves to Needs You once QA reports that
+/// command with its exit code, and does not move when the exit code is missing.
+/// </summary>
+public sealed class AddEvidenceToolNeedsYouMoveTests
+{
+    private static readonly DateTimeOffset Noon = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Builds the tool over the harness, calling as Nova.</summary>
+    /// <param name="harness">The harness.</param>
+    private static AddEvidenceTool CreateTool(TaskToolHarness harness)
+    {
+        string? novaId = harness.NovaId;
+        Assert.NotNull(novaId);
+        return new AddEvidenceTool(harness.Service, harness.Store, new ToolCallLogWriter(harness.Options), harness.Directory, harness.Clock, novaId, new FakePromptSource());
+    }
+
+    /// <summary>Creates a gated Task in Review as the Human, so creation itself moves nothing.</summary>
+    /// <param name="harness">The harness.</param>
+    private static TaskItem CreateGatedInReview(TaskToolHarness harness)
+    {
+        TaskDraft draft = new("Fix login", Team, null, TaskState.Review) { HumanGate = true };
+        return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, TaskActors.Human(harness.Options.Value))).Task;
+    }
+
+    /// <summary>Evaluates the real <see cref="ProofEvaluator"/> over the Task's own Evidence and a one-rule Definition of Done.</summary>
+    private sealed class DefinitionProofSource : IProofSource
+    {
+        /// <inheritdoc />
+        public Proof For(TaskItem task)
+        {
+            DoneItem rule = new("Tests pass", new DoneRule.CommandExits("dotnet test"), ProofItemSource.Process);
+            ProofContext context = new([rule], [], false, EvidenceLine.ParseSection(task.Description), new Dictionary<string, string>(StringComparer.Ordinal), [], [], []);
+            return ProofEvaluator.Evaluate(task, context);
+        }
+    }
+
+    /// <summary>QA's <c>dotnet test</c> with exit 0, added through the tool, completes the Proof and moves the Task to Needs You.</summary>
+    [Fact]
+    public async Task InvokeAsync_CommandWithExitZero_MovesGatedTaskToNeedsYou()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon), proof: new DefinitionProofSource());
+        TaskItem task = CreateGatedInReview(harness);
+        AddEvidenceTool tool = CreateTool(harness);
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["exitCode"] = 0 };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"Added evidence to {task.Id}.", result);
+        Assert.Equal(TaskState.NeedsYou, harness.Store.Get(task.Id)?.Status);
+    }
+
+    /// <summary>The same call with no exit code is refused, writes nothing and leaves the Task in Review.</summary>
+    [Fact]
+    public async Task InvokeAsync_CommandWithoutExitCode_LeavesTaskInReviewWithNothingWritten()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon), proof: new DefinitionProofSource());
+        TaskItem task = CreateGatedInReview(harness);
+        AddEvidenceTool tool = CreateTool(harness);
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test" };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.DoesNotContain("Added evidence", result, StringComparison.Ordinal);
+        TaskItem? after = harness.Store.Get(task.Id);
+        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Empty(EvidenceLine.ParseSection(after?.Description ?? string.Empty));
+    }
+}

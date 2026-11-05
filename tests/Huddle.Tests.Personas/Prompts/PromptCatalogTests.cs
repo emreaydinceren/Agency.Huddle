@@ -458,7 +458,7 @@ public sealed partial class PromptCatalogTests
     /// takes no placeholders, and whose default is today's hard-coded literal, copied verbatim.
     /// </summary>
     [Theory]
-    [InlineData("tool.addEvidence.description", "Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. Evidence is append-only; earlier lines are never changed.")]
+    [InlineData("tool.addEvidence.description", "Adds a line of evidence to a Task: the command you ran with its exit code, or a note when you ran no command. A command needs its exit code, or the line is refused and nothing is added. Evidence is append-only; earlier lines are never changed.")]
     [InlineData("tool.readRecords.description", "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.")]
     [InlineData("tool.listTeams.description", "Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. Use it to choose the Team to file a Request with.")]
     [InlineData("tool.fileRequest.description", "Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.")]

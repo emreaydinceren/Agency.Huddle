@@ -1061,7 +1061,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. Evidence is append-only; earlier lines are never changed.
+                Adds a line of evidence to a Task: the command you ran with its exit code, or a note when you ran no command. A command needs its exit code, or the line is refused and nothing is added. Evidence is append-only; earlier lines are never changed.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
