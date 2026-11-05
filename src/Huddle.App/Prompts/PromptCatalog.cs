@@ -46,6 +46,7 @@ internal static class PromptCatalog
         ..BuildPart01(),
         ..BuildPart02(),
         ..BuildPart03(),
+        ..BuildPart54(),
         ..BuildPart04(),
         ..BuildPart05(),
         ..BuildPart06(),
@@ -223,6 +224,40 @@ internal static class PromptCatalog
                 """,
             Placeholders: ["{{logChangeTool}}"],
             RequiredPlaceholders: ["{{logChangeTool}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the slice after <see cref="BuildPart03"/>, from <c>systemPrompt.promisedWork</c> to <c>systemPrompt.roleBlock</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart54() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.promisedWork",
+            Label: "Promised work",
+            HelperText:
+                "One short paragraph every Agent reads, after the chat rules: a promise to do something later is " +
+                "not an ending, so arrange a way back or do it now (#362). Takes no placeholders.",
+            Default:
+                """
+                "I'm doing X" is a progress line, not an ending: take the next action in the same Turn. A correction changes the task, so apply it and carry on rather than stopping at an apology. Promise later work only when you have arranged a way back: a Task, a Job or a Mention. If there is none, do it now or name the blocker. Come back with the result or the blocker without being asked.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.silentReply",
+            Label: "Silent replies",
+            HelperText:
+                "One short paragraph every Agent reads, after the Promised work paragraph: the one token to reply with " +
+                "when there is nothing to add. Must keep {{silentToken}}: the Room's recognised token is substituted " +
+                "in, so the text can never name a token the Room does not strip.",
+            Default:
+                """
+                When you have nothing to add, reply with exactly {{silentToken}} and nothing else. Never use it for a question addressed to you or for a Human's Message that needs an answer.
+                """,
+            Placeholders: ["{{silentToken}}"],
+            RequiredPlaceholders: ["{{silentToken}}"],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
