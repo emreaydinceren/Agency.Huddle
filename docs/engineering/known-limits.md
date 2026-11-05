@@ -727,8 +727,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - **Wake budgets reset on restart.** The per-Task budget of 10 Agent-made wake-ups (D-14,
     `Allow 10 more` on the TaskDetail banner) is in-memory state, like the Room Budget it
     parallels — a restart un-pauses every Task over a Change log that already spent one. A
-    hand-off a spent budget refused waits in memory too, and is delivered by `Allow 10 more` or
-    the paused Room's Continue; a restart loses it, and only the next change to the Task wakes anyone.
+    hand-off a spent budget refused is kept across a restart as a Notification on the Task. Its
+    card's **Wake {Agent}** button wakes the Agent once, with the Human as the actor, and closes the
+    Notification. Before a restart, `Allow 10 more` and the paused Room's Continue still deliver it.
+    The counts still reset, so nothing wakes on its own after a restart; the Human decides.
   - **Tags can't contain `,` or `;`.** `TaskFileFormat` reuses `PersonaFrontmatter`'s list-join
     convention (`"; "`), so a tag containing either character would corrupt the round trip (D-18).
   - **A Task link reflects the index when the Message was last rendered.** `MarkdownRenderer`

@@ -130,8 +130,9 @@ internal static class TaskFeedRules
     /// <param name="humanName">The Human's current Name.</param>
     /// <param name="teamHasConfirmer">Whether a Team has a member who can call <c>confirm_request</c>.</param>
     /// <param name="payload">The payload the Notification was written with.</param>
+    /// <param name="agentExists">Whether an Agent by this Name exists; <see langword="null"/> when the caller cannot tell, which counts as it does.</param>
     /// <returns><see langword="true"/> when the Notification should stay unresolved.</returns>
-    public static bool Holds(FeedSourceType type, TaskItem task, string humanName, Func<string, bool> teamHasConfirmer, FeedPayload? payload)
+    public static bool Holds(FeedSourceType type, TaskItem task, string humanName, Func<string, bool> teamHasConfirmer, FeedPayload? payload, Func<string, bool>? agentExists = null)
     {
         ArgumentNullException.ThrowIfNull(task);
         ArgumentNullException.ThrowIfNull(humanName);
@@ -139,6 +140,10 @@ internal static class TaskFeedRules
 
         return type switch
         {
+            FeedSourceType.TaskWakesPaused => task.Status != TaskState.Done
+                && !task.Location.Closed
+                && payload is TaskWakesPausedPayload paused
+                && (agentExists is null || agentExists(paused.Waiting)),
             FeedSourceType.TaskNeedsYou => Waits(task),
             FeedSourceType.TaskAssignedToYou => TaskQuery.NeedsYou(task, humanName),
             FeedSourceType.RequestAwaitsYou => AwaitsConfirmation(task, teamHasConfirmer, out _),

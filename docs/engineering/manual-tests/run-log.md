@@ -4203,6 +4203,13 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-20--the-task-ope
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TASKS-21 — A hand-off held by a spent wake budget survives a restart, and Wake starts the Agent once
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

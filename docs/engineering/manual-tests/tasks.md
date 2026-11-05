@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**20 tests** · 15 free, 5 paid 💰 · about 3.7 hours.
+**21 tests** · 16 free, 5 paid 💰 · about 3.7 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -573,6 +573,41 @@ otherwise sustain, and that the Human's Allow N more resumes it.*
   text (facts, judgement).
 - Allow 10 more does nothing observable -> `AllowMore`'s budget-grant call is not reaching
   `TaskActivity`.
+
+### TASKS-21 — A hand-off held by a spent wake budget survives a restart, and Wake starts the Agent once
+
+**Free (mock lane)** · about 5 min · one mock Turn
+
+*Proves #353: a hand-off a spent Task budget refused is kept as a Notification across an app
+restart, nobody wakes at startup, and **Wake {Agent}** on the card wakes the assignee once.*
+
+**Before you start**
+
+- App running on the mock Adapter, with one mock Persona assigned a Task, for example `Nova`.
+- Launch with `Team__Tasks__AgentWakeBudget` set to `1`, so one Agent-made wake spends the budget.
+
+**Steps**
+
+1. Make an Agent-made change to the Task so the budget is spent, then make one more so a
+   hand-off is held. The Feed shows a Task wake-ups paused Notification.
+2. Note the Turn count for `Nova`. Stop the app, then start it again on the same data directory.
+3. Open the Feed. Read the Notification and its buttons.
+4. Confirm that no Turn ran at startup.
+5. Click **Wake Nova** once.
+6. Watch for one Turn, and check that the Notification closes and the button goes.
+
+**Pass if — all of these**
+
+- The Notification is still in the Feed after the restart.
+- No Turn runs at startup.
+- The card reads `Wake Nova` (or the current assignee's name, with the note that the Task moved).
+- One click starts exactly one Turn, and the Notification closes.
+
+**Fail if — any of these**
+
+- The Notification is gone after the restart -> the hold is not persisted across a restart (#353).
+- A Turn runs at startup -> a held hand-off was re-sent without the Human asking.
+- A second Turn starts from the one click -> Wake is not closing the Notification or is delivering twice.
 
 ### TASKS-12 — An Agent that creates a Task with `originRoomId` wakes the assignee in that Room
 

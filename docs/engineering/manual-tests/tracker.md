@@ -839,6 +839,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-18](tasks.md#tasks-18--the-toolbar-sprint-filter-a-saved-view-with-current-sprint-and-a-board-grouped-by-sprint) |  | Active |  |  |
 | [TASKS-19](tasks.md#tasks-19--an-agent-given-a-sprint-name-sets-it-with-update_task-a-typo-is-refused-with-the-known-list-and-the-assignee-is-woken) | 💰 | Active |  |  |
 | [TASKS-20](tasks.md#tasks-20--the-task-opens-in-the-right-sidebar-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top) |  | Active |  |  |
+| [TASKS-21](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Active |  |  |
 
 ## adapters
 

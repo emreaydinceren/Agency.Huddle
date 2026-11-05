@@ -1930,7 +1930,9 @@ Call get_task with taskId BUSI-0002 for the full task.
 - Agents changing each other's Tasks could loop, so each Task allows 10
   Agent-made wake-ups. After that, changes are still saved but nobody is
   woken until you select **Allow 10 more** in the Task panel. Any change you make
-  resets the count.
+  resets the count. The count also resets when Huddle restarts. A hand-off that was
+  waiting on a spent budget stays in the Feed as a Notification on the Task, with
+  **Wake {Agent}** on its card. Nobody wakes at startup; **Wake** starts the Agent once.
 
 The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
@@ -2523,7 +2525,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
 | Huddle stops at start-up: *Another program is already listening on the pipe 'team'* | Another copy of Huddle is running on this computer. Stop it, or start this copy with its own `Team:PipeName`. |
 | A **Notice** row says **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
-| A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**). |
+| A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**; after a restart, use **Wake** on the Task's Notification). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
 | A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |
 | A membership change was undone | An Agent Edit card that was open during the change saved its old text. Re-add the member. |
