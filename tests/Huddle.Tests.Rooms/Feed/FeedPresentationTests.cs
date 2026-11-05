@@ -165,6 +165,14 @@ public sealed class FeedPresentationTests
         Assert.Null(FeedSummary.TeamOf(paused.Payload));
     }
 
+    /// <summary>A skipped AGENTS.md edit wears the document badge and is counted as "AGENTS.md files".</summary>
+    [Fact]
+    public void AgentsMdChangeSkipped_BadgeNounAndSummary()
+    {
+        Assert.Equal("document", FeedCardText.BadgeOf(FeedSourceType.AgentsMdChangeSkipped).Name);
+        Assert.Equal("AGENTS.md files", FeedSummary.NounOf(FeedSourceType.AgentsMdChangeSkipped));
+    }
+
     /// <summary>Ages are compact on a row and spelled on a card.</summary>
     [Fact]
     public void Age_RowAndCard()

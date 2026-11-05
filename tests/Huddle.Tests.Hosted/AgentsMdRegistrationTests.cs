@@ -36,4 +36,16 @@ public sealed class AgentsMdRegistrationTests
         Assert.Equal("AGENTS.md Changes", helper.DisplayName);
         Assert.Contains(registry.All, static entry => entry.Id == AgentsMdChangeHelper.HelperId);
     }
+
+    /// <summary>The dispatcher finds a Helper's invoker by id among the registered invokers, so one must exist for AGENTS.md Changes.</summary>
+    [Fact]
+    public async Task Container_RegistersAnInvokerForAgentsMdChange()
+    {
+        await using TeamWebApplicationFactory factory = new();
+
+        IEnumerable<IHelperInvoker> invokers = factory.Services.GetServices<IHelperInvoker>();
+
+        IHelperInvoker invoker = Assert.Single(invokers, static candidate => candidate.Helper.Id == AgentsMdChangeHelper.HelperId);
+        Assert.IsType<AgentsMdChangeHelper>(invoker.Helper);
+    }
 }

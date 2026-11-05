@@ -127,6 +127,7 @@ internal static class FeedSummary
         FeedSourceType.DocumentChanged => "documents",
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.TeamMemoryNotFiled => "proposals",
+        FeedSourceType.AgentsMdChangeSkipped => "AGENTS.md files",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",

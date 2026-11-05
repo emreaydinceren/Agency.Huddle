@@ -399,6 +399,134 @@ public sealed class AgentsMdChangeHelperTests : IDisposable
         Assert.Equal("a spelling fix", notice.Reason);
         FeedMessage post = Assert.Single(this.feed.Posts);
         Assert.Equal(FeedSourceType.AgentsMdChangeSkipped, post.SourceType);
+        Assert.Equal("agents-md:Home/AGENTS.md", post.TargetKey);
+        Assert.Equal(FeedActor.Huddle, post.Actor);
+        Assert.False(post.Notify);
+        AgentsMdChangeSkippedPayload payload = Assert.IsType<AgentsMdChangeSkippedPayload>(post.Payload);
+        Assert.Equal(("AgentsMdChange", "AGENTS.md Changes", "Home/AGENTS.md", "a spelling fix"), (payload.HelperId, payload.Name, payload.Path, payload.Reason));
+    }
+
+    /// <summary>A skip of an edit of exactly the cap in changed characters stands: it settles as a skip and the Feed hears of it.</summary>
+    [Fact]
+    public async Task Apply_SkipAtExactlyTheLimit_Stands()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit("Short.\n", "Short.\n" + new string('x', 200) + "\n");
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, new AgentsMdChangeVerdict(false, "minor", []), ct);
+
+        Assert.IsType<HelperApplied.NoChange>(applied);
+        _ = Assert.IsType<AgentsMdNotice.Skipped>(Assert.Single(this.Settled("Short.\n")).Notice);
+        _ = Assert.Single(this.feed.Posts);
+    }
+
+    /// <summary>A skip of an edit one character over the cap is overruled with a comparison.</summary>
+    [Fact]
+    public async Task Apply_SkipOneOverTheLimit_Overruled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit("Short.\n", "Short.\n" + new string('x', 201) + "\n");
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, new AgentsMdChangeVerdict(false, "minor", []), ct);
+
+        Assert.IsType<HelperApplied.Changed>(applied);
+        _ = Assert.IsType<AgentsMdNotice.Comparison>(Assert.Single(this.Settled("Short.\n")).Notice);
+        Assert.Empty(this.feed.Posts);
+    }
+
+    /// <summary>A skip over a pair the fallback already settled replaces that notice and still posts the Feed record.</summary>
+    [Fact]
+    public async Task Apply_SkipOverAFallbackSettledPair_StillPostsTheFeed()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit("Colour rule.\n", "Color rule.\n");
+        Assert.True(this.fixture.Ledger.CommitVerdict(Relative, input.FromHash, input.ToHash, input.NewText, new AgentsMdNotice.Unknown()));
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, new AgentsMdChangeVerdict(false, "a spelling fix", []), ct);
+
+        Assert.IsType<HelperApplied.NoChange>(applied);
+        _ = Assert.IsType<AgentsMdNotice.Skipped>(Assert.Single(this.Settled("Colour rule.\n")).Notice);
+        Assert.Equal("agents-md:Home/AGENTS.md", Assert.Single(this.feed.Posts).TargetKey);
+    }
+
+    /// <summary>A changed quote is checked against the new text: one only in the new text is accepted, one only in the old text is refused.</summary>
+    [Fact]
+    public async Task Apply_ChangedQuote_CheckedAgainstNewText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit("Be kind.\nBe rude.\n", "Be kind.\nBe brief.\n");
+        AgentsMdChangeHelper helper = this.NewHelper();
+
+        HelperApplied onlyInOld = await helper.ApplyAsync("k", input, Meaningful(Change("changed", "Softer.", "Be rude.")), ct);
+        HelperApplied onlyInNew = await helper.ApplyAsync("k", input, Meaningful(Change("changed", "Briefer.", "Be brief.")), ct);
+
+        Assert.IsType<HelperApplied.Refused>(onlyInOld);
+        Assert.IsType<HelperApplied.Changed>(onlyInNew);
+    }
+
+    /// <summary>A file with CR LF line ends is judged on its LF text, so a multi-line quote with LF line ends is accepted.</summary>
+    [Fact]
+    public async Task Apply_CrLfFile_QuoteAccepted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit("Be kind.\r\nBe fair.\r\n", "Be kind.\r\nBe fair.\r\nBe brief.\r\n");
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, Meaningful(Change(quote: "Be fair.\nBe brief.")), ct);
+
+        Assert.IsType<HelperApplied.Changed>(applied);
+    }
+
+    /// <summary>A path that cannot be read as a file (here a folder) is dropped with no exception reaching the dispatcher.</summary>
+    [Fact]
+    public async Task Apply_FileLocked_Drops()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit(OldRules, NewRules);
+        File.Delete(this.FilePath);
+        _ = Directory.CreateDirectory(this.FilePath);
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, Meaningful(Change(quote: "Be brief.")), ct);
+
+        Assert.IsType<HelperApplied.Dropped>(applied);
+        Assert.Empty(this.Settled(OldRules));
+    }
+
+    /// <summary>A file deleted after the Helper was shown it is dropped and nothing settles.</summary>
+    [Fact]
+    public async Task Apply_FileDeleted_Drops()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdChangeInput input = this.Edit(OldRules, NewRules);
+        File.Delete(this.FilePath);
+
+        HelperApplied applied = await this.NewHelper().ApplyAsync("k", input, Meaningful(Change(quote: "Be brief.")), ct);
+
+        Assert.IsType<HelperApplied.Dropped>(applied);
+        Assert.Empty(this.Settled(OldRules));
+    }
+
+    /// <summary>The edit prompt is the Spec's §6.4 text, is read live, and must keep the comparison.</summary>
+    [Fact]
+    public void Edit_MatchesTheSpec()
+    {
+        PromptDefinition definition = PromptCatalog.Get("helper.agentsMdChange.edit");
+
+        const string expected =
+            """
+            {{path}} applies to {{level}}.
+
+            The lines that changed:
+            {{comparison}}
+
+            The whole new version:
+            <file>
+            {{newText}}
+            </file>
+            """;
+        Assert.Equal(expected.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"));
+        Assert.Equal(PromptTiming.Live, definition.Timing);
+        Assert.Equal(["{{path}}", "{{level}}", "{{comparison}}", "{{newText}}"], definition.Placeholders);
+        Assert.Equal(["{{comparison}}"], definition.RequiredPlaceholders);
     }
 
     /// <summary>A skip for an edit the ledger has moved past is dropped and posts nothing.</summary>

@@ -11,7 +11,16 @@ namespace Agency.Huddle.App.Helpers.AgentsMdChange;
 /// Tells running Agents what changed when an <c>AGENTS.md</c> is edited (AgentsMdChanges Spec §6.4): it judges one edit and
 /// answers with the rules added, changed or removed. Huddle checks each quote against the file before anything is said.
 /// </summary>
-internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, AgentsMdChangeVerdict>
+/// <param name="ledger">The ledger that owns the head of each file.</param>
+/// <param name="feed">Receives the record of an edit that was not announced.</param>
+/// <param name="options">The AGENTS.md caps on what the Helper is shown.</param>
+/// <param name="logger">Records each verdict that is applied or refused.</param>
+internal sealed class AgentsMdChangeHelper(
+    AgentsMdLedger ledger,
+    IFeedPublisher feed,
+    IOptions<TeamOptions> options,
+    ILogger<AgentsMdChangeHelper> logger)
+    : IHelperAgent<AgentsMdChangeInput, AgentsMdChangeVerdict>
 {
     /// <summary>The id the Helper is registered, configured and stored under.</summary>
     public static readonly HelperId HelperId = new("AgentsMdChange");
@@ -26,28 +35,6 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     private const string TooLongToShow = "(too long to show)";
 
     private static readonly string[] Kinds = ["added", "changed", "removed"];
-
-    private readonly AgentsMdLedger ledger;
-    private readonly IFeedPublisher feed;
-    private readonly IOptions<TeamOptions> options;
-    private readonly ILogger<AgentsMdChangeHelper> logger;
-
-    /// <summary>Wires the Helper to the ledger it settles edits in, the Feed it reports to and the options that cap what it shows.</summary>
-    /// <param name="ledger">The ledger that owns the head of each file.</param>
-    /// <param name="feed">Receives the record of an edit that was not announced.</param>
-    /// <param name="options">The AGENTS.md caps on what the Helper is shown.</param>
-    /// <param name="logger">Records each verdict that is applied or refused.</param>
-    public AgentsMdChangeHelper(AgentsMdLedger ledger, IFeedPublisher feed, IOptions<TeamOptions> options, ILogger<AgentsMdChangeHelper> logger)
-    {
-        ArgumentNullException.ThrowIfNull(ledger);
-        ArgumentNullException.ThrowIfNull(feed);
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(logger);
-        this.ledger = ledger;
-        this.feed = feed;
-        this.options = options;
-        this.logger = logger;
-    }
 
     /// <inheritdoc/>
     public HelperId Id => HelperId;
@@ -81,7 +68,7 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        AgentsMdOptions caps = this.options.Value.AgentsMd;
+        AgentsMdOptions caps = options.Value.AgentsMd;
         return new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["{{path}}"] = input.RelativePath,
@@ -140,7 +127,7 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
         }
 
         // Step 4.
-        if (!this.ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, new AgentsMdNotice.Summary(changes)))
+        if (!ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, new AgentsMdNotice.Summary(changes)))
         {
             return new HelperApplied.Dropped("settled another way");
         }
@@ -154,17 +141,17 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     private HelperApplied ApplySkip(AgentsMdChangeInput input, AgentsMdChangeVerdict verdict)
     {
         int changedChars = input.Comparison.ChangedChars;
-        if (changedChars > this.options.Value.AgentsMd.MaxSkipChangedChars)
+        if (changedChars > options.Value.AgentsMd.MaxSkipChangedChars)
         {
-            (IReadOnlyList<string> lines, int notShown) = input.Comparison.Lines(this.options.Value.AgentsMd.MaxComparisonChars);
+            (IReadOnlyList<string> lines, int notShown) = input.Comparison.Lines(options.Value.AgentsMd.MaxComparisonChars);
             AgentsMdNotice comparison = new AgentsMdNotice.Comparison(lines, notShown);
-            return this.ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, comparison)
+            return ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, comparison)
                 ? new HelperApplied.Changed($"Told Agents: the Helper called it minor, but {changedChars} characters changed")
                 : new HelperApplied.Dropped("settled another way");
         }
 
         string reason = verdict.Reason ?? string.Empty;
-        if (!this.ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, new AgentsMdNotice.Skipped(reason)))
+        if (!ledger.CommitVerdict(input.RelativePath, input.FromHash, input.ToHash, input.NewText, new AgentsMdNotice.Skipped(reason)))
         {
             return new HelperApplied.Dropped("settled another way");
         }
@@ -180,9 +167,9 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     {
         try
         {
-            this.feed.Post(new FeedMessage(
+            feed.Post(new FeedMessage(
                 FeedSourceType.AgentsMdChangeSkipped,
-                "agents-md-change:" + input.RelativePath,
+                "agents-md:" + input.RelativePath,
                 FeedActor.Huddle,
                 false,
                 new AgentsMdChangeSkippedPayload(HelperId.Value, this.DisplayName, input.RelativePath, reason)));
@@ -190,7 +177,7 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // The Feed is a report on the Helper and never part of its work: a failing Feed is logged and the skip stands.
-            this.logger.LogWarning(ex, "The Feed record of a skipped AGENTS.md edit in {Path} could not be posted.", input.RelativePath);
+            logger.LogWarning(ex, "The Feed record of a skipped AGENTS.md edit in {Path} could not be posted.", input.RelativePath);
         }
     }
 
@@ -199,14 +186,24 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     /// <param name="cancellationToken">Stops the read.</param>
     private async Task<string> CurrentHashAsync(string relativePath, CancellationToken cancellationToken)
     {
-        TeamOptions team = this.options.Value;
+        TeamOptions team = options.Value;
         string path = Path.Combine(team.DataDir, team.Teams.Dir, relativePath);
         try
         {
-            return AgentsMdBody.Parse(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false)).Hash;
+            // Shared as the ledger reads it, so an editor or a scanner holding the file does not fail the read.
+            FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            await using var streamScope = stream.ConfigureAwait(false);
+            using StreamReader reader = new(stream, Encoding.UTF8);
+            return AgentsMdBody.Parse(await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false)).Hash;
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            return string.Empty;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Unreadable now is not the text that was judged: the edit is dropped and the next change judges it again.
+            logger.LogWarning(ex, "Could not read AGENTS.md '{Path}' to check it is still the judged text; the Verdict is dropped.", relativePath);
             return string.Empty;
         }
     }
@@ -215,6 +212,8 @@ internal sealed class AgentsMdChangeHelper : IHelperAgent<AgentsMdChangeInput, A
     /// <param name="quote">The quote.</param>
     private static string Normalise(string quote) => quote.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
 
+    /// <summary>What is wrong with one change, or <see langword="null"/> when it is usable.</summary>
+    /// <param name="change">The change.</param>
     private static string? ProblemWith(AgentsMdRuleChange change)
     {
         if (change is null || !Kinds.Contains(change.Kind, StringComparer.OrdinalIgnoreCase))
