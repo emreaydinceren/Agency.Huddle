@@ -276,7 +276,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "a reply");
+        TaskCompletionSource releaseReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.EnqueueGatedReply(releaseReply.Task, "a reply");
         FakeRoomSessionOwner owner = new();
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
         RoomSession room = harness.Room;
@@ -286,6 +287,7 @@ public sealed class RoomSessionTests
         await room.StopAsync("room-b", mark: 1, ct);
 
         Assert.Equal(0, session.CancelCallCount);
+        releaseReply.SetResult();
         await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
     }
 
@@ -295,7 +297,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(200), "a1 reply");
+        TaskCompletionSource releaseFirst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.EnqueueGatedReply(releaseFirst.Task, "a1 reply");
         session.EnqueueReply("b1 reply");
         FakeRoomSessionOwner owner = new();
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
@@ -311,6 +314,8 @@ public sealed class RoomSessionTests
 
         await room.StopAsync("room-a", mark: 2, ct);
 
+        // Held open until the Stop has landed: a timed delay could finish a1 first and let a2 run.
+        releaseFirst.SetResult();
         await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct, timeout: TestBudgets.Standard);
 
         Assert.DoesNotContain(session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
@@ -322,7 +327,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "never posted");
+        // Held open until the Stop cancels it: the delay never elapses, so the Turn cannot finish first.
+        session.EnqueueDelayedReply(TimeSpan.FromHours(1), "never posted");
         FakeRoomSessionOwner owner = new();
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
         RoomSession room = harness.Room;
@@ -356,7 +362,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
+        // The Stop, not the delay, ends this Turn: the delay never elapses (it used to equal the 5 s bound).
+        session.EnqueueDelayedReply(TimeSpan.FromHours(1), "never posted");
         FakeRoomSessionOwner owner = new();
         AcpOptions options = new() { TurnIdleTimeoutSeconds = 5 };
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Acp = options });
@@ -378,7 +385,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromSeconds(2), "too late");
+        // The watchdog, not the delay, ends this Turn: the delay never elapses.
+        session.EnqueueDelayedReply(TimeSpan.FromHours(1), "too late");
         FakeRoomSessionOwner owner = new();
         AcpOptions options = new() { TurnIdleTimeoutSeconds = 1 };
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, Acp = options });
@@ -502,7 +510,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(200), "first");
+        TaskCompletionSource releaseFirst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.EnqueueGatedReply(releaseFirst.Task, "first");
         session.EnqueueReply("second");
         FakeRoomSessionOwner owner = new();
         RecordingTurnScheduler scheduler = new();
@@ -511,6 +520,10 @@ public sealed class RoomSessionTests
         room.Enqueue(new QueuedWork(1, RoomAItem));
         await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
         room.Enqueue(new QueuedWork(2, RoomAItem));
+
+        // The first Turn is held open until the second is queued. A timed delay let a starved test
+        // thread queue the second item after the first had already completed.
+        releaseFirst.SetResult();
 
         await Eventually.UntilAsync(() => scheduler.CompleteCount == 2, ct, timeout: TestBudgets.Standard);
 
@@ -601,7 +614,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "never posted");
+        // Held open until the Stop cancels it: the delay never elapses, so the Turn cannot finish first.
+        session.EnqueueDelayedReply(TimeSpan.FromHours(1), "never posted");
         FakeRoomSessionOwner owner = new();
         TurnActivity turnActivity = new();
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null, AgentId = "agent-1", TurnActivity = turnActivity });
