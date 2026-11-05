@@ -15,6 +15,26 @@ public sealed class DebouncedFileWatcherTests
     private static readonly TimeSpan QuietPeriod = TimeSpan.FromMilliseconds(DebouncedFileWatcher.DebounceMilliseconds * 2);
 
     /// <summary>
+    /// A store's rebuild that throws a file-system exception must not leave the timer callback: unhandled on a timer thread it ends the
+    /// process. The guard is shared because every store on this watcher would otherwise have to get it right on its own.
+    /// </summary>
+    /// <param name="unauthorized">Which of the two file-system exceptions the rebuild throws.</param>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OnDebounceElapsed_RebuildThrowsFileSystemError_IsLoggedNotThrown(bool unauthorized)
+    {
+        using TempDataDir dir = new();
+        RecordingLogger<DebouncedFileWatcherTests> logger = new();
+        Exception error = unauthorized ? new UnauthorizedAccessException("denied") : new IOException("in use");
+        using DebouncedFileWatcher watcher = new(dir.Path, "watched.json", () => throw error, logger, "Test");
+
+        watcher.OnDebounceElapsed(null);
+
+        Assert.Same(error, Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Warning).Exception);
+    }
+
+    /// <summary>
     /// A burst of writes spanning more than one debounce window, each closer to the last than the window,
     /// produces exactly one callback, and that callback arrives only after the burst has ended.
     /// </summary>

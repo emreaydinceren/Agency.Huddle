@@ -6,6 +6,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Files;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -1853,6 +1854,97 @@ public sealed class PersonaStoreTests
         var rejection = Assert.Single(store.RejectedFiles);
         Assert.Equal(novaPath, rejection.Path);
         Assert.Equal("Couldn't read this file; it's in use.", rejection.Reason);
+    }
+
+    /// <summary>
+    /// An Agent folder that cannot be listed, as one being deleted cannot on Windows, used to throw out of the debounce timer and end the process.
+    /// A rescan now treats it as it treats a locked file: the index is kept and nothing is raised, because dropping the Agent would cascade-delete
+    /// its state. Once the folder really is gone, the next rescan removes it.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void Rescan_AgentFolderCannotBeListed_KeepsTheIndex_ThenSeesItsDeletion()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A deny rule on a folder is how this test makes it unlistable, and it is Windows-only.");
+            return;
+        }
+
+        using var dir = new TempDataDir();
+        var paths = new AgentPaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", TestPersonas.FrontmatterText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        List<string> removedNames = [];
+        store.PersonaRemoved += removed => removedNames.Add(removed.Name);
+
+        using (DeniedAccess.ToFolder(paths.AgentFolder("Nova")))
+        {
+            store.OnDebounceElapsed(null);
+
+            Assert.Empty(removedNames);
+            Assert.Contains("Nova", store.ListNames());
+        }
+
+        Directory.Delete(paths.AgentFolder("Nova"), recursive: true);
+        store.OnDebounceElapsed(null);
+
+        Assert.Equal(["Nova"], removedNames);
+        Assert.DoesNotContain("Nova", store.ListNames());
+    }
+
+    /// <summary>A definitions root that cannot be listed says nothing about any Agent, so a rescan keeps the index and raises nothing.</summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void Rescan_DefinitionsRootCannotBeListed_KeepsTheIndex()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A deny rule on a folder is how this test makes it unlistable, and it is Windows-only.");
+            return;
+        }
+
+        using var dir = new TempDataDir();
+        var paths = new AgentPaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", TestPersonas.FrontmatterText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        List<string> removedNames = [];
+        store.PersonaRemoved += removed => removedNames.Add(removed.Name);
+
+        using (DeniedAccess.ToFolder(paths.DefinitionsRoot))
+        {
+            store.OnDebounceElapsed(null);
+
+            Assert.Empty(removedNames);
+            Assert.Contains("Nova", store.ListNames());
+        }
+    }
+
+    /// <summary>The first scan has no index to protect: an Agent folder that cannot be listed is rejected with a reason, and startup carries on with the others.</summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void Construct_AgentFolderCannotBeListed_RejectsItAndLoadsTheRest()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A deny rule on a folder is how this test makes it unlistable, and it is Windows-only.");
+            return;
+        }
+
+        using var dir = new TempDataDir();
+        var paths = new AgentPaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", TestPersonas.FrontmatterText("Nova", "You are Nova."));
+        TestPersonaFiles.Write(paths, "Zed", TestPersonas.FrontmatterText("Zed", "You are Zed."));
+
+        using (DeniedAccess.ToFolder(paths.AgentFolder("Nova")))
+        {
+            using var store = CreateStore(dir);
+
+            Assert.Equal(["Zed"], store.ListNames());
+            var rejection = Assert.Single(store.RejectedFiles);
+            Assert.Equal(paths.AgentFolder("Nova"), rejection.Path);
+            Assert.Equal("Couldn't read this folder; it's in use.", rejection.Reason);
+        }
     }
 
     private static PersonaStore CreateStore(TempDataDir dir)

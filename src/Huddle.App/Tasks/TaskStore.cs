@@ -1219,8 +1219,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 text = File.ReadAllText(path);
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                // A file being deleted reads as "access denied" on Windows. Thrown from the debounce timer, that would end the process.
                 rejected.Add(new RejectedTaskFile(path, $"could not be read: {ex.Message}"));
                 continue;
             }
