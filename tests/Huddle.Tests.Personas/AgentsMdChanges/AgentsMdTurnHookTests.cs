@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Teams;
@@ -234,6 +235,29 @@ public sealed class AgentsMdTurnHookTests : IDisposable
         Assert.Null(addition.Text);
         Assert.Null(compacted);
         Assert.Contains(LogLevel.Warning, this.logger.Levels);
+    }
+
+    /// <summary>The production list puts the AGENTS.md hook before File Changes: a rule change governs how the Agent reads everything after it (O-12, Spec 6.10).</summary>
+    [Fact]
+    public void ForPersona_PutsAgentsMdBeforeFileChanges()
+    {
+        IOptions<TeamOptions> options = this.dir.Options();
+        AgentPaths paths = new(options);
+        SqliteTeamDirectory directory = new(options);
+        FileChangeTracker tracker = new(
+            new FileStateStore(options, NullLogger<FileStateStore>.Instance),
+            this.personas,
+            directory,
+            new WatchedFolderResolver(options, paths),
+            options,
+            paths,
+            NullLogger<FileChangeTracker>.Instance);
+        FileChangesTurnHook fileChanges = new(tracker, new FakePromptSource(), NullLogger<FileChangesTurnHook>.Instance);
+        TurnHookScope scope = new("Vera", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []);
+
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(scope, this.NewHook(), fileChanges, NullLogger.Instance);
+
+        Assert.Equal(["AgentsMd", "FileChanges"], pipeline.HookNames);
     }
 
     /// <summary>Builds the hook over the real Scopes, ledger and source.</summary>

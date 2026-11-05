@@ -4,6 +4,7 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Circuits;
@@ -128,6 +129,24 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NeedsHumanTrigger>();
         services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
         return services;
+    }
+
+    /// <summary>
+    /// Registers which AGENTS.md files apply to a named Agent (from its Team labels and the catalog's spelling, §6.7), and the hook the
+    /// supervisor puts first in every Persona's Turn pipeline with the source and renderer behind it (§6.10).
+    /// </summary>
+    private static void AddAgentsMdScopesAndTurnHook(IServiceCollection services)
+    {
+        services.AddSingleton<AgentsMdScopes>();
+        services.AddSingleton(static sp => new AgentsMdNoticeRenderer(
+            sp.GetRequiredService<IPromptSource>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd));
+        services.AddSingleton(static sp => new AgentsMdNoticeSource(
+            sp.GetRequiredService<AgentsMdLedger>(),
+            sp.GetRequiredService<AgentsMdNoticeRenderer>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd,
+            sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
+        services.AddSingleton<AgentsMdTurnHook>();
     }
 
     /// <summary>
@@ -647,8 +666,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
 
-        // Which AGENTS.md files apply to a named Agent, from its Team labels and the catalog's spelling (AGENTS.md changes §6.7).
-        services.AddSingleton<AgentsMdScopes>();
+        AddAgentsMdScopesAndTurnHook(services);
 
         // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
         // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).

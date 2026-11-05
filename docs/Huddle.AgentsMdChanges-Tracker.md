@@ -94,7 +94,7 @@ never by hand, so the status line stays true.
 | **D8. Together** | | | |
 | 8.1.t `AgentsMdTurnHook` | | | ✔ |
 | 8.1.i `AgentsMdTurnHook` | | | ✔ |
-| 8.2.t The list and the filter | ✔ | | |
+| 8.2.t The list and the filter | | ✔ | |
 | 8.2.i The production list and the filter | ✔ | | |
 | 8.3.t End to end | ✔ | | |
 | 8.3.i Wire it | ✔ | | |

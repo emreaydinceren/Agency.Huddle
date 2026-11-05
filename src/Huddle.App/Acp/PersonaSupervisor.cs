@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
@@ -40,6 +41,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     // starts, the same as an explicit Team:FileChanges:Enabled=false.
     private readonly FileChangeTracker? fileChanges;
     private readonly FileChangesTurnHook? fileChangesHook;
+    private readonly AgentsMdTurnHook? agentsMdHook;
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
@@ -111,7 +113,9 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
-        LastCatchUpStore? lastCatchUp = null)
+        LastCatchUpStore? lastCatchUp = null,
+        AgentsMdTurnHook? agentsMdHook = null,
+        AgentsMdScopes? agentsMdScopes = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -137,7 +141,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         this.fileChanges = fileChanges;
         this.fileChangesHook = fileChanges is null
             ? null
-            : new FileChangesTurnHook(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>());
+            : new FileChangesTurnHook(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>(), agentsMdScopes);
+        this.agentsMdHook = agentsMdHook;
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
@@ -763,7 +768,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
 
         TurnHookScope scope = new(persona.Name, profile.ReadsFiles, fileChangesOn, declaredWatches);
-        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>());
+        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.agentsMdHook, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>());
         return new StartPlan(profile.ReadsFiles, warnings, hooks, tracker?.MemoryPaths);
     }
 

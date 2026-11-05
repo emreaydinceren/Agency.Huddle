@@ -1,12 +1,14 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -206,6 +208,108 @@ public sealed class FileChangesTurnHookTests
         Assert.Empty(logger.Entries);
     }
 
+    /// <summary>An in-scope AGENTS.md is left out of the rendered block, so one edit is not told twice (Spec 6.7); another file is still listed.</summary>
+    [Fact]
+    public async Task FileChanges_LeavesOutInScopeAgentsMd()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        File.WriteAllText(Path.Combine(teamsRoot, "AGENTS.md"), "rule");
+        string note = Path.Combine(teamsRoot, "notes.md");
+        File.WriteAllText(note, "note");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(note, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+        Assert.DoesNotContain("AGENTS.md", addition.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>An AGENTS.md of a Team the Agent is not in stays an ordinary File Change, though the folder is watched.</summary>
+    [Fact]
+    public async Task FileChanges_KeepsAgentsMdOutOfScope()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        string other = Path.Combine(teamsRoot, "OtherTeam", "AGENTS.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(other) ?? teamsRoot);
+        File.WriteAllText(other, "rule");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(other, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+    }
+
+    /// <summary>The carry keeps the unfiltered report, so committing it records the AGENTS.md in the baseline and it is never listed later.</summary>
+    [Fact]
+    public async Task FileChanges_BaselineStillRecordsTheFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        string agentsMd = Path.Combine(teamsRoot, "AGENTS.md");
+        File.WriteAllText(agentsMd, "rule");
+        TurnHookScope scope = ScopeWatching(teamsRoot);
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(scope, roomId, null), ct);
+        Assert.NotNull(addition);
+        CollectedChanges carried = Assert.IsType<CollectedChanges>(addition.Carry);
+        await ((ITurnHook)hook).AfterTurnAsync(new TurnEnded(scope, roomId, null, []), addition, ct);
+
+        CollectedChanges next = await fixture.Tracker.CollectAsync(PersonaName, roomId, [teamsRoot], ct);
+
+        Assert.Contains(carried.Report.Changes, change => change.FullPath == agentsMd);
+        Assert.DoesNotContain(next.Report.Changes, change => change.FullPath == agentsMd);
+    }
+
+    /// <summary>When the only file that changed is an in-scope AGENTS.md, the Turn gets no File Changes block at all.</summary>
+    [Fact]
+    public async Task FileChanges_OnlyAgentsMdTouched_NoBlock()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        File.WriteAllText(Path.Combine(teamsRoot, "AGENTS.md"), "rule");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Null(addition.Text);
+    }
+
+    /// <summary>Builds a hook that filters by the real Scopes of the fixture's Persona, and the Teams root it watches.</summary>
+    private static (FileChangesTurnHook Hook, string TeamsRoot) ScopedHook(Fixture fixture)
+    {
+        IOptions<TeamOptions> options = fixture.DataDir.Options();
+        string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
+        Directory.CreateDirectory(teamsRoot);
+        AgentsMdScopes scopes = new(fixture.Personas, new FakeTeamCatalog(), options);
+        FileChangesTurnHook hook = new(fixture.Tracker, new FakePromptSource(), NullLogger<FileChangesTurnHook>.Instance, scopes);
+        return (hook, teamsRoot);
+    }
+
+    /// <summary>Runs a first Turn in the Room, so the next scan reports only what changes after it.</summary>
+    private static async Task BaselineAsync(FileChangesTurnHook hook, Fixture fixture, string teamsRoot, string roomId, CancellationToken ct)
+    {
+        _ = fixture;
+        TurnHookScope scope = ScopeWatching(teamsRoot);
+        TurnAddition? first = await hook.BeforeTurnAsync(new TurnStarting(scope, roomId, null), ct);
+        await ((ITurnHook)hook).AfterTurnAsync(new TurnEnded(scope, roomId, null, []), first, ct);
+    }
+
+    /// <summary>The scope of the Persona under test, declaring the Teams root as a Watched Folder.</summary>
+    private static TurnHookScope ScopeWatching(string teamsRoot) => new(PersonaName, true, true, [teamsRoot]);
+
     /// <summary>A prompt source whose every render fails, for a rendering bug.</summary>
     private sealed class ThrowingPrompts : IPromptSource
     {
@@ -267,6 +371,9 @@ public sealed class FileChangesTurnHookTests
         /// <summary>Gets the directory that holds this fixture's Rooms.</summary>
         public SqliteTeamDirectory Directory { get; } = directory;
 
+        /// <summary>Gets the Persona store behind the tracker, for the AGENTS.md Scopes.</summary>
+        public PersonaStore Personas { get; } = personas;
+
         /// <summary>Gets the tracker the hook wraps, for reading what a commit saved.</summary>
         public FileChangeTracker Tracker { get; } = tracker;
 
@@ -276,7 +383,7 @@ public sealed class FileChangesTurnHookTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            personas.Dispose();
+            this.Personas.Dispose();
             this.DataDir.Dispose();
         }
     }

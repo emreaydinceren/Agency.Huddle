@@ -1,4 +1,6 @@
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using System.Globalization;
 using System.Text;
@@ -12,7 +14,8 @@ namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 /// <param name="tracker">Collects and commits the File Changes.</param>
 /// <param name="prompts">Supplies the block's wording.</param>
 /// <param name="logger">Receives the warnings for a failed collect or commit.</param>
-internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSource prompts, ILogger<FileChangesTurnHook> logger)
+/// <param name="scopes">Says which <c>AGENTS.md</c> files apply to the Persona, so the AGENTS.md notice is not told twice; <see langword="null"/> filters nothing.</param>
+internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSource prompts, ILogger<FileChangesTurnHook> logger, AgentsMdScopes? scopes = null)
     : TurnHook<CollectedChanges>
 {
     /// <inheritdoc />
@@ -43,7 +46,37 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
             return null;
         }
 
-        return new TurnAddition(Render(collected.Report, prompts), collected);
+        return new TurnAddition(Render(this.WithoutInScopeAgentsMd(collected.Report, turn.Scope.PersonaName), prompts), collected);
+    }
+
+    /// <summary>
+    /// Builds the report to render without the Persona's in-scope <c>AGENTS.md</c> paths (Spec 6.7). The carry keeps the
+    /// original, so the baseline still records the file. A failure to list the scopes leaves the report whole.
+    /// <c>NotListed</c> may still count capped AGENTS.md paths: it counts what the cap left out before this filter ran, and is not adjusted.
+    /// </summary>
+    private FileChangesReport? WithoutInScopeAgentsMd(FileChangesReport? report, string personaName)
+    {
+        if (scopes is null || report is null || report.Changes.Count == 0)
+        {
+            return report;
+        }
+
+        try
+        {
+            HashSet<string> inScope = [.. scopes.For(personaName).Select(static file => file.FullPath)];
+            if (inScope.Count == 0)
+            {
+                return report;
+            }
+
+            List<FileChange> kept = [.. report.Changes.Where(change => !inScope.Any(path => string.Equals(path, change.FullPath, PathContainment.Comparison)))];
+            return kept.Count == report.Changes.Count ? report : report with { Changes = kept };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Persona '{PersonaName}' could not list its AGENTS.md scopes; File Changes are not filtered.", personaName);
+            return report;
+        }
     }
 
     /// <inheritdoc />

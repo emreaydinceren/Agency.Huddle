@@ -931,6 +931,8 @@ public sealed class RoomSessionTurnHookTests
 
         harness.Room.Enqueue(new QueuedWork(1, MessageItem("go")));
         await Eventually.UntilAsync(() => session.Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+        // Stop only once the reply's activity has reached the owner: a Stop before it correctly runs no After (E-5).
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(), ct, timeout: TestBudgets.Standard);
         await harness.Room.StopAsync(RoomId, 1, ct);
         await Eventually.UntilAsync(() => hook.Ended.Count == 1, ct, timeout: TestBudgets.Standard);
 

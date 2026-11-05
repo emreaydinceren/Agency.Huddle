@@ -239,6 +239,7 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
             ILoggerFactory loggerFactory = fixture.Services.GetRequiredService<ILoggerFactory>();
             TurnHookPipeline hooks = TurnHookPipeline.ForPersona(
                 new TurnHookScope("nova", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+                null,
                 new FileChangesTurnHook(tracker, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>()),
                 loggerFactory.CreateLogger<TurnHookPipeline>());
             PersonaRunner runner = new(TestPersonas.Nova, options, factory, prompts, new RoomFollows(), logger, hooks: hooks, memoryPaths: tracker.MemoryPaths);

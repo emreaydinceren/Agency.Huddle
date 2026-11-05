@@ -15,12 +15,13 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
 
     /// <summary>Builds the production pipeline for one Persona: the explicit, ordered list of hooks, minus any that is absent.</summary>
     /// <param name="scope">Who the pipeline serves.</param>
+    /// <param name="agentsMd">The AGENTS.md hook, first because a rule change governs how the Agent reads everything after it; <see langword="null"/> when absent.</param>
     /// <param name="fileChanges">The File Changes hook, or <see langword="null"/> when no tracker exists.</param>
     /// <param name="logger">Receives the pipeline's warnings and timings.</param>
     /// <returns>The pipeline; its applicable list is empty when nothing applies to <paramref name="scope"/>.</returns>
-    internal static TurnHookPipeline ForPersona(TurnHookScope scope, FileChangesTurnHook? fileChanges, ILogger logger)
+    internal static TurnHookPipeline ForPersona(TurnHookScope scope, AgentsMdTurnHook? agentsMd, FileChangesTurnHook? fileChanges, ILogger logger)
     {
-        ITurnHook?[] production = [fileChanges];
+        ITurnHook?[] production = [agentsMd, fileChanges];
         return new TurnHookPipeline([.. production.OfType<ITurnHook>()], scope, logger);
     }
 

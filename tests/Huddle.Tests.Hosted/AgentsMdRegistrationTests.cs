@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.AgentsMdChange;
@@ -22,6 +23,18 @@ public sealed class AgentsMdRegistrationTests
         Assert.NotNull(services.GetService<HelperDispatcher>());
         Assert.NotNull(services.GetService<HelperRegistry>());
         Assert.NotNull(services.GetService<AgentsMdScopes>());
+    }
+
+    /// <summary>The supervisor the real container builds plans a pipeline whose first hook is AGENTS.md, so the hook is wired, not just registered.</summary>
+    [Fact]
+    public async Task Container_SupervisorBuildsAPipelineWithAgentsMdFirst()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        PersonaSupervisor supervisor = factory.Services.GetRequiredService<PersonaSupervisor>();
+
+        PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", "---\nname: 'Vera'\n---\nYou help."));
+
+        Assert.Equal("AgentsMd", plan.Hooks.HookNames[0]);
     }
 
     /// <summary>The Helpers tab draws one card per registry entry, so the registry must list AGENTS.md Changes.</summary>

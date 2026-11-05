@@ -29,6 +29,6 @@ public static class TurnHookTestFactory
 
         FileChangesTurnHook hook = new(tracker, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>());
         TurnHookScope scope = new(persona.Name, ReadsFiles: true, FileChangesOn: true, watches);
-        return (TurnHookPipeline.ForPersona(scope, hook, loggerFactory.CreateLogger<TurnHookPipeline>()), tracker.MemoryPaths);
+        return (TurnHookPipeline.ForPersona(scope, null, hook, loggerFactory.CreateLogger<TurnHookPipeline>()), tracker.MemoryPaths);
     }
 }
