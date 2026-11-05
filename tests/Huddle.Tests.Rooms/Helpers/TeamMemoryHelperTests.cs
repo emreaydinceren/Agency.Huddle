@@ -288,6 +288,57 @@ public sealed class TeamMemoryHelperTests
         Assert.Empty(harness.Feed.Posts);
     }
 
+    /// <summary>A first-attempt none that names an indexed file the Helper was not shown is dropped for one re-judgement with that file forced in, and posts no NotFiled record.</summary>
+    [Fact]
+    public async Task Apply_NoneNamingAnIndexedFileNotShown_IsDroppedForReJudging()
+    {
+        using TeamMemoryHarness harness = new();
+        _ = harness.Put("business-basics.md", "Shop name, address and who to call", "Opening hours are nine to five.");
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("The new contact is Hugo Brandt."));
+        Assert.Empty(input.Candidates);
+
+        HelperApplied applied = await harness.ApplyAsync(input, new("none", "Research", "business-basics.md", null, null, "belongs in business-basics.md"));
+
+        Assert.Equal("re-judging: Research/business-basics.md was not shown", Assert.IsType<HelperApplied.Dropped>(applied).Why);
+        Assert.Empty(harness.Feed.Posts);
+    }
+
+    /// <summary>On the second attempt a none naming a file is a plain none with its NotFiled record: the Helper never loops.</summary>
+    [Fact]
+    public async Task Apply_NoneNamingAFileOnTheSecondAttempt_IsAPlainNone()
+    {
+        using TeamMemoryHarness harness = new();
+        _ = harness.Put("business-basics.md", "Shop name, address and who to call", "Opening hours are nine to five.");
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("The new contact is Hugo Brandt."), attempt: 2);
+
+        HelperApplied applied = await harness.ApplyAsync(input, new("none", "Research", "business-basics.md", null, null, "still unsure"));
+
+        Assert.IsType<HelperApplied.NoChange>(applied);
+        Assert.Equal(FeedSourceType.TeamMemoryNotFiled, Assert.Single(harness.Feed.Posts).SourceType);
+    }
+
+    /// <summary>A none naming a file that is not in the index, one already shown, a path-like name or a folder outside the Team is a plain none with a NotFiled record, and reads nothing.</summary>
+    /// <param name="folder">The folder the Verdict names.</param>
+    /// <param name="file">The file the Verdict names.</param>
+    [Theory]
+    [InlineData("Research", "missing.md")]
+    [InlineData("Research", "interview-consent.md")]
+    [InlineData("Research", "..\\x.md")]
+    [InlineData("Research", "../x.md")]
+    [InlineData("Marketing", "interview-consent.md")]
+    public async Task Apply_NoneNamingAnUnusableFile_IsAPlainNone(string folder, string file)
+    {
+        using TeamMemoryHarness harness = new();
+        _ = harness.Put("interview-consent.md", Description, "Written consent only.");
+        TeamMemoryInput input = harness.Builder.Build(TeamMemoryHarness.Proposal("Interview recording consent."));
+        Assert.Single(input.Candidates);
+
+        HelperApplied applied = await harness.ApplyAsync(input, new("none", folder, file, null, null, "nothing to add"));
+
+        Assert.IsType<HelperApplied.NoChange>(applied);
+        Assert.Equal(FeedSourceType.TeamMemoryNotFiled, Assert.Single(harness.Feed.Posts).SourceType);
+    }
+
     /// <summary>A Helper turned off while the run was going writes nothing.</summary>
     [Fact]
     public async Task Apply_HelperTurnedOffMeanwhile_Drops()

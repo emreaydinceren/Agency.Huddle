@@ -80,4 +80,7 @@ public enum FeedSourceType
 
     /// <summary>A Team was archived.</summary>
     TeamArchived,
+
+    /// <summary>A new Chief of Staff text ships, but the Human edited theirs, so it was not replaced.</summary>
+    BuiltinAgentUpdateAvailable,
 }

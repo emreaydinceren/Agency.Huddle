@@ -30,7 +30,7 @@ public sealed class MemoryToolTests
 
         string result = await harness.RunAsync(MemoryToolHarness.Args("list"), ct);
 
-        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir()}\nfolders you may use: me", result);
+        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir()}\nfolders you may use: me, memory", result);
     }
 
     /// <summary>The list is one <c>file - description</c> line per file, ordered by name, and is not capped at the prompt's 100.</summary>
@@ -51,7 +51,7 @@ public sealed class MemoryToolTests
 
         List<string> lines = ["dentist.md - Dentist visits and insurance. Read before booking.", "old-fact.md - The Human prefers C#."];
         lines.AddRange(Enumerable.Range(0, 120).Select(static i => $"topic-{i:D3}.md - Fact number {i}."));
-        Assert.Equal($"{string.Join('\n', lines)}\nfolder: {folder}\nfolders you may use: me", result);
+        Assert.Equal($"{string.Join('\n', lines)}\nfolder: {folder}\nfolders you may use: me, memory", result);
     }
 
     /// <summary>A new file is written with the description as frontmatter, a blank line and the text; the result carries the version of what is on disk (U-3).</summary>
@@ -82,7 +82,7 @@ public sealed class MemoryToolTests
         _ = await harness.RunAsync(MemoryToolHarness.Args("write", ("file", "family.md"), ("description", Description), ("text", "x")), ct);
 
         string listed = await harness.RunAsync(MemoryToolHarness.Args("list"), ct);
-        Assert.Equal($"family.md - {Description}\nfolder: {harness.MemoryDir()}\nfolders you may use: me", listed);
+        Assert.Equal($"family.md - {Description}\nfolder: {harness.MemoryDir()}\nfolders you may use: me, memory", listed);
     }
 
     /// <summary>A write without an acceptable description is refused with the rule (U-8).</summary>
@@ -183,7 +183,7 @@ public sealed class MemoryToolTests
 
         string result = await harness.RunAsync(MemoryToolHarness.Args("list"), ct);
 
-        Assert.Equal($"dentist.md - Dentist visits and insurance. Read before booking.\nfolder: {folder}\nfolders you may use: me", result);
+        Assert.Equal($"dentist.md - Dentist visits and insurance. Read before booking.\nfolder: {folder}\nfolders you may use: me, memory", result);
         Assert.Equal("- dentist.md - Dentist visits.", await File.ReadAllTextAsync(index, ct));
     }
 
