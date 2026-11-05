@@ -904,11 +904,20 @@ Cole follows the new rule at the next Turn with no Start afresh.
    See [[missing-page]] for the old plan.
    ```
 
+5. Click **Scheduled**, then **New job**. Set **For** to **Hana**, **Title** to `Timed check`, **Repeats** to **On chosen days** with only today picked, and the time to about 5 minutes from now. Paste this as the instruction, then save the job.
+
+   ```text
+   Reply with one short line saying this Job ran. Do nothing else.
+   ```
+
+6. Note the job's next-run time, wait until it has passed, and **click nothing on the job's page**. Then open **Scheduled** and the job's Room.
+
 **Expect**: the job runs in a Room named `⏰ Weekly brain check`. It reports `old-note.md` with no "Read when" line,
 the broken link to `missing-page`, the changed raw file, and the rule sitting in Memory. Each finding becomes a Task. No file is fixed.
+`Timed check` runs by itself in a Room named `⏰ Timed check`, within about a minute of its set time.
 
-**Pass if**: at least three of the four findings are reported, and the planted files are unchanged.
-**Fail if**: the check edits a file, or a finding is reported as fixed.
+**Pass if**: at least three of the four findings are reported, the planted files are unchanged, and `Timed check` ran with no click.
+**Fail if**: the check edits a file, a finding is reported as fixed, or `Timed check` didn't run at its set time.
 
 ### ZERO-24 — The Chief of Staff offers upkeep and runs a daily review
 
