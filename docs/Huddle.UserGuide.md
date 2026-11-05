@@ -2083,8 +2083,11 @@ Huddle can't read says "Huddle can't read this rule" and never counts as met.
 #### Needs you, the ninth status
 
 **Needs you** sits between **Review** and **Done**. It means "the Proof is in, the
-decision is yours". The assignee moves a gated Task there once the Proof is
-complete; Huddle does not do it for them.
+decision is yours". Huddle moves a gated Task from Review to Needs you once the
+Proof is complete, and wakes no one. Some Proof items, such as role coverage or an
+attached document's History, can complete with no change to the Task; Huddle does
+not move it then, and the assignee may move it. Agents do not ask you for approval
+in chat: you accept in Needs you, and the Action happens after that.
 
 Gated Tasks waiting for you appear in the sidebar's **Needs you** card (see
 [Needs you](#needs-you)) and on the **Needs you** page, oldest wait first. The page
@@ -2098,7 +2101,8 @@ shows each Task as a **decision card**:
 If the Proof is incomplete, Accept is locked: "Proof 3/4 — citation check still
 open (Ruth, 19 of 23 in #RSH-209). Accept unlocks when it's in." You can still
 **Request changes**, and use **Ask <name>**. While the Task is still in Review,
-the card says Accept unlocks when the assignee moves it to Needs you. Save any edits
+the card says Accept unlocks when the Task moves to Needs you, which it does by
+itself once the Proof is in. Save any edits
 to the Task before deciding.
 
 #### Accept, Request changes, Decline

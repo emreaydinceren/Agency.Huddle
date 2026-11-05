@@ -2,6 +2,8 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 
@@ -91,7 +93,7 @@ public sealed class AddEvidenceToolTests
         ToolCallLogWriter log = new(harness.Options);
         _ = Log(log, Noon.AddMinutes(-1), "Bash", "dotnet test");
         AddEvidenceTool tool = CreateTool(harness, log);
-        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["logRef"] = "logs/tool-calls/Nova/2026-10-01.jsonl#L7" };
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["exitCode"] = 0, ["logRef"] = "logs/tool-calls/Nova/2026-10-01.jsonl#L7" };
 
         _ = await tool.InvokeAsync(arguments, ct);
 
@@ -162,7 +164,7 @@ public sealed class AddEvidenceToolTests
         TaskItem task = harness.CreateTask("Fix login");
         AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
         await File.AppendAllTextAsync(task.Path, "\n- 2026-10-08T11:00:00Z | You | edited by hand\n", ct);
-        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test" };
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["exitCode"] = 0 };
 
         string result = await tool.InvokeAsync(arguments, ct);
 
@@ -183,6 +185,66 @@ public sealed class AddEvidenceToolTests
 
         Assert.Equal("Give a command or a note.", result);
         Assert.Empty(Evidence(harness, task));
+    }
+
+    /// <summary>A command with no exit code is refused with the fix spelled out, and nothing is written to the Task.</summary>
+    [Fact]
+    public async Task InvokeAsync_CommandWithoutExitCode_IsRefusedAndWritesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
+        TaskItem task = harness.CreateTask("Fix login");
+        AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test" };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal(
+            "A command needs its exit code, or the line does not count. Pass exitCode, the number the command returned (0 for success). For a remark about work where no command was run, pass note instead. Nothing was added.",
+            result);
+        Assert.Empty(Evidence(harness, task));
+    }
+
+    /// <summary>The exitCode and note arguments carry a description that tells the Agent a command needs its exit code.</summary>
+    [Fact]
+    public async Task InputSchema_DescribesExitCodeAndNote()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
+
+        JsonNode? properties = tool.InputSchema["properties"];
+
+        Assert.Equal(
+            "The number the command returned (0 for success). Required whenever command is given; a command without it is refused.",
+            properties?["exitCode"]?["description"]?.GetValue<string>());
+        Assert.Equal(
+            "A short remark. Use it alone, with no command, when you ran nothing; with a command it rides along on the same line.",
+            properties?["note"]?["description"]?.GetValue<string>());
+    }
+
+    /// <summary>A command with exit 0 and one with exit 1 are both recorded, and the exit 0 line meets a "command exits 0" rule while the exit 1 line does not.</summary>
+    /// <param name="exitCode">The exit code the Agent reports.</param>
+    /// <param name="met">Whether a "command <c>dotnet test</c> exits 0" rule is then met.</param>
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public async Task InvokeAsync_CommandWithExitCode_IsRecordedAndJudgedByCommandExits(int exitCode, bool met)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
+        TaskItem task = harness.CreateTask("Fix login");
+        AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["command"] = "dotnet test", ["exitCode"] = exitCode };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"Added evidence to {task.Id}.", result);
+        IReadOnlyList<EvidenceLine> lines = Evidence(harness, task);
+        Assert.Equal(exitCode, Assert.Single(lines).ExitCode);
+        DoneItem rule = new("Tests pass", new DoneRule.CommandExits("dotnet test"), ProofItemSource.Process);
+        ProofContext context = new([rule], [], false, lines, new Dictionary<string, string>(StringComparer.Ordinal), [], [], []);
+        Assert.Equal(met, Assert.Single(ProofEvaluator.Evaluate(task, context).Items).Met);
     }
 
     /// <summary>A logRef that is not path#Lnumber is refused.</summary>

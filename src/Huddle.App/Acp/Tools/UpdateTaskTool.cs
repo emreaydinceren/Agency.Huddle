@@ -53,7 +53,11 @@ internal sealed class UpdateTaskTool(
             ["reason"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
             ["human_gate"] = new JsonObject { ["type"] = "boolean" },
-            ["action"] = new JsonObject { ["type"] = "string" },
+            ["action"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "The one outward step, such as merging or sending, done only after the Human accepts in Needs You. Never use it for hand-offs or status: put those in a Message or the Task's description. An empty string clears it.",
+            },
         },
         ["required"] = new JsonArray { "taskId" },
     };

@@ -230,7 +230,7 @@ public sealed class TaskDecisionCardTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, harness, Display(TaskState.Review), AllMet());
 
-        const string expected = "Accept unlocks when Nova moves it to Needs you.";
+        const string expected = "Accept unlocks when the Task moves to Needs you. It moves by itself once its Proof is in; Nova can also move it.";
         Assert.Equal(expected, HumanGateCopy.StillInReview(Nova));
         Assert.Equal(expected, cut.Find(".task-decision-review").TextContent.Trim());
     }

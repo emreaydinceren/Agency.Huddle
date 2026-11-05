@@ -78,13 +78,7 @@ internal static class PromptCatalog
         ..BuildPart31(),
         ..BuildPartWakeRestart(),
         ..BuildPart32(),
-        ..BuildPart33(),
-        ..BuildPart34(),
-        ..BuildPart35(),
-        ..BuildPart36(),
-        ..BuildPart37(),
-        ..BuildPart38(),
-        ..BuildPart39(),
+        ..BuildParts33To39(),
         ..BuildPart51(),
         ..BuildPart52(),
         ..BuildPart40(),
@@ -102,6 +96,11 @@ internal static class PromptCatalog
         ..BuildPart53(),
         ..BuildAgentsMdNoticeParts(),
     ];
+
+    /// <summary>Builds slices 33 to 39 in catalog order, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of those slices, in catalog order.</returns>
+    private static PromptDefinition[] BuildParts33To39() =>
+        [.. BuildPart33(), .. BuildPart33Help(), .. BuildPart34(), .. BuildPart35(), .. BuildPart36(), .. BuildPart37(), .. BuildPart38(), .. BuildPart39()];
 
     /// <summary>Builds the <c>turn.agentsMd*</c> change-notice prompts, which span four slices.</summary>
     /// <returns>The prompt definitions of those slices, in catalog order.</returns>
@@ -1060,7 +1059,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. Evidence is append-only; earlier lines are never changed.
+                Adds a line of evidence to a Task: the command you ran with its exit code, or a note when you ran no command. A command needs its exit code, or the line is refused and nothing is added. Evidence is append-only; earlier lines are never changed.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1728,7 +1727,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
+                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. A Task with a Human gate or an Action is reviewed in Needs You, where the Human accepts; don't ask for approval in chat. The Action is the one outward step, such as merging or sending, never a hand-off or status. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1776,7 +1775,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. A Task with a Human gate or an Action goes from Review to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (role coverage, an attached document's History) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1797,7 +1796,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.reopenTask.description</c> to <c>prompt.digest</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, holding <c>tool.reopenTask.description</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart33() =>
     [
@@ -1814,7 +1813,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.tasks</c> to <c>prompt.digest</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart33Help() =>
+    [
         new PromptDefinition(
             Key: "getHelp.tasks",
             Label: "Help: tasks",
@@ -1834,8 +1838,13 @@ internal static class PromptCatalog
                 Some work is outward: it reaches people or systems beyond this team, such as sending
                 a message, publishing, paying or deleting for good. Create such a Task with
                 human_gate true, or set it with update_task. Set the Action, the one outward step,
-                with the action argument; set the Action before you do it. When the Proof is
-                complete, move the Task to Needs You. Only the Human can Accept it, and only the
+                with the action argument; set the Action before you do it. Never use the Action for
+                hand-offs or status: put those in a Message or the Task's description. When the Proof
+                is complete, Huddle moves a Task in Review to Needs You. You may still move it
+                yourself, which is harmless if it is already there. Some Proof items complete with no
+                write to the Task, such as role coverage or an attached document's History, and
+                Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
+                chat: the Human accepts in Needs You. Only the Human can Accept it, and only the
                 Human can turn human_gate off or clear the Action. After the Accept, the assignee
                 carries out the Action and then moves the Task to Done. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.

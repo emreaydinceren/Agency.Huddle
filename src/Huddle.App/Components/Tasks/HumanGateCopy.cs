@@ -93,7 +93,7 @@ internal static class HumanGateCopy
 
     /// <summary>The line for a Task still in Review (row 18).</summary>
     /// <param name="assignee">The assignee's name.</param>
-    public static string StillInReview(string assignee) => $"Accept unlocks when {assignee} moves it to Needs you.";
+    public static string StillInReview(string assignee) => $"Accept unlocks when the Task moves to Needs you. It moves by itself once its Proof is in; {assignee} can also move it.";
 
     /// <summary>The line for a valid acceptance whose Action is pending (row 23).</summary>
     /// <param name="human">Who accepted.</param>

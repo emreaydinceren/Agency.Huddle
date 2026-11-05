@@ -31,7 +31,7 @@ still open are in §10.
 **Your Agents do the work. You make the calls.**
 
 Anything that leaves the Team or cannot easily be undone, such as sending, paying, signing,
-publishing or merging, stops and waits for the Human. Huddle puts it in Needs You with the work,
+publishing or merging, stops and waits for the Human. Huddle puts it in Needs You (when its Proof is complete) with the work,
 the Proof and who checked it, so the Human can decide in one look.
 
 AI Agents are fast and tireless, but they are not accountable. The gate answers four problems:
@@ -50,8 +50,10 @@ Concretely:
 
 1. **One Task's journey: Draft, Check, Track, Gate, Decide.** The assignee drafts. Other members
    supply the Proof the Team's Definition of Done asks for. The Task's Change log records who did
-   what. Once the Proof is complete the Task moves to Needs You. The Human accepts, requests
-   changes or declines.
+   what. Once the Proof is complete, Huddle moves a Task in Review to Needs You and wakes no one.
+   Some Proof items complete with no write to the Task (role coverage, an attached document's
+   History); Huddle does not move the Task then, so the assignee may move it. The Human accepts,
+   requests changes or declines. The assignee does the Action only after the Accept.
 2. **Two rules hold however the Team's process is set up.** Accepting is always on: a process can
    add Proof, never remove the Human's decision. Incomplete Proof locks the gate: the Human sees
    "Done locked · Proof 2/3" and an "Ask Zoe for QA evidence" button, never a way to override.
@@ -311,7 +313,7 @@ On an ordinary Task the heading reads "Definition of Done (for information)".
 - The Accept sentence from the Human gate section.
 - When Proof is incomplete, a locked notice: "Proof 3/4 — citation check still open (Ruth, 19 of
   23 in #RSH-209). Accept unlocks when it's in."
-- When the Task is still in Review: "Accept unlocks when <assignee> moves it to Needs you."
+- When the Task is still in Review: "Accept unlocks when the Task moves to Needs you. It moves by itself once its Proof is in; <assignee> can also move it."
 - Buttons **Request changes** and **Accept** (disabled with a lock until §6.6 allows it), and an
   overflow menu holding **Decline**. Request changes and Decline open the existing `ReasonDialog`
   with the note required.

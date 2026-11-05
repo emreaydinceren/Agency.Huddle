@@ -407,6 +407,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="change">The change <see cref="TaskEvents.TaskChanged"/> published.</param>
     private void OnTaskChanged(TaskChange change)
     {
+        if (TaskActors.IsReadyMove(change))
+        {
+            // #349: Huddle's own move to Needs You hands the Task to the Human. Agents have nothing to do until the Human decides,
+            // so it joins no batch: no assignee, manager or requesting manager wake, and no wake budget spent.
+            return;
+        }
+
         if (change.Actor.Kind == TaskActorKind.Human)
         {
             // Corrections-B3 D9 item 15: on receipt, before any guard - a Human change resets the Task's

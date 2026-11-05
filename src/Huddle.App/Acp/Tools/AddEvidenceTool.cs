@@ -38,9 +38,17 @@ internal sealed class AddEvidenceTool(
         {
             ["taskId"] = new JsonObject { ["type"] = "string" },
             ["command"] = new JsonObject { ["type"] = "string" },
-            ["exitCode"] = new JsonObject { ["type"] = "integer" },
+            ["exitCode"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["description"] = "The number the command returned (0 for success). Required whenever command is given; a command without it is refused.",
+            },
             ["logRef"] = new JsonObject { ["type"] = "string" },
-            ["note"] = new JsonObject { ["type"] = "string" },
+            ["note"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "A short remark. Use it alone, with no command, when you ran nothing; with a command it rides along on the same line.",
+            },
         },
         ["required"] = new JsonArray { "taskId" },
     };
@@ -84,6 +92,11 @@ internal sealed class AddEvidenceTool(
         if (!TryReadExplicitLogRef(cleanCommand, logRef, out string? logPath, out int? logLine))
         {
             return "'logRef' must look like path#L12.";
+        }
+
+        if (cleanCommand.Length > 0 && exitCode is null)
+        {
+            return "A command needs its exit code, or the line does not count. Pass exitCode, the number the command returned (0 for success). For a remark about work where no command was run, pass note instead. Nothing was added.";
         }
 
         EvidenceLine line = this.BuildLine(target.Actor.Name, cleanCommand, cleanNote, exitCode, logPath, logLine);
