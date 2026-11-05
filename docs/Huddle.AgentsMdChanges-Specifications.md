@@ -481,7 +481,7 @@ In Teams/Home/AGENTS.md, these lines changed. Read the file before you rely on t
 | `turn.agentsMdFileWinsNoFiles` | For an Adapter with no file tools: `This is a summary. The file's text wins.` |
 | `turn.agentsMdComparison` | The fallback's first line, then `{{fence}}diff`, the lines, and `{{fence}}` |
 | `turn.agentsMdNotShown` | `…and {{count}} more changed lines.` Follows the fence when `MaxComparisonChars` cut the lines |
-| `turn.agentsMdMore` | `More rules may have changed: read the file.` Follows a file's list when it holds exactly 12 changes, the Helper's limit. Not in the no-file-tools forms, which carry the whole text |
+| `turn.agentsMdMore` | `More rules may have changed: read the file.` Follows a file's list when it holds exactly 12 changes, the Helper's limit. With no file tools, the whole text follows instead |
 | `turn.agentsMdComparisonNoFiles` | For an Adapter with no file tools: `In {{displayPath}}, these lines changed:` |
 | `turn.agentsMdOlder` | `…and {{count}} earlier changes to {{displayPath}}; read the file.` |
 | `turn.agentsMdOlderNoFiles` | For an Adapter with no file tools: `…and {{count}} earlier changes to {{displayPath}}. It now says:` then its text, up to `MaxCharsPerFile` |
@@ -499,6 +499,12 @@ Then `MaxNoticeChars` (default 8,000) bounds the revisions across the block: ove
 revisions collapse into `turn.agentsMdOlder`. Whole-file text (`NowFollow`, `Unknown`, and the `NoFiles` forms) is not
 collapsed, because cutting it could lose the news. Each such text is limited to `MaxCharsPerFile` instead, so those can take
 a block past `MaxNoticeChars`.
+
+**Heard never moves past what an Agent could not get.** An Agent with file tools can read the file; one without them must be
+given the text. So with `readsFiles` false, an incomplete notice (exactly 12 changes, `NotShown` above 0, or a collapsed
+revision) also carries the whole current text. A file's newest revision never collapses into `turn.agentsMdOlder`: if it alone
+is over the cap, `turn.agentsMdTooLong` says `{{path}} changed, too much to show here; read the file.` Line breaks in a
+`summary` or `quote` render as spaces, so a rule's text can't read as Huddle's own line.
 
 ### 6.7 Room Session integration
 
