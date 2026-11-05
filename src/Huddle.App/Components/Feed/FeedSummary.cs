@@ -45,6 +45,10 @@ internal static class FeedSummary
                 [HelperChip(p.HelperId, p.Name), Text(" didn't file "), Strong(p.Proposer), Text("'s proposal for "), Strong(p.Team), Text(": " + p.Reason)],
                 p.Fact,
                 OmitActor: true),
+            AgentsMdChangeSkippedPayload p => new(
+                [HelperChip(p.HelperId, p.Name), Text(" didn't tell Agents about "), Text(p.Path), Text(": " + p.Reason)],
+                null,
+                OmitActor: true),
             PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
             AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
             DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),

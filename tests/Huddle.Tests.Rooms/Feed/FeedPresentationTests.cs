@@ -20,6 +20,15 @@ public sealed class FeedPresentationTests
 
     private static string Flatten(FeedSummaryLine line) => string.Concat(line.Segments.Select(segment => segment.Text));
 
+    /// <summary>An AGENTS.md skip reads as its card text: the Helper, the file it did not tell Agents about, and the reason (spec 6.8, U-6).</summary>
+    [Fact]
+    public void Of_AgentsMdChangeSkipped_ReadsAsTheCardText()
+    {
+        FeedSummaryLine line = FeedSummary.Of(Item(FeedSourceType.AgentsMdChangeSkipped, new AgentsMdChangeSkippedPayload("AgentsMdChanges", "AGENTS.md Changes", "Teams/Home/AGENTS.md", "Fixes a spelling mistake")));
+
+        Assert.Equal("AGENTS.md Changes didn't tell Agents about Teams/Home/AGENTS.md: Fixes a spelling mistake", Flatten(line));
+    }
+
     /// <summary>Every source type reads as the sentence of §7, with its context after the dot.</summary>
     [Fact]
     public void Of_EachSourceType_ReadsAsTheSpecSentence()
