@@ -2809,6 +2809,17 @@ body.sidebar-resizing {
     margin-bottom: 0;
 }
 
+/* #352: a title that wraps (narrow window, right drawer open) must not recentre the buttons.
+   The row aligns to its top and both sides keep a 32px first line, so Save stays put. */
+.task-edit-page-header .page-header-row {
+    align-items: flex-start;
+}
+
+.task-edit-page-header .page-header-title,
+.task-edit-page-header .page-header-actions {
+    min-height: 32px;
+}
+
 .task-edit-page-eyebrow {
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
@@ -2830,6 +2841,13 @@ body.sidebar-resizing {
 @container task-edit-page (max-width: 600px) {
     .task-edit-page-header .page-header-row {
         flex-wrap: wrap;
+    }
+
+    /* #352: wrapped, the buttons sit on the first line, so a title of any length wraps below them and Save keeps its place. */
+    .task-edit-page-header .page-header-actions {
+        order: -1;
+        flex-basis: 100%;
+        justify-content: flex-end;
     }
 }
 
