@@ -149,6 +149,7 @@ the per-area tables below.
 | [Document history: the byline, the History and the History panel](doc-history.md) | [below](#doc-history) |
 | [Human gate: the Proof list, the decision card, Accept and Decline, the board drag and the Needs You page](human-gate.md) | [below](#human-gate) |
 | [Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter](helpers.md) | [below](#helpers) |
+| [AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's wording, `/compact`, a real restart and a save loop](agents-md-changes.md) | [below](#agents-md-changes) |
 | [Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart](feed.md) | [below](#feed) |
 | [Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action](remote-access.md) | [below](#remote-access) |
 | [Instructions and Memory: the Instructions files, the memory tool, Team Memory and the Memory protocol](instructions-memory.md) | [below](#instructions-memory) |
@@ -1306,3 +1307,21 @@ Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a 
 | [LONGROOMS-03](long-running-rooms.md#longrooms-03--recall-after-a-fresh-start-with-a-40000-token-catch-up) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
 | [LONGROOMS-04](long-running-rooms.md#longrooms-04--repeats-in-a-live-session-after-compact-and-after-a-fresh-start) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
 | [LONGROOMS-05](long-running-rooms.md#longrooms-05--a-fresh-start-with-and-without-a-save-request-first) | 💰 | Active |  | run 2026-10-31 on a seeded Room (spec §9.3); real Room still to do |
+
+## agents-md-changes
+
+AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's wording, `/compact`, a real restart and a save loop — [area file](agents-md-changes.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [AGENTSMDCHANGES-01](agents-md-changes.md#agentsmdchanges-01--the-helpers-tab-shows-the-agentsmd-changes-card) |  | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-02](agents-md-changes.md#agentsmdchanges-02--a-running-session-follows-a-new-team-rule-in-two-rooms) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-03](agents-md-changes.md#agentsmdchanges-03--a-running-session-follows-a-new-huddle-wide-rule) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-04](agents-md-changes.md#agentsmdchanges-04--a-typo-fix-is-skipped-and-the-feed-lists-it) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-05](agents-md-changes.md#agentsmdchanges-05--the-notices-wording-is-followed) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-06](agents-md-changes.md#agentsmdchanges-06--after-compact-the-next-turn-hears-the-notices-again) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-07](agents-md-changes.md#agentsmdchanges-07--with-the-helper-off-the-comparison-arrives) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-08](agents-md-changes.md#agentsmdchanges-08--a-real-restart-then-resume-still-tells-what-was-missed) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-09](agents-md-changes.md#agentsmdchanges-09--does-a-cold-resume-honour-the-changed-prompt) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-10](agents-md-changes.md#agentsmdchanges-10--a-save-loop-and-the-cards-call-count) | 💰 | Active |  | not yet run by a person |
+| [AGENTSMDCHANGES-11](agents-md-changes.md#agentsmdchanges-11--a-waiting-turn-holds-the-agents-other-room) | 💰 | Active |  | not yet run by a person |

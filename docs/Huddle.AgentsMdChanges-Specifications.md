@@ -747,9 +747,9 @@ separators and Team names of any length.
 
 | State | Meaning |
 | --- | --- |
-| The map is null | A session from before this feature. Each file counts from its first-sight hash, so every edit since Huddle began keeping the ledger is told. A file with no ledger entry yet counts as current. `started` is set the same way |
+| The map is null | A session from before this feature. Each file counts from its first-sight hash, so every edit since Huddle began keeping the ledger is told. A file with no ledger entry yet counts as current. `started` stays null, so a `/compact` then tells nothing rather than every file as new |
 | A path is absent from a non-null map, and the file has text | The file is new to this session: told as `turn.agentsMdNowFollow` |
-| A path is present but out of scope | A Project was moved or deleted: told once as `turn.agentsMdNoLonger`, unless a path in scope holds the same hash, and always dropped from the map. An Agent leaving a Team does not reach this: it edits the Persona, which forgets the session. Archiving does the same, because it moves the members out |
+| A path is present but out of scope | A Project was moved or deleted: told once as `turn.agentsMdNoLonger`, unless a path in scope holds the same hash or its heard hash is empty (the file never had text), and always dropped from the map. An Agent leaving a Team does not reach this: it edits the Persona, which forgets the session. Archiving does the same, because it moves the members out |
 | A hash equals the head | Up to date |
 
 ### 7.3 Data flow

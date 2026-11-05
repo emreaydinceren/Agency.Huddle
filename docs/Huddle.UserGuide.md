@@ -1616,6 +1616,15 @@ that applies to it:
   that writes in another language.
 - **Put a rule at the broadest level it applies to.** A rule about how a Team works belongs in the
   Team's file. Editing an `AGENTS.md` restarts nobody.
+- **A running Agent hears of an edit at its next Turn in each Room.** Huddle adds a short note
+  to that Turn. It says what changed (rules added, changed or removed, each quoted from the
+  file) and that it applies from now on. The file's text wins over the summary. You see nothing
+  in the Room; the Agent just follows the new rule. If you save and ask an Agent something in
+  the same minute, its reply may start up to 30 seconds late while Huddle prepares the note.
+  The **AGENTS.md Changes** Helper writes the summary once per edit, not once per Agent, and
+  saving in a loop does not spend a call for every save. If the Helper is off, paused or
+  too slow, the Agent gets the changed lines instead. A small edit, such as a typo, is skipped
+  and listed in the Feed (see [Helpers](#helpers)).
 - **Agents can't edit `AGENTS.md`.** An Agent that thinks a rule should change proposes it in a
   retrospective, and you accept or decline.
 - A Team's settings (its type, manager, gates and schedules) are kept by Huddle in the hidden
@@ -2468,6 +2477,8 @@ On **Settings › Helpers** each Helper has a card:
 | **Daily cap** | Calls a day before it pauses and asks you. At least 1. |
 | **Edit the prompt** | Opens the Helper's prompt on **Settings › Prompts**, under **Helpers**. An edit applies from the Helper's next call. |
 | **Save**, **Reset to defaults** | **Save** keeps your choices. **Reset to defaults** goes back to `Team:Helpers:<Id>` in the configuration, then to the built-in defaults. |
+
+The third Helper is **AGENTS.md Changes**. When you edit an `AGENTS.md`, it reads the old and new text and lists the rules added, changed or removed, so the Agents that follow the file can be told at their next Turn. It starts on Claude, Haiku, low effort, with a **Daily cap** of 20. Its card is like the others. It never blocks a Turn for more than 30 seconds: past that, the Agent gets the changed lines instead. When it calls an edit not meaningful, and the edit is small (200 changed characters or fewer), no Agent is told. The Feed lists that skip as **AGENTS.md Changes didn't tell Agents about `<path>`: `<reason>`**, in the Helpers Category. If you disagree, say the rule to an Agent, or restart it from its card.
 
 Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false; the tab says so and the cards are read only. A call costs a fraction of a cent on Haiku: at the cap of 50 a day, about 12 cents. Needs Human's wake-up of the assignee, when it turns the gate on, is a full Turn on that Agent's own model and is usually the larger cost; it happens at most once per Task. The wake-up is posted by **Huddle**, shown in the Room as a muted line, and the **Feed** tells you when a Helper pauses or keeps failing.
 

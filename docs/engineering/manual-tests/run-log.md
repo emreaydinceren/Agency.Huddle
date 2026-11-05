@@ -6410,6 +6410,83 @@ File: [`docs/engineering/manual-tests/long-running-rooms.md`](long-running-rooms
 | --- | --- | --- | --- | --- |
 | 2026-10-31 | Ran | 79f84a16 |  | Seeded Room; the week simulated. A/B 5/5 vs 5/5, then 4/5 vs 5/5; save Turn $0.83, $1.49. Spec §9.3 |
 
+### AGENTSMDCHANGES-01 — The Helpers tab shows the AGENTS.md Changes card
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-01--the-helpers-tab-shows-the-agentsmd-changes-card)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-02 — A running session follows a new Team rule in two Rooms
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-02--a-running-session-follows-a-new-team-rule-in-two-rooms)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-03 — A running session follows a new Huddle-wide rule
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-03--a-running-session-follows-a-new-huddle-wide-rule)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-04 — A typo fix is skipped and the Feed lists it
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-04--a-typo-fix-is-skipped-and-the-feed-lists-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-05 — The notice's wording is followed
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-05--the-notices-wording-is-followed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-06 — After /compact the next Turn hears the notices again
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-06--after-compact-the-next-turn-hears-the-notices-again)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-07 — With the Helper off the comparison arrives
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-07--with-the-helper-off-the-comparison-arrives)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-08 — A real restart then resume still tells what was missed
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-08--a-real-restart-then-resume-still-tells-what-was-missed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-09 — Does a cold resume honour the changed prompt
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-09--does-a-cold-resume-honour-the-changed-prompt)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-10 — A save loop and the card's call count
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-10--a-save-loop-and-the-cards-call-count)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### AGENTSMDCHANGES-11 — A waiting Turn holds the Agent's other Room
+
+File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.md#agentsmdchanges-11--a-waiting-turn-holds-the-agents-other-room)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

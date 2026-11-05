@@ -380,6 +380,17 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   and the system-prompt mode; "permission mode", "ACP mode". Not a **Plan**: the Adapter's `plan`
   mode is one Work Mode, and a Plan is an Agent's own checklist.
 
+**Turn Hook**
+: A compiled class that adds to or reads from a Turn at one of three points: when a
+  session opens, before a Turn is sent, and after it ends. Huddle runs a fixed, ordered
+  list of them around every Turn. A prompt addition is one class and one list entry.
+  File Changes and the `AGENTS.md` notice are Turn Hooks. A hook that throws is logged
+  by name and skipped, and the Turn goes on. See
+  [ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md).
+: Not a Claude Code hook, and not a plugin: Huddle's developers add them in code, and
+  nothing loads at runtime.
+: *Avoid*: plugin, middleware, callback.
+
 **Turn**
 : One prompt-to-completion cycle on a session — since Room Sessions shipped, one
   **Room Session's** session. Load-bearing: `IAgentSession.PromptAsync` throws if
@@ -490,7 +501,9 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   holds one for everyone. Huddle splices them into the system prompt right after the
   Persona's text, from general to specific: the Teams root, then each Team and each of
   its Projects, so the more specific level wins. The Human edits them in Obsidian or the
-  Library; a running session hears of an edit as a File Change.
+  Library. A running session hears of an edit at its next Turn in each Room, with what
+  changed and a note that it applies from now on; the file's text wins. See
+  [ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md).
 : Not an Agent's own rules, which live in its Persona, and not the Persona's text.
 : *Avoid*: Instructions, rules file, house rules.
 
@@ -701,6 +714,15 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   was shown in full. Huddle writes the file through the `memory` tool's rules and records
   `Team Memory (Helper)` with the proposer's Name in the file's History. See
   [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
+
+**`AGENTS.md` Changes Helper**
+: The third Helper. It reads one edit to an `AGENTS.md` file, as the old text, the new
+  text and a comparison, and lists the rules added, changed or removed, each with a
+  quote. It runs once per edit, not once per Agent. Huddle checks every quote against
+  the file, and one bad quote refuses the whole answer. A small edit it calls not
+  meaningful is skipped and listed in the Feed. See
+  [ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md).
+: Not the File Changes report, which names files and no rules.
 
 **Huddle (as sender)**
 : The sender of a Message Huddle itself writes, such as a Helper's wake-up to the
