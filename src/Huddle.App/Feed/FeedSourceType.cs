@@ -60,6 +60,9 @@ public enum FeedSourceType
     /// <summary>The Team Memory Helper did not file a member's proposal, or dropped it: a record, not a Notification.</summary>
     TeamMemoryNotFiled,
 
+    /// <summary>The AGENTS.md Changes Helper judged a change not worth telling Agents about, so none were told: a record, not a Notification.</summary>
+    AgentsMdChangeSkipped,
+
     /// <summary>A device asked to pair and waits for approval.</summary>
     PairingRequested,
 

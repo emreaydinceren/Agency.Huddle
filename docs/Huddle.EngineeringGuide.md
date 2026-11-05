@@ -264,7 +264,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `PipeName` | `team` | The named pipe Agents connect on. The app claims it as the pipe's first instance and stops at start-up when another program already listens on it: two copies on one machine sharing a name each took some of the other's Agents, which then sat Offline with nothing logged. Give a second copy its own name. |
 | `HumanName` | `You` | The Human's Name on a blank system only. Once `{DataDir}/profile.json` exists (Settings > Profile, `HumanProfileStore`), that file wins; read the live Name through `IHumanIdentity`, never from this key. |
 | `HelperConcurrency` | `2` | How many Helper runs may happen at once, across all Helpers. A Helper is a background agent that makes one judgement and lets Huddle act on it ([the Helpers design](Huddle.Helpers-Specifications.md) §6.3). It sits outside `Team:Helpers` because the configuration binder cannot mix a dictionary's entries with ordinary properties on one section. |
-| `Team:Helpers:<Id>:Enabled`, `Adapter`, `Model`, `Effort`, `DailyCap`, `ContinueGrant`, `WaitSeconds`, `TimeoutSeconds` | the Helper's code default | Per-Helper defaults, such as `Team:Helpers:NeedsHuman:DailyCap`. A value left out keeps the Helper's code default; a choice saved on the Helper's card in Settings › Helpers wins over all of them. `NeedsHuman` defaults to on, Adapter `claude`, Model `haiku`, Effort `low`, 50 calls a day, a 10-second wait and a 60-second timeout. Helpers run only while `Team:Acp:Enabled` is true. |
+| `Team:Helpers:<Id>:Enabled`, `Adapter`, `Model`, `Effort`, `DailyCap`, `ContinueGrant`, `WaitSeconds`, `TimeoutSeconds` | the Helper's code default | Per-Helper defaults, such as `Team:Helpers:NeedsHuman:DailyCap`. A value left out keeps the Helper's code default; a choice saved on the Helper's card in Settings › Helpers wins over all of them. `NeedsHuman` defaults to on, Adapter `claude`, Model `haiku`, Effort `low`, 50 calls a day, a 10-second wait and a 60-second timeout. `Team:Helpers:AgentsMdChange` defaults to on, Adapter `claude`, Model `haiku`, Effort `low`, 20 calls a day, a 2-second wait and a 25-second timeout ([ADR-0076](adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md)). Helpers run only while `Team:Acp:Enabled` is true. |
 | `AgentMessageBudget` | `40` | Agent-authored Messages one Room takes between Human Messages. Any Human Message resets it; the Room view offers the Human one more Budget at a time. **Zero or less removes the runaway-loop guard entirely.** |
 | `DemoAgent:Enabled` | `false` | The echo agents. Off by default; set `true` to get the `echo` and `alpha` Rooms. |
 | `DemoAgent:Names` | `["echo", "alpha"]` | |
@@ -318,6 +318,18 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Team:AgentsMd:MaxCharsPerFile` | `8000` | The most characters one `AGENTS.md` contributes to a session's system prompt; a longer file is cut and the cut line names the file. Replaces `Team:Instructions:MaxChars`. Second Brain Spec §7.4. |
 | `Team:AgentsMd:MaxTotalChars` | `32000` | The budget for the whole `AGENTS.md` block; Project files are dropped from the end first, then the rest are cut. Second Brain Spec §7.4. |
+| `Team:AgentsMd:NoticeWaitSeconds` | `30` | How long a Turn waits after the judgement of the current text started. `0` never waits. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:DebounceSeconds` | `60` | How long a file must stay unchanged before a judgement starts with no Turn asking. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MinJudgeSeconds` | `300` | The least time between two judgements of one file, whoever asks. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:PollSeconds` | `10` | How often the watcher checks the files. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxSkipChangedChars` | `200` | The largest edit a "not meaningful" Verdict may skip. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxRevisionsKept` | `20` | Revisions kept per file. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxNoticesPerFile` | `5` | Revisions told per file in one Turn. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxNoticeChars` | `8000` | The cap on one Turn's change-notice block. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxComparisonChars` | `4000` | The cap on one fallback's changed lines. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxHelperComparisonChars` | `12000` | The cap on the comparison the change Helper sees. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxHelperFileChars` | `16000` | The largest new text shown to the change Helper. AgentsMd Changes Spec §6.9. |
+| `Team:AgentsMd:MaxLedgerChars` | `256000` | The largest body whose text the change ledger keeps. AgentsMd Changes Spec §6.9. |
 | `Team:Teams:MaxHuddleMemoryEntries` | `30` | The cap on the Huddle-wide Memory index (`Teams/memory/`) in a session's system prompt. Second Brain Spec §7.4. |
 | `Team:Outputs:MaxIndexEntries` | `40` | The cap on the outputs index, shared across an Agent's Teams; the rest are counted as "N more in folder". Second Brain Spec §7.4. |
 | `Team:SecondBrain:QuietDays` | `60` | The days without a change after which `brain-check` calls a Team or Project quiet. Second Brain Spec §7.4. |

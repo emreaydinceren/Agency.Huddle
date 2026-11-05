@@ -261,8 +261,6 @@ public sealed class RoomSessionContextFillTests
             scheduler: new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: NullLogger.Instance,
             runToken: runCts.Token,
             persona: new Persona("nova", "You are Nova.", Model: "m1", Effort: "e1"),

@@ -5,8 +5,9 @@ using System.Globalization;
 using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
-using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.References;
@@ -43,8 +44,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly IPromptSource prompts;
     private readonly RoomFollows roomFollows;
     private readonly ILogger<PersonaRunner> logger;
-    private readonly FileChangeTracker? fileChanges;
-    private readonly IReadOnlyList<string> declaredWatches;
+    private readonly MemoryPaths? memoryPaths;
 
     // The handles this Persona answers to: its Name and, when the frontmatter declares one, its Alias.
     // AdapterCommandInvocation matches a leading Mention against exactly these, never by pattern.
@@ -100,6 +100,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly ContextFill? contextFill;
     private readonly ISessionSettings? sessionSettings;
     private readonly LastCatchUpStore? lastCatchUp;
+    private readonly TurnHookPipeline? hooks;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
@@ -143,7 +144,6 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         IPromptSource prompts,
         RoomFollows roomFollows,
         ILogger<PersonaRunner> logger,
-        FileChangeTracker? fileChanges = null,
         TimeProvider? timeProvider = null,
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
@@ -156,7 +156,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
-        LastCatchUpStore? lastCatchUp = null)
+        LastCatchUpStore? lastCatchUp = null,
+        TurnHookPipeline? hooks = null,
+        MemoryPaths? memoryPaths = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -171,7 +173,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.prompts = prompts;
         this.roomFollows = roomFollows;
         this.logger = logger;
-        this.fileChanges = fileChanges;
+        this.memoryPaths = memoryPaths;
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
@@ -179,6 +181,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
+        this.hooks = hooks;
         this.libraryDocs = libraryDocs;
         this.references = references;
         this.readsFiles = readsFiles;
@@ -187,12 +190,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.elicitationBridge = elicitationBridge;
         if (PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _))
         {
-            this.declaredWatches = identity.Watches ?? [];
             this.ownHandles = [persona.Name, identity.Alias];
         }
         else
         {
-            this.declaredWatches = [];
             this.ownHandles = [persona.Name];
         }
     }
@@ -552,8 +553,6 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.prompts,
             this.options.Acp,
             this.timeProvider,
-            this.fileChanges,
-            this.declaredWatches,
             this.logger,
             this.runCts.Token,
             this.roomSessions,
@@ -566,7 +565,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.references,
             this.contextFill,
             this.sessionSettings,
-            this.lastCatchUp);
+            this.lastCatchUp,
+            this.hooks,
+            this.memoryPaths);
     }
 
     /// <summary>Queues the Greeting for a Chief of Staff with an empty Human Room, at most once per runner lifetime.</summary>

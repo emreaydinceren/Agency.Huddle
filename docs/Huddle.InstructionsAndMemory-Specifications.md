@@ -198,6 +198,11 @@ rebuilt mid-session: that would break the prompt cache.
 | Agent | The same way: the Work Dir is watched for its own Agent |
 | Huddle-wide | Not at all. The Teams root is not a Watched Folder, so the edit applies from each Agent's next session |
 
+*Note, 2026-11-04.* `Instructions.md` has since become `AGENTS.md` (Second Brain), and
+[ADR-0076](adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md) changes this table:
+a running session now hears an edit to any level, Huddle-wide included, at its next Turn in each Room, with
+what changed. The in-scope `AGENTS.md` no longer appears in the File Changes report.
+
 File Changes run only when `FileChanges:Enabled` and the Profile `ReadsFiles`. Otherwise every
 level applies from the next session. No restart is forced; the Human can restart an Agent from
 its card.

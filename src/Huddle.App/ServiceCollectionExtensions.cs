@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Circuits;
@@ -11,6 +13,7 @@ using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Helpers.AgentsMdChange;
 using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
@@ -100,14 +103,50 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<TeamMemoryHelper>(),
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>>()));
+
+        // AGENTS.md Changes spec §6.2: the ledger reaches the dispatcher and the Helper through factories, because the dispatcher
+        // depends on this Helper's invoker, the Helper on the ledger, and the registry on every Helper.
+        services.AddSingleton(static sp => new AgentsMdLedger(
+            sp.GetRequiredService<HelperDispatcher>,
+            sp.GetRequiredService<AgentsMdChangeHelper>,
+            sp.GetRequiredService<HelperSettingsResolver>(),
+            sp.GetRequiredService<HelperBudget>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<ILogger<AgentsMdLedger>>(),
+            sp.GetService<TimeProvider>()));
+        services.AddSingleton<AgentsMdChangeHelper>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<AgentsMdChangeHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>(
+            sp.GetRequiredService<AgentsMdChangeHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>>()));
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 
         services.AddSingleton<HelperDispatcher>();
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
+        services.AddHostedService<AgentsMdWatcher>();
         services.AddSingleton<NeedsHumanTrigger>();
         services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
         return services;
+    }
+
+    /// <summary>
+    /// Registers which AGENTS.md files apply to a named Agent (from its Team labels and the catalog's spelling, §6.7), and the hook the
+    /// supervisor puts first in every Persona's Turn pipeline with the source and renderer behind it (§6.10).
+    /// </summary>
+    private static void AddAgentsMdScopesAndTurnHook(IServiceCollection services)
+    {
+        services.AddSingleton<AgentsMdScopes>();
+        services.AddSingleton(static sp => new AgentsMdNoticeRenderer(
+            sp.GetRequiredService<IPromptSource>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd));
+        services.AddSingleton(static sp => new AgentsMdNoticeSource(
+            sp.GetRequiredService<AgentsMdLedger>(),
+            sp.GetRequiredService<AgentsMdNoticeRenderer>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd,
+            sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
+        services.AddSingleton<AgentsMdTurnHook>();
     }
 
     /// <summary>
@@ -626,6 +665,8 @@ public static class ServiceCollectionExtensions
         // pages and the container's Dispose see one catalog.
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
+
+        AddAgentsMdScopesAndTurnHook(services);
 
         // The memory tool and the Team Memory write guard share these two: who writes which Team's Memory, and the one gate
         // per memory folder that every writer through the tool takes (Instructions and Memory §5.4, §5.5).

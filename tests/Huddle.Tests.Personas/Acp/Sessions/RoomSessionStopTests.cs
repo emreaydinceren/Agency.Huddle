@@ -256,8 +256,6 @@ public sealed class RoomSessionStopTests
             scheduler: scheduler,
             prompts: new FakePromptSource(),
             options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: NullLogger.Instance,
             runToken: runCts.Token);
         try

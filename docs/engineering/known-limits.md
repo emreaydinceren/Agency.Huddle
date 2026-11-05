@@ -12,6 +12,26 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   `HireService.OnboardManagerAsync` waits a minute for the manager to run, then logs a warning and gives up; `onboarded` stays unset, but no later start posts the steps. The Team keeps its process, so the Human can ask the manager to work through its `## Onboarding`.
 - **Huddle does not advertise `session.compaction`, so an automatic compaction stays invisible.**
   Advertising it removes the "Compact conversation" tool call whose `rawOutput` gives `/compact` its token figures, and the replacement `compaction_update` carries none outside JetBrains AIR, as a paid spike showed on 2026-11-03. See [Adapter Upgrades §8](../Huddle.AdapterUpgrades-Specifications.md), which names the follow-up on the legacy `trigger` field.
+- **An idle Agent does not hear of an `AGENTS.md` change until its next Turn.** Huddle adds the notice to a Turn and starts
+  none of its own, so an Agent that is not asked anything keeps its old rules in mind. It hears at its next Turn in each Room
+  ([ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md)).
+- **An automatic compaction does not make an Agent hear the notices again.** Huddle cannot see it (the entry above), so
+  after one the Agent may have lost a notice it was told. Only `/compact` re-tells every notice since the session began.
+  The file is still the truth, and a new session reads it afresh.
+- **A Turn that waits for the `AGENTS.md` Helper holds that Agent's other Rooms.** Turns run one at a time per Agent, so a
+  Turn started just after an edit may wait up to 30 seconds, with its Room silent, and the Agent's Turns in other Rooms
+  queue behind it. A Stop in the waiting Room ends the wait. A visible "reading a rule change" row would need a new Turn
+  state (O-12 of the [AgentsMd Changes spec](../Huddle.AgentsMdChanges-Specifications.md)).
+- **A Turn stopped just after its prompt was sent counts the notice as told.** Heard moved in the one case seen: the hook
+  added 472 characters, and the next Turn added 0. Whether the Agent keeps the notice is not established. The rule's next
+  edit or a `/compact` tells it again.
+- **Text before and after a tool call or a Stop-hook continuation in one Turn runs together, with no break in the Room.**
+  This is general behaviour, seen here through the DocHistory hook.
+- **A removed Team keeps its `AGENTS.md` ledger head.** Creating a Team with the same name costs one Helper call, to
+  compare the new file with the old head.
+- **A short edit can talk its way into a skip.** The Helper's prompt does not escape the file's text, so words in a small
+  edit can steer the Helper to call it not meaningful. The damage is bounded: a skip is believed only up to 200 changed
+  characters, and the Feed lists every skip.
 - **An Agent on a model without auto mode may open its first reply with an Adapter notice. Resolved 2026-11-03.**
   When the Human's own `~/.claude/settings.json` set `permissions.defaultMode` to `auto` and the Agent ran on a model
   with no auto mode, `claude-agent-acp` fell back to Accept edits and wrote "**Auto mode unavailable:** … using Accept

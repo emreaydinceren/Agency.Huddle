@@ -250,6 +250,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 - [Instructions and Memory](manual-tests/instructions-memory.md): the Instructions files, the memory tool, Team Memory and the Memory protocol.
 - [Long-running Rooms](manual-tests/long-running-rooms.md): the §9.1 experiment on the Chief of Staff's Room — recall after a fresh start, repeats after `/compact` and after a fresh start, and the memory flush played by hand.
+- [AGENTS.md changes](manual-tests/agents-md-changes.md): a running Agent hears an edit at its next Turn in each Room, the skipped typo in the Feed, the notice's wording, `/compact`, the Helper off, a real restart and resume, and a save loop.
 - [Team Memory Helper](manual-tests/team-memory-helper.md): proposals filed by a Helper into Team Memory, the History, the Feed record, the membership check and the daily cap.
 - [Long-running Rooms](manual-tests/long-running-rooms.md): the experiment on a real Room that decides whether phase 2b and phase 4 are built.
 - [Second Brain](manual-tests/second-brain.md): the Second Brain use cases as a Human's checklist: raw uploads, Team Memory, AGENTS.md, prompt sources, chat rules, archive and unarchive, an old data folder and a protected raw file.

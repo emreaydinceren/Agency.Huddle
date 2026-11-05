@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
@@ -234,7 +235,14 @@ public sealed class PersonaRunnerMemoryToolFileChangesTests
             FakeAgentHostFactory factory = new(clock);
             FileChangeTracker tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
             ILogger<PersonaRunner> logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
-            PersonaRunner runner = new(TestPersonas.Nova, options, factory, new FakePromptSource(), new RoomFollows(), logger, tracker);
+            FakePromptSource prompts = new();
+            ILoggerFactory loggerFactory = fixture.Services.GetRequiredService<ILoggerFactory>();
+            TurnHookPipeline hooks = TurnHookPipeline.ForPersona(
+                new TurnHookScope("nova", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+                null,
+                new FileChangesTurnHook(tracker, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>()),
+                loggerFactory.CreateLogger<TurnHookPipeline>());
+            PersonaRunner runner = new(TestPersonas.Nova, options, factory, prompts, new RoomFollows(), logger, hooks: hooks, memoryPaths: tracker.MemoryPaths);
 
             Scenario scenario = new(fixture, factory, clock, runner, notesPath);
             await runner.StartAsync(ct);

@@ -17,6 +17,7 @@ using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Factories;
 
@@ -629,7 +630,7 @@ public sealed class PromptGoldenTests
             new("Alice", "did anyone see the release notes?"),
             new("Bob", "I have not, checking now"),
         ];
-        var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = report };
+        var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
@@ -648,7 +649,7 @@ public sealed class PromptGoldenTests
             [new FileChange(FileChangeKind.Added, @"E:\Huddle\App_Data\work\Nova\memory\code-language.md", "Alpha")],
             NotListed: 0,
             Unchecked: []);
-        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report };
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
@@ -662,10 +663,10 @@ public sealed class PromptGoldenTests
     [Fact]
     public void BuildPrompt_EmptyReport_ByteIdenticalToExistingGoldens()
     {
-        var plainWithEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = FileChangesReport.Empty };
+        var plainWithEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(FileChangesReport.Empty, new FakePromptSource()) };
         AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithEmpty, new FakePromptSource()));
 
-        var plainWithNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = null };
+        var plainWithNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(null, new FakePromptSource()) };
         AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithNull, new FakePromptSource()));
 
         CaughtUpMessage[] missed =
@@ -673,10 +674,10 @@ public sealed class PromptGoldenTests
             new("Alice", "did anyone see the release notes?"),
             new("Bob", "I have not, checking now"),
         ];
-        var catchUpWithEmpty = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = FileChangesReport.Empty };
+        var catchUpWithEmpty = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(FileChangesReport.Empty, new FakePromptSource()) };
         AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
 
-        var catchUpWithNull = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = null };
+        var catchUpWithNull = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(null, new FakePromptSource()) };
         AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithNull, new FakePromptSource()));
     }
 
@@ -689,7 +690,7 @@ public sealed class PromptGoldenTests
             NotListed: 0,
             Unchecked: []);
         var item = new WorkItem(
-            "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting) with { FileChanges = report };
+            "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
@@ -770,7 +771,7 @@ public sealed class PromptGoldenTests
             Resumed: false,
             Messages: [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu-1", "Human", "earlier text")],
             Omitted: 0);
-        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report, Transcript = transcript };
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()), Transcript = transcript };
 
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
@@ -846,7 +847,7 @@ public sealed class PromptGoldenTests
             Omitted: 0);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", [])
             with
-        { FileChanges = fileChanges, LibraryDocuments = library, Transcript = transcript };
+        { HookBlocks = FileChangesTestBlocks.Of(fileChanges, new FakePromptSource()), LibraryDocuments = library, Transcript = transcript };
 
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 

@@ -48,6 +48,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.HelperPaused, "helper-paused"),
             (FeedSourceType.HelperFailing, "helper-failing"),
             (FeedSourceType.TeamMemoryNotFiled, "team-memory-not-filed"),
+            (FeedSourceType.AgentsMdChangeSkipped, "agents-md-change-skipped"),
             (FeedSourceType.PairingRequested, "pairing-requested"),
             (FeedSourceType.AdminRequested, "admin-requested"),
             (FeedSourceType.DevicePaired, "device-paired"),
@@ -98,6 +99,19 @@ public sealed class FeedPayloadsTests
             Assert.NotNull(read.Payload);
             Assert.Equal(json, FeedPayloads.Serialize(FeedActorKind.OutsideHuddle, read.Payload));
         }
+    }
+
+    /// <summary>The AGENTS.md skip payload keeps its Helper id, name, path and reason through the envelope.</summary>
+    [Fact]
+    public void Envelope_AgentsMdChangeSkipped_RoundTripsEveryField()
+    {
+        AgentsMdChangeSkippedPayload original = new("AgentsMdChanges", "AGENTS.md Changes", "Teams/Home/AGENTS.md", "Fixes a spelling mistake");
+
+        string json = FeedPayloads.Serialize(FeedActorKind.OutsideHuddle, original);
+        FeedEnvelope read = FeedPayloads.Read(json, FeedSourceType.AgentsMdChangeSkipped);
+
+        AgentsMdChangeSkippedPayload round = Assert.IsType<AgentsMdChangeSkippedPayload>(read.Payload);
+        Assert.Equal(original, round);
     }
 
     /// <summary>The envelope is camelCase with a version and a data object, as the spec shows.</summary>
@@ -226,6 +240,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.HelperPaused, FeedCategory.Helpers),
             (FeedSourceType.HelperFailing, FeedCategory.Helpers),
             (FeedSourceType.TeamMemoryNotFiled, FeedCategory.Helpers),
+            (FeedSourceType.AgentsMdChangeSkipped, FeedCategory.Helpers),
             (FeedSourceType.SecondBrainOverCap, FeedCategory.SecondBrain),
             (FeedSourceType.TaskWakesPaused, FeedCategory.Tasks),
             (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),

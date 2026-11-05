@@ -32,6 +32,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             HelperPausedPayload p => new(FeedTargetKind.Helper, p.HelperId),
             HelperFailingPayload p => new(FeedTargetKind.Helper, p.HelperId),
             TeamMemoryNotFiledPayload p => new(FeedTargetKind.Helper, p.HelperId),
+            AgentsMdChangeSkippedPayload p => new(FeedTargetKind.Helper, p.HelperId),
             PairingRequestedPayload p => new(FeedTargetKind.Device, p.RequestId),
             AdminRequestedPayload p => new(FeedTargetKind.Device, p.RequestId),
             DevicePairedPayload p => new(FeedTargetKind.Device, p.DeviceId),

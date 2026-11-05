@@ -19,8 +19,13 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// Trailing and optional like <paramref name="WorkMode"/>, so an older file loads it as <see langword="null"/>.
 /// </param>
 /// <param name="ContextSize">The size of the context window that <paramref name="ContextUsed"/> was measured against; zero when the Adapter did not say.</param>
+/// <param name="HookState">
+/// Each Turn Hook's own state for this session, keyed by hook name, or <see langword="null"/> when none was stored.
+/// Trailing and optional like <paramref name="WorkMode"/>, so a file written before Turn Hooks existed has no such key
+/// and loads as <see langword="null"/>. Keys the store does not know are kept as they are.
+/// </param>
 internal sealed record RoomSessionEntry(
-    string SessionId, string AdapterId, string? Model, string? Effort, string? LastMessageId, DateTimeOffset LastTurnUtc, string? WorkMode = null, long? ContextUsed = null, long ContextSize = 0)
+    string SessionId, string AdapterId, string? Model, string? Effort, string? LastMessageId, DateTimeOffset LastTurnUtc, string? WorkMode = null, long? ContextUsed = null, long ContextSize = 0, IReadOnlyDictionary<string, string?>? HookState = null)
 {
     /// <summary>
     /// Whether this entry still describes a session the Persona would resume: the Adapter, Model, Effort and

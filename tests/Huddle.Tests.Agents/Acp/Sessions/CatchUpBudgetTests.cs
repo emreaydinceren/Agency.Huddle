@@ -193,8 +193,6 @@ public sealed class CatchUpBudgetTests
             scheduler: new ImmediateTurnScheduler(),
             prompts: new FakePromptSource(),
             options: new AcpOptions(),
-            fileChanges: null,
-            declaredWatches: [],
             logger: NullLogger.Instance,
             runToken: runCts.Token,
             persona: Nova,

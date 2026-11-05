@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Pipes;
@@ -490,6 +491,56 @@ public sealed class PersonaRunnerFileChangesTests
         Assert.Equal(expected2, factory.Session.Prompts[1]);
     }
 
+    /// <summary>Spec §6.10: a runner given a pipeline passes it to its session, so a file changed between two Turns is listed and the block opens the prompt.</summary>
+    [Fact]
+    public async Task PersonaRunner_PassesThePipelineToTheSession()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var workDir = OwnWorkDir(options.Value, "nova");
+        Directory.CreateDirectory(workDir);
+        var filePath = Path.Combine(workDir, "a.txt");
+        File.WriteAllText(filePath, "v1");
+
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("first");
+        factory.Session.EnqueueReply("second");
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        var prompts = new FakePromptSource();
+        var fileChangesHook = new FileChangesTurnHook(tracker, prompts, fixture.Services.GetRequiredService<ILogger<FileChangesTurnHook>>());
+        var hooks = TurnHookPipeline.ForPersona(
+            new TurnHookScope("nova", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+            null,
+            fileChangesHook,
+            fixture.Services.GetRequiredService<ILogger<PersonaRunner>>());
+
+        await using var agentHost = new PersonaRunner(
+            TestPersonas.Nova, options, factory, prompts, new RoomFollows(), fixture.Services.GetRequiredService<ILogger<PersonaRunner>>(), hooks: hooks, memoryPaths: tracker.MemoryPaths);
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await Eventually.HistoryCountAsync(store, roomId, 2, ct);
+
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
+        File.WriteAllText(filePath, "v1 changed");
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
+        await Eventually.HistoryCountAsync(store, roomId, 4, ct);
+
+        var header = prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>());
+
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        // contains-ok: prompt text, not markup; the block's start shows the pipeline path listed the change.
+        Assert.StartsWith(header, factory.Session.Prompts[1], StringComparison.Ordinal);
+    }
+
     /// <summary>Builds a <see cref="PersonaRunner"/> over <paramref name="fixture"/>'s real pipe, with the given (or absent) File Changes tracker.</summary>
     private static PersonaRunner CreateHost(
         PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, FileChangeTracker? fileChanges, PersonaCommands? commands = null)
@@ -501,7 +552,21 @@ public sealed class PersonaRunnerFileChangesTests
         // host, and NullLogger would silently discard every entry a test like
         // CommitFails_TurnStillPostsAndConsumerLives needs to assert against.
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger, fileChanges, commands: commands);
+        FakePromptSource prompts = new();
+        TurnHookPipeline? hooks = null;
+        if (fileChanges is not null)
+        {
+            // The fixture's logger factory, so the hook's commit Warning reaches fixture.LogEntries.
+            ILoggerFactory loggerFactory = fixture.Services.GetRequiredService<ILoggerFactory>();
+            FileChangesTurnHook hook = new(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>());
+            hooks = TurnHookPipeline.ForPersona(
+                new TurnHookScope(persona.Name, ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
+                null,
+                hook,
+                loggerFactory.CreateLogger<TurnHookPipeline>());
+        }
+
+        return new PersonaRunner(persona, options, factory, prompts, new RoomFollows(), logger, commands: commands, hooks: hooks, memoryPaths: fileChanges?.MemoryPaths);
     }
 
     /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>

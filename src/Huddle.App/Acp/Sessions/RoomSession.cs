@@ -1,4 +1,5 @@
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
@@ -39,8 +40,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private readonly ITurnScheduler scheduler;
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
-    private readonly FileChangeTracker? fileChanges;
-    private readonly IReadOnlyList<string> declaredWatches;
+    private readonly MemoryPaths? memoryPaths;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -126,6 +126,31 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private bool running;
     private long lastUsed;
 
+    private readonly TurnHookPipeline? hooks;
+
+    /// <summary>
+    /// The per-hook state the Turn hooks keep, keyed by hook name. Consumer-only: both uses
+    /// (the Before point in <c>ProcessWorkItemAsync</c> and the After point in <c>FinishTurnAsync</c>)
+    /// run on the consumer.
+    /// The opening of a session also writes it, under the gate (<c>ReplaceHookState</c>), and the Opening hooks read it
+    /// without it: the eager open at start-up is awaited to its end before the read loop starts
+    /// (<c>PersonaRunner</c> awaits <c>OpenAtStartAsync</c> first), so no item exists to run a Turn beside it, and a lazy open
+    /// runs on the consumer inside the admitted slot.
+    /// </summary>
+    private readonly Dictionary<string, string?> hookState = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The Stop token of the Turn hooks' Before points while they run, or <see langword="null"/> otherwise. Published and
+    /// cleared under <c>gate</c>, so the Stop path never cancels a disposed source (O-12); the consumer disposes it.
+    /// </summary>
+    private CancellationTokenSource? beforeTurnStop;
+
+    /// <summary>The scheduler sequence of the item the Stop source above belongs to; read only with it, under <c>gate</c>.</summary>
+    private long beforeTurnStopSequence;
+
+    /// <summary>The Room whose item the Stop source above belongs to; read only with it, under <c>gate</c>.</summary>
+    private string? beforeTurnStopRoomId;
+
     /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
     private string? lastModel;
 
@@ -160,8 +185,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="scheduler">The ticket protocol this session's consumer runs its Turns through.</param>
     /// <param name="prompts">Resolves every <c>turn.*</c> prompt's current text.</param>
     /// <param name="options">The Persona's current ACP options, read live for the idle-timeout bound.</param>
-    /// <param name="fileChanges">The Persona's File Changes tracker, or <see langword="null"/> when File Changes is off.</param>
-    /// <param name="declaredWatches">The Persona's declared Watched Folders.</param>
     /// <param name="logger">Where this session logs.</param>
     /// <param name="runToken">The runner's own run token; cancelled means shutdown, never a Stop.</param>
     /// <param name="time">
@@ -182,6 +205,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
+    /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
+    /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes to paths for <c>Touched</c>. <see langword="null"/> records none, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -189,8 +214,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ITurnScheduler scheduler,
         IPromptSource prompts,
         AcpOptions options,
-        FileChangeTracker? fileChanges,
-        IReadOnlyList<string> declaredWatches,
         ILogger logger,
         CancellationToken runToken,
         TimeProvider? time = null,
@@ -206,14 +229,15 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
-        LastCatchUpStore? lastCatchUp = null)
+        LastCatchUpStore? lastCatchUp = null,
+        TurnHookPipeline? hooks = null,
+        MemoryPaths? memoryPaths = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(scheduler);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(declaredWatches);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.RoomId = roomId;
@@ -222,8 +246,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.scheduler = scheduler;
         this.prompts = prompts;
         this.options = options;
-        this.fileChanges = fileChanges;
-        this.declaredWatches = declaredWatches;
+        this.memoryPaths = memoryPaths;
         this.logger = logger;
         this.runToken = runToken;
         this.time = time ?? TimeProvider.System;
@@ -238,6 +261,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
         this.libraryDocs = libraryDocs;
+        this.hooks = hooks;
         this.references = references;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
@@ -642,6 +666,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // ProcessWorkItemAsync and that the consumer's own re-check reads under: anything already
             // queued for this Room (sequence at or below it) must drain without spending anything.
             this.stopMarks[roomId] = mark;
+
+            this.CancelBeforeWait(roomId);
+
             turn = this.activeTurn;
             activeSession = this.session;
         }
@@ -838,10 +865,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         try
         {
+            // Called under the gate, synchronous to its first await: yield so Opening never runs under it.
+            await Task.Yield();
             var (opened, resumed, resumedAfterId) = await this.OpenOrResumeAsync(cancellationToken).ConfigureAwait(false);
 
-            // A freshly opened and a resumed session alike: either can be asked a question on its first
-            // Turn, and one with no scope bound is answered as cancelled (E-3).
+            // Fresh or resumed alike: an unbound session's question is answered as cancelled (E-3).
             opened.BindElicitationScope(this);
             var readerCts = CancellationTokenSource.CreateLinkedTokenSource(this.runToken);
             lock (this.gate)
@@ -869,8 +897,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             this.resumedAfterMessageId = resumedAfterId;
             this.usageBaselinePending = resumed;
 
-            // A fresh open starts an empty context, so a reading left by an earlier session must
-            // not show; a resume keeps it, because that context still exists.
+            // A fresh open starts an empty context, so an earlier reading must not show; a resume keeps it.
             if (!resumed && this.agentId is { } freshAgentId)
             {
                 this.contextFill?.Forget(freshAgentId, this.RoomId);
@@ -926,13 +953,59 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
                 var resumedSession = await this.host.ResumeAsync(entry.SessionId, cancellationToken).ConfigureAwait(false);
                 if (resumedSession is not null)
                 {
+                    this.ReplaceHookState(entry.HookState);
+                    try
+                    {
+                        await this.RunOpeningHooksAsync(SessionOpenReason.Resumed, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Nothing owns the resumed session yet: this.session is set only after this method returns.
+                        await resumedSession.DisposeAsync().ConfigureAwait(false);
+                        throw;
+                    }
+
                     return (resumedSession, true, entry.LastMessageId);
                 }
             }
         }
 
+        // Opening runs before the open: AgentsMdTurnHook captures its hashes then (Spec 8.5).
+        this.ReplaceHookState(null);
+        await this.RunOpeningHooksAsync(SessionOpenReason.Fresh, cancellationToken).ConfigureAwait(false);
         var opened = await this.open(cancellationToken).ConfigureAwait(false);
         return (opened, false, null);
+    }
+
+    /// <summary>
+    /// Swaps the hook state for a new session's: cleared, then filled from <paramref name="stored"/>. The swap is under the gate and
+    /// never awaits. The consumer touches <c>hookState</c> only inside a Turn. No open can run beside a Turn's Before or After:
+    /// the eager open at start-up (<c>RoomSessionPool.OpenAtStartAsync</c>) is awaited to its end by <c>PersonaRunner</c>
+    /// before the read loop starts, so nothing is queued until it is done, and every later open is the lazy one, which the
+    /// consumer itself runs (<c>TryLazyOpenAsync</c>) before the Turn.
+    /// </summary>
+    /// <param name="stored">The entry's stored state, or <see langword="null"/> for a fresh session.</param>
+    private void ReplaceHookState(IReadOnlyDictionary<string, string?>? stored)
+    {
+        lock (this.gate)
+        {
+            this.hookState.Clear();
+            if (stored is not null)
+            {
+                foreach (var pair in stored)
+                {
+                    this.hookState[pair.Key] = pair.Value;
+                }
+            }
+        }
+    }
+
+    private async Task RunOpeningHooksAsync(SessionOpenReason reason, CancellationToken cancellationToken)
+    {
+        if (this.hooks is not null)
+        {
+            await this.hooks.OnSessionOpeningAsync(reason, this.hookState, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task RunConsumerAsync(CancellationToken ct)
@@ -1151,6 +1224,25 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.scheduler.Complete(head.Sequence);
     }
 
+    /// <summary>
+    /// Ends the wait of the Turn hooks' Before points when the item waiting in them is in <paramref name="roomId"/> and the Room's mark
+    /// covers its sequence: an item admitted after the mark (a later sequence) keeps its wait, as the publish check keeps its Turn.
+    /// Called under <see cref="gate"/>, so the source cannot be disposed meanwhile (the consumer clears the field under this same gate
+    /// first). <c>CancelAsync</c>, not <c>Cancel</c>: Cancel runs the hook's continuations inline, on this caller's thread with the
+    /// gate held. CancelAsync marks the token cancelled now, keeping the order with the mark, and runs the callbacks elsewhere. Not
+    /// awaited: nothing may be awaited under the lock.
+    /// </summary>
+    /// <param name="roomId">The Room the Human stopped.</param>
+    private void CancelBeforeWait(string roomId)
+    {
+        if (this.beforeTurnStop is { } waiting
+            && string.Equals(this.beforeTurnStopRoomId, roomId, StringComparison.Ordinal)
+            && this.IsStoppedAtOrBefore(roomId, this.beforeTurnStopSequence))
+        {
+            _ = waiting.CancelAsync();
+        }
+    }
+
     /// <summary>Whether a Room's Stop mark covers <paramref name="sequence"/>, under <see cref="gate"/>.</summary>
     private bool IsStoppedAtOrBefore(string roomId, long sequence)
     {
@@ -1198,19 +1290,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // The token-Budget check (D22 correction 11) runs in the consumer, before this method is
         // ever called - and before this session opens - so an item drained for a spent Budget never
         // pays for opening a session it will not prompt.
-        //
-        // collected stays null for a Greeting (FC §6.8: a Greeting neither collects nor commits, the
-        // trigger is the prompt itself, not a delivered Message) and for a null tracker (§6.11: the
-        // Adapter cannot read files). It is carried on the TurnRun so the finally block can see it
-        // (FC §6.8, finding P-17).
-        (item, CollectedChanges? collected) = await this.CollectFileChangesAsync(item, ct).ConfigureAwait(false);
-        item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
-        item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
-        item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
-
-        // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-        this.WriteLastCatchUp(item);
-        TurnRun? run = this.TryPublishTurn(item, collected, sequence, ct);
+        TurnRun? run = await this.PrepareAndPublishAsync(item, sequence, ct).ConfigureAwait(false);
         if (run is null)
         {
             return;
@@ -1243,36 +1323,96 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     }
 
     /// <summary>
-    /// Collects the Room's File Changes at Turn start and attaches the report to the item.
+    /// Runs the Before hooks and publishes the Turn. While a Message Turn waits in the hooks, an empty Draft under the
+    /// Turn's own message id shows the Agent working with the Draft's Stop control (O-12); the published Turn reuses
+    /// that id, so the Room never shows two Drafts, and a Turn that is dropped instead retracts it.
     /// </summary>
-    /// <remarks>
-    /// Collected before the Turn/cancellation/watchdog exists, so a slow disk scan is never counted
-    /// as Adapter silence (rules.md TRAP 1/TRAP 2 ordering) and so a Turn that waited in the queue
-    /// lists changes made while it waited. A scan or directory failure must not kill the consumer
-    /// loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
+    /// <param name="item">The item being prepared.</param>
+    /// <param name="sequence">The item's sequence, compared with the Room's Stop mark.</param>
     /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item (with <see cref="WorkItem.FileChanges"/> set for a Message when a tracker exists) and what was collected, or <see langword="null"/> when nothing was.</returns>
-    private async Task<(WorkItem Item, CollectedChanges? Collected)> CollectFileChangesAsync(WorkItem item, CancellationToken ct)
+    /// <returns>The published Turn, or <see langword="null"/> when the item was dropped.</returns>
+    private async Task<TurnRun?> PrepareAndPublishAsync(WorkItem item, long sequence, CancellationToken ct)
     {
-        CollectedChanges? collected = null;
-
-        if (item.Kind == WorkItemKind.Message && this.fileChanges is not null)
+        string messageId = Guid.CreateVersion7().ToString("N");
+        bool announced = this.hooks is { HookNames.Count: > 0 } && item.Kind == WorkItemKind.Message;
+        if (announced)
         {
-            try
-            {
-                collected = await this.fileChanges.CollectAsync(this.owner.PersonaName, item.RoomId, this.declaredWatches, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to collect File Changes for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-
-            item = item with { FileChanges = collected?.Report };
+            await this.WriteDeltaAsync(item.RoomId, messageId, isFinal: false, ct).ConfigureAwait(false);
         }
 
-        return (item, collected);
+        TurnRun? run = null;
+        try
+        {
+            (item, TurnHookBeforeResult? hookResult) = await this.RunBeforeHooksAsync(item, sequence, ct).ConfigureAwait(false);
+
+            // A Stop that ended the Before wait (or landed in it) drops the item now, as TryPublishTurn would later: the
+            // catch-up below clears firstTurnPending, and the next Turn still needs it (E-7).
+            if (this.IsStoppedAtOrBefore(item.RoomId, sequence))
+            {
+                return null;
+            }
+
+            item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
+            item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
+            item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
+
+            // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
+            this.WriteLastCatchUp(item);
+            run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
+            return run;
+        }
+        finally
+        {
+            if (announced && run is null)
+            {
+                await this.WriteDeltaAsync(item.RoomId, messageId, isFinal: true, ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Runs the Turn hooks' Before points for a Message Turn and attaches their blocks to the item.
+    /// Runs before the Turn, the cancellation source and the watchdog exist, so a slow hook is never
+    /// counted as Adapter silence.
+    /// </summary>
+    /// <param name="item">The item being prepared.</param>
+    /// <param name="sequence">The item's sequence, compared with the Room's Stop mark.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>The item with its hook blocks set, and the result, or <see langword="null"/> when no hook ran.</returns>
+    private async Task<(WorkItem Item, TurnHookBeforeResult? Result)> RunBeforeHooksAsync(WorkItem item, long sequence, CancellationToken ct)
+    {
+        if (this.hooks is null || item.Kind != WorkItemKind.Message)
+        {
+            return (item, null);
+        }
+
+        using CancellationTokenSource stop = new();
+        lock (this.gate)
+        {
+            this.beforeTurnStop = stop;
+            this.beforeTurnStopRoomId = item.RoomId;
+            this.beforeTurnStopSequence = sequence;
+            if (this.IsStoppedAtOrBefore(item.RoomId, sequence))
+            {
+                _ = stop.CancelAsync(); // Not awaited under the gate; the token is cancelled at once and the hooks have not started.
+            }
+        }
+
+        try
+        {
+            TurnHookBeforeResult result = await this.hooks
+                .BeforeTurnAsync(item.RoomId, this.hookState, ct, stop.Token)
+                .ConfigureAwait(false);
+            return (result.Blocks.Count > 0 ? item with { HookBlocks = result.Blocks } : item, result);
+        }
+        finally
+        {
+            lock (this.gate)
+            {
+                this.beforeTurnStop = null;
+                this.beforeTurnStopRoomId = null;
+            }
+        }
     }
 
     /// <summary>
@@ -1501,13 +1641,13 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// RelatedMessageId, and later a MessageDelta, correlate back to this Turn.
     /// </remarks>
     /// <param name="item">The fully prepared item.</param>
-    /// <param name="collected">What the File Changes collect returned, if anything.</param>
+    /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     /// <param name="sequence">The item's scheduler sequence, compared against the Room's Stop mark.</param>
+    /// <param name="messageId">The Turn's message id, minted before the hooks ran so an early Draft shares it.</param>
     /// <param name="ct">The run's own cancellation token, which the Turn's token is linked to.</param>
     /// <returns>The published Turn's state, or <see langword="null"/> when nothing was published and nothing was committed.</returns>
-    private TurnRun? TryPublishTurn(WorkItem item, CollectedChanges? collected, long sequence, CancellationToken ct)
+    private TurnRun? TryPublishTurn(WorkItem item, TurnHookBeforeResult? hookResult, long sequence, string messageId, CancellationToken ct)
     {
-        var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
         lock (this.gate)
@@ -1519,7 +1659,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // StopAsync writes the mark before taking this same lock to read activeTurn, so either
             // this check sees the mark or the Stop sees the Turn once published below. Nothing has
             // been committed on this path.
-            if (this.stopMarks.TryGetValue(item.RoomId, out var mark) && sequence <= mark)
+            if (this.IsStoppedAtOrBefore(item.RoomId, sequence))
             {
                 turnCancellation.Dispose();
                 return null;
@@ -1537,7 +1677,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // the question source linked to turnCancellation that EndUserInput must dispose.
             ActiveTurn turn = new(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
             this.activeTurn = turn;
-            return new TurnRun(item, collected, messageId, completion, turnCancellation, turn, opened);
+            return new TurnRun(item, messageId, completion, turnCancellation, turn, opened, hookResult);
         }
     }
 
@@ -1687,9 +1827,47 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         if (item.Kind == WorkItemKind.Command && outcome.Reason == StopReason.EndTurn)
         {
             this.usageBaselinePending = true;
+            if (string.Equals(item.Command?.Name, "compact", StringComparison.OrdinalIgnoreCase))
+            {
+                await this.RunCompactedOpeningAsync(run.ActiveSession.SessionId, ct).ConfigureAwait(false);
+            }
         }
 
         this.ReportTurnHealth(outcome.Reason);
+    }
+
+    /// <summary>
+    /// Runs the hooks' Opening with the reason Compacted after a completed /compact and writes the resulting Hook State
+    /// to the stored entry at once: a Command Turn stores no entry of its own, so this is the only write. Does not hold
+    /// the gate across the await; a throwing Opening is already logged by the pipeline.
+    /// </summary>
+    /// <param name="sessionId">The id of the session that compacted; only an entry holding this id is written.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task RunCompactedOpeningAsync(string sessionId, CancellationToken ct)
+    {
+        if (this.hooks is null)
+        {
+            return;
+        }
+
+        await this.hooks.OnSessionOpeningAsync(SessionOpenReason.Compacted, this.hookState, ct).ConfigureAwait(false);
+        if (this.RoomId is { } compactRoomId && this.roomSessionStore is not null)
+        {
+            try
+            {
+                this.roomSessionStore.UpdateHookState(
+                    this.owner.PersonaName,
+                    compactRoomId,
+                    sessionId,
+                    new Dictionary<string, string?>(this.hookState, StringComparer.Ordinal));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The compaction is done and its reply posted: a store that cannot be written must not fail the Turn.
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' could not store the hook state after /compact in room {RoomId}.", this.owner.PersonaName, compactRoomId);
+            }
+        }
     }
 
     /// <summary>Streams what was held back at the end of a Turn that turned out not to end with the silent token.</summary>
@@ -1818,7 +1996,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
 
         await this.WriteFinalDeltaAsync(run, ct).ConfigureAwait(false);
-        await this.CommitFileChangesAsync(run, ct).ConfigureAwait(false);
+        await this.RunAfterHooksAsync(run, ct).ConfigureAwait(false);
         this.StoreSessionEntry(run, ct);
 
         run.TurnCancellation.Dispose();
@@ -1838,56 +2016,56 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// </remarks>
     /// <param name="run">The Turn that ended.</param>
     /// <param name="ct">The run's own cancellation token.</param>
-    private async Task WriteFinalDeltaAsync(TurnRun run, CancellationToken ct)
+    private Task WriteFinalDeltaAsync(TurnRun run, CancellationToken ct) =>
+        this.WriteDeltaAsync(run.Item.RoomId, run.MessageId, isFinal: true, ct);
+
+    /// <summary>
+    /// Writes an empty <see cref="MessageDelta"/>: non-final opens (or keeps) the Draft, final removes it. Skipped on
+    /// shutdown, and a dead pipe is logged rather than thrown, as for the terminator.
+    /// </summary>
+    /// <param name="roomId">The Room of the Turn.</param>
+    /// <param name="messageId">The Turn's message id.</param>
+    /// <param name="isFinal">Whether this is the terminator.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task WriteDeltaAsync(string roomId, string messageId, bool isFinal, CancellationToken ct)
     {
         if (!ct.IsCancellationRequested)
         {
             try
             {
-                await this.owner.WriteAsync(new MessageDelta(run.Item.RoomId, run.MessageId, string.Empty, IsFinal: true), ct).ConfigureAwait(false);
+                await this.owner.WriteAsync(new MessageDelta(roomId, messageId, string.Empty, isFinal), ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or ObjectDisposedException)
             {
-                // The pipe died before the terminator could be written; the Turn already ended
+                // The pipe died before the delta could be written; the Turn already ended
                 // one way or another, so there is nothing left to signal and nothing to retry.
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write the final delta for a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
+                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write a delta for a turn in room {RoomId}.", this.owner.PersonaName, roomId);
             }
         }
     }
 
     /// <summary>
-    /// Commits the File Changes the Turn collected, after the Draft terminator so a slow or failing
-    /// commit never delays the Turn's own MessageDelta reaching the Room.
+    /// Runs the Turn hooks' After points, after the Draft terminator so a slow or failing hook never delays
+    /// the Turn's own MessageDelta reaching the Room. Gated on shutdown and, per finding P-17, on the Turn
+    /// having either returned from PromptAsync or shown activity. The token is
+    /// <paramref name="ct"/>, never the Turn's: a stopped Turn has already cancelled its own and must still commit.
     /// </summary>
-    /// <remarks>
-    /// Uses the Turn's own state, never this.activeTurn - already nulled - and copies Touched under
-    /// gate since the event reader can still be writing to it concurrently with this method's own
-    /// thread. Gated on !ct.IsCancellationRequested (shutdown) and, per finding P-17, on the Turn
-    /// having either returned from PromptAsync or shown activity: a prompt refused outright before
-    /// any event (E-5) saw neither and must not commit, so the Room's list repeats next Turn; a Stop
-    /// after activity (E-6) still commits.
-    /// </remarks>
     /// <param name="run">The Turn that ended.</param>
     /// <param name="ct">The run's own cancellation token.</param>
-    private async Task CommitFileChangesAsync(TurnRun run, CancellationToken ct)
+    private async Task RunAfterHooksAsync(TurnRun run, CancellationToken ct)
     {
-        if (this.fileChanges is not null && run.Collected is not null && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
+        if (this.hooks is null || run.HookResult is null || ct.IsCancellationRequested || !(run.PromptReturned || run.Turn.SawActivity))
         {
-            HashSet<string> touched;
-            lock (this.gate)
-            {
-                touched = [.. run.Turn.Touched];
-            }
-
-            try
-            {
-                await this.fileChanges.CommitAsync(this.owner.PersonaName, run.Item.RoomId, run.Collected, touched, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to commit File Changes for room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
-            }
+            return;
         }
+
+        HashSet<string> touched;
+        lock (this.gate)
+        {
+            touched = [.. run.Turn.Touched];
+        }
+
+        await this.hooks.AfterTurnAsync(run.Item.RoomId, this.hookState, run.HookResult, touched, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1915,12 +2093,22 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             // The meter's latest reading rides along, so a restart can show it again before this
             // Room's session reopens. Read after the Turn's usage updates, which precede its outcome.
             ContextFillReading? context = this.agentId is { } id ? this.contextFill?.Get(id, storeRoomId) : null;
-            this.roomSessionStore.Put(
-                this.owner.PersonaName,
-                storeRoomId,
-                new RoomSessionEntry(
-                    run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode,
-                    context?.Used, context?.Size ?? 0));
+            try
+            {
+                this.roomSessionStore.Put(
+                    this.owner.PersonaName,
+                    storeRoomId,
+                    new RoomSessionEntry(
+                        run.ActiveSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode,
+                        context?.Used, context?.Size ?? 0, new Dictionary<string, string?>(this.hookState, StringComparer.Ordinal)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The Turn is finished and its reply posted: a store that cannot be written must not fail it. The stored entry
+                // stays as it was, so a resumed session hears again what this one has already heard.
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' could not store the session entry after a turn in room {RoomId}.", this.owner.PersonaName, storeRoomId);
+            }
         }
     }
 
@@ -1929,26 +2117,26 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// phases: what the Turn is, and the latches its phases write for the later ones to read.
     /// </summary>
     /// <param name="item">The fully prepared item.</param>
-    /// <param name="collected">What the File Changes collect returned, null for a Greeting or without a tracker.</param>
     /// <param name="messageId">The Message id minted for this Turn.</param>
     /// <param name="completion">Completed by the event reader when the Turn's outcome arrives.</param>
     /// <param name="turnCancellation">The Turn's own cancellation source, disposed last.</param>
     /// <param name="turn">The Turn published as the active one.</param>
     /// <param name="activeSession">The session the Turn was published against.</param>
+    /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     private sealed class TurnRun(
         WorkItem item,
-        CollectedChanges? collected,
         string messageId,
         TaskCompletionSource<TurnOutcome> completion,
         CancellationTokenSource turnCancellation,
         ActiveTurn turn,
-        IAgentSession activeSession)
+        IAgentSession activeSession,
+        TurnHookBeforeResult? hookResult)
     {
         /// <summary>Gets the fully prepared item.</summary>
         public WorkItem Item { get; } = item;
 
-        /// <summary>Gets what the File Changes collect returned.</summary>
-        public CollectedChanges? Collected { get; } = collected;
+        /// <summary>Gets what the Turn hooks' Before points produced, or <see langword="null"/> when none ran (a Greeting, a Command, or no pipeline).</summary>
+        public TurnHookBeforeResult? HookResult { get; } = hookResult;
 
         /// <summary>Gets the Message id minted for this Turn.</summary>
         public string MessageId { get; } = messageId;
@@ -2518,9 +2706,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         if (kind != ToolKind.Other
             || name is null
             || !MemoryTool.IsToolName(name)
-            || this.fileChanges?.MemoryPaths is not { } memoryPaths
+            || this.memoryPaths is not { } resolver
             || MemoryRequest.FromJson(rawInputJson) is not { } request
-            || !memoryPaths.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
+            || !resolver.TryResolve(this.owner.PersonaName, request.Folder, request.File, out string? path))
         {
             return null;
         }
@@ -2648,7 +2836,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         }
 
         var builder = new StringBuilder();
-        RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
+
+        // Spec 6.7: hook blocks (File Changes is one of them) lead the framed prompt, each followed by a blank line.
+        if (item.HookBlocks is { } hookBlocks)
+        {
+            foreach (string hookBlock in hookBlocks)
+            {
+                builder.Append(hookBlock);
+                builder.Append("\n\n");
+            }
+        }
+
         RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
 
         // Spec section 9.3: after the Library documents block and before any catch-up or the Message.
@@ -2745,65 +2943,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             builder.Append(prompts.Render(
                 "turn.catchUpLine",
                 new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>
-    /// FC §6.8: with a non-empty <paramref name="report"/>, writes the File Changes block ahead of
-    /// everything else — the header, one line per change, one line per unchecked folder, an
-    /// "…and N more." line when the cap left some out, then a blank line. Writes nothing for a
-    /// <see langword="null"/> or empty report: "absent means unchanged".
-    /// </summary>
-    private static void AppendFileChangesBlock(StringBuilder builder, FileChangesReport? report, IPromptSource prompts)
-    {
-        if (report is null || report.IsEmpty)
-        {
-            return;
-        }
-
-        builder.Append(prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>()));
-        builder.Append('\n');
-
-        foreach (var change in report.Changes)
-        {
-            var key = change.Kind switch
-            {
-                FileChangeKind.Added => "turn.fileAdded",
-                FileChangeKind.Changed => "turn.fileChanged",
-                FileChangeKind.Deleted => "turn.fileDeleted",
-                _ => throw new InvalidOperationException($"Unknown File Change kind '{change.Kind}'."),
-            };
-
-            builder.Append(prompts.Render(key, new Dictionary<string, string> { ["{{path}}"] = change.FullPath }));
-
-            if (change.ByYouRoomName is not null)
-            {
-                builder.Append(prompts.Render("turn.fileByYouSuffix", new Dictionary<string, string> { ["{{roomName}}"] = change.ByYouRoomName }));
-            }
-
-            builder.Append('\n');
-        }
-
-        foreach (var uncheckedFolder in report.Unchecked)
-        {
-            builder.Append(prompts.Render(
-                "turn.folderUnchecked",
-                new Dictionary<string, string>
-                {
-                    ["{{path}}"] = uncheckedFolder,
-                    ["{{max}}"] = report.MaxFilesPerFolder.ToString(CultureInfo.InvariantCulture),
-                }));
-            builder.Append('\n');
-        }
-
-        if (report.NotListed > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.fileChangesMore",
-                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
             builder.Append('\n');
         }
 

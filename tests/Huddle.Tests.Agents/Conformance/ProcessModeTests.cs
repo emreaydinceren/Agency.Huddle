@@ -7,10 +7,12 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.Tests.Pipes;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -105,9 +107,9 @@ public sealed class ProcessModeTests
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
+        (TurnHookPipeline hooks, MemoryPaths? memoryPaths) = TurnHookTestFactory.ForPersona(host.Services, persona);
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, hooks: hooks, memoryPaths: memoryPaths);
 
         try
         {

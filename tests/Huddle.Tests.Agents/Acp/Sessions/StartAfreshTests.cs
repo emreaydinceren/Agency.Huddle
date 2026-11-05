@@ -432,8 +432,6 @@ public sealed class StartAfreshTests
             new FakePromptSource(),
             new AcpOptions(),
             TimeProvider.System,
-            fileChanges: null,
-            declaredWatches: [],
             NullLogger.Instance,
             runToken,
             roomSessions: store,

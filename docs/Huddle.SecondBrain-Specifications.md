@@ -99,7 +99,7 @@ Each is something the Human does or says, with what the system does. The IDs are
 | U2 | Says to the manager: "go through what I just attached" | The manager reads the Skill `ingest`, proposes three Memory facts, one Task (*file the amendment by Nov 30*) and one output page, each linking the raw file, and waits for OK |
 | U3 | Says "remember that the accountant is Dana Lee" | The Agent applies the two tests (a fact that could change), proposes it to Team Memory with `propose_team_memory`; the Team Memory Helper files it |
 | U4 | Says "from now on, lead every summary with the number" | The Agent recognises a rule, says it belongs in the Team's `AGENTS.md`, and proposes a retro change; the Human accepts; Huddle writes the line into `Teams/Finances/AGENTS.md` |
-| U5 | Edits `Teams/Home/AGENTS.md` in Obsidian | The next session of every *Home* member carries the new body; no Agent restarts; a running session hears of it as a File Change |
+| U5 | Edits `Teams/Home/AGENTS.md` in Obsidian | The next session of every *Home* member carries the new body; no Agent restarts; a running session hears of it as a File Change *(amended: at its next Turn in each Room it hears what changed, see [ADR-0076](adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md))* |
 | U6 | Asks "what did we decide about the roof?" | The Agent finds a matching index line in Team Memory, opens the topic, answers, and cites its path |
 | U7 | Asks the Chief of Staff "capture: call the roofer about the gutter" | The Chief of Staff routes it by the Teams' `owns:` lines to *Home* as a Task |
 | U8 | Accepts the Chief of Staff's offer of a weekday 09:00 review | A Job in the Chief of Staff's `schedule.md`; each run lists due, overdue and waiting items across Teams |
@@ -996,7 +996,7 @@ Decide(kind, p):
 | Activity | Full | Incremental |
 | --- | --- | --- |
 | Indexes (Memory, Huddle-wide, Team, outputs) | Rebuilt at every session start | None: later changes reach a running session as File Changes, and the next session rebuilds |
-| `AGENTS.md` block | Read at every session start | A running session hears of an edit as a File Change; it follows the edit from its next session (ADR-0070) |
+| `AGENTS.md` block | Read at every session start | A running session hears of an edit as a File Change; it follows the edit from its next session (ADR-0070). *Amended by [ADR-0076](adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md): a running session now hears what changed at its next Turn in each Room, and the in-scope `AGENTS.md` leaves the File Changes report* |
 | Catalog (`_team.md`) | Built at start-up | Rebuilt on `PersonasChanged` and file changes, as today |
 | Prompt overrides | Snapshot at start-up | Folder watcher swaps the snapshot; next session uses it |
 | Folder provisioning | Start-up pass for the Teams root `memory/` | On each create |
