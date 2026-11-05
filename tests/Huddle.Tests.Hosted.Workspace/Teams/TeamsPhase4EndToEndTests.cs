@@ -117,6 +117,134 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal(1, run.Wakes(apiManager.Name, "Request event: Confirm"));
     }
 
+    /// <summary>
+    /// #350 item 6, no Action: the requesting Team's manager is told when the Request reaches Done. In the development Team type
+    /// the manager's role does NOT cover verify, so the manager's own <c>confirm_request</c> is refused and the Team's QA confirms
+    /// it; the Request closes with no Human move. Before Done the call is refused with the next step. The Action (gated, Needs You)
+    /// variant is not covered here.
+    /// </summary>
+    [Fact]
+    public async Task Request_DoneWakesRequestingManager_WhoConfirmsAndClosesIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir webSpace = NewWorkspace();
+        using TempDataDir apiSpace = NewWorkspace();
+        await using TeamWebApplicationFactory root = new();
+        await using Run run = Run.Open(root);
+        Teams teams = await StartTeamsAsync(run, webSpace.Path, apiSpace.Path, ct);
+        TaskService service = run.Services.GetRequiredService<TaskService>();
+        TaskStore store = run.Services.GetRequiredService<TaskStore>();
+        TaskActor human = HumanActor(run);
+        TaskActor webManager = await teams.Web.ActorAsync(run, ManagerRole, ct);
+        TaskActor webDeveloper = await teams.Web.ActorAsync(run, DeveloperRole, ct);
+        TaskActor apiManager = await teams.Api.ActorAsync(run, ManagerRole, ct);
+        TaskActor apiDeveloper = await teams.Api.ActorAsync(run, DeveloperRole, ct);
+        TaskActor apiQa = await teams.Api.ActorAsync(run, QaRole, ct);
+        TaskItem blocked = Saved(service.Create(new TaskDraft("Ship login", WebTeam, null, TaskState.ToDo, Assignee: webDeveloper.Name), human));
+        _ = await Tool<FileRequestTool>(run, webManager).InvokeAsync(FileArguments(blocked.Id.ToString()), ct);
+        TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
+        _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
+
+        string early = await Tool<ConfirmRequestTool>(run, webManager).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
+
+        Assert.Equal($"A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, {apiDeveloper.Name}, to move it to Done.", early);
+
+        _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
+        TaskActor webQaNamed = await teams.Web.ActorAsync(run, QaRole, ct);
+        await Eventually.UntilAsync(() => run.Wakes(webManager.Name, $"yours: {webQaNamed.Name}.") >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
+
+        string byManager = await Tool<ConfirmRequestTool>(run, webManager).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
+        TaskActor webQa = await teams.Web.ActorAsync(run, QaRole, ct);
+        string byQa = await Tool<ConfirmRequestTool>(run, webQa).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
+
+        Assert.Equal("Only the requesting Team's QA can confirm a Request.", byManager);
+        Assert.Equal($"Confirmed {request.Id}; it is closed.", byQa);
+        TaskItem closed = Current(store, request.Id);
+        Assert.True(closed.Location.Closed);
+        Assert.Equal(webQa.Name, FieldsOf(closed).ConfirmedBy);
+    }
+
+    /// <summary>
+    /// #350 item 6, with an Action: file, triage, work, Review with Evidence carrying an exit code, Huddle moves the Request to
+    /// Needs You, the Human Accepts, the assignee moves it to Done, the Team's QA confirms and it is closed. The Human's only
+    /// move on the Request is Accept.
+    /// </summary>
+    [Fact]
+    public async Task Request_WithAction_NeedsYouAcceptDoneConfirmed_HumanOnlyAccepts()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir webSpace = NewWorkspace();
+        using TempDataDir apiSpace = NewWorkspace();
+        await using TeamWebApplicationFactory root = new();
+        await using Run run = Run.Open(root);
+        Teams teams = await StartTeamsAsync(run, webSpace.Path, apiSpace.Path, ct);
+        TaskService service = run.Services.GetRequiredService<TaskService>();
+        TaskStore store = run.Services.GetRequiredService<TaskStore>();
+        TaskActor human = HumanActor(run);
+        TaskActor webManager = await teams.Web.ActorAsync(run, ManagerRole, ct);
+        TaskActor webQa = await teams.Web.ActorAsync(run, QaRole, ct);
+        TaskActor apiManager = await teams.Api.ActorAsync(run, ManagerRole, ct);
+        TaskActor apiDeveloper = await teams.Api.ActorAsync(run, DeveloperRole, ct);
+        TaskActor apiQa = await teams.Api.ActorAsync(run, QaRole, ct);
+        _ = await Tool<FileRequestTool>(run, webManager).InvokeAsync(FileArguments(null), ct);
+        TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
+        _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
+        _ = Saved(service.Update(request.Id, new TaskPatch { Action = Optional<string?>.Set("Deploy the fix to production") }, null, apiManager));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
+
+        _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+
+        Assert.Equal(TaskState.NeedsYou, Current(store, request.Id).Status);
+        TaskItem waiting = Current(store, request.Id);
+        _ = Saved(service.Decide(request.Id, Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept, null, waiting.Version, human));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiDeveloper));
+        string confirmed = await Tool<ConfirmRequestTool>(run, webQa).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
+
+        Assert.Equal($"Confirmed {request.Id}; it is closed.", confirmed);
+        TaskItem closed = Current(store, request.Id);
+        Assert.True(closed.Location.Closed);
+        ChangeLogEntry humanMove = Assert.Single(closed.ChangeLog, entry => string.Equals(entry.Actor, human.Name, StringComparison.Ordinal));
+        Assert.StartsWith("accepted ", humanMove.Summary, StringComparison.Ordinal); // contains-ok: the rest of the entry is a content fingerprint of the Request text
+    }
+
+    /// <summary>
+    /// #350 item 4 and 6, the Bea case: a small-business manager covers <c>verify</c>, so when the development Team finishes the
+    /// Request she filed, her own <c>confirm_request</c> is accepted and closes it, with no Human move.
+    /// </summary>
+    [Fact]
+    public async Task Request_FiledBySmallBusinessManager_ManagerConfirmsAndClosesIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir apiSpace = NewWorkspace();
+        using TempDataDir shopSpace = NewWorkspace();
+        await using TeamWebApplicationFactory root = new();
+        await using Run run = Run.Open(root);
+        TeamCast api = await CreateAndStartAsync(run, ApiTeam, apiSpace.Path, [], ct);
+        TeamCast shop = await CreateAndStartAsync(run, "Bakery", shopSpace.Path, [], ct, "small-business", ["business-manager"]);
+        TaskService service = run.Services.GetRequiredService<TaskService>();
+        TaskStore store = run.Services.GetRequiredService<TaskStore>();
+        TaskActor bea = await shop.ActorAsync(run, "business-manager", ct);
+        TaskActor apiManager = await api.ActorAsync(run, ManagerRole, ct);
+        TaskActor apiDeveloper = await api.ActorAsync(run, DeveloperRole, ct);
+        TaskActor apiQa = await api.ActorAsync(run, QaRole, ct);
+        _ = await Tool<FileRequestTool>(run, bea).InvokeAsync(FileArguments(null), ct);
+        TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
+        _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
+        _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
+
+        string confirmed = await Tool<ConfirmRequestTool>(run, bea).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
+
+        Assert.Equal($"Confirmed {request.Id}; it is closed.", confirmed);
+        Assert.True(Current(store, request.Id).Location.Closed);
+    }
+
     /// <summary>Flow 2 (RQ-3): declining a Request with a reason moves it to Rejected and wakes the requesting manager and the Chief of Staff.</summary>
     [Fact]
     public async Task Request_Declined_MovesToRejected_WakesRequestingManagerAndChiefOfStaff()
@@ -420,10 +548,12 @@ public sealed class TeamsPhase4EndToEndTests
     /// <param name="extraRoles">Role ids hired on top of the preset.</param>
     /// <param name="ct">Cancels the work.</param>
     /// <returns>The hired cards.</returns>
-    private static async Task<TeamCast> CreateAndStartAsync(Run run, string teamName, string workspace, string[] extraRoles, CancellationToken ct)
+    /// <param name="typeId">The Team type, the development type unless a test needs another shape.</param>
+    /// <param name="startRoles">The roles the Team starts with, the development preset unless a test needs another shape.</param>
+    private static async Task<TeamCast> CreateAndStartAsync(Run run, string teamName, string workspace, string[] extraRoles, CancellationToken ct, string typeId = TypeId, string[]? startRoles = null)
     {
         IServiceProvider services = run.Services;
-        TeamTypeManifest type = services.GetRequiredService<TeamTypeCatalog>().Find(TypeId) ?? throw new InvalidOperationException("The development type is not in the catalog.");
+        TeamTypeManifest type = services.GetRequiredService<TeamTypeCatalog>().Find(typeId) ?? throw new InvalidOperationException("The Team type is not in the catalog.");
         ITeamFolders folders = services.GetRequiredService<ITeamFolders>();
         HireService hiring = services.GetRequiredService<HireService>();
         IHireContext context = services.GetRequiredService<IHireContext>();
@@ -433,7 +563,7 @@ public sealed class TeamsPhase4EndToEndTests
 
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
-        foreach (string roleId in StartRoles.Concat(extraRoles))
+        foreach (string roleId in (startRoles ?? StartRoles).Concat(extraRoles))
         {
             RoleSpec role = type.Roles.First(each => string.Equals(each.Id, roleId, StringComparison.Ordinal));
             CardState card = CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<ISkillAvailability>(), context.Connectors);

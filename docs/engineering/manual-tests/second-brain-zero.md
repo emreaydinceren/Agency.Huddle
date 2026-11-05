@@ -995,11 +995,13 @@ Skip this if the budget is tight. It is a second development cycle.
    Total: $409.50
    ```
 
-5. The Task reaches **Done** but stays open: only the requesting Team's QA, or you, can close it. The Bakery has no QA, so close it yourself.
+5. The Task reaches **Done** but stays open until the Bakery confirms it. Do not move it or close it yourself.
 
-**Expect**: a Task in the Dev Team's Backlog with **Request · feature · from Harbor Lane Bakery** and **Needs triage**. Bea is woken on accept and on evidence.
+**Expect**: a Task in the Dev Team's Backlog with **Request · feature · from Harbor Lane Bakery** and **Needs triage**. Bea is woken on accept and when the Request reaches Done, and her wake says it is her Team's turn to confirm. Bea confirms with `confirm_request`, and the Request closes with no Human move.
 
-**Pass if**: the Request moves through triage, both outputs match, and an Agent is refused if it tries to close the Request.
+**Pass if**: the Request moves through triage, both outputs match, an Agent is refused if it tries to close the Request before it is confirmed, and Bea confirms it and it closes.
+
+**Fail if**: you have to move the Request to Done or close it yourself.
 **Fail if**: a Request leaves Backlog without triage, or the second output changed.
 
 ### ZERO-27 — Find it all, and add up the cost

@@ -50,12 +50,12 @@ internal static class RequestLifecycle
                 return Allow(Rejected, TriageState.Declined, WakeTarget.RequestingManager, WakeTarget.ChiefOfStaff);
             case RequestEvent.Work when workable:
                 return Allow(status, current.Triage, WakeTarget.RequestingManager);
-            case RequestEvent.EvidenceAttached when string.Equals(status, Review, StringComparison.Ordinal):
-                return Allow(Done, current.Triage, WakeTarget.RequestingManager);
             case RequestEvent.Confirm when string.Equals(status, Done, StringComparison.Ordinal):
                 return requesterQaConfirms
                     ? new RequestTransition(true, null, current, [WakeTarget.ReceivingManager], true)
                     : Refuse("Only the requesting Team's QA can confirm a Request.");
+            case RequestEvent.Confirm:
+                return Refuse($"A Request can be confirmed once it is in Done. This one is in {status}. Ask its assignee to move it to Done.");
             default:
                 return Refuse($"A Request in {status} (triage {current.Triage}) cannot take the {ev} event.");
         }

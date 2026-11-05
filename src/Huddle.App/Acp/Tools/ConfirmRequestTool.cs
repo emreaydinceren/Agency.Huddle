@@ -69,7 +69,7 @@ internal sealed class ConfirmRequestTool(
         RequestTransition transition = RequestLifecycle.Apply(new RequestState(request.Status.ToWire(), fields.Triage), RequestEvent.Confirm, isRequesterQa);
         if (!transition.Allowed)
         {
-            return transition.Error ?? string.Empty;
+            return NameAssignee(transition.Error ?? string.Empty, request.Assignee);
         }
 
         TaskPatch patch = BuildConfirmationPatch(request, fields, actor, noteText);
@@ -100,6 +100,15 @@ internal sealed class ConfirmRequestTool(
 
         return string.Create(CultureInfo.InvariantCulture, $"Confirmed {closed.Id}; it is closed.");
     }
+
+    /// <summary>Puts the assignee's name into the lifecycle's "ask its assignee" refusal, which knows the status but not the person.</summary>
+    /// <param name="refusal">The lifecycle's refusal text.</param>
+    /// <param name="assignee">The Request's assignee, if it has one.</param>
+    /// <returns>The refusal, naming the assignee when there is one.</returns>
+    private static string NameAssignee(string refusal, string? assignee) =>
+        string.IsNullOrWhiteSpace(assignee)
+            ? refusal
+            : refusal.Replace("Ask its assignee to", string.Create(CultureInfo.InvariantCulture, $"Ask its assignee, {assignee}, to"), StringComparison.Ordinal);
 
     /// <summary>Builds the patch that records <c>confirmed_by</c> and appends the optional note under a Confirmation heading.</summary>
     /// <param name="request">The Request being confirmed.</param>

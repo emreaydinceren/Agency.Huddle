@@ -76,6 +76,7 @@ internal static class PromptCatalog
         ..BuildPart29(),
         ..BuildPart30(),
         ..BuildPart31(),
+        ..BuildPart60(),
         ..BuildPartWakeRestart(),
         ..BuildPart32(),
         ..BuildParts33To39(),
@@ -1183,7 +1184,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's QA may call it. Optionally add a note.
+                Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's verifier may call it, and only once the Request is in Done. Optionally add a note.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1744,6 +1745,25 @@ internal static class PromptCatalog
                 """,
             Placeholders: ["{{taskId}}", "{{title}}"],
             RequiredPlaceholders: ["{{taskId}}"],
+            Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds the line a Request's move to Done adds to the requesting manager's wake-up (#350).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart60() =>
+    [
+        new PromptDefinition(
+            Key: "task.wake.requestDone",
+            Label: "Request done wake-up line",
+            HelperText:
+                "Added to the wake-up message when a Request reaches Done, for the manager of the Team " +
+                "that filed it. It says the Request waits for that Team to confirm it, and names the members who can.",
+            Default:
+                """
+                {{taskId}} is a Request and it is now Done. It waits for your Team to confirm it. Only a verifier on your Team can call confirm_request; yours: {{verifiers}}. If that is you, check it and confirm it. If not, ask them to.
+                """,
+            Placeholders: ["{{taskId}}", "{{verifiers}}"],
+            RequiredPlaceholders: ["{{taskId}}", "{{verifiers}}"],
             Timing: PromptTiming.Live),
     ];
 

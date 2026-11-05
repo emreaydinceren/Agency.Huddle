@@ -21,9 +21,6 @@ internal enum RequestEvent
     /// <summary>The receiving Team worked the Request (To Do to Review).</summary>
     Work,
 
-    /// <summary>The receiving QA attached evidence in Review.</summary>
-    EvidenceAttached,
-
     /// <summary>The requesting Team's QA confirmed the Request is done.</summary>
     Confirm,
 }

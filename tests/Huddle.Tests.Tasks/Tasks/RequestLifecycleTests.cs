@@ -81,13 +81,6 @@ public sealed class RequestLifecycleTests
         AssertAllowed(Run(status, "Accepted", "Work"), status, TriageState.Accepted, WakeTarget.RequestingManager);
     }
 
-    /// <summary>Evidence attached in Review moves the Request to Done and wakes the requesting manager.</summary>
-    [Fact]
-    public void EvidenceAttached_FromReview_DoneWakesRequester()
-    {
-        AssertAllowed(Run("Review", "Accepted", "EvidenceAttached"), "Done", TriageState.Accepted, WakeTarget.RequestingManager);
-    }
-
     /// <summary>The requesting Team's QA confirming a Done Request closes it and wakes the receiving manager (RQ-5).</summary>
     [Fact]
     public void Confirm_FromDoneWithQa_ClosesWakesReceiver()
@@ -114,6 +107,28 @@ public sealed class RequestLifecycleTests
         Assert.False(transition.Closes);
     }
 
+    /// <summary>
+    /// #350: confirming a Request that is not in Done is refused with the next step, naming the status it is in, whatever the
+    /// caller's role, and the lifecycle (which knows no assignee) names no one.
+    /// </summary>
+    /// <param name="status">The Task status wire name.</param>
+    /// <param name="triage">The triage state name.</param>
+    [Theory]
+    [InlineData("Needs You", "Accepted")]
+    [InlineData("Review", "Accepted")]
+    [InlineData("To Do", "Accepted")]
+    [InlineData("Backlog", "None")]
+    public void Confirm_NotDone_RefusedWithTheNextStep(string status, string triage)
+    {
+        RequestTransition transition = Run(status, triage, "Confirm", qa: true);
+
+        Assert.False(transition.Allowed);
+        Assert.Equal($"A Request can be confirmed once it is in Done. This one is in {status}. Ask its assignee to move it to Done.", transition.Error);
+        Assert.Null(transition.Next);
+        Assert.Empty(transition.Wake);
+        Assert.False(transition.Closes);
+    }
+
     /// <summary>An illegal pair is refused with an error naming the status and the event, and wakes nobody.</summary>
     [Fact]
     public void Accept_FromDone_RefusedWithExactMessage()
@@ -135,15 +150,11 @@ public sealed class RequestLifecycleTests
     [InlineData("Done", "Accepted", "Accept")]
     [InlineData("To Do", "Accepted", "Decline")]
     [InlineData("Review", "Accepted", "Decline")]
-    [InlineData("Backlog", "None", "Confirm")]
-    [InlineData("Backlog", "None", "EvidenceAttached")]
     [InlineData("Backlog", "None", "Work")]
     [InlineData("Backlog", "None", "InfoAdded")]
     [InlineData("Backlog", "NeedsInfo", "Accept")]
     [InlineData("Backlog", "NeedsInfo", "Decline")]
     [InlineData("Backlog", "NeedsInfo", "MarkNeedsInfo")]
-    [InlineData("In Progress", "Accepted", "EvidenceAttached")]
-    [InlineData("To Do", "Accepted", "Confirm")]
     [InlineData("Done", "Accepted", "Work")]
     [InlineData("Rejected", "Declined", "Accept")]
     [InlineData("Rejected", "Declined", "Work")]
