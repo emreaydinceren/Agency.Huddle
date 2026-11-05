@@ -145,13 +145,10 @@
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
                         }
-                        @* NF-6: the lasting total, kept across restarts, for an Agent hired from a role. *@
-                        @if (this.roleRef is not null)
+                        @* NF-6: the lasting total, kept across restarts, for every Agent. Absent when nothing is stored. *@
+                        @foreach (var persisted in this.Spend.GetPersisted(this.name))
                         {
-                            @foreach (var persisted in this.Spend.GetPersisted(this.name))
-                            {
-                                <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
-                            }
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
                         }
                         <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-alias">@($"@{this.alias}")</MudText>
                         @if (this.teams.Length > 0)

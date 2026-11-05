@@ -4146,6 +4146,46 @@ body.sidebar-resizing {
     background: var(--hu-ground-page);
 }
 
+/* The Spending panel (issue 356): a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
+.spending-row,
+.spending-total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ink-rule);
+}
+
+.spending-row-name,
+.spending-total-label {
+    flex: 1 1 12rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.spending-total {
+    border-bottom: 0;
+    font-weight: 600;
+}
+
+.spending-row-amount,
+.spending-total-amount,
+.spending-helper-calls {
+    font-variant-numeric: tabular-nums;
+}
+
+.spending-helper-calls {
+    color: var(--mud-palette-text-secondary);
+}
+
+.spending-overlap-note {
+    margin: 8px 0;
+    max-width: 75ch;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
 /* ---- Tasks ------------------------------------------------------------------------------------ */
 
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------

@@ -78,6 +78,29 @@ internal sealed class HelperUsageStore
         return new HelperUsage(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), cost, reader.IsDBNull(4) ? null : reader.GetString(4));
     }
 
+    /// <summary>Reads what every Helper has used, all time: the calls made and the reported cost per currency.</summary>
+    /// <returns>The calls summed over every Helper and day, and one cost per currency; no cost entry when none was reported.</returns>
+    public HelperSpendTotal AllTime()
+    {
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT COALESCE(SUM(calls), 0), currency, SUM(cost) FROM helper_usage GROUP BY currency;";
+
+        int calls = 0;
+        List<StoredSpend> costs = [];
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            calls += reader.GetInt32(0);
+            if (!reader.IsDBNull(1) && !reader.IsDBNull(2))
+            {
+                costs.Add(new StoredSpend(reader.GetString(1), (decimal)reader.GetDouble(2)));
+            }
+        }
+
+        return new HelperSpendTotal(calls, costs);
+    }
+
     /// <summary>Adds one call to the day.</summary>
     /// <param name="id">The Helper.</param>
     /// <param name="day">The local day.</param>

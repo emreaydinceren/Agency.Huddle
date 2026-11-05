@@ -1000,7 +1000,7 @@ Skip this if the budget is tight. It is a second development cycle.
 
 1. Press `Ctrl+K`, and search `lib:Millstone`, then `task:permission`, then `room:Blue Gull`. Open one result of each.
 2. Click the **Feed** icon. Read **All**, then **Documents** and **Helpers**. Confirm that you can follow what happened without any Message text.
-3. Open each Team's page, and write down **Spent**.
+3. Open **Settings › Spending**, and write down each Team's amount, the Chief of Staff's, the Agents in no Team, the Helpers' and the **Total**, one amount per currency.
 4. On **Settings › Helpers**, write down each Helper's call count for today.
 5. In `T-B`, count what the Second Brain now holds, and confirm no adapter is orphaned after you stop the app.
 
@@ -1016,7 +1016,7 @@ Skip this if the budget is tight. It is a second development cycle.
 
 **Expect**: search finds the raw file's contents, the Task and the Room. The Feed shows Tasks, documents and Helper actions.
 
-**Pass if**: each search finds its item, and you recorded Spent for all three Teams in the Run log's Notes.
+**Pass if**: each search finds its item, and you recorded the Spending amounts for all three Teams and the Total in the Run log's Notes.
 **Fail if**: an item that exists on disk cannot be found, or the Feed shows Message text.
 
 ## Starting over
