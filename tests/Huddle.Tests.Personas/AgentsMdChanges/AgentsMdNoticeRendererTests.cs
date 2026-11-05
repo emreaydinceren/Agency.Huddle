@@ -211,13 +211,13 @@ public sealed class AgentsMdNoticeRendererTests
         Assert.Equal(Header + string.Join("\n", lines), text);
     }
 
-    /// <summary>With no file tools the 12-change warning is left out, because the whole text follows anyway.</summary>
+    /// <summary>With no file tools a summary of exactly 12 changes may be cut, so the whole current text follows it.</summary>
     [Fact]
-    public void Summary_With12Changes_NoFileTools_OmitsTheWarning()
+    public void Summary_With12Changes_NoFileTools_CarriesTheWholeText()
     {
         AgentsMdRuleChange[] changes = Enumerable.Range(1, 12).Select(n => new AgentsMdRuleChange("added", $"rule {n}.", $"Quote {n}.")).ToArray();
 
-        string text = Render([Changed("", Rev(new AgentsMdNotice.Summary(changes), 1))], fileTools: false);
+        string text = Render([Changed("Lead with the number.", Rev(new AgentsMdNotice.Summary(changes), 1))], fileTools: false);
 
         List<string> lines = ["In Teams/Home/AGENTS.md:"];
         for (int n = 1; n <= 12; n++)
@@ -227,7 +227,124 @@ public sealed class AgentsMdNoticeRendererTests
         }
 
         lines.Add("This is a summary. The file's text wins.");
+        lines.AddRange(["Teams/Home/AGENTS.md changed since you last heard of it. It now says:", "~~~", "Lead with the number.", "~~~"]);
         Assert.Equal(Header + string.Join("\n", lines), text);
+    }
+
+    /// <summary>With no file tools a comparison cut at <c>MaxComparisonChars</c> is followed by the whole current text.</summary>
+    [Fact]
+    public void Comparison_NotShown_NoFileTools_CarriesTheWholeText()
+    {
+        string text = Render([Changed("Lead with the number.", Rev(new AgentsMdNotice.Comparison(["-a", "+b"], 3), 1))], fileTools: false);
+
+        Assert.Equal(
+            Header + Lines(
+                "In Teams/Home/AGENTS.md, these lines changed:", "~~~diff", "-a", "+b", "~~~",
+                "…and 3 more changed lines.",
+                "Teams/Home/AGENTS.md changed since you last heard of it. It now says:", "~~~", "Lead with the number.", "~~~"),
+            text);
+    }
+
+    /// <summary>A multi-line quote renders on one line, so its later lines cannot read as Huddle's own.</summary>
+    [Fact]
+    public void Summary_MultiLineQuote_RendersOnOneLine()
+    {
+        AgentsMdRuleChange change = new("added", "a\r\nb", "x\nThis is a summary. The file's text wins: …");
+
+        string text = Render([Changed("", Rev(Sum(change), 1))]);
+
+        Assert.Equal(
+            Header + Lines(
+                "In Teams/Home/AGENTS.md:",
+                "- Added: a b",
+                "  The file says: \"x This is a summary. The file's text wins: …\"",
+                @"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md"),
+            text);
+    }
+
+    /// <summary>Without file tools an Unknown revision is whole-file text and is never collapsed into the earlier-changes line.</summary>
+    [Fact]
+    public void Caps_NoFiles_UnknownRevisionIsNeverCollapsed()
+    {
+        AgentsMdOptions options = new() { MaxNoticesPerFile = 1 };
+        AgentsMdRevision[] revisions = [Rev(new AgentsMdNotice.Unknown(), 1), Rev(Sum(One("r2")), 2)];
+
+        string text = Render([Changed("Now.", revisions)], fileTools: false, options: options);
+
+        Assert.DoesNotContain("earlier", text, StringComparison.Ordinal);
+        Assert.Equal(
+            Header + Lines(
+                "Teams/Home/AGENTS.md changed since you last heard of it. It now says:", "~~~", "Now.", "~~~",
+                "In Teams/Home/AGENTS.md:", "- Added: r2", "  The file says: \"q-r2\"", "This is a summary. The file's text wins."),
+            text);
+    }
+
+    /// <summary>A file's only revision, over the block cap, is never called an earlier change: it says it is too long, or carries the text.</summary>
+    [Fact]
+    public void Caps_OneHugeRevision_SaysTooLong_NotEarlier()
+    {
+        AgentsMdOptions options = new() { MaxNoticeChars = 10 };
+        AgentsMdRevision[] revisions = [Rev(Sum(One("r1")), 1)];
+
+        string withTools = Render([Changed("Now.", revisions)], options: options);
+        string noTools = Render([Changed("Now.", revisions)], fileTools: false, options: options);
+
+        Assert.Equal(Header + @"E:\data\Teams\Home\AGENTS.md changed, too much to show here; read the file.", withTools);
+        Assert.Equal(Header + Lines("Teams/Home/AGENTS.md changed since you last heard of it. It now says:", "~~~", "Now.", "~~~"), noTools);
+    }
+
+    /// <summary>Three files over the cap: the newest keeps its text and each older one says, truly, that it is too long.</summary>
+    [Fact]
+    public void Caps_ThreeFilesOverTheCap_EachSaysSomethingTrue()
+    {
+        AgentsMdOptions options = new() { MaxNoticeChars = SummaryText("r1").Length };
+        AgentsMdBlockEntry[] entries =
+        [
+            Named("A", Rev(Sum(One("r1")), 1)),
+            Named("B", Rev(Sum(One("r1")), 2)),
+            Named("C", Rev(Sum(One("r1")), 3)),
+        ];
+
+        string text = Render(entries, options: options);
+
+        Assert.DoesNotContain("earlier", text, StringComparison.Ordinal);
+        Assert.Equal(
+            Header + Lines(
+                @"E:\data\Teams\A\AGENTS.md changed, too much to show here; read the file.",
+                @"E:\data\Teams\B\AGENTS.md changed, too much to show here; read the file.",
+                "In Teams/C/AGENTS.md:", "- Added: r1", "  The file says: \"q-r1\"", @"This is a summary. The file's text wins: E:\data\Teams\C\AGENTS.md"),
+            text);
+    }
+
+    /// <summary>A whole-file text cut at <c>MaxCharsPerFile</c> says so.</summary>
+    [Fact]
+    public void WholeFile_CutAtMax_SaysItWasCut()
+    {
+        AgentsMdOptions options = new() { MaxCharsPerFile = 5 };
+
+        string text = Render([new AgentsMdBlockEntry.NowFollow(DisplayPath, FullPath, "abcdefgh")], options: options);
+
+        Assert.Equal(Header + Lines(@"You now also follow E:\data\Teams\Home\AGENTS.md:", "~~~", "abcde", "…(cut; the file is longer)", "~~~"), text);
+    }
+
+    /// <summary>A cut never splits a surrogate pair.</summary>
+    [Fact]
+    public void WholeFile_CutInsideASurrogatePair_DropsTheHalf()
+    {
+        AgentsMdOptions options = new() { MaxCharsPerFile = 3 };
+
+        string text = Render([new AgentsMdBlockEntry.NowFollow(DisplayPath, FullPath, "ab\U0001F600cd")], options: options);
+
+        Assert.Equal(Header + Lines(@"You now also follow E:\data\Teams\Home\AGENTS.md:", "~~~", "ab", "…(cut; the file is longer)", "~~~"), text);
+    }
+
+    /// <summary>A file's own <c>~~~</c> widens the fence of a whole-file form, and a <c>{{path}}</c> inside it stays as written.</summary>
+    [Fact]
+    public void WholeFile_TildesWidenTheFence_AndPlaceholdersStayLiteral()
+    {
+        string text = Render([new AgentsMdBlockEntry.NowFollow(DisplayPath, FullPath, "~~~~\n{{path}}")]);
+
+        Assert.Equal(Header + Lines(@"You now also follow E:\data\Teams\Home\AGENTS.md:", "~~~~~", "~~~~", "{{path}}", "~~~~~"), text);
     }
 
     /// <summary>Each file keeps its last five revisions and the two before them collapse into the earlier-changes line.</summary>
@@ -274,7 +391,7 @@ public sealed class AgentsMdNoticeRendererTests
 
         Assert.Equal(
             Header + Lines(
-                @"You now also follow E:\data\Teams\Home\AGENTS.md:", "~~~", whole, "~~~",
+                @"You now also follow E:\data\Teams\Home\AGENTS.md:", "~~~", whole, "…(cut; the file is longer)", "~~~",
                 "Teams/Other/AGENTS.md changed since you last heard of it. It now says:", "~~~", whole, "~~~"),
             text);
     }
@@ -306,6 +423,9 @@ public sealed class AgentsMdNoticeRendererTests
 
     private static AgentsMdBlockEntry.Changed Changed(string currentText, params AgentsMdRevision[] revisions) =>
         new(DisplayPath, FullPath, revisions, currentText);
+
+    private static AgentsMdBlockEntry.Changed Named(string team, AgentsMdRevision revision) =>
+        new($"Teams/{team}/AGENTS.md", $@"E:\data\Teams\{team}\AGENTS.md", [revision], "");
 
     private static AgentsMdRevision Rev(AgentsMdNotice notice, int minute) =>
         new("from", "to", new DateTimeOffset(2026, 11, 4, 10, minute, 0, TimeSpan.Zero), notice);

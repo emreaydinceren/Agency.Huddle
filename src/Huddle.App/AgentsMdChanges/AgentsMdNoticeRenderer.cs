@@ -55,25 +55,45 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
             string? text = this.RevisionText(changed, revision.Notice, fileTools);
             if (text is not null)
             {
-                slots.Add(new Slot(revision.SettledUtc, text));
+                slots.Add(new Slot(revision.SettledUtc, text)
+                {
+                    Pinned = !fileTools && revision.Notice is AgentsMdNotice.Unknown,
+                    Incomplete = !fileTools && IsCut(revision.Notice),
+                });
             }
         }
 
         int overflow = slots.Count - Math.Max(0, options.MaxNoticesPerFile);
-        for (int index = 0; index < overflow; index++)
+        for (int index = 0; index < slots.Count - 1 && overflow > 0; index++)
         {
-            slots[index].Collapsed = true;
+            if (!slots[index].Pinned)
+            {
+                slots[index].Collapsed = true;
+                overflow--;
+            }
         }
 
         return slots;
     }
 
-    /// <summary>Collapses the oldest revisions across the block until their text fits <c>MaxNoticeChars</c>.</summary>
+    /// <summary>Whether a notice may have left something out: exactly 12 changes, or a comparison with lines not shown.</summary>
+    private static bool IsCut(AgentsMdNotice notice) => notice switch
+    {
+        AgentsMdNotice.Summary summary => summary.Changes.Count == HelperChangeLimit,
+        AgentsMdNotice.Comparison comparison => comparison.NotShown > 0,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Brings the block's revision text within <c>MaxNoticeChars</c>: older revisions collapse first, oldest first; then a file's
+    /// newest revision, oldest first, is replaced by the too-long line. Whole-file text is never touched.
+    /// </summary>
     private void CollapseOverflow(List<List<Slot>> slots)
     {
-        List<Slot> live = [.. slots.SelectMany(static list => list).Where(static slot => !slot.Collapsed)];
-        int total = live.Sum(static slot => slot.Text.Length);
-        foreach (Slot slot in live.OrderBy(static slot => slot.SettledUtc))
+        List<Slot> all = [.. slots.SelectMany(static list => list)];
+        List<Slot> newest = [.. slots.Where(static list => list.Count > 0).Select(static list => list[^1])];
+        int total = all.Where(static slot => !slot.Collapsed).Sum(static slot => slot.Text.Length);
+        foreach (Slot slot in all.Where(slot => !slot.Collapsed && !slot.Pinned && !newest.Contains(slot)).OrderBy(static slot => slot.SettledUtc))
         {
             if (total <= options.MaxNoticeChars)
             {
@@ -81,6 +101,17 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
             }
 
             slot.Collapsed = true;
+            total -= slot.Text.Length;
+        }
+
+        foreach (Slot slot in newest.Where(static slot => !slot.Pinned).OrderBy(static slot => slot.SettledUtc))
+        {
+            if (total <= options.MaxNoticeChars)
+            {
+                return;
+            }
+
+            slot.TooLong = true;
             total -= slot.Text.Length;
         }
     }
@@ -108,9 +139,20 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
                 : this.WithText("turn.agentsMdOlderNoFiles", changed.CurrentText, ("count", count), ("displayPath", changed.DisplayPath)));
         }
 
-        lines.AddRange(slots.Where(static slot => !slot.Collapsed).Select(static slot => slot.Text));
+        lines.AddRange(slots.Where(static slot => !slot.Collapsed).Select(slot => slot.TooLong ? this.TooLongText(changed, fileTools) : slot.Text));
+        bool carried = collapsed > 0 || slots.Any(static slot => slot.Pinned || slot.TooLong);
+        if (!fileTools && !carried && slots.Any(static slot => slot.Incomplete))
+        {
+            lines.Add(this.UnknownText(changed.DisplayPath, changed.Path, changed.CurrentText, fileTools));
+        }
+
         return lines.Count == 0 ? null : string.Join('\n', lines);
     }
+
+    /// <summary>What stands for a file's newest revision when it alone is over the cap: a pointer to the file, or its whole text.</summary>
+    private string TooLongText(AgentsMdBlockEntry.Changed changed, bool fileTools) => fileTools
+        ? prompts.Say("turn.agentsMdTooLong", ("path", changed.Path))
+        : this.UnknownText(changed.DisplayPath, changed.Path, changed.CurrentText, fileTools);
 
     /// <summary>Renders one revision's notice, or null for one that is not told.</summary>
     private string? RevisionText(AgentsMdBlockEntry.Changed changed, AgentsMdNotice notice, bool fileTools) => notice switch
@@ -128,8 +170,8 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
         foreach (AgentsMdRuleChange change in summary.Changes)
         {
             lines.Add(string.Equals(change.Kind, "removed", StringComparison.OrdinalIgnoreCase)
-                ? prompts.Say("turn.agentsMdRemoved", ("summary", change.Summary), ("quote", change.Quote))
-                : prompts.Say("turn.agentsMdChange", ("kind", KindLabel(change.Kind)), ("summary", change.Summary), ("quote", change.Quote)));
+                ? prompts.Say("turn.agentsMdRemoved", ("summary", OneLine(change.Summary)), ("quote", OneLine(change.Quote)))
+                : prompts.Say("turn.agentsMdChange", ("kind", KindLabel(change.Kind)), ("summary", OneLine(change.Summary)), ("quote", OneLine(change.Quote))));
         }
 
         if (fileTools && summary.Changes.Count == HelperChangeLimit)
@@ -165,9 +207,18 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
     private string WithText(string key, string text, params (string Name, string Value)[] values)
     {
         int max = Math.Max(0, options.MaxCharsPerFile);
-        string cut = text.Length > max ? text[..max] : text;
+        string cut = text;
+        if (text.Length > max)
+        {
+            int end = max > 0 && char.IsHighSurrogate(text[max - 1]) ? max - 1 : max;
+            cut = text[..end] + "\n…(cut; the file is longer)";
+        }
+
         return prompts.Say(key, [.. values, ("fence", ChooseFence(cut)), ("text", cut)]);
     }
+
+    /// <summary>A rule's text on one line, so its later lines cannot read as lines of the notice.</summary>
+    private static string OneLine(string text) => text.ReplaceLineEndings(" ");
 
     /// <summary>The label for a change kind: <c>Added</c> or <c>Changed</c>.</summary>
     private static string KindLabel(string kind) =>
@@ -195,5 +246,14 @@ internal sealed class AgentsMdNoticeRenderer(IPromptSource prompts, AgentsMdOpti
         public string Text { get; } = text;
 
         public bool Collapsed { get; set; }
+
+        /// <summary>Whether the revision is whole-file text that no cap may collapse.</summary>
+        public bool Pinned { get; init; }
+
+        /// <summary>Whether the notice may have left something out, so an Agent without file tools needs the whole text.</summary>
+        public bool Incomplete { get; init; }
+
+        /// <summary>Whether the cap replaced the revision with the too-long line.</summary>
+        public bool TooLong { get; set; }
     }
 }

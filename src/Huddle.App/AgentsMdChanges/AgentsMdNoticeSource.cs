@@ -54,8 +54,18 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
             _ = ledger.CommitComparison(file);
         }
 
+        foreach ((AgentsMdFile file, _) in pending)
+        {
+            AgentsMdBody? fresh = this.TryRead(file); // The text may have changed during the wait: tell the text as it is now.
+            if (fresh is not null)
+            {
+                bodies[file.RelativePath] = fresh;
+            }
+        }
+
+        bool unreadableNew = scope.Any(file => !bodies.ContainsKey(file.RelativePath) && !(heard?.ContainsKey(file.RelativePath) ?? false));
         Dictionary<string, string> updated = new(current, comparer);
-        List<AgentsMdBlockEntry> entries = this.EntriesFor(behind, bodies, current, updated, outOfScope);
+        List<AgentsMdBlockEntry> entries = this.EntriesFor(behind, bodies, current, updated, unreadableNew ? [] : outOfScope);
         string block = entries.Count == 0 ? string.Empty : renderer.Render(entries, readsFiles);
         return new AgentsMdCollected(block.Length == 0 ? null : block, updated);
     }
@@ -152,9 +162,14 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
         Dictionary<string, string> resolved = new(comparer);
         foreach (AgentsMdFile file in scope)
         {
+            string? firstSight = ledger.FirstSightHash(file.RelativePath);
             if (bodies.TryGetValue(file.RelativePath, out AgentsMdBody? body))
             {
-                resolved[file.RelativePath] = ledger.FirstSightHash(file.RelativePath) ?? body.Hash;
+                resolved[file.RelativePath] = firstSight ?? body.Hash;
+            }
+            else if (firstSight is not null)
+            {
+                resolved[file.RelativePath] = firstSight; // Unreadable now: keep what the ledger first saw, so the edit is told once it reads.
             }
         }
 

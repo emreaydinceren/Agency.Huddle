@@ -43,7 +43,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(168,PromptCatalog.All.Count);
+        Assert.Equal(169,PromptCatalog.All.Count);
     }
 
     /// <summary>3.3.t (LR-R12, correction C10): <c>turn.transcriptOmittedOwn</c> is in the catalog directly after <c>turn.transcriptOmitted</c>.</summary>

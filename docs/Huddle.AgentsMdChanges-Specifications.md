@@ -485,6 +485,7 @@ In Teams/Home/AGENTS.md, these lines changed. Read the file before you rely on t
 | `turn.agentsMdComparisonNoFiles` | For an Adapter with no file tools: `In {{displayPath}}, these lines changed:` |
 | `turn.agentsMdOlder` | `…and {{count}} earlier changes to {{displayPath}}; read the file.` |
 | `turn.agentsMdOlderNoFiles` | For an Adapter with no file tools: `…and {{count}} earlier changes to {{displayPath}}. It now says:` then its text, up to `MaxCharsPerFile` |
+| `turn.agentsMdTooLong` | `{{path}} changed, too much to show here; read the file.` Stands for a file's newest revision when it alone is over `MaxNoticeChars` |
 | `turn.agentsMdNowFollow` | `You now also follow {{path}}:` then its text, up to `MaxCharsPerFile` |
 | `turn.agentsMdNoLonger` | `{{displayPath}} no longer applies to you.` |
 | `turn.agentsMdUnknown` | `{{path}} changed since you last heard of it. Read it before you rely on what you started with.` |

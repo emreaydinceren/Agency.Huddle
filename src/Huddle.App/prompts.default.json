@@ -166,5 +166,6 @@
   "turn.agentsMdNowFollow": "You now also follow {{path}}:\n{{fence}}\n{{text}}\n{{fence}}",
   "turn.agentsMdNoLonger": "{{displayPath}} no longer applies to you.",
   "turn.agentsMdUnknown": "{{path}} changed since you last heard of it. Read it before you rely on what you started with.",
-  "turn.agentsMdUnknownNoFiles": "{{displayPath}} changed since you last heard of it. It now says:\n{{fence}}\n{{text}}\n{{fence}}"
+  "turn.agentsMdUnknownNoFiles": "{{displayPath}} changed since you last heard of it. It now says:\n{{fence}}\n{{text}}\n{{fence}}",
+  "turn.agentsMdTooLong": "{{path}} changed, too much to show here; read the file."
 }

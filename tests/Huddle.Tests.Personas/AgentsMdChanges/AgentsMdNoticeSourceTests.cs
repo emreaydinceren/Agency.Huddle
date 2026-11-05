@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Waiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -247,6 +248,11 @@ public sealed class AgentsMdNoticeSourceTests : IDisposable
 
         AgentsMdCollected first = await source.CollectAsync(scope, heard, true, ct);
         AgentsMdCollected second = await source.CollectAsync(scope, first.Heard, true, ct);
+
+        if (scenario is not ("SkippedOnly" or "Moved"))
+        {
+            Assert.NotNull(first.Block);
+        }
 
         Assert.Null(second.Block);
         Assert.Equal(first.Heard.OrderBy(pair => pair.Key, StringComparer.Ordinal), second.Heard.OrderBy(pair => pair.Key, StringComparer.Ordinal));
@@ -525,6 +531,112 @@ public sealed class AgentsMdNoticeSourceTests : IDisposable
 
         Assert.NotNull(since);
         Assert.Empty(since);
+    }
+
+    /// <summary>With no heard map and a file that cannot be read, the map keeps the file's first-sight hash, so the next Turn tells the edit and not "You now also follow".</summary>
+    [Fact]
+    public async Task NullHeard_ReadFails_KeepsFirstSightInHeard_NextTurnTellsTheEdit()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdLedger ledger = this.NewLedger();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(ledger, file, 1, 2);
+        File.Delete(file.FullPath);
+        Directory.CreateDirectory(file.FullPath);
+        AgentsMdNoticeSource source = NewSource(ledger);
+
+        AgentsMdCollected first = await source.CollectAsync([file], null, true, ct);
+        Directory.Delete(file.FullPath);
+        this.Save(file, 2);
+        AgentsMdCollected second = await source.CollectAsync([file], first.Heard, true, ct);
+
+        Assert.Null(first.Block);
+        AssertHeard(first, (Relative, HashOf(1)));
+        Assert.Equal(ExpectedBlock(this.ChangedOf(TextOf(2), ["-Rule 1.", "+Rule 2."])), second.Block);
+    }
+
+    /// <summary>Without file tools the block carries the text as it is after the wait, not as it was read before it.</summary>
+    [Fact]
+    public async Task NoFileTools_TextChangedDuringTheWait_ToldTheNewText()
+    {
+        using CancellationTokenSource stop = Bounded(TestContext.Current.CancellationToken);
+        Rig rig = this.Wire();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Pend(rig, file);
+        Dictionary<string, string> heard = new() { [Relative] = "ABCD" };
+        Task<AgentsMdCollected> collect = rig.Source.CollectAsync([file], heard, false, stop.Token);
+        Assert.False(collect.IsCompleted);
+        this.Save(file, 3);
+        _ = rig.Ledger.Observe(file);
+
+        rig.Clock.Advance(TimeSpan.FromSeconds(31));
+        AgentsMdCollected result = await collect;
+
+        string expected = new AgentsMdNoticeRenderer(new FakePromptSource(), new AgentsMdOptions())
+            .Render([new AgentsMdBlockEntry.Unknown("Teams/" + Relative, file.FullPath, AgentsMdBody.Parse(TextOf(3)).Text)], false);
+        Assert.Equal(expected, result.Block);
+    }
+
+    /// <summary>Two files wait on one deadline: the latest judgement start plus the limit, so the earlier start does not end the wait.</summary>
+    [Fact]
+    public async Task TwoPendingFiles_DeadlineIsTheLatestStart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using CancellationTokenSource stop = Bounded(ct);
+        Rig rig = this.Wire();
+        AgentsMdFile first = this.FileOf(Relative);
+        AgentsMdFile second = this.FileOf("Other/AGENTS.md");
+        this.Pend(rig, first);
+        this.Pend(rig, second);
+        _ = rig.Ledger.TryStartJudgement(first, JudgementReason.TurnAsked);
+        Assert.NotNull(rig.Ledger.JudgementStarted(Relative));
+        rig.Clock.Advance(TimeSpan.FromSeconds(20));
+        Dictionary<string, string> heard = new() { [Relative] = HashOf(1), ["Other/AGENTS.md"] = HashOf(1) };
+
+        Task<AgentsMdCollected> collect = rig.Source.CollectAsync([first, second], heard, true, stop.Token);
+        rig.Clock.Advance(TimeSpan.FromSeconds(11));
+        _ = await Task.WhenAny(collect, Task.Delay(TestBudgets.Short, ct));
+
+        Assert.False(collect.IsCompleted);
+        rig.Clock.Advance(TimeSpan.FromSeconds(20));
+        AgentsMdCollected result = await collect;
+        Assert.NotNull(result.Block);
+    }
+
+    /// <summary>The Adapter's file-tool flag reaches the renderer: with none, the block carries the file's text.</summary>
+    [Fact]
+    public async Task NoFileTools_ReachesTheRenderer()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdLedger ledger = this.NewLedger();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(ledger, file, 1);
+
+        AgentsMdCollected result = await NewSource(ledger).CollectAsync([file], new Dictionary<string, string> { [Relative] = "ABCD" }, false, ct);
+
+        string expected = new AgentsMdNoticeRenderer(new FakePromptSource(), new AgentsMdOptions())
+            .Render([new AgentsMdBlockEntry.Unknown("Teams/" + Relative, file.FullPath, AgentsMdBody.Parse(TextOf(1)).Text)], false);
+        Assert.Equal(expected, result.Block);
+    }
+
+    /// <summary>A moved file whose new path cannot be read yet is not told as gone: the move is told once, as nothing, when the path reads.</summary>
+    [Fact]
+    public async Task Moved_NewPathUnreadable_NotToldTwice()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdFile moved = this.FileOf("Home/New/AGENTS.md");
+        Directory.CreateDirectory(moved.FullPath);
+        AgentsMdNoticeSource source = NewSource(this.NewLedger());
+        Dictionary<string, string> heard = new() { ["Home/Old/AGENTS.md"] = HashOf(1) };
+
+        AgentsMdCollected first = await source.CollectAsync([moved], heard, true, ct);
+        Directory.Delete(moved.FullPath);
+        this.Save(moved, 1);
+        AgentsMdCollected second = await source.CollectAsync([moved], first.Heard, true, ct);
+
+        Assert.Null(first.Block);
+        Assert.Null(second.Block);
+        AssertHeard(second, ("Home/New/AGENTS.md", HashOf(1)));
     }
 
     /// <summary>A token that cancels itself after 30 real seconds, so no wait in a test is unbounded.</summary>

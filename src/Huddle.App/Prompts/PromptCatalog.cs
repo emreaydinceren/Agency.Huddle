@@ -2200,6 +2200,13 @@ internal static class PromptCatalog
             Placeholders: ["{{displayPath}}", "{{fence}}", "{{text}}"],
             RequiredPlaceholders: ["{{displayPath}}", "{{fence}}", "{{text}}"],
             Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.agentsMdTooLong",
+            Label: "AGENTS.md change: a change too long to show",
+            HelperText: "Stands for a file's newest change when it alone is over Team:AgentsMd:MaxNoticeChars. {{path}} is the full path.",
+            Default: "{{path}} changed, too much to show here; read the file.",
+            Placeholders: ["{{path}}"], RequiredPlaceholders: ["{{path}}"], Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog: <c>systemPrompt.agentsMdLevels</c>.</summary>
