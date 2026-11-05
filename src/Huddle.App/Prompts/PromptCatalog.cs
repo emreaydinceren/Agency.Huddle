@@ -78,14 +78,7 @@ internal static class PromptCatalog
         ..BuildPart31(),
         ..BuildPartWakeRestart(),
         ..BuildPart32(),
-        ..BuildPart33(),
-        ..BuildPart33Help(),
-        ..BuildPart34(),
-        ..BuildPart35(),
-        ..BuildPart36(),
-        ..BuildPart37(),
-        ..BuildPart38(),
-        ..BuildPart39(),
+        ..BuildParts33To39(),
         ..BuildPart51(),
         ..BuildPart52(),
         ..BuildPart40(),
@@ -103,6 +96,11 @@ internal static class PromptCatalog
         ..BuildPart53(),
         ..BuildAgentsMdNoticeParts(),
     ];
+
+    /// <summary>Builds slices 33 to 39 in catalog order, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of those slices, in catalog order.</returns>
+    private static PromptDefinition[] BuildParts33To39() =>
+        [.. BuildPart33(), .. BuildPart33Help(), .. BuildPart34(), .. BuildPart35(), .. BuildPart36(), .. BuildPart37(), .. BuildPart38(), .. BuildPart39()];
 
     /// <summary>Builds the <c>turn.agentsMd*</c> change-notice prompts, which span four slices.</summary>
     /// <returns>The prompt definitions of those slices, in catalog order.</returns>
