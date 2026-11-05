@@ -220,8 +220,11 @@ Markdown file:
   write failure is logged and never stops the session. The Adapter reads that file (rules.md, *The Work Dir is not a jail*).
 - When the Agent is about to stop, the script reads the Turn's transcript (everything after the last prompt). If the Turn
   wrote or edited a `.md` file and made no `log_change` call, it sends the Agent back once, naming the files. If it only
-  opened a `.md` file, it asks whether the Agent reviewed it or disagrees with it, and says that reading to answer needs no
-  entry. A Turn that touched no Markdown, one that already logged, and a second stop in a row (`stop_hook_active`) all pass
+  opened a `.md` file, it does this only for an Agent whose role covers `verify` (a reviewer): the script is given
+  `--remind-reads` by `DotAcpAgentHostFactory.InstallDocHistoryHook` (#354), and an Agent with no role, such as the Chief of
+  Staff, is not sent back for reading. The reminder asks whether the Agent reviewed it or disagrees with it, and says that reading
+  to answer needs no entry. Both reminders end by telling the Agent to reply with exactly the silent token and nothing else
+  (`SilentReply.Token`), so a Turn that ends there posts nothing. A Turn that touched no Markdown, one that already logged, and a second stop in a row (`stop_hook_active`) all pass
   without a word, so it cannot loop.
 - It needs `node`, which the Adapter needs anyway. It is compatible with ADR-0060: the hook decides nothing about the entry
   and writes none. The Agent still reports, in its own words, under its own Name.

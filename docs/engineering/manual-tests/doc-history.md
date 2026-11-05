@@ -163,7 +163,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 1 the file has a `hooks.Stop` list with exactly one entry whose command is `node "<data>\hooks\doc-history-stop.js" log_change` (Ada's mock Adapter gives tools no `mcp__team__` prefix; a Claude Agent's command ends in `mcp__team__log_change`), and the script exists.
+- At step 1 the file has a `hooks.Stop` list with exactly one entry whose command is `node "<data>\hooks\doc-history-stop.js" log_change` (Ada's mock Adapter gives tools no `mcp__team__` prefix; a Claude Agent's command ends in `mcp__team__log_change`, and ends in `mcp__team__log_change --remind-reads` for an Agent hired into a role that covers `verify`, such as a Team's reviewer; an Agent with no role, such as the Chief of Staff, never has the flag), and the script exists.
 - At step 3 your `"model": "keep-me"` is still there, and there is still exactly one hook entry, not two.
 - At step 4 the file still reads `{ not json`, and the app started **Ada** anyway (the hook is a nudge, never a reason to refuse a session).
 

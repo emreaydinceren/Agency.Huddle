@@ -36,7 +36,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   5 runs per scenario. With the tool description alone, 0 of 35 runs logged. With the description, a system prompt
   paragraph and a Stop hook that sends the Agent back once after it touched a Markdown file, the 2026-10-19 rates were
   5 of 5 on every scenario: create, edit two files, review, object, no invented actor, asked outright, and (correctly) no
-  call for a summary or a non-Markdown file. Haiku at low Effort is the hardest case the spec allows, but a Sonnet or
+  call for a summary or a non-Markdown file. Those rates predate the read reminder (#354), which only an Agent whose role covers
+  `verify` gets. Rates measured with it on 2026-11-04: a reviewer's review
+  5 of 5 and object 4 of 5; an Agent with no such role, object 3 of 5 (LIVE-DH-9, recorded and not asserted). Haiku at low Effort is the hardest case the spec allows, but a Sonnet or
   Opus Agent, or an Adapter that does not run Claude Code hooks, is unmeasured, and a Turn that changes a document with
   `Bash` rather than `Write` or `Edit` is not seen by the hook. The links Huddle rewrites in other notes when a note is renamed or moved are
   not recorded in those notes' Histories, on purpose: the Human did not edit them.

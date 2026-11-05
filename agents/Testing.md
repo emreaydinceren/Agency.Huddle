@@ -36,7 +36,9 @@ dotnet test Huddle.slnx --
   created (an unmounted drive, a relative path), it does nothing and the system temp folder is used,
   which is how CI runs. It never changes the user or machine environment, so set it for the one shell
   (`$env:HUDDLE_TEST_TEMP = 'R:\t'`) or wherever suits you. The test folders a run leaves behind are
-  in that folder, so do not empty it while another run is using it. Measured on Windows, the
+  in that folder, so do not empty it while another run is using it. **Never point it at a RAM disk
+  for a live Adapter test:** the Adapter can't resolve a working folder on `R:`, so every tool call
+  fails and a paid probe reports 0 of 5 (seen 2026-11-04). Use a folder on a real disk. Measured on Windows, the
   `PersonaSpendTests` class took 227 s with the temp folder on the system drive and 26 s on a RAM disk.
   A test that creates a directory link (junction or symlink) and resolves it must not use the redirected folder: a
   RAM-disk driver can create links yet fail to read them (`Incorrect function`). Such a test builds its folder with
