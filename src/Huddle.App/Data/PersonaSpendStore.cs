@@ -96,6 +96,29 @@ public sealed class PersonaSpendStore
     }
 
     /// <summary>
+    /// Returns every Persona's total per currency across all Tasks, one entry per Persona and currency. A
+    /// caller that adds these up (the Spending panel's Total) counts an Agent once however many Teams it is in.
+    /// Amounts are never added across currencies.
+    /// </summary>
+    /// <returns>One entry per Persona and currency; empty when nothing is stored.</returns>
+    public IReadOnlyList<PersonaSpendRow> All()
+    {
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT persona_name, currency, amount FROM persona_spend;";
+
+        Dictionary<(string Name, string Currency), decimal> totals = new(AllKeyComparer.Instance);
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            (string, string) key = (reader.GetString(0), reader.GetString(1));
+            totals[key] = totals.GetValueOrDefault(key) + ParseAmount(reader.GetString(2));
+        }
+
+        return [.. totals.Select(static pair => new PersonaSpendRow(pair.Key.Name, pair.Key.Currency, pair.Value))];
+    }
+
+    /// <summary>
     /// Moves every row of <paramref name="oldName"/> to <paramref name="newName"/>, adding into any
     /// row the new name already has for the same Task and currency.
     /// </summary>
@@ -205,6 +228,21 @@ public sealed class PersonaSpendStore
         }
 
         return [.. totals.Select(static pair => new StoredSpend(pair.Key, pair.Value))];
+    }
+
+    /// <summary>Keys <see cref="All"/>'s totals by Persona (<c>NOCASE</c>, as the table's primary key is) and currency (ordinal).</summary>
+    private sealed class AllKeyComparer : IEqualityComparer<(string Name, string Currency)>
+    {
+        /// <summary>The shared instance.</summary>
+        public static readonly AllKeyComparer Instance = new();
+
+        /// <inheritdoc/>
+        public bool Equals((string Name, string Currency) x, (string Name, string Currency) y) =>
+            SqliteNoCaseComparer.Instance.Equals(x.Name, y.Name) && string.Equals(x.Currency, y.Currency, StringComparison.Ordinal);
+
+        /// <inheritdoc/>
+        public int GetHashCode((string Name, string Currency) obj) =>
+            HashCode.Combine(SqliteNoCaseComparer.Instance.GetHashCode(obj.Name), obj.Currency.GetHashCode(StringComparison.Ordinal));
     }
 
     /// <summary>Compares names the way SQLite <c>NOCASE</c> does: only the ASCII letters A-Z fold, every other character is compared ordinally.</summary>

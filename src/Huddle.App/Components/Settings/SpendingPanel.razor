@@ -1,0 +1,167 @@
+@*
+    The Spending section (issue 356 Part 2): what Adapters have reported, one row per Team, the Chief of Staff, each
+    Agent in no Team and the Helpers, then a Total per currency that counts every Agent once. Read-only: no budgets or
+    limits here. Amounts are never added across currencies, and nothing spent shows the shared empty state.
+*@
+
+@implements IDisposable
+@using System.Globalization
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Agents
+@using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Teams
+@inject PersonaStore Personas
+@inject PersonaSpend Spend
+@inject PersonaSpendStore Store
+@inject HelperUsageStore HelperStore
+@inject ITeamCatalog Catalog
+
+<div class="spending-panel">
+    <SettingsIntro>
+        This covers only the cost Adapters report. A cost an Adapter does not report, such as compaction, is not counted,
+        and an Adapter that reports no cost shows nothing here. Removing an Agent removes its spend, so the Total drops
+        when an Agent is removed.
+    </SettingsIntro>
+
+    @if (this.rows.Count == 0)
+    {
+        <EmptyState Title="Nothing spent yet" Text="Spend appears here once an Adapter reports a cost for an Agent or a Helper." />
+    }
+    else
+    {
+        <div class="spending-rows" role="list">
+            @foreach (SpendRow row in this.rows)
+            {
+                <div class="spending-row" role="listitem">
+                    <span class="spending-row-name">@row.Name</span>
+                    @if (row.Calls is int calls)
+                    {
+                        <span class="spending-helper-calls">@Plural.Of(calls, "call", "calls")</span>
+                    }
+                    @foreach (StoredSpend amount in row.Amounts)
+                    {
+                        <span class="spending-row-amount">@Money(amount)</span>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (this.overlapping.Count > 0)
+        {
+            <p class="spending-overlap-note">
+                @string.Join(", ", this.overlapping) @(this.overlapping.Count == 1 ? "is" : "are") in more than one Team, so the Team rows add up to
+                more than the Total. The Total counts each Agent once.
+            </p>
+        }
+
+        <div class="spending-total">
+            <span class="spending-total-label">Total</span>
+            @foreach (StoredSpend amount in this.total)
+            {
+                <span class="spending-total-amount">@Money(amount)</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<SpendRow> rows = [];
+    private IReadOnlyList<StoredSpend> total = [];
+    private IReadOnlyList<string> overlapping = [];
+
+    /// <summary>One line of the panel: a name, its amounts (one per currency) and, for the Helpers, their call count.</summary>
+    private sealed record SpendRow(string Name, IReadOnlyList<StoredSpend> Amounts, int? Calls = null);
+
+    /// <summary>Formats an amount as three decimals, then the currency, the way a Team page does.</summary>
+    private static string Money(StoredSpend amount) =>
+        $"{amount.Amount.ToString("N3", CultureInfo.InvariantCulture)} {amount.Currency}";
+
+    /// <summary>Sums amounts per currency, never across currencies.</summary>
+    private static List<StoredSpend> SumPerCurrency(IEnumerable<StoredSpend> amounts) =>
+        [.. amounts
+            .GroupBy(static amount => amount.Currency, StringComparer.Ordinal)
+            .Select(static group => new StoredSpend(group.Key, group.Sum(static amount => amount.Amount)))
+            .OrderBy(static amount => amount.Currency, StringComparer.Ordinal)];
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        // Both are singletons shared with every card, so they are released in Dispose, and the page refreshes when
+        // an Adapter reports spend or a Team appears or goes (an archived Team leaves the catalog).
+        this.Spend.SpendChanged += this.OnSpendChanged;
+        this.Catalog.Changed += this.OnCatalogChanged;
+        this.Load();
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Spend.SpendChanged -= this.OnSpendChanged;
+        this.Catalog.Changed -= this.OnCatalogChanged;
+    }
+
+    private void OnSpendChanged(string personaName) => this.Refresh();
+
+    private void OnCatalogChanged() => this.Refresh();
+
+    /// <summary>Reloads the rows and repaints on the renderer's thread.</summary>
+    private void Refresh()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.Load();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Builds the rows from what is stored. An archived Team has left the catalog, so its members' spend is still
+    /// stored under their own names and shows as one row each, and the Total still counts it.
+    /// </summary>
+    private void Load()
+    {
+        IReadOnlyList<PersonaSpendRow> all = this.Store.All();
+        IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
+        HashSet<string> inTeam = new(teams.SelectMany(static team => team.Members), StringComparer.OrdinalIgnoreCase);
+        string? chief = this.Personas.Entries
+            .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name;
+
+        List<SpendRow> built = [];
+        foreach (TeamSummary team in teams)
+        {
+            IReadOnlyList<StoredSpend> amounts = this.Store.ForPersonas(team.Members);
+            if (amounts.Count > 0)
+            {
+                built.Add(new SpendRow(team.Name, amounts));
+            }
+        }
+
+        if (chief is not null && this.Store.ForPersona(chief) is { Count: > 0 } chiefAmounts)
+        {
+            built.Add(new SpendRow(chief, chiefAmounts));
+        }
+
+        foreach (IGrouping<string, PersonaSpendRow> agent in all
+            .Where(row => !inTeam.Contains(row.PersonaName) && !string.Equals(row.PersonaName, chief, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(static row => row.PersonaName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            built.Add(new SpendRow(agent.Key, SumPerCurrency(agent.Select(static row => new StoredSpend(row.Currency, row.Amount)))));
+        }
+
+        HelperSpendTotal helpers = this.HelperStore.AllTime();
+        if (helpers.Calls > 0 || helpers.Cost.Count > 0)
+        {
+            built.Add(new SpendRow("Helpers", helpers.Cost, helpers.Calls));
+        }
+
+        this.rows = built;
+        this.total = SumPerCurrency(all.Select(static row => new StoredSpend(row.Currency, row.Amount)).Concat(helpers.Cost));
+        this.overlapping = [.. all
+            .Select(static row => row.PersonaName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(name => teams.Count(team => team.Members.Contains(name, StringComparer.OrdinalIgnoreCase)) > 1)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+    }
+}

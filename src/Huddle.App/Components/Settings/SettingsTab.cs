@@ -16,6 +16,9 @@ public enum SettingsTab
     /// <summary>Helpers: the background agents that make one judgement each, and what they may spend.</summary>
     Helpers,
 
+    /// <summary>What Adapters have reported spending: per Team, Agent and the Helpers, and a Total per currency. Read-only.</summary>
+    Spending,
+
     /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>
     Appearance,
 

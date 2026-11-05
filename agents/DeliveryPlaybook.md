@@ -13,7 +13,9 @@ below exists because its absence cost a fix round, a bug, or an hour.
 1. **Branch and worktrees.** Work on a feature branch. Give each parallel agent its own
    worktree (`git worktree add -b feat/x-d2 E:\Repos\Huddle-wt\d2 feat/x`) and a directory
    junction from `<worktree>\Conversation` to the main checkout's `Conversation\` (gitignored), so
-   shared scripts and notes resolve from every worktree.
+   shared scripts and notes resolve from every worktree. **Before `git worktree remove`, delete the
+   junction with `cmd /c rmdir <worktree>\Conversation`.** Removing a worktree with the junction still
+   there follows it and permanently deletes the shared folder's contents; this happened on 2026-11-04.
 2. **A common brief** every agent reads first: commands, hard rules (below), the red-first
    procedure, and a fixed report shape that includes a **Coverage** table (each plan bullet,
    Spec clause and correction → a test name, or `NOT COVERED` with the task that owns it). The

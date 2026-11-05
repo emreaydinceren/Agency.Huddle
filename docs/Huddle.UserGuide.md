@@ -675,8 +675,9 @@ its card. It shows:
 
 - **Role:** the role and version the Agent was hired as.
 - **Total spent:** the lasting cost of the Agent, one line per currency, kept
-  across restarts. This is different from **Spent since start**, which counts
-  only the current run.
+  across restarts. It shows on every Agent card once anything is stored, not
+  only on an Agent with this panel. This is different from **Spent since start**,
+  which counts only the current run.
 - **Packs:** named groups of Skills, such as **MSBuild Authoring**. Select a
   pack's chip to add its Skills to that Agent, or select it again to take
   them off. A Skill the role itself carries stays when you remove a pack. Adding
@@ -2444,6 +2445,8 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
+
+**Spending** (**Settings › Spending**, read-only) shows what the Adapters have reported as spent: one line per Team, the Chief of Staff, each Agent in no Team and the Helpers, each with its cost and, for Helpers, its calls. Then a **Total** counts every Agent once, however many Teams it is in, so a line appears when an Agent's spend counts in more than one Team. Amounts are shown per currency and are never added across currencies. The panel covers only what the Adapters report, and removing an Agent removes its spend from it. It sets no budgets or limits.
 
 ### Helpers
 

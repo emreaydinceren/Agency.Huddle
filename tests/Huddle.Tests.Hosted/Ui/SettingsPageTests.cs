@@ -62,8 +62,32 @@ public sealed class SettingsPageTests
 
         List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
         Assert.Equal(
-            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/sessions", "/settings/remoteaccess"],
+            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/spending", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/sessions", "/settings/remoteaccess"],
             hrefs);
+    }
+
+    /// <summary>
+    /// <c>/settings/spending</c> selects the Spending section: it renders <c>SpendingPanel</c> and the menu marks
+    /// the Spending link as the current page (issue 356 Part 2).
+    /// </summary>
+    [Fact]
+    public async Task SettingsPage_SpendingSegment_ShowsSpendingPanelAndHighlightsIt()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        foreach (Type type in new[] { typeof(Agency.Huddle.App.Acp.PersonaStore), typeof(Agency.Huddle.App.Acp.PersonaSpend), typeof(Agency.Huddle.App.Data.PersonaSpendStore), typeof(Agency.Huddle.App.Data.HelperUsageStore), typeof(Agency.Huddle.App.Teams.ITeamCatalog) })
+        {
+            if (!ctx.Services.Any(descriptor => descriptor.ServiceType == type))
+            {
+                ctx.Services.AddSingleton(type, factory.Services.GetRequiredService(type));
+            }
+        }
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "spending"));
+
+        Assert.Single(cut.FindAll(".spending-panel"));
+        var current = Assert.Single(cut.FindAll(".settings-nav a.mud-nav-link[aria-current='page']"));
+        Assert.Equal("/settings/spending", current.GetAttribute("href"));
     }
 
     /// <summary>
@@ -121,7 +145,7 @@ public sealed class SettingsPageTests
 
         Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.RemoteAccess.RemoteAccessPanel>());
         List<AngleSharp.Dom.IElement> items = cut.FindAll(".settings-nav .mud-nav-item").ToList();
-        Assert.Equal(9, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(10, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
         Assert.Equal("Remote access", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 
@@ -149,7 +173,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
-        Assert.Equal(7, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(8, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
     }
 
     /// <summary>The <c>/settings/sessions</c> route highlights the ninth row, "Sessions", directly after Library, and renders the Sessions panel (Spec §5.4, T2).</summary>
@@ -162,7 +186,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "sessions"));
 
         Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.SessionsPanel>());
-        Assert.Equal(8, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(9, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
         Assert.Equal("Sessions", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 

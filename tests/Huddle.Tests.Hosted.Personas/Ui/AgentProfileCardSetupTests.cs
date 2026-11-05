@@ -215,7 +215,7 @@ public sealed class AgentProfileCardSetupTests
         Assert.Equal("Total spent: 0.500 USD", cut.Find(".agent-profile-card-spend-total").TextContent.Trim());
     }
 
-    /// <summary>An Agent without a role shows no role line, packs, warnings or lasting spend.</summary>
+    /// <summary>An Agent without a role shows no role line, packs or warnings, but still shows its lasting spend (NF-6).</summary>
     [Fact]
     public async Task NoRole_ShowsNoSetupAdditions()
     {
@@ -228,10 +228,25 @@ public sealed class AgentProfileCardSetupTests
 
         IRenderedComponent<ContainerFragment> view = await OpenViewCardAsync(ctx, factory, "plain");
         Assert.Empty(view.FindAll(".agent-profile-card-role"));
-        Assert.Empty(view.FindAll(".agent-profile-card-spend-total"));
+        Assert.Equal("Total spent: 0.500 USD", view.Find(".agent-profile-card-spend-total").TextContent.Trim());
 
         await ClickButtonAsync(view, "Edit");
         Assert.Empty(view.FindAll(".agent-profile-card-pack"));
         Assert.Empty(view.FindAll(".agent-profile-card-warning"));
+    }
+
+    /// <summary>An Agent without a role and with nothing stored shows no lasting spend line.</summary>
+    [Fact]
+    public async Task NoRole_NothingStored_ShowsNoSpendTotal()
+    {
+        using TempDataDir dir = new();
+        await using TeamWebApplicationFactory factory = new();
+        await SeedPersonaAsync(factory, "quiet", "You help.");
+        await using MudBunitContext ctx = NewContext(factory);
+        AddTeamTypes(ctx, dir);
+
+        IRenderedComponent<ContainerFragment> view = await OpenViewCardAsync(ctx, factory, "quiet");
+
+        Assert.Empty(view.FindAll(".agent-profile-card-spend-total"));
     }
 }
