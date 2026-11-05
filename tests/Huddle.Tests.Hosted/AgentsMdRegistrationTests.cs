@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.AgentsMdChanges;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.AgentsMdChange;
 using Agency.Huddle.Tests.Ui;
@@ -35,6 +37,36 @@ public sealed class AgentsMdRegistrationTests
         PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", "---\nname: 'Vera'\n---\nYou help."));
 
         Assert.Equal("AgentsMd", plan.Hooks.HookNames[0]);
+    }
+
+    /// <summary>The supervisor's File Changes hook is built with the AGENTS.md scopes: an in-scope AGENTS.md change is left out of File Changes through the real provider.</summary>
+    [Fact]
+    public async Task Container_FileChangesHook_GetsTheScopes()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using CancellationTokenSource bound = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bound.CancelAfter(TimeSpan.FromSeconds(30));
+        await using TeamWebApplicationFactory factory = new();
+        string teamsRoot = Path.Combine(factory.DataDirPath, "Teams");
+        Directory.CreateDirectory(teamsRoot);
+        string agentsMd = Path.Combine(teamsRoot, "AGENTS.md");
+        string note = Path.Combine(teamsRoot, "notes.md");
+        PersonaSupervisor supervisor = factory.Services.GetRequiredService<PersonaSupervisor>();
+        PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", $"---\nname: 'Vera'\ntitle: 'Vera'\nalias: 'vera'\nwatches: ['{teamsRoot.Replace("\\", "/", StringComparison.Ordinal)}']\n---\nYou help."));
+        Assert.Contains("FileChanges", plan.Hooks.HookNames);
+        ITeamDirectory directory = factory.Services.GetRequiredService<ITeamDirectory>();
+        Room room = await directory.CreateRoomAsync("scopes", [KnownIds.Human], bound.Token);
+        Dictionary<string, string?> state = new(StringComparer.Ordinal);
+        TurnHookBeforeResult first = await plan.Hooks.BeforeTurnAsync(room.Id, state, bound.Token, CancellationToken.None);
+        await plan.Hooks.AfterTurnAsync(room.Id, state, first, [], bound.Token);
+        await File.WriteAllTextAsync(agentsMd, "rule", bound.Token);
+        await File.WriteAllTextAsync(note, "note", bound.Token);
+
+        TurnHookBeforeResult second = await plan.Hooks.BeforeTurnAsync(room.Id, state, bound.Token, CancellationToken.None);
+
+        string text = second.Additions["FileChanges"].Text ?? string.Empty;
+        Assert.Contains("notes.md", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("AGENTS.md", text, StringComparison.Ordinal);
     }
 
     /// <summary>The Helpers tab draws one card per registry entry, so the registry must list AGENTS.md Changes.</summary>

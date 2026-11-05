@@ -152,6 +152,40 @@ public sealed class AgentsMdNoticeSourceTests : IDisposable
         AssertHeard(result, (Relative, HashOf(1)));
     }
 
+    /// <summary>An empty heard hash means "not heard": a path that left scope with one is dropped without a word.</summary>
+    [Fact]
+    public async Task NoLonger_EmptyHeardHash_SaysNothing_AndDrops()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdLedger ledger = this.NewLedger();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(ledger, file, 1);
+
+        AgentsMdCollected result = await NewSource(ledger).CollectAsync([file], new Dictionary<string, string> { [Relative] = HashOf(1), ["Home/Gone/AGENTS.md"] = string.Empty }, true, ct);
+
+        Assert.Null(result.Block);
+        AssertHeard(result, (Relative, HashOf(1)));
+    }
+
+    /// <summary>A new-to-session file deleted during the wait re-reads as absent: nothing is told and the session has heard an empty hash.</summary>
+    [Fact]
+    public async Task NewFile_DeletedDuringTheWait_TellsNothing()
+    {
+        using CancellationTokenSource stop = Bounded(TestContext.Current.CancellationToken);
+        Rig rig = this.Wire();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Pend(rig, file);
+        Task<AgentsMdCollected> collect = rig.Source.CollectAsync([file], new Dictionary<string, string>(), true, stop.Token);
+        Assert.False(collect.IsCompleted);
+        File.Delete(file.FullPath);
+
+        rig.Clock.Advance(TimeSpan.FromSeconds(31));
+        AgentsMdCollected result = await collect;
+
+        Assert.Null(result.Block);
+        AssertHeard(result, (Relative, string.Empty));
+    }
+
     /// <summary>A Project moved: its old path is out of scope and the new path holds the same hash, so nothing is told and the map follows.</summary>
     [Fact]
     public async Task Moved_TellsNothing_HeardMoves()

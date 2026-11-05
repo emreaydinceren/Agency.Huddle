@@ -110,7 +110,7 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
             string display = "Teams/" + file.RelativePath;
             if (heardHash.Length == 0)
             {
-                if (!outOfScope.ContainsValue(body.Hash))
+                if (body.Hash.Length > 0 && !outOfScope.ContainsValue(body.Hash))
                 {
                     entries.Add(new AgentsMdBlockEntry.NowFollow(display, file.FullPath, body.Text));
                 }
@@ -140,7 +140,7 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
         HashSet<string> followed = [.. bodies.Values.Select(static body => body.Hash)];
         foreach ((string path, string hash) in outOfScope)
         {
-            if (!followed.Contains(hash))
+            if (hash.Length > 0 && !followed.Contains(hash))
             {
                 entries.Add(new AgentsMdBlockEntry.NoLonger("Teams/" + path));
             }

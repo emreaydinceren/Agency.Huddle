@@ -63,13 +63,16 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
 
         try
         {
-            HashSet<string> inScope = [.. scopes.For(personaName).Select(static file => file.FullPath)];
-            if (inScope.Count == 0)
+            IReadOnlyList<AgentsMdFile> files = scopes.For(personaName);
+            if (files.Count == 0)
             {
                 return report;
             }
 
-            List<FileChange> kept = [.. report.Changes.Where(change => !inScope.Any(path => string.Equals(path, change.FullPath, PathContainment.Comparison)))];
+            StringComparer comparer = PathContainment.Comparison == StringComparison.OrdinalIgnoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            HashSet<string> inScope = new(files.Select(static file => file.FullPath), comparer);
+            HashSet<string> teamDirs = new(files.Where(static file => file.Level == AgentsMdLevel.Team).Select(static file => Path.GetDirectoryName(file.FullPath) ?? string.Empty), comparer);
+            List<FileChange> kept = [.. report.Changes.Where(change => !inScope.Contains(change.FullPath) && !IsLevelPath(change.FullPath, teamDirs))];
             return kept.Count == report.Changes.Count ? report : report with { Changes = kept };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -77,6 +80,18 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
             logger.LogWarning(ex, "Persona '{PersonaName}' could not list its AGENTS.md scopes; File Changes are not filtered.", personaName);
             return report;
         }
+    }
+
+    /// <summary>Whether a path is an <c>AGENTS.md</c> directly in a Team folder or in a folder directly under one: a level path, whether or not the level still exists.</summary>
+    private static bool IsLevelPath(string fullPath, HashSet<string> teamDirs)
+    {
+        if (!string.Equals(Path.GetFileName(fullPath), "AGENTS.md", PathContainment.Comparison))
+        {
+            return false;
+        }
+
+        string? folder = Path.GetDirectoryName(fullPath);
+        return folder is not null && (teamDirs.Contains(folder) || teamDirs.Contains(Path.GetDirectoryName(folder) ?? string.Empty));
     }
 
     /// <inheritdoc />

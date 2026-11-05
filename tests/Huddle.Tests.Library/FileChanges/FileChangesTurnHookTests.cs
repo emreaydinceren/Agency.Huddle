@@ -247,6 +247,48 @@ public sealed class FileChangesTurnHookTests
         Assert.Contains(other, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
     }
 
+    /// <summary>A deleted Project is no longer in scope, but its AGENTS.md is a level path under the Agent's Team: it is left out, because the AGENTS.md notice tells the deletion.</summary>
+    [Fact]
+    public async Task FileChanges_DeletedProjectAgentsMd_LeftOut()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        string project = Path.Combine(teamsRoot, "Home", "Proj");
+        Directory.CreateDirectory(project);
+        File.WriteAllText(Path.Combine(project, "AGENTS.md"), "rule");
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
+        Directory.Delete(project, recursive: true);
+        string note = Path.Combine(teamsRoot, "notes.md");
+        File.WriteAllText(note, "note");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(note, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+        Assert.DoesNotContain("AGENTS.md", addition.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>An AGENTS.md in a folder deeper than a Project is not a level path: it stays an ordinary File Change.</summary>
+    [Fact]
+    public async Task FileChanges_DeeperAgentsMd_Kept()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
+        string deeper = Path.Combine(teamsRoot, "Home", "Proj", "Deep", "AGENTS.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(deeper) ?? teamsRoot);
+        File.WriteAllText(deeper, "rule");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(deeper, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+    }
+
     /// <summary>The carry keeps the unfiltered report, so committing it records the AGENTS.md in the baseline and it is never listed later.</summary>
     [Fact]
     public async Task FileChanges_BaselineStillRecordsTheFile()
@@ -342,7 +384,7 @@ public sealed class FileChangesTurnHookTests
         TempDataDir dataDir = new();
         IOptions<TeamOptions> options = dataDir.Options();
         AgentPaths agentPaths = new(options);
-        TestPersonaFiles.Write(agentPaths, "nova", "---\nName: Nova\nTitle: Nova\nAlias: Nova\n---\nYou are Nova.");
+        TestPersonaFiles.Write(agentPaths, "nova", "---\nName: Nova\nTitle: Nova\nAlias: Nova\nteams: ['Home']\n---\nYou are Nova.");
 
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);

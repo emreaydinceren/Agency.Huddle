@@ -220,6 +220,71 @@ public sealed class AgentsMdTurnHookTests : IDisposable
         Assert.Equal(first.Text, told?.Text);
     }
 
+    /// <summary>A session from before the feature has no map: its first Turn tells nothing about existing files and records a map, and a later edit is told once (Spec §8.5).</summary>
+    [Fact]
+    public async Task Opening_Resumed_NoMap_FirstTurnTellsNothing_ThenAnEditIsTold()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(file, 1);
+        ITurnHook hook = this.NewHook();
+        string? state = await hook.OnSessionOpeningAsync(new SessionOpening(Scope, SessionOpenReason.Resumed, null), ct);
+
+        TurnAddition? first = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, state), ct);
+        state = await hook.AfterTurnAsync(new TurnEnded(Scope, RoomId, state, []), first, ct);
+        this.Save(file, 2);
+        _ = this.ledger.Observe(file);
+        _ = this.ledger.CommitComparison(file);
+        TurnAddition? edit = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, state), ct);
+        state = await hook.AfterTurnAsync(new TurnEnded(Scope, RoomId, state, []), edit, ct);
+        TurnAddition? again = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, state), ct);
+
+        Assert.NotNull(first);
+        Assert.Null(first.Text);
+        Assert.NotNull(edit?.Text);
+        Assert.Contains("Rule 2.", edit.Text, StringComparison.Ordinal);
+        Assert.Null(again);
+    }
+
+    /// <summary>Upgrade: a null-state session sees an empty Project folder as an absent level; deleting that folder later must not tell the Agent it no longer applies.</summary>
+    [Fact]
+    public async Task Upgrade_NullState_DeletedEmptyProject_TellsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        this.Play(this.FileOf(Relative), 1);
+        string project = Path.Combine(this.TeamsRoot, "Home", "Proj");
+        Directory.CreateDirectory(project);
+        ITurnHook hook = this.NewHook();
+        TurnAddition? first = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, null), ct);
+        string? state = await hook.AfterTurnAsync(new TurnEnded(Scope, RoomId, null, []), first, ct);
+        Directory.Delete(project);
+
+        TurnAddition? second = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, state), ct);
+
+        Assert.Null(first?.Text);
+        Assert.NotNull(second);
+        Assert.Null(second.Text);
+    }
+
+    /// <summary>An Agent without file tools gets the whole text form of a change, not the pointer form.</summary>
+    [Fact]
+    public async Task Before_NoFileTools_GetsTheWholeTextForm()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(file, 1, 2);
+        AgentsMdTurnHook hook = this.NewHook();
+        TurnHookScope noTools = Scope with { ReadsFiles = false };
+
+        TurnAddition? withTools = await hook.BeforeTurnAsync(new TurnStarting(Scope, RoomId, StateOf(Map(1), Map(1))), ct);
+        TurnAddition? without = await hook.BeforeTurnAsync(new TurnStarting(noTools, RoomId, StateOf(Map(1), Map(1))), ct);
+
+        Assert.NotNull(withTools?.Text);
+        Assert.NotNull(without?.Text);
+        Assert.NotEqual(withTools.Text, without.Text);
+        Assert.Contains("Rule 2.", without.Text, StringComparison.Ordinal);
+    }
+
     /// <summary>A state that is not the JSON of the two maps does not throw out of the hook: it counts as no state, and a Warning says so.</summary>
     [Fact]
     public async Task State_Corrupt_TreatedAsNull_AndWarns()

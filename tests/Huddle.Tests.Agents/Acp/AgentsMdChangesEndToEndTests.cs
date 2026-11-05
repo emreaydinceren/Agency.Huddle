@@ -176,7 +176,8 @@ public sealed class AgentsMdChangesEndToEndTests
             string side = await scenario.CreateSideRoomAsync(bound.Token);
             int prompts = scenario.PromptCount;
             int repliesA = await scenario.PostAsync(scenario.RoomA, "stopped while it waits", bound.Token);
-            await Task.Delay(TestBudgets.Short, bound.Token);
+            await Eventually.UntilAsync(() => scenario.Fixture.HelperProcess.Calls > 0, bound.Token, TestBudgets.Slowest);
+            Assert.Equal(prompts, scenario.PromptCount);
             int repliesSide = await scenario.PostAsync(side, "queued behind the wait", bound.Token);
             await Task.Delay(TestBudgets.Short, bound.Token);
             Assert.Equal(prompts, scenario.PromptCount);
@@ -212,7 +213,8 @@ public sealed class AgentsMdChangesEndToEndTests
             string side = await scenario.CreateSideRoomAsync(bound.Token);
             int prompts = scenario.PromptCount;
             _ = await scenario.PostAsync(scenario.RoomA, "stopped while it waits", bound.Token);
-            await Task.Delay(TestBudgets.Short, bound.Token);
+            await Eventually.UntilAsync(() => scenario.Fixture.HelperProcess.Calls > 0, bound.Token, TestBudgets.Slowest);
+            Assert.Equal(prompts, scenario.PromptCount);
             int repliesSide = await scenario.PostAsync(side, "queued behind the wait", bound.Token);
             await Task.Delay(TestBudgets.Short, bound.Token);
             await scenario.StopAsync(scenario.RoomA, bound.Token);
