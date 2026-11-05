@@ -366,7 +366,8 @@ You have no tools and need none: everything you need is in the next message. Ans
 Rules:
 - A change is meaningful when it could change what an agent does. A spelling fix, reformatting or reordering that keeps
   the same meaning is not meaningful.
-- List each rule added, changed or removed. Do not list anything else, and add nothing from your own knowledge.
+- List each rule added, changed or removed, at most 12. When more changed, list the 12 that most change what an agent
+  does. Do not list anything else, and add nothing from your own knowledge.
 - "quote" is copied word for word from the file, character for character: from the new version for "added" and "changed",
   from the old version for "removed". Quote the whole rule, at most 500 characters. It will be checked.
 - "summary" says what changed in at most 15 words.
@@ -480,6 +481,7 @@ In Teams/Home/AGENTS.md, these lines changed. Read the file before you rely on t
 | `turn.agentsMdFileWinsNoFiles` | For an Adapter with no file tools: `This is a summary. The file's text wins.` |
 | `turn.agentsMdComparison` | The fallback's first line, then `{{fence}}diff`, the lines, and `{{fence}}` |
 | `turn.agentsMdNotShown` | `…and {{count}} more changed lines.` Follows the fence when `MaxComparisonChars` cut the lines |
+| `turn.agentsMdMore` | `More rules may have changed: read the file.` Follows a file's list when it holds exactly 12 changes, the Helper's limit. Not in the no-file-tools forms, which carry the whole text |
 | `turn.agentsMdComparisonNoFiles` | For an Adapter with no file tools: `In {{displayPath}}, these lines changed:` |
 | `turn.agentsMdOlder` | `…and {{count}} earlier changes to {{displayPath}}; read the file.` |
 | `turn.agentsMdOlderNoFiles` | For an Adapter with no file tools: `…and {{count}} earlier changes to {{displayPath}}. It now says:` then its text, up to `MaxCharsPerFile` |
@@ -1174,7 +1176,7 @@ the rename and removal cascade, the DI precedent, and [rules.md](engineering/rul
 
 | # | Assumption | Why it matters | How to settle it |
 | --- | --- | --- | --- |
-| C-1 | A judgement finishes inside the 25-second timeout | The Team Memory manual tests wait about 20 seconds with a 10-second debounce, which suggests about 10 seconds a call, but on a smaller input than this Helper's largest. If it misses often, the Human mostly gets the comparison, and each miss spends a call | One paid run per file size, on the real Adapter, as soon as the Helper exists (plan Task 5.6), which may change the defaults |
+| C-1 | A judgement finishes inside the 25-second timeout | The Team Memory manual tests wait about 20 seconds with a 10-second debounce, which suggests about 10 seconds a call, but on a smaller input than this Helper's largest. If it misses often, the Human mostly gets the comparison, and each miss spends a call | Settled 2026-11-04 by plan Task 5.6, on Haiku at low Effort: 1 KB about 8 seconds, 8 KB 10 to 13, a rewrite at the 16,000-character cap 11 to 32, failing when the answer listed more than 12 changes. With the limit stated in the system prompt, the cap case took 10 to 13 seconds and all three answers parsed. The defaults stay |
 | C-2 | The system prompt survives `/compact` | The re-telling sets heard back to the session's start hashes. If the prompt were lost too, it would need the file's whole text | The paid manual run after `/compact` |
 | C-3 | Agents follow the notice's wording | Claude Code's documentation warns that commanding text can trigger prompt-injection defences | The paid manual run; the wording is a Prompt, so it changes without code |
 | C-4 | Huddle cannot add context beside a tool result | Only rules out a fourth hook point; nothing depends on it being possible | Not needed for this delivery |
