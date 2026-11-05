@@ -43,7 +43,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(172,PromptCatalog.All.Count);
+        Assert.Equal(178,PromptCatalog.All.Count);
     }
 
     /// <summary>The Task prompts tell an Agent that Huddle moves a ready gated Task to Needs You, never to use the Action for hand-offs, and not to ask for approval in chat; the status list names Needs You.</summary>

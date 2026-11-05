@@ -170,5 +170,11 @@
   "turn.agentsMdNoLonger": "{{displayPath}} no longer applies to you.",
   "turn.agentsMdUnknown": "{{path}} changed since you last heard of it. Read it before you rely on what you started with.",
   "turn.agentsMdUnknownNoFiles": "{{displayPath}} changed since you last heard of it. It now says:\n{{fence}}\n{{text}}\n{{fence}}",
-  "turn.agentsMdTooLong": "{{path}} changed, too much to show here; read the file."
+  "turn.agentsMdTooLong": "{{path}} changed, too much to show here; read the file.",
+  "turn.huddleMemoryHeader": "Huddle-wide facts changed in {{folder}}. They hold for every Team and every Room.\nIf a fact bears on your work, read its file.",
+  "turn.huddleMemoryAdded": "- New: {{name}}",
+  "turn.huddleMemoryChanged": "- Changed: {{name}}",
+  "turn.huddleMemoryDeleted": "- Removed, no longer true: {{name}}",
+  "turn.huddleMemoryDescription": ": The file says: \"{{description}}\"",
+  "turn.huddleMemoryMore": "…and {{count}} more; they follow at your next Turn."
 }

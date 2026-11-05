@@ -747,7 +747,13 @@ This also answers an open question: can the Chief of Staff file a Task into a Te
    Using only your instructions and memory index, with no tools: what are the Rivera children allergic to?
    ```
 
-**Expect**: Cole answers Pacific Time, and names Huddle-wide Memory. Cole does not know the allergies, and says so, because they are in another Team's Memory.
+5. Repeat the case with Cole already mid-conversation: in a Room where Cole has already answered, ask the Chief of Staff to remember a second fact (for example that Sam's manager is called Priya), then send Cole, with no Start afresh:
+
+   ```text
+   Using only what you were told in this conversation, with no tools: what is the name of Sam's manager?
+   ```
+
+**Expect**: Cole answers Pacific Time, and names Huddle-wide Memory. Cole does not know the allergies, and says so, because they are in another Team's Memory. In the mid-conversation repeat, Cole answers Priya at the next Turn, because a Huddle-wide fact reaches a running Agent as a file name and description (ADR-0077). Ask the same again in that Room: no second notice.
 
 **Pass if**: the file exists in `Teams\memory\`, the first answer is right, and the second says it does not know.
 **Fail if**: the fact is held only in the Chief of Staff's own Memory, or Cole states the allergies without reading anything.
@@ -805,8 +811,11 @@ lactose topic if there is one. The History shows **Team Memory (Helper)** and na
    Are there any rules in your instructions about how to write a line about an invoice? Quote them.
    ```
 
+6. Running-session case (ADR-0076): with Cole mid-conversation in that Room, add a checkable rule to `Teams/Harbor Lane Bakery/AGENTS.md` (for example "end every invoice line with the word Paid"), save, and send Cole a Message about an invoice, with no Start afresh. Repeat for `Teams/AGENTS.md`.
+
 **Expect**: Hana, who holds `retrospective`, proposes the line, and Huddle writes it only when you accept. Cole does not
-hold that Skill. Cole tells you the rule belongs in `AGENTS.md`. A new session quotes the line you added.
+hold that Skill. Cole tells you the rule belongs in `AGENTS.md`. A new session quotes the line you added, and a running
+Cole follows the new rule at the next Turn with no Start afresh.
 
 **Pass if**: the Family file changes only after you accept, and Cole's new session quotes the rule.
 **Fail if**: an Agent edits an `AGENTS.md` itself, or Cole's new session does not know the rule.

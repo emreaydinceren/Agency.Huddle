@@ -99,7 +99,8 @@ overwritten. No Adapter runs under `Teams/`, so the three Team levels have no su
 (`Agents/<Name>/work/Instructions.md`) is retired. Rules about one Agent go into its Persona file,
 `<Name>.md`. Rules about the work go into the Team's or Project's `AGENTS.md`. An edit to the
 Persona restarts the Agent, as it does today: `Persona` is a record, and any change to its text is
-a restart. An edit to any `AGENTS.md` restarts nobody. So the guidance is: keep a rule at the
+a restart. An edit to any `AGENTS.md`, or a new, changed or deleted file in `Teams/memory`, restarts nobody: a running
+Agent hears of it at its next Turn (ADR-0076, ADR-0077). So the guidance is: keep a rule at the
 broadest level it applies to, and put a rule in a Persona only when it is about that one Agent.
 
 An Agent folder then holds exactly three things: `<Name>.md` (who it is and how it behaves),
@@ -559,7 +560,8 @@ Teams/<Team>/AGENTS.md       ─┘ the Team type's layer: stages, gates, cadenc
 
 1. **The overlay is composed into the prompt, never copied into a Team's file.** Creating a Team
    writes only the type's content into its `AGENTS.md`. Each session stacks the layers. Improving
-   a Prompt or `Teams/AGENTS.md` reaches every Team at its next session, and a Human's edits to a
+   a Prompt reaches every Team at its next session, while an edit to `Teams/AGENTS.md` reaches a running Agent at its
+   next Turn (ADR-0076), and a Human's edits to a
    Team's file are never overwritten by an update to the overlay.
 2. **The overlay has three parts:** the folders every new Team is provisioned with (`raw/`,
    `memory/`, `outputs/`), the Second Brain Prompts, and the conduct in `Teams/AGENTS.md`.
