@@ -645,6 +645,83 @@ public sealed class RoomSessionTurnHookTests
         Assert.Equal(control.Prompts, session.Prompts);
     }
 
+    /// <summary>While a Message Turn waits in Before, the owner has an open (empty, non-final) Draft for it, so the Room shows the Agent working with Stop (O-12).</summary>
+    [Fact]
+    public async Task Before_Waiting_OwnerSeesTheTurnAsWorking()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        HeldBefore held = new();
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, held.Hook);
+
+        harness.Room.Enqueue(new QueuedWork(1, MessageItem("first")));
+        await held.Entered.Task.WaitAsync(TestBudgets.Standard, ct);
+
+        MessageDelta working = Assert.Single(owner.Written.OfType<MessageDelta>());
+        Assert.False(working.IsFinal);
+        Assert.Equal(string.Empty, working.Text);
+        Assert.Equal(RoomId, working.RoomId);
+        await harness.Room.StopAsync(RoomId, 1, ct);
+    }
+
+    /// <summary>A Stop that ends the wait retracts the indicator with a final delta of the same message id, and no prompt is sent.</summary>
+    [Fact]
+    public async Task Stop_DuringBefore_ClearsTheIndicator()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        HeldBefore held = new();
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, held.Hook);
+
+        harness.Room.Enqueue(new QueuedWork(1, MessageItem("first")));
+        await held.Entered.Task.WaitAsync(TestBudgets.Standard, ct);
+        await harness.Room.StopAsync(RoomId, 1, ct);
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+
+        List<MessageDelta> deltas = [.. owner.Written.OfType<MessageDelta>()];
+        Assert.Equal(2, deltas.Count);
+        Assert.Equal(deltas[0].MessageId, deltas[1].MessageId);
+        Assert.Empty(session.Prompts);
+    }
+
+    /// <summary>A Turn that publishes after the wait reuses the indicator's message id: one Draft for the Turn, ended by one final delta.</summary>
+    [Fact]
+    public async Task Before_Then_Publish_OneDraftOnly()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReply("done");
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, new RecordingHook());
+
+        harness.Room.Enqueue(new QueuedWork(1, MessageItem("hello")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+
+        Assert.Single(owner.Written.OfType<MessageDelta>().Select(delta => delta.MessageId).Distinct(StringComparer.Ordinal));
+        Assert.Single(owner.Written.OfType<MessageDelta>(), delta => delta.IsFinal);
+    }
+
+    /// <summary>A Greeting Turn runs no hook, so it gets no early indicator: its first delta carries text.</summary>
+    [Fact]
+    public async Task GreetingTurn_NoEarlyIndicator()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReply("hello there");
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, new RecordingHook());
+        WorkItem greeting = new(RoomId, "Room 1", string.Empty, string.Empty, [], WorkItemKind.Greeting);
+
+        harness.Room.Enqueue(new QueuedWork(1, greeting));
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
+
+        MessageDelta first = owner.Written.OfType<MessageDelta>().First();
+        Assert.False(first.IsFinal);
+        Assert.NotEqual(string.Empty, first.Text);
+    }
+
     /// <summary>
     /// A Stop returns while a cancel callback the hook registered is still running: the callback runs off the Stop caller
     /// (<c>CancelAsync</c>), so the gate is never held across hook code. With <c>Cancel()</c> the callback runs inline and

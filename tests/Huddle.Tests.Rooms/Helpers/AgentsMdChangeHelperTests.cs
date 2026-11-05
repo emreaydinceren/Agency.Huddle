@@ -237,7 +237,7 @@ public sealed class AgentsMdChangeHelperTests : IDisposable
         Answer:
         {"meaningful": true | false, "reason": "at most 15 words, why",
          "changes": [{"kind": "added" | "changed" | "removed", "summary": "...", "quote": "..."}]}
-        For meaningful false, give an empty list of changes.
+        For meaningful false, give an empty list of changes. If you list no changes, meaningful is false.
         """;
 
     /// <summary>A Verdict that is not meaningful needs no changes.</summary>

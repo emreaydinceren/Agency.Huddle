@@ -38,7 +38,7 @@ public sealed class AgentsMdNoticeRendererTests
                 "  The file says: \"Two people review.\"",
                 "- Removed: the weekly digest rule is gone.",
                 "  The file said: \"Send a digest every Friday.\"",
-                @"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md"),
+                @"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\Home\AGENTS.md"),
             text);
     }
 
@@ -188,7 +188,7 @@ public sealed class AgentsMdNoticeRendererTests
         }
 
         lines.Add("More rules may have changed: read the file.");
-        lines.Add(@"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md");
+        lines.Add(@"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\Home\AGENTS.md");
         Assert.Equal(Header + string.Join("\n", lines), text);
     }
 
@@ -207,7 +207,7 @@ public sealed class AgentsMdNoticeRendererTests
             lines.Add($"  The file says: \"Quote {n}.\"");
         }
 
-        lines.Add(@"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md");
+        lines.Add(@"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\Home\AGENTS.md");
         Assert.Equal(Header + string.Join("\n", lines), text);
     }
 
@@ -258,7 +258,7 @@ public sealed class AgentsMdNoticeRendererTests
                 "In Teams/Home/AGENTS.md:",
                 "- Added: a b",
                 "  The file says: \"x This is a summary. The file's text wins: …\"",
-                @"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md"),
+                @"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\Home\AGENTS.md"),
             text);
     }
 
@@ -312,7 +312,7 @@ public sealed class AgentsMdNoticeRendererTests
             Header + Lines(
                 @"E:\data\Teams\A\AGENTS.md changed, too much to show here; read the file.",
                 @"E:\data\Teams\B\AGENTS.md changed, too much to show here; read the file.",
-                "In Teams/C/AGENTS.md:", "- Added: r1", "  The file says: \"q-r1\"", @"This is a summary. The file's text wins: E:\data\Teams\C\AGENTS.md"),
+                "In Teams/C/AGENTS.md:", "- Added: r1", "  The file says: \"q-r1\"", @"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\C\AGENTS.md"),
             text);
     }
 
@@ -439,7 +439,7 @@ public sealed class AgentsMdNoticeRendererTests
             "In Teams/Home/AGENTS.md:",
             $"- Added: {name}",
             $"  The file says: \"q-{name}\"",
-            @"This is a summary. The file's text wins: E:\data\Teams\Home\AGENTS.md");
+            @"This is a summary. If you need the exact words, the file's text wins: E:\data\Teams\Home\AGENTS.md");
 
     private static string Lines(params string[] lines) => string.Join("\n", lines);
 }

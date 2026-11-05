@@ -526,7 +526,7 @@ public sealed class AgentsMdChangesEndToEndTests
 
         /// <summary>The block a summarised edit renders, for an Adapter that reads files.</summary>
         internal string ExpectedNotice =>
-            Header + "In Teams/AGENTS.md:\n- Changed: A rule changed.\n  The file says: \"Use spaces.\"\nThis is a summary. The file's text wins: " + this.AgentsMdPath + "\n\n";
+            Header + "In Teams/AGENTS.md:\n- Changed: A rule changed.\n  The file says: \"Use spaces.\"\nThis is a summary. If you need the exact words, the file's text wins: " + this.AgentsMdPath + "\n\n";
 
         /// <summary>The block an edit with no summary renders: the changed lines.</summary>
         internal string ExpectedComparison =>

@@ -115,6 +115,32 @@ public sealed class ChatPageTests
     }
 
     /// <summary>
+    /// A waiting Turn is an empty Draft (no text yet, as RoomSession opens it while Before hooks wait): the Room shows the
+    /// Stop control for it, and pressing it asks the gateway to stop that Agent's Turn in this Room (O-12).
+    /// </summary>
+    [Fact]
+    public async Task Chat_WaitingTurn_ShowsStop_AndPressingItStops()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, drafts) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+        drafts.Append(Guid.CreateVersion7().ToString("N"), room.Id, agent.Id, agent.Name, string.Empty);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+        await cut.InvokeAsync(() => cut.Find("button.draft-stop").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal((agent.Id, room.Id), Assert.Single(factory.FakeAgentGateway.StopTurnCalls)), TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
     /// The Room header offers a Rename control seeded from the Room's current name. Rendered through
     /// <see cref="MudBunitContext"/> rather than a plain HTTP GET: the control sits behind a click
     /// (the Edit icon button), which is absent from a prerender - see <c>docs/engineering/testing.md</c>.

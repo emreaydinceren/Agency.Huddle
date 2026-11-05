@@ -1290,22 +1290,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         // The token-Budget check (D22 correction 11) runs in the consumer, before this method is
         // ever called - and before this session opens - so an item drained for a spent Budget never
         // pays for opening a session it will not prompt.
-        (item, TurnHookBeforeResult? hookResult) = await this.RunBeforeHooksAsync(item, sequence, ct).ConfigureAwait(false);
-
-        // A Stop that ended the Before wait (or landed in it) drops the item now, as TryPublishTurn would later: the
-        // catch-up below clears firstTurnPending, and the next Turn still needs it (E-7).
-        if (this.IsStoppedAtOrBefore(item.RoomId, sequence))
-        {
-            return;
-        }
-
-        item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
-        item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
-        item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
-
-        // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-        this.WriteLastCatchUp(item);
-        TurnRun? run = this.TryPublishTurn(item, hookResult, sequence, ct);
+        TurnRun? run = await this.PrepareAndPublishAsync(item, sequence, ct).ConfigureAwait(false);
         if (run is null)
         {
             return;
@@ -1334,6 +1319,54 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         {
             this.roomSessionStore?.Forget(this.owner.PersonaName, failedRoomId);
             await this.CloseAfterRepeatedFailureAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Runs the Before hooks and publishes the Turn. While a Message Turn waits in the hooks, an empty Draft under the
+    /// Turn's own message id shows the Agent working with the Draft's Stop control (O-12); the published Turn reuses
+    /// that id, so the Room never shows two Drafts, and a Turn that is dropped instead retracts it.
+    /// </summary>
+    /// <param name="item">The item being prepared.</param>
+    /// <param name="sequence">The item's sequence, compared with the Room's Stop mark.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>The published Turn, or <see langword="null"/> when the item was dropped.</returns>
+    private async Task<TurnRun?> PrepareAndPublishAsync(WorkItem item, long sequence, CancellationToken ct)
+    {
+        string messageId = Guid.CreateVersion7().ToString("N");
+        bool announced = this.hooks is { HookNames.Count: > 0 } && item.Kind == WorkItemKind.Message;
+        if (announced)
+        {
+            await this.WriteDeltaAsync(item.RoomId, messageId, isFinal: false, ct).ConfigureAwait(false);
+        }
+
+        TurnRun? run = null;
+        try
+        {
+            (item, TurnHookBeforeResult? hookResult) = await this.RunBeforeHooksAsync(item, sequence, ct).ConfigureAwait(false);
+
+            // A Stop that ended the Before wait (or landed in it) drops the item now, as TryPublishTurn would later: the
+            // catch-up below clears firstTurnPending, and the next Turn still needs it (E-7).
+            if (this.IsStoppedAtOrBefore(item.RoomId, sequence))
+            {
+                return null;
+            }
+
+            item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
+            item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
+            item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
+
+            // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
+            this.WriteLastCatchUp(item);
+            run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
+            return run;
+        }
+        finally
+        {
+            if (announced && run is null)
+            {
+                await this.WriteDeltaAsync(item.RoomId, messageId, isFinal: true, ct).ConfigureAwait(false);
+            }
         }
     }
 
@@ -1610,11 +1643,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="item">The fully prepared item.</param>
     /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
     /// <param name="sequence">The item's scheduler sequence, compared against the Room's Stop mark.</param>
+    /// <param name="messageId">The Turn's message id, minted before the hooks ran so an early Draft shares it.</param>
     /// <param name="ct">The run's own cancellation token, which the Turn's token is linked to.</param>
     /// <returns>The published Turn's state, or <see langword="null"/> when nothing was published and nothing was committed.</returns>
-    private TurnRun? TryPublishTurn(WorkItem item, TurnHookBeforeResult? hookResult, long sequence, CancellationToken ct)
+    private TurnRun? TryPublishTurn(WorkItem item, TurnHookBeforeResult? hookResult, long sequence, string messageId, CancellationToken ct)
     {
-        var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
         lock (this.gate)
@@ -1950,19 +1983,30 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// </remarks>
     /// <param name="run">The Turn that ended.</param>
     /// <param name="ct">The run's own cancellation token.</param>
-    private async Task WriteFinalDeltaAsync(TurnRun run, CancellationToken ct)
+    private Task WriteFinalDeltaAsync(TurnRun run, CancellationToken ct) =>
+        this.WriteDeltaAsync(run.Item.RoomId, run.MessageId, isFinal: true, ct);
+
+    /// <summary>
+    /// Writes an empty <see cref="MessageDelta"/>: non-final opens (or keeps) the Draft, final removes it. Skipped on
+    /// shutdown, and a dead pipe is logged rather than thrown, as for the terminator.
+    /// </summary>
+    /// <param name="roomId">The Room of the Turn.</param>
+    /// <param name="messageId">The Turn's message id.</param>
+    /// <param name="isFinal">Whether this is the terminator.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task WriteDeltaAsync(string roomId, string messageId, bool isFinal, CancellationToken ct)
     {
         if (!ct.IsCancellationRequested)
         {
             try
             {
-                await this.owner.WriteAsync(new MessageDelta(run.Item.RoomId, run.MessageId, string.Empty, IsFinal: true), ct).ConfigureAwait(false);
+                await this.owner.WriteAsync(new MessageDelta(roomId, messageId, string.Empty, isFinal), ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or ObjectDisposedException)
             {
-                // The pipe died before the terminator could be written; the Turn already ended
+                // The pipe died before the delta could be written; the Turn already ended
                 // one way or another, so there is nothing left to signal and nothing to retry.
-                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write the final delta for a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
+                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write a delta for a turn in room {RoomId}.", this.owner.PersonaName, roomId);
             }
         }
     }

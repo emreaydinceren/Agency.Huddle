@@ -2081,7 +2081,7 @@ internal static class PromptCatalog
             Key: "turn.agentsMdFileWins",
             Label: "AGENTS.md change: the file wins",
             HelperText: "Ends a summary. {{path}} is the file's full path.",
-            Default: "This is a summary. The file's text wins: {{path}}",
+            Default: "This is a summary. If you need the exact words, the file's text wins: {{path}}",
             Placeholders: ["{{path}}"], RequiredPlaceholders: ["{{path}}"], Timing: PromptTiming.Live),
 
     ];
@@ -2581,7 +2581,7 @@ internal static class PromptCatalog
                 Answer:
                 {"meaningful": true | false, "reason": "at most 15 words, why",
                  "changes": [{"kind": "added" | "changed" | "removed", "summary": "...", "quote": "..."}]}
-                For meaningful false, give an empty list of changes.
+                For meaningful false, give an empty list of changes. If you list no changes, meaningful is false.
                 """;
 
     /// <summary>The default of <c>helper.teamMemory.system</c>, kept out of the definition so the slice that lists it stays short.</summary>
