@@ -11,9 +11,6 @@ namespace Agency.Huddle.App.Tasks;
 /// <param name="gates">The process gates, for what a role covers.</param>
 internal sealed class RequestConfirmers(ITeamCatalog teams, PersonaStore personas, ProcessGateService gates) : IRequestConfirmers
 {
-    /// <summary>The role coverage step a confirming member must have.</summary>
-    private const string VerifyCoverage = "verify";
-
     /// <inheritdoc />
     public bool IsVerifierOf(string team, string member)
     {
@@ -25,9 +22,7 @@ internal sealed class RequestConfirmers(ITeamCatalog teams, PersonaStore persona
 
         return personas.Get(member) is { } persona
             && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
-            && identity.Role is { } role
-            && gates.CoverageOf(role) is { } coverage
-            && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
+            && gates.CoversVerify(identity.Role);
     }
 
     /// <inheritdoc />

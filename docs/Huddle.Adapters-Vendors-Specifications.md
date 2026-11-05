@@ -549,7 +549,9 @@ through `EnvironmentOverrides` and signs that home in themselves.
 **The document-history Stop hook (G-5).** `InstallsClaudeHooks` is `true` for the `claude`
 preset, the legacy behaviour for a presetless profile, and `false` for every other preset, which
 relies on the Agent's own `log_change` calls
-([ADR-0060](adr/0060-a-documents-history-is-what-its-editors-report.md)).
+([ADR-0060](adr/0060-a-documents-history-is-what-its-editors-report.md)). Where the hook is installed it also carries the
+read reminder (`--remind-reads`) for an Agent whose role covers `verify`, and both reminders end by asking for the silent
+token, `NO_REPLY`, as the whole reply.
 
 ### 6.8 Sign-in, protected folders and reading permission requests
 

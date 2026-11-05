@@ -106,6 +106,14 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         return spec is null ? null : string.Join(',', spec.Covers);
     }
 
+    /// <summary>Tells whether a role covers the <c>verify</c> step: the one test the request confirmers and the document history read reminder share.</summary>
+    /// <param name="role">The role a member was hired into, or <see langword="null"/> for an Agent with none.</param>
+    /// <returns><see langword="true"/> when the role's coverage lists verify; <see langword="false"/> for no role, an unknown role or any other coverage.</returns>
+    public bool CoversVerify(RoleRef? role) =>
+        role is not null
+        && this.CoverageOf(role) is { } coverage
+        && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
+
     private static bool HasVerifierEvidence(GateContext context) =>
         context.Evidence.Any(line =>
             line.Command.Length > 0

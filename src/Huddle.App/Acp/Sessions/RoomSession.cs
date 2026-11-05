@@ -1675,6 +1675,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
         if (postText is not null)
         {
+            await this.ReleaseHeldTailAsync(run, SilentReply.Strip(outcome.Text), ct).ConfigureAwait(false);
             await this.owner.WriteAsync(new PostMessage(item.RoomId, run.MessageId, postText), ct).ConfigureAwait(false);
             run.ReplyPosted = true;
         }
@@ -1691,6 +1692,35 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.ReportTurnHealth(outcome.Reason);
     }
 
+    /// <summary>Streams what was held back at the end of a Turn that turned out not to end with the silent token.</summary>
+    /// <param name="run">The Turn that finished.</param>
+    /// <param name="postText">The text being posted, which is what the page should end up showing.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task ReleaseHeldTailAsync(TurnRun run, string postText, CancellationToken ct)
+    {
+        int streamed;
+        lock (this.gate)
+        {
+            streamed = run.Turn.StreamedLength;
+        }
+
+        if (run.Turn.DeltaWriteFailed || streamed >= postText.Length)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.owner.WriteAsync(new MessageDelta(run.Item.RoomId, run.MessageId, postText[streamed..], IsFinal: false), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            // The pipe died; the posted Message below carries the text, so nothing is lost.
+            run.Turn.DeltaWriteFailed = true;
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write a message delta for a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
+        }
+    }
+
     /// <summary>The text to post for a finished Turn, or <see langword="null"/> when there is nothing fit to post.</summary>
     /// <param name="run">The Turn that finished.</param>
     /// <param name="outcome">How it ended.</param>
@@ -1699,9 +1729,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     {
         // A refusal or a cancelled Turn is not a successful reply, even if some text arrived
         // before the stop: neither is fit to post into the Room.
+        // A reply that is the silent token, or ends with it, loses the token first; what is left decides
+        // whether there is anything to post.
+        string replyText = SilentReply.Strip(outcome.Text);
         var isPostable = outcome.Reason is not (StopReason.Refusal or StopReason.Cancelled)
-            && !string.IsNullOrWhiteSpace(outcome.Text);
-        string? postText = isPostable ? outcome.Text : null;
+            && !string.IsNullOrWhiteSpace(replyText);
+        string? postText = isPostable ? replyText : null;
 
         // An Adapter's /compact replies with no text at all, so a command that said nothing is
         // reported by a fixed line built from its tool output. Without it the Room could not tell a
@@ -2257,6 +2290,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private async Task AppendAndPublishDeltaAsync(string text, CancellationToken ct)
     {
         ActiveTurn? turn;
+        string streamable;
         lock (this.gate)
         {
             turn = this.activeTurn;
@@ -2266,18 +2300,26 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             }
 
             turn.Text.Append(text);
+
+            // The tail that could still become the silent token is held back; the rest streams as written.
+            // Only the part not yet streamed is looked at, so a long reply is not copied again for every chunk.
+            int streamed = turn.StreamedLength;
+            string pending = turn.Text.ToString(streamed, turn.Text.Length - streamed);
+            int safe = SilentReply.SafeLength(pending);
+            streamable = pending[..safe];
+            turn.StreamedLength = streamed + safe;
         }
 
-        // DeltaWriteFailed and the write below are touched only from this single-threaded event
-        // reader loop, so no lock is needed to read or set it here.
-        if (turn.DeltaWriteFailed)
+        // DeltaWriteFailed is volatile, because ReleaseHeldTailAsync sets it from the run task as well;
+        // the write below needs no lock, as only this reader loop streams while the Turn runs.
+        if (turn.DeltaWriteFailed || streamable.Length == 0)
         {
             return;
         }
 
         try
         {
-            await this.owner.WriteAsync(new MessageDelta(turn.RoomId, turn.MessageId, text, IsFinal: false), ct).ConfigureAwait(false);
+            await this.owner.WriteAsync(new MessageDelta(turn.RoomId, turn.MessageId, streamable, IsFinal: false), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
@@ -3026,9 +3068,22 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         /// <summary>
         /// Whether a <see cref="MessageDelta"/> write has already failed for this Turn. Set once a
         /// write throws, so a dead pipe is logged at most once per Turn rather than once per chunk.
-        /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
+        /// Written by the event-reader loop and, at the Turn's end, by the run task that releases the held tail,
+        /// so every access goes through <see cref="Volatile"/> and one thread's failure is seen by the other.
         /// </summary>
-        public bool DeltaWriteFailed { get; set; }
+        public bool DeltaWriteFailed
+        {
+            get => Volatile.Read(ref this.deltaWriteFailed);
+            set => Volatile.Write(ref this.deltaWriteFailed, value);
+        }
+
+        private bool deltaWriteFailed;
+
+        /// <summary>
+        /// How many characters of <see cref="Text"/> have been sent to the page. The tail that could still be the
+        /// silent token is not, so this runs behind the text until the Turn ends. Read and written under the session's gate.
+        /// </summary>
+        public int StreamedLength { get; set; }
 
         /// <summary>
         /// The last tool output of this Turn that was a JSON object, which is where an Adapter command

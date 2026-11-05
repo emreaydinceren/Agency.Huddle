@@ -33,7 +33,8 @@ internal sealed record ProbeRun(IReadOnlyList<LoggedCall> Calls, string Reply, I
 /// <param name="Failure">The reason a run failed, or <see langword="null"/> when it passed.</param>
 /// <param name="MinPasses">How many of the runs must pass.</param>
 /// <param name="GuardsOtherLogging">Whether a run also fails when the Agent logged some other way (spec §10, <i>A run that logs some other way fails</i>).</param>
-internal sealed record ProbeScenario(string Id, string Prompt, Action<string> Seed, Func<ProbeRun, string?> Failure, int MinPasses, bool GuardsOtherLogging)
+/// <param name="Reviewer">Whether the Agent has a role that covers verify, so its Stop hook also reminds it after a Turn that only read a file (#354).</param>
+internal sealed record ProbeScenario(string Id, string Prompt, Action<string> Seed, Func<ProbeRun, string?> Failure, int MinPasses, bool GuardsOtherLogging, bool Reviewer = false)
 {
     private static readonly Regex ClaimsToHaveLogged = new(@"\b(logged|recorded)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 

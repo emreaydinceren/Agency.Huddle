@@ -99,9 +99,10 @@ internal sealed class LiveAgentLane : IAsyncDisposable
     /// <summary>Runs one Turn in a fresh session whose working folder is <paramref name="workDirectory"/>.</summary>
     /// <param name="workDirectory">An existing absolute folder.</param>
     /// <param name="prompt">The user's message.</param>
+    /// <param name="remindReads">Whether the Agent plays a reviewer, whose Stop hook also reminds it after a Turn that only read a file, as for a role that covers verify.</param>
     /// <param name="cancellationToken">Cancels the Turn.</param>
     /// <returns>The reply and the usage the Adapter reported.</returns>
-    public async Task<LiveTurn> RunAsync(string workDirectory, string prompt, CancellationToken cancellationToken)
+    public async Task<LiveTurn> RunAsync(string workDirectory, string prompt, bool remindReads, CancellationToken cancellationToken)
     {
         string names = string.Join(", ", this.toolServer.ToolNames.Select(static name => $"mcp__team__{name}"));
         // The same paragraph the app adds to a real Persona's prompt when it offers the tool (DocHistory spec section 10).
@@ -114,7 +115,7 @@ internal sealed class LiveAgentLane : IAsyncDisposable
         // What the app does when it starts a Persona that is offered the tool: put the Stop hook in the Work Dir first.
         if (this.toolServer.ToolNames.Contains("log_change", StringComparer.Ordinal))
         {
-            DocHistoryStopHook.Install(workDirectory, Path.Combine(Path.GetTempPath(), "dochistory-live-hooks"), "mcp__team__log_change", NullLogger.Instance);
+            DocHistoryStopHook.Install(workDirectory, Path.Combine(Path.GetTempPath(), "dochistory-live-hooks"), "mcp__team__log_change", NullLogger.Instance, remindReads);
         }
 
         Stopwatch clock = Stopwatch.StartNew();
