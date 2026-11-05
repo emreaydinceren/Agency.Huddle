@@ -1,5 +1,7 @@
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Files;
 using System.Globalization;
+using System.Runtime.Versioning;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 using Microsoft.Extensions.Logging;
@@ -298,6 +300,35 @@ public sealed class TaskStoreTests
         });
 
         Assert.Null(exception);
+    }
+
+    /// <summary>
+    /// A Task file that denies reading, as one being deleted does on Windows, is rejected on a rescan. It used to throw out of the debounce
+    /// timer and end the process, because only an <see cref="IOException"/> was caught.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void RebuildFromWatcher_FileDeniesReading_RejectedNotThrown()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("A deny rule on a file is how this test makes it unreadable, and it is Windows-only.");
+            return;
+        }
+
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        using (DeniedAccess.ToFile(path))
+        {
+            store.RebuildFromWatcher();
+
+            Assert.Empty(store.All);
+            Assert.Equal(path, Assert.Single(store.RejectedFiles).Path);
+        }
     }
 
     /// <summary>Looking up an id no file carries returns null rather than throwing.</summary>
