@@ -89,6 +89,64 @@ public sealed class FeedStartupReconciliationTests
         Assert.Equal(new FeedResolution(moved.Id.ToString(), FeedSourceType.GateDecisionDue), Assert.Single(recorder.Resolutions));
     }
 
+    /// <summary>
+    /// #353: after a restart the "wake-ups paused" Notification stays while its Task is open and its Agent exists, and closes for a Done,
+    /// closed or deleted Task or a deleted Agent. Nothing is posted, and only the Notifications that stay are handed back to the wake service.
+    /// </summary>
+    [Fact]
+    public async Task Tasks_WakesPaused_StaysOnlyWhileTheTaskAndAgentAreStillThere()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using FeedHarness harness = new();
+        using TaskToolHarness tasks = new();
+        TaskActor actor = TaskActors.Human(tasks.Options.Value);
+        TaskItem open = Assert.IsType<TaskResult.Saved>(tasks.Service.Create(new TaskDraft("Open", "Platform", null), actor)).Task;
+        TaskItem done = Assert.IsType<TaskResult.Saved>(tasks.Service.Create(new TaskDraft("Done", "Platform", null), actor)).Task;
+        TaskItem orphaned = Assert.IsType<TaskResult.Saved>(tasks.Service.Create(new TaskDraft("Orphaned", "Platform", null), actor)).Task;
+        _ = Assert.IsType<TaskResult.Saved>(tasks.Service.Update(done.Id, new TaskPatch { Status = TaskState.Done }, null, actor, humanOverridesGates: true));
+        await harness.Writer.StartAsync(ct);
+        harness.Queue.Post(Paused(open.Id.ToString(), "Nova"));
+        harness.Queue.Post(Paused(done.Id.ToString(), "Nova"));
+        harness.Queue.Post(Paused(orphaned.Id.ToString(), "Gone"));
+        harness.Queue.Post(Paused("PLAT-9999", "Nova"));
+        await harness.DrainAsync(ct);
+        await harness.Writer.StopAsync(ct);
+        RecordingFeedPublisher recorder = new();
+        RecordingPauses pauses = new("Nova");
+        TaskFeedStartup startup = new(harness.Store, tasks.Store, recorder, new NoConfirmers(), new ConfiguredHumanIdentity(tasks.Options.Value.HumanName), NullLogger<TaskFeedStartup>.Instance, pauses);
+
+        startup.Reconcile();
+
+        Assert.Equal(open.Id, Assert.Single(pauses.Restored));
+        Assert.Equal(3, recorder.Resolutions.Count);
+        Assert.Contains(new FeedResolution(done.Id.ToString(), FeedSourceType.TaskWakesPaused), recorder.Resolutions);
+        Assert.Contains(new FeedResolution(orphaned.Id.ToString(), FeedSourceType.TaskWakesPaused), recorder.Resolutions);
+        Assert.Contains(new FeedResolution("PLAT-9999", FeedSourceType.TaskWakesPaused), recorder.Resolutions);
+        Assert.Empty(recorder.Posts);
+    }
+
+    private static FeedMessage Paused(string id, string waiting) =>
+        new(FeedSourceType.TaskWakesPaused, id, FeedActor.Huddle, true, new TaskWakesPausedPayload(id, "T", "Platform", waiting));
+
+    /// <summary>A wake service stand-in that knows the named Agents and records which Tasks it was told were paused.</summary>
+    private sealed class RecordingPauses(params string[] agents) : IWakePauses
+    {
+        /// <summary>The Tasks whose pause was restored.</summary>
+        public List<TaskId> Restored { get; } = [];
+
+        /// <inheritdoc />
+        public bool AgentExists(string name) => agents.Contains(name, StringComparer.OrdinalIgnoreCase);
+
+        /// <inheritdoc />
+        public void RestorePaused(TaskId id) => this.Restored.Add(id);
+
+        /// <inheritdoc />
+        public bool IsHeld(TaskId id) => false;
+
+        /// <inheritdoc />
+        public Task<string?> WakeAsync(TaskId id, string waiting, CancellationToken ct) => Task.FromResult<string?>(null);
+    }
+
     private static FeedMessage Decision(string id, string fromStatus) =>
         new(FeedSourceType.GateDecisionDue, id, FeedTestSupport.Agent(), true, new GateDecisionPayload(id, "T", "Platform", "g", "m", fromStatus, TaskState.Done.ToWire()));
 

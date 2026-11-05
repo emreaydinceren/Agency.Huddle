@@ -26,8 +26,66 @@ namespace Agency.Huddle.App.Tasks;
 /// the same Task must not interleave their budget and Room decisions (corrections-B3 D9 items 7-9).
 /// </para>
 /// </summary>
-internal sealed partial class TaskTriggerService : IHostedService, IDisposable
+internal sealed partial class TaskTriggerService : IHostedService, IDisposable, IWakePauses
 {
+    /// <inheritdoc />
+    public bool AgentExists(string name) => this.personas.Get(name) is not null;
+
+    /// <inheritdoc />
+    public void RestorePaused(TaskId id)
+    {
+        lock (this.gate)
+        {
+            _ = this.pausedOpen.Add(id);
+        }
+    }
+
+    /// <inheritdoc />
+    public bool IsHeld(TaskId id)
+    {
+        lock (this.gate)
+        {
+            return this.heldWakes.Keys.Any(key => key.TaskId == id);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> WakeAsync(TaskId id, string waiting, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(waiting);
+
+        bool open;
+        lock (this.gate)
+        {
+            open = this.pausedOpen.Contains(id) && !this.heldWakes.Keys.Any(key => key.TaskId == id);
+        }
+
+        TaskItem? task = open ? this.store.Get(id) : null;
+        if (task is null || task.Status == TaskState.Done || task.Location.Closed)
+        {
+            return null;
+        }
+
+        string recipient = string.IsNullOrWhiteSpace(task.Assignee) ? waiting : task.Assignee;
+        Dictionary<string, string> values = new(StringComparer.Ordinal)
+        {
+            ["{{taskId}}"] = id.ToString(),
+            ["{{title}}"] = NeutraliseMentions(task.Title),
+        };
+        string summary = this.prompts.Render(RestartMessageKey, values);
+        bool posted = await this.WakeForRequestAsync(task, recipient, TaskActors.Human(this.human), summary, ct).ConfigureAwait(false);
+        if (!posted)
+        {
+            return null;
+        }
+
+        this.ForgetHeld(id);
+        return recipient;
+    }
+
+    /// <summary>The Prompt the Wake button's change line is rendered from (#353).</summary>
+    private const string RestartMessageKey = "task.wake.restart";
+
     /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
     private const string WakeMessageKey = "task.wake.message";
 
@@ -950,8 +1008,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         this.RecordOutcome(id, assigneeName, room, outcome);
         if (outcome == WakeOutcome.BudgetSpent)
         {
-            // The Room's Continue already asks the Human (a Budget Notification), and re-delivers only the Room's last Message.
+            // The Room's Budget card asks the Human to Continue, but only for the Room's last Message; this Notification says a hand-off waits too.
             this.Hold(batch, latest, assigneeName, room.Id);
+            this.NotifyPaused(latest, assigneeName, room.Id);
         }
 
         return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
@@ -964,6 +1023,15 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private void HoldForWakeBudget(Batch batch, TaskItem latest, string name)
     {
         this.Hold(batch, latest, name, null);
+        this.NotifyPaused(latest, name, null);
+    }
+
+    /// <summary>Tells the Human a hand-off waits, once per Task while a pause Notification is open.</summary>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="name">The Agent the hand-off is for.</param>
+    /// <param name="roomId">The paused Room that refused it, or <see langword="null"/> when the Task's wake budget did.</param>
+    private void NotifyPaused(TaskItem latest, string name, string? roomId)
+    {
         bool first;
         lock (this.gate)
         {
@@ -973,7 +1041,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         if (first)
         {
             string id = latest.Id.ToString();
-            this.feed?.Post(new FeedMessage(FeedSourceType.TaskWakesPaused, id, FeedActor.Huddle, true, new TaskWakesPausedPayload(id, latest.Title, latest.Location.Team, name)));
+            this.feed?.Post(new FeedMessage(FeedSourceType.TaskWakesPaused, id, FeedActor.Huddle, true, new TaskWakesPausedPayload(id, latest.Title, latest.Location.Team, name, roomId)));
         }
     }
 
@@ -1067,6 +1135,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private void ReleaseHeld(Func<HeldWake, bool> due)
     {
         List<HeldWake> released;
+        List<TaskId> closed = [];
         lock (this.gate)
         {
             if (this.stopped || this.heldWakes.Count == 0)
@@ -1079,6 +1148,20 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             {
                 _ = this.heldWakes.Remove((held.TaskId, held.Name));
             }
+
+            // A pause Notification closes once nothing for its Task is still held, so Continue closes the one a paused Room posted.
+            foreach (HeldWake held in released)
+            {
+                if (!this.heldWakes.Keys.Any(key => key.TaskId == held.TaskId) && this.pausedOpen.Remove(held.TaskId))
+                {
+                    closed.Add(held.TaskId);
+                }
+            }
+        }
+
+        foreach (TaskId id in closed)
+        {
+            this.feed?.Resolve(id.ToString(), FeedSourceType.TaskWakesPaused);
         }
 
         if (released.Count == 0)

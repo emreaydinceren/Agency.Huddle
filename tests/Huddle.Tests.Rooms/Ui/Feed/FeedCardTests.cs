@@ -443,6 +443,74 @@ public sealed class FeedCardTests
         Assert.Empty(activity.FindAll(".feed-btn-review"));
     }
 
+    private static FeedItem WakesPausedItem(string waiting = "Nova", bool resolved = false) =>
+        FeedTestData.Item(
+            FeedSourceType.TaskWakesPaused,
+            new TaskWakesPausedPayload("GRO-1", "Draft the pricing page", "Growth", waiting),
+            notify: true,
+            at: Now.AddMinutes(-20),
+            resolved: resolved ? Now.AddMinutes(-5) : null) with { TargetKey = "GRO-1" };
+
+    /// <summary>#353: Wake {Agent} shows only on an open pause Notification whose hand-off is no longer held, and a press wakes that Agent once.</summary>
+    [Fact]
+    public async Task Buttons_WakeAgent_OnlyWhenNothingIsHeld_AndWakesOnce()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        _ = host.SeedTask("GRO-1");
+        await using MudBunitContext ctx = host.NewContext();
+        FakeWakePauses pauses = new();
+        ctx.Services.AddSingleton<IWakePauses>(pauses);
+
+        pauses.Held = true;
+        IRenderedComponent<FeedCard> held = Render(ctx, WakesPausedItem(), expanded: true);
+        pauses.Held = false;
+        IRenderedComponent<FeedCard> lost = Render(ctx, WakesPausedItem(), expanded: true);
+        IRenderedComponent<FeedCard> closed = Render(ctx, WakesPausedItem(resolved: true), expanded: true);
+        lost.Find(".feed-btn-wake").Click();
+
+        Assert.Empty(held.FindAll(".feed-btn-wake"));
+        Assert.Empty(closed.FindAll(".feed-btn-wake"));
+        Assert.Equal("Wake Nova", Words(lost.Find(".feed-btn-wake").TextContent));
+        Assert.Equal([("GRO-0001", "Nova")], pauses.Woken);
+    }
+
+    /// <summary>#353: when the Task now belongs to someone else, the button names the current assignee and the card says so.</summary>
+    [Fact]
+    public async Task Buttons_WakeAgent_TaskReassigned_NamesTheCurrentAssignee()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        _ = host.SeedTask("GRO-1", assignee: "Kai");
+        await using MudBunitContext ctx = host.NewContext();
+        ctx.Services.AddSingleton<IWakePauses>(new FakeWakePauses());
+
+        IRenderedComponent<FeedCard> card = Render(ctx, WakesPausedItem(), expanded: true);
+
+        Assert.Equal("Wake Kai", Words(card.Find(".feed-btn-wake").TextContent));
+        Assert.Equal("Nova no longer has this Task. It is now assigned to Kai, so Wake starts Kai.", Words(card.Find(".feed-wake-note").TextContent));
+    }
+
+    /// <summary>Stands in for the wake service: whether a hand-off is held, and the Wakes it was asked for.</summary>
+    private sealed class FakeWakePauses : IWakePauses
+    {
+        public bool Held { get; set; }
+
+        public List<(string Task, string Waiting)> Woken { get; } = [];
+
+        public bool AgentExists(string name) => true;
+
+        public void RestorePaused(TaskId id)
+        {
+        }
+
+        public bool IsHeld(TaskId id) => this.Held;
+
+        public Task<string?> WakeAsync(TaskId id, string waiting, CancellationToken ct)
+        {
+            this.Woken.Add((id.ToString(), waiting));
+            return Task.FromResult<string?>(waiting);
+        }
+    }
+
     /// <summary>"Open Task" and the origin Room's "Open Room" open their pages.</summary>
     [Fact]
     public async Task Buttons_Task_OpenTaskAndOriginRoom()

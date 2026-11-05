@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
 /// Resolves, once at startup, the Task Notifications whose condition ended while Huddle was stopped (Feed spec §6.10):
-/// a Task file edited by hand, a Task accepted or moved on elsewhere. It only calls <c>Resolve</c>; nothing is posted.
+/// a Task file edited by hand, a Task accepted or moved on elsewhere. It only calls <c>Resolve</c>; nothing is posted and no Agent is woken.
 /// </summary>
 internal sealed class TaskFeedStartup(
     FeedStore feedStore,
@@ -13,7 +13,8 @@ internal sealed class TaskFeedStartup(
     IFeedPublisher feed,
     IRequestConfirmers confirmers,
     IHumanIdentity human,
-    ILogger<TaskFeedStartup> logger) : BackgroundService
+    ILogger<TaskFeedStartup> logger,
+    IWakePauses? pauses = null) : BackgroundService
 {
     /// <summary>The Notification types that have a resolution rule.</summary>
     private static readonly FeedSourceType[] ResolvableTypes =
@@ -24,7 +25,8 @@ internal sealed class TaskFeedStartup(
         FeedSourceType.RequestAwaitsYou,
         FeedSourceType.GateDecisionDue,
 
-        // A wake budget is in memory and starts fresh, so TaskFeedRules.Holds says a pause from before the restart is over.
+        // The hand-off and the wake budget are in memory and start fresh, but the Notification is saved and stays while the Task is open and its Agent exists:
+        // it is how the Human learns the hand-off was lost. Reconcile hands each one that stays back to the wake service, which delivers nothing.
         FeedSourceType.TaskWakesPaused,
     ];
 
@@ -48,14 +50,20 @@ internal sealed class TaskFeedStartup(
     internal void Reconcile()
     {
         string humanName = human.Name;
+        Func<string, bool>? agentExists = pauses is null ? null : pauses.AgentExists;
         foreach (FeedSourceType type in ResolvableTypes)
         {
             foreach (FeedItem item in feedStore.Unresolved(type))
             {
                 TaskItem? task = TaskId.TryParse(item.TargetKey, out TaskId id) ? tasks.Get(id) : null;
-                if (task is null || !TaskFeedRules.Holds(type, task, humanName, confirmers.TeamHasConfirmer, item.Payload))
+                if (task is null || !TaskFeedRules.Holds(type, task, humanName, confirmers.TeamHasConfirmer, item.Payload, agentExists))
                 {
                     feed.Resolve(item.TargetKey, type);
+                }
+                else if (type == FeedSourceType.TaskWakesPaused)
+                {
+                    // Only remembers the pause is open, so a later Human change or Allow more closes it. Nothing is delivered and no Agent wakes.
+                    pauses?.RestorePaused(id);
                 }
             }
         }

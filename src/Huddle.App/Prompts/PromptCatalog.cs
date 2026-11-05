@@ -75,6 +75,7 @@ internal static class PromptCatalog
         ..BuildPart29(),
         ..BuildPart30(),
         ..BuildPart31(),
+        ..BuildPartWakeRestart(),
         ..BuildPart32(),
         ..BuildPart33(),
         ..BuildPart34(),
@@ -1632,6 +1633,25 @@ internal static class PromptCatalog
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession,
             ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
+    ];
+
+    /// <summary>Builds the <c>task.wake.restart</c> definition, the change line the Wake button on a pause Notification sends (#353).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPartWakeRestart() =>
+    [
+        new PromptDefinition(
+            Key: "task.wake.restart",
+            Label: "Task wake-up after a restart",
+            HelperText:
+                "The change line listed in the wake-up message when the Human presses Wake on a " +
+                "Notification about a hand-off that was lost when Huddle restarted.",
+            Default:
+                """
+                Task {{taskId}} "{{title}}" is waiting on you; a hand-off was lost when Huddle restarted. Call get_task with taskId {{taskId}} for the full task.
+                """,
+            Placeholders: ["{{taskId}}", "{{title}}"],
+            RequiredPlaceholders: ["{{taskId}}"],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>task.wake.message</c> to <c>tool.getTask.description</c>.</summary>

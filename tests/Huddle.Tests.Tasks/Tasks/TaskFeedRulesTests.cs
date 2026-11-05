@@ -299,6 +299,22 @@ public sealed class TaskFeedRulesTests
         Assert.False(TaskFeedRules.Holds(FeedSourceType.RequestAwaitsYou, Task(TaskState.Done, extra: RequestFrom("Design")), HumanName, HasConfirmer, null));
     }
 
+    /// <summary>
+    /// #353: a "wake-ups paused" Notification holds across a restart while the Task is open and the Agent it waits on exists;
+    /// it ends for a Task that is Done or closed, and for an Agent that no longer exists.
+    /// </summary>
+    [Fact]
+    public void Holds_TaskWakesPaused_HoldsWhileTheTaskIsOpenAndTheAgentExists()
+    {
+        TaskWakesPausedPayload paused = new("PLAT-0001", "Fix footer", "Platform", "Nova");
+        TaskItem open = Task(TaskState.InProgress, assignee: "Nova");
+
+        Assert.True(TaskFeedRules.Holds(FeedSourceType.TaskWakesPaused, open, HumanName, NoConfirmer, paused, static name => name == "Nova"));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskWakesPaused, open with { Status = TaskState.Done }, HumanName, NoConfirmer, paused, static _ => true));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskWakesPaused, open with { Location = open.Location with { Closed = true } }, HumanName, NoConfirmer, paused, static _ => true));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskWakesPaused, open, HumanName, NoConfirmer, paused, static _ => false));
+    }
+
     /// <summary>When the Helper's gate-on lands in the same change that makes the Task wait in Needs You, the Needs You Notification carries the ask and the gate-on is Activity with the reason, never a Notification born resolved.</summary>
     [Fact]
     public void For_HelperGateOnThatLandsInNeedsYou_IsActivityAndNotResolvedInTheSameBreath()
