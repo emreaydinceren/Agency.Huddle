@@ -132,7 +132,7 @@ public sealed class TaskTriggerNeedsYouMoveTests
 
         harness.Events.RaiseTaskChanged(new TaskChange(
             waiting,
-            waiting,
+            waiting with { Status = TaskState.Done },
             [new FieldChange(TaskField.Status, "Needs You", "Done")],
             arrangement.Cast.NovaActor,
             new ChangeLogEntry(harness.Clock.GetUtcNow(), "Nova", "status: Needs You → Done")));
@@ -140,6 +140,8 @@ public sealed class TaskTriggerNeedsYouMoveTests
         await harness.Trigger.WhenIdleAsync();
 
         string post = Assert.Single(harness.Posts).Message.Text;
-        Assert.Equal("Mia|PLAT-0001|Nova|- status: Needs You → Done", post);
+        Assert.Equal(
+            "Mia|PLAT-0001|Nova|- status: Needs You → Done\nPLAT-0001 is a Request and it is now Done. It waits for your Team to confirm it. Only a verifier on your Team can call confirm_request; yours: nobody yet, so the Human closes it. If that is you, check it and confirm it. If not, ask them to.",
+            post);
     }
 }

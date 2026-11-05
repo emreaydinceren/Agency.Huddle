@@ -1193,7 +1193,7 @@ internal sealed class TaskService : IDisposable
     private const string LeaveBacklogRefusal = "A Request leaves Backlog only when its receiving manager accepts or declines it with triage_request.";
 
     /// <summary>Refusal for an agent closing a Request nobody confirmed.</summary>
-    private const string CloseRequestRefusal = "A Request closes only after the requesting Team's QA confirms it with confirm_request.";
+    private const string CloseRequestRefusal = "A Request closes only after the requesting Team's verifier confirms it with confirm_request, and that needs it in Done. Done is not closed: if it isn't Done yet, move it to Done with update_task, then ask them to confirm.";
 
     /// <summary>Reads the Request fields of a Task.</summary>
     /// <param name="task">The Task.</param>

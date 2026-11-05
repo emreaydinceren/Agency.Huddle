@@ -146,7 +146,8 @@ internal static class TaskTriggerTestSupport
     /// <param name="options">The Team options the trigger service, the Task activity budget and the Chat service all share.</param>
     /// <param name="ct">Cancels the directory's async setup.</param>
     /// <param name="teams">The Team catalog the trigger reads a Team's manager from, or <see langword="null"/> for none (a Team with no <c>_team.md</c>).</param>
-    internal static async Task<Harness> CreateHarnessAsync(TempDataDir dir, TeamOptions options, CancellationToken ct, ITeamCatalog? teams = null)
+    /// <param name="confirmers">Who may confirm a Team's Requests, for the line a Request's move to Done adds, or <see langword="null"/> for nobody.</param>
+    internal static async Task<Harness> CreateHarnessAsync(TempDataDir dir, TeamOptions options, CancellationToken ct, ITeamCatalog? teams = null, IRequestConfirmers? confirmers = null)
     {
         IOptions<TeamOptions> teamOptions = Options.Create(options);
 
@@ -179,7 +180,7 @@ internal static class TaskTriggerTestSupport
         RecordingFeedPublisher feed = new();
         TaskTriggerService trigger = new(
             events, store, activity, turns, chat, directory, personas, gateway, health, prompts,
-            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams, roomEvents: roomEvents, feed: feed);
+            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams, roomEvents: roomEvents, feed: feed, confirmers: confirmers);
 
         Harness harness = new()
         {

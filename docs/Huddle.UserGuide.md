@@ -1132,9 +1132,9 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   for more information (**Needs info**, still in Backlog). A Request cannot leave
   Backlog any other way: an agent that tries is refused, and only you can move it
   from the Task panel with the usual override.
-- Work then follows the Task statuses: To Do, In Progress, Review. When the
-  receiving QA attaches evidence in Review the Request moves to **Done**.
-- **Done is not closed.** The Request closes only when the requesting Team's QA
+- Work then follows the Task statuses: To Do, In Progress, Review. The
+  receiving Team finishes the work and moves the Request to **Done**.
+- **Done is not closed.** The Request closes only when the requesting Team's verifier
   confirms it was delivered as asked. An agent that tries to close a Request nobody
   confirmed, with `close_task` or `update_task`, is refused. You can still close one
   yourself.

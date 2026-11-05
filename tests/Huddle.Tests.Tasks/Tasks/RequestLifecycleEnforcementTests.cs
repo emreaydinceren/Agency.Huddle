@@ -10,7 +10,7 @@ namespace Agency.Huddle.Tests.Tasks;
 public sealed class RequestLifecycleEnforcementTests
 {
     private const string LeaveBacklogRefusal = "A Request leaves Backlog only when its receiving manager accepts or declines it with triage_request.";
-    private const string CloseRefusal = "A Request closes only after the requesting Team's QA confirms it with confirm_request.";
+    private const string CloseRefusal = "A Request closes only after the requesting Team's verifier confirms it with confirm_request, and that needs it in Done. Done is not closed: if it isn't Done yet, move it to Done with update_task, then ask them to confirm.";
 
     /// <summary>Request frontmatter filed by Design's Dana.</summary>
     private static List<KeyValuePair<string, string>> Pairs(TriageState triage = TriageState.None, string confirmedBy = "") =>

@@ -73,9 +73,10 @@ public sealed class RequestTriageToolsTests
         /// <param name="id">The Task id.</param>
         /// <param name="status">The status.</param>
         /// <param name="pairs">The extra frontmatter fields.</param>
-        public void Seed(string id, TaskState status, List<KeyValuePair<string, string>> pairs)
+        /// <param name="assignee">The assignee, or <see langword="null"/> for none.</param>
+        public void Seed(string id, TaskState status, List<KeyValuePair<string, string>> pairs, string? assignee = null)
         {
-            TaskItem task = TestTasks.Make(id: id, status: status, description: "Body", location: new TaskLocation("Platform", null, false), unknownFields: pairs);
+            TaskItem task = TestTasks.Make(id: id, status: status, assignee: assignee, description: "Body", location: new TaskLocation("Platform", null, false), unknownFields: pairs);
             TaskItem toWrite = task with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, task.Location, task.Id) };
             _ = this.Harness.Store.Create(toWrite, TaskFileFormat.Compose(toWrite)) ?? throw new InvalidOperationException("Fixture collided with an existing file.");
         }
@@ -105,7 +106,8 @@ public sealed class RequestTriageToolsTests
     /// <param name="ct">Cancels the setup.</param>
     /// <param name="status">The seeded Request's status.</param>
     /// <param name="triage">The seeded Request's triage state.</param>
-    private static async Task<Scene> CreateSceneAsync(CancellationToken ct, TaskState status = TaskState.Backlog, TriageState triage = TriageState.None)
+    /// <param name="assignee">The assignee of a Request past Backlog; a Backlog Request has none.</param>
+    private static async Task<Scene> CreateSceneAsync(CancellationToken ct, TaskState status = TaskState.Backlog, TriageState triage = TriageState.None, string? assignee = "Kai")
     {
         TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.Personas.Add(new PersonaIdentity("Dana", "Dana", "Dana", ["Design"]), "You are Dana.");
@@ -121,7 +123,7 @@ public sealed class RequestTriageToolsTests
             scene.Ids[name] = user?.Id ?? throw new InvalidOperationException("Directory refused a user.");
         }
 
-        scene.Seed(TaskId, status, RequestPairs(triage));
+        scene.Seed(TaskId, status, RequestPairs(triage), status == TaskState.Backlog ? null : assignee);
         return scene;
     }
 
@@ -334,9 +336,35 @@ public sealed class RequestTriageToolsTests
 
         string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId }, ct);
 
-        Assert.Equal("A Request in Review (triage Accepted) cannot take the Confirm event.", result);
+        Assert.Equal("A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, Kai, to move it to Done.", result);
         Assert.False(scene.Current().Location.Closed);
         Assert.Empty(scene.Notifier.Calls);
+    }
+
+    /// <summary>#350: the first-run case. A Request waiting in Needs You is refused with its status and its assignee's name, and nothing changes.</summary>
+    [Fact]
+    public async Task Confirm_NeedsYou_NamesStatusAndAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct, TaskState.NeedsYou, TriageState.Accepted);
+
+        string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId }, ct);
+
+        Assert.Equal("A Request can be confirmed once it is in Done. This one is in Needs You. Ask its assignee, Kai, to move it to Done.", result);
+        Assert.False(scene.Current().Location.Closed);
+        Assert.Empty(scene.Notifier.Calls);
+    }
+
+    /// <summary>#350: a Request with no assignee is refused with the lifecycle's text and no invented name.</summary>
+    [Fact]
+    public async Task Confirm_NotDoneNoAssignee_UsesGenericAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct, TaskState.Review, TriageState.Accepted, assignee: null);
+
+        string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId }, ct);
+
+        Assert.Equal("A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee to move it to Done.", result);
     }
 
     /// <summary>A plain Task cannot be confirmed.</summary>

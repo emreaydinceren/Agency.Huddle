@@ -89,6 +89,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
     private const string WakeMessageKey = "task.wake.message";
 
+    /// <summary>The Prompt key of the line added when a Request reaches Done (#350).</summary>
+    private const string RequestDoneKey = "task.wake.requestDone";
+
     /// <summary>More outside-edit changes than this within one coalesce window are logged, not woken (corrections-B3 D9 item 18).</summary>
     private const int MaxOutsideEditsPerWindow = 10;
 
@@ -139,6 +142,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     private readonly HashSet<TaskId> pausedOpen = [];
     private readonly RoomEvents? roomEvents;
     private readonly IFeedPublisher? feed;
+
+    /// <summary>Says who on a Team may confirm its Requests, for the line that names them (#350); <see langword="null"/> names nobody.</summary>
+    private readonly IRequestConfirmers? confirmers;
     private OutsideWindow? outsideWindow;
     private bool subscribed;
     private bool stopped;
@@ -163,6 +169,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="human">The Human's live identity, whose Name or Alias is never woken (guard 3); <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="roomEvents">Says when a paused Room can take Messages again, which delivers the hand-offs it refused; <see langword="null"/> leaves them waiting for the next change.</param>
     /// <param name="feed">Tells the Human a Task's wake-ups are paused; <see langword="null"/> shows that on the Task only.</param>
+    /// <param name="confirmers">Names the Team members who may confirm a Request, for the line a Request's move to Done adds; <see langword="null"/> names nobody.</param>
     public TaskTriggerService(
         TaskEvents events,
         TaskStore store,
@@ -181,7 +188,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         ITeamCatalog? teams = null,
         IHumanIdentity? human = null,
         RoomEvents? roomEvents = null,
-        IFeedPublisher? feed = null)
+        IFeedPublisher? feed = null,
+        IRequestConfirmers? confirmers = null)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(store);
@@ -216,6 +224,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
         this.roomEvents = roomEvents;
         this.feed = feed;
+        this.confirmers = confirmers;
     }
 
     /// <summary>
@@ -493,6 +502,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             if (change.Changes.Any(static field => field.Field == TaskField.Status))
             {
                 batch.StatusChanged = true;
+
+                // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
+                batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
             }
 
             if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
@@ -1254,11 +1266,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         bool counted = false;
         try
         {
-            string text = this.Render(latest, actor, assigneeName, batch.Entries);
-            if (DecisionSentence(latest, batch.Decision, batch.Note) is { } sentence)
-            {
-                text = text + "\n" + sentence;
-            }
+            string text = this.WakeText(batch, latest, assigneeName);
 
             if (string.Equals(senderId, KnownIds.Huddle, StringComparison.Ordinal))
             {
@@ -1475,6 +1483,74 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
+    /// <summary>Renders the wake text for one recipient: the Task wake, then the Human's decision sentence and the Request confirm line when they apply.</summary>
+    /// <param name="batch">The batch being delivered.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="assigneeName">The Name being woken.</param>
+    /// <returns>The Message text.</returns>
+    private string WakeText(Batch batch, TaskItem latest, string assigneeName)
+    {
+        string text = this.Render(latest, batch.Actor, assigneeName, batch.Entries);
+        if (DecisionSentence(latest, batch.Decision, batch.Note) is { } sentence)
+        {
+            text = text + "\n" + sentence;
+        }
+
+        return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
+    }
+
+    /// <summary>
+    /// #350: the line that tells the requesting Team's manager a Request has reached Done and waits for their Team to confirm it.
+    /// It goes to that manager whichever wake reaches them (the requesting-manager wake, or the assignee or manager wake when
+    /// they are also that person), and only when this batch moved the Request into Done.
+    /// </summary>
+    /// <param name="batch">The batch being delivered.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="recipient">The Name being woken.</param>
+    /// <returns>The rendered line, or <see langword="null"/> for any other wake.</returns>
+    private string? ConfirmLine(Batch batch, TaskItem latest, string recipient)
+    {
+        if (!batch.MovedToDone)
+        {
+            return null;
+        }
+
+        Dictionary<string, string> frontmatter = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> field in latest.UnknownFields)
+        {
+            frontmatter[field.Key] = field.Value;
+        }
+
+        if (!RequestFields.TryRead(frontmatter, out RequestFields? request) || request is null)
+        {
+            return null;
+        }
+
+        string? manager = this.teams?.Find(request.FromTeam)?.Manager;
+        if (string.IsNullOrEmpty(manager) || !string.Equals(manager, recipient, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return this.prompts.Render(
+            RequestDoneKey,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["{{taskId}}"] = latest.Id.ToString(),
+                ["{{verifiers}}"] = this.VerifierNames(request.FromTeam),
+            });
+    }
+
+    /// <summary>Names the members of a Team who may confirm its Requests, so a manager who is not one can pass the Request on.</summary>
+    /// <param name="team">The requesting Team.</param>
+    /// <returns>The names joined with commas, or a sentence fragment saying nobody can when the Team has no verifier.</returns>
+    private string VerifierNames(string team)
+    {
+        IReadOnlyList<string> members = this.teams?.Find(team)?.Members ?? [];
+        string[] verifiers = this.confirmers is null ? [] : [.. members.Where(member => this.confirmers.IsVerifierOf(team, member))];
+        return verifiers.Length == 0 ? "nobody yet, so the Human closes it" : string.Join(", ", verifiers);
+    }
+
     /// <summary>Renders <c>task.wake.message</c> (Spec §10.5) for the latest Task and the batch's summaries, neutralising Mentions in the title and the changes.</summary>
     /// <param name="task">The latest Task.</param>
     /// <param name="actor">Who made the changes.</param>
@@ -1617,6 +1693,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         /// <summary>Whether any batched change moved the Task's status (RQ-4 wakes the requesting manager on those).</summary>
         public bool StatusChanged { get; set; }
+
+        /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
+        public bool MovedToDone { get; set; }
 
         /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
         public OutsideWindow? OutsideWindow { get; set; }

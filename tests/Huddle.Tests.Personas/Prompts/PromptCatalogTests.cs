@@ -43,7 +43,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(178,PromptCatalog.All.Count);
+        Assert.Equal(179, PromptCatalog.All.Count);
     }
 
     /// <summary>The Task prompts tell an Agent that Huddle moves a ready gated Task to Needs You, never to use the Action for hand-offs, and not to ask for approval in chat; the status list names Needs You.</summary>
@@ -462,7 +462,7 @@ public sealed partial class PromptCatalogTests
     [InlineData("tool.readRecords.description", "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.")]
     [InlineData("tool.listTeams.description", "Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. Use it to choose the Team to file a Request with.")]
     [InlineData("tool.fileRequest.description", "Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.")]
-    [InlineData("tool.confirmRequest.description", "Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's QA may call it. Optionally add a note.")]
+    [InlineData("tool.confirmRequest.description", "Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's verifier may call it, and only once the Request is in Done. Optionally add a note.")]
     [InlineData("tool.triageRequest.description", "Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.")]
     [InlineData("tool.proposeSprint.description", "Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.")]
     [InlineData("tool.markRetroRow.description", "Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.")]
