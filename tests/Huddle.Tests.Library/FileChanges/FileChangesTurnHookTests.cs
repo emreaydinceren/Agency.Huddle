@@ -216,7 +216,7 @@ public sealed class FileChangesTurnHookTests
         using Fixture fixture = await CreateFixtureAsync(ct);
         string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
         (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
-        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
         File.WriteAllText(Path.Combine(teamsRoot, "AGENTS.md"), "rule");
         string note = Path.Combine(teamsRoot, "notes.md");
         File.WriteAllText(note, "note");
@@ -236,7 +236,7 @@ public sealed class FileChangesTurnHookTests
         using Fixture fixture = await CreateFixtureAsync(ct);
         string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
         (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
-        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
         string other = Path.Combine(teamsRoot, "OtherTeam", "AGENTS.md");
         Directory.CreateDirectory(Path.GetDirectoryName(other) ?? teamsRoot);
         File.WriteAllText(other, "rule");
@@ -255,7 +255,7 @@ public sealed class FileChangesTurnHookTests
         using Fixture fixture = await CreateFixtureAsync(ct);
         string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
         (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
-        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
         string agentsMd = Path.Combine(teamsRoot, "AGENTS.md");
         File.WriteAllText(agentsMd, "rule");
         TurnHookScope scope = ScopeWatching(teamsRoot);
@@ -278,7 +278,7 @@ public sealed class FileChangesTurnHookTests
         using Fixture fixture = await CreateFixtureAsync(ct);
         string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
         (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
-        await BaselineAsync(hook, fixture, teamsRoot, roomId, ct);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
         File.WriteAllText(Path.Combine(teamsRoot, "AGENTS.md"), "rule");
 
         TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
@@ -299,9 +299,8 @@ public sealed class FileChangesTurnHookTests
     }
 
     /// <summary>Runs a first Turn in the Room, so the next scan reports only what changes after it.</summary>
-    private static async Task BaselineAsync(FileChangesTurnHook hook, Fixture fixture, string teamsRoot, string roomId, CancellationToken ct)
+    private static async Task BaselineAsync(FileChangesTurnHook hook, string teamsRoot, string roomId, CancellationToken ct)
     {
-        _ = fixture;
         TurnHookScope scope = ScopeWatching(teamsRoot);
         TurnAddition? first = await hook.BeforeTurnAsync(new TurnStarting(scope, roomId, null), ct);
         await ((ITurnHook)hook).AfterTurnAsync(new TurnEnded(scope, roomId, null, []), first, ct);

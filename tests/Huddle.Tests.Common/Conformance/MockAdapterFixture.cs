@@ -11,9 +11,11 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Sessions;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Pipes;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -52,18 +54,53 @@ namespace Agency.Huddle.Tests.Conformance;
 public sealed class MockAdapterFixture : IAsyncDisposable
 {
     private readonly IHost host;
-    private readonly TempDataDir dataDir;
+    private readonly TempDataDir? dataDir;
     private readonly PersonaRunner runner;
     private bool disposed;
 
-    private MockAdapterFixture(IHost host, TempDataDir dataDir, PersonaRunner runner, FakeAcpAgent agent, string pipeName)
+    private MockAdapterFixture(IHost host, TempDataDir? dataDir, string dataDirPath, PersonaRunner runner, FakeAcpAgent agent, FakeHelperProcessRunner helperProcess, string pipeName)
     {
         this.host = host;
         this.dataDir = dataDir;
+        this.DataDirPath = dataDirPath;
         this.runner = runner;
         this.Agent = agent;
+        this.HelperProcess = helperProcess;
         this.PipeName = pipeName;
     }
+
+    /// <summary>
+    /// The fake the Helper reaches instead of a real adapter process (the same double <c>TeamWebApplicationFactory</c> installs). A test
+    /// sets its <see cref="FakeHelperProcessRunner.Text"/> or handler, and counts <see cref="FakeHelperProcessRunner.Calls"/>.
+    /// </summary>
+    internal FakeHelperProcessRunner HelperProcess { get; }
+
+    /// <summary>The data directory the host runs on. Pass it as <c>dataDirPath</c> to <see cref="StartAsync"/> to restart on the same files.</summary>
+    public string DataDirPath { get; }
+
+    /// <summary>
+    /// A reply the AGENTS.md Helper accepts: a meaningful verdict with one change quoting <paramref name="quote"/>, which must be present in
+    /// the file (the Helper refuses a verdict whose quote is not). Valid against <c>AgentsMdChangeVerdict</c>, whose <c>Meaningful</c> is required.
+    /// </summary>
+    /// <param name="quote">Text that appears in the AGENTS.md being judged.</param>
+    /// <param name="summary">The change's summary.</param>
+    /// <returns>The reply text.</returns>
+    internal static string VerdictJson(string quote, string summary = "A rule changed.")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(quote);
+        ArgumentException.ThrowIfNullOrWhiteSpace(summary);
+
+        return new JsonObject
+        {
+            ["meaningful"] = true,
+            ["reason"] = "A rule changed.",
+            ["changes"] = new JsonArray(new JsonObject { ["kind"] = "changed", ["summary"] = summary, ["quote"] = quote }),
+        }.ToJsonString();
+    }
+
+    /// <summary>Scripts the fake Helper process to answer every call with <see cref="VerdictJson"/>.</summary>
+    /// <param name="quote">Text that appears in the AGENTS.md being judged.</param>
+    internal void ScriptVerdict(string quote) => this.HelperProcess.Text = VerdictJson(quote);
 
     /// <summary>
     /// The scripted ACP peer the Persona's session is actually talking to. Tests read
@@ -119,22 +156,53 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// opens during startup. <see langword="null"/> leaves the peer's defaults.
     /// </param>
     /// <returns>The started fixture.</returns>
-    internal static async Task<MockAdapterFixture> StartAsync(
+    internal static Task<MockAdapterFixture> StartAsync(
         Persona persona,
         IReadOnlyDictionary<string, string?>? additionalConfig = null,
         TimeProvider? timeProvider = null,
         Action<FakeAcpAgent>? scriptAgent = null,
         CancellationToken cancellationToken = default)
+        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, fullPipeline: false, dataDirPath: null, cancellationToken);
+
+    /// <summary>
+    /// Starts a fixture whose runner gets the whole Turn pipeline the supervisor builds from the container (AGENTS.md hook first),
+    /// optionally on an existing data directory to restart on the same files. Everything else is as for the other overload.
+    /// </summary>
+    /// <param name="persona">The Persona to run.</param>
+    /// <param name="dataDirPath">An existing data directory to run on, which this fixture then does not delete; <see langword="null"/> for a fresh one it owns.</param>
+    /// <param name="additionalConfig">Configuration applied after the defaults, so it can override <c>Team:AgentsMd:NoticeWaitSeconds</c> and the Helper's <c>WaitSeconds</c>.</param>
+    /// <param name="timeProvider">The runner's clock; <see langword="null"/> for the real one.</param>
+    /// <param name="scriptAgent">Called with the scripted peer before the runner starts.</param>
+    /// <param name="cancellationToken">Cancels startup.</param>
+    /// <returns>The started fixture.</returns>
+    internal static Task<MockAdapterFixture> StartFullPipelineAsync(
+        Persona persona,
+        string? dataDirPath = null,
+        IReadOnlyDictionary<string, string?>? additionalConfig = null,
+        TimeProvider? timeProvider = null,
+        Action<FakeAcpAgent>? scriptAgent = null,
+        CancellationToken cancellationToken = default)
+        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, fullPipeline: true, dataDirPath, cancellationToken);
+
+    private static async Task<MockAdapterFixture> StartCoreAsync(
+        Persona persona,
+        IReadOnlyDictionary<string, string?>? additionalConfig,
+        TimeProvider? timeProvider,
+        Action<FakeAcpAgent>? scriptAgent,
+        bool fullPipeline,
+        string? dataDirPath,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
 
-        TempDataDir dataDir = new();
+        TempDataDir? dataDir = dataDirPath is null ? new() : null;
+        string dataPath = dataDirPath ?? dataDir?.Path ?? throw new InvalidOperationException("No data directory.");
         string pipeName = "mock-adapter-test-" + Guid.NewGuid().ToString("N");
 
         Dictionary<string, string?> config = new(StringComparer.Ordinal)
         {
             ["Team:PipeName"] = pipeName,
-            ["Team:DataDir"] = dataDir.Path,
+            ["Team:DataDir"] = dataPath,
             ["Team:HumanName"] = "You",
             ["Team:DemoAgent:Enabled"] = "false",
             ["Team:Acp:Enabled"] = "true",
@@ -144,6 +212,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
             // touches AdapterLocator. The value itself is never read: the launcher this fixture
             // installs below launches nothing.
             ["Team:Acp:Args:0"] = "--mock-adapter-fixture",
+
+            // A Turn never waits for a summary by default, and the Helper judges after a second, not the
+            // default two: a real clock pays both in wall time per test. Either can be overridden.
+            ["Team:AgentsMd:NoticeWaitSeconds"] = "0",
+            ["Team:Helpers:AgentsMdChange:WaitSeconds"] = "1",
         };
 
         if (additionalConfig is not null)
@@ -170,6 +243,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         scriptAgent?.Invoke(launcher.Agent);
         builder.Services.AddSingleton<IAgentProcessLauncher>(launcher);
 
+        // The Helper must never reach a real adapter process: the fake answers instead.
+        builder.Services.RemoveAll<IHelperProcessRunner>();
+        FakeHelperProcessRunner helperProcess = new();
+        builder.Services.AddSingleton<IHelperProcessRunner>(helperProcess);
+
         IHost host = builder.Build();
         await host.StartAsync(cancellationToken).ConfigureAwait(false);
 
@@ -178,7 +256,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        (TurnHookPipeline hooks, MemoryPaths? memoryPaths) = TurnHookTestFactory.ForPersona(host.Services, persona);
+        (TurnHookPipeline hooks, MemoryPaths? memoryPaths) = TurnHookTestFactory.ForPersona(host.Services, persona, fullPipeline);
         RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
         OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
@@ -197,11 +275,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
             await runner.DisposeAsync().ConfigureAwait(false);
             await host.StopAsync(CancellationToken.None).ConfigureAwait(false);
             host.Dispose();
-            dataDir.Dispose();
+            dataDir?.Dispose();
             throw;
         }
 
-        return new MockAdapterFixture(host, dataDir, runner, launcher.Agent, pipeName);
+        return new MockAdapterFixture(host, dataDir, dataPath, runner, launcher.Agent, helperProcess, pipeName);
     }
 
     /// <summary>Waits up to five seconds for the <c>session/new</c> request the real host sends the scripted peer.</summary>
@@ -256,6 +334,6 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         await this.runner.DisposeAsync().ConfigureAwait(false);
         await this.host.StopAsync().ConfigureAwait(false);
         this.host.Dispose();
-        this.dataDir.Dispose();
+        this.dataDir?.Dispose();
     }
 }
