@@ -59,4 +59,4 @@ This Team takes one person's personal admin from start to Done without a plan: a
 
 - Note which mailbox, calendar and budget sheet the Human uses.
 - Write Team Memory notes on travel preferences, regular bills, clinics and the Human's reply style.
-- Propose a starter Task to the Chief of Household.
+- Suggest a starter Task.

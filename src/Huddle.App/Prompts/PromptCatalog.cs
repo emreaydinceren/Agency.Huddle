@@ -262,9 +262,11 @@ internal static class PromptCatalog
                 "where the steps of the process's Onboarding section are substituted in.",
             Default:
                 """
-                Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:
+                Your Team has just started. Work through these onboarding steps, then tell the Human what you found:
 
                 {{steps}}
+
+                End by suggesting one starter Task in your reply, and ask the Human whether to start it. Do not create a Task or assign anyone until the Human says yes.
                 """,
             Placeholders: ["{{steps}}"],
             RequiredPlaceholders: ["{{steps}}"],

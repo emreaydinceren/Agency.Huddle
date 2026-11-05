@@ -58,4 +58,4 @@ This Team decides what to build next and writes each problem down well enough fo
 
 - Read the repository and note its specs, designs and open issues.
 - Write Team Memory notes on the product's users, goals and constraints.
-- Propose a starter Task, such as defining the smallest open problem.
+- Suggest a starter Task, such as defining the smallest open problem.

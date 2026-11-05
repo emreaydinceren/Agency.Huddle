@@ -60,4 +60,4 @@ This Team keeps a live system running. It diagnoses incidents, runs the agreed m
 
 - Read the runbooks folder and note which systems each runbook covers.
 - Write Team Memory notes on the severity levels, the update intervals and who to reach.
-- Propose a starter Task, such as reviewing one runbook for gaps.
+- Suggest a starter Task, such as reviewing one runbook for gaps.

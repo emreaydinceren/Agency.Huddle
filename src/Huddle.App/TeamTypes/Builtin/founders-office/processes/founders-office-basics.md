@@ -60,4 +60,4 @@ This Team runs the founder's recurring work: investor research, pitches, investo
 
 - Note where the founder folder keeps the deck, the model and past updates.
 - Write Team Memory notes on the company, the round and the founder's voice.
-- Propose a starter Task, such as a brief for the next investor meeting.
+- Suggest a starter Task, such as a brief for the next investor meeting.

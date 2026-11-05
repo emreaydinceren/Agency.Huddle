@@ -64,4 +64,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Write plainly for members who 
 
 - Note where the club folder keeps the rules, minutes, rota and accounts.
 - Write Team Memory notes on the officers, the meeting cycle and the group's tone.
-- Propose a starter Task, such as the next meeting's agenda.
+- Suggest a starter Task, such as the next meeting's agenda.

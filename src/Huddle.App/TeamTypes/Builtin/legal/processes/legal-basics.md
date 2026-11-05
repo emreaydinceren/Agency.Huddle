@@ -60,4 +60,4 @@ This Team reads the contracts, leases, policies, notices and terms the Human has
 
 - Note the Documents folder and the country or region whose rules apply.
 - Write Team Memory notes on the Human's standing agreements, their renewal dates and the lawyer they use, if any.
-- Propose a starter Task to the Compliance Lead.
+- Suggest a starter Task.

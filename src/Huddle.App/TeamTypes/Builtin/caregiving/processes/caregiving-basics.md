@@ -60,4 +60,4 @@ This Team handles the paperwork of caring for one person: appointments, forms, b
 
 - Note who the carers are, who the clinicians are and what the person prefers.
 - Write Team Memory notes on the care plan, medication times as written by the doctor, and key contacts.
-- Propose a starter Task, such as next month's appointments.
+- Suggest a starter Task, such as next month's appointments.

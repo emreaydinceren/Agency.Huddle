@@ -61,4 +61,4 @@ This Team runs one open-source repository. It triages issues, builds and reviews
 
 - Note the repository, its check command, its labels and its release steps.
 - Write Team Memory notes on the contribution guide, the code of conduct and the project's voice.
-- Propose a starter Task to the Maintainer.
+- Suggest a starter Task.

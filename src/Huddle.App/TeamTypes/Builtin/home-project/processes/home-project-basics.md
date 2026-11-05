@@ -60,4 +60,4 @@ This Team gathers the costs, rules, quotes and dates for one renovation or repai
 
 - Note where the project folder keeps the scope, photos, quotes and permits.
 - Write Team Memory notes on the property, the budget limit and the must-not-change list.
-- Propose a starter Task, such as a one-page scope.
+- Suggest a starter Task, such as a one-page scope.

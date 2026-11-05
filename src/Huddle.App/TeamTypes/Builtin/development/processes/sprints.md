@@ -65,4 +65,4 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 - Read the workspace and the current sprint goal.
 - Run the build and the tests, and record the results.
 - Write Team Memory notes on the conventions you found.
-- Propose a starter Task that fits the sprint goal.
+- Suggest a starter Task that fits the sprint goal.

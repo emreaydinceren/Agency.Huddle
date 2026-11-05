@@ -65,4 +65,4 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 - Read the workspace and the open bug list.
 - Run the build and the tests, and record the results.
 - Write Team Memory notes on the areas that break most often.
-- Propose a starter Task, such as the oldest open bug with a clear symptom.
+- Suggest a starter Task, such as the oldest open bug with a clear symptom.

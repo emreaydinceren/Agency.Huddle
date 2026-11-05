@@ -64,4 +64,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Answer the customer's question
 
 - Note where the support folder keeps tickets, articles and saved replies.
 - Write Team Memory notes on the product, the tone of voice and what the team may promise.
-- Propose a starter Task, such as the five most asked questions.
+- Suggest a starter Task, such as the five most asked questions.
