@@ -1,8 +1,15 @@
+using System.Globalization;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Components;
+using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.App.Profile;
 using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -51,6 +58,86 @@ public sealed class AgentProfileCardNameTests
         cut.WaitForAssertion(() => Assert.NotEqual(first, NameValue(cut)));
 
         Assert.Contains(NameValue(cut), AgentNamePool.Names);
+    }
+
+    /// <summary>
+    /// A new Agent's Name box never opens with the Human's Name or Alias. Every other pool Name belongs to an Agent and
+    /// the Human's Alias is the only free one, so the draw is deterministic: unfixed it can only return the Alias, fixed
+    /// it falls back to a numbered Name.
+    /// </summary>
+    [Fact]
+    public async Task CreateMode_OnlyFreePoolNameIsTheHumansAlias_OpensWithANumberedName()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        PersonaStore personas = factory.Services.GetRequiredService<PersonaStore>();
+        string humanAlias = AgentNamePool.Names[0];
+        for (int i = 1; i < AgentNamePool.Names.Count; i++)
+        {
+            _ = personas.Add(new PersonaIdentity(AgentNamePool.Names[i], "Other", string.Create(CultureInfo.InvariantCulture, $"pool{i}"), Teams: []), "You are other.");
+        }
+
+        await using MudBunitContext ctx = NewContext(factory);
+        ctx.Services.AddSingleton<IHumanIdentity>(new AliasedHumanIdentity("Zed Human", humanAlias));
+
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
+        await ClickButtonAsync(cut, "New agent");
+
+        string shown = NameValue(cut);
+        Assert.NotEqual(humanAlias, shown, StringComparer.OrdinalIgnoreCase);
+        Assert.Matches(@"^.+ \d+$", shown);
+    }
+
+    /// <summary>
+    /// A new Agent's Name box never opens with the Human's Name (as opposed to the Alias). Every other pool Name belongs
+    /// to an Agent and the Human's Name is the only free one, so the draw is deterministic: unfixed it can only return
+    /// that Name, fixed it falls back to a numbered Name.
+    /// </summary>
+    [Fact]
+    public async Task CreateMode_OnlyFreePoolNameIsTheHumansName_OpensWithANumberedName()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        PersonaStore personas = factory.Services.GetRequiredService<PersonaStore>();
+        string humanName = AgentNamePool.Names[0];
+        for (int i = 1; i < AgentNamePool.Names.Count; i++)
+        {
+            _ = personas.Add(new PersonaIdentity(AgentNamePool.Names[i], "Other", string.Create(CultureInfo.InvariantCulture, $"pool{i}"), Teams: []), "You are other.");
+        }
+
+        await using MudBunitContext ctx = NewContext(factory);
+        ctx.Services.AddSingleton<IHumanIdentity>(new AliasedHumanIdentity(humanName));
+
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
+        await ClickButtonAsync(cut, "New agent");
+
+        string shown = NameValue(cut);
+        Assert.NotEqual(humanName, shown, StringComparer.OrdinalIgnoreCase);
+        Assert.Matches(@"^.+ \d+$", shown);
+    }
+
+    /// <summary>A name typed on a draft card that is the Human's is refused on the card, with wording for the Human, and nothing is handed on.</summary>
+    [Fact]
+    public async Task DraftCard_NameIsTheHumans_IsRefusedOnTheCard()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        ctx.Services.AddSingleton<IHumanIdentity>(new AliasedHumanIdentity("Sam"));
+        List<string> saved = [];
+        DialogParameters parameters = new()
+        {
+            [nameof(AgentProfileCard.Mode)] = AgentProfileCardMode.Create,
+            [nameof(AgentProfileCard.Name)] = "Ada",
+            [nameof(AgentProfileCard.Title)] = "Helper",
+            [nameof(AgentProfileCard.Text)] = "You help.",
+            [nameof(AgentProfileCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)>(this, draft => saved.Add(draft.Name)),
+        };
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
+        await cut.InvokeAsync(() => ctx.Services.GetRequiredService<IDialogService>().ShowAsync<AgentProfileCard>("Edit draft", parameters, AgentProfileCard.Options));
+
+        await SetTextValueAsync(cut, "Name", "Sam");
+        await ClickButtonAsync(cut, "Save draft");
+
+        Assert.Equal("'Sam' is your own name. Choose another for this Agent.", cut.WaitForElement("[role='alert']").TextContent.Trim());
+        Assert.Empty(saved);
     }
 
     /// <summary>A suggested name saves as it stands, with no editing.</summary>

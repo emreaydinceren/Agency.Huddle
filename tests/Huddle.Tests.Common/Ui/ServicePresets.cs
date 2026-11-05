@@ -109,6 +109,9 @@ internal static class ServicePresets
     internal static readonly Type[] Agents =
     [
         typeof(PersonaStore),
+
+        // AgentProfileCard keeps the Human's Name and Alias out of the names it draws and accepts.
+        typeof(IHumanIdentity),
         typeof(ITeamDirectory),
         typeof(IAgentGateway),
         typeof(PersonaHealth),

@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
@@ -72,6 +73,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     private readonly PersonaEffortStore efforts;
     private readonly PersonaWorkModeStore workModes;
     private readonly ILogger<PersonaStore> logger;
+    private readonly IHumanIdentity? human;
     private readonly Lock watchGate = new();
 
     // Serialises Add and Update end to end - exists-check through the synchronous index publish -
@@ -112,12 +114,14 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="efforts">The SQLite-backed store for each Persona's chosen Effort.</param>
     /// <param name="workModes">The SQLite-backed store for each Persona's chosen Work Mode.</param>
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
+    /// <param name="human">The Human's live identity (rules.md); built by hand without one, no Agent Name is refused for matching it.</param>
     public PersonaStore(
         AgentPaths agentPaths,
         PersonaModelStore models,
         PersonaEffortStore efforts,
         PersonaWorkModeStore workModes,
-        ILogger<PersonaStore> logger)
+        ILogger<PersonaStore> logger,
+        IHumanIdentity? human = null)
     {
         ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(models);
@@ -130,6 +134,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         this.efforts = efforts;
         this.workModes = workModes;
         this.logger = logger;
+        this.human = human;
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
         // to watch from the moment the app starts, even before any Persona has been added.
@@ -638,6 +643,10 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         return PersonaIndex.Build(files);
     }
 
+    /// <summary>Whether <paramref name="nameOrAlias"/> is the Human's Name or Alias, ignoring case; always <see langword="false"/> when the store was built without a Human.</summary>
+    /// <param name="nameOrAlias">The Name or Alias to test.</param>
+    internal bool IsHuman(string? nameOrAlias) => this.human?.Matches(nameOrAlias) == true;
+
     /// <summary>
     /// Builds a candidate index - the current valid entries, with the file at <paramref name="path"/>
     /// substituted for <paramref name="text"/> (and, for an update, its OLD entry at
@@ -664,7 +673,37 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             throw new ChatException(ErrorCodes.BadMessage, rejection.Reason);
         }
 
-        return candidate.Entries.First(entry => string.Equals(entry.Path, path, StringComparison.Ordinal));
+        PersonaEntry result = candidate.Entries.First(entry => string.Equals(entry.Path, path, StringComparison.Ordinal));
+        this.RefuseHumanName(result, excludingPath);
+        return result;
+    }
+
+    /// <summary>
+    /// Refuses a candidate whose Name or Alias is the Human's. An Agent that already matches (a hand-written file
+    /// the rescan loaded) may still be saved while the Name or Alias it matches is left unchanged.
+    /// </summary>
+    /// <param name="candidate">The entry the candidate text would produce.</param>
+    /// <param name="excludingPath">The path of the entry being replaced, or <see langword="null"/> for a new file.</param>
+    private void RefuseHumanName(PersonaEntry candidate, string? excludingPath)
+    {
+        if (this.human is null)
+        {
+            return;
+        }
+
+        PersonaEntry? previous = excludingPath is null
+            ? null
+            : this.index.Entries.FirstOrDefault(entry => string.Equals(entry.Path, excludingPath, StringComparison.Ordinal));
+
+        foreach (string value in new[] { candidate.Name, candidate.Alias })
+        {
+            bool unchanged = previous is not null
+                && (string.Equals(previous.Name, value, StringComparison.OrdinalIgnoreCase) || string.Equals(previous.Alias, value, StringComparison.OrdinalIgnoreCase));
+            if (this.human.Matches(value) && !unchanged)
+            {
+                throw new ChatException(ErrorCodes.BadMessage, $"'{value}' is your own name. Choose another for this Agent.");
+            }
+        }
     }
 
     /// <summary>
