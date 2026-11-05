@@ -73,4 +73,4 @@ Each job has one owner from noticing that it needs doing to getting it done, nev
 - Write Team Memory notes on the allergies and diet of each person, the emergency contacts, the bin day, the weekly check-in day, the school's usual senders, the parents' preferences and the digest day.
 - Write the "who owns what" note: each area of the home and its one owner.
 - Notes record where a document is kept, never its number: "passports in the blue folder", never a passport, policy, account or card number.
-- Propose a starter Task to the household manager.
+- Suggest a starter Task.

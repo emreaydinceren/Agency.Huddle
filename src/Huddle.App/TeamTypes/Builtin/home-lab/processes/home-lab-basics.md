@@ -58,4 +58,4 @@ This Team keeps a home lab as code in one repository: its configuration, scripts
 
 - Read the repository and note its layout, inventory and runbook.
 - Write Team Memory notes on the machines, the network and where secrets live outside the repository.
-- Propose a starter Task, such as an inventory of what runs where.
+- Suggest a starter Task, such as an inventory of what runs where.

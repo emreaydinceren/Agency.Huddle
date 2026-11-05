@@ -58,4 +58,4 @@ This Team answers one question from sources, such as a comparison, a literature 
 
 - Read the notes folder and note any sources the Human already trusts.
 - Write Team Memory notes on the citation style and the Human's usual questions.
-- Propose a starter Task, such as scoping one open question.
+- Suggest a starter Task, such as scoping one open question.

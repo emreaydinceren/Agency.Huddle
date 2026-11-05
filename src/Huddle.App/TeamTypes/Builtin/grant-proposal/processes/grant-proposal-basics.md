@@ -64,4 +64,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Write each section to the fund
 
 - Note where the proposals folder keeps calls, drafts and past proposals.
 - Write Team Memory notes on the organisation's mission, past awards and voice.
-- Propose a starter Task, such as listing the requirements of the next call.
+- Suggest a starter Task, such as listing the requirements of the next call.

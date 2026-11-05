@@ -141,7 +141,7 @@ public sealed class ProcessSourcesTests
         Assert.True(posted);
         (string manager, string text) = Assert.Single(poster.Posts);
         Assert.Equal(Manager, manager);
-        Assert.Equal("Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:\n\n- Read the workspace.\n- Run the tests.", text);
+        Assert.Equal("Your Team has just started. Work through these onboarding steps, then tell the Human what you found:\n\n- Read the workspace.\n- Run the tests.\n\nEnd by suggesting one starter Task in your reply, and ask the Human whether to start it. Do not create a Task or assign anyone until the Human says yes.", text);
         Assert.True(folders.File?.Onboarded);
     }
 

@@ -60,4 +60,4 @@ This Team gathers and cites the documents for one tax year, from the checklist t
 
 - Note where the tax folder keeps last year's return and this year's documents.
 - Write Team Memory notes on the accountant's deadline, the categories and the sources of income.
-- Propose a starter Task, such as this year's document checklist.
+- Suggest a starter Task, such as this year's document checklist.

@@ -62,4 +62,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Write each step as an action t
 
 - Note the docs folder, the docs index and how the docs are built.
 - Write Team Memory notes on the style guide, the audience and the pages readers ask about most.
-- Propose a starter Task to the Docs Lead.
+- Suggest a starter Task.

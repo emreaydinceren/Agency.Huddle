@@ -68,4 +68,4 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 - Read the workspace and note its layout and its specs.
 - Run the build and the tests, and record the results.
 - Write Team Memory notes on the conventions you found.
-- Propose a starter Task, such as a spec for the smallest open question.
+- Suggest a starter Task, such as a spec for the smallest open question.

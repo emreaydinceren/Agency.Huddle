@@ -63,4 +63,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Every first email gives one re
 
 - Note the Sales folder, the offer, the price list and the customer profile.
 - Write Team Memory notes on the Human's voice, past wins and companies not to contact.
-- Propose a starter Task to the Sales Lead.
+- Suggest a starter Task.

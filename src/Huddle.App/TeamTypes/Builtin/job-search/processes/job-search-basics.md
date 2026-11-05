@@ -59,4 +59,4 @@ This Team runs an active job search: finding openings, tailoring documents, prep
 
 - Note the Job search folder, the current resume and the target roles, places and pay.
 - Write Team Memory notes on the Human's strengths, deal-breakers and writing voice.
-- Propose a starter Task to the Career Coach.
+- Suggest a starter Task.
