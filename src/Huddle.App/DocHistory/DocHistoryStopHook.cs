@@ -119,7 +119,8 @@ internal static class DocHistoryStopHook
     /// The hook script. Claude Code runs it when the Agent is about to stop and passes a JSON object on standard input; it
     /// reads the Turn's transcript, and when the Turn wrote, edited or opened a Markdown file and made no <c>log_change</c>
     /// call, answers <c>{"decision":"block","reason":…}</c>, which sends the Agent back once with the reason as its next
-    /// instruction. On the second stop (<c>stop_hook_active</c>) or any doubt it says nothing, so it cannot loop.
+    /// instruction. A <c>Read</c> of a file named <c>AGENTS.md</c> (any case, either slash) is following the rules, not
+    /// reviewing a document, so it is not counted; a write to it still is. On the second stop (<c>stop_hook_active</c>) or any doubt it says nothing, so it cannot loop.
     /// </summary>
     internal const string Script = """
         // Written by Agency.Huddle (DocHistory). Reminds the Agent to call log_change after it touched a .md file.
@@ -151,7 +152,7 @@ internal static class DocHistoryStopHook
                 const markdown = typeof file === "string" && /\.md$/i.test(file);
                 if (/log_change$/.test(block.name)) logged = true;
                 else if (markdown && ["Write", "Edit", "MultiEdit", "NotebookEdit"].includes(block.name)) wrote.add(file);
-                else if (markdown && block.name === "Read") opened.add(file);
+                else if (markdown && block.name === "Read" && file.split(/[\\/]/).pop().toLowerCase() !== "agents.md") opened.add(file);
               }
             }
             if (logged || (wrote.size === 0 && opened.size === 0)) return;

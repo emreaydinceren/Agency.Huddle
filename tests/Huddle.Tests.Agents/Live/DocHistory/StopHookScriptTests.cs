@@ -76,6 +76,38 @@ public sealed class StopHookScriptTests : IDisposable
         Assert.Contains("You wrote or edited /w/a.md", reason, StringComparison.Ordinal);
     }
 
+    /// <summary>Reading AGENTS.md is following the rules, not reviewing a document, so the hook says nothing (any case).</summary>
+    [Fact]
+    public async Task StopHook_ReadOfAgentsMd_DoesNotBlock()
+    {
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/sub/agents.MD")]));
+    }
+
+    /// <summary>A Windows path to AGENTS.md is matched on its file name too.</summary>
+    [Fact]
+    public async Task StopHook_ReadOfAgentsMd_WindowsPath_DoesNotBlock()
+    {
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", @"C:\work\room\AGENTS.md")]));
+    }
+
+    /// <summary>Writing AGENTS.md is still reminded.</summary>
+    [Fact]
+    public async Task StopHook_WriteOfAgentsMd_StillBlocks()
+    {
+        string reason = await this.RunAsync([Prompt(), Use("Edit", "/w/AGENTS.md")]);
+
+        Assert.Contains("You wrote or edited /w/AGENTS.md", reason, StringComparison.Ordinal); // contains-ok: the reason's tail is long prose; the file naming is the point.
+    }
+
+    /// <summary>Another Markdown file read beside AGENTS.md is still reminded, and AGENTS.md is not named.</summary>
+    [Fact]
+    public async Task StopHook_ReadOfOtherMd_StillBlocks()
+    {
+        string reason = await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/notes.md")]);
+
+        Assert.Contains("You opened /w/notes.md this turn", reason, StringComparison.Ordinal); // contains-ok: the reason's tail is long prose; the file naming is the point.
+    }
+
     private static string Prompt() => """{"type":"user","message":{"role":"user","content":"please do it"}}""";
 
     private static string ToolResult() =>

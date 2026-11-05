@@ -477,7 +477,7 @@ In Teams/Home/AGENTS.md, these lines changed. Read the file before you rely on t
 | `turn.agentsMdFile` | `In {{displayPath}}:`. `{{displayPath}}` is `Teams/` plus the ledger's relative path, and `{{path}}` is the full path |
 | `turn.agentsMdChange` | `- {{kind}}: {{summary}}` then `  The file says: "{{quote}}"`. `{{kind}}` is `Added` or `Changed` |
 | `turn.agentsMdRemoved` | `- Removed: {{summary}}` then `  The file said: "{{quote}}"` |
-| `turn.agentsMdFileWins` | `This is a summary. If you need the exact words, the file's text wins: {{path}}` Measured on the real Adapter: an unconditional "The file's text wins" made an Agent read the file after replying, then reply again in the same Turn |
+| `turn.agentsMdFileWins` | `This is a summary. If you need the exact words, the file's text wins: {{path}}` |
 | `turn.agentsMdFileWinsNoFiles` | For an Adapter with no file tools: `This is a summary. The file's text wins.` |
 | `turn.agentsMdComparison` | The fallback's first line, then `{{fence}}diff`, the lines, and `{{fence}}` |
 | `turn.agentsMdNotShown` | `…and {{count}} more changed lines.` Follows the fence when `MaxComparisonChars` cut the lines |
