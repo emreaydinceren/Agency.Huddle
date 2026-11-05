@@ -305,6 +305,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `DocHistory:Enabled` | `true` | Whether document History runs at all ([DocHistory spec](Huddle.DocHistory-Specifications.md) §6.9). `false` offers no `log_change`, records no Human saves and shows no byline, History or History panel. The history files stay where they are. |
 | `DocHistory:MaxEntries` | `500` | Entries kept per document; the oldest are dropped on the next append. |
 | `DocHistory:MaxSummaryLength` | `200` | The longest summary `log_change` accepts. |
+| (silent reply) | `NO_REPLY` | Not a key: the token an Agent ends a reply with when it has nothing to add, defined once as `SilentReply.Token`. A reply that is only the token, or ends with it, loses the token before it is posted, and the token never streams. A silent Turn posts no Message, so it spends no Room Budget. The document History Stop hook asks an Agent to finish with it after logging. |
 | `DocHistory:HumanSaveGroupWindow` | `00:05:00` | How close consecutive Human saves must be to share one row in the panel and the History. |
 | `Feed:Enabled` | `true` | Whether the Feed runs at all ([Feed spec](Huddle.Feed-Specifications.md) §6.11). `false` registers a publisher that does nothing, starts no writer and draws neither the Notifications button nor the Feed link. The `feed_events` rows stay where they are. |
 | `Feed:DismissedRetentionDays` | `30` | A dismissed Notification is deleted this many days after its dismissal. Zero or less keeps them forever. |

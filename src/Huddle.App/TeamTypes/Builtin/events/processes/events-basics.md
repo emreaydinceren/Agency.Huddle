@@ -58,4 +58,4 @@ This Team plans one event at a time, from a small birthday to a small conference
 
 - Note the event date, guest count, budget and the mailbox vendors write to.
 - Write Team Memory notes on the Human's must-haves, dietary needs and vendors they already trust.
-- Propose a starter Task to the Event Lead.
+- Suggest a starter Task.

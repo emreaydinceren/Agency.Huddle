@@ -36,7 +36,9 @@ dotnet test Huddle.slnx --
   created (an unmounted drive, a relative path), it does nothing and the system temp folder is used,
   which is how CI runs. It never changes the user or machine environment, so set it for the one shell
   (`$env:HUDDLE_TEST_TEMP = 'R:\t'`) or wherever suits you. The test folders a run leaves behind are
-  in that folder, so do not empty it while another run is using it. Measured on Windows, the
+  in that folder, so do not empty it while another run is using it. **Never point it at a RAM disk
+  for a live Adapter test:** the Adapter can't resolve a working folder on `R:`, so every tool call
+  fails and a paid probe reports 0 of 5 (seen 2026-11-04). Use a folder on a real disk. Measured on Windows, the
   `PersonaSpendTests` class took 227 s with the temp folder on the system drive and 26 s on a RAM disk.
   A test that creates a directory link (junction or symlink) and resolves it must not use the redirected folder: a
   RAM-disk driver can create links yet fail to read them (`Incorrect function`). Such a test builds its folder with
@@ -197,6 +199,8 @@ Causes found, all fixed at the root:
 | A test assumes `await Task.Delay(100)` resumes well inside a 500 ms window | On a starved runner it resumed ~400 ms late. Drive the step from a state the product reports, not a wall-clock pause; if the assertion only holds inside a window, measure the window and assert only when it was met (`DebouncedFileWatcherTests`, `TailscaleRuntimeTests` backoff) |
 | Two items compare in the wrong order, only in CI | Ids made in the same millisecond share their time prefix and differ only in the random tail, so creation order is a coin toss. Compare as a set (`GetMembersByRoomAsync_MatchesEachRoomsOwnRead`) |
 | A save "times out" while the test polls the file it replaces | Each `File.ReadAllText` holds the file open, and on Windows that refuses `AtomicFile`'s move. Await the save, then read once |
+| A test queues a second item "while the first Turn runs", but the first Turn's reply was a 200 ms `EnqueueDelayedReply` | On a starved runner the test thread got to the second `Enqueue` after the delay had passed, so the first Turn was already complete: no "offer next before complete" order, or the second item ran when a Stop was meant to drop it. A test race: hold the Turn with `EnqueueGatedReply(tcs.Task, …)` and release it after the second `Enqueue` (`RoomSessionTests.SecondItem_OfferedBeforeFirstCompleted`) |
+| A wall-clock `Assert.InRange` on a read ("5,000 entries under 1 s") fails at 1.3 s | A spec figure for an idle machine is not a load-proof limit. Assert a generous ceiling that still catches a scaling blow-up, and say so in the summary (`RegistryResolverTests.Read_FiveThousandEntryCatalog_UnderOneSecond`) |
 | A `PipeHostFixture` test times out at exactly its budget, only when it runs first in a cold process | The fixture's start (6-8 s of JIT under load) spent the test's token. Pass a `BehaviourBudget`, which pauses while the fixture boots |
 
 **When the cause is a shape, fix every instance in the same PR.** The token-source row above went red

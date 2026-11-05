@@ -5,8 +5,12 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Profile;
+using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Teams;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -21,6 +25,7 @@ public sealed class JobsToolTests : IDisposable
     private readonly JobStore store;
     private readonly JobScheduler scheduler;
     private readonly NullRunner runner = new();
+    private readonly FakeTeamCatalog catalog = new();
 
     /// <summary>Seeds Nova and Orion, and Cleo as the Chief of Staff.</summary>
     public JobsToolTests()
@@ -30,6 +35,16 @@ public sealed class JobsToolTests : IDisposable
         TestPersonaFiles.Write(paths, "Nova", PersonaSupervisorTestSupport.PersonaText("Nova", "You are Nova."));
         TestPersonaFiles.Write(paths, "Orion", PersonaSupervisorTestSupport.PersonaText("Orion", "You are Orion."));
         TestPersonaFiles.Write(paths, "Cleo", "---\nName: Cleo\nTitle: Chief of Staff\nAlias: cos\n_builtin: chief-of-staff\n---\nYou are Cleo.");
+        foreach (string name in new[] { "Pia", "Quinn", "Rex" })
+        {
+            TestPersonaFiles.Write(paths, name, PersonaSupervisorTestSupport.PersonaText(name, $"You are {name}."));
+        }
+
+        this.catalog.Teams =
+        [
+            new TeamSummary("Marketing", [], ["Pia", "Nova", "Quinn"], true) { Manager = "Pia" },
+            new TeamSummary("Sales", [], ["Rex", "Orion"], true) { Manager = "Rex" },
+        ];
         this.personas = this.options.CreatePersonaStore();
         this.store = new JobStore(this.personas, this.options, NullLogger<JobStore>.Instance);
         ManualTimeProvider clock = new(new DateTimeOffset(2026, 11, 2, 8, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
@@ -96,6 +111,79 @@ public sealed class JobsToolTests : IDisposable
 
         Assert.Equal("Nova", Assert.Single(novas)?["target"]?.GetValue<string>());
         Assert.Equal(2, all.Count);
+    }
+
+    /// <summary>A manager schedules for a member of its own Team, and the Job records the manager as its creator.</summary>
+    [Fact]
+    public async Task Create_ByAManager_ForItsMember_IsAllowed()
+    {
+        string answer = await this.Tool("Pia").InvokeAsync(Create("Nova"), TestContext.Current.CancellationToken);
+
+        Job job = Assert.Single(this.store.Jobs);
+        Assert.Equal((JobOwner.Agent("Nova"), "Pia"), (job.Owner, job.CreatedBy));
+        Assert.Equal($"Scheduled {job.Id} \"Digest\" for Nova: daily at 09:00. It runs next on Mon 2 Nov 2026 at 09:00 (UTC).", answer);
+    }
+
+    /// <summary>A manager is refused for an Agent of another Team and for the Human; those stay with the Chief of Staff.</summary>
+    /// <param name="target">The target outside the manager's Team.</param>
+    [Theory]
+    [InlineData("Orion")]
+    [InlineData("You")]
+    public async Task Create_ByAManager_ForOutsideItsTeam_IsRefused(string target)
+    {
+        string answer = await this.Tool("Pia").InvokeAsync(Create(target), TestContext.Current.CancellationToken);
+
+        Assert.Equal(JobsTool.Refusal, answer);
+        Assert.Empty(this.store.Jobs);
+    }
+
+    /// <summary>A member who is not the manager is refused for a colleague in the same Team.</summary>
+    [Fact]
+    public async Task Create_ByAMember_ForAColleague_IsRefused()
+    {
+        string answer = await this.Tool("Nova").InvokeAsync(Create("Quinn"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(JobsTool.Refusal, answer);
+        Assert.Empty(this.store.Jobs);
+    }
+
+    /// <summary>A manager lists a member's Job beside its own and pauses it; another Team's manager sees and may do neither.</summary>
+    [Fact]
+    public async Task ManagerListsAndPauses_AMembersJob()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        _ = await this.Tool("Nova").InvokeAsync(Create(), ct);
+        _ = await this.Tool("Orion").InvokeAsync(Create(), ct);
+        string novasId = this.store.Jobs.Single(job => job.Owner.IsAgent("Nova")).Id;
+
+        JsonArray seen = Assert.IsType<JsonArray>(JsonNode.Parse(await this.Tool("Pia").InvokeAsync(Args("list"), ct)));
+        string paused = await this.Tool("Pia").InvokeAsync(Args("pause", ("id", novasId)), ct);
+        string refused = await this.Tool("Rex").InvokeAsync(Args("pause", ("id", novasId)), ct);
+
+        Assert.Equal("Nova", Assert.Single(seen)?["target"]?.GetValue<string>());
+        Assert.Equal($"Paused {novasId} \"Digest\"; it will not run until it is resumed.", paused);
+        Assert.Equal(JobsTool.Refusal, refused);
+        Assert.True(this.store.Jobs.Single(job => job.Id == novasId).Paused);
+    }
+
+    /// <summary>The Chief of Staff still schedules for a member of any Team, whether or not it manages that Team.</summary>
+    [Fact]
+    public async Task Create_ByTheChiefOfStaff_ForATeamMember_StillWorks()
+    {
+        _ = await this.Tool("Cleo").InvokeAsync(Create("Quinn"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(JobOwner.Agent("Quinn"), Assert.Single(this.store.Jobs).Owner);
+    }
+
+    /// <summary>The <c>when</c> field lists the monthly form, taken from the same grammar the parser quotes.</summary>
+    [Fact]
+    public void InputSchema_WhenField_ListsTheMonthlyForm()
+    {
+        string? when = this.Tool("Nova").InputSchema["properties"]?["when"]?["description"]?.GetValue<string>();
+
+        Assert.Equal(
+            "One of 'once on 2026-11-05 at 14:30', 'daily at 09:00', 'weekdays at 09:00', 'weekly on mon,thu at 09:00', 'monthly on 15 at 09:00' or 'every 4 hours'.",
+            when);
     }
 
     /// <summary>An Agent may not pause, run or delete another Agent's Job.</summary>
@@ -200,7 +288,7 @@ public sealed class JobsToolTests : IDisposable
     [Fact]
     public async Task RefusalAndUnknownZone_AreWordedExactly()
     {
-        Assert.Equal("You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human.", JobsTool.Refusal);
+        Assert.Equal("You can schedule Jobs for yourself and for members of a Team you manage. Ask the Chief of Staff to schedule one for anyone else or for the Human.", JobsTool.Refusal);
         JsonObject arguments = Create();
         arguments["timezone"] = "Mars/Olympus";
 
@@ -231,8 +319,17 @@ public sealed class JobsToolTests : IDisposable
         return arguments;
     }
 
-    private JobsTool Tool(string persona) =>
-        new(this.store, this.scheduler, this.personas, new ConfiguredHumanIdentity("You"), new FakePromptSource(), persona);
+    /// <summary>Builds the tool the way production does, through <see cref="ActivatorUtilities"/>, so the constructor's services come from the container.</summary>
+    /// <param name="persona">The calling Persona's Name.</param>
+    private JobsTool Tool(string persona)
+    {
+        ServiceCollection services = new();
+        _ = services.AddSingleton(this.store).AddSingleton(this.scheduler).AddSingleton(this.personas);
+        _ = services.AddSingleton<IHumanIdentity>(new ConfiguredHumanIdentity("You")).AddSingleton<IPromptSource>(new FakePromptSource());
+        _ = services.AddSingleton<ITeamCatalog>(this.catalog);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        return ActivatorUtilities.CreateInstance<JobsTool>(provider, persona);
+    }
 
     /// <summary>A runner that posts nothing and answers with <see cref="Outcome"/>.</summary>
     private sealed class NullRunner : IJobRunner

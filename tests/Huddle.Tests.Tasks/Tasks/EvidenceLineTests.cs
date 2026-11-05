@@ -44,6 +44,34 @@ public sealed class EvidenceLineTests
         Assert.Equal(text, line.Format());
     }
 
+    /// <summary>A command equal to the wanted one, or followed by a space and a bracketed note (the form written before #340), runs it.</summary>
+    [Theory]
+    [InlineData("dotnet test")]
+    [InlineData("  dotnet test ")]
+    [InlineData("dotnet test (repo root C:\\HuddleZero\\repos\\bakery-quote)")]
+    [InlineData("dotnet test (note)")]
+    public void RunsCommand_ExactOrWithBracketedNote_ReturnsTrue(string stored)
+    {
+        EvidenceLine line = new(default, "Maya", stored, 0, null, null, string.Empty);
+
+        Assert.True(line.RunsCommand("dotnet test"));
+    }
+
+    /// <summary>A longer flag form, a different word, a bracket with no space, or a missing closing bracket does not run the command.</summary>
+    [Theory]
+    [InlineData("dotnet test --filter X")]
+    [InlineData("dotnet testing (x)")]
+    [InlineData("dotnet test(x)")]
+    [InlineData("dotnet test (x")]
+    [InlineData("dotnet build")]
+    [InlineData("")]
+    public void RunsCommand_OtherForms_ReturnsFalse(string stored)
+    {
+        EvidenceLine line = new(default, "Maya", stored, 0, null, null, string.Empty);
+
+        Assert.False(line.RunsCommand("dotnet test"));
+    }
+
     /// <summary>A failing check records its non-zero exit code.</summary>
     [Fact]
     public void TryParse_FailingTest_RecordsExitOne()

@@ -4203,6 +4203,13 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-20--the-task-ope
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TASKS-21 — A hand-off held by a spent wake budget survives a restart, and Wake starts the Agent once
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell
@@ -5370,6 +5377,20 @@ File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-05--only-the-chief-
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | Pass | `8c89c795` + uncommitted `feat/schedules` | | Same run. In Ravi's one-to-one, asked for a daily 09:00 Job for the Chief of Staff: Ravi called `jobs` and quoted `You can only schedule Jobs for yourself. Ask the Chief of Staff to schedule one for another Agent or for the Human.` Nothing was written. In the Chief of Staff's one-to-one, asked for a weekday 09:00 Job for Ravi: the tool answered `Scheduled job-cd16de "Bins check" for Ravi: weekdays at 09:00. It runs next on Tue 3 Nov 2026 at 09:00 (Pacific Standard Time).`; `Agents/Ravi/schedule.md` held it with `by: Chief of Staff`; Scheduled listed `Bins check · Ravi`. The zone in the answer was the Windows id; fixed after the run to name the IANA zone. Both test Jobs were then deleted by removing their files, and the view emptied within a second. Two Turns. |
 
+### JOBS-06 — A monthly Job runs on its day, or on the last day of a short month
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-06--a-monthly-job-runs-on-its-day-or-on-the-last-day-of-a-short-month)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### JOBS-07 — A manager schedules for its Team, and for no one else
+
+File: [`docs/engineering/manual-tests/jobs.md`](jobs.md#jobs-07--a-manager-schedules-for-its-team-and-for-no-one-else)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Right sidebar: the panels by Subject, Outline, collapse and focus
 
 ### RSIDE-01 — A Room shows Members, Tasks and Documents
@@ -6367,6 +6388,14 @@ File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+### TMHELP-08 — A new manager writes Team Memory during onboarding
+
+File: [`docs/engineering/manual-tests/team-memory-helper.md`](team-memory-helper.md#tmhelp-08--a-new-manager-writes-team-memory-during-onboarding)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-04 | Pass | f2874883 |  | Agent, isolated lane, Haiku. One-role Development Team (manager only) on a repo with two conventions. Manager wrote `Teams\Tm8Dev\memory\tm8-repo-conventions-and-build.md` with a description and both conventions, proposed a starter Task and created none; only its Room had a Turn. 0.008 USD. Effort stayed Agent default in the draft |
 
 ## Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush
 

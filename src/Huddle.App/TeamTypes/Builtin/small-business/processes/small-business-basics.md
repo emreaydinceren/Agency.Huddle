@@ -61,4 +61,4 @@ This Team runs the day-to-day work of a small business: it reconciles the books,
 
 - Note which mailbox, bank exports and records folder the business uses.
 - Write Team Memory notes on the business's voice, its policies and its spending categories.
-- Propose a starter Task to the business manager.
+- Suggest a starter Task.

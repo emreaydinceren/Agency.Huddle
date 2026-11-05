@@ -46,6 +46,7 @@ internal static class PromptCatalog
         ..BuildPart01(),
         ..BuildPart02(),
         ..BuildPart03(),
+        ..BuildPart54(),
         ..BuildPart04(),
         ..BuildPart05(),
         ..BuildPart06(),
@@ -75,6 +76,7 @@ internal static class PromptCatalog
         ..BuildPart29(),
         ..BuildPart30(),
         ..BuildPart31(),
+        ..BuildPartWakeRestart(),
         ..BuildPart32(),
         ..BuildPart33(),
         ..BuildPart34(),
@@ -92,7 +94,7 @@ internal static class PromptCatalog
         ..BuildPart44(),
         ..BuildPart45(),
         ..BuildPart46(),
-        ..BuildPart54(),
+        ..BuildPart59(),
         ..BuildPart47(),
         ..BuildPart48(),
         ..OverlayPromptFiles.Load(),
@@ -230,6 +232,40 @@ internal static class PromptCatalog
             Placeholders: ["{{logChangeTool}}"],
             RequiredPlaceholders: ["{{logChangeTool}}"],
             Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the slice after <see cref="BuildPart03"/>, from <c>systemPrompt.promisedWork</c> to <c>systemPrompt.roleBlock</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart54() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.promisedWork",
+            Label: "Promised work",
+            HelperText:
+                "One short paragraph every Agent reads, after the chat rules: a promise to do something later is " +
+                "not an ending, so arrange a way back or do it now (#362). Takes no placeholders.",
+            Default:
+                """
+                "I'm doing X" is a progress line, not an ending: take the next action in the same Turn. A correction changes the task, so apply it and carry on rather than stopping at an apology. Promise later work only when you have arranged a way back: a Task, a Job or a Mention. If there is none, do it now or name the blocker. Come back with the result or the blocker without being asked.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.silentReply",
+            Label: "Silent replies",
+            HelperText:
+                "One short paragraph every Agent reads, after the Promised work paragraph: the one token to reply with " +
+                "when there is nothing to add. Must keep {{silentToken}}: the Room's recognised token is substituted " +
+                "in, so the text can never name a token the Room does not strip.",
+            Default:
+                """
+                When you have nothing to add, reply with exactly {{silentToken}} and nothing else. Never use it for a question addressed to you or for a Human's Message that needs an answer.
+                """,
+            Placeholders: ["{{silentToken}}"],
+            RequiredPlaceholders: ["{{silentToken}}"],
+            Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
             Key: "systemPrompt.roleBlock",
@@ -268,9 +304,11 @@ internal static class PromptCatalog
                 "where the steps of the process's Onboarding section are substituted in.",
             Default:
                 """
-                Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:
+                Your Team has just started. Work through these onboarding steps, then tell the Human what you found:
 
                 {{steps}}
+
+                End by suggesting one starter Task in your reply, and ask the Human whether to start it. Do not create a Task or assign anyone until the Human says yes.
                 """,
             Placeholders: ["{{steps}}"],
             RequiredPlaceholders: ["{{steps}}"],
@@ -1515,7 +1553,8 @@ internal static class PromptCatalog
                 {{managedPaths}}
                 Members propose facts, and Huddle files them through a Helper that decides whether each is worth
                 keeping and where it belongs, so you do not need to file what members tell you. You can still write it
-                yourself with the {{memoryTool}} tool: do so for your own decisions, and to fix or tidy what is there.
+                yourself with the {{memoryTool}} tool, passing the Team or Project as the folder: do so for your own
+                decisions, and to fix or tidy what is there.
                 Descriptions follow the same rules as your own Memory. When you are unsure where a fact belongs, propose it with {{proposeTool}}
                 instead.
                 """,
@@ -1639,6 +1678,25 @@ internal static class PromptCatalog
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession,
             ReliedWarning: "Agents rely on this to keep each Room's conversation to that Room."),
+    ];
+
+    /// <summary>Builds the <c>task.wake.restart</c> definition, the change line the Wake button on a pause Notification sends (#353).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPartWakeRestart() =>
+    [
+        new PromptDefinition(
+            Key: "task.wake.restart",
+            Label: "Task wake-up after a restart",
+            HelperText:
+                "The change line listed in the wake-up message when the Human presses Wake on a " +
+                "Notification about a hand-off that was lost when Huddle restarted.",
+            Default:
+                """
+                Task {{taskId}} "{{title}}" is waiting on you; a hand-off was lost when Huddle restarted. Call get_task with taskId {{taskId}} for the full task.
+                """,
+            Placeholders: ["{{taskId}}", "{{title}}"],
+            RequiredPlaceholders: ["{{taskId}}"],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>task.wake.message</c> to <c>tool.getTask.description</c>.</summary>
@@ -2524,7 +2582,7 @@ internal static class PromptCatalog
 
     /// <summary>Builds the AGENTS.md Changes Helper's prompts: its system prompt and the message that shows it one edit (AgentsMdChanges spec §6.4).</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
-    private static PromptDefinition[] BuildPart54() =>
+    private static PromptDefinition[] BuildPart59() =>
     [
         new PromptDefinition(
             Key: "helper.agentsMdChange.system",
@@ -2693,7 +2751,7 @@ internal static class PromptCatalog
                 "timetable. Takes no placeholders.",
             Default:
                 """
-                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule only for yourself; the Chief of Staff may also schedule for another Agent or for the Human, by passing 'target'.
+                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule for yourself; a manager may also schedule for the members of its Team, and the Chief of Staff may also schedule for any other Agent or for the Human, by passing 'target'. Schedule exactly what was approved. If you can't, because of who it is for or when it runs, don't pick something close: say what you can't do and ask. A Job's title must match its schedule.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

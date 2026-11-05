@@ -60,4 +60,4 @@ This Team runs one move, from the first housing search to the first week in the 
 
 - Note the move date, the old and new areas, and who is moving.
 - Write Team Memory notes on the must-haves, the budget and the accounts that need a new address.
-- Propose a starter Task, such as the move checklist.
+- Suggest a starter Task, such as the move checklist.

@@ -17,6 +17,9 @@ namespace Agency.Huddle.Tests.Tasks;
 /// </summary>
 public sealed class TaskTriggerOutcomeTests
 {
+    /// <summary>The Prompt the Wake button's change line is rendered from (#353).</summary>
+    private const string RestartMessageKey = "task.wake.restart";
+
     /// <summary>
     /// Spec §10.4: an assignee who is a known Persona but has never registered (no user row) stops the
     /// wake - nothing is posted and no Room is created - while another Task's wake still posts. Green
@@ -241,6 +244,181 @@ public sealed class TaskTriggerOutcomeTests
         Assert.Equal(cast.Kai.Id, post.Message.SenderId);
         Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
         Assert.Equal(WakeOutcome.Offline, harness.Activity.LastWake(task.Id)?.Outcome);
+    }
+
+    /// <summary>
+    /// #353: after a restart the open pause Notification is handed back to the service. That delivers nothing, posts nothing and wakes no Agent,
+    /// and a Human's change to the Task then closes the Notification.
+    /// </summary>
+    [Fact]
+    public async Task RestorePaused_DeliversNothing_AndAHumanChangeClosesTheNotification()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        harness.Trigger.RestorePaused(task.Id);
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+        Assert.Empty(harness.Feed.Posts);
+        Assert.Empty(harness.Feed.Resolutions);
+        Assert.Null(harness.Activity.LastWake(task.Id));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
+    }
+
+    /// <summary>#353: Allow more on a Task whose pause was restored after a restart closes the Notification, and delivers nothing because the hand-off is gone.</summary>
+    [Fact]
+    public async Task RestorePaused_AllowMore_ClosesTheNotificationAndDeliversNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+        harness.Trigger.RestorePaused(task.Id);
+
+        harness.Activity.Grant(task.Id);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
+        Assert.Empty(harness.Posts);
+    }
+
+    /// <summary>#353: a hand-off the wake budget refused is held, so the Wake button stays hidden; after a restart nothing is held and it shows.</summary>
+    [Fact]
+    public async Task IsHeld_TrueWhileAHandOffIsHeld_FalseAfterARestart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        TaskItem restarted = harness.Seed(TestTasks.Make(id: "PLAT-0002", assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+        harness.Trigger.RestorePaused(restarted.Id);
+
+        Assert.True(harness.Trigger.IsHeld(task.Id));
+        Assert.False(harness.Trigger.IsHeld(restarted.Id));
+    }
+
+    /// <summary>#353: Wake after a restart wakes the Agent once, as the Human, with the general message, and closes the Notification.</summary>
+    [Fact]
+    public async Task WakeAsync_AfterARestart_WakesTheAgentOnceAsTheHumanAndClosesTheNotification()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}|{{taskId}}|{{actor}}|{{changes}}");
+        harness.Prompts.SetOverride(RestartMessageKey, "LOST {{taskId}}");
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        harness.Trigger.RestorePaused(task.Id);
+
+        string? woken = await harness.Trigger.WakeAsync(task.Id, "Nova", ct);
+        string? again = await harness.Trigger.WakeAsync(task.Id, "Nova", ct);
+
+        Assert.Equal("Nova", woken);
+        Assert.Null(again);
+        Assert.Equal($"Nova|{task.Id}|You|- LOST {task.Id}", Assert.Single(harness.Posts).Message.Text);
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
+    }
+
+    /// <summary>#353: a Task now assigned to someone else wakes the current assignee, and the answer names that Agent.</summary>
+    [Fact]
+    public async Task WakeAsync_TaskReassigned_WakesTheCurrentAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        harness.Trigger.RestorePaused(task.Id);
+
+        string? woken = await harness.Trigger.WakeAsync(task.Id, "Zeta", ct);
+
+        Assert.Equal("Nova", woken);
+        Assert.Equal("Nova", Assert.Single(harness.Posts).Message.Text);
+    }
+
+    /// <summary>#353: with wake-ups off, a Wake does nothing and leaves the Notification open.</summary>
+    [Fact]
+    public async Task WakeAsync_WakeUpsOff_WakesNobodyAndKeepsTheNotification()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        harness.Trigger.RestorePaused(task.Id);
+        options.Tasks.WakeEnabled = false;
+
+        string? woken = await harness.Trigger.WakeAsync(task.Id, "Nova", ct);
+
+        Assert.Null(woken);
+        Assert.Empty(harness.Posts);
+        Assert.Empty(harness.Feed.Resolutions);
+    }
+
+    /// <summary>
+    /// #353: a hand-off refused by a paused Room posts one pause Notification per Task and Agent, naming the Room and pointing at Continue,
+    /// however many changes the Room refuses. Continue closes it and delivers the hand-off.
+    /// </summary>
+    [Fact]
+    public async Task RoomBudgetSpent_PostsOneNotification_AndContinueClosesItAndDelivers()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You", AgentMessageBudget = 1 };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
+        _ = await harness.Chat.PostAsync(cast.Room.Id, cast.Kai.Id, "Working on it.", ct: ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+        harness.Raise(task, cast.KaiActor, "Status: In Progress → Review");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        FeedMessage notice = Assert.Single(harness.Feed.Posts);
+        Assert.Equal(FeedSourceType.TaskWakesPaused, notice.SourceType);
+        Assert.True(notice.Notify);
+        Assert.Equal(task.Id.ToString(), notice.TargetKey);
+        TaskWakesPausedPayload payload = Assert.IsType<TaskWakesPausedPayload>(notice.Payload);
+        Assert.Equal("Nova", payload.Waiting);
+        Assert.Equal(cast.Room.Id, payload.RoomId);
+        Assert.Empty(harness.Feed.Resolutions);
+
+        _ = await harness.Chat.ExtendBudgetAsync(cast.Room.Id, ct);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(task.Id.ToString(), harness.Posts[^1].Message.Text);
+        Assert.Equal(new FeedResolution(task.Id.ToString(), FeedSourceType.TaskWakesPaused), Assert.Single(harness.Feed.Resolutions));
     }
 
     /// <summary>A Human's change wakes the assignee itself, so the hand-off that was waiting is dropped, not delivered as a second wake, and the pause is over.</summary>

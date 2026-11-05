@@ -63,4 +63,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Write to the audience and angl
 
 - Read the content folder and note its layout and any published examples.
 - Write Team Memory notes on the house style, the voice and the usual audiences.
-- Propose a starter Task, such as a brief for one piece the Human has asked about.
+- Suggest a starter Task, such as a brief for one piece the Human has asked about.

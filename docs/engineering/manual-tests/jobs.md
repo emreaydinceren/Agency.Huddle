@@ -6,7 +6,7 @@ nor sends late a run. The automated suite proves the timetable rules, the stores
 the view, the watcher and the real clock. The design is [the Jobs spec](../../Huddle.Jobs-Specifications.md) and
 [ADR-0074](../../adr/0074-a-job-is-markdown-in-its-owners-folder-and-runs-in-its-own-room.md).
 
-**5 tests** · 4 free, 1 paid (JOBS-05) · about 0.5 hours. Written 2026-11-02. **JOBS-01 and JOBS-05 passed 2026-11-02** with real Agents; JOBS-02 to JOBS-04 not yet run by a person.
+**7 tests** · 5 free, 2 paid (JOBS-05, JOBS-07) · about 0.75 hours. Written 2026-11-02. **JOBS-01 and JOBS-05 passed 2026-11-02** with real Agents; JOBS-02 to JOBS-04 not yet run by a person. JOBS-06 and JOBS-07 were added 2026-11-04 and have not been run.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals,
 procedures and oracles this page names.
@@ -71,3 +71,33 @@ in the file afterwards.
 
 **Expect**: Ada reports the refusal; the Chief of Staff's Job appears under Scheduled as `… · Ada`, by the Chief of Staff.
 This test needs real Agents (`Team:Acp:Enabled`), so it spends a few Turns.
+
+### JOBS-06 — A monthly Job runs on its day, or on the last day of a short month
+
+**Free** · about 5 min
+
+1. Click **Scheduled** in the Activity bar, then **New job**.
+2. Choose **Ada**, title `Month end`, instruction `Say hello.`, Repeats **Every month**, Day of the month `31`, and time
+   `09:00`. Check the **Next runs** preview: each run falls on the last day of a month that has fewer than 31 days (for
+   a preview made in November, the first run is on 30 November). Click **Schedule**.
+3. Open `$data\Agents\Ada\schedule.md`.
+
+**Expect**: the Job's page shows *Monthly on day 31 at 09:00* with the next run the preview showed; the file holds a
+section with `when: monthly on 31 at 09:00`; nothing is posted now, because the run is not due yet.
+
+### JOBS-07 — A manager schedules for its Team, and for no one else
+
+**Paid** 💰 · about 5 min
+
+Setup: make **Ben** the manager of a Team with **Ravi** as a member (create that Team in the Teams view if the seed has
+none).
+
+1. In Ben's one-to-one, ask: `Use the jobs tool to schedule a weekday 09:00 Job for Ravi, titled Inbox check.`
+2. In Ben's one-to-one, ask: `Use the jobs tool to schedule a daily 09:00 Job for the Human.`
+3. In Ben's one-to-one, ask: `Use the jobs tool to schedule a monthly 15th at 09:00 Job for Ravi, titled Bill check.`
+
+**Expect**: step 1 creates `Inbox check · Ravi` under Scheduled, by Ben; `Agents\Ravi\schedule.md` holds `when: weekdays at
+09:00` and `by: Ben`. Step 2 is refused with the text "You can schedule Jobs for yourself and for members of a Team you
+manage. Ask the Chief of Staff to schedule one for anyone else or for the Human.", and no Job for the Human appears. Step 3
+creates `Bill check · Ravi` with `when: monthly on 15 at 09:00`, not a weekly stand-in; if Ben could not make it, it says so
+and asks. This test needs real Agents (`Team:Acp:Enabled`), so it spends a few Turns.

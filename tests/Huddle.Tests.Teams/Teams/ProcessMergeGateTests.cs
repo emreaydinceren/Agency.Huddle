@@ -17,6 +17,8 @@ public sealed class ProcessMergeGateTests
     private const string Team = "Platform";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
 
+    private const string OldTest = "dotnet test (repo root C:\\HuddleZero\\repos\\bakery-quote)";
+
     private static readonly DateTimeOffset Noon = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 
     /// <summary>A Persona whose Team has the gate and no passing check Evidence is refused with the gate message.</summary>
@@ -92,11 +94,48 @@ public sealed class ProcessMergeGateTests
         Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
     }
 
-    private static void AddEvidence(TaskToolHarness harness, string command, int exitCode)
+    /// <summary>A passing run recorded before #340, with its note folded into the command, lets the merge through.</summary>
+    [Fact]
+    public void RefusalFor_OldLineWithNoteInCommand_ExitZero_IsAllowed()
+    {
+        using TaskToolHarness harness = new(new ManualTimeProvider(Noon));
+        using TempDataDir dir = new();
+        AddEvidence(harness, OldTest, 0);
+        ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
+
+        Assert.Null(gate.RefusalFor("Nova", "git merge main"));
+    }
+
+    /// <summary>A failing run recorded before #340 keeps the merge refused.</summary>
+    [Fact]
+    public void RefusalFor_OldLineWithNoteInCommand_ExitOne_IsRefused()
+    {
+        using TaskToolHarness harness = new(new ManualTimeProvider(Noon));
+        using TempDataDir dir = new();
+        AddEvidence(harness, OldTest, 1);
+        ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
+
+        Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
+    }
+
+    /// <summary>An old passing line followed by a new failing run is refused: the latest run wins.</summary>
+    [Fact]
+    public void RefusalFor_OldPassThenNewFailure_IsRefused()
+    {
+        using TaskToolHarness harness = new(new ManualTimeProvider(Noon));
+        using TempDataDir dir = new();
+        AddEvidence(harness, OldTest, 0);
+        AddEvidence(harness, "dotnet test", 1, minutes: 5);
+        ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
+
+        Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
+    }
+
+    private static void AddEvidence(TaskToolHarness harness, string command, int exitCode, int minutes = 0)
     {
         TaskResult created = harness.Service.Create(new TaskDraft("Fix login", Team, null), TaskActors.Human(harness.Options.Value));
         TaskItem task = Assert.IsType<TaskResult.Saved>(created).Task;
-        EvidenceLine line = new(Noon, "Nova", command, exitCode, null, null, string.Empty);
+        EvidenceLine line = new(Noon.AddMinutes(minutes), "Nova", command, exitCode, null, null, string.Empty);
         TaskResult added = harness.Service.AddEvidence(task.Id, line, new TaskActor(TaskActorKind.Agent, "Nova", "nova-id"));
         Assert.IsType<TaskResult.Saved>(added);
     }

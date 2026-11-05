@@ -58,4 +58,4 @@ This Team answers a question the Human has with data: a metric, a trend, a compa
 
 - Read the data folder, if one is connected, and note its files, formats and date ranges.
 - Write Team Memory notes on the metric definitions and known data quirks.
-- Propose a starter Task, such as profiling one dataset.
+- Suggest a starter Task, such as profiling one dataset.

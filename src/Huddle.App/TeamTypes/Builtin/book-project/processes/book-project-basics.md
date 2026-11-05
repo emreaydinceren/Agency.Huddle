@@ -64,4 +64,4 @@ Follow the voice principles in `Teams/AGENTS.md`. Write in the author's voice ra
 
 - Note how the manuscript folder is laid out by chapter.
 - Write Team Memory notes on the genre, the reader, the author's voice and the style sheet.
-- Propose a starter Task, such as a chapter map of the current draft.
+- Suggest a starter Task, such as a chapter map of the current draft.

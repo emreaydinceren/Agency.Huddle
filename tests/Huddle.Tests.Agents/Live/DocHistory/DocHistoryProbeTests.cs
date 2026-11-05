@@ -41,13 +41,19 @@ public sealed class DocHistoryProbeTests
     /// <summary>LIVE-DH-3: asked to check citations that are all right, the Agent logs one <c>reviewed</c> and leaves the file alone.</summary>
     [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public Task Live3_ReviewWithoutChange_LogsReviewed() => RunAsync(
-        new ProbeScenario("LIVE-DH-3", "Check the citations in report.md. Change nothing unless one is wrong.", ProbeScenario.SeedCommon, CheckReviewed, MinPasses: 4, GuardsOtherLogging: true),
+        new ProbeScenario("LIVE-DH-3", "Check the citations in report.md. Change nothing unless one is wrong.", ProbeScenario.SeedCommon, CheckReviewed, MinPasses: 4, GuardsOtherLogging: true, Reviewer: true),
         TestContext.Current.CancellationToken);
 
     /// <summary>LIVE-DH-4: asked whether it agrees with a contradicted finding, the Agent logs one <c>objected</c> naming F2 and leaves the file alone.</summary>
     [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public Task Live4_Disagree_LogsObjected() => RunAsync(
-        new ProbeScenario("LIVE-DH-4", "Do you agree with finding F2 in report.md? Don't edit the file.", ProbeScenario.SeedCommon, CheckObjected, MinPasses: 3, GuardsOtherLogging: true),
+        new ProbeScenario("LIVE-DH-4", "Do you agree with finding F2 in report.md? Don't edit the file.", ProbeScenario.SeedCommon, CheckObjected, MinPasses: 3, GuardsOtherLogging: true, Reviewer: true),
+        TestContext.Current.CancellationToken);
+
+    /// <summary>LIVE-DH-9: the LIVE-DH-4 question put to an Agent whose role does not cover verify, so its Stop hook has no read reminder. Its rate is recorded for the owner and not asserted (#354).</summary>
+    [Fact(Timeout = 1_500_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
+    public Task Live9_NonReviewerAskedToObject_RecordsTheRate() => RunAsync(
+        new ProbeScenario("LIVE-DH-9", "Do you agree with finding F2 in report.md? Don't edit the file.", ProbeScenario.SeedCommon, CheckObjected, MinPasses: 0, GuardsOtherLogging: true),
         TestContext.Current.CancellationToken);
 
     /// <summary>LIVE-DH-5: asked only to summarise a document, the Agent makes no call at all.</summary>
@@ -215,7 +221,7 @@ public sealed class DocHistoryProbeTests
                 Dictionary<string, string> before = ProbeScenario.Snapshot(folder);
                 tool.Folder = folder;
                 int callsBefore = tool.Calls.Count;
-                LiveTurn turn = await lane.RunAsync(folder, scenario.Prompt, ct);
+                LiveTurn turn = await lane.RunAsync(folder, scenario.Prompt, scenario.Reviewer, ct);
                 ProbeRun observed = new([.. tool.Calls.Skip(callsBefore)], turn.Reply, before, ProbeScenario.Snapshot(folder));
                 string? failure = scenario.Judge(observed);
                 passes += failure is null ? 1 : 0;

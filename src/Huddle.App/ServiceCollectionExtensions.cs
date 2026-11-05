@@ -875,6 +875,7 @@ public static class ServiceCollectionExtensions
         // returns, because a plain count can no longer tell the two apart (corrections-B3 blocking
         // item 2).
         services.AddSingleton<TaskTriggerService>();
+        services.AddSingleton<IWakePauses>(sp => sp.GetRequiredService<TaskTriggerService>());
         services.AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>());
 
         // Digest and retro wake-ups on schedule or count (OR-3, RT-2); singleton plus hosted, like the service above.

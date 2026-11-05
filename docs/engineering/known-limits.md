@@ -56,7 +56,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   5 runs per scenario. With the tool description alone, 0 of 35 runs logged. With the description, a system prompt
   paragraph and a Stop hook that sends the Agent back once after it touched a Markdown file, the 2026-10-19 rates were
   5 of 5 on every scenario: create, edit two files, review, object, no invented actor, asked outright, and (correctly) no
-  call for a summary or a non-Markdown file. Haiku at low Effort is the hardest case the spec allows, but a Sonnet or
+  call for a summary or a non-Markdown file. Those rates predate the read reminder (#354), which only an Agent whose role covers
+  `verify` gets. Rates measured with it on 2026-11-04: a reviewer's review
+  5 of 5 and object 4 of 5; an Agent with no such role, object 3 of 5 (LIVE-DH-9, recorded and not asserted). Haiku at low Effort is the hardest case the spec allows, but a Sonnet or
   Opus Agent, or an Adapter that does not run Claude Code hooks, is unmeasured, and a Turn that changes a document with
   `Bash` rather than `Write` or `Edit` is not seen by the hook. The links Huddle rewrites in other notes when a note is renamed or moved are
   not recorded in those notes' Histories, on purpose: the Human did not edit them.
@@ -745,8 +747,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - **Wake budgets reset on restart.** The per-Task budget of 10 Agent-made wake-ups (D-14,
     `Allow 10 more` on the TaskDetail banner) is in-memory state, like the Room Budget it
     parallels — a restart un-pauses every Task over a Change log that already spent one. A
-    hand-off a spent budget refused waits in memory too, and is delivered by `Allow 10 more` or
-    the paused Room's Continue; a restart loses it, and only the next change to the Task wakes anyone.
+    hand-off a spent budget refused is kept across a restart as a Notification on the Task. Its
+    card's **Wake {Agent}** button wakes the Agent once, with the Human as the actor, and closes the
+    Notification. Before a restart, `Allow 10 more` and the paused Room's Continue still deliver it.
+    The counts still reset, so nothing wakes on its own after a restart; the Human decides.
   - **Tags can't contain `,` or `;`.** `TaskFileFormat` reuses `PersonaFrontmatter`'s list-join
     convention (`"; "`), so a tag containing either character would corrupt the round trip (D-18).
   - **A Task link reflects the index when the Message was last rendered.** `MarkdownRenderer`

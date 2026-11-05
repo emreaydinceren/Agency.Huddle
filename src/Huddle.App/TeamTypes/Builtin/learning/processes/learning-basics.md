@@ -58,4 +58,4 @@ This Team supports one learner working towards one goal: a subject, a skill, a l
 
 - Note the learner's goal, level, weekly time and any course syllabus.
 - Write Team Memory notes on how the learner likes to practise and where they struggled before.
-- Propose a starter Task to the Tutor Lead.
+- Suggest a starter Task.

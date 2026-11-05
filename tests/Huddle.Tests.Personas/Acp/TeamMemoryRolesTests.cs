@@ -81,7 +81,8 @@ public sealed class TeamMemoryRolesTests
             {Paths("Dev")}
             Members propose facts, and Huddle files them through a Helper that decides whether each is worth
             keeping and where it belongs, so you do not need to file what members tell you. You can still write it
-            yourself with the mcp__team__memory tool: do so for your own decisions, and to fix or tidy what is there.
+            yourself with the mcp__team__memory tool, passing the Team or Project as the folder: do so for your own
+            decisions, and to fix or tidy what is there.
             Descriptions follow the same rules as your own Memory. When you are unsure where a fact belongs, propose it with mcp__team__propose_team_memory
             instead.
 
@@ -122,7 +123,7 @@ public sealed class TeamMemoryRolesTests
     {
         string actual = TeamBlock(new FakePromptSource(), null, ["get_help", "memory", "propose_team_memory"], Group("Dev", isManager: true));
 
-        Assert.Contains("yourself with the memory tool:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("yourself with the memory tool, passing the Team or Project as the folder:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.Contains("propose it with propose_team_memory\ninstead.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
     }

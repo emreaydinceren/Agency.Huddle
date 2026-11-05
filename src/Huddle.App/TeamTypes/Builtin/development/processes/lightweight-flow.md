@@ -64,4 +64,4 @@ This Team builds and ships software in a repository, and this process takes a sm
 - Read the workspace and note its layout.
 - Run the build and the tests, and record the results.
 - Write Team Memory notes on the conventions you found.
-- Propose a starter Task to the manager.
+- Suggest a starter Task.

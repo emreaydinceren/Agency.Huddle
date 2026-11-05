@@ -840,6 +840,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-18](tasks.md#tasks-18--the-toolbar-sprint-filter-a-saved-view-with-current-sprint-and-a-board-grouped-by-sprint) |  | Active |  |  |
 | [TASKS-19](tasks.md#tasks-19--an-agent-given-a-sprint-name-sets-it-with-update_task-a-typo-is-refused-with-the-known-list-and-the-assignee-is-woken) | 💰 | Active |  |  |
 | [TASKS-20](tasks.md#tasks-20--the-task-opens-in-the-right-sidebar-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top) |  | Active |  |  |
+| [TASKS-21](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Active |  |  |
 
 ## adapters
 
@@ -1117,6 +1118,8 @@ Jobs: scheduled instructions in their own Rooms — [area file](jobs.md)
 | [JOBS-03](jobs.md#jobs-03--the-file-is-the-source-of-truth) |  | Active |  | | not yet run by a person |
 | [JOBS-04](jobs.md#jobs-04--a-restart-neither-repeats-nor-sends-late) |  | Active |  | | not yet run by a person |
 | [JOBS-05](jobs.md#jobs-05--only-the-chief-of-staff-schedules-for-others) | 💰 | Pass |  | 2026-11-02, uncommitted `feat/schedules`. Ravi was refused with the exact text; the Chief of Staff scheduled `Bins check` for Ravi (`by: Chief of Staff`) |
+| [JOBS-06](jobs.md#jobs-06--a-monthly-job-runs-on-its-day-or-on-the-last-day-of-a-short-month) |  | Active |  | | added 2026-11-04, not yet run by a person |
+| [JOBS-07](jobs.md#jobs-07--a-manager-schedules-for-its-team-and-for-no-one-else) | 💰 | Active |  | | added 2026-11-04, not yet run by a person |
 
 ## second-brain
 
@@ -1295,6 +1298,7 @@ Team Memory Helper: proposals filed by a Helper, the History, the Feed record, t
 | [TMHELP-05](team-memory-helper.md#tmhelp-05--a-proposal-to-a-team-the-member-is-not-in-is-refused) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-06](team-memory-helper.md#tmhelp-06--instructions-inside-a-proposal-do-not-move-the-write-outside-the-team) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-07](team-memory-helper.md#tmhelp-07--the-daily-cap-pauses-the-helper-and-the-tool-says-so) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-08](team-memory-helper.md#tmhelp-08--a-new-manager-writes-team-memory-during-onboarding) | 💰 | Active |  | not yet run by a person |
 
 ## long-running-rooms
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.DocHistory;
@@ -37,7 +38,8 @@ internal static class DocHistoryStopHook
     /// <param name="dataDir">The App's data folder, which keeps the script.</param>
     /// <param name="logChangeToolName">The tool's prefixed name, which the hook's message tells the Agent to call.</param>
     /// <param name="logger">Receives a failure.</param>
-    internal static void Install(string workDir, string dataDir, string logChangeToolName, ILogger logger)
+    /// <param name="remindReads">Whether the hook also sends back a Turn that only read a Markdown file; true for an Agent whose role covers verify (#354).</param>
+    internal static void Install(string workDir, string dataDir, string logChangeToolName, ILogger logger, bool remindReads = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workDir);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDir);
@@ -52,7 +54,7 @@ internal static class DocHistoryStopHook
                 WriteIfChanged(script, Script);
             }
 
-            AddToSettings(Path.Combine(workDir, ".claude", SettingsFile), $"node \"{script}\" {logChangeToolName}", logger);
+            AddToSettings(Path.Combine(workDir, ".claude", SettingsFile), $"node \"{script}\" {logChangeToolName}{(remindReads ? " --remind-reads" : string.Empty)}", logger);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -122,10 +124,12 @@ internal static class DocHistoryStopHook
     /// instruction. A <c>Read</c> of a file named <c>AGENTS.md</c> (any case, either slash) is following the rules, not
     /// reviewing a document, so it is not counted; a write to it still is. On the second stop (<c>stop_hook_active</c>) or any doubt it says nothing, so it cannot loop.
     /// </summary>
-    internal const string Script = """
+    internal const string Script = $$"""
         // Written by Agency.Huddle (DocHistory). Reminds the Agent to call log_change after it touched a .md file.
         const fs = require("fs");
         const tool = process.argv[2] || "log_change";
+        const remindReads = process.argv[3] === "--remind-reads";
+        const silent = "{{SilentReply.Token}}";
         let raw = "";
         process.stdin.setEncoding("utf8");
         process.stdin.on("data", (chunk) => (raw += chunk));
@@ -155,10 +159,10 @@ internal static class DocHistoryStopHook
                 else if (markdown && block.name === "Read" && file.split(/[\\/]/).pop().toLowerCase() !== "agents.md") opened.add(file);
               }
             }
-            if (logged || (wrote.size === 0 && opened.size === 0)) return;
+            if (logged || (wrote.size === 0 && (!remindReads || opened.size === 0))) return;
             const reason = wrote.size > 0
-              ? `You wrote or edited ${[...wrote].join(", ")} this turn but have not logged it. Call ${tool} once for each file with path, kind (created for a new file, edited for an existing one) and summary (one line saying what you did and why), then finish your reply.`
-              : `You opened ${[...opened].join(", ")} this turn. If you reviewed or checked it (kind reviewed) or disagree with part of it (kind objected), call ${tool} with path, kind and summary, then finish your reply. If you only read it to answer a question or summarise it, there is nothing to log: just finish.`;
+              ? `You wrote or edited ${[...wrote].join(", ")} this turn but have not logged it. Call ${tool} once for each file with path, kind (created for a new file, edited for an existing one) and summary (one line saying what you did and why). When you are done, reply with exactly this and nothing else: ${silent}`
+              : `You opened ${[...opened].join(", ")} this turn. If you reviewed or checked it (kind reviewed) or disagree with part of it (kind objected), call ${tool} with path, kind and summary. If you only read it to answer a question or summarise it, there is nothing to log. When you are done, reply with exactly this and nothing else: ${silent}`;
             process.stdout.write(JSON.stringify({ decision: "block", reason }));
           } catch (error) {
             // Never block an Agent because the reminder failed.

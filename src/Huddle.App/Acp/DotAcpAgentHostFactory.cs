@@ -136,7 +136,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
 
-        this.InstallDocHistoryHook(workDir, toolNames);
+        InstallDocHistoryHook(workDir, this.options.DataDir, toolNames, parsed, this.serviceProvider.GetService<ProcessGateService>(), this.logger);
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
@@ -309,12 +309,17 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// Adapter process reads that folder's settings.
     /// </summary>
     /// <param name="workDir">The Persona's Work Dir.</param>
+    /// <param name="dataDir">The App's data folder, which keeps the hook script.</param>
     /// <param name="toolNames">The session's tool names, already prefixed.</param>
-    private void InstallDocHistoryHook(string workDir, IReadOnlyList<string> toolNames)
+    /// <param name="identity">The Persona's parsed identity, or <see langword="null"/>. An Agent whose role covers verify also gets the read reminder (#354); one with no role, such as the Chief of Staff, does not.</param>
+    /// <param name="gates">Tells which roles cover verify, or <see langword="null"/> when the service is not registered.</param>
+    /// <param name="logger">Receives an install failure.</param>
+    internal static void InstallDocHistoryHook(string workDir, string dataDir, IReadOnlyList<string> toolNames, PersonaIdentity? identity, ProcessGateService? gates, ILogger logger)
     {
         if (SystemPromptComposer.FindLogChangeTool(toolNames) is { } logChangeToolName)
         {
-            DocHistoryStopHook.Install(workDir, this.options.DataDir, logChangeToolName, this.logger);
+            bool remindReads = gates?.CoversVerify(identity?.Role) == true;
+            DocHistoryStopHook.Install(workDir, dataDir, logChangeToolName, logger, remindReads);
         }
     }
 

@@ -20,6 +20,7 @@ public sealed class ProofEvaluatorTests
     private const string Quinn = "Quinn";
     private const string Ruth = "Ruth";
     private const string Dev = "Dev";
+    private const string OldTest = "dotnet test (repo root C:\\HuddleZero\\repos\\bakery-quote)";
 
     private static readonly DateTimeOffset Noon = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 
@@ -115,6 +116,38 @@ public sealed class ProofEvaluatorTests
         ProofContext context = Context([Item(new DoneRule.CommandExits("dotnet test"))], evidence: [parsed]);
 
         Assert.True(Single(context).Met);
+    }
+
+    /// <summary>A line written before #340, with the note folded into the command and exit 0, meets the item.</summary>
+    [Fact]
+    public void CommandExits_OldLineWithNoteInCommand_ExitZero_IsMet()
+    {
+        ProofContext context = Context([Item(new DoneRule.CommandExits("dotnet test"))], evidence: [Run(Dev, OldTest, 0)]);
+
+        Assert.True(Single(context).Met);
+    }
+
+    /// <summary>A line written before #340 with exit 1 leaves the item open and says the exit code.</summary>
+    [Fact]
+    public void CommandExits_OldLineWithNoteInCommand_ExitOne_Fails()
+    {
+        ProofContext context = Context([Item(new DoneRule.CommandExits("dotnet test"))], evidence: [Run(Dev, OldTest, 1)]);
+
+        ProofItem item = Single(context);
+
+        Assert.False(item.Met);
+        Assert.Equal("last run exit 1", item.Detail);
+    }
+
+    /// <summary>An old passing line followed by a new failing run is open: the latest run wins.</summary>
+    [Fact]
+    public void CommandExits_OldPassThenNewFailure_Fails()
+    {
+        ProofContext context = Context(
+            [Item(new DoneRule.CommandExits("dotnet test"))],
+            evidence: [Run(Dev, OldTest, 0, minutes: 0), Run(Dev, "dotnet test", 1, minutes: 5)]);
+
+        Assert.False(Single(context).Met);
     }
 
     /// <summary>A command never run leaves the item open, owned by the assignee, with the detail <c>not run</c>.</summary>

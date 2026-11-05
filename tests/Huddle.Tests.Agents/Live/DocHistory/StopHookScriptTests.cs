@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.DocHistory;
 
 namespace Agency.Huddle.Tests.Live.DocHistory;
@@ -34,14 +35,58 @@ public sealed class StopHookScriptTests : IDisposable
         Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Edit", "/w/a.md"), Use(Tool, null)]));
     }
 
-    /// <summary>A Turn that only opened a Markdown file is asked whether it reviewed or objected, and told it may stop if it only read.</summary>
+    /// <summary>With the read flag, a Turn that only opened a Markdown file is asked whether it reviewed or objected, and told to reply with only the silent token if it only read.</summary>
     [Fact]
-    public async Task OnlyOpenedMarkdown_AsksForReviewOrObjection()
+    public async Task OnlyOpenedMarkdown_WithFlag_AsksForReviewOrObjection()
     {
-        string reason = await this.RunAsync([Prompt(), Use("Read", "/w/report.md")]);
+        string reason = await this.RunAsync([Prompt(), Use("Read", "/w/report.md")], remindReads: true);
 
         Assert.Contains("You opened /w/report.md", reason, StringComparison.Ordinal);
-        Assert.Contains("there is nothing to log: just finish", reason, StringComparison.Ordinal);
+        Assert.Contains("there is nothing to log", reason, StringComparison.Ordinal); // contains-ok: model-facing reason text; the exact wording is pinned by the token test
+    }
+
+    /// <summary>Without the flag, a Turn that only read a Markdown file is not sent back: the hook says nothing.</summary>
+    [Fact]
+    public async Task OnlyOpenedMarkdown_NoFlag_SaysNothing()
+    {
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/report.md")]));
+    }
+
+    /// <summary>Without the flag, a write still blocks, so creates and edits are still logged.</summary>
+    [Fact]
+    public async Task WroteMarkdown_NoFlag_StillBlocks()
+    {
+        string reason = await this.RunAsync([Prompt(), Use("Write", "/w/a.md"), Use("Read", "/w/b.md")]);
+
+        Assert.Contains("You wrote or edited /w/a.md", reason, StringComparison.Ordinal); // contains-ok: model-facing reason; the read file must not be named
+        Assert.DoesNotContain("/w/b.md", reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>With the flag, a read blocks once, and the second stop in a row passes so the hook cannot loop.</summary>
+    [Fact]
+    public async Task OnlyOpenedMarkdown_WithFlag_StopHookActive_LetsThrough()
+    {
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/report.md")], stopHookActive: true, remindReads: true));
+    }
+
+    /// <summary>With the flag, a Turn that read a Markdown file and logged a change is let through.</summary>
+    [Fact]
+    public async Task OnlyOpenedMarkdown_WithFlag_Logged_LetsThrough()
+    {
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/report.md"), Use(Tool, null)], remindReads: true));
+    }
+
+    /// <summary>Both reasons end with the silent token and no longer tell the Agent to finish its reply, which invites more words.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reasons_EndWithTheSilentToken(bool wrote)
+    {
+        string reason = await this.RunAsync([Prompt(), Use(wrote ? "Write" : "Read", "/w/a.md")], remindReads: true);
+
+        Assert.EndsWith("reply with exactly this and nothing else: " + SilentReply.Token, reason, StringComparison.Ordinal); // contains-ok: the reason's tail is the only place the token must appear, and no full stop may follow it
+        Assert.DoesNotContain("finish your reply", reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("just finish", reason, StringComparison.Ordinal);
     }
 
     /// <summary>A Turn that touched no Markdown file, or only a text file, costs nothing: the hook says nothing.</summary>
@@ -76,18 +121,18 @@ public sealed class StopHookScriptTests : IDisposable
         Assert.Contains("You wrote or edited /w/a.md", reason, StringComparison.Ordinal);
     }
 
-    /// <summary>Reading AGENTS.md is following the rules, not reviewing a document, so the hook says nothing (any case).</summary>
+    /// <summary>Reading AGENTS.md is following the rules, not reviewing a document, so even a reviewer's hook says nothing (any case).</summary>
     [Fact]
     public async Task StopHook_ReadOfAgentsMd_DoesNotBlock()
     {
-        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/sub/agents.MD")]));
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/sub/agents.MD")], remindReads: true));
     }
 
     /// <summary>A Windows path to AGENTS.md is matched on its file name too.</summary>
     [Fact]
     public async Task StopHook_ReadOfAgentsMd_WindowsPath_DoesNotBlock()
     {
-        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", @"C:\work\room\AGENTS.md")]));
+        Assert.Equal(string.Empty, await this.RunAsync([Prompt(), Use("Read", @"C:\work\room\AGENTS.md")], remindReads: true));
     }
 
     /// <summary>Writing AGENTS.md is still reminded.</summary>
@@ -103,7 +148,7 @@ public sealed class StopHookScriptTests : IDisposable
     [Fact]
     public async Task StopHook_ReadOfOtherMd_StillBlocks()
     {
-        string reason = await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/notes.md")]);
+        string reason = await this.RunAsync([Prompt(), Use("Read", "/w/AGENTS.md"), Use("Read", "/w/notes.md")], remindReads: true);
 
         Assert.Contains("You opened /w/notes.md this turn", reason, StringComparison.Ordinal); // contains-ok: the reason's tail is long prose; the file naming is the point.
     }
@@ -124,15 +169,17 @@ public sealed class StopHookScriptTests : IDisposable
     /// <summary>Runs the script with a transcript and returns the reason it blocked with, or an empty string when it said nothing.</summary>
     /// <param name="lines">The transcript's lines.</param>
     /// <param name="stopHookActive">Whether this is the second stop in a row.</param>
+    /// <param name="remindReads">Whether the script is given the <c>--remind-reads</c> flag, as a reviewer's is.</param>
     /// <returns>The block reason, or empty.</returns>
-    private async Task<string> RunAsync(string[] lines, bool stopHookActive = false)
+    private async Task<string> RunAsync(string[] lines, bool stopHookActive = false, bool remindReads = false)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         string script = Path.Combine(this.folder, DocHistoryStopHook.ScriptName);
         string transcript = Path.Combine(this.folder, "transcript.jsonl");
         await File.WriteAllTextAsync(script, DocHistoryStopHook.Script, ct);
         await File.WriteAllLinesAsync(transcript, lines, ct);
-        ProcessStartInfo start = new("node", [script, Tool]) { RedirectStandardInput = true, RedirectStandardOutput = true, UseShellExecute = false };
+        string[] arguments = remindReads ? [script, Tool, "--remind-reads"] : [script, Tool];
+        ProcessStartInfo start = new("node", arguments) {RedirectStandardInput = true, RedirectStandardOutput = true, UseShellExecute = false };
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("node did not start.");
         JsonObject input = new() { ["transcript_path"] = transcript, ["stop_hook_active"] = stopHookActive, ["hook_event_name"] = "Stop" };
         await process.StandardInput.WriteAsync(input.ToJsonString());

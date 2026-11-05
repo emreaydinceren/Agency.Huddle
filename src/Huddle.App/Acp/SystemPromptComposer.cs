@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp;
 using System.Globalization;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
@@ -358,6 +359,16 @@ internal static class SystemPromptComposer
             "Chat rules",
             "systemPrompt.chatRules",
             prompts.Render("systemPrompt.chatRules", new Dictionary<string, string>())));
+        parts.Add(PromptOf(
+            prompts,
+            "Promised work",
+            "systemPrompt.promisedWork",
+            prompts.Render("systemPrompt.promisedWork", new Dictionary<string, string>())));
+        parts.Add(PromptOf(
+            prompts,
+            "Silent replies",
+            "systemPrompt.silentReply",
+            prompts.Render("systemPrompt.silentReply", new Dictionary<string, string> { ["{{silentToken}}"] = SilentReply.Token })));
         parts.Add(new PromptPart(
             "Tools",
             new PromptPartSource.Tools(toolNames.Count),
@@ -425,6 +436,8 @@ internal static class SystemPromptComposer
                     ["{{jobsTool}}"] = FindJobsTool(toolNames) ?? ToolUnavailable,
                     ["{{logChangeTool}}"] = FindLogChangeTool(toolNames) ?? ToolUnavailable,
                     ["{{retroTool}}"] = toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "propose_retro_changes")) ?? ToolUnavailable,
+                    ["{{listTasksTool}}"] = toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "list_tasks")) ?? ToolUnavailable,
+                    ["{{searchTool}}"] = toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "search")) ?? ToolUnavailable,
                 })));
 
     /// <summary>Adds one workspace part per Team with a readable workspace (slot 7, Spec 8.1), in the order given.</summary>

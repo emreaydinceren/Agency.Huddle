@@ -39,6 +39,7 @@
                 <MudSelectItem T="JobCadence" Value="JobCadence.Daily">Every day</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.Weekdays">Every weekday</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.Weekly">On chosen days</MudSelectItem>
+                <MudSelectItem T="JobCadence" Value="JobCadence.Monthly">Every month</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.EveryHours">Every few hours</MudSelectItem>
             </MudSelect>
             @if (this.form.Cadence == JobCadence.Once)
@@ -56,6 +57,12 @@
                                      ValueChanged="@(chosen => this.form.Set(shown, chosen))" />
                     }
                 </div>
+            }
+            @if (this.form.Cadence == JobCadence.Monthly)
+            {
+                <MudNumericField T="int" Label="Day of the month" Min="1" Max="@JobRecurrence.MaxDayOfMonth" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 HelperText="A day past the month's end runs on its last day." Class="job-editor-day-of-month"
+                                 @bind-Value="this.form.DayOfMonth" />
             }
             @if (this.form.Cadence == JobCadence.EveryHours)
             {

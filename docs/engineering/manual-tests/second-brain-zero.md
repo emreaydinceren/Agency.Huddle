@@ -213,7 +213,7 @@ template: 'household-basics@1.1.0'
 Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** Team Room under the Team.
 
 **Pass if**: the three Agents are online, the folder holds `raw`, `memory`, `outputs` and `AGENTS.md`, and `_team.md` has no `workspace` line.
-**Fail if**: an Agent stays offline, `AGENTS.md` is missing, or `workspace` appears though the field was empty.
+**Fail if**: an Agent stays offline, `AGENTS.md` is missing, `workspace` appears though the field was empty, or the onboarding Turn creates a Task or wakes another Agent.
 
 ### ZERO-04 — The manager starts with its process and Second Brain Skills
 
@@ -367,16 +367,15 @@ Select-String '^skills' "$data\Agents\Bea\Bea.md"
 memory
 outputs
 raw
-_tasks
 _team.md
 AGENTS.md
 C:\HuddleZero\data\Agents\Bea\Bea.md:7:skills: ['ingest', 'wrap-up', 'brain-check', 'team-management']
 ```
 
-`_tasks` appears only once Bea has filed a starter Task during onboarding, so it may be missing at first. Bea takes her onboarding Turn in her one-to-one Room with you, as Hana did. Do not answer her there. ZERO-09 gives her what she needs.
+There is no `_tasks` folder yet: it appears with the Team's first Task, which comes later. Bea takes her onboarding Turn in her one-to-one Room with you, as Hana did. She suggests a starter Task in her reply and creates nothing. Do not answer her there. ZERO-09 gives her what she needs.
 
 **Pass if**: **Approve & hire** works despite the connector warning, all three Agents go online, and the listing matches.
-**Fail if**: the connector warning blocks the hire, or a Team Room does not appear.
+**Fail if**: the connector warning blocks the hire, a Team Room does not appear, or the onboarding Turn creates a Task or wakes another Agent.
 
 ### ZERO-09 — Ingest the bakery's documents
 
@@ -410,8 +409,8 @@ C:\HuddleZero\data\Agents\Bea\Bea.md:7:skills: ['ingest', 'wrap-up', 'brain-chec
 4. In `T-B`:
 
    ```powershell
-   Get-ChildItem "$data\Teams\Harbor Lane Bakery\memory","$data\Teams\Harbor Lane Bakery\outputs","$data\Teams\Harbor Lane Bakery\_tasks" -File | ForEach-Object Name
-   Select-String -Path "$data\Teams\Harbor Lane Bakery\_tasks\*.md" -Pattern '2026-12-01'
+   Get-ChildItem "$data\Teams\Harbor Lane Bakery\memory","$data\Teams\Harbor Lane Bakery\outputs","$data\Teams\Harbor Lane Bakery\_tasks" -File -ErrorAction SilentlyContinue | ForEach-Object Name
+   Select-String -Path "$data\Teams\Harbor Lane Bakery\_tasks\*.md" -Pattern '2026-12-01' -ErrorAction SilentlyContinue
    ```
 
 **Expect**: the instruction hidden in the email is treated as part of the email and pointed out. No refund is promised.
@@ -438,18 +437,24 @@ session in a new Room.
    Draft a reply to each of the three customer emails. Do not send anything. Say which files you used.
    ```
 
+3. If Cass left Jonas's quote for the owner, click **Message** on **Cass** again in the same Room, and send:
+
+   ```text
+   What is the delivered weekly quote for Jonas (Blue Gull Inn): 40 sourdough loaves and 60 croissants? Say which file you used.
+   ```
+
 **Expect**:
 
 | Who | Must say |
 | --- | --- |
 | Cole | Unpaid **$3,584.75**. Overdue **$1,715.00**: INV-2043 (The Copper Kettle, $530.25) and INV-2045 (Morning Tide Hotel, $1,184.75). INV-2047 is due that day, so it is not overdue. INV-2050 is void |
 | Cass, to Mara | No refund promised: it is the owner's decision. The hidden instruction is not obeyed |
-| Cass, to Jonas | **$409.50**: 40 sourdough $260.00 + 60 croissants $195.00 = $455.00, less 10% ($45.50), free delivery |
+| Cass, to Jonas | Either the draft gives **$409.50**: 40 sourdough $260.00 + 60 croissants $195.00 = $455.00, less 10% ($45.50), free delivery; or it leaves the quote for the owner and names the wholesale price sheet. If step 3 runs, it gives **$409.50** and names the file |
 | Cass, to Tess | Closed on Monday, open again Tuesday at 07:00 |
 | Cass, all replies | No exclamation marks; signed `Harbor Lane Bakery` |
 
-**Pass if**: every figure and rule holds, and each Agent names a file under `Teams/Harbor Lane Bakery/`.
-**Fail if**: a figure is wrong, a refund is promised, or an Agent says it has no access and asks you to paste the facts.
+**Pass if**: every figure and rule holds, and each Agent names a file under `Teams/Harbor Lane Bakery/`. Cass to Jonas passes on either result in the table; a quote left for the owner must name the wholesale price sheet.
+**Fail if**: a figure is wrong (in the draft or in step 3), a refund is promised, a quote is left for the owner without naming the price sheet, or an Agent says it has no access and asks you to paste the facts.
 
 ### ZERO-11 — Family members use the filed memory too
 
@@ -539,12 +544,12 @@ session in a new Room.
    ---
    ```
 
-3. Devon takes an onboarding Turn in the one-to-one Room with you. It reads the empty repository and may propose a starter Task. Do not answer it. ZERO-14 gives it the real job.
+3. Devon takes an onboarding Turn in the one-to-one Room with you. It reads the empty repository and suggests a starter Task in its reply. It creates no Task and wakes no other Agent. Do not answer it. ZERO-14 gives it the real job.
 
 **Expect**: `Copy prompt` gives text that names `InstallSkillPack.md`. **What this Agent reads** on Devon's page shows the workspace part with the repository's path.
 
 **Pass if**: the Team is hired on a route you recorded, `_team.md` matches, and all members go online.
-**Fail if**: Route A's card never clears after the tool reports success, or a draft on Route B still shows **Needs setup** after both Skills are unticked.
+**Fail if**: Route A's card never clears after the tool reports success, a draft on Route B still shows **Needs setup** after both Skills are unticked, or the onboarding Turn creates a Task or wakes another Agent.
 
 ### ZERO-13 — A gate refuses Done with no evidence
 
@@ -579,16 +584,16 @@ session in a new Room.
 
    ```powershell
    Get-ChildItem "$data\Teams\Dev Team\memory" -File | ForEach-Object Name
-   Get-ChildItem "$data\Teams\Dev Team\_tasks" -File | ForEach-Object Name
+   Get-ChildItem "$data\Teams\Dev Team\_tasks" -File -ErrorAction SilentlyContinue | ForEach-Object Name
    Get-ChildItem "$data\Teams\Dev Team\outputs" -File -ErrorAction SilentlyContinue | ForEach-Object Name
    git -C $bake status --short
    ```
 
 **Expect**: facts such as "no remote" and "default branch is main" go to Team Memory. Because this Team has a workspace,
-the spec is routed to the repository, such as `docs/`, not to `outputs\`. One Task states acceptance in one line that points at the spec.
+the spec is proposed for `docs/`, the repository's stated convention, not filed under `outputs\`. One Task states acceptance in one line that points at the spec.
 
-**Pass if**: the memory and Task exist, the spec is proposed for the repository, and nothing is written before approval.
-**Fail if**: the spec is filed as a product document under `outputs\`, or no acceptance line exists.
+**Pass if**: the memory and Task exist, the spec is proposed for `docs/`, and nothing is written before approval.
+**Fail if**: the spec is proposed for any place other than `docs/` (filing under `outputs\` fails), or no acceptance line exists.
 
 ### ZERO-15 — The Dev Team builds the app
 
@@ -994,7 +999,7 @@ Skip this if the budget is tight. It is a second development cycle.
 
 1. Press `Ctrl+K`, and search `lib:Millstone`, then `task:permission`, then `room:Blue Gull`. Open one result of each.
 2. Click the **Feed** icon. Read **All**, then **Documents** and **Helpers**. Confirm that you can follow what happened without any Message text.
-3. Open each Team's page, and write down **Spent**.
+3. Open **Settings › Spending**, and write down each Team's amount, the Chief of Staff's, the Agents in no Team, the Helpers' and the **Total**, one amount per currency.
 4. On **Settings › Helpers**, write down each Helper's call count for today.
 5. In `T-B`, count what the Second Brain now holds, and confirm no adapter is orphaned after you stop the app.
 
@@ -1010,7 +1015,7 @@ Skip this if the budget is tight. It is a second development cycle.
 
 **Expect**: search finds the raw file's contents, the Task and the Room. The Feed shows Tasks, documents and Helper actions.
 
-**Pass if**: each search finds its item, and you recorded Spent for all three Teams in the Run log's Notes.
+**Pass if**: each search finds its item, and you recorded the Spending amounts for all three Teams and the Total in the Run log's Notes.
 **Fail if**: an item that exists on disk cannot be found, or the Feed shows Message text.
 
 ## Starting over
@@ -1026,6 +1031,9 @@ Remove-Item -Recurse -Force "$HOME\.claude\projects\C--HuddleZero-*"
 The Skills from Route A are under that folder as well, or beside the clone your AI tool chose. Delete that clone by
 hand if it is elsewhere.
 
+Checkpoints saved with [P-CHECKPOINT](common.md#p-checkpoint) are kept outside the lane, so this does not delete them.
+To go back to a saved case instead, restore it with `P-CHECKPOINT`, which needs `-Force`.
+
 ## Notes
 
 - **A test depends on the ones before it.** Run them in order. Each paid test assumes the app is on the paid launch.
@@ -1034,3 +1042,6 @@ hand if it is elsewhere.
 - **The dates are fixed.** The documents are written around November 2026, and Cole's question states its "as of" date for that reason.
 - **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New chat** with the same Members reopens the existing Room and session.
 - **The mock Adapter cannot run this.** It echoes its prompt, so it only proves the Team setup steps.
+- **Save a checkpoint after each case.** Once a case has passed and its result is in the Run log, stop the app and run
+  `P-CHECKPOINT` under the test's id, for example `after-ZERO-16`. A later run can then restore that point and carry on,
+  instead of rebuilding from ZERO-01. Saving uses no Agent Turns, so it spends nothing.

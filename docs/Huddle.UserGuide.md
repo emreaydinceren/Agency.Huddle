@@ -675,8 +675,9 @@ its card. It shows:
 
 - **Role:** the role and version the Agent was hired as.
 - **Total spent:** the lasting cost of the Agent, one line per currency, kept
-  across restarts. This is different from **Spent since start**, which counts
-  only the current run.
+  across restarts. It shows on every Agent card once anything is stored, not
+  only on an Agent with this panel. This is different from **Spent since start**,
+  which counts only the current run.
 - **Packs:** named groups of Skills, such as **MSBuild Authoring**. Select a
   pack's chip to add its Skills to that Agent, or select it again to take
   them off. A Skill the role itself carries stays when you remove a pack. Adding
@@ -1938,7 +1939,9 @@ Call get_task with taskId BUSI-0002 for the full task.
 - Agents changing each other's Tasks could loop, so each Task allows 10
   Agent-made wake-ups. After that, changes are still saved but nobody is
   woken until you select **Allow 10 more** in the Task panel. Any change you make
-  resets the count.
+  resets the count. The count also resets when Huddle restarts. A hand-off that was
+  waiting on a spent budget stays in the Feed as a Notification on the Task, with
+  **Wake {Agent}** on its card. Nobody wakes at startup; **Wake** starts the Agent once.
 
 The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
@@ -2172,14 +2175,15 @@ replies, and a job for you puts its Room on [Needs you](#needs-you) until you po
 To schedule one, click **Scheduled** in the Activity bar, then **New job**:
 
 1. Choose who it is for, and give it a title and an instruction.
-2. Choose how it repeats: once, every day, every weekday, on chosen days, or every few hours.
+2. Choose how it repeats: once, every day, every weekday, on chosen days, every month on a day you pick (the 1st to the 31st), or every few hours. A day that a month does not have, such as the 31st in April, runs on that month's last day.
 3. Check the **Next runs** preview, then click **Schedule**.
 
 A job's page shows when it runs next and how its last run went, with **Edit…**, **Pause**, **Run now**, **Open Room** and
 **Delete job…**. Deleting a job keeps its Room.
 
-Agents schedule their own jobs with the `jobs` tool. Only the Chief of Staff can schedule a job for another Agent or for
-you, so you can ask it: "remind me every Friday at 16:00 to send the weekly update".
+Agents schedule their own jobs with the `jobs` tool. A manager can also schedule a job for a member of its Team. Only the
+Chief of Staff can schedule a job for any other Agent or for you, so you can ask it: "remind me every Friday at 16:00 to
+send the weekly update".
 
 Jobs are kept in `schedule.md`: beside each Agent's definition in its Agent folder, and in `Human/schedule.md` under
 the data folder for yours. You can edit the file by hand; a line Huddle cannot read is listed on the Scheduled page and
@@ -2454,6 +2458,8 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
 
+**Spending** (**Settings › Spending**, read-only) shows what the Adapters have reported as spent: one line per Team, the Chief of Staff, each Agent in no Team and the Helpers, each with its cost and, for Helpers, its calls. Then a **Total** counts every Agent once, however many Teams it is in, so a line appears when an Agent's spend counts in more than one Team. Amounts are shown per currency and are never added across currencies. The panel covers only what the Adapters report, and removing an Agent removes its spend from it. It sets no budgets or limits.
+
 ### Helpers
 
 A **Helper** is a small background agent that makes one judgement about something that just happened, and lets Huddle act on its answer. It is not an Agent: it has no Room, keeps no memory, uses no tools and posts no Messages. Huddle shows it what it needs to see, it answers in a few words, and Huddle makes the change itself.
@@ -2530,7 +2536,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
 | Huddle stops at start-up: *Another program is already listening on the pipe 'team'* | Another copy of Huddle is running on this computer. Stop it, or start this copy with its own `Team:PipeName`. |
 | A **Notice** row says **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
-| A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**). |
+| A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**; after a restart, use **Wake** on the Task's Notification). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
 | A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |
 | A membership change was undone | An Agent Edit card that was open during the change saved its old text. Re-add the member. |

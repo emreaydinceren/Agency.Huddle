@@ -49,6 +49,7 @@
 @implements IDisposable
 
 @inject PersonaStore Personas
+@inject IHumanIdentity Human
 @inject PersonaSupervisor Supervisor
 @inject IModelCatalog ModelCatalog
 @inject AdapterCatalog Adapters
@@ -145,13 +146,10 @@
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
                         }
-                        @* NF-6: the lasting total, kept across restarts, for an Agent hired from a role. *@
-                        @if (this.roleRef is not null)
+                        @* NF-6: the lasting total, kept across restarts, for every Agent. Absent when nothing is stored. *@
+                        @foreach (var persisted in this.Spend.GetPersisted(this.name))
                         {
-                            @foreach (var persisted in this.Spend.GetPersisted(this.name))
-                            {
-                                <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
-                            }
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
                         }
                         <MudText Typo="Typo.body2" Class="mud-text-secondary agent-profile-card-alias">@($"@{this.alias}")</MudText>
                         @if (this.teams.Length > 0)
@@ -909,11 +907,19 @@
     /// </summary>
     private IReadOnlyList<AgentModeOption> availableWorkModes = [];
 
-    /// <summary>Draws an Agent name from the pool that no existing Agent has.</summary>
+    /// <summary>Draws an Agent name from the pool that no existing Agent has and that is not the Human's Name or Alias.</summary>
     /// <param name="current">The name now showing, which is not drawn again, or <see langword="null"/>.</param>
     /// <returns>The drawn name.</returns>
-    private string PickName(string? current) =>
-        AgentNamePool.Pick(Random.Shared, this.Personas.Entries.Select(static entry => entry.Name), current);
+    private string PickName(string? current)
+    {
+        List<string> taken = [.. this.Personas.Entries.Select(static entry => entry.Name), this.Human.Current.Name];
+        if (this.Human.Current.Alias is { Length: > 0 } humanAlias)
+        {
+            taken.Add(humanAlias);
+        }
+
+        return AgentNamePool.Pick(Random.Shared, taken, current);
+    }
 
     /// <summary>Replaces the Name box with another random name from the pool.</summary>
     private void PickAnotherName() => this.name = this.PickName(this.name);
@@ -2125,6 +2131,12 @@
         if (draftName.Length == 0)
         {
             this.error = "An Agent needs a Name.";
+            return;
+        }
+
+        if (this.Human.Matches(draftName))
+        {
+            this.error = $"'{draftName}' is your own name. Choose another for this Agent.";
             return;
         }
 

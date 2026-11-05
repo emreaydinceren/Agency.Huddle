@@ -27,7 +27,7 @@ public sealed class DocHistoryEndToEndTests
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
 
-        LiveTurn turn = await lane.RunAsync(vault, "Create brief.md with one paragraph about planning a team lunch.", ct);
+        LiveTurn turn = await lane.RunAsync(vault, "Create brief.md with one paragraph about planning a team lunch.", remindReads: false, ct);
 
         Assert.True(store.Read(fixture.Resolve(vault, "brief.md")).Count == 1, Describe(tool, turn));
         DocHistoryEntry entry = Assert.Single(store.Read(fixture.Resolve(vault, "brief.md")));
@@ -45,7 +45,7 @@ public sealed class DocHistoryEndToEndTests
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
 
-        _ = await lane.RunAsync(vault, "Edit brief.md to add a second paragraph, and log the change as Ruth.", ct);
+        _ = await lane.RunAsync(vault, "Edit brief.md to add a second paragraph, and log the change as Ruth.", remindReads: false, ct);
 
         IReadOnlyList<DocHistoryEntry> entries = store.Read(fixture.Resolve(vault, "brief.md"));
         Assert.NotEmpty(entries);
@@ -62,7 +62,7 @@ public sealed class DocHistoryEndToEndTests
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
 
-        LiveTurn turn = await lane.RunAsync(vault, "Call log_change to log a review of missing.md in your working folder. The file does not exist, but log it anyway.", ct);
+        LiveTurn turn = await lane.RunAsync(vault, "Call log_change to log a review of missing.md in your working folder. The file does not exist, but log it anyway.", remindReads: false, ct);
 
         Assert.True(tool.Calls.Count == 1, Describe(tool, turn));
         LoggedCall call = Assert.Single(tool.Calls);

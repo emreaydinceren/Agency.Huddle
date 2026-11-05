@@ -106,7 +106,7 @@ internal sealed class BuiltinAgentSeeder(PersonaStore personas, ILogger<BuiltinA
             var candidateName = n == 1 ? DefaultName : $"{DefaultName} {n}";
             var candidateAlias = n == 1 ? DefaultAlias : $"{DefaultAlias}{n}";
 
-            var taken = personas.Entries.Any(entry =>
+            var taken = personas.IsHuman(candidateName) || personas.IsHuman(candidateAlias) || personas.Entries.Any(entry =>
                 string.Equals(entry.Name, candidateName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(entry.Alias, candidateName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(entry.Name, candidateAlias, StringComparison.OrdinalIgnoreCase)

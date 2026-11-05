@@ -15,6 +15,7 @@
 @inject NavigationManager Navigation
 @inject LibraryPathResolver LibraryResolver
 @inject TaskStore Store
+@inject IServiceProvider Services
 
 <div class="@this.RootClass" data-feed-id="@this.Group.Lead.Id">
     @if (this.Unseen)
@@ -142,6 +143,11 @@
                     break;
             }
 
+            @if (this.WakeName is { } noteName && this.Group.Lead.Payload is TaskWakesPausedPayload noted && !string.Equals(noteName, noted.Waiting, StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="feed-wake-note">@noted.Waiting no longer has this Task. It is now assigned to @noteName, so Wake starts @noteName.</div>
+            }
+
             <FeedRelated Item="this.Group.Lead" ExtraTargets="this.ExtraTargets" />
 
             @* A device item has no Open button: its chip already opens Settings > Remote access. *@
@@ -152,6 +158,10 @@
                     @if (this.CanReview)
                     {
                         <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</MudButton>
+                    }
+                    @if (this.WakeName is { } wakeName)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.NotificationsActive" Class="feed-btn feed-btn-wake" OnClick="this.WakeAgent">Wake @wakeName</MudButton>
                     }
                     @if (this.OriginRoomId is { } originRoom)
                     {
@@ -273,6 +283,36 @@
 
             targets.AddRange(TaskAttachmentText.PathLines(this.task.Description));
             return targets;
+        }
+    }
+
+    /// <summary>
+    /// The Agent the Wake button wakes, or <see langword="null"/> when it does not show: an open pause Notification whose Task is still open
+    /// and whose hand-off is no longer held in memory (after a restart). It is the Task's current assignee, else the Agent the Notification named.
+    /// </summary>
+    private string? WakeName
+    {
+        get
+        {
+            if (this.Lead is { Notify: true, ResolvedAt: null, Payload: TaskWakesPausedPayload paused }
+                && this.task is { Status: not TaskState.Done, Location.Closed: false } open
+                && this.Services.GetService<IWakePauses>() is { } pauses
+                && !pauses.IsHeld(open.Id))
+            {
+                return string.IsNullOrWhiteSpace(open.Assignee) ? paused.Waiting : open.Assignee;
+            }
+
+            return null;
+        }
+    }
+
+    private async Task WakeAgent()
+    {
+        if (this.Lead.Payload is TaskWakesPausedPayload paused
+            && this.task is { } open
+            && this.Services.GetService<IWakePauses>() is { } pauses)
+        {
+            _ = await pauses.WakeAsync(open.Id, paused.Waiting, CancellationToken.None);
         }
     }
 

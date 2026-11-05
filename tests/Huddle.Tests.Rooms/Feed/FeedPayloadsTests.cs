@@ -125,6 +125,22 @@ public sealed class FeedPayloadsTests
         Assert.Contains("\"team\":\"Growth\"", json, StringComparison.Ordinal);
     }
 
+    /// <summary>#353: a "wake-ups paused" payload saved before it carried a Room id still reads, with no Room; one that has it reads it back.</summary>
+    [Fact]
+    public void Read_TaskWakesPausedWithoutRoomId_StillReads()
+    {
+        string withRoom = FeedPayloads.Serialize(FeedActorKind.Huddle, new TaskWakesPausedPayload("PLAT-0001", "T", "Platform", "Nova", "room-1"));
+        string old = withRoom.Replace(",\"roomId\":\"room-1\"", string.Empty, StringComparison.Ordinal);
+
+        TaskWakesPausedPayload current = Assert.IsType<TaskWakesPausedPayload>(FeedPayloads.Read(withRoom, FeedSourceType.TaskWakesPaused).Payload);
+        TaskWakesPausedPayload saved = Assert.IsType<TaskWakesPausedPayload>(FeedPayloads.Read(old, FeedSourceType.TaskWakesPaused).Payload);
+
+        Assert.DoesNotContain("roomId", old, StringComparison.Ordinal);
+        Assert.Equal("room-1", current.RoomId);
+        Assert.Equal("Nova", saved.Waiting);
+        Assert.Null(saved.RoomId);
+    }
+
     /// <summary>Bad JSON, a data object of the wrong shape and an unknown type all read as a null payload without throwing.</summary>
     [Fact]
     public void Read_Malformed_GivesNullPayloadNeverThrows()

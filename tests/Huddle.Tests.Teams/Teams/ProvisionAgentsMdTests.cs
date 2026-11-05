@@ -14,7 +14,7 @@ public sealed class ProvisionAgentsMdTests
     // Template tax-season-basics.md lines 1-6 are the frontmatter; the body starts at line 7 and ends at line 63.
     private const string BodyStart = "# Tax season basics\n\n## Identity\n";
 
-    private const string BodyEnd = "- Propose a starter Task, such as this year's document checklist.\n";
+    private const string BodyEnd = "- Suggest a starter Task, such as this year's document checklist.\n";
 
     private static ProcessProvisioner Build(TempDataDir dir, DiskTeamFolders folders) =>
         new(new TeamTypeCatalog(dir.Options(), NullLogger<TeamTypeCatalog>.Instance), folders);

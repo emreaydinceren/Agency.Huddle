@@ -341,9 +341,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             {
                 File.Delete(temp);
             }
-
-            return true;
         }
+
+        // The catalog reads the file again only after its debounce; a session that starts now (the manager just hired) must already see the change.
+        this.catalog.Refresh();
+        return true;
     }
 
     /// <summary>Moves <paramref name="temp"/> over <paramref name="path"/>, retrying briefly while a reader (the catalog's watcher) still holds the target open.</summary>
