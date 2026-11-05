@@ -75,6 +75,21 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
         return true;
     }
 
+    /// <summary>
+    /// Whether this line records a run of <paramref name="command"/>. Before #340, <c>add_evidence</c> folded a note into the
+    /// command, so a stored line reads <c>dotnet test (note)</c>; those lines are never rewritten, so this accepts that form
+    /// as well as the exact command. It exists for those older lines and can be removed once they no longer matter.
+    /// </summary>
+    /// <param name="command">The command to look for, such as a Definition of Done command or a Team's check command.</param>
+    /// <returns>True when the trimmed command equals the trimmed <paramref name="command"/>, or starts with it followed by a space and a bracketed note that ends the text.</returns>
+    public bool RunsCommand(string command)
+    {
+        string wanted = command.Trim();
+        string stored = this.Command.Trim();
+        return string.Equals(stored, wanted, StringComparison.Ordinal)
+            || (stored.StartsWith(wanted + " (", StringComparison.Ordinal) && stored.EndsWith(')'));
+    }
+
     /// <summary>Formats the line as time, author, command, then the optional exit code and log reference, joined by the field separator. Notes return their original text.</summary>
     /// <returns>The line text, without a line break.</returns>
     public string Format()

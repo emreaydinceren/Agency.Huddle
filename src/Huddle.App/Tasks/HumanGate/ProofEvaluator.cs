@@ -62,7 +62,7 @@ internal static class ProofEvaluator
     private static (bool Met, string? Owner, string? Detail) CommandExits(TaskItem task, ProofContext context, string command)
     {
         EvidenceLine? latest = context.Evidence
-            .Where(line => line.ExitCode is not null && string.Equals(line.Command.Trim(), command.Trim(), StringComparison.Ordinal))
+            .Where(line => line.ExitCode is not null && line.RunsCommand(command))
             .OrderBy(static line => line.Time)
             .LastOrDefault();
         if (latest is null)
