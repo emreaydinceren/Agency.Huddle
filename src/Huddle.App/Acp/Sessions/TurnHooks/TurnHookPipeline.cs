@@ -18,11 +18,27 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     /// <param name="agentsMd">The AGENTS.md hook, first because a rule change governs how the Agent reads everything after it; <see langword="null"/> when absent.</param>
     /// <param name="fileChanges">The File Changes hook, or <see langword="null"/> when no tracker exists.</param>
     /// <param name="logger">Receives the pipeline's warnings and timings.</param>
+    /// <param name="huddleMemory">The Huddle-wide Memory hook, between AGENTS.md and File Changes; <see langword="null"/> when absent.</param>
     /// <returns>The pipeline; its applicable list is empty when nothing applies to <paramref name="scope"/>.</returns>
-    internal static TurnHookPipeline ForPersona(TurnHookScope scope, AgentsMdTurnHook? agentsMd, FileChangesTurnHook? fileChanges, ILogger logger)
+    internal static TurnHookPipeline ForPersona(
+        TurnHookScope scope,
+        AgentsMdTurnHook? agentsMd,
+        FileChangesTurnHook? fileChanges,
+        ILogger logger,
+        HuddleMemoryTurnHook? huddleMemory = null)
     {
-        ITurnHook?[] production = [agentsMd, fileChanges];
-        return new TurnHookPipeline([.. production.OfType<ITurnHook>()], scope, logger);
+        return new TurnHookPipeline(InProductionOrder(agentsMd, huddleMemory, fileChanges), scope, logger);
+    }
+
+    /// <summary>The production order of the hooks, minus any that is absent: AGENTS.md, then the Huddle-wide Memory hook, then File Changes.</summary>
+    /// <param name="agentsMd">The AGENTS.md hook, or <see langword="null"/>.</param>
+    /// <param name="huddleMemory">The Huddle-wide Memory hook, or <see langword="null"/>.</param>
+    /// <param name="fileChanges">The File Changes hook, or <see langword="null"/>.</param>
+    /// <returns>The hooks that are present, in the order they run.</returns>
+    internal static IReadOnlyList<ITurnHook> InProductionOrder(ITurnHook? agentsMd, ITurnHook? huddleMemory, ITurnHook? fileChanges)
+    {
+        ITurnHook?[] production = [agentsMd, huddleMemory, fileChanges];
+        return [.. production.OfType<ITurnHook>()];
     }
 
     /// <summary>Runs every applicable hook's Before point in list order.</summary>

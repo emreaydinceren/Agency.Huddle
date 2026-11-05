@@ -42,6 +42,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private readonly FileChangeTracker? fileChanges;
     private readonly FileChangesTurnHook? fileChangesHook;
     private readonly AgentsMdTurnHook? agentsMdHook;
+    private readonly HuddleMemoryTurnHook? huddleMemoryHook;
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
@@ -115,7 +116,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
         AgentsMdTurnHook? agentsMdHook = null,
-        AgentsMdScopes? agentsMdScopes = null)
+        AgentsMdScopes? agentsMdScopes = null,
+        HuddleMemoryTurnHook? huddleMemoryHook = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -143,6 +145,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             ? null
             : new FileChangesTurnHook(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>(), agentsMdScopes);
         this.agentsMdHook = agentsMdHook;
+        this.huddleMemoryHook = huddleMemoryHook;
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
@@ -768,7 +771,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
 
         TurnHookScope scope = new(persona.Name, profile.ReadsFiles, fileChangesOn, declaredWatches);
-        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.agentsMdHook, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>());
+        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.agentsMdHook, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>(), this.huddleMemoryHook);
         return new StartPlan(profile.ReadsFiles, warnings, hooks, tracker?.MemoryPaths);
     }
 

@@ -995,7 +995,7 @@ Decide(kind, p):
 
 | Activity | Full | Incremental |
 | --- | --- | --- |
-| Indexes (Memory, Huddle-wide, Team, outputs) | Rebuilt at every session start | None: later changes reach a running session as File Changes, and the next session rebuilds |
+| Indexes (Memory, Huddle-wide, Team, outputs) | Rebuilt at every session start | None: later changes reach a running session as File Changes, a change to Huddle-wide Memory as a Huddle-wide fact (ADR 0077), and the next session rebuilds |
 | `AGENTS.md` block | Read at every session start | A running session hears of an edit as a File Change; it follows the edit from its next session (ADR-0070). *Amended by [ADR-0076](adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md): a running session now hears what changed at its next Turn in each Room, and the in-scope `AGENTS.md` leaves the File Changes report* |
 | Catalog (`_team.md`) | Built at start-up | Rebuilt on `PersonasChanged` and file changes, as today |
 | Prompt overrides | Snapshot at start-up | Folder watcher swaps the snapshot; next session uses it |

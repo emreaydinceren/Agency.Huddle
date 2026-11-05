@@ -102,10 +102,59 @@ internal static class PromptCatalog
     private static PromptDefinition[] BuildParts33To39() =>
         [.. BuildPart33(), .. BuildPart33Help(), .. BuildPart34(), .. BuildPart35(), .. BuildPart36(), .. BuildPart37(), .. BuildPart38(), .. BuildPart39()];
 
+    /// <summary>Builds the <c>turn.huddleMemory*</c> prompts: the block that tells a running Agent a Huddle-wide fact changed.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildHuddleMemoryParts() =>
+    [
+        new PromptDefinition(
+            Key: "turn.huddleMemoryHeader",
+            Label: "Huddle-wide fact change: header",
+            HelperText: "Opens a block telling an Agent that Huddle-wide facts changed. {{folder}} is the folder that holds them. Said once per block.",
+            Default:
+                "Huddle-wide facts changed in {{folder}}. They hold for every Team and every Room.\n" +
+                "If a fact bears on your work, read its file.",
+            Placeholders: ["{{folder}}"], RequiredPlaceholders: ["{{folder}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.huddleMemoryAdded",
+            Label: "Huddle-wide fact change: new file",
+            HelperText: "One new fact. {{name}} is the file name.",
+            Default: "- New: {{name}}",
+            Placeholders: ["{{name}}"], RequiredPlaceholders: ["{{name}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.huddleMemoryChanged",
+            Label: "Huddle-wide fact change: changed file",
+            HelperText: "One changed fact. {{name}} is the file name.",
+            Default: "- Changed: {{name}}",
+            Placeholders: ["{{name}}"], RequiredPlaceholders: ["{{name}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.huddleMemoryDeleted",
+            Label: "Huddle-wide fact change: deleted file",
+            HelperText: "One fact that was deleted, so it is no longer true. {{name}} is the file name.",
+            Default: "- Removed, no longer true: {{name}}",
+            Placeholders: ["{{name}}"], RequiredPlaceholders: ["{{name}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.huddleMemoryDescription",
+            Label: "Huddle-wide fact change: description",
+            HelperText: "Follows a file name when the file has a description. {{description}} is its one-line description.",
+            Default: ": The file says: \"{{description}}\"",
+            Placeholders: ["{{description}}"], RequiredPlaceholders: ["{{description}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.huddleMemoryMore",
+            Label: "Huddle-wide fact change: more to come",
+            HelperText: "The closing line when more facts changed than were listed. {{count}} is how many were left for the next Turn.",
+            Default: "…and {{count}} more; they follow at your next Turn.",
+            Placeholders: ["{{count}}"], RequiredPlaceholders: ["{{count}}"], Timing: PromptTiming.Live),
+    ];
+
     /// <summary>Builds the <c>turn.agentsMd*</c> change-notice prompts, which span four slices.</summary>
     /// <returns>The prompt definitions of those slices, in catalog order.</returns>
     private static PromptDefinition[] BuildAgentsMdNoticeParts() =>
-        [.. BuildPart55(), .. BuildPart56(), .. BuildPart57(), .. BuildPart58()];
+        [.. BuildPart55(), .. BuildPart56(), .. BuildPart57(), .. BuildPart58(), .. BuildHuddleMemoryParts()];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>

@@ -147,6 +147,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd,
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
+        services.AddSingleton<HuddleMemoryTurnHook>();
     }
 
     /// <summary>
