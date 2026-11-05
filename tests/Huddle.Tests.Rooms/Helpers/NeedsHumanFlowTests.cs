@@ -121,7 +121,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     /// <summary>Holds still long enough for a wrongly queued judgement to have run.</summary>
     private static Task SettleAsync() => Task.Delay(150, TestContext.Current.CancellationToken);
 
-    /// <summary>An Agent's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1).</summary>
+    /// <summary>An Agent's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1); a Task in Review with nothing left to prove then goes to Needs You.</summary>
     [Fact]
     public async Task AgentCreate_NeedsHuman_TurnsGateOnWithReason()
     {
@@ -133,9 +133,11 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         TaskItem? after = this.harness.Store.Get(task.Id);
         Assert.NotNull(after);
         Assert.True(after.HumanGate);
-        ChangeLogEntry entry = after.ChangeLog[^1];
+        ChangeLogEntry entry = after.ChangeLog[^2];
         Assert.Equal("Needs Human (Helper)", entry.Actor);
         Assert.Equal("human gate on (reason: Sends a reply to a customer)", entry.Summary);
+        Assert.Equal("Huddle", after.ChangeLog[^1].Actor);
+        Assert.Equal(TaskState.NeedsYou, after.Status);
         Assert.Equal($"Turned the gate on for {task.Id}", this.status.Get(NeedsHumanHelper.HelperId).LastResult);
     }
 
@@ -439,7 +441,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.IsType<HelperApplied.Changed>(applied);
         TaskItem? stored = this.harness.Store.Get(task.Id);
         Assert.NotNull(stored);
-        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^1].Summary);
+        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^2].Summary);
     }
 
     /// <summary>A true Verdict with no reason is refused by Validate; a false one needs none.</summary>

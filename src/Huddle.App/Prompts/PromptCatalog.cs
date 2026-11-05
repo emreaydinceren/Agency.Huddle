@@ -1843,7 +1843,7 @@ internal static class PromptCatalog
                 is complete, Huddle moves a Task in Review to Needs You. You may still move it
                 yourself, which is harmless if it is already there. Some Proof items complete with no
                 write to the Task, such as role coverage or an attached document's History, and
-                Huddle does not move the Task then, so move it yourself. Do not ask for approval in
+                Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
                 chat: the Human accepts in Needs You. Only the Human can Accept it, and only the
                 Human can turn human_gate off or clear the Action. After the Accept, the assignee
                 carries out the Action and then moves the Task to Done. Use list_tasks with the
