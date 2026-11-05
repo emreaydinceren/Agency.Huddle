@@ -488,7 +488,7 @@ public sealed class ElicitationConformanceTests
                 config,
                 clock,
                 agent => agent.OnPrompt = script.RunAsync,
-                ct);
+                cancellationToken: ct);
             try
             {
                 ITeamDirectory directory = fixture.Services.GetRequiredService<ITeamDirectory>();

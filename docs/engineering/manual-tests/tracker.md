@@ -1297,6 +1297,7 @@ Team Memory Helper: proposals filed by a Helper, the History, the Feed record, t
 | [TMHELP-05](team-memory-helper.md#tmhelp-05--a-proposal-to-a-team-the-member-is-not-in-is-refused) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-06](team-memory-helper.md#tmhelp-06--instructions-inside-a-proposal-do-not-move-the-write-outside-the-team) | 💰 | Active |  | not yet run by a person |
 | [TMHELP-07](team-memory-helper.md#tmhelp-07--the-daily-cap-pauses-the-helper-and-the-tool-says-so) | 💰 | Active |  | not yet run by a person |
+| [TMHELP-08](team-memory-helper.md#tmhelp-08--a-new-manager-writes-team-memory-during-onboarding) | 💰 | Active |  | not yet run by a person |
 
 ## long-running-rooms
 

@@ -1,4 +1,8 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Agency.Huddle.Tests.Conformance;
 
@@ -95,6 +99,43 @@ public sealed class TeamMemorySessionTests
         Assert.DoesNotContain("You look after the shared Memory of Ops", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Business keep shared Memory", prompt, StringComparison.Ordinal);
         Assert.Equal(1, prompt.Split(TeamBlockHeading).Length - 1);
+    }
+
+    /// <summary>
+    /// Build a team's real hire order (<c>CreateTeam</c> with no manager, <c>HireDrafts</c>, then the manager written to <c>_team.md</c>), with the
+    /// manager's session starting straight after, no wait: its prompt must still carry the manager paragraph, not the member's (#348 Part 1).
+    /// </summary>
+    [Fact]
+    public async Task SessionStart_ManagerHiredInBuildTeamOrder_ReadsTheManagerParagraph()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        const string text = "---\nName: Devon\nTitle: Lead\nAlias: devon\nTeams: [Dev Team]\n---\nYou are Devon.";
+        Persona persona = new("devon", text);
+
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
+            persona,
+            beforeRunnerStart: TeamMemorySessionTests.HireDevonAsManager,
+            cancellationToken: ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(ct);
+
+        // contains-ok: composed system prompt text; the two paragraphs are the assertions.
+        Assert.Contains("You look after the shared Memory of Dev Team:", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Dev Team keep shared Memory", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>Does what <c>BuildTeam.ApproveCoreAsync</c> does to the stores, in its order: create the Team without a manager, hire, then write the manager.</summary>
+    /// <param name="services">The started host's services.</param>
+    private static void HireDevonAsManager(IServiceProvider services)
+    {
+        ITeamFolders folders = services.GetRequiredService<ITeamFolders>();
+        HireService hiring = services.GetRequiredService<HireService>();
+        TeamFile file = new(new VersionedRef("development", "1.0.0"), null, null, null, string.Empty);
+        Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam("Dev Team", file).Outcome);
+
+        DraftHire devon = new("Devon", "Lead", "You are Devon.", null, new Avatar(null, null, null), null, null);
+        DraftHireResult result = hiring.HireDrafts("Dev Team", [devon]);
+        Assert.Null(result.Error);
+        Assert.True(folders.UpdateTeamFile("Dev Team", current => current with { Manager = "Devon" }));
     }
 
     /// <summary>
