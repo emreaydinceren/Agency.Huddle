@@ -498,6 +498,39 @@ public sealed class FileChangeTrackerTests
     }
 
     /// <summary>
+    /// An underscore-prefixed FILE in a Team folder (<c>_team.md</c>) that was in the baseline and did
+    /// not change is never listed on later Turns; only a real change is, once. Zero-fixes: Cole's
+    /// prompt carried "added _team.md" on every Turn because the baseline prune dropped the file.
+    /// </summary>
+    [Fact]
+    public async Task Collect_UnchangedUnderscoreFileInTeamFolder_NotRepeatedAndChangeListedOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(teamDir);
+        string teamFile = Path.Combine(teamDir, "_team.md");
+        File.WriteAllText(teamFile, "settings");
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+        CollectedChanges second = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, second, [], ct);
+        CollectedChanges third = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, third, [], ct);
+
+        File.WriteAllText(teamFile, "settings, edited");
+        CollectedChanges fourth = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, fourth, [], ct);
+        CollectedChanges fifth = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        Assert.Empty(second.Report.Changes);
+        Assert.Empty(third.Report.Changes);
+        Assert.Equal([(FileChangeKind.Changed, teamFile)], fourth.Report.Changes.Select(change => (change.Kind, change.FullPath)));
+        Assert.Empty(fifth.Report.Changes);
+    }
+
+    /// <summary>
     /// Spec §6.4 and §12 T12: a Persona in Team "Business" is told about a new file in the Team's
     /// <c>memory</c> folder on its next Turn, because the implicit Team watch does not prune it.
     /// </summary>

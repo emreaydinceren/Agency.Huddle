@@ -519,7 +519,9 @@ internal sealed class FileChangeTracker(
         PathContainment.IsInside(fullPath, teamsRoot, includeRoot: true, PathContainment.Comparison);
 
     /// <summary>
-    /// Removes any entry under a <c>_</c>-prefixed path segment from <paramref name="snapshot"/>,
+    /// Removes any entry under a <c>_</c>-prefixed FOLDER from <paramref name="snapshot"/> (never a file
+    /// whose own name starts with <c>_</c>, such as <c>_team.md</c>, which the scan keeps and so the
+    /// baseline must keep too, or it is reported as added every Turn),
     /// matching <see cref="FolderScanner"/>'s own pruning: a saved baseline can predate
     /// <paramref name="pruneUnderscore"/> applying to this folder, and would otherwise show that
     /// entry as spuriously deleted the first time it does.
@@ -537,7 +539,7 @@ internal sealed class FileChangeTracker(
         foreach ((string relativePath, FileEntry fileEntry) in snapshot.Files)
         {
             string[] segments = relativePath.Split(Path.DirectorySeparatorChar);
-            if (pruneUnderscore && segments.Any(segment => segment.StartsWith('_')))
+            if (pruneUnderscore && segments[..^1].Any(segment => segment.StartsWith('_')))
             {
                 continue;
             }
