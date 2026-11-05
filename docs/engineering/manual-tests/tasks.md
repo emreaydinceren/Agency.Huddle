@@ -957,6 +957,8 @@ position into the next one.*
    same Task again: it opens again. Then click **Edit**, change the Priority, and close its Tab with the **×**.
 2. Open `/tasks/item/<id>` for a Task directly: the Right sidebar opens on it. Click **Edit**.
 3. Open the long Task, scroll the sidebar to the bottom, then click another Task in the List.
+4. Open the edit page of a Task with a long title, and note the height of **Save**. Open and close the Right
+   sidebar, edit a field, and narrow the window to about 400px.
 
 **Pass if — all of these**
 
@@ -965,6 +967,9 @@ position into the next one.*
 - Step 2: a permanent "Edit {id}" Tab opens with the Task's editor; clicking **Edit** again on that Task
   goes back to the same Tab.
 - Step 3: the next Task's read view starts at its top.
+- Step 4: **Save** stays at the same height (within half a pixel) when the title wraps to a second line, when the
+  Right sidebar opens and closes, and when the label becomes **Save & notify**; at a narrow width the buttons sit
+  above the title and the whole title stays readable.
 
 **Fail if — any of these**
 - Clicking the Task with the sidebar closed leaves it closed -> `Tasks.OnOpenTaskAsync` is not calling
