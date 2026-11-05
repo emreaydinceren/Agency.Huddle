@@ -297,8 +297,8 @@ public sealed class RoomSessionTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
-        TaskCompletionSource releaseFirst = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        session.EnqueueGatedReply(releaseFirst.Task, "a1 reply");
+        // Never elapses, so only the Stop can end a1: a shorter delay could finish a1 first and let a2 run.
+        session.EnqueueDelayedReply(TimeSpan.FromHours(1), "a1 reply");
         session.EnqueueReply("b1 reply");
         FakeRoomSessionOwner owner = new();
         await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
@@ -314,8 +314,6 @@ public sealed class RoomSessionTests
 
         await room.StopAsync("room-a", mark: 2, ct);
 
-        // Held open until the Stop has landed: a timed delay could finish a1 first and let a2 run.
-        releaseFirst.SetResult();
         await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b1 reply"), ct, timeout: TestBudgets.Standard);
 
         Assert.DoesNotContain(session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
