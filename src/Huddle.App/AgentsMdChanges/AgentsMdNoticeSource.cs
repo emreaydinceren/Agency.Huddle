@@ -20,7 +20,17 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
     /// <param name="readsFiles">Whether the Adapter can read files, so the block points at them instead of carrying their text.</param>
     /// <param name="cancellationToken">Stops the collection.</param>
     /// <returns>The block, or null when there is nothing to tell, and the map after this Turn.</returns>
-    public async Task<AgentsMdCollected> CollectAsync(IReadOnlyList<AgentsMdFile> scope, IReadOnlyDictionary<string, string>? heard, bool readsFiles, CancellationToken cancellationToken)
+    public Task<AgentsMdCollected> CollectAsync(IReadOnlyList<AgentsMdFile> scope, IReadOnlyDictionary<string, string>? heard, bool readsFiles, CancellationToken cancellationToken) =>
+        this.CollectAsync(scope, heard, readsFiles, scopeComplete: true, cancellationToken);
+
+    /// <summary>Collects what the session has not heard, from a scope that may be missing a Team's Projects.</summary>
+    /// <param name="scope">The files that apply to the session, general to specific.</param>
+    /// <param name="heard">The hash per relative path the session last heard; null for a session from before the feature.</param>
+    /// <param name="readsFiles">Whether the Adapter can read files, so the block points at them instead of carrying their text.</param>
+    /// <param name="scopeComplete">False when a Team could not be listed: a heard path missing from the scope may still apply, so it is neither told nor dropped.</param>
+    /// <param name="cancellationToken">Stops the collection.</param>
+    /// <returns>The block, or null when there is nothing to tell, and the map after this Turn.</returns>
+    public async Task<AgentsMdCollected> CollectAsync(IReadOnlyList<AgentsMdFile> scope, IReadOnlyDictionary<string, string>? heard, bool readsFiles, bool scopeComplete, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(scope);
         cancellationToken.ThrowIfCancellationRequested();
@@ -65,7 +75,7 @@ internal sealed class AgentsMdNoticeSource(AgentsMdLedger ledger, AgentsMdNotice
 
         bool unreadableNew = scope.Any(file => !bodies.ContainsKey(file.RelativePath) && !(heard?.ContainsKey(file.RelativePath) ?? false));
         Dictionary<string, string> updated = new(current, comparer);
-        List<AgentsMdBlockEntry> entries = this.EntriesFor(behind, bodies, current, updated, unreadableNew ? [] : outOfScope);
+        List<AgentsMdBlockEntry> entries = this.EntriesFor(behind, bodies, current, updated, unreadableNew || !scopeComplete ? [] : outOfScope);
         string block = entries.Count == 0 ? string.Empty : renderer.Render(entries, readsFiles);
         return new AgentsMdCollected(block.Length == 0 ? null : block, updated);
     }

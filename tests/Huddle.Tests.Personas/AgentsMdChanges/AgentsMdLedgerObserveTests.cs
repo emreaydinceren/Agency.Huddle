@@ -225,6 +225,7 @@ public sealed class AgentsMdLedgerObserveTests : IDisposable
     [InlineData("""{"revisions":null}""")]
     [InlineData("""{"relativePath":"Home/AGENTS.md","firstSightHash":"AB","headHash":"AB","revisions":[{"fromHash":"","toHash":"AB","notice":null}]}""")]
     [InlineData("{}")]
+    [InlineData("""{"relativePath":"Home/AGENTS.md","firstSightHash":"AB","headHash":"AB","revisions":[]}""")]
     public void Ledger_ValidJsonWrongShape_IsAFirstSight_AndWarns(string body)
     {
         AgentsMdFile file = this.FileAt();

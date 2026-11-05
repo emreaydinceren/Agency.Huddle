@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 namespace Agency.Huddle.Tests.AgentsMdChanges;
 
 /// <summary>
-/// Pins <see cref="AgentsMdNoticeSource.CollectAsync"/> without the wait (AgentsMdChanges Spec §8.3 and §7.2): which files are
+/// Pins <see cref="AgentsMdNoticeSource"/> without the wait (AgentsMdChanges Spec §8.3 and §7.2): which files are
 /// behind, the revisions told oldest first, what a session has heard afterwards (the last revision read, never the head), a file
 /// that cannot be read, and the second Turn saying nothing after every case.
 /// </summary>
@@ -232,6 +232,21 @@ public sealed class AgentsMdNoticeSourceTests : IDisposable
         Assert.Equal(ExpectedBlock(new AgentsMdBlockEntry.NoLonger("Teams/Gone/AGENTS.md")), first.Block);
         AssertHeard(first, (Relative, HashOf(1)));
         Assert.Null(second.Block);
+    }
+
+    /// <summary>When a Team could not be listed, a heard path missing from the scope may still apply: it is not told as gone, and heard keeps it.</summary>
+    [Fact]
+    public async Task OutOfScope_ScopeIncomplete_SaysNothing_AndKeepsHeard()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AgentsMdLedger ledger = this.NewLedger();
+        AgentsMdFile file = this.FileOf(Relative);
+        this.Play(ledger, file, 1);
+
+        AgentsMdCollected result = await NewSource(ledger).CollectAsync([file], new Dictionary<string, string> { [Relative] = HashOf(1), ["Home/Proj/AGENTS.md"] = HashOf(9) }, true, scopeComplete: false, ct);
+
+        Assert.Null(result.Block);
+        AssertHeard(result, (Relative, HashOf(1)), ("Home/Proj/AGENTS.md", HashOf(9)));
     }
 
     /// <summary>A Team with no file has an empty current hash and an empty heard hash, so it is not behind.</summary>

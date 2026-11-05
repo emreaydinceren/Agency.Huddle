@@ -289,6 +289,28 @@ public sealed class FileChangesTurnHookTests
         Assert.Contains(deeper, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
     }
 
+    /// <summary>A Team's reserved folders hold no Project, so no notice covers an AGENTS.md there: it stays an ordinary File Change, or it would be lost.</summary>
+    /// <param name="folder">The reserved folder directly under the Team.</param>
+    [Theory]
+    [InlineData("outputs")]
+    [InlineData("memory")]
+    public async Task FileChanges_AgentsMdInReservedFolder_Kept(string folder)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
+        string reserved = Path.Combine(teamsRoot, "Home", folder, "AGENTS.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(reserved) ?? teamsRoot);
+        File.WriteAllText(reserved, "rule");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(reserved, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+    }
+
     /// <summary>The carry keeps the unfiltered report, so committing it records the AGENTS.md in the baseline and it is never listed later.</summary>
     [Fact]
     public async Task FileChanges_BaselineStillRecordsTheFile()

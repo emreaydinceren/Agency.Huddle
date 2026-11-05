@@ -2,6 +2,7 @@ using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Teams;
 using System.Globalization;
 using System.Text;
 
@@ -82,7 +83,10 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
         }
     }
 
-    /// <summary>Whether a path is an <c>AGENTS.md</c> directly in a Team folder or in a folder directly under one: a level path, whether or not the level still exists.</summary>
+    /// <summary>
+    /// Whether a path is an <c>AGENTS.md</c> directly in a Team folder or in a Project folder directly under one: a level path, whether or not
+    /// the level still exists. A Team's reserved folders hold no Project, so no notice covers a file there and it stays a File Change.
+    /// </summary>
     private static bool IsLevelPath(string fullPath, HashSet<string> teamDirs)
     {
         if (!string.Equals(Path.GetFileName(fullPath), "AGENTS.md", PathContainment.Comparison))
@@ -91,7 +95,9 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
         }
 
         string? folder = Path.GetDirectoryName(fullPath);
-        return folder is not null && (teamDirs.Contains(folder) || teamDirs.Contains(Path.GetDirectoryName(folder) ?? string.Empty));
+        return folder is not null
+            && (teamDirs.Contains(folder)
+                || (teamDirs.Contains(Path.GetDirectoryName(folder) ?? string.Empty) && !TeamNames.IsReservedProjectName(Path.GetFileName(folder))));
     }
 
     /// <inheritdoc />

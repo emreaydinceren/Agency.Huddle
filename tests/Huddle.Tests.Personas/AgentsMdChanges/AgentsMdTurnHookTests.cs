@@ -285,6 +285,21 @@ public sealed class AgentsMdTurnHookTests : IDisposable
         Assert.Contains("Rule 2.", without.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>The hook passes on that a Team could not be listed: a heard Project under it is not told as gone, and a Warning says why.</summary>
+    [Fact]
+    public async Task Before_TeamCannotBeListed_DoesNotTellItsProjectsAreGone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Directory.CreateDirectory(this.TeamsRoot);
+        File.WriteAllText(Path.Combine(this.TeamsRoot, "Home"), "a file where the Team's folder should be");
+        Dictionary<string, string> heard = new() { [Relative] = string.Empty, ["Home/Proj/AGENTS.md"] = HashOf(1) };
+
+        TurnAddition? addition = await this.NewHook().BeforeTurnAsync(new TurnStarting(Scope, RoomId, StateOf(heard, heard)), ct);
+
+        Assert.Null(addition?.Text);
+        Assert.Contains(LogLevel.Warning, this.logger.Levels);
+    }
+
     /// <summary>A state that is not the JSON of the two maps does not throw out of the hook: it counts as no state, and a Warning says so.</summary>
     [Fact]
     public async Task State_Corrupt_TreatedAsNull_AndWarns()

@@ -10,18 +10,20 @@ internal static class AgentsMdLocator
     /// <summary>Yields each level in composition order: Huddle-wide, then each Team, then its Projects sorted ordinally.</summary>
     /// <param name="teamsRoot">The Teams root folder.</param>
     /// <param name="teamNames">The folder names of the Agent's Teams, in the order given.</param>
+    /// <param name="unlisted">Told the name of a Team whose folder exists but could not be listed, so its Projects are unknown rather than absent.</param>
     /// <returns>Every level's file, whether or not it exists.</returns>
-    public static IEnumerable<AgentsMdFile> Enumerate(string teamsRoot, IReadOnlyList<string> teamNames)
+    public static IEnumerable<AgentsMdFile> Enumerate(string teamsRoot, IReadOnlyList<string> teamNames, Action<string>? unlisted = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(teamsRoot);
         ArgumentNullException.ThrowIfNull(teamNames);
-        return EnumerateCore(teamsRoot, teamNames);
+        return EnumerateCore(teamsRoot, teamNames, unlisted);
     }
 
     /// <summary>Walks the levels lazily so a Team's folder is listed only when the caller reaches it.</summary>
     /// <param name="teamsRoot">The Teams root folder.</param>
     /// <param name="teamNames">The Team folder names.</param>
-    private static IEnumerable<AgentsMdFile> EnumerateCore(string teamsRoot, IReadOnlyList<string> teamNames)
+    /// <param name="unlisted">Told a Team whose folder could not be listed.</param>
+    private static IEnumerable<AgentsMdFile> EnumerateCore(string teamsRoot, IReadOnlyList<string> teamNames, Action<string>? unlisted)
     {
         yield return Make(AgentsMdLevel.HuddleWide, null, null, teamsRoot);
 
@@ -35,7 +37,7 @@ internal static class AgentsMdLocator
 
             string teamDir = Path.Combine(teamsRoot, team);
             yield return Make(AgentsMdLevel.Team, team, null, teamDir);
-            foreach (string project in ProjectNames(teamDir))
+            foreach (string project in ProjectNames(team, teamDir, unlisted))
             {
                 yield return Make(AgentsMdLevel.Project, team, project, Path.Combine(teamDir, project));
             }
@@ -59,8 +61,10 @@ internal static class AgentsMdLocator
     }
 
     /// <summary>Lists a Team's Project folder names, minus reserved names, sorted ordinally.</summary>
+    /// <param name="team">The Team's name.</param>
     /// <param name="teamDir">The Team's folder.</param>
-    private static List<string> ProjectNames(string teamDir)
+    /// <param name="unlisted">Told the Team's name when its folder exists but could not be listed.</param>
+    private static List<string> ProjectNames(string team, string teamDir, Action<string>? unlisted)
     {
         List<string> names = [];
         try
@@ -76,7 +80,12 @@ internal static class AgentsMdLocator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // A missing or locked Team folder has no readable Projects; they are simply absent.
+            // A missing Team folder has no Projects. One still there that could not be listed says nothing about its Projects, so the caller hears of it.
+            if (Path.Exists(teamDir))
+            {
+                unlisted?.Invoke(team);
+            }
+
             return [];
         }
 

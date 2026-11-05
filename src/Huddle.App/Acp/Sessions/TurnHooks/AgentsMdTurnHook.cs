@@ -57,9 +57,14 @@ internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSour
         ArgumentNullException.ThrowIfNull(turn);
 
         StateDocument? state = this.Parse(turn.State);
-        IReadOnlyList<AgentsMdFile> scope = scopes.For(turn.Scope.PersonaName);
+        (IReadOnlyList<AgentsMdFile> scope, bool complete) = scopes.Scan(turn.Scope.PersonaName);
+        if (!complete)
+        {
+            logger.LogWarning("Persona '{PersonaName}' could not list a Team's folder; a Project's AGENTS.md stays as it was heard this Turn.", turn.Scope.PersonaName);
+        }
+
         AgentsMdCollected collected = await source
-            .CollectAsync(scope, state?.Heard, turn.Scope.ReadsFiles, cancellationToken)
+            .CollectAsync(scope, state?.Heard, turn.Scope.ReadsFiles, complete, cancellationToken)
             .ConfigureAwait(false);
 
         string? block = string.IsNullOrEmpty(collected.Block) ? null : collected.Block;

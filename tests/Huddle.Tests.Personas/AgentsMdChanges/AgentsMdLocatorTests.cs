@@ -48,6 +48,32 @@ public sealed class AgentsMdLocatorTests : IDisposable
         Assert.Equal([null, null, "Alpha", "Zeta", "beta", null], files.Select(static file => file.Project).ToArray());
     }
 
+    /// <summary>A Team's path that exists but cannot be listed is reported, because its Projects are unknown rather than absent, and other Teams still list.</summary>
+    [Fact]
+    public void Enumerate_TeamCannotBeListed_ReportsIt()
+    {
+        this.Folder("B", "Proj");
+        File.WriteAllText(Path.Combine(this.TeamsRoot, "A"), "a file where the Team's folder should be");
+        List<string> unlisted = [];
+
+        AgentsMdFile[] files = AgentsMdLocator.Enumerate(this.TeamsRoot, ["A", "B"], unlisted.Add).ToArray();
+
+        Assert.Equal(["A"], unlisted);
+        Assert.Equal(["AGENTS.md", "A/AGENTS.md", "B/AGENTS.md", "B/Proj/AGENTS.md"], files.Select(static file => file.RelativePath).ToArray());
+    }
+
+    /// <summary>A Team whose folder is gone has no Projects: that is known, so nothing is reported.</summary>
+    [Fact]
+    public void Enumerate_TeamFolderMissing_ReportsNothing()
+    {
+        this.Folder();
+        List<string> unlisted = [];
+
+        _ = AgentsMdLocator.Enumerate(this.TeamsRoot, ["Gone"], unlisted.Add).ToArray();
+
+        Assert.Empty(unlisted);
+    }
+
     /// <summary>A level whose file does not exist is still yielded, with the full path it would have.</summary>
     [Fact]
     public void Enumerate_YieldsALevelWithNoFile()

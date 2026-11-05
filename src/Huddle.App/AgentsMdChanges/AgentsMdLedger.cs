@@ -774,7 +774,7 @@ internal sealed class AgentsMdLedger
         /// <param name="document">The parsed file.</param>
         public static Entry? From(AgentsMdLedgerDocument document)
         {
-            if (document.Revisions is null || document.HeadHash is null || document.FirstSightHash is null
+            if (document.Revisions is null || document.Revisions.Count == 0 || document.HeadHash is null || document.FirstSightHash is null
                 || document.Revisions.Exists(static revision => revision?.Notice is null))
             {
                 return null;
