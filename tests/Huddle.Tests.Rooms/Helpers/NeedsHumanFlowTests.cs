@@ -444,6 +444,67 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^2].Summary);
     }
 
+    /// <summary>#399: a Verdict that names an action sets the gate and the Action in one write, logged by the Helper.</summary>
+    [Fact]
+    public async Task Apply_VerdictWithAction_SetsGateAndActionInOneWrite()
+    {
+        TaskItem task = this.Create(Leo);
+
+        HelperApplied applied = await this.helper.ApplyAsync("k", InputOf(task), new NeedsHumanVerdict(true, "Task merges to main", "Merge feat/x into main"), TestContext.Current.CancellationToken);
+
+        Assert.IsType<HelperApplied.Changed>(applied);
+        TaskItem? stored = this.harness.Store.Get(task.Id);
+        Assert.NotNull(stored);
+        Assert.True(stored.HumanGate);
+        Assert.Equal("Merge feat/x into main", stored.Action);
+        Assert.Contains(stored.ChangeLog, e => e.Actor == "Needs Human (Helper)" && e.Summary == "human gate on; action set: Merge feat/x into main (reason: Task merges to main)");
+    }
+
+    /// <summary>#399: a Verdict with no action sets the gate only.</summary>
+    [Fact]
+    public async Task Apply_VerdictWithoutAction_SetsGateOnly()
+    {
+        TaskItem task = this.Create(Leo);
+
+        _ = await this.helper.ApplyAsync("k", InputOf(task), new NeedsHumanVerdict(true, "Sends a reply", null), TestContext.Current.CancellationToken);
+
+        TaskItem? stored = this.harness.Store.Get(task.Id);
+        Assert.NotNull(stored);
+        Assert.True(stored.HumanGate);
+        Assert.Null(stored.Action);
+    }
+
+    /// <summary>#399: an Action already on the Task is kept; the Verdict is dropped as the Task is gated.</summary>
+    [Fact]
+    public async Task Apply_VerdictWithAction_KeepsTheActionAlreadySet()
+    {
+        TaskItem task = this.Create(Leo, "A", action: "Do it");
+
+        _ = await this.helper.ApplyAsync("k", InputOf(task), new NeedsHumanVerdict(true, "outward", "Merge feat/x into main"), TestContext.Current.CancellationToken);
+
+        Assert.Equal("Do it", this.harness.Store.Get(task.Id)?.Action);
+    }
+
+    /// <summary>#399: an action longer than the Task limit is cut to 197 characters and an ellipsis.</summary>
+    [Fact]
+    public async Task Apply_LongAction_IsCutToTheTaskLimit()
+    {
+        TaskItem task = this.Create(Leo);
+
+        HelperApplied applied = await this.helper.ApplyAsync("k", InputOf(task), new NeedsHumanVerdict(true, "outward", new string('y', 300)), TestContext.Current.CancellationToken);
+
+        Assert.IsType<HelperApplied.Changed>(applied);
+        Assert.Equal(new string('y', 197) + "...", this.harness.Store.Get(task.Id)?.Action);
+    }
+
+    /// <summary>#399: Validate accepts a Verdict with an action and one without.</summary>
+    [Fact]
+    public void Validate_ActionIsOptional()
+    {
+        Assert.Null(this.helper.Validate(new NeedsHumanVerdict(true, "Task merges to main", "Merge feat/x into main")));
+        Assert.Null(this.helper.Validate(new NeedsHumanVerdict(true, "Sends a reply", null)));
+    }
+
     /// <summary>A true Verdict with no reason is refused by Validate; a false one needs none.</summary>
     [Fact]
     public void Validate_TrueWithoutReason_IsRefused()

@@ -26,6 +26,9 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     /// <summary>The Task Reason limit (Tasks Spec §9.2).</summary>
     private const int MaxReasonLength = 200;
 
+    /// <summary>The Task Action limit (Human gate Spec §6.1).</summary>
+    private const int MaxActionLength = 200;
+
     /// <inheritdoc/>
     public HelperId Id => HelperId;
 
@@ -114,7 +117,10 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
                 return new HelperApplied.Dropped(drop);
             }
 
-            TaskPatch patch = new() { HumanGate = Optional<bool>.Set(true), Reason = reason };
+            // A Task that already has an Action is gated, so WhyDrop has dropped it: the Action the Helper names is only ever added.
+            TaskPatch patch = string.IsNullOrWhiteSpace(verdict.Action)
+                ? new TaskPatch { HumanGate = Optional<bool>.Set(true), Reason = reason }
+                : new TaskPatch { HumanGate = Optional<bool>.Set(true), Reason = reason, Action = Optional<string?>.Set(CutTo(verdict.Action, MaxActionLength)) };
             TaskResult result = service.Update(input.Id, patch, current.Version, actor);
             switch (result)
             {
@@ -164,11 +170,14 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     }
 
     /// <summary>Cuts a reason to the Task Reason limit: 197 characters and an ellipsis.</summary>
-    private static string CutReason(string reason)
+    private static string CutReason(string reason) => CutTo(reason, MaxReasonLength);
+
+    /// <summary>Trims <paramref name="text"/> and cuts it to <paramref name="limit"/> characters, the last three an ellipsis.</summary>
+    private static string CutTo(string text, int limit)
     {
-        string trimmed = reason.Trim();
-        return trimmed.Length <= MaxReasonLength
+        string trimmed = text.Trim();
+        return trimmed.Length <= limit
             ? trimmed
-            : string.Create(CultureInfo.InvariantCulture, $"{trimmed[..(MaxReasonLength - 3)]}...");
+            : string.Create(CultureInfo.InvariantCulture, $"{trimmed[..(limit - 3)]}...");
     }
 }

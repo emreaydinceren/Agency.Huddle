@@ -23,7 +23,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 3. **Break down**: the tech lead splits the spec into build Tasks, each with an acceptance line. Done when every build Task has one.
 4. **Build**: the developer writes the change and its tests against the spec. Done when the build and the tests pass locally.
 5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. Done when both are recorded.
-6. **Done**: the manager moves the build Task to Done. Done when every gate in Gates is met.
+6. **Done**: the manager moves the build Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
 

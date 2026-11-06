@@ -52,6 +52,42 @@ public sealed class TaskTriggerManagerWakeTests
         Assert.Equal(["Nova", "Mia"], harness.Posts.Select(p => p.Message.Text).ToArray());
     }
 
+    /// <summary>
+    /// #399: an Accept of a Task with an Action wakes the manager with a line that says to reassign the Action to whoever can do it
+    /// and not to ask the Human, while the assignee keeps the plain go-ahead line.
+    /// </summary>
+    [Fact]
+    public async Task AcceptWithAction_ManagerLineSaysToReassignAndNotToAskTheHuman()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, CatalogWithManager());
+        Cast cast = await StartWakingAsync(harness, ct);
+        (_, Room room) = await AddManagerAsync(harness, cast, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem task = harness.Seed(TestTasks.Make(id: "PLAT-0001", assignee: "Nova", originRoomId: room.Id) with { Action = "Merge feat/x into main" });
+
+        TaskActor human = new(TaskActorKind.Human, "You", KnownIds.Human);
+        harness.Events.RaiseTaskChanged(new TaskChange(
+            null,
+            task,
+            [],
+            human,
+            new ChangeLogEntry(harness.Clock.GetUtcNow(), human.Name, "accepted"),
+            Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept,
+            null));
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        string[] texts = [.. harness.Posts.Select(p => p.Message.Text)];
+        Assert.Equal(2, texts.Length);
+        Assert.EndsWith("\nAccepted: go ahead and Merge feat/x into main, then move PLAT-0001 to Done.", texts[0], StringComparison.Ordinal); // contains-ok: the decision sentence is the Message's last line; the template above it varies.
+        Assert.EndsWith(
+            "\nAccepted: Merge feat/x into main. If you or the assignee can't do it, reassign PLAT-0001 to whoever can. Do not ask the Human; they have accepted it.",
+            texts[1],
+            StringComparison.Ordinal); // contains-ok: the decision sentence is the Message's last line; the template above it varies.
+    }
+
     /// <summary>The manager's own change wakes only the assignee.</summary>
     [Fact]
     public async Task ManagerOwnChange_WakesOnlyAssignee()
