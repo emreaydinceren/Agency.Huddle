@@ -30,11 +30,13 @@ internal sealed class RetroProposalFixture : IDisposable
         ]
         """);
 
-    private RetroProposalFixture(TaskToolHarness harness, string roomId, string otherRoomId)
+    private RetroProposalFixture(TaskToolHarness harness, string roomId, string otherRoomId, string rootRoomId, string otherTeamRoomId)
     {
         this.Harness = harness;
         this.RoomId = roomId;
         this.OtherRoomId = otherRoomId;
+        this.RootRoomId = rootRoomId;
+        this.OtherTeamRoomId = otherTeamRoomId;
         this.TeamFolder = Path.Combine(harness.Options.Value.DataDir, "platform-folder");
         _ = Directory.CreateDirectory(this.TeamFolder);
         File.WriteAllText(Path.Combine(this.TeamFolder, TeamPaths.AgentsMdFileName), ProcessText);
@@ -72,8 +74,14 @@ internal sealed class RetroProposalFixture : IDisposable
     /// <summary>The Task tool harness with Nova and Kai.</summary>
     public TaskToolHarness Harness { get; }
 
-    /// <summary>The Human's room with Nova, the proposer.</summary>
+    /// <summary>Platform's Team Room, with the Human and Nova, the proposer: the only room the card shows in.</summary>
     public string RoomId { get; }
+
+    /// <summary>A root room (no Team) holding the Human and Nova.</summary>
+    public string RootRoomId { get; }
+
+    /// <summary>The Team Room of the Other Team, holding the Human, Nova and Kai.</summary>
+    public string OtherTeamRoomId { get; }
 
     /// <summary>The Human's room with Kai only.</summary>
     public string OtherRoomId { get; }
@@ -135,9 +143,11 @@ internal sealed class RetroProposalFixture : IDisposable
         _ = harness.Personas.Add(new PersonaIdentity("Rae", "Retro", "rae", ["Platform"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Rae.");
         _ = harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", ["Platform"], Skills: skill), "You are Sam.");
         _ = harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
-        Room room = await harness.Directory.CreateRoomAsync("Retro", [KnownIds.Human, harness.NovaId ?? ""], ct);
+        Room room = await harness.Directory.CreateRoomAsync("Platform", [KnownIds.Human, harness.NovaId ?? ""], "Platform", teamRoom: true, ct);
         Room other = await harness.Directory.CreateRoomAsync("Chat", [KnownIds.Human, harness.KaiId ?? ""], ct);
-        RetroProposalFixture fixture = new(harness, room.Id, other.Id);
+        Room root = await harness.Directory.CreateRoomAsync("Retro", [KnownIds.Human, harness.NovaId ?? ""], ct);
+        Room otherTeam = await harness.Directory.CreateRoomAsync("Other", [KnownIds.Human, harness.NovaId ?? "", harness.KaiId ?? ""], "Other", teamRoom: true, ct);
+        RetroProposalFixture fixture = new(harness, room.Id, other.Id, root.Id, otherTeam.Id);
         fixture.Ids["Nova"] = harness.NovaId ?? "";
         fixture.Ids["Kai"] = harness.KaiId ?? "";
         foreach (string name in new[] { "Rae", "Sam", "Ola" })

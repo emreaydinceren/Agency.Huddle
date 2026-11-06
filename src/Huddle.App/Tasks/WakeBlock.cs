@@ -20,4 +20,7 @@ public enum WakeBlock
 
     /// <summary>Tasks, or wake-ups specifically, are turned off (guard 1).</summary>
     Disabled,
+
+    /// <summary>The post would go into a Room whose Budget is spent; the Task's own wake budget is untouched.</summary>
+    RoomBudgetSpent,
 }

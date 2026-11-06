@@ -141,9 +141,21 @@ public sealed class FeedPresentationTests
         Assert.Equal("Asked 16:00 · you can turn it off on the Task", FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null, "r"), true, at), Utc)?.Text);
         Assert.Equal("Paused 16:00 · Continue is on the Helper's card", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at), Utc)?.Text);
         Assert.Equal("Since 16:00 · Tasks are not being judged", FeedSummary.StatusOf(Item(FeedSourceType.HelperFailing, new HelperFailingPayload("H", "H", 3, "x"), true, at), Utc)?.Text);
-        Assert.Equal("Paused 16:00 · Allow more is on the Task; after a restart, Wake is on this card", FeedSummary.StatusOf(Item(FeedSourceType.TaskWakesPaused, new TaskWakesPausedPayload("G-1", "T", "G", "Nova"), true, at), Utc)?.Text);
+        Assert.Equal("Paused 16:00 · after a restart, Wake is on this card", FeedSummary.StatusOf(Item(FeedSourceType.TaskWakesPaused, new TaskWakesPausedPayload("G-1", "T", "G", "Nova"), true, at), Utc)?.Text);
         Assert.Equal("Paused 16:00 · done 16:20", FeedSummary.StatusOf(Item(FeedSourceType.HelperPaused, new HelperPausedPayload("H", "H", 50, 0), true, at, resolved), Utc)?.Text);
         Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null)), Utc));
+    }
+
+    /// <summary>A hand-off held by the Task's own pause tells the Human what to do: press Allow more on the Task or change it, with no number the Task page does not show.</summary>
+    [Fact]
+    public void TaskWakesPaused_TaskPaused_SaysWhatToDo()
+    {
+        FeedItem item = Item(FeedSourceType.TaskWakesPaused, new TaskWakesPausedPayload("G-1", "T", "G", "Nova"), true);
+
+        FeedSummaryLine line = FeedSummary.Of(item);
+
+        Assert.Equal("paused wake-ups on T: Agents changed it too many times", Flatten(line));
+        Assert.Equal("The hand-off to Nova waits. Open the Task and press Allow more, or change the Task yourself", line.Context);
     }
 
     /// <summary>A hand-off held by a paused Room says the Room is paused and sends the Human to Continue, not to Allow more on the Task.</summary>

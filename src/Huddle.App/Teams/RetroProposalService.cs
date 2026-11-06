@@ -38,7 +38,7 @@ internal sealed class RetroProposalService(
 
     private readonly Lock gate = new();
 
-    /// <summary>The sets waiting in a room: those whose proposer is a member of it.</summary>
+    /// <summary>The sets waiting in a room: those of the Team whose Team Room it is (ADR-0052); when a Team's Team Room is archived or missing, those whose proposer is a member of it.</summary>
     /// <param name="roomId">The room.</param>
     /// <param name="ct">Cancels the lookup.</param>
     /// <returns>The pending sets.</returns>
@@ -46,10 +46,23 @@ internal sealed class RetroProposalService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
-        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
         List<RetroProposalSet> pending = [];
+        IReadOnlyList<User>? members = null;
         foreach (TeamSummary team in teams.Teams)
         {
+            Room? teamRoom = await directory.FindTeamRoomAsync(team.Name, ct).ConfigureAwait(false);
+            if (teamRoom is { Archived: false })
+            {
+                if (string.Equals(teamRoom.Id, roomId, StringComparison.Ordinal))
+                {
+                    pending.AddRange(proposals.Pending(team.Name));
+                }
+
+                continue;
+            }
+
+            // The Team Room is archived or missing: the set falls back to any room holding the proposer, so it stays reachable.
+            members ??= await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
             pending.AddRange(proposals.Pending(team.Name)
                 .Where(set => members.Any(member => member.Kind == UserKind.Agent && string.Equals(member.Name, set.Proposer, StringComparison.OrdinalIgnoreCase))));
         }
