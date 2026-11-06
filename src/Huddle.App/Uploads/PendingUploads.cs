@@ -44,7 +44,21 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
     /// <param name="openStream">Opens the bytes; called once the chip is reserved, with the chip's cancellation token.</param>
     /// <param name="ct">Cancels the upload and rethrows; removing the chip cancels it without throwing.</param>
     /// <returns>The chip as it ended: <see cref="UploadState.Done"/>, or <see cref="UploadState.Failed"/>.</returns>
-    public async Task<PendingUpload> AddAsync(string roomId, string browserName, Func<CancellationToken, Stream> openStream, CancellationToken ct)
+    public Task<PendingUpload> AddAsync(string roomId, string browserName, Func<CancellationToken, Stream> openStream, CancellationToken ct) =>
+        this.AddAsync(roomId, browserName, openStream, turn: null, ct);
+
+    /// <summary>
+    /// As the overload without a turn, but the chip is reserved at once and the bytes are not opened until
+    /// <paramref name="turn"/> is free, so several files can show their chips together and be read one after another.
+    /// Waiters are served in the order they asked. Removing a chip that is still waiting cancels its wait.
+    /// </summary>
+    /// <param name="roomId">The Room whose Message the file is for.</param>
+    /// <param name="browserName">The name the browser reported.</param>
+    /// <param name="openStream">Opens the bytes; called once the chip is reserved and the turn is held.</param>
+    /// <param name="turn">A one-slot semaphore shared by the files of one pick, or <see langword="null"/> for no waiting.</param>
+    /// <param name="ct">Cancels the whole add.</param>
+    /// <returns>The chip as it ended: done, or failed with the reason.</returns>
+    public async Task<PendingUpload> AddAsync(string roomId, string browserName, Func<CancellationToken, Stream> openStream, SemaphoreSlim? turn, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
         ArgumentNullException.ThrowIfNull(openStream);
@@ -69,8 +83,15 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         }
 
         EventRaise.Isolated(this.Changed, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
+        bool holdsTurn = false;
         try
         {
+            if (turn is not null)
+            {
+                await turn.WaitAsync(entry.Cancellation.Token).ConfigureAwait(false);
+                holdsTurn = true;
+            }
+
             Stream stream = openStream(entry.Cancellation.Token);
             await using var streamScope = stream.ConfigureAwait(false);
             LibraryResult<LibraryUpload> result = await uploads.SaveAsync(roomId, browserName, stream, entry.Cancellation.Token).ConfigureAwait(false);
@@ -88,6 +109,11 @@ internal sealed class PendingUploads(ChatUploadService uploads, IOptions<TeamOpt
         }
         finally
         {
+            if (holdsTurn)
+            {
+                turn?.Release();
+            }
+
             entry.Dispose();
         }
     }
