@@ -51,7 +51,7 @@ internal static class LegacyCatalogReader
                 return null;
             }
 
-            entries.Add(new LegacyCatalogEntry(id, name, entry.Description ?? string.Empty, entry.Publisher ?? string.Empty, repo, path, entry.Link ?? string.Empty, entry.Commit ?? string.Empty, entry.License ?? string.Empty, entry.Category ?? string.Empty, entry.SubCategory ?? string.Empty, entry.Requires ?? []));
+            entries.Add(new LegacyCatalogEntry(id, name, entry.Description ?? string.Empty, entry.Publisher ?? string.Empty, repo, path, entry.Link ?? string.Empty, entry.Commit ?? string.Empty, entry.License ?? string.Empty, entry.Category ?? string.Empty, entry.SubCategory ?? string.Empty, entry.Requires ?? [], entry.Sha256));
         }
 
         return entries;
@@ -72,5 +72,5 @@ internal static class LegacyCatalogReader
     }
 
     /// <summary>The JSON shape, every field nullable.</summary>
-    private sealed record Dto(string? Id, string? Name, string? Description, string? Publisher, string? Repo, string? Path, string? Link, string? Commit, string? License, string? Category, string? SubCategory, List<string>? Requires);
+    private sealed record Dto(string? Id, string? Name, string? Description, string? Publisher, string? Repo, string? Path, string? Link, string? Commit, string? License, string? Category, string? SubCategory, List<string>? Requires, string? Sha256 = null);
 }

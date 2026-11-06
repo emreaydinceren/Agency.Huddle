@@ -2136,7 +2136,9 @@ internal static class PromptCatalog
                 {{missing}}
 
                 Fetch each one here and fill in its path (this computer's entry if the file is shared). Reuse
-                a catalog entry when one exists (appendix D) and fetch exactly the commit in its origin. Run
+                a catalog entry when one exists (appendix D) and fetch exactly the commit in its origin, byte
+                for byte (git clone or a raw file download, never a web page fetch tool, which rewrites text;
+                Huddle refuses a folder that differs from the pinned commit). Run
                 the validate command with --strict on each file you change until it prints Errors=0. Then tell
                 me what is ready; I will return to Huddle and approve the hire.
                 """,

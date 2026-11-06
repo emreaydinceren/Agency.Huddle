@@ -13,6 +13,7 @@ namespace Agency.Huddle.App.SkillSources.Move;
 /// <param name="Category">The category.</param>
 /// <param name="SubCategory">The sub-category.</param>
 /// <param name="Requires">What the Skill needs.</param>
+/// <param name="Sha256">The folder hash at <paramref name="Commit"/> (<c>SkillFolderHash</c>); null in a catalog generated before it was recorded.</param>
 internal sealed record LegacyCatalogEntry(
     string Id,
     string Name,
@@ -25,4 +26,5 @@ internal sealed record LegacyCatalogEntry(
     string License,
     string Category,
     string SubCategory,
-    IReadOnlyList<string> Requires);
+    IReadOnlyList<string> Requires,
+    string? Sha256 = null);

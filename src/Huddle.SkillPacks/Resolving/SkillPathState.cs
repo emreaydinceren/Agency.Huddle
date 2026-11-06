@@ -14,4 +14,7 @@ public enum SkillPathState
 
     /// <summary>The path is per computer and has no entry for this one and no <c>*</c> (R009).</summary>
     NoEntryForComputer,
+
+    /// <summary>The path leads to a folder whose content differs from the hash the catalog pins (S010); not usable.</summary>
+    Altered,
 }

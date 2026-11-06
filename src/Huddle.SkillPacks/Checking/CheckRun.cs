@@ -410,7 +410,12 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
                     break;
             }
 
-            this.states[key] = skill.PathState == SkillPathState.Present ? ItemCheckState.Usable : ItemCheckState.NotDownloaded;
+            this.states[key] = skill.PathState switch
+            {
+                SkillPathState.Present => ItemCheckState.Usable,
+                SkillPathState.Altered => ItemCheckState.Broken,
+                _ => ItemCheckState.NotDownloaded,
+            };
         }
     }
 

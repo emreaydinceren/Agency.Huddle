@@ -666,7 +666,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
         string repo = entry.Repo.Trim().TrimEnd('/');
         string commit = entry.Commit.Length > 0 ? entry.Commit : "HEAD";
         string origin = entry.Link.Length > 0 ? entry.Link : $"{repo}/tree/{commit}/{entry.Path.Trim('/')}";
-        return new JsonObject
+        JsonObject mapped = new()
         {
             ["name"] = entry.Name,
             ["description"] = entry.Description,
@@ -678,6 +678,12 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             ["requires"] = new JsonArray([.. entry.Requires.Select(static item => (JsonNode?)JsonValue.Create(item))]),
             ["path"] = string.Empty,
         };
+        if (entry.Sha256 is { Length: > 0 } pinned)
+        {
+            mapped["sha256"] = pinned;
+        }
+
+        return mapped;
     }
 
     /// <summary>Adds a catalog for a repository outside the six.</summary>
