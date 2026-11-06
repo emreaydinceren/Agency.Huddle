@@ -184,7 +184,7 @@ public sealed class TeamMemoryHelperTests
         Assert.NotEqual(original, harness.Helper.Fingerprint(leo with { Attempt = 2 }));
     }
 
-    /// <summary>A "none" writes nothing and leaves a Feed record with the reason, not a Notification (U-3).</summary>
+    /// <summary>A "none" writes nothing and posts a Notification with the reason, so a Human told "proposed" learns it was declined (#393).</summary>
     [Fact]
     public async Task Apply_None_WritesNothingAndRecordsWhy()
     {
@@ -197,7 +197,7 @@ public sealed class TeamMemoryHelperTests
         Assert.False(Directory.Exists(harness.Folder()));
         FeedMessage posted = Assert.Single(harness.Feed.Posts);
         Assert.Equal(FeedSourceType.TeamMemoryNotFiled, posted.SourceType);
-        Assert.False(posted.Notify);
+        Assert.True(posted.Notify);
         TeamMemoryNotFiledPayload payload = Assert.IsType<TeamMemoryNotFiledPayload>(posted.Payload);
         Assert.Equal(("Research", "Leo", "I prefer short summaries.", "A personal preference, not a Team fact"), (payload.Team, payload.Proposer, payload.Fact, payload.Reason));
     }

@@ -296,7 +296,7 @@ internal sealed class TeamMemoryHelper(
         }
     }
 
-    /// <summary>Posts the Feed record of a proposal that was not filed. A Feed that fails is logged, never raised.</summary>
+    /// <summary>Posts the Feed record of a proposal that was not filed, as a Notification: a Human told "proposed" must learn it was dropped, and no paid Turn is spent saying so. A Feed that fails is logged, never raised.</summary>
     /// <param name="proposal">The proposal.</param>
     /// <param name="reason">Why it was not filed.</param>
     private void NotFiled(TeamMemoryProposal proposal, string reason)
@@ -308,7 +308,7 @@ internal sealed class TeamMemoryHelper(
                 FeedSourceType.TeamMemoryNotFiled,
                 "team-memory:" + proposal.Team,
                 FeedActor.Huddle,
-                false,
+                true,
                 new TeamMemoryNotFiledPayload(HelperId.Value, this.DisplayName, proposal.Team, proposal.Proposer, fact, reason)));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
