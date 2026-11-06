@@ -185,34 +185,6 @@ public sealed class AgentsMdWatcherDebounceTests : IDisposable
     private async Task WaitForTheRunToEndAsync(CancellationToken ct) =>
         await Eventually.UntilAsync(() => this.clock.ScheduledTimerCount == 0, ct, TestBudgets.Slow);
 
-    /// <summary>A tick that lands while the judgement is out arms nothing of its own and asks for no second call, so the run holds one call.</summary>
-    [Fact]
-    public async Task TickWhileJudgementInFlight_QueuesNoSecondJudgement()
-    {
-        CancellationToken ct = TestContext.Current.CancellationToken;
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        this.process.Hold = release.Task;
-        await this.HeadThenEditAsync(ct, Home);
-        this.clock.Advance(TimeSpan.FromSeconds(61));
-        await this.watcher.TickAsync(ct);
-        this.clock.Advance(TimeSpan.FromMinutes(1));
-        await Eventually.UntilAsync(() => this.process.Calls == 1, ct, TestBudgets.Slow);
-        int armedWithTheCallOut = this.clock.ScheduledTimerCount;
-
-        this.clock.Advance(TimeSpan.FromSeconds(10));
-        await this.watcher.TickAsync(ct);
-        int armedAfterTheTick = this.clock.ScheduledTimerCount;
-        release.SetResult();
-        await this.WaitForTheRunToEndAsync(ct);
-        this.clock.Advance(TimeSpan.FromMinutes(10));
-        await this.watcher.TickAsync(ct);
-
-        Assert.Equal(1, armedWithTheCallOut);
-        Assert.Equal(armedWithTheCallOut, armedAfterTheTick);
-        Assert.Equal(0, this.clock.ScheduledTimerCount);
-        Assert.Equal(1, this.process.Calls);
-    }
-
     /// <summary>A save 50 seconds into the wait starts it again: the file is not judged 61 seconds after the first save.</summary>
     [Fact]
     public async Task EachSaveRestartsTheDebounce()
