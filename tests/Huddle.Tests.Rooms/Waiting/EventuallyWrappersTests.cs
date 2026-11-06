@@ -58,12 +58,12 @@ public sealed class EventuallyWrappersTests
         int ticks = 0;
 
         Task<IReadOnlyList<ChatMessage>> wait = Eventually.HistoryCountAsync(
-            store, "room-1", 1, ct, TestBudgets.Short, onTick: () => ticks++);
-        await Task.Delay(60, ct);
+            store, "room-1", 1, ct, TestBudgets.Slow, onTick: () => Interlocked.Increment(ref ticks));
+        await Eventually.UntilAsync(() => Volatile.Read(ref ticks) >= 2, ct, TestBudgets.Slow);
         await AppendAsync(store, "room-1", ct);
         _ = await wait;
 
-        Assert.True(ticks >= 2);
+        Assert.True(Volatile.Read(ref ticks) >= 2);
     }
 
     /// <summary>A Transcript that never reaches the count fails the wait with an assertion naming the room.</summary>
