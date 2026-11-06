@@ -331,7 +331,7 @@ The blue folder is noted as where the documents are, without the policy number, 
 5. Open the Family page's **Tasks** tab.
 
 **Expect**: Hana reads the PDF. Every proposed item names its raw file. After approval the Tasks appear on the Board
-with their dates. The fee's Task has an **Action** or **Requires your acceptance**, so it can wait in **Needs you**.
+with their dates. The fee's Task has an **Action** or **Requires your acceptance**. A new Task starts in **Backlog**; Huddle moves a Task to **Needs you** only from **Review** with its Proof complete, so the fee's Task reaches **Needs you** once Hana moves it to **Review**. In **Backlog** it counts as open, not as needing you.
 
 **Pass if**: nothing is written before approval, the items match the key, and each output has `description:` and **Based on**.
 **Fail if**: a proposal has no source, the PDF is skipped silently, or an original in `raw\` changes.

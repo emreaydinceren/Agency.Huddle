@@ -46,6 +46,17 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(179, PromptCatalog.All.Count);
     }
 
+    /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
+    [Fact]
+    public void CreateTaskDescription_TellsAgentToMoveHumanOnlyTaskToReview()
+    {
+        string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
+
+        Assert.Contains("only step left is the Human's", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("move it to Review", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("never from Backlog", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+    }
+
     /// <summary>The Task prompts tell an Agent that Huddle moves a ready gated Task to Needs You, never to use the Action for hand-offs, and not to ask for approval in chat; the status list names Needs You.</summary>
     [Fact]
     public void TaskPrompts_NameNeedsYouAndWhoMovesIt()
