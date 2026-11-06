@@ -89,6 +89,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
     private const string WakeMessageKey = "task.wake.message";
 
+    /// <summary>#403: the last line of a wake into Review. A reply in chat moves nothing; the outcome goes on the Task.</summary>
+    private const string ReviewSentence = "Review the work, then record the outcome on the Task and name the next step; a reply in chat alone does not move it.";
+
     /// <summary>The Prompt key of the line added when a Request reaches Done (#350).</summary>
     private const string RequestDoneKey = "task.wake.requestDone";
 
@@ -505,6 +508,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
                 // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
                 batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
+                batch.MovedToReview = change.After.Status == TaskState.Review && change.Before?.Status != TaskState.Review;
             }
 
             if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
@@ -789,6 +793,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         await this.WakeAssigneeAsync(batch, latest, ct).ConfigureAwait(false);
         await this.WakeManagerAsync(batch, latest, ct).ConfigureAwait(false);
+        await this.WakeChallengerAsync(batch, latest, ct).ConfigureAwait(false);
         await this.WakeRequestingManagerAsync(batch, latest, ct).ConfigureAwait(false);
     }
 
@@ -969,6 +974,57 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
 
         await this.DeliverAsync(batch, latest, manager, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #403: a Task that entered Review in this batch must reach someone who can review it. When the assignee can't (the builder
+    /// still holds it), the Team's first member who can review is woken once, through <see cref="DeliverAsync"/> so the same wake budget
+    /// applies. Nobody is woken when the assignee can review (they were woken above), when the one who can made the change, or is the
+    /// manager (woken above); a Team with nobody who can review is left as before.
+    /// </summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeChallengerAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        if (!batch.MovedToReview
+            || latest.Status != TaskState.Review
+            || this.confirmers is not { } challengers
+            || !this.teamOptions.Tasks.Enabled
+            || !this.teamOptions.Tasks.WakeEnabled)
+        {
+            return;
+        }
+
+        string team = latest.Location.Team;
+        string? manager = this.teams?.Find(team)?.Manager;
+        if (latest.Assignee is { Length: > 0 } assignee && challengers.IsChallengerOf(team, assignee))
+        {
+            return;
+        }
+
+        if (manager is { Length: > 0 }
+            && !string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase))
+        {
+            // The manager was woken for this entry and hands it to whoever reviews; only an entry that reached nobody capable needs this wake.
+            return;
+        }
+
+        IReadOnlyList<string> members = this.teams?.Find(team)?.Members ?? [];
+        string? challenger = members.FirstOrDefault(member =>
+            challengers.IsChallengerOf(team, member)
+            && !string.Equals(member, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(member, latest.Assignee, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(member, manager, StringComparison.OrdinalIgnoreCase)
+            && !this.human.Matches(member)
+            && this.personas.Get(member) is not null);
+        if (challenger is not null)
+        {
+            batch.Challenger = challenger;
+            _ = await this.DeliverAsync(batch, latest, challenger, ct).ConfigureAwait(false);
+        }
     }
 
     /// <summary>Resolves the recipient, the sender and the Room, consumes the Agent wake budget, posts the wake and records its outcome.</summary>
@@ -1501,6 +1557,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             text = text + "\n" + sentence;
         }
 
+        bool sentenceRecipient = string.Equals(assigneeName, latest.Assignee, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(assigneeName, batch.Challenger, StringComparison.OrdinalIgnoreCase);
+        if (batch.MovedToReview && latest.Status == TaskState.Review && sentenceRecipient)
+        {
+            text = text + "\n" + ReviewSentence;
+        }
+
         return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
     }
 
@@ -1701,6 +1764,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
         public bool MovedToDone { get; set; }
+
+        /// <summary>Whether the batch's last status change moved the Task into Review (#403: someone who can review must be woken once).</summary>
+        public bool MovedToReview { get; set; }
+
+        /// <summary>The member woken to review when the assignee could not, set by the wake for it just before it is delivered.</summary>
+        public string? Challenger { get; set; }
 
         /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
         public OutsideWindow? OutsideWindow { get; set; }

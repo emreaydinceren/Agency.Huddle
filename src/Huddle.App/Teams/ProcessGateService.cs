@@ -115,6 +115,14 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         && this.CoverageOf(role) is { } coverage
         && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Tells whether a role covers the <c>challenge</c> step, which is what reviewing a Task in Review takes (#403).</summary>
+    /// <param name="role">The role a member was hired into, or <see langword="null"/> for an Agent with none.</param>
+    /// <returns><see langword="true"/> when the role's coverage lists challenge.</returns>
+    public bool CoversChallenge(RoleRef? role) =>
+        role is not null
+        && this.CoverageOf(role) is { } coverage
+        && coverage.Split(',', StringSplitOptions.TrimEntries).Contains("challenge", StringComparer.OrdinalIgnoreCase);
+
     private static bool HasVerifierEvidence(GateContext context) =>
         context.Evidence.Any(line =>
             line.Command.Length > 0
