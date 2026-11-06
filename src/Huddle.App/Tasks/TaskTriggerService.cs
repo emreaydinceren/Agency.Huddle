@@ -1445,7 +1445,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="decision">The batch's decision, if any.</param>
     /// <param name="note">The note given with it.</param>
     /// <returns>The sentence, or <see langword="null"/> when there is nothing to quote.</returns>
-    /// <param name="toManager">Whether the recipient is the Team's manager: the assignee may be someone who can't do the Action (a reviewer can't merge), so the manager is told to hand it to whoever can.</param>
+    /// <param name="toManager">Whether the recipient is the Team's manager: the assignee may be someone who can't do the Action, so the manager is told to hand it to whoever can.</param>
     private static string? DecisionSentence(TaskItem task, Agency.Huddle.App.Tasks.HumanGate.TaskDecision? decision, string? note, bool toManager = false) => decision switch
     {
         Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept when task.Action is { } action && toManager =>
