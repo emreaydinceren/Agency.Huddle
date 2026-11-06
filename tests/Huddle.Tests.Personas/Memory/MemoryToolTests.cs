@@ -276,6 +276,75 @@ public sealed class MemoryToolTests
         Assert.Equal("Edited by the Human.", await File.ReadAllTextAsync(path, ct));
     }
 
+    /// <summary>A write whose body arrives as <c>content</c>, the name Agents guess, is written as if it were <c>text</c>.</summary>
+    [Fact]
+    public async Task Write_ContentInPlaceOfText_WritesTheBody()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+
+        string result = await harness.RunAsync(
+            MemoryToolHarness.Args("write", ("file", "topic.md"), ("description", GoodDescription), ("content", "From content.")),
+            ct);
+
+        Assert.StartsWith("written topic.md", result, StringComparison.Ordinal); // contains-ok: tool-result text, not markup
+        Assert.Equal($"---\ndescription: {GoodDescription}\n---\n\nFrom content.\n", await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "topic.md"), ct));
+    }
+
+    /// <summary>An append whose body arrives as <c>content</c> is appended as if it were <c>text</c>.</summary>
+    [Fact]
+    public async Task Append_ContentInPlaceOfText_AppendsTheBody()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        string path = MemoryToolHarness.Put(harness.MemoryDir(), "topic.md", "First.");
+
+        string result = await harness.RunAsync(MemoryToolHarness.Args("append", ("file", "topic.md"), ("content", "Second.")), ct);
+
+        Assert.StartsWith("appended to topic.md", result, StringComparison.Ordinal); // contains-ok: tool-result text, not markup
+        Assert.Equal("First.\nSecond.\n", await File.ReadAllTextAsync(path, ct));
+    }
+
+    /// <summary>When both <c>text</c> and <c>content</c> are given, <c>text</c> is the body.</summary>
+    [Fact]
+    public async Task Write_TextAndContent_TextWins()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+
+        _ = await harness.RunAsync(
+            MemoryToolHarness.Args("write", ("file", "topic.md"), ("description", GoodDescription), ("text", "From text."), ("content", "From content.")),
+            ct);
+
+        Assert.Equal($"---\ndescription: {GoodDescription}\n---\n\nFrom text.\n", await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "topic.md"), ct));
+    }
+
+    /// <summary>A write with neither <c>text</c> nor <c>content</c> is refused as before, naming <c>text</c>.</summary>
+    [Fact]
+    public async Task Write_NoBodyAtAll_IsRefusedNamingText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+
+        string result = await harness.RunAsync(MemoryToolHarness.Args("write", ("file", "topic.md"), ("description", GoodDescription)), ct);
+
+        Assert.Equal("The write command needs 'text'. The commands are list, read, write, append, replace and delete.", result);
+        Assert.False(File.Exists(Path.Combine(harness.MemoryDir(), "topic.md")));
+    }
+
+    /// <summary>A read that names its command as <c>action</c> and its file as <c>path</c>, as Agents were seen to, works.</summary>
+    [Fact]
+    public async Task Read_ActionAndPathInPlaceOfCommandAndFile_ReadsTheFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using MemoryToolHarness harness = new();
+        _ = MemoryToolHarness.Put(harness.MemoryDir(), "topic.md", "Body.");
+
+        string result = await harness.RunAsync(new JsonObject { ["action"] = "read", ["path"] = "topic.md" }, ct);
+
+        Assert.StartsWith("Body.", result, StringComparison.Ordinal); // contains-ok: tool-result text, not markup
+    }
+
     /// <summary>A write that names a version for a file that is gone is told it was deleted.</summary>
     [Fact]
     public async Task Write_VersionForAMissingFile_IsToldItWasDeleted()
