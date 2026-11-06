@@ -15,7 +15,7 @@ internal static class HelperSessionMeta
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        Dictionary<string, object>? meta = DotAcpAgentHostFactory.BuildIsolationMeta(profile);
+        Dictionary<string, object>? meta = DotAcpAgentHostFactory.BuildIsolationMeta(profile, connectors: false);
         if (meta is null)
         {
             return null;

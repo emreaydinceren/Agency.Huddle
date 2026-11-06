@@ -192,7 +192,7 @@ public sealed class SessionModeProbeTests
             DotAcpAgentHost host = NewHost();
             await host.StartAsync(ct);
             string scratch = Folder("catalog");
-            await using IAgentSession catalog = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating)), ct);
+            await using IAgentSession catalog = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating, connectors: false)), ct);
             report.AppendLine("no mode sent, Adapter default model: " + catalog.CurrentModeId);
             string? sonnet = catalog.Models.FirstOrDefault(static option => option.Id.Contains("sonnet", StringComparison.OrdinalIgnoreCase))?.Id;
             if (sonnet is null)
@@ -205,7 +205,7 @@ public sealed class SessionModeProbeTests
             Dictionary<string, string?> lowEffort = new(StringComparer.Ordinal);
             foreach (string model in new[] { sonnet })
             {
-                await using IAgentSession onModel = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: model, meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating)), ct);
+                await using IAgentSession onModel = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: model, meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating, connectors: false)), ct);
                 lowEffort[model] = onModel.EffortLevels.FirstOrDefault(static level => level.Id.Contains("low", StringComparison.OrdinalIgnoreCase))?.Id;
                 report.AppendLine("no mode sent, " + model + ": " + onModel.CurrentModeId);
             }
@@ -286,7 +286,7 @@ public sealed class SessionModeProbeTests
         {
             RecordingHandler handler = new(new WorkDirPermissionHandler(null, NullLogger<WorkDirPermissionHandler>.Instance, new FakeGate(), "Ivy"), requests);
             SystemPromptOptions prompt = new("The Team application exposes this tool, which runs inside the application: mcp__team__update_task. Use it when asked.", SystemPromptMode.Append);
-            return new AgentSessionOptions(repo, handler, prompt, this.toolServer.Endpoint, model, this.lowEffort[model], DotAcpAgentHostFactory.BuildIsolationMeta(Isolating), mode);
+            return new AgentSessionOptions(repo, handler, prompt, this.toolServer.Endpoint, model, this.lowEffort[model], DotAcpAgentHostFactory.BuildIsolationMeta(Isolating, connectors: false), mode);
         }
 
         /// <summary>A new, unstarted host on the real Adapter.</summary>
