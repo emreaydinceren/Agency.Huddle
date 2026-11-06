@@ -585,13 +585,15 @@ restart, nobody wakes at startup, and **Wake {Agent}** on the card wakes the ass
 
 - App running on the mock Adapter, with one mock Persona assigned a Task, for example `Nova`.
 - Launch with `Team__Tasks__AgentWakeBudget` set to `1`, so one Agent-made wake spends the budget.
+- The Task needs a Team folder. A mock calls no tools, so make an Agent-made change by calling
+  `update_task` on a second Agent's tool server, using the URL and header from its `session/new`.
 
 **Steps**
 
 1. Make an Agent-made change to the Task so the budget is spent, then make one more so a
    hand-off is held. The Feed shows a Task wake-ups paused Notification.
 2. Note the Turn count for `Nova`. Stop the app, then start it again on the same data directory.
-3. Open the Feed. Read the Notification and its buttons.
+3. Open the Feed and expand the Notification's row with its chevron. Read the Notification and its buttons.
 4. Confirm that no Turn ran at startup.
 5. Click **Wake Nova** once.
 6. Watch for one Turn, and check that the Notification closes and the button goes.
