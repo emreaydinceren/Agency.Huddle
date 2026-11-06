@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using System.IO.Pipes;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Pipes;
 
@@ -74,27 +75,116 @@ public sealed class PipeAcceptLoopTests
     }
 
     /// <summary>
-    /// A pipe name another server already listens on - a second Huddle on the same machine - stops the loop with an error naming
-    /// the pipe and <c>Team:PipeName</c>, rather than sharing the name: shared, each Agent connected to whichever program's
-    /// listener answered, and the ones that reached the other program stayed Offline here with nothing logged.
+    /// A pipe name held only briefly - the previous host is still going away on a quick restart - is claimed once the holder lets go
+    /// within the wait, instead of stopping the host on the first refusal.
     /// </summary>
     [Fact]
-    public async Task PipeNameAlreadyListenedOn_StopsWithAnErrorNamingThePipe()
+    public async Task PipeNameReleasedDuringTheWait_IsClaimed()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         string pipeName = "pipe-accept-loop-tests-" + Guid.NewGuid().ToString("N");
+        TrackedFakeTimeProvider clock = new();
+        TaskCompletionSource connected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        NamedPipeServerStream other = new(
+            pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        using CancellationTokenSource stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        PipeAcceptLoop loop = new(
+            pipeName,
+            server =>
+            {
+                server.Dispose();
+                connected.TrySetResult();
+            },
+            NullLogger.Instance,
+            clock);
+        Task loopTask = loop.RunAsync(stop.Token);
+
+        await DriveClockAsync(clock, loopTask, until: static () => false, ct, drive: 1);
+        Assert.False(loopTask.IsCompleted, "The loop gave up on the first refusal.");
+        await other.DisposeAsync();
+        await using NamedPipeClientStream client = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        Task dial = client.ConnectAsync(ct);
+        await DriveClockAsync(clock, loopTask, until: () => connected.Task.IsCompleted, ct);
+        await connected.Task.WaitAsync(ct);
+        await dial.WaitAsync(ct);
+
+        Assert.False(loopTask.IsCompleted);
+        await stop.CancelAsync();
+        await loopTask.WaitAsync(ct);
+    }
+
+    /// <summary>
+    /// A pipe name another server holds for the whole wait - a second Huddle on the same machine - stops the loop, only after the wait has
+    /// run out, with an error naming the pipe and <c>Team:PipeName</c>, rather than sharing the name: shared, each Agent connected to
+    /// whichever program's listener answered, and the ones that reached the other program stayed Offline here with nothing logged.
+    /// </summary>
+    [Fact]
+    public async Task PipeNameHeldThroughoutTheWait_GivesTheMessageAfterTheBound()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string pipeName = "pipe-accept-loop-tests-" + Guid.NewGuid().ToString("N");
+        TrackedFakeTimeProvider clock = new();
         await using NamedPipeServerStream other = new(
             pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        PipeAcceptLoop loop = new(pipeName, static server => server.Dispose(), NullLogger.Instance);
+        PipeAcceptLoop loop = new(pipeName, static server => server.Dispose(), NullLogger.Instance, clock);
+        DateTimeOffset start = clock.GetUtcNow();
+        Task loopTask = loop.RunAsync(ct);
 
-        // Bounded, so a loop that shares the name ends by cancellation and fails the assertion instead of waiting forever.
-        using CancellationTokenSource bounded = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        bounded.CancelAfter(TimeSpan.FromSeconds(5));
-        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() => loop.RunAsync(bounded.Token));
+        await DriveClockAsync(clock, loopTask, until: static () => false, ct);
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() => loopTask);
 
+        Assert.True(clock.GetUtcNow() - start >= TimeSpan.FromSeconds(1), "The loop gave up before the clock moved at all.");
         Assert.Equal(
             $"Another program is already listening on the pipe '{pipeName}', most likely another copy of Huddle. Stop it, or give this copy its own pipe with Team:PipeName.",
             error.Message);
+    }
+
+    /// <summary>Stopping the host while the loop waits for a held pipe name ends the wait quietly, without the already-listening error.</summary>
+    [Fact]
+    public async Task StopDuringTheWait_EndsTheLoopWithoutAnError()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string pipeName = "pipe-accept-loop-tests-" + Guid.NewGuid().ToString("N");
+        TrackedFakeTimeProvider clock = new();
+        await using NamedPipeServerStream other = new(
+            pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        using CancellationTokenSource stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        PipeAcceptLoop loop = new(pipeName, static server => server.Dispose(), NullLogger.Instance, clock);
+        Task loopTask = loop.RunAsync(stop.Token);
+
+        await DriveClockAsync(clock, loopTask, until: static () => false, ct, drive: 1);
+        Assert.False(loopTask.IsCompleted, "The loop gave up on the first refusal.");
+        await stop.CancelAsync();
+        await loopTask.WaitAsync(ct);
+
+        Assert.True(loopTask.IsCompletedSuccessfully);
+    }
+
+    /// <summary>
+    /// Moves <paramref name="clock"/> a second at a time, each time the loop has armed its wait, until <paramref name="until"/> holds,
+    /// the loop ends, or <paramref name="drive"/> steps have been taken.
+    /// </summary>
+    /// <param name="clock">The loop's clock.</param>
+    /// <param name="loopTask">The running loop.</param>
+    /// <param name="until">True when no more time is needed.</param>
+    /// <param name="ct">Bounds the whole drive.</param>
+    /// <param name="drive">The most steps to take.</param>
+    private static async Task DriveClockAsync(TrackedFakeTimeProvider clock, Task loopTask, Func<bool> until, CancellationToken ct, int drive = 100)
+    {
+        using CancellationTokenSource bounded = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bounded.CancelAfter(TimeSpan.FromSeconds(30));
+        try
+        {
+            for (int step = 0; step < drive && !loopTask.IsCompleted && !until(); step++)
+            {
+                Task advanced = clock.AdvanceWhenArmedAsync(1, TimeSpan.FromSeconds(1), bounded.Token);
+                _ = await Task.WhenAny(advanced, loopTask);
+            }
+        }
+        finally
+        {
+            await bounded.CancelAsync();
+        }
     }
 
     /// <summary>Reads one byte from <paramref name="server"/>, writes it back, then disposes the instance.</summary>
