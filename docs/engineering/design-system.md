@@ -649,9 +649,9 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   Within a level, either every row has an icon or none does (UX-015).
 - **A 1:1 Room shows the Agent's small avatar; a group Room shows the Room icon**
   (UX-016). That avatar is 32px (`.room-row-avatar.avatar-transcript`), so it draws the Agent's
-  picture: the face is how the Human finds the Room. The Agent's title follows the name, muted at
-  caption size (`.room-row-title`), and wraps below the name when the sidebar is too narrow for
-  both; the row grows to fit. An Agent with no Persona, or a title that repeats the name, shows no title.
+  picture: the face is how the Human finds the Room. The Agent's title sits on its own line below
+  the name at every sidebar width, muted at caption size (`.room-row-title`); the row grows to fit.
+  An Agent with no Persona, or a title that repeats the name, shows no title.
 - **Sidebar action links** ("New chat", "Build a team", "New view") take the
   `nav-action-link` class: secondary text colour (not the accent), the "+" in the leading slot
   and the label on the text line like any row. Don't set `IconColor` on them, and don't repeat

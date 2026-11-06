@@ -51,7 +51,7 @@
             }
             @if (this.AgentTitle is { } agentTitle)
             {
-                @* The name, then the Agent's title muted after it; a narrow sidebar wraps the title to a second line. *@
+                @* Two lines at every sidebar width: the name, then the Agent's title muted below it. *@
                 <span class="room-row-text">
                     <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
                     <span class="room-row-title" title="@agentTitle">@agentTitle</span>

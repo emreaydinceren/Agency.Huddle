@@ -1833,14 +1833,12 @@ body.sidebar-resizing {
     padding-block: 2px;
 }
 
-/* The name, then the Agent's title muted after it on the same line; when both do not fit, the title wraps below the
-   name. Each truncates with an ellipsis rather than wrapping inside itself. */
+/* Two lines at every sidebar width: the name, then the Agent's title muted below it. Each truncates with an ellipsis
+   rather than wrapping inside itself. */
 .room-row-text {
     display: flex;
     flex: 1 1 auto;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 6px;
+    flex-direction: column;
     min-width: 0;
     line-height: 1.25;
 }
