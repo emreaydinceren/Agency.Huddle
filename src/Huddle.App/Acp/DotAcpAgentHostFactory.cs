@@ -141,7 +141,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
-        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile);
+        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile, connectors: false);
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -586,25 +586,43 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// the same Meta, exactly as it always carried the same token.
     /// </summary>
     /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="connectors">
+    /// Whether the Human's claude.ai account connectors stay available. <see langword="false"/> adds
+    /// <c>options.env</c> with the one key <c>ENABLE_CLAUDEAI_MCP_SERVERS=false</c> (Agent Connectors Spec 8.1); a
+    /// future writer of <c>options.env</c> must add to that dictionary, not replace it. <see langword="true"/> adds nothing.
+    /// No <c>strict-mcp-config</c> and no <c>tools</c> entry is added either way.
+    /// </param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
-    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile)
+    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile, bool connectors)
     {
-        return profile.IsolateUserSettings
-            ? new Dictionary<string, object>(StringComparer.Ordinal)
+        if (!profile.IsolateUserSettings)
+        {
+            return null;
+        }
+
+        Dictionary<string, object> options = new(StringComparer.Ordinal)
+        {
+            ["settingSources"] = new[] { "project", "local" },
+            ["settings"] = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                ["claudeCode"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["options"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        ["settingSources"] = new[] { "project", "local" },
-                        ["settings"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                        {
-                            ["autoMemoryEnabled"] = false,
-                        },
-                    },
-                },
-            }
-            : null;
+                ["autoMemoryEnabled"] = false,
+            },
+        };
+        if (!connectors)
+        {
+            options["env"] = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false",
+            };
+        }
+
+        return new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["claudeCode"] = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["options"] = options,
+            },
+        };
     }
 
     /// <summary>Builds the factory that produces the Persona's role block at each session start.</summary>

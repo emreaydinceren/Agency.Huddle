@@ -298,6 +298,13 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     `autoMemoryEnabled: false` also drops any `CLAUDE_MODEL_CONFIG` model override that
     session would otherwise have carried. `settingSources` is not affected — it merges rather
     than replaces. `AdapterProfile.IsolateUserSettings`'s remarks carry this in code.
+- **No Agent can reach the claude.ai account connectors yet, and there is no switch.** Every Agent
+  session starts with `ENABLE_CLAUDEAI_MCP_SERVERS=false` (stage 3 of #357, first step). The per-Agent
+  store, the card switch, the approval prompt and the notice are the next change, so until then an Agent
+  that used a connector fails on its next Turn with no explanation. An Adapter profile that does not
+  isolate user settings gets no `_meta` at all, so only that profile's `EnvironmentOverrides` can turn the
+  connectors off there (spec 3.6). MCP servers a Human put in `~/.claude.json` are **untested**: the
+  isolation leaves `user` out of `settingSources`, but no check proved those servers stay out (spec 3.3).
 - **One `AppToolServer` per Persona** — one loopback Kestrel each. Revisit past
   about four Personas.
 - **`SystemPromptMode.Append` has never been evidenced against a live model.** If
