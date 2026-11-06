@@ -91,6 +91,94 @@ public sealed class BuiltinAgentSeederTests
     }
 
     /// <summary>
+    /// Issue 390: a blank install's Chief of Staff is created with the cheap model already stored,
+    /// so its first greeting does not run on the account's most expensive default.
+    /// </summary>
+    [Fact]
+    public async Task Start_EmptyLibrary_StoresTheCheapModelBeforeAnyTurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = NewStore(dataDir);
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        Assert.Equal("haiku", personas.Get("Chief of Staff")?.Model);
+    }
+
+    /// <summary>Issue 390: an existing Chief of Staff with a stored model keeps it across a start.</summary>
+    [Fact]
+    public async Task Start_ExistingChiefWithModel_KeepsItsModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = NewStore(dataDir);
+        personas.Add(
+            new PersonaIdentity("Chief of Staff", "Chief", "cos", Teams: [], Builtin: BuiltinAgent.ChiefOfStaffMarker),
+            "You are the Chief.", model: "opus");
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        Assert.Equal("opus", personas.Get("Chief of Staff")?.Model);
+    }
+
+    /// <summary>Issue 390: an existing Chief of Staff with no stored model is not given one, so an existing install sees no change.</summary>
+    [Fact]
+    public async Task Start_ExistingChiefWithoutModel_StaysOnAgentDefault()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = NewStore(dataDir);
+        personas.Add(
+            new PersonaIdentity("Chief of Staff", "Chief", "cos", Teams: [], Builtin: BuiltinAgent.ChiefOfStaffMarker),
+            "You are the Chief.");
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        Assert.Null(personas.Get("Chief of Staff")?.Model);
+    }
+
+    /// <summary>Issue 390: a model the Human sets, or clears back to the Agent default, survives a restart.</summary>
+    [Fact]
+    public async Task Start_AfterHumanChangesModel_RestartKeepsTheChoice()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string? chosen;
+        string? cleared;
+        using (PersonaStore first = NewStore(dataDir))
+        {
+            await new BuiltinAgentSeeder(first, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+            Persona chief = first.Get("Chief of Staff") ?? throw new InvalidOperationException("Chief missing.");
+            _ = first.Update("Chief of Staff", chief.Text, "sonnet", null, null);
+        }
+
+        using (PersonaStore second = NewStore(dataDir))
+        {
+            await new BuiltinAgentSeeder(second, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+            chosen = second.Get("Chief of Staff")?.Model;
+            Persona chief = second.Get("Chief of Staff") ?? throw new InvalidOperationException("Chief missing.");
+            _ = second.Update("Chief of Staff", chief.Text, null, null, null);
+        }
+
+        using (PersonaStore third = NewStore(dataDir))
+        {
+            await new BuiltinAgentSeeder(third, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+            cleared = third.Get("Chief of Staff")?.Model;
+        }
+
+        Assert.Equal("sonnet", chosen);
+        Assert.Null(cleared);
+    }
+
+    /// <summary>Builds a real store over the temp data folder.</summary>
+    private static PersonaStore NewStore(TempDataDir dataDir) => new(
+        new AgentPaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+
+    /// <summary>
     /// Issue 351: a Human named "Chief of Staff" owns the default Name, so the seeder moves on to
     /// the next free pair ("Chief of Staff 2" / "cos2") instead of failing and leaving no Chief of Staff.
     /// </summary>

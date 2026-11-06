@@ -40,6 +40,15 @@ internal sealed class BuiltinAgentSeeder(
     private const string DefaultAlias = "cos";
 
     /// <summary>
+    /// The model a newly created Chief of Staff starts on, in the id the Model picker stores for the
+    /// Claude Adapter (the same name <c>TeamMemoryHelper</c> uses). The greeting runs at the first
+    /// launch, before a Human can open the Agents page, and on the account's default model it cost 0.33 USD.
+    /// Only a Chief created here gets it: an existing one, with or without a stored model, is never
+    /// touched, and the Human can change or clear it afterwards.
+    /// </summary>
+    private const string GreetingModel = "haiku";
+
+    /// <summary>
     /// How many <c>(Name, Alias)</c> pairs the free-name search tries before giving up. Spec §8.6
     /// does not itself bound the search, but an installation with a hundred Personas already named
     /// "Chief of Staff N" is not a free-name search away from a usable one - past this point,
@@ -81,7 +90,7 @@ internal sealed class BuiltinAgentSeeder(
 
         try
         {
-            personas.Add(identity, body, model: null, effort: null);
+            personas.Add(identity, body, model: GreetingModel, effort: null);
         }
         catch (ChatException ex)
         {

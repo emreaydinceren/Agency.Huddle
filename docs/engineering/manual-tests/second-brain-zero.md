@@ -164,7 +164,7 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
    Chief of Staff
    ```
 
-5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, set **Model** to Haiku and **Effort** to low, and click **Save**.
+5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, check **Model** already shows Haiku (a new Chief of Staff starts on it, so the first greeting is cheap), set **Effort** to low, and click **Save**.
 
 **Expect**: the app opens on **Settings › Profile** with a welcome note, not on a chat. No Team exists. The sidebar's
 **Teams** view shows only **Build a team**.
