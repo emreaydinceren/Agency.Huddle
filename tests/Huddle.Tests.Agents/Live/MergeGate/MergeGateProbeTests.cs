@@ -184,7 +184,7 @@ public sealed class MergeGateProbeTests
         private static void Seed(string repo)
         {
             Git(repo, "init -q -b main");
-            Git(repo, "config user.email probe@example.test");
+            Git(repo, "config user.email probe@example.com");
             Git(repo, "config user.name Probe");
             File.WriteAllText(Path.Combine(repo, "base.txt"), "base");
             Git(repo, "add base.txt");
