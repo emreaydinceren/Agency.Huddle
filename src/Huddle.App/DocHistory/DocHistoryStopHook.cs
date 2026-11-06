@@ -54,7 +54,7 @@ internal static class DocHistoryStopHook
                 WriteIfChanged(script, Script);
             }
 
-            AddToSettings(Path.Combine(workDir, ".claude", SettingsFile), $"node \"{script}\" {logChangeToolName}{(remindReads ? " --remind-reads" : string.Empty)}", logger);
+            AddToSettings(Path.Combine(workDir, ".claude", SettingsFile), "Stop", null, ScriptName, $"node \"{script}\" {logChangeToolName}{(remindReads ? " --remind-reads" : string.Empty)}", logger);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -62,11 +62,14 @@ internal static class DocHistoryStopHook
         }
     }
 
-    /// <summary>Adds or replaces this hook's entry in a settings file.</summary>
+    /// <summary>Adds or replaces one hook's entry in a settings file, keeping every other setting and hook. The merge gate's hook uses it too.</summary>
     /// <param name="settingsPath">The settings file, which may not exist yet.</param>
+    /// <param name="eventName">The hook event the entry goes under, such as <c>Stop</c> or <c>PreToolUse</c>.</param>
+    /// <param name="matcher">The tool matcher for the entry, or <see langword="null"/> for none.</param>
+    /// <param name="scriptName">The script's file name, by which an earlier entry of the same hook is recognised and replaced.</param>
     /// <param name="command">The command the hook runs.</param>
     /// <param name="logger">Receives a settings file that cannot be read as JSON.</param>
-    private static void AddToSettings(string settingsPath, string command, ILogger logger)
+    internal static void AddToSettings(string settingsPath, string eventName, string? matcher, string scriptName, string command, ILogger logger)
     {
         JsonObject root = [];
         if (File.Exists(settingsPath))
@@ -83,20 +86,24 @@ internal static class DocHistoryStopHook
         }
 
         JsonObject hooks = root["hooks"] as JsonObject ?? [];
-        JsonArray stop = hooks["Stop"] as JsonArray ?? [];
-        for (int index = stop.Count - 1; index >= 0; index--)
+        JsonArray entries = hooks[eventName] as JsonArray ?? [];
+        for (int index = entries.Count - 1; index >= 0; index--)
         {
-            if (stop[index]?.ToJsonString().Contains(ScriptName, StringComparison.Ordinal) == true)
+            if (entries[index]?.ToJsonString().Contains(scriptName, StringComparison.Ordinal) == true)
             {
-                stop.RemoveAt(index);
+                entries.RemoveAt(index);
             }
         }
 
-        stop.Add(new JsonObject
+        JsonObject entry = [];
+        if (matcher is not null)
         {
-            ["hooks"] = new JsonArray(new JsonObject { ["type"] = "command", ["command"] = command }),
-        });
-        hooks["Stop"] = stop;
+            entry["matcher"] = matcher;
+        }
+
+        entry["hooks"] = new JsonArray(new JsonObject { ["type"] = "command", ["command"] = command });
+        entries.Add(entry);
+        hooks[eventName] = entries;
         root["hooks"] = hooks;
 
         Directory.CreateDirectory(Path.GetDirectoryName(settingsPath) ?? ".");
@@ -106,7 +113,7 @@ internal static class DocHistoryStopHook
     /// <summary>Writes a text file only when its content differs, so a session start does not touch an unchanged file.</summary>
     /// <param name="path">The file.</param>
     /// <param name="text">The text it should hold.</param>
-    private static void WriteIfChanged(string path, string text)
+    internal static void WriteIfChanged(string path, string text)
     {
         if (File.Exists(path) && string.Equals(File.ReadAllText(path), text, StringComparison.Ordinal))
         {

@@ -1069,8 +1069,11 @@ command, Huddle reads it. If it is a `git merge` or `git push` and the Team has
 `checks-before-merge` and a `checkCommand`, Huddle refuses it until Evidence on one
 of the Team's open Tasks shows the latest run of that exact command passing. The
 Agent is told only that the request was denied; the reason is written to the log,
-not shown to it. This is a guard against honest mistakes, not a sandbox. It only
-works in work modes where the Adapter asks before running a command, and it does not
+not shown to it. This is a guard against honest mistakes, not a sandbox. With the
+Claude Code Adapter it also works when the Adapter would otherwise run commands
+without asking (its `auto` mode), because Huddle installs a small hook that makes it
+ask before a `git merge` or `git push`. A Codex Adapter has no such hook, so the gate
+only works there in modes where Codex asks. It does not
 catch a git alias, `FOO=1 git push`, `sudo`, a command wrapped in `bash -c`, a script
 that pushes, or a push from an IDE or another tool. Your own approval of a prompt is
 never intercepted.
