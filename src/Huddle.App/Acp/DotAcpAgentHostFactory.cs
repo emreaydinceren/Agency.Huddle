@@ -137,6 +137,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
 
         InstallDocHistoryHook(workDir, this.options.DataDir, toolNames, parsed, this.serviceProvider.GetService<ProcessGateService>(), this.logger);
+        InstallMergeGateHook(workDir, this.options.DataDir, this.serviceProvider.GetService<IMergeGate>(), this.logger);
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
@@ -320,6 +321,22 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         {
             bool remindReads = gates?.CoversVerify(identity?.Role) == true;
             DocHistoryStopHook.Install(workDir, dataDir, logChangeToolName, logger, remindReads);
+        }
+    }
+
+    /// <summary>
+    /// Issue #396: when a merge gate is registered, puts the <c>PreToolUse</c> hook in the Work Dir that makes the Adapter
+    /// send a permission request for <c>git merge</c> and <c>git push</c> even in its <c>auto</c> mode.
+    /// </summary>
+    /// <param name="workDir">The Persona's Work Dir.</param>
+    /// <param name="dataDir">The App's data folder, which keeps the hook script.</param>
+    /// <param name="mergeGate">The registered gate, or <see langword="null"/> when there is none, in which case nothing is installed.</param>
+    /// <param name="logger">Receives an install failure.</param>
+    internal static void InstallMergeGateHook(string workDir, string dataDir, IMergeGate? mergeGate, ILogger logger)
+    {
+        if (mergeGate is not null)
+        {
+            MergeGateHook.Install(workDir, dataDir, logger);
         }
     }
 
