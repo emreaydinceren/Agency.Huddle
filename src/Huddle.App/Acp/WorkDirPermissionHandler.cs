@@ -87,7 +87,7 @@ internal sealed class WorkDirPermissionHandler(
     /// </summary>
     /// <param name="command">The shell command line.</param>
     /// <returns>One word list per command, in order.</returns>
-    private static List<List<string>> SplitSegments(string command)
+    internal static List<List<string>> SplitSegments(string command)
     {
         List<List<string>> segments = [];
         List<string> words = [];
@@ -150,7 +150,7 @@ internal sealed class WorkDirPermissionHandler(
     }
 
     /// <summary>Git options that consume the next word.</summary>
-    private static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
+    internal static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
 
     /// <summary>The Agent's home configuration directory for the current user, or null when it cannot be resolved.</summary>
     /// <returns>The absolute path to <c>~/.claude</c>, or <see langword="null"/> when the profile directory is unknown.</returns>
@@ -281,7 +281,7 @@ internal sealed class WorkDirPermissionHandler(
 
     /// <summary>Whether the word names the git executable, with or without a directory or <c>.exe</c>.</summary>
     /// <param name="word">The first word of a segment, unquoted.</param>
-    private static bool IsGit(string word)
+    internal static bool IsGit(string word)
     {
         string name = word[(word.LastIndexOfAny(['/', '\\']) + 1)..];
         return string.Equals(name, "git", StringComparison.OrdinalIgnoreCase)
@@ -290,7 +290,7 @@ internal sealed class WorkDirPermissionHandler(
 
     /// <summary>Strips surrounding quote characters from a shell word.</summary>
     /// <param name="word">The word.</param>
-    private static string Unquote(string word) => word.Trim('"', '\'');
+    internal static string Unquote(string word) => word.Trim('"', '\'');
 
     /// <summary>Picks a refusal option, preferring a one-time refusal, and cancels when none is offered.</summary>
     /// <param name="options">The options the Agent offered.</param>

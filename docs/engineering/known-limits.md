@@ -8,6 +8,8 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+- **The merge gate for a Human-gated Task covers the assignee's own shell only.**
+  `ProcessMergeGate` refuses an assignee's `git merge` of a branch, and a `git push` naming main or no branch, while an open gated Task of that Persona's Team has no valid Accept. It does not see a merge by someone who is not the assignee, a command run outside a Persona's shell, or a merge made while already on main by another route (a pull, a rebase, a fast-forward from a tool). Merging main into a feature branch stays allowed. See OD-1 in the [HumanGate spec](../Huddle.HumanGate-Specifications.md).
 - **Huddle does not always move a ready gated Task to Needs You.**
   It moves a Task in Review when a write to the Task completes the Proof. A Proof item fed by role coverage or by an attached document's History can complete with no Task write, so the Task stays in Review until the assignee moves it; the Agent prompts (`tool.updateTask.description`, `getHelp.tasks`) say so, and the card says Accept unlocks when the Task moves.
 - **A Team hired with Adapters off is not onboarded, and nothing tries again.**

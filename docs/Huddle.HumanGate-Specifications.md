@@ -425,7 +425,7 @@ Manual tests go in a new page, `engineering/manual-tests/human-gate.md`, written
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| OD-1 | Should `WorkDirPermissionHandler` refuse an Agent's `git merge` or `git push` until a gated Task is accepted? | **Defer.** A command names no Task, so the handler cannot tell which acceptance it needs. Tying it to "the Persona has any accepted Task" would refuse unrelated merges and pass the wrong one. `checks-before-merge` stays as it is |
+| OD-1 | Should `WorkDirPermissionHandler` refuse an Agent's `git merge` or `git push` until a gated Task is accepted? | **Decided (issue #396).** `ProcessMergeGate` refuses the assignee of an open gated Task that has no valid Accept: a `git merge` of anything but main, and a `git push` naming main or no branch. A merge of main into a feature branch is allowed. A non-assignee, a command outside a Persona's shell and a merge made while already on main by another route stay uncovered ([known limits](engineering/known-limits.md)). `checks-before-merge` is unchanged |
 | OD-2 | Should a Task carry its own Accept sentence ("makes the memo the team's current answer", mockup 2)? | A fixed sentence in v1 (§6.8). Add an optional `outcome:` key later if Humans ask for it |
 | OD-3 | Should Huddle move a gated Task to Needs You by itself when the Proof completes? | No in v1: the assignee moves it, as mockup 1 says. Revisit after use |
 
