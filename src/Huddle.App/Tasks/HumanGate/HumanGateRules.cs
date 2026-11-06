@@ -6,6 +6,17 @@ namespace Agency.Huddle.App.Tasks.HumanGate;
 /// <summary>The pure rules H-1 to H-5 that keep a Human-gated Task from skipping the Human (Human gate Spec §6.4).</summary>
 internal static class HumanGateRules
 {
+    /// <summary>The Action Huddle names on a finished Task of a Team with <c>accept-before-merge</c> that has none (issue #416): the Human's Accept leads to it.</summary>
+    internal const string MergeAction = "Merge this Task's work into main";
+
+    /// <summary>Whether the Task's Change log records its gate being turned off or its Action cleared: only the Human can do either (H-1), and that word is final.</summary>
+    /// <param name="task">The Task.</param>
+    internal static bool HumanTurnedGateOff(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        return task.ChangeLog.Any(static entry => entry.Summary.Split("; ").Any(static part => part is TaskDiff.HumanGateOff or TaskDiff.ActionCleared));
+    }
+
     /// <summary>Checks a proposed change to a Task.</summary>
     /// <param name="before">The Task as it is, or <see langword="null"/> when the change creates it (H-5).</param>
     /// <param name="after">The Task as it would be.</param>
