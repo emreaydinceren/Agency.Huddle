@@ -323,6 +323,47 @@ with a replaced system prompt and no Huddle tool server. Driven live against
   The runner takes the text from the first `{` to the last `}`; prose that itself contains a brace after the object would
   defeat that, which would show on the card as an unparseable answer.
 
+## Switching the claude.ai connectors off for an Agent (spike for issue #357, stage 1, 2026-11-06)
+
+Driven live against `@agentclientprotocol/claude-agent-acp` **0.100.0** (the Adapter in `tools/acp`), Sonnet at low Effort,
+on the owner's account with its claude.ai connectors (Claude Docs, Microsoft Learn, ms365). The probe was
+`ConnectorProbeTests` (gated by `TEAM_E2E_CONNECTORS=1`, throwaway, not committed). Its permission handler refused
+every tool except `update_task` and `git --version`, and aborted on the first refusal. No `claude_ai` tool was
+attempted in any session, and no prompt asked for anything but `PONG`, a tool list, `update_task` or a version command.
+
+**The headline result: the connectors can be switched off per session, and nothing in the plan breaks.**
+`_meta.claudeCode.options.env.ENABLE_CLAUDEAI_MCP_SERVERS = "false"` alone removes every `claude_ai` tool and leaves
+`mcp__team__` working.
+
+**Read this before reading a tool list.** The connectors do not appear on the first Turn of a session. They connect
+afterwards and arrive as a `deferred_tools_delta` attachment (names only, loaded on demand through `ToolSearch`) on the
+**second** Turn. A one-Turn check, or a model asked to "list its tools" on Turn 1, shows no connectors whether they are
+on or off. Every comparison below uses a third Turn, and the proof is the session log under
+`~/.claude/projects/` (`claude_ai` appears there or does not), not only the model's reply.
+
+| # | Question | Answer | Evidence |
+| --- | --- | --- | --- |
+| Q1 | With the variable on the Agent's `_meta`, are all `claude_ai_*` tools gone, and do `mcp__team__` tools work? | **Yes and yes.** Without it, the third Turn's list held 61 `claude_ai` names (Claude Docs, Microsoft Learn and 50 ms365 tools, including `outlook_send_mail` and `outlook_batch_delete_messages`) beside 1 `mcp__team__` name. With it, 0 `claude_ai` names in the reply and 0 `claude_ai` strings in the session logs over 7 Turns, 33 lines listed, and `mcp__team__update_task` ran (the tool body counted 1 run). | Sessions `59dbd479` (on) and `fb0a7093` (off): the same script `PONG, PONG, list`. The on-session log has 3 lines naming `claude_ai`; the off-session log has 0, as has the 7-Turn off session `9ca8df35`, where `update_task` ran. |
+| Q2 | Does `env` replace the Adapter's environment or add to it? Do `git`, `dotnet`, `node` and sign-in still work? | **It adds.** The Adapter builds the session environment as `{ ...process.env, ...options.env }` (`acp-agent.js`, "const env = {"). Live: with the variable set, Bash ran `git --version && dotnet --version && node --version` and printed `git 2.52.0.windows.1`, `10.0.403`, `v24.13.1`; the session signed in with the existing `claude` login (no `ANTHROPIC_API_KEY` set). | Session `9ca8df35`, Turn 3. The `settings` option is a different matter: it still replaces (`AdapterProfile.cs:29-37`), and this spike did not touch it. |
+| Q3 | Is `--strict-mcp-config` needed or harmful on an Agent? | **Not needed, and harmful.** The variable alone removes the connectors (Q1), so strict adds nothing for them. Strict removes the Work Dir's own project and local MCP servers. Work Dir with a `.mcp.json` server `projsrv` approved by `settings.local.json` (`enableAllProjectMcpServers`): without strict the Agent listed `mcp__projsrv__update_task` and `mcp__team__update_task`; with strict, only `mcp__team__update_task`. `mcp__team__` worked in both, because Huddle passes it through ACP `mcpServers`, which strict leaves alone. | Sessions `f7d3a81d` (no strict, 34 lines) and `1b68cd5c` (strict, 33 lines, `update_task` ran). Not tested: servers a Human put in `~/.claude.json` (user scope). `settingSources` leaves out `user`, but this spike did not prove those servers stay out. |
+| Q4 | In a new Adapter process, does a resumed session get the new setting? Does the conversation survive? | **Yes and yes.** A session opened with connectors on (three Turns, its log holds the connector names) was resumed in a second Adapter process with the variable off. The resumed list had 0 `claude_ai` names and 33 lines, the model still answered `PINEAPPLE` to "what word did I ask you to remember", and `mcp__team__update_task` ran (earlier run, session `362f4e6d`). The same-process case stays as `DotAcpPersonaHost.ResumeAsync` documents: the new `_meta` is ignored. | Session `e5263976`, Turns 4 to 6 after the second process started. The old connector names stay in the history file, but the tools are not offered, so the model could not call them. |
+| Q5 | Does a connector call stop for approval under Manual mode? | **Not run: needs the owner's yes.** What the code shows: in `default` (Manual) the Adapter's `canUseTool` raises a permission request for an MCP tool, and Huddle's `WorkDirPermissionHandler` answers it. That handler refuses only the protected `~/.claude` directory, the four file guards and a gated `git merge` or `git push`; every other request ends at `Approve(...)`. A connector call matches none of those guards, so **it would be approved without a Human prompt**. Manual mode is a gate for Huddle's handler, not for the Human. | `WorkDirPermissionHandler.DecideAsync` (last line), `DotAcpPersonaHost.cs:253` and `:318`. |
+| Q6 | Cost of one identical Turn, connectors on and off | The same script `PONG, PONG, list`. Context used per Turn: 36,238, 40,136 and 42,233 tokens on; 36,240, 36,274 and 36,523 off. Turn 2 reported cost: $0.0397 on, $0.0243 off. The connectors add about **3,900 tokens of context per Turn from Turn 2** (the Turn-2 cache write was 9,149 tokens against 5,285), about 11 percent, and +$0.015 on the Turn they first appear. Turn 3 is not a clean price comparison: on, the model listed 61 more names (2,051 output tokens against 204). | Reported cost is the Adapter's running `usage_update` cost; token counts are the `usage` fields in the session logs. Sessions `59dbd479`, `fb0a7093`. |
+| Q7 | `BuildIsolationMeta` returns null when `IsolateUserSettings` is off. What can be controlled on other Adapters? | The `claudeCode` entry is read by `claude-agent-acp` only, and `agency-acp` ignores it (`AdapterProfile.IsolateUserSettings`). The legacy synthesised `claude` profile isolates; a configured profile that runs `claude-agent-acp` defaults to `IsolateUserSettings: false`, gets no `_meta` at all and logs a warning (`AdapterCatalog.WarnUnisolatedClaude`). For such a profile the one lever is `EnvironmentOverrides` (`Team:Acp:Adapters:*:EnvironmentOverrides`), set on the launched process (Q8). It is per profile, not per Agent, because `AgentProcessOptionsFactory` reads it from the profile. Other Adapters have no claude.ai connectors; their own MCP configuration is outside this spike. | Code only. Nothing paid was run for it. |
+| Q8 | Does setting the variable in the environment before launching the Adapter work? | **Yes.** `AgentProcessOptions.EnvironmentOverrides = { ENABLE_CLAUDEAI_MCP_SERVERS: "false" }` on the host, with the plain isolation `_meta` and no `env` on `_meta`: 0 `claude_ai` strings in the log after two Turns, the Turn on which they appear when on. | Session `746bbc58`. Tested at host level; a full Huddle launch was not run. |
+
+**What this means for the plan.**
+
+- An Agent needs the one entry, `options.env.ENABLE_CLAUDEAI_MCP_SERVERS = "false"`, next to the isolation `_meta`.
+  `strict-mcp-config` stays off for Agents (it stays on for Helpers, who have no MCP servers of their own).
+- The switch is read when the Adapter creates the session's query. A fresh session takes the current setting. A resume in
+  the same Adapter process ignores the new `_meta` (as documented in `DotAcpPersonaHost.ResumeAsync`), so after the Human
+  flips the switch the running Agent keeps its old state until its host restarts, as after an app restart (Q4).
+- The connectors are a startup cost on every Turn once they connect (Q6), so the default-off also saves money.
+- Q5 matters most for the default: while a Human can leave connectors on, a connector call is approved by Huddle's
+  handler with no prompt. The owner's yes is needed to measure that live.
+- Spend: $0.77 reported by the Adapter across 10 sessions (two runs), against a stop at $5.
+
 ## Troubleshooting
 
 **The agent returns no `configOptions` at all.** Check whether it needs
