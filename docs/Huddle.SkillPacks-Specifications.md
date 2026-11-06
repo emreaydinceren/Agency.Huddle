@@ -4427,6 +4427,14 @@ recursively, ordered by relative path, CRLF normalised to LF for text extensions
 the root of its own clone. Normalising line endings matters here, because two computers
 sharing one Skill Sources folder may check the same commit out with different line endings.
 
+**What the catalog's `sha256` is compared with (S010).** A second method, `SkillFolderHash.ComputeCatalogFolder`
+(`ComputeCatalog` for in-memory files), lays the bytes out the same way but reads CRLF as LF in **every file that
+is not binary**, where binary means a NUL in the first 8000 bytes, as git decides. A clone made with
+`core.autocrlf=true` turns `.sh`, `.py` and `.js` files into CRLF, and the extension list above would read that
+healthy Skill as altered. The first method is not widened, because it produced the hashes already recorded in
+`.source.json` and a wider rule would make every one of them read as modified. The resolver computes the catalog
+hash only for an entry that pins one and does not cache it.
+
 **What the hash is compared with.** Huddle holds **one copy per Skill**, `Skills/<name>/`,
 shared by every Agent that holds it. Its `.source.json` records the hash of the copy as it
 was made (`sha256`, as today). Two comparisons follow:

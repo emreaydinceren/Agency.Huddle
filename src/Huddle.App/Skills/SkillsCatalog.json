@@ -11,7 +11,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "API & Interface Design",
-    "requires": []
+    "requires": [],
+    "sha256": "e0b01afd4e2e445ec31d1b083bd0b81a9d1665d5a7f961a1bf57e521625fef27"
   },
   {
     "id": "addyosmani/agent-skills/browser-testing-with-devtools",
@@ -25,7 +26,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Browser & E2E Testing",
-    "requires": []
+    "requires": [],
+    "sha256": "faada493db081854d597976b3b11421f1176d81caadadf53e8312745d29eb20a"
   },
   {
     "id": "addyosmani/agent-skills/ci-cd-and-automation",
@@ -39,7 +41,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "CI/CD Pipelines",
-    "requires": []
+    "requires": [],
+    "sha256": "80b7002a828a0ab619364172eb9cbcd7ff08ec39dc5a2fc2794fb3acc6c02cf3"
   },
   {
     "id": "addyosmani/agent-skills/code-review-and-quality",
@@ -53,7 +56,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Code Review",
-    "requires": []
+    "requires": [],
+    "sha256": "863d871e7b8c00ed4d0f38e36497f5febda0f5b17150dedebf6ebbcf31a35ad6"
   },
   {
     "id": "addyosmani/agent-skills/code-simplification",
@@ -67,7 +71,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Simplification & Refactoring",
-    "requires": []
+    "requires": [],
+    "sha256": "2fcb05c8539171b51d3ac967b3bb8e25a65d765036d8a9f3c295a7d73cf1da90"
   },
   {
     "id": "addyosmani/agent-skills/constraint-driven-development",
@@ -81,7 +86,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Quality Bar & Constraints",
-    "requires": []
+    "requires": [],
+    "sha256": "4ba46d6b7b0fd1a50779e019a13d277bb6062b7fa1c0d940d433b3a7d71489f9"
   },
   {
     "id": "addyosmani/agent-skills/context-engineering",
@@ -95,7 +101,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Context Management",
-    "requires": []
+    "requires": [],
+    "sha256": "2a94634d9b648c733d6c25723a48784d8a5da0e55c3a743398eb3b22ea4dc329"
   },
   {
     "id": "addyosmani/agent-skills/debugging-and-error-recovery",
@@ -109,7 +116,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Debugging Process",
-    "requires": []
+    "requires": [],
+    "sha256": "493f4a0759a468ad963a7cd45713d28b23f4f9893ec7765f91f7c612ef5265b5"
   },
   {
     "id": "addyosmani/agent-skills/deprecation-and-migration",
@@ -123,7 +131,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": "Deprecation & Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "749bcd3b8a31fbe2f59d1dd27ab36909b3f9d3bc5a4e7057fc7fecad14f32e87"
   },
   {
     "id": "addyosmani/agent-skills/documentation-and-adrs",
@@ -137,7 +146,8 @@
     "license": "MIT",
     "category": "Documentation",
     "subCategory": "ADRs & Technical Docs",
-    "requires": []
+    "requires": [],
+    "sha256": "b16fa4f6ab44b4c52b1392a9d8e466fc3c802f32c2865847470694c1178c0152"
   },
   {
     "id": "addyosmani/agent-skills/doubt-driven-development",
@@ -151,7 +161,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Adversarial Verification",
-    "requires": []
+    "requires": [],
+    "sha256": "66d08630b4bcda3ddc1e26b8cc32d8056291b7f8ac102f93533eb346d8dd853b"
   },
   {
     "id": "addyosmani/agent-skills/frontend-ui-engineering",
@@ -165,7 +176,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Frontend & UI",
-    "requires": []
+    "requires": [],
+    "sha256": "fdb2c63047d2851bd8813b4c69b799a3f701c8448793871e47764bc8eafb9ac5"
   },
   {
     "id": "addyosmani/agent-skills/git-workflow-and-versioning",
@@ -179,7 +191,8 @@
     "license": "MIT",
     "category": "Source Control & Collaboration",
     "subCategory": "Git Workflow",
-    "requires": []
+    "requires": [],
+    "sha256": "3463db975b3bba5e7f9d117abfba3126b694085bdac50683072ee971fe56ae21"
   },
   {
     "id": "addyosmani/agent-skills/idea-refine",
@@ -193,7 +206,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Idea Refinement",
-    "requires": []
+    "requires": [],
+    "sha256": "d99d88702012055f82b3d3a2174ea467dfb51a9abd7c583020f91a2b7333836b"
   },
   {
     "id": "addyosmani/agent-skills/incremental-implementation",
@@ -207,7 +221,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Incremental Delivery",
-    "requires": []
+    "requires": [],
+    "sha256": "62ef93c6389f110af49ed4fad1fe2c27d3d9dd2d8fe0d0f6db089489c3d4aac3"
   },
   {
     "id": "addyosmani/agent-skills/interview-me",
@@ -221,7 +236,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Requirements Interview",
-    "requires": []
+    "requires": [],
+    "sha256": "68615337944c1d56cd9db6b934e247ff1d67600dd9db3d41cc9bf7236b9d986c"
   },
   {
     "id": "addyosmani/agent-skills/observability-and-instrumentation",
@@ -235,7 +251,8 @@
     "license": "MIT",
     "category": "Operations & Observability",
     "subCategory": "Instrumentation",
-    "requires": []
+    "requires": [],
+    "sha256": "71661b8e1558d7eed8cdf93bfb731da1c3afed9b895b049ecf92792af0d8a364"
   },
   {
     "id": "addyosmani/agent-skills/performance-optimization",
@@ -249,7 +266,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Performance Optimization",
-    "requires": []
+    "requires": [],
+    "sha256": "8f0d4a7a23292ffeeef9d6b841826d4df5773a11e35a6c36ffeca2644b8de4cc"
   },
   {
     "id": "addyosmani/agent-skills/planning-and-task-breakdown",
@@ -263,7 +281,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Task Breakdown",
-    "requires": []
+    "requires": [],
+    "sha256": "11b51e8874c451ef4d0d18f4a56f9210310f5364cc1b176a7df1ff36014cef41"
   },
   {
     "id": "addyosmani/agent-skills/security-and-hardening",
@@ -277,7 +296,8 @@
     "license": "MIT",
     "category": "Security",
     "subCategory": "Secure Coding & Hardening",
-    "requires": []
+    "requires": [],
+    "sha256": "21713b2fe68eb6895a38b6d609e05a2cc91b0780fc3d0ef6305b61a7df7457e1"
   },
   {
     "id": "addyosmani/agent-skills/shipping-and-launch",
@@ -291,7 +311,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Release & Launch",
-    "requires": []
+    "requires": [],
+    "sha256": "3a789cbf9ca5d6ecbfe677a6930bd5b219fd695f7113b5e8bbf518375adf57db"
   },
   {
     "id": "addyosmani/agent-skills/source-driven-development",
@@ -305,7 +326,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Doc-Grounded Coding",
-    "requires": []
+    "requires": [],
+    "sha256": "d42621fac185da1053a4a44bd967ea5783760637962c7bc77f57494479bcdabc"
   },
   {
     "id": "addyosmani/agent-skills/spec-driven-development",
@@ -319,7 +341,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Spec Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "8ee02eca7b4c80150a0f0dea28faa8ad1d27eb677744901e06ef938ca7414e77"
   },
   {
     "id": "addyosmani/agent-skills/test-driven-development",
@@ -333,7 +356,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test-Driven Development",
-    "requires": []
+    "requires": [],
+    "sha256": "7b5b9d5a6de3719059b83ecdae6b467f2c2190973ba8eacff1e1d69cfea92183"
   },
   {
     "id": "addyosmani/agent-skills/using-agent-skills",
@@ -347,7 +371,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Router",
-    "requires": []
+    "requires": [],
+    "sha256": "64ee1ea9d458df9cd5cdbf40dd0961a0322d9be6b85e45f9de8abae65b4fe7b1"
   },
   {
     "id": "anthropics/skills/academy-guide",
@@ -361,7 +386,8 @@
     "license": "Apache-2.0",
     "category": "Research & Learning",
     "subCategory": "Product Learning Guide",
-    "requires": []
+    "requires": [],
+    "sha256": "cc7e2ace6f4953fc564189865fb5529ba557a322826bbc73f3599d6441ce741f"
   },
   {
     "id": "anthropics/skills/algorithmic-art",
@@ -375,7 +401,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Generative Art",
-    "requires": []
+    "requires": [],
+    "sha256": "4a85abfeaa09f2dd2c4b76c85d57b65f61dc10d55c3cca245989cee8897c2be5"
   },
   {
     "id": "anthropics/skills/brand-guidelines",
@@ -389,7 +416,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Branding & Styling",
-    "requires": []
+    "requires": [],
+    "sha256": "10067cdd9be9cd5d97c741fc6e25830135afa0e11cc71e567b75763e26d08799"
   },
   {
     "id": "anthropics/skills/canvas-design",
@@ -403,7 +431,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Visual Design",
-    "requires": []
+    "requires": [],
+    "sha256": "1866477474e694f562261008bb6a817e53f027b6347b062fbd1e2ee2eb83f20d"
   },
   {
     "id": "anthropics/skills/claude-api",
@@ -417,7 +446,8 @@
     "license": "Apache-2.0",
     "category": "Implementation",
     "subCategory": "AI/LLM API Development",
-    "requires": []
+    "requires": [],
+    "sha256": "03f27c0662b2e573010279224e462dfe0fccd224c2785accdfd952115adadff4"
   },
   {
     "id": "anthropics/skills/discernment-nudge",
@@ -431,7 +461,8 @@
     "license": "Apache-2.0",
     "category": "Agent Workflow & Context",
     "subCategory": "Response Quality & Judgment",
-    "requires": []
+    "requires": [],
+    "sha256": "c3f503f343e5e32f7c8539e47853ca4d69e0cfdbd294789510c8203ae8f92e1d"
   },
   {
     "id": "anthropics/skills/doc-coauthoring",
@@ -445,7 +476,8 @@
     "license": "none",
     "category": "Documents & Content",
     "subCategory": "Document Co-authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "d32facc16a25b47a21a90e79c1e6c072d342a9e41b595b58b86f869ff33ccc26"
   },
   {
     "id": "anthropics/skills/docx",
@@ -459,7 +491,8 @@
     "license": "© 2025 Anthropic, PBC. All rights reserved.",
     "category": "Documents & Content",
     "subCategory": "Word Documents",
-    "requires": []
+    "requires": [],
+    "sha256": "5b58401c8411c469d6ad194242a5026b2ef5baec7ae24febe0785c167868eca5"
   },
   {
     "id": "anthropics/skills/frontend-design",
@@ -473,7 +506,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Frontend UI Design",
-    "requires": []
+    "requires": [],
+    "sha256": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
   },
   {
     "id": "anthropics/skills/internal-comms",
@@ -487,7 +521,8 @@
     "license": "Apache-2.0",
     "category": "Documents & Content",
     "subCategory": "Business Communications",
-    "requires": []
+    "requires": [],
+    "sha256": "a864e111fed981a514102493dafd2bf426929af06cf35e8943ccbdeb4be65724"
   },
   {
     "id": "anthropics/skills/mcp-builder",
@@ -501,7 +536,8 @@
     "license": "Apache-2.0",
     "category": "Implementation",
     "subCategory": "MCP Server Development",
-    "requires": []
+    "requires": [],
+    "sha256": "890b91d77934d6d19d12a85a878d3502ea3dca2a5d3ede10bbaa0dd2761120dc"
   },
   {
     "id": "anthropics/skills/pdf",
@@ -515,7 +551,8 @@
     "license": "© 2025 Anthropic, PBC. All rights reserved.",
     "category": "Documents & Content",
     "subCategory": "PDF",
-    "requires": []
+    "requires": [],
+    "sha256": "8da60dcc59ddbd4d2057f217416a6cf5c8b1e17ed671548d25ace5846afbab7b"
   },
   {
     "id": "anthropics/skills/pptx",
@@ -529,7 +566,8 @@
     "license": "© 2025 Anthropic, PBC. All rights reserved.",
     "category": "Documents & Content",
     "subCategory": "Presentations",
-    "requires": []
+    "requires": [],
+    "sha256": "f4113381a33ec4e215451fdfb322ef7f36f128b3864627bb3fc5ba2327261f00"
   },
   {
     "id": "anthropics/skills/skill-creator",
@@ -543,7 +581,8 @@
     "license": "Apache-2.0",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Creation & Evaluation",
-    "requires": []
+    "requires": [],
+    "sha256": "2d7f889e6ae93c6c27d699856942c336b5b8644537496987d5571043d059b1dc"
   },
   {
     "id": "anthropics/skills/slack-gif-creator",
@@ -557,7 +596,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Animated GIFs",
-    "requires": []
+    "requires": [],
+    "sha256": "25581243f719e75121f9051ec671e810e53375fe648a6362d673d6bfbbe9d479"
   },
   {
     "id": "anthropics/skills/template",
@@ -571,7 +611,8 @@
     "license": "none",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Template",
-    "requires": []
+    "requires": [],
+    "sha256": "143ecbef94ad1b41d05d13ed6a1f52a80aef7ae7114d9cfa88a3fdf2f2049754"
   },
   {
     "id": "anthropics/skills/theme-factory",
@@ -585,7 +626,8 @@
     "license": "Apache-2.0",
     "category": "Design & Creative",
     "subCategory": "Theming",
-    "requires": []
+    "requires": [],
+    "sha256": "f426a07c06316201360be19324f2689c5bd3ab2d1669848c9383c321efa4386f"
   },
   {
     "id": "anthropics/skills/web-artifacts-builder",
@@ -599,7 +641,8 @@
     "license": "Apache-2.0",
     "category": "Implementation",
     "subCategory": "Frontend & UI",
-    "requires": []
+    "requires": [],
+    "sha256": "7a081b86fd5068d3ca2c4d9c059956634feff65ccbf1c39c3d34a6e5d0971139"
   },
   {
     "id": "anthropics/skills/webapp-testing",
@@ -613,7 +656,8 @@
     "license": "Apache-2.0",
     "category": "Testing & QA",
     "subCategory": "Browser & E2E Testing",
-    "requires": []
+    "requires": [],
+    "sha256": "48cd9a742a59250edec6db89cf081ef5465f365e2133f6d6c5e29c380b754b7d"
   },
   {
     "id": "anthropics/skills/xlsx",
@@ -627,7 +671,8 @@
     "license": "© 2025 Anthropic, PBC. All rights reserved.",
     "category": "Documents & Content",
     "subCategory": "Spreadsheets",
-    "requires": []
+    "requires": [],
+    "sha256": "9654007fafc12c77a2080477c90bd7758a632197089ea1cfa959b9f60444f443"
   },
   {
     "id": "dotnet/skills/agentic-workflows",
@@ -641,7 +686,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "GitHub Agentic Workflows",
-    "requires": []
+    "requires": [],
+    "sha256": "bad77e10e9a3e50be5a3a72a7ea6ca7544c5adb5321c7f3f8274b8242d4ff821"
   },
   {
     "id": "dotnet/skills/analyzing-dotnet-performance",
@@ -655,7 +701,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": ".NET Performance Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "54439c853c77eb28c3ed44c12e2405d53409d37496b55b17fe386f0adc2ab85d"
   },
   {
     "id": "dotnet/skills/android-tombstone-symbolication",
@@ -669,7 +716,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Crash Symbolication",
-    "requires": []
+    "requires": [],
+    "sha256": "72929eda93b8b9f26218dc120be0fa3ad59dc19edaaefbc222f40e5a505f0e5a"
   },
   {
     "id": "dotnet/skills/apple-crash-symbolication",
@@ -683,7 +731,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Crash Symbolication",
-    "requires": []
+    "requires": [],
+    "sha256": "7a948297a5b6d4be49b40dc573d9d6497b829c80fc5eb181fa2f26ac38733ffb"
   },
   {
     "id": "dotnet/skills/assertion-quality",
@@ -697,7 +746,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "daccee7518ba35c7e5927a89af851f8aa0c627c1d2ac8eb5e54c0a8c047f0778"
   },
   {
     "id": "dotnet/skills/author-component",
@@ -711,7 +761,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "a76769dd408baa91a188a1aa1d46997a4d7ae7dc672e80fa1af41b05b5b8f980"
   },
   {
     "id": "dotnet/skills/authoring-github-workflows",
@@ -725,7 +776,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "GitHub Workflows",
-    "requires": []
+    "requires": [],
+    "sha256": "40c2593a62798bb4d53e88dc63954f6db7714be59204bc93d9329655254961cd"
   },
   {
     "id": "dotnet/skills/binlog-failure-analysis",
@@ -739,7 +791,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Diagnostics",
-    "requires": []
+    "requires": [],
+    "sha256": "835577fe50b982e1a092056d2d53dbaf461171aad9a9c7eca5346a7acaeb3f3d"
   },
   {
     "id": "dotnet/skills/binlog-generation",
@@ -753,7 +806,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Diagnostics",
-    "requires": []
+    "requires": [],
+    "sha256": "4bf982fb91a003e3bc92a4ea63d14b4c696e3f263a0669d63ea4c08abba9a850"
   },
   {
     "id": "dotnet/skills/build-parallelism",
@@ -767,7 +821,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "3f4c56129349f4f43f9522e449f9375a253cb7ad2952f2317354a177a9999fae"
   },
   {
     "id": "dotnet/skills/build-perf-baseline",
@@ -781,7 +836,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "d3eb6db4fc0762f6f19f32ee8184eb2ae3bcae3ee256411f46208225bbcc8406"
   },
   {
     "id": "dotnet/skills/build-perf-diagnostics",
@@ -795,7 +851,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "20ba35d907b3788d44b115cf3aae7811a3e13923d1b8df2dec88d14d8b268d4b"
   },
   {
     "id": "dotnet/skills/check-bin-obj-clash",
@@ -809,7 +866,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Diagnostics",
-    "requires": []
+    "requires": [],
+    "sha256": "717cf42754cbbfa7b93276709f1f65d2a0e33a84a2879f4755117f033e3ca0ba"
   },
   {
     "id": "dotnet/skills/clr-activation-debugging",
@@ -823,7 +881,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Runtime Debugging",
-    "requires": []
+    "requires": [],
+    "sha256": "00edc260b8840829edd41919a798a4e11561357499062c20f512edfd93524fcb"
   },
   {
     "id": "dotnet/skills/code-testing-agent",
@@ -837,7 +896,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Generation",
-    "requires": []
+    "requires": [],
+    "sha256": "83d3d492948bf5ab2006de419854ee24bca6daec98e4c11eb682e68ea86114e6"
   },
   {
     "id": "dotnet/skills/code-testing-extensions",
@@ -851,7 +911,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Generation",
-    "requires": []
+    "requires": [],
+    "sha256": "0d44fff9c62ea2f26cf980a10724b81bb3f52dd9b6408e59b6650222047b79d3"
   },
   {
     "id": "dotnet/skills/collect-user-input",
@@ -865,7 +926,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "89ee342417c4dbf70e0f79c126502dd8601c6e4a0dae5390bc3a6ce17b4afda8"
   },
   {
     "id": "dotnet/skills/configure-auth",
@@ -879,7 +941,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "e853f20e0343792bfa4b62773239d1c0b3c5cbbb32802e7df40dadc5b5cf1b41"
   },
   {
     "id": "dotnet/skills/convert-blazor-server-to-webapp",
@@ -893,7 +956,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": "Blazor Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "70765d6cb49647799f3dbdc3a9775642de4c35463783cdf48525720ed83d7f34"
   },
   {
     "id": "dotnet/skills/convert-to-cpm",
@@ -907,7 +971,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "NuGet Package Management",
-    "requires": []
+    "requires": [],
+    "sha256": "f75105f59ee04ead8b81f8e5fb6e2439ca97bc21006b26ec5a1cb345d897c859"
   },
   {
     "id": "dotnet/skills/coordinate-components",
@@ -921,7 +986,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "0338fed651ae8149aa25556f59d7fb4d3f386b70f5d351e078088fc31f5de90e"
   },
   {
     "id": "dotnet/skills/copy-to-output-directory",
@@ -935,7 +1001,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "7de41101665230e41f0156c087e3e4adf2dbc384d0e8dbfd35a2e4d460dda495"
   },
   {
     "id": "dotnet/skills/coverage-analysis",
@@ -949,7 +1016,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Coverage & Risk",
-    "requires": []
+    "requires": [],
+    "sha256": "4b4e551214d09d3ea96f6bacfea7673297354eabca32b2013122062e7d0386f3"
   },
   {
     "id": "dotnet/skills/crap-score",
@@ -963,7 +1031,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Coverage & Risk",
-    "requires": []
+    "requires": [],
+    "sha256": "59654fb0171f61f81248f126d9587b42116fa4352cf51fe122556ab6a3d0d01a"
   },
   {
     "id": "dotnet/skills/create-blazor-project",
@@ -977,7 +1046,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "0933766808ba8cb3035cd7c96a1a818a851d35a09b0a51a80ded0a1bb6610146"
   },
   {
     "id": "dotnet/skills/create-custom-agent",
@@ -991,7 +1061,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Agent Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "73d811a2db469639d51a586af7c6f9ca3fe6f9144c5340bd931082562bce9d93"
   },
   {
     "id": "dotnet/skills/create-datadriven-aspnetcore",
@@ -1005,7 +1076,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Data & EF Core",
-    "requires": []
+    "requires": [],
+    "sha256": "70d14926bc369e3ce2b914e23519a7996152fcd86d3be08626ac4643f5ec3925"
   },
   {
     "id": "dotnet/skills/create-skill",
@@ -1019,7 +1091,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Creation",
-    "requires": []
+    "requires": [],
+    "sha256": "5e40b2eefc5c5f7b9f7bd6e758d78f36b0e43761d49f5dd67e615abd30f4232f"
   },
   {
     "id": "dotnet/skills/create-skill-test",
@@ -1033,7 +1106,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Testing",
-    "requires": []
+    "requires": [],
+    "sha256": "31447bb95472fceea3876a46b3559c7e816bee54b9bf85b784b094d22e0d9835"
   },
   {
     "id": "dotnet/skills/csharp-refactoring",
@@ -1047,7 +1121,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "C# Refactoring",
-    "requires": []
+    "requires": [],
+    "sha256": "907f808ebab010ec85b9fbe02bd1e8df59ca63b4006a83b8dbe27ebed72c2e31"
   },
   {
     "id": "dotnet/skills/csharp-scripts",
@@ -1061,7 +1136,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "C# Scripting",
-    "requires": []
+    "requires": [],
+    "sha256": "6f525fbd9d61d2d4a727fc37ce3a0f09684638b4b069f5d8eba081958e2ff250"
   },
   {
     "id": "dotnet/skills/detect-static-dependencies",
@@ -1075,7 +1151,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Testability",
-    "requires": []
+    "requires": [],
+    "sha256": "f8b8a30a59e0557628e6c00373fb0b25e210d308266bdabd5f39a74827435049"
   },
   {
     "id": "dotnet/skills/directory-build-organization",
@@ -1089,7 +1166,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "90842094b650914091bc8f7dec41894819e9bac54a9dc3d9479eeb5813425c32"
   },
   {
     "id": "dotnet/skills/dotnet-aot-compat",
@@ -1103,7 +1181,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET AOT Compatibility",
-    "requires": []
+    "requires": [],
+    "sha256": "61d074150b7d1c469388ba4d3264463ddd8639d0e99f61df18bf780957aecb94"
   },
   {
     "id": "dotnet/skills/dotnet-maui-doctor",
@@ -1117,7 +1196,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "6cc27cef9354248036d05bfe0f79448cab833f4e897113e87234d94d40fa19b4"
   },
   {
     "id": "dotnet/skills/dotnet-pinvoke",
@@ -1131,7 +1211,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Interop",
-    "requires": []
+    "requires": [],
+    "sha256": "dc6edf3e49d9afc2ceadc799703054275c6dea87bf75f28f24285dad3e5f7358"
   },
   {
     "id": "dotnet/skills/dotnet-trace-collect",
@@ -1145,7 +1226,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Trace Collection",
-    "requires": []
+    "requires": [],
+    "sha256": "bb630ea8200cede8c2ebde25324c186124deb6285836e4f9466a97dcb7e12b7f"
   },
   {
     "id": "dotnet/skills/dotnet-webapi",
@@ -1159,7 +1241,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": "ASP.NET Core Web API",
-    "requires": []
+    "requires": [],
+    "sha256": "2aedc615b14b3027800a556a4bf0c28f28f21b09ffc7a546c3865f08a26b79b0"
   },
   {
     "id": "dotnet/skills/dump-collect",
@@ -1173,7 +1256,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Dump Collection",
-    "requires": []
+    "requires": [],
+    "sha256": "38ba0c12b27e223988d7a8e8eac8e8def4178fbc0adc2644418804f3e0a5fd3b"
   },
   {
     "id": "dotnet/skills/eval-performance",
@@ -1187,7 +1271,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "299969c0cac25334d87a9600a1fa9e7a17fa3acaaf8bfae0111e699fc5d226cc"
   },
   {
     "id": "dotnet/skills/exp-mock-usage-analysis",
@@ -1201,7 +1286,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "e2c0d2c191b5a5c87bb6ac62ff593f1870e09a573c12f7f07b6a0b5fd456876f"
   },
   {
     "id": "dotnet/skills/exp-test-maintainability",
@@ -1215,7 +1301,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "5f4d99e64d763bca593951f2bb36ba1339ab796a0b7e1474d2dce0c213626e5e"
   },
   {
     "id": "dotnet/skills/extension-points",
@@ -1229,7 +1316,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "36a57fd653a096a53c287bb8f5349714175ca2db13cd687a93e929334db11bb9"
   },
   {
     "id": "dotnet/skills/fetch-and-send-data",
@@ -1243,7 +1331,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "6eb732b577ea818a192f28887dd96dc1362e978462bf1c31a911c0e8a14c4655"
   },
   {
     "id": "dotnet/skills/filter-syntax",
@@ -1257,7 +1346,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "8b91ef0e8a6598023c35f2b2aed41263c11128483f97c64b0ae48489120afb02"
   },
   {
     "id": "dotnet/skills/find-untested-sources",
@@ -1271,7 +1361,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Coverage & Risk",
-    "requires": []
+    "requires": [],
+    "sha256": "824294ea07dd1ddfbdb6228551caca2a3c9d57388cf98df407f89fabc7371efe"
   },
   {
     "id": "dotnet/skills/generate-testability-wrappers",
@@ -1285,7 +1376,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Testability",
-    "requires": []
+    "requires": [],
+    "sha256": "a7a1a2a2fe5a30110f8ca3d39c3de296b38b5d66b61db2b037f0bf221799e691"
   },
   {
     "id": "dotnet/skills/grade-tests",
@@ -1299,7 +1391,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "b569caee7c96e70d2a2e990db8e690962034524cb46777475c98802e6823db51"
   },
   {
     "id": "dotnet/skills/improve-skill-quality",
@@ -1313,7 +1406,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Quality",
-    "requires": []
+    "requires": [],
+    "sha256": "db14e571256975c8eab01058d73917c86779665cab6e9760b7a6418d3284d34c"
   },
   {
     "id": "dotnet/skills/including-generated-files",
@@ -1327,7 +1421,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "1be86b184f47f2eb647913df543e4767c6dcbacc89f8d3af3c78b9fe9027c496"
   },
   {
     "id": "dotnet/skills/incremental-build",
@@ -1341,7 +1436,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "1b60130106440d6097a65269cd1deb479e2b391d3231fd795454ad4478126711"
   },
   {
     "id": "dotnet/skills/item-management",
@@ -1355,7 +1451,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "f16953ae1fe1868fd687f7568ba4bfc80c8694b7eb3d1d62f0edcc7b8624ea27"
   },
   {
     "id": "dotnet/skills/maui-app-lifecycle",
@@ -1369,7 +1466,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "4eb5ab26c9b8c2e222fab9d2c575338d516a5211cb70bee0349cc359e56c375f"
   },
   {
     "id": "dotnet/skills/maui-collectionview",
@@ -1383,7 +1481,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "f2720989250f7182460bae4215ae7e42d8c38c3a1c15ac7458d863e45b214425"
   },
   {
     "id": "dotnet/skills/maui-data-binding",
@@ -1397,7 +1496,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "d90b9cd84389ab18ef7f884c0e4538f73266e39cfcabb0771f9e1e3111d66f03"
   },
   {
     "id": "dotnet/skills/maui-dependency-injection",
@@ -1411,7 +1511,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "468f8fe37099737f4193103f27637663f5f762878c51e2b746437b1d8ecc50ee"
   },
   {
     "id": "dotnet/skills/maui-safe-area",
@@ -1425,7 +1526,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "abb3ce931c7093012161b7ec594f4cd7c4478b63877f7b20a850773e01132083"
   },
   {
     "id": "dotnet/skills/maui-shell-navigation",
@@ -1439,7 +1541,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "5336684220f93206004c9591725ab443abc2b92a8ea52d3f9a1ceb6aa9dafcfb"
   },
   {
     "id": "dotnet/skills/maui-theming",
@@ -1453,7 +1556,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET MAUI",
-    "requires": []
+    "requires": [],
+    "sha256": "264ad113a4ccf4e1b29c7729def2f7f5b3c5f819d822f3fa093e0f6a2dd0070a"
   },
   {
     "id": "dotnet/skills/microbenchmarking",
@@ -1467,7 +1571,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Microbenchmarking",
-    "requires": []
+    "requires": [],
+    "sha256": "b888a6032d9a02c2ea2159356e66e60c5c7e68280d87d7a56efd8753133dc401"
   },
   {
     "id": "dotnet/skills/migrate-dotnet10-to-dotnet11",
@@ -1481,7 +1586,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Version Upgrade",
-    "requires": []
+    "requires": [],
+    "sha256": "969efcd511c55d4cbb2a14136fa0a0d50e1e6ac39a4a346a8482a2df141147e2"
   },
   {
     "id": "dotnet/skills/migrate-dotnet8-to-dotnet9",
@@ -1495,7 +1601,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Version Upgrade",
-    "requires": []
+    "requires": [],
+    "sha256": "b765e5c22e95f4665e3e556d9c5a957792f3218134e2dcf4ce66d46366ef44ff"
   },
   {
     "id": "dotnet/skills/migrate-dotnet9-to-dotnet10",
@@ -1509,7 +1616,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Version Upgrade",
-    "requires": []
+    "requires": [],
+    "sha256": "369111568ec40b48dd3830ea96d3b73f652ae38fd726ede3191cb8d2ce8ab2e9"
   },
   {
     "id": "dotnet/skills/migrate-mstest-v1v2-to-v3",
@@ -1523,7 +1631,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "d97a118fff7e9007c5fef936cf5be43a4df0edc2a5bea7c055ecb66365f5c64e"
   },
   {
     "id": "dotnet/skills/migrate-mstest-v3-to-v4",
@@ -1537,7 +1646,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "6e80ddec854fd44b0d737fd17f6166ef2934c5aa7d6a385b8c593185040dc0ea"
   },
   {
     "id": "dotnet/skills/migrate-nullable-references",
@@ -1551,7 +1661,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": "C# Language Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "3c84efbf2a5a98ec76dc86acfc18009de9140dd1c7fd5bd168790c042ded47e9"
   },
   {
     "id": "dotnet/skills/migrate-nunit-to-mstest",
@@ -1565,7 +1676,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "f7cec42859589a92b0e0073f0b397d405387d30593185470c98afab418e46b1f"
   },
   {
     "id": "dotnet/skills/migrate-static-to-wrapper",
@@ -1579,7 +1691,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Testability",
-    "requires": []
+    "requires": [],
+    "sha256": "1e6d2ddd8864a6e3fa6717db36d7b637d192caeb92b83cd13527c9878964f89f"
   },
   {
     "id": "dotnet/skills/migrate-vstest-to-mtp",
@@ -1593,7 +1706,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "a46f7f00344ee9d77d6af3ae42600b529d8a3f074a5b98fc7ffab102ec647d02"
   },
   {
     "id": "dotnet/skills/migrate-xunit-to-mstest",
@@ -1607,7 +1721,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "c6a29e277b802bc5722447385c6ed39391524a937ad4fde70036765cb1284310"
   },
   {
     "id": "dotnet/skills/migrate-xunit-to-xunit-v3",
@@ -1621,7 +1736,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": ".NET Test Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "fb1ab34aed754c773163aae9e0c5f4de989b238cd09f837e3fa20aace0c3acf7"
   },
   {
     "id": "dotnet/skills/msbuild",
@@ -1635,7 +1751,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Diagnostics",
-    "requires": []
+    "requires": [],
+    "sha256": "f3102ad5c9f545c642a4c4608ba03c1e126e939c473b3f32fc528466754fcd65"
   },
   {
     "id": "dotnet/skills/msbuild-antipatterns",
@@ -1649,7 +1766,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "5224b7292c887bb51e5ef48fdec0d4db985d92bdd30a13700e6c66c19c7ec9ff"
   },
   {
     "id": "dotnet/skills/msbuild-modernization",
@@ -1663,7 +1781,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Modernization",
-    "requires": []
+    "requires": [],
+    "sha256": "1896109c4043b05f8e1a71ee8cf8600c344156038b7b3076faf1758363e3082e"
   },
   {
     "id": "dotnet/skills/mtp-hot-reload",
@@ -1677,7 +1796,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "f637f217e49bab5a1072112c1f47f10c9900afe623381a16ddd957671a1a5543"
   },
   {
     "id": "dotnet/skills/nuget-trusted-publishing",
@@ -1691,7 +1811,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "NuGet Publishing",
-    "requires": []
+    "requires": [],
+    "sha256": "fd769bb3bf008153f1b37ae119e0c8df8db158f666b1655216c9f2af8c7604ed"
   },
   {
     "id": "dotnet/skills/optimizing-ef-core-queries",
@@ -1705,7 +1826,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "EF Core Query Performance",
-    "requires": []
+    "requires": [],
+    "sha256": "77548b7f6ddc8f1d1b2dc0f81839e9dbe4535226fd246a605f16189ec19cc71e"
   },
   {
     "id": "dotnet/skills/plan-ui-change",
@@ -1719,7 +1841,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "4a0b011071e8a0ae2ee964e5c75ac27e21218cdc8b3a22dd8f04a774bf89ee3f"
   },
   {
     "id": "dotnet/skills/platform-detection",
@@ -1733,7 +1856,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "3e70f08c9a67a58e2df6310bf8e5a9596ccb2b1c73bd04337b8a23599ac23501"
   },
   {
     "id": "dotnet/skills/property-patterns",
@@ -1747,7 +1871,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "0b5eaf087fa1aedd6f64a281605be109a107ed4f4b87e7fab4f9eab951387928"
   },
   {
     "id": "dotnet/skills/resolve-project-references",
@@ -1761,7 +1886,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "8f694ec699a88b102157e2e4c6704c6f2d64a4b9eb6ee835c2c9300e99c835bd"
   },
   {
     "id": "dotnet/skills/run-tests",
@@ -1775,7 +1901,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "bf912bf1bec4ce27d6e7be07922545cb4db53075a2fa217fc3cb56ed350feb8d"
   },
   {
     "id": "dotnet/skills/scaffold-dotnet-test-project",
@@ -1789,7 +1916,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Generation",
-    "requires": []
+    "requires": [],
+    "sha256": "27a9794299821887b4b0859d684275baa41d42c234307b7ad56f15739ead68dd"
   },
   {
     "id": "dotnet/skills/setup-local-sdk",
@@ -1803,7 +1931,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET SDK & Tooling",
-    "requires": []
+    "requires": [],
+    "sha256": "f5e8291284a307708b3fc878c125f3244db13e2b30cfa50a26439651435a4058"
   },
   {
     "id": "dotnet/skills/support-prerendering",
@@ -1817,7 +1946,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "81bcb81d391e1566896ad499db8411c3927fe50ab659b2d042000b74939df3fe"
   },
   {
     "id": "dotnet/skills/system-text-json-net11",
@@ -1831,7 +1961,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET 11 Features",
-    "requires": []
+    "requires": [],
+    "sha256": "dd634c38ed9737e71e8f0f82416ab365fb62ffd4929ddbe913e3c9c84ffa8741"
   },
   {
     "id": "dotnet/skills/target-authoring",
@@ -1845,7 +1976,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "MSBuild Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "9559cad05c918449212121a4db7b4f968ce4bf5f7cb91f554ea7aa2c8a29d72b"
   },
   {
     "id": "dotnet/skills/technology-selection",
@@ -1859,7 +1991,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "Technology Selection",
-    "requires": []
+    "requires": [],
+    "sha256": "79146edd44f43d4468355912e30cc36228295080aae48d21972cc13ae26409b9"
   },
   {
     "id": "dotnet/skills/template-authoring",
@@ -1873,7 +2006,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "875e6a99e379f101d955ff80fb0c6a3501067c59eba8f21c97674849b577e135"
   },
   {
     "id": "dotnet/skills/template-comparison",
@@ -1887,7 +2021,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "c5f4100b022cbb440a8693f7d41e1c170d814e9618f62d0b410066d34262bc8b"
   },
   {
     "id": "dotnet/skills/template-discovery",
@@ -1901,7 +2036,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "f8bcb5342e89dc5a274eb9194f04ce85f2ad49bfbc2eeb41035e06d15ce8ffef"
   },
   {
     "id": "dotnet/skills/template-instantiation",
@@ -1915,7 +2051,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "166a67b36b819360f2c66164bd1d2847d61ddfa20d3d4091a6fa4aa17f0b873e"
   },
   {
     "id": "dotnet/skills/template-smart-defaults",
@@ -1929,7 +2066,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "7ba1c862b6a1fa41b4509532cccb806d29118b684e3b6f9367d03fff7522dacc"
   },
   {
     "id": "dotnet/skills/template-validation",
@@ -1943,7 +2081,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Template Engine",
-    "requires": []
+    "requires": [],
+    "sha256": "700364e7036b2ad03835aa32a05b825a24c7ecf7f65357c11ba83d2e893581a4"
   },
   {
     "id": "dotnet/skills/test-analysis-extensions",
@@ -1957,7 +2096,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "dc29444966e7074c995a7c6e18448f3815551b64bf26dd67f7627e78425a47dd"
   },
   {
     "id": "dotnet/skills/test-anti-patterns",
@@ -1971,7 +2111,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "f15880544c4bdce65c0054b73a98888580a27fc5dc07f03df1dcbd99518d54eb"
   },
   {
     "id": "dotnet/skills/test-gap-analysis",
@@ -1985,7 +2126,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Coverage & Risk",
-    "requires": []
+    "requires": [],
+    "sha256": "a785747ec2d44cf24d93e96e5b8e5c88a742e623a607a6e88d696a985d3684ed"
   },
   {
     "id": "dotnet/skills/test-smell-detection",
@@ -1999,7 +2141,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Analysis",
-    "requires": []
+    "requires": [],
+    "sha256": "9a181c46684032161837874c4fdfc4b4555395501335313ebe7b8dce91636547"
   },
   {
     "id": "dotnet/skills/test-tagging",
@@ -2013,7 +2156,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "e2a3e22682d32a7a84521ebc75fb5b3bd668c3fb7101dca22a0cfec47eba8b90"
   },
   {
     "id": "dotnet/skills/testability-obstacle",
@@ -2027,7 +2171,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Testability",
-    "requires": []
+    "requires": [],
+    "sha256": "87027036a60bf1a3b43ca77858323ffcefa0045b8f1b8c4add0cd6c4aa609d6c"
   },
   {
     "id": "dotnet/skills/thread-abort-migration",
@@ -2041,7 +2186,8 @@
     "license": "MIT",
     "category": "Migration & Modernization",
     "subCategory": "C# Language Migration",
-    "requires": []
+    "requires": [],
+    "sha256": "c1fd243b3b7f5a24d1f98cda6c70655cd1414373aad3a5f077a68e62c6a3fffa"
   },
   {
     "id": "dotnet/skills/use-igniteui-blazor",
@@ -2055,7 +2201,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "248a767b37a74197ae994eaf65c028b99392765f330b1b2d1d8e0a2197b37afe"
   },
   {
     "id": "dotnet/skills/use-js-interop",
@@ -2069,7 +2216,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET Blazor",
-    "requires": []
+    "requires": [],
+    "sha256": "cf74367c69f82316f7e59a8551d1d71b0e4d0e354b2d61cb353873d15885465e"
   },
   {
     "id": "dotnet/skills/vectorization",
@@ -2083,7 +2231,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Performance Optimization",
-    "requires": []
+    "requires": [],
+    "sha256": "503d764c57f96bde42804657031fafa120149f5b6d88230ff038825e90bef0ac"
   },
   {
     "id": "dotnet/skills/winforms-expert",
@@ -2097,7 +2246,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": ".NET WinForms",
-    "requires": []
+    "requires": [],
+    "sha256": "6b8c4f95aab3fc29cece1de1da75f5c67dd24ba031b12d543f47e07fc5f65239"
   },
   {
     "id": "dotnet/skills/writing-mstest-tests",
@@ -2111,7 +2261,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Generation",
-    "requires": []
+    "requires": [],
+    "sha256": "c4b27463df783bb91743d5752c774da635f87a01039f9e47ea8eb0dacc43151b"
   },
   {
     "id": "garrytan/gstack/autoplan",
@@ -2125,7 +2276,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Automated Plan Review",
-    "requires": []
+    "requires": [],
+    "sha256": "6da13b6ebae69afdd8417edbe92b4557b8154a6e46baf73bc69be8a44d8892fd"
   },
   {
     "id": "garrytan/gstack/benchmark",
@@ -2139,7 +2291,8 @@
     "license": "MIT",
     "category": "Operations & Observability",
     "subCategory": "Performance Benchmarking",
-    "requires": []
+    "requires": [],
+    "sha256": "300f1b50f2b402c51926480516751e2a4c800a8ee48708893ae92c85b0633e28"
   },
   {
     "id": "garrytan/gstack/benchmark-models",
@@ -2153,7 +2306,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill & Model Benchmarking",
-    "requires": []
+    "requires": [],
+    "sha256": "41773dfe263c899b7dea520875a23e97ccc1d3dc5cddb0fbf323c64c4a97e19c"
   },
   {
     "id": "garrytan/gstack/browse",
@@ -2167,7 +2321,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Headless Browser",
-    "requires": []
+    "requires": [],
+    "sha256": "318f9eb7ef3c724a78c9cbf285c38f9597754bc9fd208d58e2e3c0f660cca6df"
   },
   {
     "id": "garrytan/gstack/canary",
@@ -2181,7 +2336,8 @@
     "license": "MIT",
     "category": "Operations & Observability",
     "subCategory": "Post-Deploy Monitoring",
-    "requires": []
+    "requires": [],
+    "sha256": "61f76e3d151fb414987e47a3699febfcc69d8525250a78331529ff5b894f4f66"
   },
   {
     "id": "garrytan/gstack/careful",
@@ -2195,7 +2351,8 @@
     "license": "MIT",
     "category": "Safety & Guardrails",
     "subCategory": "Destructive Command Warnings",
-    "requires": []
+    "requires": [],
+    "sha256": "91102120aefd7efa0bedca79c03a23817b257e9025aa517797e2542ade4fa394"
   },
   {
     "id": "garrytan/gstack/codex",
@@ -2209,7 +2366,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Second-Opinion Review",
-    "requires": []
+    "requires": [],
+    "sha256": "b5b367827687bbb00d04ee0efd6a9d7033bf539e1a933d910a1465e4d0c7d1c9"
   },
   {
     "id": "garrytan/gstack/context-restore",
@@ -2223,7 +2381,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Context Save & Restore",
-    "requires": []
+    "requires": [],
+    "sha256": "99da4d17a17e314f41f433299a4171c66f94446a01ebd8eb0313f15064d40318"
   },
   {
     "id": "garrytan/gstack/context-save",
@@ -2237,7 +2396,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Context Save & Restore",
-    "requires": []
+    "requires": [],
+    "sha256": "83dc493da8f52f04420c8032b43c34f2e1c0c9d711afe247ccd1eac878a4a3d3"
   },
   {
     "id": "garrytan/gstack/cso",
@@ -2251,7 +2411,8 @@
     "license": "MIT",
     "category": "Security",
     "subCategory": "Security Audit",
-    "requires": []
+    "requires": [],
+    "sha256": "46f61971048908cf93dba0f41a538a08a8c19d85812133d11b606a506c9190a7"
   },
   {
     "id": "garrytan/gstack/design-consultation",
@@ -2265,7 +2426,8 @@
     "license": "MIT",
     "category": "Design & Creative",
     "subCategory": "Design System",
-    "requires": []
+    "requires": [],
+    "sha256": "f1b416a1a6df9947011e6c6a4f637802ee1f7526d084a068e6323ec843987b7a"
   },
   {
     "id": "garrytan/gstack/design-html",
@@ -2279,7 +2441,8 @@
     "license": "MIT",
     "category": "Design & Creative",
     "subCategory": "Design to HTML",
-    "requires": []
+    "requires": [],
+    "sha256": "b2af2db821ae0af5214d65a26d105118e5e9e1fef4afd3fecccf9a1a5120325d"
   },
   {
     "id": "garrytan/gstack/design-review",
@@ -2293,7 +2456,8 @@
     "license": "MIT",
     "category": "Design & Creative",
     "subCategory": "Visual Design Review",
-    "requires": []
+    "requires": [],
+    "sha256": "d1dbb44e8ee9de2a3e74bc9805fd09cd6fcd002d2dc9447dacab635829d24fa4"
   },
   {
     "id": "garrytan/gstack/design-shotgun",
@@ -2307,7 +2471,8 @@
     "license": "MIT",
     "category": "Design & Creative",
     "subCategory": "Design Exploration",
-    "requires": []
+    "requires": [],
+    "sha256": "71f842fabe9875407d0d0a99157a46970e7c14a955e8bf8562fd8bf2655a7951"
   },
   {
     "id": "garrytan/gstack/deslop-shared-libs",
@@ -2321,7 +2486,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Code Reuse & Deduplication",
-    "requires": []
+    "requires": [],
+    "sha256": "1c8243ce726f91148f061941bf0ba086d276c065db558e7ee0c0e2542998e397"
   },
   {
     "id": "garrytan/gstack/devex-review",
@@ -2335,7 +2501,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "DevEx Review",
-    "requires": []
+    "requires": [],
+    "sha256": "4e794b0643ff9a4eb34fef1c7cc69c2dfc1d69308dc7ab8057c97af036495720"
   },
   {
     "id": "garrytan/gstack/diagram",
@@ -2349,7 +2516,8 @@
     "license": "MIT",
     "category": "Documentation",
     "subCategory": "Diagrams",
-    "requires": []
+    "requires": [],
+    "sha256": "3874bcaadba3fce4bc031019337f665cc3971230c90b27bad96bcb7c8ce20d02"
   },
   {
     "id": "garrytan/gstack/document-generate",
@@ -2363,7 +2531,8 @@
     "license": "MIT",
     "category": "Documentation",
     "subCategory": "Doc Generation",
-    "requires": []
+    "requires": [],
+    "sha256": "be653be398d509a2877d1fe5b674ad22dfe528e2429657b9bcb647993d8c3d52"
   },
   {
     "id": "garrytan/gstack/document-release",
@@ -2377,7 +2546,8 @@
     "license": "MIT",
     "category": "Documentation",
     "subCategory": "Release Docs",
-    "requires": []
+    "requires": [],
+    "sha256": "ae6463819c929db303953cb01b602afb3777d8d9b1211da98c3599db104b9614"
   },
   {
     "id": "garrytan/gstack/freeze",
@@ -2391,7 +2561,8 @@
     "license": "MIT",
     "category": "Safety & Guardrails",
     "subCategory": "Edit Scope Lock",
-    "requires": []
+    "requires": [],
+    "sha256": "b44843f2ac8ef0098c5c72b061f15034c500943311149114b8c2d61d15e6ff22"
   },
   {
     "id": "garrytan/gstack/gstack",
@@ -2419,7 +2590,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Product/CEO Review",
-    "requires": []
+    "requires": [],
+    "sha256": "9fcfde3b58be714e6bf0bd15c8f75a0b5eabd8d00d415052f878272ef3060ad4"
   },
   {
     "id": "garrytan/gstack/gstack-openclaw-investigate",
@@ -2433,7 +2605,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Root-Cause Investigation",
-    "requires": []
+    "requires": [],
+    "sha256": "b554c87b9a29ba763a1e12459736d92d4f120368ac3301f173e3040165e6285f"
   },
   {
     "id": "garrytan/gstack/gstack-openclaw-office-hours",
@@ -2447,7 +2620,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Product Office Hours",
-    "requires": []
+    "requires": [],
+    "sha256": "3db2232617380c51e15f4797112bd697a55d0be45ac9c45f91fcff1eb5b552dd"
   },
   {
     "id": "garrytan/gstack/gstack-openclaw-retro",
@@ -2461,7 +2635,8 @@
     "license": "MIT",
     "category": "Project Management",
     "subCategory": "Retrospectives",
-    "requires": []
+    "requires": [],
+    "sha256": "04fce45122865b332f34ff4ba9a45eb8e6ac2e8ad6d8023af01112cc9db44087"
   },
   {
     "id": "garrytan/gstack/gstack-upgrade",
@@ -2475,7 +2650,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Toolkit Maintenance",
-    "requires": []
+    "requires": [],
+    "sha256": "50feebf63c4cf25ad8db66db4685413a93733bf2353bbe64c7366f3b367eafcf"
   },
   {
     "id": "garrytan/gstack/guard",
@@ -2489,7 +2665,8 @@
     "license": "MIT",
     "category": "Safety & Guardrails",
     "subCategory": "Combined Safety Mode",
-    "requires": []
+    "requires": [],
+    "sha256": "d4af0c0edee97fcf7440bd2cce032ebd09ba9dda9119ef1dbc41c4e326b2d008"
   },
   {
     "id": "garrytan/gstack/hackernews-frontpage",
@@ -2503,7 +2680,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Browser Skill Example",
-    "requires": []
+    "requires": [],
+    "sha256": "589d31822d53b6e33521b39e04e30e8745966d5ff9e21a9c67ccc725220b4b68"
   },
   {
     "id": "garrytan/gstack/health",
@@ -2517,7 +2695,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Code Health Dashboard",
-    "requires": []
+    "requires": [],
+    "sha256": "e2b74eed9e4d6d73ec92abbb762cc6fa993a90803351e32f56ceb689e5c5875f"
   },
   {
     "id": "garrytan/gstack/investigate",
@@ -2531,7 +2710,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Root-Cause Investigation",
-    "requires": []
+    "requires": [],
+    "sha256": "b3a3f6193400ff57b772c3847089c53da55180c0e71d352d1b98c559deab0143"
   },
   {
     "id": "garrytan/gstack/ios-clean",
@@ -2545,7 +2725,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": "iOS Development",
-    "requires": []
+    "requires": [],
+    "sha256": "0fb43fc20c572ed56144d86147e639fff1b5fb7f7c8e16bbd4c8ed4c9f386c1c"
   },
   {
     "id": "garrytan/gstack/ios-design-review",
@@ -2559,7 +2740,8 @@
     "license": "MIT",
     "category": "Design & Creative",
     "subCategory": "iOS Design Review",
-    "requires": []
+    "requires": [],
+    "sha256": "f65f0677a026aec71632ee3401dae192c47d01a7b2f92449f0a9e0dd7162dcf4"
   },
   {
     "id": "garrytan/gstack/ios-fix",
@@ -2573,7 +2755,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "iOS Bug Fixing",
-    "requires": []
+    "requires": [],
+    "sha256": "938259e18d087f6a9ad4d567febcc80f7db43167db4cdcf8388c23d6afaac898"
   },
   {
     "id": "garrytan/gstack/ios-qa",
@@ -2587,7 +2770,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "iOS QA",
-    "requires": []
+    "requires": [],
+    "sha256": "3adeb16da5797ba6b9fec999f15d237908b059ea79540df76426f2c14f9d4c39"
   },
   {
     "id": "garrytan/gstack/ios-sync",
@@ -2601,7 +2785,8 @@
     "license": "MIT",
     "category": "Platform & Framework Expertise",
     "subCategory": "iOS Development",
-    "requires": []
+    "requires": [],
+    "sha256": "876d3b7038965ae6ece6449357ebf2c924fdf214cb5627e1169d89a0bc8d7452"
   },
   {
     "id": "garrytan/gstack/land-and-deploy",
@@ -2615,7 +2800,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Deploy",
-    "requires": []
+    "requires": [],
+    "sha256": "40e59e005cc58d399d258fc030c9fc651cef3dd75df13c5002bf2a77a8363a57"
   },
   {
     "id": "garrytan/gstack/landing-report",
@@ -2629,7 +2815,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Ship Queue Dashboard",
-    "requires": []
+    "requires": [],
+    "sha256": "134da0c124c6737319f7b23f48d5f8d93607ec0c4b1e663efc9551f041d0052e"
   },
   {
     "id": "garrytan/gstack/learn",
@@ -2643,7 +2830,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Project Learnings",
-    "requires": []
+    "requires": [],
+    "sha256": "c221747ae95fd80341462e56149acec3ccc694568c2b4ac7bd19298dba43458b"
   },
   {
     "id": "garrytan/gstack/make-pdf",
@@ -2657,7 +2845,8 @@
     "license": "MIT",
     "category": "Documents & Content",
     "subCategory": "PDF",
-    "requires": []
+    "requires": [],
+    "sha256": "a888a3f9a8ae14bff91fe7e7f6777c6b594895cec2cdb5bec00304918e1950bb"
   },
   {
     "id": "garrytan/gstack/office-hours",
@@ -2671,7 +2860,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Product Office Hours",
-    "requires": []
+    "requires": [],
+    "sha256": "09c769cfee44ae7db98b94309793b9cabc05d8e38febb6b5b70af1d73a8e1f3a"
   },
   {
     "id": "garrytan/gstack/open-gstack-browser",
@@ -2685,7 +2875,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Headless Browser",
-    "requires": []
+    "requires": [],
+    "sha256": "04a7405b7d0a0f5e128871ca8c8051c290dab282815867f32900cd04b143172f"
   },
   {
     "id": "garrytan/gstack/pair-agent",
@@ -2699,7 +2890,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Multi-Agent Browser Pairing",
-    "requires": []
+    "requires": [],
+    "sha256": "f705273342d558d7baed3942d53a20712c22121a18b5784a78807e1599078d50"
   },
   {
     "id": "garrytan/gstack/plan-ceo-review",
@@ -2713,7 +2905,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Product/CEO Review",
-    "requires": []
+    "requires": [],
+    "sha256": "043e9b1edcee6b1e59b747e3147aa410a710bc66ada476998396204c83b00b24"
   },
   {
     "id": "garrytan/gstack/plan-design-review",
@@ -2727,7 +2920,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Design Plan Review",
-    "requires": []
+    "requires": [],
+    "sha256": "c9e3778b6cd6c4e3dd4346311dc70c314ab8b84057ea3b2528423635619021b5"
   },
   {
     "id": "garrytan/gstack/plan-devex-review",
@@ -2741,7 +2935,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "DevEx Plan Review",
-    "requires": []
+    "requires": [],
+    "sha256": "46e9750d669ae1b46783f314cc442808941c03ca80334fd668692573def49fe5"
   },
   {
     "id": "garrytan/gstack/plan-eng-review",
@@ -2755,7 +2950,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Engineering Plan Review",
-    "requires": []
+    "requires": [],
+    "sha256": "6b2b46b3267e141af05a74c8aecef29941a23ae9791e0b25c5203fb177805f60"
   },
   {
     "id": "garrytan/gstack/plan-tune",
@@ -2769,7 +2965,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Question Tuning",
-    "requires": []
+    "requires": [],
+    "sha256": "9f180565fcc523f6749d0a713ded685705be18e7aaa3279308f29e4cca67e674"
   },
   {
     "id": "garrytan/gstack/qa",
@@ -2783,7 +2980,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "QA & Fix Loop",
-    "requires": []
+    "requires": [],
+    "sha256": "51d7715a744324aa696f50ebc8a077a6432fa9f4d04456e0aa2b90686f2bb895"
   },
   {
     "id": "garrytan/gstack/qa-only",
@@ -2797,7 +2995,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "QA Report Only",
-    "requires": []
+    "requires": [],
+    "sha256": "bebda02bf771e90a924bfedf20bdef4675131d6ccceac887b43b68ca21c937a4"
   },
   {
     "id": "garrytan/gstack/retro",
@@ -2811,7 +3010,8 @@
     "license": "MIT",
     "category": "Project Management",
     "subCategory": "Retrospectives",
-    "requires": []
+    "requires": [],
+    "sha256": "5ea6b79a2f5910b1a864d76ab308313dde976607ea29fe97963f9734dc0f7aa8"
   },
   {
     "id": "garrytan/gstack/review",
@@ -2825,7 +3025,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Pre-Merge Review",
-    "requires": []
+    "requires": [],
+    "sha256": "001fc86662f3df014aaacb58396a2d9a8c05590154dd0255bed5fba46e60f300"
   },
   {
     "id": "garrytan/gstack/scrape",
@@ -2839,7 +3040,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Web Scraping",
-    "requires": []
+    "requires": [],
+    "sha256": "37e80780694e96a78b0b29d084e23860c721126182ad44c698b7c666303e1b20"
   },
   {
     "id": "garrytan/gstack/setup-browser-cookies",
@@ -2853,7 +3055,8 @@
     "license": "MIT",
     "category": "Integrations & Tooling",
     "subCategory": "Browser Auth Setup",
-    "requires": []
+    "requires": [],
+    "sha256": "bd48bab26baaa7cc0d0f74f09c3995b2fc1220a5ad7b0ea6c0d969a35a7bbeb8"
   },
   {
     "id": "garrytan/gstack/setup-deploy",
@@ -2867,7 +3070,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Deploy Configuration",
-    "requires": []
+    "requires": [],
+    "sha256": "5af4a9776edf1ac9c78d666f62d4a15b09d6213d3fc2b6c983858f4615a505ba"
   },
   {
     "id": "garrytan/gstack/setup-gbrain",
@@ -2881,7 +3085,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Agent Memory Setup",
-    "requires": []
+    "requires": [],
+    "sha256": "942419865911476258054986d85fb5749c7ca3bd97270dc1781ca593dedc86c4"
   },
   {
     "id": "garrytan/gstack/ship",
@@ -2895,7 +3100,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Release & PR",
-    "requires": []
+    "requires": [],
+    "sha256": "6d9c110a0603f94f7c0aece6f1cd9330815d1ea537aa04b42f865355ff719661"
   },
   {
     "id": "garrytan/gstack/skillify",
@@ -2909,7 +3115,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Creation",
-    "requires": []
+    "requires": [],
+    "sha256": "11ebb7ca43d0f6880e4a323b5ed733a438b91af7f22e4e2f8e1aa3c525b9f086"
   },
   {
     "id": "garrytan/gstack/spec",
@@ -2923,7 +3130,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Spec Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "00ea38fbfeb041d66ed763c5bb3dd9e5e88ba3f8b5a38faf5984fa89eaa57004"
   },
   {
     "id": "garrytan/gstack/sync-gbrain",
@@ -2937,7 +3145,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Agent Memory Sync",
-    "requires": []
+    "requires": [],
+    "sha256": "40ab3662675f915688509b7861bf356f7661cab3474c26fc10f7f3da4b67b722"
   },
   {
     "id": "garrytan/gstack/test-audit",
@@ -2951,7 +3160,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Audit",
-    "requires": []
+    "requires": [],
+    "sha256": "ca979a9b7ed8260f58254e86f981389051d3b9e864a696defd7d50121ae564a2"
   },
   {
     "id": "garrytan/gstack/unfreeze",
@@ -2965,7 +3175,8 @@
     "license": "MIT",
     "category": "Safety & Guardrails",
     "subCategory": "Edit Scope Lock",
-    "requires": []
+    "requires": [],
+    "sha256": "c139c884809671a31cf58eb01c525b37a51ec30f03e150c770082f772a9308a3"
   },
   {
     "id": "mattpocock/skills/ask-matt",
@@ -2979,7 +3190,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Router",
-    "requires": []
+    "requires": [],
+    "sha256": "7ff2383b40fe9d8f3e753d267d964fb2b44d120a948fd2a57c3b26ddfc318370"
   },
   {
     "id": "mattpocock/skills/chief-of-staff",
@@ -2993,7 +3205,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Subagent Orchestration",
-    "requires": []
+    "requires": [],
+    "sha256": "5b9cd9c119664cfae5b3c9ec3f60add887ca92ad445674d3455d464617355eda"
   },
   {
     "id": "mattpocock/skills/claude-handoff",
@@ -3007,7 +3220,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Handoff",
-    "requires": []
+    "requires": [],
+    "sha256": "e903af941877ac195671a1eff550ba42266f5f5a4028ebeae4cd1fec82b88dd4"
   },
   {
     "id": "mattpocock/skills/code-review",
@@ -3021,7 +3235,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Code Review",
-    "requires": []
+    "requires": [],
+    "sha256": "01451680bee1eec827067cff76ef6c64541bbfe08646e87fcd8f08d47e643e10"
   },
   {
     "id": "mattpocock/skills/codebase-design",
@@ -3035,7 +3250,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "Module & Interface Design",
-    "requires": []
+    "requires": [],
+    "sha256": "721a6a709001482b70d4ecd3a7880a84ec158170236b999b1f14a8a321e20059"
   },
   {
     "id": "mattpocock/skills/diagnosing-bugs",
@@ -3049,7 +3265,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Debugging Process",
-    "requires": []
+    "requires": [],
+    "sha256": "87c78ae966e591f9ceb177789cc5cc9de69277cd26679ffd36ca5300f430d513"
   },
   {
     "id": "mattpocock/skills/domain-modeling",
@@ -3063,7 +3280,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "Domain Modeling",
-    "requires": []
+    "requires": [],
+    "sha256": "b78689833404148c769077355e12dbe5ad996a158a1e21e58ddf169e439d9d8c"
   },
   {
     "id": "mattpocock/skills/git-guardrails-claude-code",
@@ -3077,7 +3295,8 @@
     "license": "MIT",
     "category": "Safety & Guardrails",
     "subCategory": "Git Command Blocking",
-    "requires": []
+    "requires": [],
+    "sha256": "7aa92e9d469c6cd0b24ed8accb2e4be681c44c1524d71604c06b4055b7b56482"
   },
   {
     "id": "mattpocock/skills/grill-me",
@@ -3091,7 +3310,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Requirements Interrogation",
-    "requires": []
+    "requires": [],
+    "sha256": "ab1acb9fbd9eaee03da254abb8a8de228d1e7a07475fe959da4a5eefa34ea4b9"
   },
   {
     "id": "mattpocock/skills/grill-with-docs",
@@ -3105,7 +3325,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Requirements Interrogation",
-    "requires": []
+    "requires": [],
+    "sha256": "02e258f41d210f9b2e7cce9faf62b3c59e8fcebe5d2736369c3cd07d471324f8"
   },
   {
     "id": "mattpocock/skills/grilling",
@@ -3119,7 +3340,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Requirements Interrogation",
-    "requires": []
+    "requires": [],
+    "sha256": "74de5501c2b0cec8410bf4ebc9eaddc84f6f7706e04d2c70a814872b1c44e410"
   },
   {
     "id": "mattpocock/skills/handoff",
@@ -3133,7 +3355,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Handoff",
-    "requires": []
+    "requires": [],
+    "sha256": "f60a2c3688379b7a306b3a7b8dd4120eab39da44c74fa2cb62d6424935f04aa7"
   },
   {
     "id": "mattpocock/skills/implement",
@@ -3147,7 +3370,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Work Item Implementation",
-    "requires": []
+    "requires": [],
+    "sha256": "560465496ad0669329993bfdd0604e5c93b5c2446309a76f486040010b063908"
   },
   {
     "id": "mattpocock/skills/implement-spec",
@@ -3161,7 +3385,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Spec Implementation",
-    "requires": []
+    "requires": [],
+    "sha256": "3aa684ea42bfe136e4c6c63f7349214b2bb974c2e949f3532a11df796e0f1146"
   },
   {
     "id": "mattpocock/skills/improve-codebase-architecture",
@@ -3175,7 +3400,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "Architecture Improvement",
-    "requires": []
+    "requires": [],
+    "sha256": "5334eba3370c6124922f8819447b42fabd8df8d11008a242083b8527589a8686"
   },
   {
     "id": "mattpocock/skills/loop-me",
@@ -3189,7 +3415,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Requirements Interrogation",
-    "requires": []
+    "requires": [],
+    "sha256": "5dac8f9919f3e1a528a4f1f00db07c81c3e6092e706376d81c697d16422ab163"
   },
   {
     "id": "mattpocock/skills/migrate-to-shoehorn",
@@ -3203,7 +3430,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test Data & Typing",
-    "requires": []
+    "requires": [],
+    "sha256": "a63549df6d5b5c6595029f8c504ccf31a12f01312f03db70da4b45cb10ba5ca8"
   },
   {
     "id": "mattpocock/skills/pr",
@@ -3217,7 +3445,8 @@
     "license": "MIT",
     "category": "Source Control & Collaboration",
     "subCategory": "Pull Requests",
-    "requires": []
+    "requires": [],
+    "sha256": "a66195583d0f9323004cdd4da169f93449071f29023671f3e31a916e740f6861"
   },
   {
     "id": "mattpocock/skills/prototype",
@@ -3231,7 +3460,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Prototyping",
-    "requires": []
+    "requires": [],
+    "sha256": "1e3ba2202a5b77b8aa50bc4447432331d6e42590e53ec0935689662cfed199ca"
   },
   {
     "id": "mattpocock/skills/research",
@@ -3245,7 +3475,8 @@
     "license": "MIT",
     "category": "Research & Learning",
     "subCategory": "Primary-Source Research",
-    "requires": []
+    "requires": [],
+    "sha256": "5bd6a6b833227dd87ee023c2d4734f4c349f290140514bb80bdc041ead1e837e"
   },
   {
     "id": "mattpocock/skills/retro",
@@ -3259,7 +3490,8 @@
     "license": "MIT",
     "category": "Project Management",
     "subCategory": "Retrospectives",
-    "requires": []
+    "requires": [],
+    "sha256": "e260aefb7b75b3548a3ee9883afbf8808e521f2e86feec92399617894f83b7c2"
   },
   {
     "id": "mattpocock/skills/scaffold-exercises",
@@ -3273,7 +3505,8 @@
     "license": "MIT",
     "category": "Research & Learning",
     "subCategory": "Course Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "019bbcc250992c776244aa1c818aed4015364f65bb9d1dbfd3bef9bae196b065"
   },
   {
     "id": "mattpocock/skills/setup-matt-pocock-skills",
@@ -3287,7 +3520,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Setup",
-    "requires": []
+    "requires": [],
+    "sha256": "77594679663ef582b544188e02fd4347a8e2aaab1401fb1d2b2b411d0ea729c2"
   },
   {
     "id": "mattpocock/skills/setup-pre-commit",
@@ -3301,7 +3535,8 @@
     "license": "MIT",
     "category": "Source Control & Collaboration",
     "subCategory": "Pre-commit Hooks",
-    "requires": []
+    "requires": [],
+    "sha256": "98523a8db5977c41a095834df8697123bb845ff6ddbb9500733b161f11441a37"
   },
   {
     "id": "mattpocock/skills/setup-ts-deep-modules",
@@ -3315,7 +3550,8 @@
     "license": "MIT",
     "category": "Architecture & Design",
     "subCategory": "Module Boundaries",
-    "requires": []
+    "requires": [],
+    "sha256": "8a3136caaea8fa439521917a624496769eba40cf8c59f62b4113a0dc916288a3"
   },
   {
     "id": "mattpocock/skills/tdd",
@@ -3329,7 +3565,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test-Driven Development",
-    "requires": []
+    "requires": [],
+    "sha256": "e3e0f78ff1c2d52ffefa0378baa1e80e129d359288cf9a56f4e59afcd2aac86c"
   },
   {
     "id": "mattpocock/skills/teach",
@@ -3343,7 +3580,8 @@
     "license": "MIT",
     "category": "Research & Learning",
     "subCategory": "Teaching",
-    "requires": []
+    "requires": [],
+    "sha256": "31bb3eed09dd2787e290e933def99fbf7d65044a29119c224af47c01404ab228"
   },
   {
     "id": "mattpocock/skills/to-questionnaire",
@@ -3357,7 +3595,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Stakeholder Questionnaires",
-    "requires": []
+    "requires": [],
+    "sha256": "0bcb2b31a45a3d176daa07c16d6532ee7819b802de081090c3fa856702767b13"
   },
   {
     "id": "mattpocock/skills/to-spec",
@@ -3371,7 +3610,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Spec Authoring",
-    "requires": []
+    "requires": [],
+    "sha256": "eb934b5eda9523c7853a2741544bd4721ee1bea471f5a04f8397827f67bdbdda"
   },
   {
     "id": "mattpocock/skills/to-tickets",
@@ -3385,7 +3625,8 @@
     "license": "MIT",
     "category": "Project Management",
     "subCategory": "Ticket Creation",
-    "requires": []
+    "requires": [],
+    "sha256": "17496514c92954f68eacdf2b1221e2ddb39fa231b83f03c70bc7d4422f704b2d"
   },
   {
     "id": "mattpocock/skills/triage",
@@ -3399,7 +3640,8 @@
     "license": "MIT",
     "category": "Project Management",
     "subCategory": "Issue Triage",
-    "requires": []
+    "requires": [],
+    "sha256": "4342a07c9ebe0696713ec93a883c46e56503a587a34d824fabab5ca61e3bdfbb"
   },
   {
     "id": "mattpocock/skills/wait-what",
@@ -3413,7 +3655,8 @@
     "license": "MIT",
     "category": "Agent Workflow & Context",
     "subCategory": "Communication Repair",
-    "requires": []
+    "requires": [],
+    "sha256": "70c9bf9f5a84b6849760f9492f569d5aa12307a0310323fde5f583144730c26c"
   },
   {
     "id": "mattpocock/skills/wayfinder",
@@ -3427,7 +3670,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Multi-Session Planning",
-    "requires": []
+    "requires": [],
+    "sha256": "a0aee2945105bc5f682588388b2c33d5cc8a68f68f10a60ece3f725e73076136"
   },
   {
     "id": "mattpocock/skills/wizard",
@@ -3441,7 +3685,8 @@
     "license": "MIT",
     "category": "Build, CI/CD & Release",
     "subCategory": "Setup Wizards",
-    "requires": []
+    "requires": [],
+    "sha256": "2d3b019a036758b7db5848c6a6e0d294d5f55be06d08519ec41f8fae5e0797eb"
   },
   {
     "id": "mattpocock/skills/writing-beats",
@@ -3455,7 +3700,8 @@
     "license": "MIT",
     "category": "Documents & Content",
     "subCategory": "Article Writing",
-    "requires": []
+    "requires": [],
+    "sha256": "5af3ce4383f995c76a4780b3d3029af8e9c69aa1a44d57a6c8bc13a820836b8a"
   },
   {
     "id": "mattpocock/skills/writing-for-agents",
@@ -3469,7 +3715,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Writing Agent Docs",
-    "requires": []
+    "requires": [],
+    "sha256": "e79a2476b2417b228922453478d9505a6b9af19f3a412e560728ce62ed3555ca"
   },
   {
     "id": "mattpocock/skills/writing-fragments",
@@ -3483,7 +3730,8 @@
     "license": "MIT",
     "category": "Documents & Content",
     "subCategory": "Article Writing",
-    "requires": []
+    "requires": [],
+    "sha256": "00d286876c139f3f764e5021923f632c785dba1eb2fd7afdd9f44854a12772d2"
   },
   {
     "id": "mattpocock/skills/writing-shape",
@@ -3497,7 +3745,8 @@
     "license": "MIT",
     "category": "Documents & Content",
     "subCategory": "Article Writing",
-    "requires": []
+    "requires": [],
+    "sha256": "7e06f4ca8a96c83b5b9a540c0279e998ba449e74586c77d44f9b8183c1bd8ef8"
   },
   {
     "id": "obra/superpowers/brainstorming",
@@ -3511,7 +3760,8 @@
     "license": "MIT",
     "category": "Requirements & Discovery",
     "subCategory": "Design Brainstorming",
-    "requires": []
+    "requires": [],
+    "sha256": "eb826dcba7f9c29208035a758e7d0054e42a599eb659ca9d766b8c92138d7fbb"
   },
   {
     "id": "obra/superpowers/diagnosing-superpowers",
@@ -3525,7 +3775,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Session Diagnostics",
-    "requires": []
+    "requires": [],
+    "sha256": "dfe7cdf5d0f9410eb71febb08253d6b66508befab513616ae25e7e5094a6b645"
   },
   {
     "id": "obra/superpowers/dispatching-parallel-agents",
@@ -3539,7 +3790,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Parallel Agent Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "d799e464fdfb0edc80b3b7ad7cce03e64ee07fc5db231c988688a81438503659"
   },
   {
     "id": "obra/superpowers/executing-plans",
@@ -3553,7 +3805,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Plan Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "81e01e598f433bf20e857a6bf79c93c5bde656596084296645a7e921d20018d7"
   },
   {
     "id": "obra/superpowers/finishing-a-development-branch",
@@ -3567,7 +3820,8 @@
     "license": "MIT",
     "category": "Source Control & Collaboration",
     "subCategory": "Branch Completion",
-    "requires": []
+    "requires": [],
+    "sha256": "7e24d821d45b8f10773edd9f1a4be2fac90eedae4f8fc8e70e34e27e44d3f3c0"
   },
   {
     "id": "obra/superpowers/receiving-code-review",
@@ -3581,7 +3835,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Receiving Feedback",
-    "requires": []
+    "requires": [],
+    "sha256": "528d336858d6f7d22cfcb887a249409ce682cb7d37a939cb15a82f2576a35876"
   },
   {
     "id": "obra/superpowers/requesting-code-review",
@@ -3595,7 +3850,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Requesting Review",
-    "requires": []
+    "requires": [],
+    "sha256": "f6a532d71e6854d65aa61cfb093b6702177c67b68ca0045fe383680f5ea71989"
   },
   {
     "id": "obra/superpowers/subagent-driven-development",
@@ -3609,7 +3865,8 @@
     "license": "MIT",
     "category": "Implementation",
     "subCategory": "Subagent Execution",
-    "requires": []
+    "requires": [],
+    "sha256": "ed60879592a02e8416cadf41d1c71613a19e9c1ccd71f42af1abaf51e9f3483a"
   },
   {
     "id": "obra/superpowers/systematic-debugging",
@@ -3623,7 +3880,8 @@
     "license": "MIT",
     "category": "Debugging & Performance",
     "subCategory": "Debugging Process",
-    "requires": []
+    "requires": [],
+    "sha256": "4d30d3c4f62f4af8e416ce676178c3cfa5393ec4720da3c20f87444877c367b4"
   },
   {
     "id": "obra/superpowers/test-driven-development",
@@ -3637,7 +3895,8 @@
     "license": "MIT",
     "category": "Testing & QA",
     "subCategory": "Test-Driven Development",
-    "requires": []
+    "requires": [],
+    "sha256": "2782702b2cf69ace085ed30d067b6f8bfd2d777ad51770fc5bdae9cb5c1b5c04"
   },
   {
     "id": "obra/superpowers/using-git-worktrees",
@@ -3651,7 +3910,8 @@
     "license": "MIT",
     "category": "Source Control & Collaboration",
     "subCategory": "Git Worktrees",
-    "requires": []
+    "requires": [],
+    "sha256": "b69324cb5e5ba5b846fc2ae2811616008dc6f19858245100e472713190d4c9e4"
   },
   {
     "id": "obra/superpowers/using-superpowers",
@@ -3665,7 +3925,8 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Router",
-    "requires": []
+    "requires": [],
+    "sha256": "6a9104fac7e16c3cec2bc118943aefd331cac35b4cfabd427cea4dc16337c6a5"
   },
   {
     "id": "obra/superpowers/verification-before-completion",
@@ -3679,7 +3940,8 @@
     "license": "MIT",
     "category": "Code Review & Quality",
     "subCategory": "Completion Verification",
-    "requires": []
+    "requires": [],
+    "sha256": "09b0e3a4689c1c38a3b8fc6ef57a1d4165aa33c0013d546dbde9dd348941a319"
   },
   {
     "id": "obra/superpowers/writing-plans",
@@ -3693,7 +3955,8 @@
     "license": "MIT",
     "category": "Planning & Specification",
     "subCategory": "Implementation Plans",
-    "requires": []
+    "requires": [],
+    "sha256": "ef082ddb5354d736059397133b3682e8a0c85c57906affe47c9da354cbb7c91e"
   },
   {
     "id": "obra/superpowers/writing-skills",
@@ -3707,6 +3970,7 @@
     "license": "MIT",
     "category": "Skill Authoring & Meta",
     "subCategory": "Skill Creation",
-    "requires": []
+    "requires": [],
+    "sha256": "52cdfda22598fcdb50374e7ef51fc8c1122dd1a36aa609a437b2662d500104e8"
   }
 ]

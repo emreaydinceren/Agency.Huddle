@@ -40,8 +40,13 @@ its Skills with one chip.
 
 ## Good to know
 
-A catalog entry can hold a hash of a Skill's folder, but the shipped catalog has no hashes yet, so that
-comparison doesn't run today.
+Every entry in the shipped catalog but one holds a hash of its Skill's folder, so a fetched Skill whose
+folder differs from the pinned commit shows as altered. Line endings do not count, so a clone made by Git
+for Windows with its usual conversion still matches; a binary file is compared as it is. The exception is
+`garrytan/gstack/gstack`: it is the whole repository, which holds a symlink, so it has no hash and nothing
+is compared for it. An install that already split the catalog into its
+Sources keeps the entries it split then, which have no hash, so that comparison stays off there until
+those catalog files are split again.
 
 ## In more detail
 

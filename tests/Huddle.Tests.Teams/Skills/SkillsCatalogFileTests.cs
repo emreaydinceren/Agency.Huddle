@@ -15,8 +15,12 @@ public sealed partial class SkillsCatalogFileTests
     private static readonly string[] ExpectedKeys =
     [
         "id", "name", "description", "publisher", "repo", "path",
-        "link", "commit", "license", "category", "subCategory", "requires",
+        "link", "commit", "license", "category", "subCategory", "requires", "sha256",
     ];
+
+    /// <summary>Matches a 64-character lowercase hex SHA-256.</summary>
+    [GeneratedRegex("^[0-9a-f]{64}$", RegexOptions.CultureInvariant)]
+    private static partial Regex HashPattern();
 
     /// <summary>Matches a full 40-character lowercase hex commit id.</summary>
     [GeneratedRegex("^[0-9a-f]{40}$", RegexOptions.CultureInvariant)]
@@ -42,9 +46,9 @@ public sealed partial class SkillsCatalogFileTests
         Assert.NotEmpty(LoadEntries());
     }
 
-    /// <summary>Every entry carries exactly the 12 documented keys.</summary>
+    /// <summary>Every entry carries exactly the 13 documented keys, the folder hash included; the one unpinned entry has the other 12.</summary>
     [Fact]
-    public void Catalog_EveryEntryHasTheTwelveKeys()
+    public void Catalog_EveryEntryHasTheThirteenKeys()
     {
         List<JsonElement> entries = LoadEntries();
 
@@ -52,7 +56,8 @@ public sealed partial class SkillsCatalogFileTests
         foreach (JsonElement entry in entries)
         {
             string[] keys = [.. entry.EnumerateObject().Select(static property => property.Name).Order(StringComparer.Ordinal)];
-            Assert.Equal(ExpectedKeys.Order(StringComparer.Ordinal), keys);
+            bool unpinned = string.Equals(entry.GetProperty("id").GetString(), "garrytan/gstack/gstack", StringComparison.Ordinal);
+            Assert.Equal(ExpectedKeys.Where(key => !unpinned || !string.Equals(key, "sha256", StringComparison.Ordinal)).Order(StringComparer.Ordinal), keys);
         }
     }
 
@@ -85,6 +90,24 @@ public sealed partial class SkillsCatalogFileTests
 
         Assert.NotEmpty(entries);
         Assert.All(entries, static entry => Assert.Matches(CommitPattern(), entry.GetProperty("commit").GetString() ?? string.Empty));
+    }
+
+    /// <summary>
+    /// 264 of the 265 entries pin their folder with a 64-character hex SHA-256, so the S010 check runs for them.
+    /// The one without is <c>garrytan/gstack/gstack</c>, whose empty path makes it the whole repository (with a
+    /// symlink), so a healthy fetch can differ; a new entry must come with a hash.
+    /// </summary>
+    [Fact]
+    public void Catalog_EveryEntryButTheWholeRepositoryOnePinsAFolderHash()
+    {
+        List<JsonElement> entries = LoadEntries();
+
+        Assert.Equal(265, entries.Count);
+        List<string?> unhashed = [.. entries
+            .Where(static entry => !entry.TryGetProperty("sha256", out JsonElement hash) || !HashPattern().IsMatch(hash.GetString() ?? string.Empty))
+            .Select(static entry => entry.GetProperty("id").GetString())];
+        Assert.Equal(["garrytan/gstack/gstack"], unhashed);
+        Assert.Equal(264, entries.Count - unhashed.Count);
     }
 
     /// <summary>The catalog carries metadata only: no description is long enough to be skill body text.</summary>
