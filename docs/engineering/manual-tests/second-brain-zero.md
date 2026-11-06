@@ -577,12 +577,12 @@ session in a new Room.
 
 1. On the Dev Team's **Tasks** tab, click **New task**. Set the title to `Gate check, cancel me`, leave it unassigned, and save.
 2. Switch to the Board and drag the card to **Done**.
-3. Open the Task, set its status to **Done** in the edit form, and save. A new Task carries the Human gate, so the form does not refuse it: it moves the Task to **Review** with no warning and no **Move anyway**. The owner is reviewing that behaviour, so record exactly what you see. Do not press **Move anyway** if it shows. Then set the status to **Cancelled** and save.
+3. Open the Task, set its status to **Done** in the edit form, and save. A new Task carries the Human gate, so the form refuses it: a yellow warning in the panel says `needs <your name>'s acceptance` and the status stays as it was. There is no **Move anyway** for a gated Task. If the status changes to anything else, or no warning shows, record the History line and who wrote it. Then set the status to **Cancelled** and save.
 
-**Expect**: the card snaps back with `Could not move` and the reason. In the edit form the Task does not reach Done: today it goes to **Review**, silently, because a gated Task is decided on its card. If you use a Task without the Human gate, the panel warns that it names `qa-evidence-before-done` and offers **Move anyway**. Devon may try to close the Task from its title; the gate refuses that too.
+**Expect**: the card snaps back with `Could not move` and the reason. In the edit form the Task does not reach Done: the panel shows the acceptance warning and the status is unchanged, because a gated Task is decided on its card. If you use a Task without the Human gate, the panel warns that it names `qa-evidence-before-done` and offers **Move anyway**. Devon may try to close the Task from its title; the gate refuses that too.
 
-**Pass if**: both moves are refused and name the gate.
-**Fail if**: the Task reaches Done without **Move anyway**.
+**Pass if**: the board move is refused and names the gate, and the form shows the acceptance warning and leaves the status unchanged.
+**Fail if**: the Task reaches Done without **Move anyway**, or the form changes the status with no warning.
 
 ### ZERO-14 — Ingest the spec and the Team's conventions
 

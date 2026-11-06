@@ -177,6 +177,39 @@ public sealed class HumanGateRulesTests
         Assert.Equal(GateId.HumanGate, refusal.Gate);
     }
 
+    /// <summary>H-4: a valid Accept plus an edit to the description in the same change as Done is refused with text that says the edit would void the Accept.</summary>
+    [Fact]
+    public void H4_ValidAcceptWithDescriptionEditedInTheDoneChange_SaysTheEditVoidsTheAccept()
+    {
+        TaskItem before = Accepted();
+        const string message = "PLAT-0001 has Emre's Accept, and this change to its title, Action or description would void it. Send the status Done on its own, and put your notes in Evidence.";
+
+        AssertRefused(HumanGateRules.Check(before, before with { Status = TaskState.Done, Description = "Notes added" }, AnAgent, ProofWith(4), Human), GateId.HumanGate, message);
+        AssertRefused(HumanGateRules.Check(before, before with { Status = TaskState.Done, Title = "Retitled" }, AnAgent, ProofWith(4), Human), GateId.HumanGate, message);
+        AssertRefused(HumanGateRules.Check(before, before with { Status = TaskState.Done, Action = "Send it" }, AnAgent, ProofWith(4), Human), GateId.HumanGate, message);
+    }
+
+    /// <summary>H-4: with a valid Accept and nothing edited, Done is allowed.</summary>
+    [Fact]
+    public void H4_ValidAcceptAndNoEdit_IsAllowed()
+    {
+        TaskItem before = Accepted();
+
+        Assert.Null(HumanGateRules.Check(before, before with { Status = TaskState.Done }, AnAgent, ProofWith(4), Human));
+    }
+
+    /// <summary>H-4: with no Accept, an edit in the Done change keeps the old text.</summary>
+    [Fact]
+    public void H4_NoAcceptAndDescriptionEdited_KeepsTheNeedsAcceptanceText()
+    {
+        TaskItem before = Gated(TaskState.NeedsYou) with { ChangeLog = [TestTasks.Entry("2026-10-01T09:00:00Z", "Ada", Entered)] };
+
+        AssertRefused(
+            HumanGateRules.Check(before, before with { Status = TaskState.Done, Description = "Notes" }, AnAgent, ProofWith(4), Human),
+            GateId.HumanGate,
+            "PLAT-0001 needs Emre's acceptance. Move it to Needs You when the Proof is complete; you'll be woken when Emre decides.");
+    }
+
     /// <summary>H-4: an incomplete Proof blocks Done even with a valid acceptance.</summary>
     [Fact]
     public void H4_DoneWithIncompleteProof_IsRefused()
