@@ -318,6 +318,32 @@ public sealed class SearchToolTests
         Assert.EndsWith("No results for 'zzzzzz'.", result, StringComparison.Ordinal);
     }
 
+    /// <summary>ZERO-25: a multi-word query that finds nothing says the whole phrase must match and tells the Agent to try one or two words.</summary>
+    [Fact]
+    public async Task MultiWordNothingMatches_TellsTheAgentToTryFewerWords()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool().InvokeAsync(Args("Science Museum trip permission slip", filter: "rooms"), ct);
+
+        Assert.Equal(
+            "No results for 'Science Museum trip permission slip'. Search matches the whole phrase, in order; it does not look for each word on its own. Don't conclude nothing exists: try one or two words.",
+            result[result.IndexOf("No results", StringComparison.Ordinal)..]);
+    }
+
+    /// <summary>A single-word miss keeps the plain reply: there is no phrase to shorten.</summary>
+    [Fact]
+    public async Task SingleWordNothingMatches_GivesNoPhraseHint()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool().InvokeAsync(Args("zzzzzz", filter: "rooms"), ct);
+
+        Assert.DoesNotContain("whole phrase", result, StringComparison.Ordinal);
+    }
+
     /// <summary>One provider throwing empties only its own group; the Rooms group still renders.</summary>
     [Fact]
     public async Task FailingProvider_EmptiesOnlyItsGroup()

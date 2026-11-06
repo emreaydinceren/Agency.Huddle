@@ -152,6 +152,53 @@ public sealed class TaskSearchProviderTests
         Assert.False(result.Truncated);
     }
 
+    /// <summary>ZERO-27: a word held only in the Task's Action line finds the Task, as a ContentMatch.</summary>
+    [Fact]
+    public async Task Action_MatchesAsContentMatch()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        harness.SeedOnDisk(MakeTask("FAMI-0001", "Science Museum slip and $18 fee") with { Action = "Alex signs the permission slip and pays $18" });
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult result = await provider.SearchAsync(Query("permission"), ct);
+
+        TaskHit hit = Assert.IsType<TaskHit>(Assert.Single(result.Hits));
+        Assert.Equal("Science Museum slip and $18 fee", hit.TaskTitle);
+        Assert.Equal(MatchTier.ContentMatch, hit.Tier);
+    }
+
+    /// <summary>A word held only in the Task's description finds the Task, as a ContentMatch.</summary>
+    [Fact]
+    public async Task Description_MatchesAsContentMatch()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0001", title: "Write the spec", description: "Cover the allergy review too", location: new TaskLocation("Platform", null, false)));
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult result = await provider.SearchAsync(Query("allergy"), ct);
+
+        TaskHit hit = Assert.IsType<TaskHit>(Assert.Single(result.Hits));
+        Assert.Equal(MatchTier.ContentMatch, hit.Tier);
+    }
+
+    /// <summary>A Task whose title holds the word ranks above one that holds it only in the body.</summary>
+    [Fact]
+    public async Task TitleHit_RanksBeforeBodyHit()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0001", title: "Write the spec", description: "mentions permission", location: new TaskLocation("Platform", null, false)));
+        harness.SeedOnDisk(MakeTask("PLAT-0002", "Permission check"));
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult result = await provider.SearchAsync(Query("permission"), ct);
+        IReadOnlyList<SearchHit> ranked = SearchResultRanker.Rank(result, Query("permission")).Hits;
+
+        Assert.Equal(["PLAT-0002", "PLAT-0001"], ranked.OfType<TaskHit>().Select(hit => hit.Id.ToString()));
+    }
+
     /// <summary>Builds a Task on the Platform Team, active or Closed.</summary>
     /// <param name="id">The Task's id, such as "PLAT-0001".</param>
     /// <param name="title">The Task's title.</param>

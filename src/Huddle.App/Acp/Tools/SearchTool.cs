@@ -276,6 +276,10 @@ internal sealed class SearchTool(
         if (!any)
         {
             text.Append('\n').Append("No results for '").Append(read.Parse.Phrase).Append("'.");
+            if (read.Parse.Phrase.Contains(' ', StringComparison.Ordinal))
+            {
+                text.Append(" Search matches the whole phrase, in order; it does not look for each word on its own. Don't conclude nothing exists: try one or two words.");
+            }
         }
 
         string rendered = text.ToString().TrimStart('\n');
