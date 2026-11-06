@@ -9,6 +9,12 @@ namespace Agency.Huddle.App.Tasks;
 /// </summary>
 internal static class TaskDiff
 {
+    /// <summary>The Change log summary of the Human gate being turned off.</summary>
+    internal const string HumanGateOff = "human gate off";
+
+    /// <summary>The Change log summary of the Action being cleared.</summary>
+    internal const string ActionCleared = "action cleared";
+
     private const string EmDash = "—";
     private const string MinusSign = "−";
     private const string ListSeparator = "; ";
@@ -139,8 +145,8 @@ internal static class TaskDiff
         TaskField.Description => "description edited",
         TaskField.Location => $"moved: {change.Old} → {change.New}",
         TaskField.Unknown => $"{change.Old} edited",
-        TaskField.HumanGate => change.New is null ? "human gate off" : "human gate on",
-        TaskField.Action => change.New is null ? "action cleared" : $"action set: {change.New}",
+        TaskField.HumanGate => change.New is null ? HumanGateOff : "human gate on",
+        TaskField.Action => change.New is null ? ActionCleared : $"action set: {change.New}",
         TaskField.BlockedBy or TaskField.Tags => SummariseListChange(change),
         _ => SummariseScalarChange(change),
     };

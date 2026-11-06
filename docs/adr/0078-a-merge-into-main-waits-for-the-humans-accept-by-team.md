@@ -85,9 +85,27 @@ every Team is settled. A Team whose `_team.md` cannot be read or written (unpars
 without stopping the host, and tried again at the next start; the Teams already settled are not repeated, so a Human's
 turn-off survives the retry. A Team of another type is read and never written.
 
+## Amended 2026-11-06: Huddle names the merge when nobody did (issue #416)
+
+The refusal above can't teach the Action path: a permission reply carries no reason, so a refused Agent sees only that the request was denied, and the text goes to the log. And in two ZERO-26 runs no Agent tried to merge. Review and QA
+finished in under three minutes and the Team then waited for the Human: in one run Bea and Devon asked in chat, in the other Devon said
+"only the Human can accept a Task as Done" and his Turn ended. The Task stayed in Review with no Action, so nothing could be accepted. An installed Team had no way to read the rule either: the migration added the gate's name to `_team.md`,
+not the sentences to its `AGENTS.md`.
+
+So in a Team with this gate, when an Agent's write completes the Proof of an ungated Task in Review, `TaskService` sets the Action to
+`Merge this Task's work into main` and moves the Task to Needs You, in one write by Huddle that wakes nobody. An Action an Agent already
+wrote is kept. A gate the Human turned off, or an Action the Human cleared, stays that way: the Change log records it, and that word is
+final. Nothing rests on an Agent's wording.
+
+- **Rejected: naming the merge when the Task enters Review.** A Task could then carry the Action long before anything could be accepted, and the Agents would be woken by the change.
+- **Rejected: Bea's chat card counting as the Accept.** Telling an acceptance apart from other questions would rest on wording.
+- **Rejected: teaching it in the Helper's prompt.** It would still rest on a model's judgement of each Task's text.
+
 ## Consequences
 
 - Every member of a development Team waits for the Human's Accept before a merge into main.
+- A Task of such a Team goes through the Human's Accept even if it merges nothing, such as a docs note kept outside the repository. One extra press was preferred to a Team that stops, and the Human can clear the Action and move that Task to Done.
+- The Proof decides when, and the built-in processes' Proof has no review item, so a Task can reach Needs You before the reviewer has finished. Evidence added later doesn't void the Accept.
 - The checks gate (`checks-before-merge`) is unchanged and still applies.
 - Limits that remain are in [known limits](../engineering/known-limits.md): the Codex Adapter, scripts that merge, a
   merge made while already on main by a pull or a rebase, and the one-hour window above.

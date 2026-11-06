@@ -102,6 +102,7 @@ public sealed class TeamsPhase4EndToEndTests
         await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+        AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
         await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiQa.Name) >= 1 && run.Wakes(webDeveloper.Name, UnblockedMarker) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
@@ -118,10 +119,10 @@ public sealed class TeamsPhase4EndToEndTests
     }
 
     /// <summary>
-    /// #350 item 6, no Action: the requesting Team's manager is told when the Request reaches Done. In the development Team type
+    /// #350 item 6, no Action from an Agent: Huddle names the merge when the Proof completes (#416), and the Human's Accept is the
+    /// one Human move. The requesting Team's manager is told when the Request reaches Done. In the development Team type
     /// the manager's role does NOT cover verify, so the manager's own <c>confirm_request</c> is refused and the Team's QA confirms
-    /// it; the Request closes with no Human move. Before Done the call is refused with the next step. The Action (gated, Needs You)
-    /// variant is not covered here.
+    /// it; the Request closes with no further Human move. Before Done the call is refused with the next step.
     /// </summary>
     [Fact]
     public async Task Request_DoneWakesRequestingManager_WhoConfirmsAndClosesIt()
@@ -152,6 +153,7 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal($"A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, {apiDeveloper.Name}, to move it to Done.", early);
 
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+        AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
         TaskActor webQaNamed = await teams.Web.ActorAsync(run, QaRole, ct);
         await Eventually.UntilAsync(() => run.Wakes(webManager.Name, $"yours: {webQaNamed.Name}.") >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
@@ -211,9 +213,22 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.StartsWith("accepted ", humanMove.Summary, StringComparison.Ordinal); // contains-ok: the rest of the entry is a content fingerprint of the Request text
     }
 
+    /// <summary>The Human's Accept on a Request Huddle brought to Needs You with the merge named (#416), checking that it did.</summary>
+    /// <param name="service">Makes the decision.</param>
+    /// <param name="store">Reads the Task.</param>
+    /// <param name="id">The Request.</param>
+    /// <param name="human">The Human's actor.</param>
+    private static void AcceptNamedMerge(TaskService service, TaskStore store, TaskId id, TaskActor human)
+    {
+        TaskItem waiting = Current(store, id);
+        Assert.Equal(TaskState.NeedsYou, waiting.Status);
+        Assert.Equal(Agency.Huddle.App.Tasks.HumanGate.HumanGateRules.MergeAction, waiting.Action);
+        _ = Saved(service.Decide(id, Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept, null, waiting.Version, human));
+    }
+
     /// <summary>
     /// #350 item 4 and 6, the Bea case: a small-business manager covers <c>verify</c>, so when the development Team finishes the
-    /// Request she filed, her own <c>confirm_request</c> is accepted and closes it, with no Human move.
+    /// Request she filed, her own <c>confirm_request</c> is accepted and closes it, with no Human move after the Accept.
     /// </summary>
     [Fact]
     public async Task Request_FiledBySmallBusinessManager_ManagerConfirmsAndClosesIt()
@@ -237,6 +252,7 @@ public sealed class TeamsPhase4EndToEndTests
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
+        AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
 
         string confirmed = await Tool<ConfirmRequestTool>(run, bea).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
