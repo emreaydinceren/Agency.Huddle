@@ -23,7 +23,8 @@
           "license": { "type": "string" },
           "category": { "type": "string" },
           "subCategory": { "type": "string" },
-          "requires": { "type": "array", "items": { "type": "string" } },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Optional. The folder hash of the Skill at the pinned commit (CRLF read as LF in text files). A fetched folder that hashes differently is refused." },
+          "requires":{ "type": "array", "items": { "type": "string" } },
           "path": { "$ref": "#/$defs/path" }
         }
       }

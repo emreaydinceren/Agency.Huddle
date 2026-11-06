@@ -68,8 +68,45 @@ function Find-LicenseFile([string]$folder) {
         Sort-Object Name | Select-Object -First 1
 }
 
+# The folder hash Huddle compares (SkillFolderHash.Compute): files ordered by relative path (ordinal, '/'), skipping
+# .source.json and any .git folder; each contributes path, NUL, decimal length, NUL, bytes. CRLF becomes LF in
+# .md .txt .json .yml .yaml files first, so a Windows checkout and a download both match.
+function Get-SkillFolderHash([string]$folder) {
+    $root = (Resolve-Path -LiteralPath $folder).Path.TrimEnd('\', '/')
+    $textExt = @('.md', '.txt', '.json', '.yml', '.yaml')
+    $files = @{}
+    foreach ($file in Get-ChildItem -LiteralPath $root -File -Recurse -Force) {
+        $relative = $file.FullName.Substring($root.Length + 1).Replace('\', '/')
+        if ($relative -eq '.source.json' -or $relative.StartsWith('.git/', [StringComparison]::Ordinal) -or $relative.Contains('/.git/')) { continue }
+        $files[$relative] = $file.FullName
+    }
+    $hash = [System.Security.Cryptography.IncrementalHash]::CreateHash([System.Security.Cryptography.HashAlgorithmName]::SHA256)
+    try {
+        $keys = [string[]]$files.Keys
+        [Array]::Sort($keys, [System.StringComparer]::Ordinal)
+        foreach ($relative in $keys) {
+            [byte[]]$bytes = [System.IO.File]::ReadAllBytes($files[$relative])
+            if ($textExt -contains [System.IO.Path]::GetExtension($relative).ToLowerInvariant()) {
+                $kept = [System.Collections.Generic.List[byte]]::new($bytes.Length)
+                for ($b = 0; $b -lt $bytes.Length; $b++) {
+                    if ($bytes[$b] -eq 13 -and ($b + 1) -lt $bytes.Length -and $bytes[$b + 1] -eq 10) { continue }
+                    $kept.Add($bytes[$b])
+                }
+                $bytes = $kept.ToArray()
+            }
+            $hash.AppendData([System.Text.Encoding]::UTF8.GetBytes($relative))
+            $hash.AppendData([byte[]]@(0))
+            $hash.AppendData([System.Text.Encoding]::UTF8.GetBytes($bytes.Length.ToString([System.Globalization.CultureInfo]::InvariantCulture)))
+            $hash.AppendData([byte[]]@(0))
+            $hash.AppendData($bytes)
+        }
+        return ([System.BitConverter]::ToString($hash.GetHashAndReset()).Replace('-', '').ToLowerInvariant())
+    }
+    finally { $hash.Dispose() }
+}
+
 $commits = @{}
-$missing = [System.Collections.Generic.List[string]]::new()
+$missing =[System.Collections.Generic.List[string]]::new()
 $entries = [System.Collections.Generic.SortedDictionary[string, object]]::new([System.StringComparer]::Ordinal)
 $fixtureRows = 0
 $rows = 0
@@ -130,6 +167,7 @@ for ($i = $start + 1; $i -lt $lines.Count; $i++) {
         category    = $category
         subCategory = $sub
         requires    = @()
+        sha256      = (Get-SkillFolderHash $skillFolder)
     }
 }
 

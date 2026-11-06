@@ -385,6 +385,14 @@ public static class RegistryResolver
                 }
             }
 
+            List<Finding> findings = [];
+            if (state == SkillPathState.Present && pointerHash is not null && entry?.Sha256 is { } pinned
+                && !string.Equals(pointerHash, pinned, StringComparison.OrdinalIgnoreCase))
+            {
+                state = SkillPathState.Altered;
+                findings.Add(Finding.Error("S010", first.ProviderFile, $"Skill \"{name}\": the folder {folder} differs from the pinned commit (its content hash is {pointerHash}, the catalog pins {pinned}). Fetch the whole folder again byte for byte, for example with git at that commit."));
+            }
+
             string? source = this.sourceByFile.GetValueOrDefault(first.ProviderFile);
             return new SkillEntry(
                 name,
@@ -400,7 +408,7 @@ public static class RegistryResolver
                 [.. claims.Select(static item => item.Claim.Provider).Distinct(StringComparer.Ordinal)],
                 pointerHash,
                 this.InstalledHash(name, first.Origin),
-                [],
+                findings,
                 state,
                 [.. claims.Select(static item => item.Claim)]);
         }

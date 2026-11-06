@@ -118,7 +118,8 @@ public sealed record CatalogFile(
             JsonFields.String(item, "category"),
             JsonFields.String(item, "subCategory"),
             JsonFields.Strings(item, "requires"),
-            path);
+            path,
+            JsonFields.String(item, "sha256") is { Length: > 0 } pinned ? pinned.Trim() : null);
     }
 
     /// <summary>A failed parse with one D001.</summary>

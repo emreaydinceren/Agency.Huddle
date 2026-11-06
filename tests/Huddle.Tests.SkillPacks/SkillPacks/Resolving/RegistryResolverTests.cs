@@ -132,6 +132,87 @@ public sealed class RegistryResolverTests
         Assert.Equal(SkillPathState.Missing, resolved.FindSkill("pdf")?.PathState);
     }
 
+    /// <summary>A catalog entry with a <c>sha256</c> that matches the folder's content leaves the Skill present and usable.</summary>
+    [Fact]
+    public void Resolve_PinnedHashMatchesContent_IsPresentAndUsable()
+    {
+        RegistryFixture fixture = new();
+        string folder = fixture.CloneSkill("docx");
+        fixture.SkillFolder(folder).Source().Catalog("shipped", PinnedEntry(folder, PinnedHashOf("Body.\n")));
+
+        SkillEntry skill = Assert.Single(fixture.Resolve().Skills);
+
+        Assert.Equal(SkillPathState.Present, skill.PathState);
+        Assert.Equal(ItemCheckState.Usable, fixture.Check().StateOf("skill:docx"));
+    }
+
+    /// <summary>One changed byte against the pinned hash: the Skill is not present, is Broken, and the reason says it differs from the pin.</summary>
+    [Fact]
+    public void Resolve_PinnedHashDiffersByOneByte_IsRefusedWithReason()
+    {
+        RegistryFixture fixture = new();
+        string folder = fixture.CloneSkill("docx");
+        fixture.SkillFolder(folder, body: "Body!").Source().Catalog("shipped", PinnedEntry(folder, PinnedHashOf("Body.\n")));
+
+        SkillEntry skill = Assert.Single(fixture.Resolve().Skills);
+        CheckResult result = fixture.Check();
+
+        Assert.NotEqual(SkillPathState.Present, skill.PathState);
+        Assert.Equal(ItemCheckState.Broken, result.StateOf("skill:docx"));
+        Finding finding = Assert.Single(result.Findings, static item => item.Code == "S010");
+        Assert.Equal(
+            $"Skill \"docx\": the folder {folder} differs from the pinned commit (its content hash is {skill.PointerSha256}, the catalog pins {PinnedHashOf("Body.\n")}). Fetch the whole folder again byte for byte, for example with git at that commit.",
+            finding.Message);
+    }
+
+    /// <summary>A file that differs from the pin only by CRLF against LF is accepted: a Windows git checkout or a download may change the endings.</summary>
+    [Fact]
+    public void Resolve_PinnedHashDiffersOnlyByLineEndings_IsPresent()
+    {
+        RegistryFixture fixture = new();
+        string folder = fixture.CloneSkill("docx");
+        fixture.Source().Catalog("shipped", PinnedEntry(folder, PinnedHashOf("Body.\n")));
+        fixture.Files.Add(Path.Combine(folder, "SKILL.md"), SkillText("Body.\n").Replace("\n", "\r\n", StringComparison.Ordinal));
+
+        SkillEntry skill = Assert.Single(fixture.Resolve().Skills);
+
+        Assert.Equal(SkillPathState.Present, skill.PathState);
+        Assert.Equal(ItemCheckState.Usable, fixture.Check().StateOf("skill:docx"));
+    }
+
+    /// <summary>An entry with no pinned hash (a Human's own Source) is never refused for its content.</summary>
+    [Fact]
+    public void Resolve_NoPinnedHash_IsUnaffected()
+    {
+        RegistryFixture fixture = new();
+        string folder = fixture.CloneSkill("docx");
+        fixture.SkillFolder(folder, body: "Anything at all").Source().Catalog("shipped", PinnedEntry(folder, null));
+
+        SkillEntry skill = Assert.Single(fixture.Resolve().Skills);
+
+        Assert.Equal(SkillPathState.Present, skill.PathState);
+        Assert.Equal(ItemCheckState.Usable, fixture.Check().StateOf("skill:docx"));
+    }
+
+    /// <summary>The SKILL.md text <c>RegistryFixture.SkillFolder</c> writes for <c>docx</c> with the given body.</summary>
+    private static string SkillText(string body)
+    {
+        return $"---\nname: docx\ndescription: Does docx things.\nlicense: MIT\n---\n{body}";
+    }
+
+    /// <summary>The folder hash of a <c>docx</c> folder holding only the SKILL.md for <paramref name="body"/>.</summary>
+    private static string PinnedHashOf(string body)
+    {
+        return Agency.Huddle.SkillPacks.Folders.SkillFolderHash.Compute(new Dictionary<string, byte[]>(StringComparer.Ordinal) { ["SKILL.md"] = Encoding.UTF8.GetBytes(SkillText(body)) });
+    }
+
+    /// <summary>A one-entry catalog list for <c>docx</c>, with a <c>sha256</c> when one is given.</summary>
+    private static string PinnedEntry(string folder, string? sha256)
+    {
+        string pin = sha256 is null ? string.Empty : $$""", "sha256": "{{sha256}}" """;
+        return $$"""[{ "name": "docx", "description": "Word", "origin": "{{Origin}}", "path": "{{Json(folder)}}"{{pin}} }]""";
+    }
+
     /// <summary>A pack file that fails to parse within two seconds of its last write is not reported yet; it is listed for a retry.</summary>
     [Fact]
     public void Resolve_ParseFailureWithinTwoSeconds_NotReportedYet()
