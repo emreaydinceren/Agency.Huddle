@@ -27,7 +27,7 @@ internal static class FeedSummary
             TaskAssignedPayload p => new([Text("assigned you "), TaskChip(p.Id, p.Title)], null),
             TaskWakesPausedPayload { RoomId: not null } p => new(
                 [Text("held a hand-off on "), TaskChip(p.Id, p.Title), Text(": its Room is paused")],
-                $"The hand-off to {p.Waiting} waits until you press Continue in the Room"),
+                $"The hand-off to {p.Waiting} waits. Press Continue on the Room's Budget card"),
             TaskWakesPausedPayload p => new(
                 [Text("paused wake-ups on "), TaskChip(p.Id, p.Title), Text(": Agents changed it too many times")],
                 $"The hand-off to {p.Waiting} waits. Open the Task and press Allow more, or change the Task yourself"),
@@ -95,7 +95,6 @@ internal static class FeedSummary
             RoomWaitPayload when item.SourceType == FeedSourceType.RoomBudget => " · waiting for you to continue or wrap up",
             TaskGatePayload => " · you can turn it off on the Task",
             HelperPausedPayload => " · Continue is on the Helper's card",
-            TaskWakesPausedPayload { RoomId: not null } => " · Continue is on the Room's Budget card",
             TaskWakesPausedPayload => " · after a restart, Wake is on this card",
             HelperFailingPayload => " · Tasks are not being judged",
             _ => " · waiting for you",

@@ -158,7 +158,7 @@ public sealed class FeedPresentationTests
         Assert.Equal("The hand-off to Nova waits. Open the Task and press Allow more, or change the Task yourself", line.Context);
     }
 
-    /// <summary>A hand-off held by a paused Room says the Room is paused and sends the Human to Continue, not to Allow more on the Task.</summary>
+    /// <summary>A hand-off held by a paused Room sends the Human to Continue, not to Allow more, and says Wake takes over after a restart, when the Budget card is gone.</summary>
     [Fact]
     public void TaskWakesPaused_RoomPaused_NamesTheRoomAndContinue()
     {
@@ -168,8 +168,8 @@ public sealed class FeedPresentationTests
         FeedSummaryLine line = FeedSummary.Of(item);
 
         Assert.Equal("held a hand-off on T: its Room is paused", Flatten(line));
-        Assert.Equal("The hand-off to Nova waits until you press Continue in the Room", line.Context);
-        Assert.Equal("Paused 16:00 · Continue is on the Room's Budget card", FeedSummary.StatusOf(item, Utc)?.Text);
+        Assert.Equal("The hand-off to Nova waits. Press Continue on the Room's Budget card", line.Context);
+        Assert.Equal("Paused 16:00 · after a restart, Wake is on this card", FeedSummary.StatusOf(item, Utc)?.Text);
     }
 
     /// <summary>The Helper items wear a gauge (paused) and an alert (failing) badge, say "Helpers", and open the Helper's settings anchor.</summary>

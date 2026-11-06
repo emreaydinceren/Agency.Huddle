@@ -4209,6 +4209,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-21--a-hand-off-h
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `eb1b8c78` | #353 | Mock lane, free. A wrapper around `mock-acp` counted Turns, and `update_task` was called over the Agent's tool server, because a mock calls no tools. The Notification survived the restart, no Turn ran at startup, and one click on Wake Ada ran one Turn and closed the card. Also tried a Task hand-off held on a Room with a spent Budget: same result, with the Room's Budget card resolved at startup. Finding, fixed in the same PR: that card still told the Human to press a Continue that was gone. Not covered: a chat Mention refused by a spent Budget (see the follow-up issue). No pre-restart Turn count for the first case. |
 
 ## Adapters: choosing one per Persona, and running two at once
 
