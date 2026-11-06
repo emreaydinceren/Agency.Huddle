@@ -97,8 +97,17 @@ internal static class HumanGateRules
             && proof.IsComplete
             && acceptance.State == AcceptanceState.Valid
             && string.Equals(fingerprint, acceptance.Hash, StringComparison.Ordinal);
-        return allowed
-            ? null
+        if (allowed)
+        {
+            return null;
+        }
+
+        // A valid Accept covers the content as it was; this write changes that content, so the Accept is what is at stake.
+        return before.Status == TaskState.NeedsYou && acceptance.State == AcceptanceState.Valid
+            && !string.Equals(fingerprint, acceptance.Hash, StringComparison.Ordinal)
+            ? new GateRefusal(
+                GateId.HumanGate,
+                $"{id} has {humanName}'s Accept, and this change to its title, Action or description would void it. Send the status Done on its own, and put your notes in Evidence.")
             : new GateRefusal(
                 GateId.HumanGate,
                 $"{id} needs {humanName}'s acceptance. Move it to Needs You when the Proof is complete; you'll be woken when {humanName} decides.");
