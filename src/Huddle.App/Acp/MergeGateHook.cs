@@ -4,11 +4,13 @@ namespace Agency.Huddle.App.Acp;
 
 /// <summary>
 /// Installs the <c>PreToolUse</c> hook that makes <see cref="WorkDirPermissionHandler"/> see a <c>git merge</c> or
-/// <c>git push</c> (issue #396). In the Adapter's <c>auto</c> permission mode, which a user's own
-/// <c>~/.claude/settings.json</c> can set (<c>defaultMode</c>) whatever Huddle sends, the Adapter approves a Bash
-/// command itself and never sends a permission request, so the Team's merge gate was never consulted. A hook that
+/// <c>git push</c> (issue #396). In the Adapter's <c>auto</c> permission mode the Adapter approves a Bash
+/// command itself and never sends a permission request, and a user's <c>permissions.allow</c> rule or an operator's
+/// Work Mode can do the same, so the Team's merge gate would not be consulted. A hook that
 /// answers <c>ask</c> for those two commands, and says nothing for every other command, turns the call back into a
-/// request that Huddle decides. Huddle still owns the decision: the hook only makes sure it is asked.
+/// request that Huddle decides. Huddle still owns the decision: the hook only makes sure it is asked. Huddle also moves
+/// an isolating Adapter's session out of a user's <c>defaultMode</c> (issue #414); the hook stays for the other routes,
+/// and for an Adapter entry that does not isolate.
 /// </summary>
 /// <remarks>
 /// Only the Claude Code Adapter reads <c>.claude/settings.local.json</c>. Codex has no equivalent hook, so under

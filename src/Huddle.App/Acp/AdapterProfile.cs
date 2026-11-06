@@ -35,7 +35,9 @@ namespace Agency.Huddle.App.Acp;
 /// 22: claude-agent-acp's <c>settings</c> option REPLACES its own computed settings rather than
 /// merging, so sending <c>autoMemoryEnabled: false</c> also drops any <c>CLAUDE_MODEL_CONFIG</c>
 /// model override that session would otherwise have carried; <c>settingSources</c> merges instead
-/// of replacing.
+/// of replacing. <c>settingSources</c> does not cover the Human's <c>permissions.defaultMode</c>, which the Adapter
+/// reads for itself, so an isolating Adapter's session is also set to the mode Huddle chooses (issue #414, see
+/// <c>WorkModePolicy.EffectiveMode</c>).
 /// </param>
 /// <param name="SessionPerRoom">
 /// Whether this Adapter Profile gives each Room its own Room Session (RS §6.12). Defaults to
