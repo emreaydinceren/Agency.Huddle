@@ -50,6 +50,21 @@ internal sealed class WorkModePolicy
         return !this.hidden.Contains(modeId);
     }
 
+    /// <summary>
+    /// Whether a Persona's stored Work Mode would send a tool call to the Adapter's permission check without asking: a mode that is
+    /// offered and is <c>bypassPermissions</c> (Claude Code applies it before the Adapter's <c>canUseTool</c>, so Huddle's handler never
+    /// sees the call) or <c>auto</c> (the model decides). A hidden mode is replaced by the default and so does not skip. Connectors
+    /// are refused in such a mode, because the approval prompt would never run (Agent Connectors spec 8.4).
+    /// </summary>
+    /// <param name="workMode">The Persona's stored Work Mode, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the effective mode never asks.</returns>
+    internal bool SkipsApproval(string? workMode)
+    {
+        return workMode is not null
+            && this.IsOffered(workMode)
+            && (string.Equals(workMode, "bypassPermissions", StringComparison.Ordinal) || string.Equals(workMode, "auto", StringComparison.Ordinal));
+    }
+
     /// <summary>The modes that may be offered, in the order the Adapter advertised them.</summary>
     /// <param name="modes">Every mode the Adapter advertised.</param>
     /// <returns>The advertised modes that are not hidden.</returns>

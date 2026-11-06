@@ -6565,3 +6565,107 @@ File: [`docs/engineering/manual-tests/agents-md-changes.md`](agents-md-changes.m
 ---
 
 Back to [the manual test script](../manual-tests.md).
+
+### AGCONN-01 — A new Agent has account connectors off
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-01--a-new-agent-has-account-connectors-off)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. A new Agent's switch reads off. |
+
+### AGCONN-02 — Turning on asks first, and Cancel leaves it off
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-02--turning-on-asks-first-and-cancel-leaves-it-off)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Failed at `a07e0a0e`: after Cancel the switch was drawn on while the line said Off. Fixed, then passed on the rebuilt app. |
+
+### AGCONN-03 — Give access restarts the Agent and records it in the Feed
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-03--give-access-restarts-the-agent-and-records-it-in-the-feed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Give access with real mouse clicks, 4 of 4, coordinates checked first. An earlier failure most likely clicked Cancel, about 30 px away, in a downscaled screenshot; that cause is not proven. |
+
+### AGCONN-04 — Turning off applies at once, and a rename drops access
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-04--turning-off-applies-at-once-and-a-rename-drops-access)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Turning off applied at once. The rename step was not run; `PersonaConnectorsTests` covers it. |
+
+### AGCONN-05 — An Adapter Huddle cannot control shows text, not a switch
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-05--an-adapter-huddle-cannot-control-shows-text-not-a-switch)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Skipped | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Only `claude-agent-acp` is configured on the lane. |
+
+### AGCONN-06 — The one-time notice shows after an upgrade and stays dismissed
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-06--the-one-time-notice-shows-after-an-upgrade-and-stays-dismissed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. The first two clauses passed. The rest of the case was not run; `AgentConnectorsPageTests` covers the dismissal. |
+
+### AGCONN-07 — A new Agent lists no claude.ai tool by Turn 3
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-07--a-new-agent-lists-no-claudeai-tool-by-turn-3)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. 0 `claude_ai` strings in a new Agent's log at Turn 3. |
+
+### AGCONN-08 — With the switch on the connectors appear, and every use asks first
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-08--with-the-switch-on-the-connectors-appear-and-every-use-asks-first)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. The card appeared for `mcp__claude_ai_ms365__get_me`, and one Allow once ran it: the one real connector call of all these runs. With an Agent-written `allow` in `settings.local.json`, a card still appeared; refused. Logged: McpServerName `claude.ai ms365`, McpServerSource `claudeai`, Kind Other. |
+
+### AGCONN-09 — An Agent cannot switch its own connectors on
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-09--an-agent-cannot-switch-its-own-connectors-on)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Asked to turn its own connectors on, Devon said it had no way and made no tool call. `persona_connectors` and `settings.local.json` unchanged. |
+
+### AGCONN-10 — A Turn running when the switch flips
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-10--a-turn-running-when-the-switch-flips)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Switched off mid-Turn: the card showed off at once, and the running Turn and its pending call did not change. No pass line was reached. |
+
+### AGCONN-11 — A connector call held past the wait
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-11--a-connector-call-held-past-the-wait)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Partial | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Timeout lowered to 30 s. Refused with "no answer", the call did not run, and the Turn was not killed. The model tried no second call, so "refused with no new card" is pinned only by tests. |
+
+### AGCONN-12 — The switch flipped while a card is open
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-12--the-switch-flipped-while-a-card-is-open)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Flipping the switch off closed the card as refused and the call never ran. The Turn then ended with no message to the Human. |
+
+### AGCONN-13 — Hostile arguments
+
+File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#agconn-13--hostile-arguments)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. On the stand-in `claude_ai_probe`. Markup, `**bold**` and a `javascript:` link showed as plain text, short fields were all shown, and a 6000-character body was cut with a count. Bidi was not tested: the model dropped the character. An earlier apparent hang was most likely a stale binary. |

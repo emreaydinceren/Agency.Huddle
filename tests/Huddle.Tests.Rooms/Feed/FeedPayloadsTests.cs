@@ -57,6 +57,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.TaskWakesPaused, "task-wakes-paused"),
             (FeedSourceType.TeamArchived, "team-archived"),
             (FeedSourceType.BuiltinAgentUpdateAvailable, "builtin-agent-update-available"),
+            (FeedSourceType.AgentConnectorsChanged, "agent-connectors-changed"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -245,6 +246,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.TaskWakesPaused, FeedCategory.Tasks),
             (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),
             (FeedSourceType.BuiltinAgentUpdateAvailable, FeedCategory.SecondBrain),
+            (FeedSourceType.AgentConnectorsChanged, FeedCategory.SecondBrain),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

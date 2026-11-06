@@ -627,6 +627,17 @@ already stored for an Agent.
 > inside the agent's own `~/.claude` folder. A shell command that redirects into
 > it is not caught.
 
+### Account connectors
+
+An Agent cannot use your claude.ai account connectors (mail, calendar, files) unless you turn them on for that Agent. Every Agent starts with them off, including the Chief of Staff, and an Agent cannot switch them on for itself.
+
+1. Open the Agent and find **Account connectors** under Work mode.
+2. Turn the switch on. Huddle asks first: "Give {Name} access to all your connected accounts?" Choose **Give access**, or **Cancel** to leave it off.
+3. Huddle restarts the Agent to apply the change; it takes effect on the Agent's next Turn. The line under the switch then says "On since" and the date. Each use of a connector asks you first: a card in the Room names the Agent and the tool, shows what the Agent asked for as plain text (the Agent's words, which Huddle has not checked, and which may come from an email it read), and offers **Allow once** or **Refuse**. There is no "always allow". If you do not answer within ten minutes, or press Dismiss, or the Turn stops, the call is refused, and so is every further connector call in that Turn. A Work Mode that never asks before a tool runs (Bypass permissions, Auto) cannot be combined with connectors: the switch stays off and says why.
+
+Turning the switch off applies at once, with no question. Renaming an Agent turns it off again, so switch it back on after a rename. Resetting the Chief of Staff to its default also turns it off. The switch appears only for the Claude Adapter with isolation on. For any other Adapter the card says what Huddle cannot control instead.
+
+If you upgraded with Agents already in place, the Agents page shows a one-time notice that connectors are now off. Dismiss it and it does not come back. The Feed records each time you turn the switch on or off.
 ### Renaming an Agent
 
 Change **Name** on the Edit card and save. Huddle warns you first:

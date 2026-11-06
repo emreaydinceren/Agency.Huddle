@@ -18,7 +18,7 @@ without the prompt.
 
 | # | Question | Recommendation | What each choice costs |
 | --- | --- | --- | --- |
-| OQ-1 | With the switch on, should a connector call stop and ask the Human before it runs? Today nothing asks (section 4). | **Yes: every call to a connector tool asks, and the switch does not ship until it does.** | **Ask for every call:** safest; a build of its own, because no Human-approval path exists in the permission handler today (section 8.4); a busy Agent asks often. **Ask only for tools that write** (send, delete, create): fewer prompts, but needs a list of tool names kept up to date, and a new connector tool defaults to unguarded. **Ask for none:** the switch becomes "this Agent may send and delete mail with nobody asked"; the warning on the card must then say so in as many words. |
+| OQ-1 | With the switch on, should a connector call stop and ask the Human before it runs? Before the prompt was built nothing asked (section 4). | **Yes: every call to a connector tool asks, and the switch does not ship until it does.** | **Ask for every call:** safest; a build of its own, because no Human-approval path exists in the permission handler today (section 8.4); a busy Agent asks often. **Ask only for tools that write** (send, delete, create): fewer prompts, but needs a list of tool names kept up to date, and a new connector tool defaults to unguarded. **Ask for none:** the switch becomes "this Agent may send and delete mail with nobody asked"; the warning on the card must then say so in as many words. |
 | OQ-2 | Run the paid Q5 check (one harmless read, such as `get_me`) now? | **No. Pin the handler's behaviour with a free test now, and run the paid read once, in stage 3, after OQ-1 is built.** | **Now:** about one Turn of spend (under 0.05 USD at the spike's prices) to confirm the code reading, which a free test already shows. **In stage 3:** the same read then proves the prompt appears, which is the check that matters. **Never:** the prompt is unproven end to end. |
 | OQ-3 | How are existing installs told that Agents lost their connectors? | **A release note plus a one-time, dismissible notice on the Agents page.** | **Release note only:** nothing to build; an Agent that used a connector fails on its next Turn with no explanation. **Plus the notice:** one small stored flag and one `MudAlert`. **Per-Agent Feed item for each Agent that used a connector:** the app cannot tell which did, so this would need a scan of session logs; not recommended. |
 | OQ-4 | When an Agent is renamed, does its access follow the name? | **No: the row is removed, and the Human switches it on again.** | **Drops:** one extra click after a rename, never a surprise grant. **Follows:** a rename keeps access, but any code path that renames a Persona then carries a grant, and the next rename bug becomes an access bug. |
@@ -79,11 +79,17 @@ did not prove those servers stay out. Recorded as out of scope (section 12).
 
 ### 3.4 Resume
 
+**Seen on a real session, 2026-11-06.** Devon's session `eca138f4`, opened with connectors on before this feature, resumed in a new Adapter process with the switch off. Its log shows a `deferred_tools_delta` with no added names and 64 removed, 61 of them `claude_ai`, and Devon carried on working. The names still appear earlier in that log as history; they aren't offered.
+
 A session opened with connectors on, then resumed in a new Adapter process with the variable off, has no connectors, keeps its
 conversation, and `mcp__team__update_task` still works. So a restart is how an existing Agent loses access.
 **Not tested:** the reverse, a session opened with connectors off and resumed in a new process with them on. The design
-assumes the connectors then appear from the second Turn, as in a fresh session. **Unverified**; stage 3 verification
-checks it (section 11.2).
+assumes the connectors then appear from the second Turn, as in a fresh session. **Not proven for a true resume.** The paid run
+of 2026-11-06 (#357) turned the switch off then on and restarted the Agent twice: both new sessions logged `session/create ... resume=none`
+(the restart opened a fresh session, it did not resume), and the newest session's log holds the `deferred_tools_delta` naming
+`claude_ai_Claude_Docs` and `claude_ai_ms365` tools (about 200 `claude_ai_ms365` hits). So off to on did give the Agent its connectors at
+the next Turn; the first report read the log for the probe's name only and called them absent. A session that is genuinely resumed in a
+new process with the switch on has still not been observed.
 
 ### 3.5 Cost
 
@@ -104,22 +110,22 @@ every Agent on that profile. It goes in the release note for anyone who needs it
 
 ## 4. The risk this feature must face
 
-**With the switch on, an Agent can use the Human's mail, files and calendar, and today nothing asks first.**
+**With the switch on, an Agent can use the Human's mail, files and calendar. This section records the risk as it stood before the
+approval prompt (section 8.4) was built; with the prompt, every connector call asks first.**
 
-What the code shows (read, not run; spike question Q5 was not run):
+What the code showed before the prompt (read, not run; spike question Q5 was not run):
 
 - In `default` (Manual) mode the Adapter's permission check raises a permission request for an MCP tool.
 - Huddle's `WorkDirPermissionHandler.DecideAsync` answers it. It refuses only: a write to the protected `~/.claude` directory
   (`WorkDirPermissionHandler.cs:169`), the four file guards (`:179-182`) and a gated `git merge` or `git push` (`:196-199`).
   Everything else ends at `return Task.FromResult(Approve(context.Options))` (`:210`).
-- A connector call matches none of those guards. **It would be approved with no Human prompt.**
+- A connector call matched none of those guards. **It would have been approved with no Human prompt.**
 - ADR-0079 already records this shape: "approves it with no Human unless a guard or the merge gate refuses."
 - `rules.md` says the same: "nothing asks the Human before a tool runs."
 
-So the switch, built alone, means: "this Agent may send, reply to or delete mail, and write to files, with nobody asked."
-The warning on the card cannot make that safe; it can only describe it. OQ-1 asks whether a connector call under the switch
-should stop for approval. The recommendation is yes, and the design in section 8.4 shows what that takes.
-**This spec does not assume the answer.** Sections 5 to 7 hold either way; section 8.4 and the verification change with it.
+So the switch, built alone, would have meant: "this Agent may send, reply to or delete mail, and write to files, with nobody asked."
+The warning on the card cannot make that safe; it can only describe it. OQ-1 was answered yes, and the switch does not ship without
+the prompt: section 8.4 is what was built.
 
 ## 5. The default, and who it covers (decision 1)
 
@@ -158,6 +164,7 @@ singleton next to `PersonaWorkModeStore` (`ServiceCollectionExtensions.cs:390`).
 | `propose_agents` | No. `Candidate` carries only a name, text and a few fields; its own comment says it "cannot set Model, Effort, Adapter or Skills" (`Candidate.cs:6`). It gets no connectors field. |
 | Any App Tool (`mcp__team__`) | No. No App Tool calls `PersonaStore.Add`, `Update` or `Remove`; verified by search of `src/Huddle.App/Acp/Tools`. The `Add` callers are Human-driven (`ProposalService.cs:131` on the Human's accept, `HireService`, the card). |
 | The card, over Blazor | Only a Human session. The card is the one caller of `PersonaStore.SetConnectors`. |
+| A file the Agent writes in its Work Dir (`.claude/settings.local.json` or `settings.json` allow rule, a `PreToolUse` hook, a subagent with `bypassPermissions`, `defaultMode`, `env`) | **No, as measured.** Nothing written there got the stand-in connector tool past Huddle's handler, and `env.ENABLE_CLAUDEAI_MCP_SERVERS=true` in either settings file did not bring the connectors back, because `options.env` wins over a settings file's `env`. Measured on a **stand-in** server named `claude_ai_probe` (source `project`, Adapter 0.100.0), **not a real connector**: a real connector's source is presumably `claudeai`. The same routes do let an Agent skip the prompt for ordinary tools; that is issue #432. Huddle's own `permissions.ask` rule (section 8.4) is the extra protection. Evidence: `acp-session-config.md`, "Agent-written files and the permission prompt". |
 | A shell command writing `team.db` | **Yes, in principle.** The guards see path arguments only; a shell command gets past them (`RawGuard.cs` remarks: "that boundary is soft and documented"). No guard names `team.db`. This is the same soft boundary that protects `AGENTS.md` and Raw today. Recorded as accepted; stage 3 adds a test that pins the guards do not claim to cover it (section 10). |
 
 ### 6.3 Where it is written
@@ -214,11 +221,13 @@ The switch must never claim a protection it cannot deliver. The card chooses one
 | Adapter | Control | The row shows |
 | --- | --- | --- |
 | `IsolateUserSettings` true and `AdapterCatalog.RunsClaude` (the stock `claude-agent-acp`) | Per Agent, by `_meta` env | The switch |
-| Runs Claude, `IsolateUserSettings` false (a configured profile with no `_meta`) | Per profile only | No switch. Text: "Huddle cannot switch this Adapter's account connectors per Agent. Set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in the Adapter's `EnvironmentOverrides`, or turn on isolation for it." |
-| Anything else (`agency-acp` and other Adapters) | None needed in the spike's evidence | Text: "{Adapter} does not load your claude.ai connectors." **Unverified for every Adapter but the two tested; the text must not ship until each shipped preset has been checked.** |
+| Runs Claude, `IsolateUserSettings` false (a configured profile; its `_meta` carries only `options.env` with the connectors off) | Off for every Agent on it; no per-Agent switch | No switch. Text: "Huddle cannot switch this Adapter's account connectors per Agent. Set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in the Adapter's `EnvironmentOverrides`, or turn on isolation for it." |
+| Anything else (`agency-acp` and other Adapters) | None needed in the spike's evidence | Text: "{Adapter} does not load your claude.ai connectors." **Unverified, so the shipped text claims nothing:** "Huddle can't control {Adapter}'s account connectors." |
 
 In the first two rows a stored "on" is ignored with a warning in the log. The off-by-default promise is only claimed in the
-first row; the other two say what Huddle cannot do.
+first row; the other two say what Huddle cannot do. In the second row Huddle does send `options.env` with the connectors off (since
+the 357e review), so the account connectors stay off there too when the switch is off. The approval prompt is **not** guaranteed on
+that row: the profile's session takes the Human's own `defaultMode` and allow rules, which can skip the prompt (`known-limits.md`).
 
 Open for stage 3: whether `IsolateUserSettings: true` on an Adapter that is not `claude-agent-acp` should count as the first
 row. The spike says the entry is ignored there, so the code uses `RunsClaude` as well, not isolation alone.
@@ -231,7 +240,8 @@ row. The spike says the entry is ignored there, so the code uses `RunsClaude` as
 `internal static`, called at `:144` and by `HelperSessionMeta.cs:18`.
 
 - `connectors == false`: add `options.env = { "ENABLE_CLAUDEAI_MCP_SERVERS": "false" }` next to `settingSources` and `settings`.
-- `connectors == true`: add nothing. The account connectors load as today.
+- `connectors == true`: no `env`. The account connectors load as today. `settings` also carries `permissions: { ask: ["mcp__claude_ai_*"] }`
+  beside `autoMemoryEnabled` (section 8.4); `settings` replaces the Adapter's computed settings, so both go in one dictionary.
 - No `strict-mcp-config`, no `tools` change.
 
 `HelperSessionMeta` passes `false` and keeps its own `env` and `strict` entries; its assignment of `sessionOptions["env"]`
@@ -254,26 +264,63 @@ change must reach a new host. It does:
 
 So the effect is on the Agent's next Turn after the restart, the same as changing the Model. The row says "Restarting {Name} to
 apply this." and then the Helper line. A same-process resume ignores new `_meta` (`DotAcpPersonaHost.cs:186-193`); the restart
-is what avoids that case, so the spec adds no wording about "next fresh session" to the Human. **Unverified:** what a
+is what avoids that case, so the spec adds no wording about "next fresh session" to the Human. Observed 2026-11-06: a restart after the
+switch changed opened a fresh session (`resume=none`) and the connectors were in it from Turn 2 (section 3.4). **Unverified:** what a
 restart does to a Turn already running. The Model change takes the same path, so the behaviour is the existing one; stage 3 checks
 it with a Turn running (section 11.2).
 
-### 8.4 Stopping for approval (if OQ-1 is yes)
+### 8.4 Stopping for approval (built; OQ-1 is yes)
 
-The handler has no Human-approval path: it decides from the request alone and returns. A prompt needs one.
+Every call to a claude.ai connector tool stops and asks the Human before it runs. Without an answer it is refused, never approved.
+There is no "always allow".
 
-- A connector tool is recognised by name: the Adapter prefixes MCP tools `mcp__<server>__<tool>`, and connector servers are
-  `claude_ai_*` (observed in the spike logs). The check is a prefix test on the tool title or name. **Unverified** which field
-  the Adapter fills with the name in a permission request; the spike's handler matched on title or input containing the name
-  (`ConnectorProbeTests`), which suggests either. A free test with a captured request settles it.
-- The handler awaits a Human answer through the existing Needs-you machinery (`NeedsYouTracker`, an Agent card `C8`). Which of
-  the existing cards fits, or whether a new `ConnectorApprovalCard` is needed, is a stage-3 design question. **This spec does not
-  size it.** It is the largest piece of work in the feature.
-- Without an answer within the Turn's wait, the request is **refused**, never approved.
-- No "always allow".
-
-If OQ-1 is no, this section is dropped and the confirm copy changes as section 7.2 shows.
-
+- **Route.** `DotAcpClientAdapter.RequestPermissionAsync` links the host's and the session's lifetimes into the handler's token and passes
+  the session's `IElicitationScope` in `PermissionRequestContext.Scope`. `WorkDirPermissionHandler.DecideAsync` asks through it, so the
+  card is an `ElicitationCard` in the Turn's Room, the idle watchdog is paused, `UserInputTimeoutSeconds` (600 s) bounds the wait, and
+  the card is dropped on cancel. Nothing goes through `NeedsYouTracker`.
+- **Name.** The tool name and MCP server are in `_meta.claudeCode.toolName` and `_meta.claudeCode.mcpServer.name` of the permission
+  request (`acp-agent.js`, `canUseTool`), read into `ToolCallInfo.ToolName` and `McpServerName`. **Unproven for a real connector request
+  until the paid check (AGCONN-11).** `ConnectorCallClassifier.AsksHuman` fails safe: a name or server containing `claude_ai_` asks; a
+  named tool that is not a connector (`Bash`, `mcp__team__`, a Work Dir server) does not; with no name, kind `Other` asks, and so does an
+  `mcp__` title naming `claude_ai_`. A `Bash` command that merely quotes the marker does not.
+- **Order in `DecideAsync`.** Cancellation, `~/.claude`, the four file guards, the merge gate, then the classifier and the question, then
+  `Approve`. A guard refusal posts no card.
+- **Answer.** `ConnectorApprovalForm` builds one required enum field, `allow_once` or `refuse`, with no default. Only an accepted
+  `allow_once` selects the `AllowOnce` option. Everything else uses `reject_once` (else `reject_always`, else cancelled): a decline, a cancel,
+  an unreadable form, no scope, no active Turn, a failure, and a timeout. If only `AllowAlways` is offered the call is refused.
+- **T-13 wording.** The handler is pending until answered; a timeout refuses and the rest of that Turn's connector calls are refused without a
+  card (`RoomSession.ApprovalTimedOut`, a mark on the Turn); it never approves without an answer.
+- **Hostile arguments.** The call's arguments are shown in `UntrustedDetail`: control, format and bidi characters removed, 4 KB cap, the hidden
+  count stated, plain text only, under a line that says they are the Agent's own words.
+- **Modes that skip the check.** The Adapter applies `bypassPermissions` before `canUseTool`, so Huddle's handler never sees the call; `auto`
+  hands the decision to the model. `AgentConnectorsRow` refuses to turn connectors on in either, and says why, and
+  `DotAcpAgentHostFactory.EffectiveConnectors` passes `false` for a stored "on" that meets one. `acceptEdits` is allowed: the Adapter source
+  does not skip `canUseTool` for it (Claude Code's own `acceptEdits` rule is not confirmed here). Both modes are hidden by default.
+- **Every Agent, whatever the switch says.** The handler runs for every Agent and asks for a connector call on a non-isolating profile
+  too, but the Human-chosen Work Mode of that profile can still skip the prompt (see 7.3 and `known-limits.md`). Helpers refuse
+  every request (`HelperPermissionHandler`) and have connectors off.
+- **Huddle's own `ask` rule (357f).** When connectors are passed for a session, `BuildIsolationMeta` adds
+  `"permissions": { "ask": ["mcp__claude_ai_*"] }` to `options.settings`, beside `autoMemoryEnabled`; with them off it is not added.
+  A spike (`acp-session-config.md`, "Agent-written files and the permission prompt") measured `ask` beating an Agent's local allow
+  rule and allow hook, for the `tool`, `server` and `server__*` forms, and `permissions.deny` with `mcp__claude_ai_*` removed the tool.
+  **That was a stand-in server named `claude_ai_probe`, source `project`, not a real connector, and `ask` with the `mcp__claude_ai_*`
+  wildcard has not been run against a real connector.** Nothing an Agent wrote in its Work Dir got the stand-in connector tool past the
+  handler; the same routes do skip the prompt for ordinary tools (issue #432). `options.env` wins over a settings file's `env`, so a file
+  cannot switch the connectors back on. `HelperSessionMeta` is unaffected.
+- **Review fixes (357e).** The latch is read after the bridge returns, because the real bridge answers a timed-out question as cancelled
+  and does not throw. A nameless `other` call asks unless its title is one the Adapter writes for a built-in tool (`Load skill[: name]`,
+  `NotebookEdit`, `Asking for your input`, `SendMessage`, `TaskStop`, `ListAgents`, `Monitor`; `reporters/interaction.js`, `file-edit.js`
+  of claude-agent-acp 0.100.0, the pinned version, re-checked against `dist/tool-calls/reporters`: the list is unchanged from 0.75.1). A named tool also asks when `_meta.claudeCode.mcpServer.source` is `claudeai` (an open set per the SDK
+  types; used in addition to the name check), and `ReadMcpResourceTool`/`ListMcpResourcesTool` ask when their arguments name a
+  `claude_ai_` server. The arguments are shown field by field, shortest first, each long text cut with a count; when they are not a JSON
+  object, a nested value would be cut, or the fields do not all fit, only Refuse is offered. Control, format and bidi characters are
+  stripped by code point (tag characters included). Every decision is logged at Information with Agent, tool, Room and answer, no arguments.
+  Every request that reaches the classifier and asks is also logged at Information before the wait, with `ToolName`, `McpServerName`,
+  `McpServerSource`, `Kind` and `Title` ("Connector call asks ..."), so a call that stays pending still leaves what the wire carried.
+  **Open (AGCONN-13, 2026-11-06):** a stand-in `claude_ai_probe` call stayed pending with no card, and no log line shows whether the
+  request reached the handler (the app logged nothing for it, and no "dropped a question" line either). The elicitation card is drawn
+  only in the Turn's own Room; Needs You does not list it. A pending card holds the Turn up to `UserInputTimeoutSeconds`.
+  A `claude -p` run from Bash is not intercepted (known limit).
 ## 9. `requires` and `connectors.json` (decision 6)
 
 Nothing changes in who gets access. `RoleSpec.Requires` (`RoleSpec.cs:14`) only feeds the **Needs setup** label through
@@ -297,7 +344,8 @@ The hire-card line is a stage-3 detail and may be dropped without changing the d
 | `propose_agents` (`ProposeAgentsTool.cs`, `Candidate.cs`) | Cannot carry the flag. | No such field exists in `Candidate`, and none is added. |
 | Retro and Pack updates (`RetroProposalService`, `PackUpdater`, `TeamMembership`) | Call `Update` with the Persona's own values. | `Update` neither reads nor writes the flag (section 6.3). |
 | Library import or a copied Persona file | Frontmatter is the only thing carried. | The flag is not in frontmatter. |
-| Built-in reset (`BuiltinAgentReset`) | Deletes the row. | Reset returns to off. |
+| Built-in reset (`BuiltinAgentReset`) | Deletes the row; `BuiltinAgentReset.cs:42` calls `SetConnectors(name, false)` only. | Reset returns to off. Pinned by `ConnectorsCannotTurnOnTests.Reset_RemovesAPresentRow`. |
+| Built-in seeding (`BuiltinAgentSeeder:93`), the Skill sources remover (`SkillSourcesRemover:236`) and the card's Save | Call `Add` or `Update`. | Neither writes the flag; only `SetConnectors` does, and its one caller passes `true` from the card's Give access. With the row absent, each leaves it absent: `ConnectorsCannotTurnOnTests.Seeder_WritesChiefOfStaff_WithConnectorsOff` and `ConnectorsRemovalTests.RemovePack_HolderWithoutRow_StaysOff`; the card's Save is `PersonaStore.Update`, pinned by T-7. |
 
 One test per row pins this (section 12). Stage 3 re-greps for any other caller of `Personas.Add` or `Update` at build time and
 adds a row for each.
@@ -355,6 +403,7 @@ Every task is test first, per the house rule. Tests are free unless marked. Test
 | T-1 | `PersonaConnectorsStoreTests`: no row reads off; `Set` writes `enabled_at`; blank deletes; keys are case-insensitive; a database without the table gets one | Section 6.1 |
 | T-2 | `BuildIsolationMeta_ConnectorsOff_CarriesTheOneEnvKey` (and the isolation keys are unchanged) | Sections 8.1, 8.2 |
 | T-3 | `BuildIsolationMeta_ConnectorsOn_CarriesNoEnv` | Section 8.1 |
+| T-3a | `BuildIsolationMeta_ConnectorsOn_AddsTheAskRule_AndOffDoesNot`: on, `settings` holds `autoMemoryEnabled` and `permissions.ask = ["mcp__claude_ai_*"]`; off, `settings` holds `autoMemoryEnabled` only | Sections 8.1, 8.4 |
 | T-4 | `BuildIsolationMeta_ProfileNotIsolating_ReturnsNull_ForEitherSetting` | Section 3.6 |
 | T-5 | `HelperSessionMetaTests` still pins `tools`, `env` and `strict-mcp-config`, and adds that the Agent's `_meta` has no `extraArgs` and no `tools` | Section 3.3 |
 | T-6 | `rules.md` row for Agents, quoted by a test: a build of an Agent `_meta` without the env key fails | Rule |
@@ -363,8 +412,8 @@ Every task is test first, per the house rule. Tests are free unless marked. Test
 | T-9 | Team duplicate of a source with the row set: every new Agent is off | Section 10 |
 | T-10 | `propose_agents` with a `connectors` property in the JSON: ignored, nothing stored | Section 10 |
 | T-11 | A frontmatter key `connectors: true` in a Persona file: ignored | Section 6.2 |
-| T-12 | `WorkDirPermissionHandler` given a `mcp__claude_ai_ms365__outlook_send_mail` request: today **Approve** (a characterization test that fails when OQ-1 is built, by design) | Section 4 |
-| T-13 | If OQ-1 is yes: the handler returns a pending state for a connector call and **refuses** on timeout; never approves without an answer | Section 8.4 |
+| T-12 | `WorkDirPermissionHandler` given a `mcp__claude_ai_ms365__outlook_send_mail` request asks the Human and, with no scope, refuses (replaces the characterization of the old approval; `ConnectorApprovalTests`) | Section 4 |
+| T-13 | The handler is pending for a connector call until answered; a timeout refuses and refuses the rest of that Turn; a decline, an unreadable form, no scope and no active Turn refuse; it never approves without an answer | Section 8.4 |
 | T-14 | bUnit `AgentConnectorsRow`: off by default; Give access shows the confirm with the warning; Cancel leaves it off; Confirm calls `SetConnectors(name, true)`; turning off applies at once; the row is absent in Edit and New modes | Section 7.1 |
 | T-15 | bUnit: the three Adapter states render the switch, the "cannot control" text and the "does not load" text | Section 7.3 |
 | T-16 | Feed: `SetConnectors` publishes one `AgentConnectorsChanged`; the same value twice publishes none | Section 11 |

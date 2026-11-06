@@ -69,6 +69,7 @@ internal static class FeedTestSupport
         FeedSourceType.TaskWakesPaused => new TaskWakesPausedPayload("GRO-44", "Ship the page", team, "Nova"),
         FeedSourceType.TeamArchived => new TeamArchivedPayload(team, "Team " + team + " archived"),
         FeedSourceType.BuiltinAgentUpdateAvailable => new BuiltinAgentUpdatePayload(team, "An update exists for " + team),
+        FeedSourceType.AgentConnectorsChanged => new AgentConnectorsPayload("Nova", true),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 

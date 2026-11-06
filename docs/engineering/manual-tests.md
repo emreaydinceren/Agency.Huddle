@@ -230,6 +230,8 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Jobs](manual-tests/jobs.md): scheduled Jobs, their Rooms, Needs You for the Human, `schedule.md` and restarts.
 - [Feed](manual-tests/feed.md): the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart.
 - [Remote access](manual-tests/remote-access.md): the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action.
+- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
+- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
 - [Right sidebar](manual-tests/right-sidebar.md): the panels by Subject, Outline scrolling, collapse and focus.
 - [Persona lifecycle](manual-tests/persona-lifecycle.md): supervisor, work folders, health and restarts.
 - [The named pipe](manual-tests/pipe-external.md): external agents and the wire.

@@ -46,7 +46,7 @@ internal sealed class AdapterCatalog
     /// <summary>Whether a profile launches Claude, judged by its Command, AdapterPath or any Args entry.</summary>
     /// <param name="profile">The profile to inspect.</param>
     /// <returns><see langword="true"/> when one of those names <c>claude-agent-acp</c>.</returns>
-    private static bool RunsClaude(AdapterProfile profile) =>
+    internal static bool RunsClaude(AdapterProfile profile) =>
         AdapterCatalog.IsClaudeAgent(profile.Command)
         || AdapterCatalog.IsClaudeAgent(profile.AdapterPath)
         || (profile.Args is not null && profile.Args.Any(AdapterCatalog.IsClaudeAgent));

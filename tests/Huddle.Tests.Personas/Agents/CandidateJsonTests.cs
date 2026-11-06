@@ -77,6 +77,7 @@ public sealed class CandidateJsonTests
     [InlineData("adapter")]
     [InlineData("skills")]
     [InlineData("_builtin")]
+    [InlineData("connectors")]
     public void TryParse_ForbiddenField_ReportsProblem(string field)
     {
         JsonObject node = new()

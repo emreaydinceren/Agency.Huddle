@@ -59,6 +59,7 @@ internal static class FeedSummary
             SecondBrainOverCapPayload p => new([Text(p.Message)], null, OmitActor: true),
             TeamArchivedPayload p => new([Text(p.Message)], null, OmitActor: true),
             BuiltinAgentUpdatePayload p => new([Text(p.Message)], null, OmitActor: true),
+            AgentConnectorsPayload p => new([Text(p.On ? "You turned on account connectors for " : "You turned off account connectors for "), Strong(p.Name)], null, OmitActor: true),
             _ => new([Text("Something happened")], null, OmitActor: true),
         };
     }

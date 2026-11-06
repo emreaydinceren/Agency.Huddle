@@ -161,7 +161,7 @@ internal sealed class WorkDirPermissionHandler(
     }
 
     /// <inheritdoc />
-    public Task<PermissionDecision> DecideAsync(PermissionRequestContext context, CancellationToken cancellationToken)
+    public async Task<PermissionDecision> DecideAsync(PermissionRequestContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
@@ -173,7 +173,7 @@ internal sealed class WorkDirPermissionHandler(
                 path,
                 protectedDirectory);
 
-            return Task.FromResult(Refuse(context.Options));
+            return Refuse(context.Options);
         }
 
         string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.Raw.RefusalFor(context.ToolCall)
@@ -190,7 +190,7 @@ internal sealed class WorkDirPermissionHandler(
                     guardReason);
             }
 
-            return Task.FromResult(Refuse(context.Options));
+            return Refuse(context.Options);
         }
 
         if (mergeGate is not null
@@ -204,10 +204,104 @@ internal sealed class WorkDirPermissionHandler(
                 personaName,
                 reason);
 
-            return Task.FromResult(Refuse(context.Options));
+            return Refuse(context.Options);
         }
 
-        return Task.FromResult(Approve(context.Options));
+        // Last, after every refusal above, so a call a guard refuses never posts a card (Agent Connectors spec 8.4).
+        return ConnectorCallClassifier.AsksHuman(context.ToolCall)
+            ? await this.AskHumanAsync(context, cancellationToken).ConfigureAwait(false)
+            : Approve(context.Options);
+    }
+
+    /// <summary>
+    /// Stops a claude.ai connector call for the Human's answer. Only an accepted <c>allow_once</c> selects the one-time allow
+    /// (never <see cref="Approve"/>, whose fallback is the standing allow); a missing scope, a Turn whose earlier question timed out,
+    /// a decline, a cancellation, an unreadable answer and a failure all refuse.
+    /// </summary>
+    /// <param name="context">The request.</param>
+    /// <param name="cancellationToken">Ends the wait: a Stop, the Turn ending, the session closing or the host disposing.</param>
+    /// <returns>The one-time allow, or a refusal.</returns>
+    private async Task<PermissionDecision> AskHumanAsync(PermissionRequestContext context, CancellationToken cancellationToken)
+    {
+        string? roomId = (context.Scope as IConnectorTurnLatch)?.ActiveRoomId;
+        this.LogRequest(context, roomId);
+        if (context.Scope is not { } scope || scope is IConnectorTurnLatch { ApprovalTimedOut: true })
+        {
+            logger.LogWarning(
+                "Refused a connector call for '{PersonaName}' without asking: {Why}.",
+                personaName,
+                context.Scope is null ? "no Room to ask in" : "an earlier question on this Turn went unanswered");
+            this.LogDecision(context, roomId, context.Scope is null ? "refused: no Room to ask in" : "refused: an earlier question on this Turn went unanswered");
+            return Refuse(context.Options);
+        }
+
+        string outcome = "refused: no answer";
+        try
+        {
+            ElicitationResult answer = await scope.ElicitAsync(ConnectorApprovalForm.Build(personaName, context), cancellationToken).ConfigureAwait(false);
+            if (ConnectorApprovalForm.IsAllowOnce(answer) && Pick(context.Options, PermissionOptionKind.AllowOnce) is { } allow)
+            {
+                this.LogDecision(context, roomId, "allowed once");
+                return allow;
+            }
+
+            outcome = answer is ElicitationAccepted ? "refused by the Human" : "refused: no answer";
+        }
+        catch (OperationCanceledException)
+        {
+            // A Stop, a closing session or the host's disposal: nobody answered, so the call is refused below.
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Asking the Human about a connector call for '{PersonaName}' failed; the call is refused.", personaName);
+            outcome = "refused: the question failed";
+        }
+
+        this.LogDecision(context, roomId, outcome);
+        return Refuse(context.Options);
+    }
+
+    /// <summary>
+    /// Records the wire facts of a request that reached the classifier and asks, before the question is posted: the tool, the MCP
+    /// server and its source, the kind and the title. It is written before the wait so a call that never gets an answer still leaves
+    /// a line, and what a real request looks like can be read from it. The arguments are never logged.
+    /// </summary>
+    private void LogRequest(PermissionRequestContext context, string? roomId)
+    {
+        if (!logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        ToolCallInfo call = context.ToolCall;
+        logger.LogInformation(
+            "Connector call asks '{PersonaName}' in room {RoomId}: ToolName {ToolName}, McpServerName {McpServerName}, McpServerSource {McpServerSource}, Kind {Kind}, Title {Title}.",
+            personaName,
+            roomId ?? "(none)",
+            ConnectorApprovalForm.LoggableName(call.ToolName),
+            ConnectorApprovalForm.LoggableName(call.McpServerName),
+            ConnectorApprovalForm.LoggableName(call.McpServerSource),
+            Enum.GetName(call.Kind) ?? "(unknown)",
+            ConnectorApprovalForm.LoggableName(call.Title));
+    }
+
+    /// <summary>
+    /// Records one connector decision so a call that was allowed can be traced afterwards: the Agent, the tool, the Room and the
+    /// answer. The arguments are never logged.
+    /// </summary>
+    private void LogDecision(PermissionRequestContext context, string? roomId, string answer)
+    {
+        if (!logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        logger.LogInformation(
+            "Connector call decision for '{PersonaName}' in room {RoomId}: tool {ToolName}, {Answer}.",
+            personaName,
+            roomId ?? "(none)",
+            ConnectorApprovalForm.LoggableName(context.ToolCall.ToolName ?? context.ToolCall.Title),
+            answer);
     }
 
     /// <summary>Reads the shell command out of a tool call's raw input.</summary>

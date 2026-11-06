@@ -41,6 +41,7 @@ internal static class FeedPayloads
         FeedSourceType.SecondBrainOverCap => typeof(SecondBrainOverCapPayload),
         FeedSourceType.TeamArchived => typeof(TeamArchivedPayload),
         FeedSourceType.BuiltinAgentUpdateAvailable => typeof(BuiltinAgentUpdatePayload),
+        FeedSourceType.AgentConnectorsChanged => typeof(AgentConnectorsPayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

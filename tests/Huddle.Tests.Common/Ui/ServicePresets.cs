@@ -125,6 +125,10 @@ internal static class ServicePresets
         typeof(AvatarStore),
         typeof(SkillStore),
         typeof(BuiltinAgentReset),
+
+        // The Account connectors row (P6a) injects the policy; the page resolves the one-time notice's flag on demand.
+        typeof(WorkModePolicy),
+        typeof(ConnectorsNoticeStore),
     ];
 
     /// <summary>

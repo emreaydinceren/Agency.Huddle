@@ -1,12 +1,10 @@
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.Acp.Abstractions;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>
 /// The Agent session <c>_meta</c> built by <see cref="DotAcpAgentHostFactory.BuildIsolationMeta"/> keeps the Human's
-/// claude.ai account connectors off unless told otherwise (Agent Connectors Spec sections 8.1 and 8.2, tests T-2 to T-6, T-12).
+/// claude.ai account connectors off unless told otherwise (Agent Connectors Spec sections 8.1 and 8.2, tests T-2 to T-6; T-12 and T-13 are in ConnectorApprovalTests).
 /// </summary>
 public sealed class AgentIsolationMetaTests
 {
@@ -48,6 +46,76 @@ public sealed class AgentIsolationMetaTests
         Assert.Equal(2, options.Count);
     }
 
+    /// <summary>
+    /// Spec 8.4: with connectors on, <c>settings</c> carries Huddle's own <c>permissions.ask</c> rule for every claude.ai tool beside
+    /// <c>autoMemoryEnabled</c> (the option replaces the Adapter's settings), and with connectors off it carries only
+    /// <c>autoMemoryEnabled</c>, exactly as T-2 pins.
+    /// </summary>
+    [Fact]
+    public void BuildIsolationMeta_ConnectorsOn_AddsTheAskRule_AndOffDoesNot()
+    {
+        Dictionary<string, object> on = Assert.IsType<Dictionary<string, object>>(
+            Options(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: true), connectors: true))["settings"]);
+        Dictionary<string, object> off = Assert.IsType<Dictionary<string, object>>(
+            Options(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: true), connectors: false))["settings"]);
+
+        Assert.Equal(2, on.Count);
+        Assert.False((bool)on["autoMemoryEnabled"]);
+        Dictionary<string, object> permissions = Assert.IsType<Dictionary<string, object>>(on["permissions"]);
+        KeyValuePair<string, object> rule = Assert.Single(permissions);
+        Assert.Equal("ask", rule.Key);
+        Assert.Equal(["mcp__claude_ai_*"], Assert.IsType<string[]>(rule.Value));
+        KeyValuePair<string, object> only = Assert.Single(off);
+        Assert.Equal("autoMemoryEnabled", only.Key);
+    }
+
+    private static AdapterProfile NonIsolatingClaude() =>
+        new("custom", "Custom Claude", null, "claude-agent-acp", null, null, true, null, true, false, true, null, true);
+
+    /// <summary>
+    /// F4: a custom profile that runs Claude but does not isolate still gets the connectors switched off when the setting is off: the
+    /// <c>_meta</c> carries <c>options.env</c> and nothing else, so no isolation key is added to a profile that did not ask for it.
+    /// </summary>
+    [Fact]
+    public void BuildIsolationMeta_ClaudeProfileNotIsolating_ConnectorsOff_CarriesOnlyTheEnvKey()
+    {
+        Dictionary<string, object> options = Options(DotAcpAgentHostFactory.BuildIsolationMeta(NonIsolatingClaude(), connectors: false));
+
+        Dictionary<string, object> env = Assert.IsType<Dictionary<string, object>>(Assert.Single(options).Value);
+        Assert.Equal("false", env["ENABLE_CLAUDEAI_MCP_SERVERS"]);
+        Assert.Single(env);
+        Assert.False(options.ContainsKey("settingSources"));
+        Assert.False(options.ContainsKey("settings"));
+    }
+
+    /// <summary>F4: the same profile with the setting on, and a profile that does not run Claude on either setting, still get no meta.</summary>
+    /// <param name="connectors">The connectors setting.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildIsolationMeta_NoMetaNeeded_ReturnsNull(bool connectors)
+    {
+        Assert.Null(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: false), connectors: connectors));
+        if (connectors)
+        {
+            Assert.Null(DotAcpAgentHostFactory.BuildIsolationMeta(NonIsolatingClaude(), connectors: true));
+        }
+    }
+
+    /// <summary>F4: a stored "on" is ignored on a profile that does not isolate, and honoured on one that does.</summary>
+    [Fact]
+    public void ConnectorsPassed_StoredOn_IsIgnoredWithoutIsolation()
+    {
+        Assert.False(DotAcpAgentHostFactory.ConnectorsPassed(NonIsolatingClaude(), effective: true));
+        Assert.True(DotAcpAgentHostFactory.ConnectorsPassed(Profile(isolate: true), effective: true));
+        Assert.False(DotAcpAgentHostFactory.ConnectorsPassed(Profile(isolate: true), effective: false));
+    }
+
+    /// <summary>F4: a Helper on a non-isolating profile still gets no meta: it keeps its old behaviour, and its handler refuses every request.</summary>
+    [Fact]
+    public void HelperSessionMeta_ClaudeProfileNotIsolating_StaysNull() =>
+        Assert.Null(Agency.Huddle.App.Helpers.HelperSessionMeta.For(NonIsolatingClaude()));
+
     /// <summary>T-4: an Adapter that does not isolate gets no meta whichever way the setting is (Spec 3.6).</summary>
     /// <param name="connectors">The connectors setting.</param>
     [Theory]
@@ -84,29 +152,5 @@ public sealed class AgentIsolationMetaTests
         Dictionary<string, object> env = Assert.IsType<Dictionary<string, object>>(
             Options(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: true), connectors: false))["env"]);
         Assert.Equal("false", env["ENABLE_CLAUDEAI_MCP_SERVERS"]);
-    }
-
-    /// <summary>
-    /// T-12, a characterization of today: a claude.ai connector call is approved with no Human asked. Decision OQ-1
-    /// replaces this test when the approval prompt is built; it is meant to fail then.
-    /// </summary>
-    [Fact]
-    public async Task CurrentBehaviour_ConnectorToolCall_IsApprovedWithNoHumanAsked()
-    {
-        CancellationToken ct = TestContext.Current.CancellationToken;
-        IReadOnlyList<PermissionOptionInfo> options =
-        [
-            new PermissionOptionInfo("allow-1", "Allow once", PermissionOptionKind.AllowOnce),
-            new PermissionOptionInfo("reject-1", "Reject once", PermissionOptionKind.RejectOnce),
-        ];
-        PermissionRequestContext request = new(
-            "session-1",
-            new ToolCallInfo("call-1", "mcp__claude_ai_ms365__outlook_send_mail", ToolKind.Other, ToolCallStatus.Pending, """{"to":"a@example.com"}"""),
-            options);
-        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance);
-
-        PermissionDecision decision = await handler.DecideAsync(request, ct);
-
-        Assert.Equal("allow-1", Assert.IsType<SelectedDecision>(decision).OptionId);
     }
 }

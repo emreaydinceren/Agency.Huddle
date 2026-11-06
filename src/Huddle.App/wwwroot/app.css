@@ -5944,6 +5944,21 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     flex: 0 0 auto;
 }
 
+/* A connector call's arguments (Agent Connectors spec 8.4): the Agent's words, shown as plain text in a bounded, scrollable box. */
+.elicitation-card-untrusted-text {
+    margin: 4px 0 12px;
+    padding: 8px;
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--mud-typography-default-family);
+    font-size: 0.8125rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--ink-wash);
+}
+
 /* An agent's text is shown verbatim, so the line breaks in a message or a description are kept. */
 .elicitation-card-message,
 .elicitation-card-field-description {

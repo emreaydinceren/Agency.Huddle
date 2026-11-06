@@ -21,7 +21,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <see cref="BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
 /// both traps intact (<c>docs/engineering/rules.md</c>, "A Turn ends four ways").
 /// </summary>
-internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
+internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnectorTurnLatch
 {
     // The bounds on Acp:UserInputTimeoutSeconds. The floor keeps a question from expiring before a
     // Human could read it and, since zero and below are raised to it, means a question is never
@@ -377,26 +377,68 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         TimeSpan bound = UserInputTimeoutFrom(this.options.UserInputTimeoutSeconds);
         using CancellationTokenSource timeout = new(bound, this.time);
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lease.Token, timeout.Token);
+        ElicitationResult result;
         try
         {
-            return await bridge.RequestAsync(new ElicitationContext(lease.RoomId, askerAgentId), request, linked.Token).ConfigureAwait(false);
+            result = await bridge.RequestAsync(new ElicitationContext(lease.RoomId, askerAgentId), request, linked.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            // A Stop, the Turn ending, a shutdown and the caller giving up are all expected and silent;
-            // only the bound running out is worth a line, because the Human sees a question vanish.
-            if (timeout.IsCancellationRequested)
-            {
-#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
-                this.logger.LogWarning(
-                    "Persona '{PersonaName}' dropped a question in room {RoomId}: no answer after {TimeoutSeconds} seconds.",
-                    this.owner.PersonaName,
-                    lease.RoomId,
-                    bound.TotalSeconds);
-#pragma warning restore HAA0601
-            }
+            result = new ElicitationCancelled();
+        }
 
-            return new ElicitationCancelled();
+        // The real bridge resolves a cancelled request as ElicitationCancelled and does not throw, so the bound running out is read
+        // here, after the await, not in a catch. A Stop, the Turn ending, a shutdown or the caller giving up cancelled the question
+        // some other way and stays silent; only the bound running out is worth a line, because the Human sees a question vanish.
+        if (result is ElicitationCancelled && timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested && !lease.Token.IsCancellationRequested)
+        {
+            this.MarkApprovalTimedOut();
+#pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' dropped a question in room {RoomId}: no answer after {TimeoutSeconds} seconds.",
+                this.owner.PersonaName,
+                lease.RoomId,
+                bound.TotalSeconds);
+#pragma warning restore HAA0601
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Whether a question on the Turn now in flight ran out of time with no answer. The connector approval prompt reads it and
+    /// refuses every further connector call on that Turn without asking; the next Turn starts clear because the mark lives on the
+    /// Turn, not on this session.
+    /// </summary>
+    public bool ApprovalTimedOut
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.activeTurn?.ApprovalTimedOut ?? false;
+            }
+        }
+    }
+
+    /// <summary>Gets the Room of the Turn now in flight, or <see langword="null"/> when there is none.</summary>
+    public string? ActiveRoomId
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.activeTurn?.RoomId;
+            }
+        }
+    }
+
+    /// <summary>Marks the Turn now in flight as having had a question go unanswered.</summary>
+    private void MarkApprovalTimedOut()
+    {
+        lock (this.gate)
+        {
+            this.activeTurn?.MarkApprovalTimedOut();
         }
     }
 
@@ -3187,6 +3229,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         private long lastActivityTimestamp = Time.GetTimestamp();
         private bool stopRequested;
         private bool timedOut;
+        private bool approvalTimedOut;
         private bool sawActivity;
 
         // The questions the agent has open on this Turn (E-3). A COUNT, not a flag: two overlapping
@@ -3316,6 +3359,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         /// <see cref="MarkStopRequested"/> is.
         /// </summary>
         public void MarkTimedOut() => Volatile.Write(ref this.timedOut, true);
+
+        /// <summary>Gets a value indicating whether a question on this Turn went unanswered until its bound; not the Turn's own timeout.</summary>
+        public bool ApprovalTimedOut => Volatile.Read(ref this.approvalTimedOut);
+
+        /// <summary>Records that a question on this Turn went unanswered until its bound.</summary>
+        public void MarkApprovalTimedOut() => Volatile.Write(ref this.approvalTimedOut, true);
 
         /// <summary>
         /// Opens one question on this Turn: counts it, which pauses the idle watchdog through

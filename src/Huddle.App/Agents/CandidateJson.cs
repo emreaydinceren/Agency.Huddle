@@ -18,7 +18,7 @@ internal static class CandidateJson
     /// Fields only the Human sets, on the Agent card, once a Candidate is approved (Spec §14
     /// D-5). A Candidate that carries any of these is rejected outright, never silently stripped.
     /// </summary>
-    private static readonly HashSet<string> ForbiddenFields = new(StringComparer.Ordinal) { "model", "effort", "adapter", "skills", "_builtin" };
+    private static readonly HashSet<string> ForbiddenFields = new(StringComparer.Ordinal) { "model", "effort", "adapter", "skills", "_builtin", "connectors" };
 
     /// <summary>
     /// The JSON schema of one Candidate object, as <c>propose_agents</c> (each item of

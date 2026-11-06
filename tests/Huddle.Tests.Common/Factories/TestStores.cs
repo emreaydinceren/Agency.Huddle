@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 
 namespace Agency.Huddle.Tests.Factories;
 
@@ -52,6 +53,7 @@ internal static class TestStores
 
     /// <summary>Creates a real <see cref="PersonaStore"/> over <paramref name="options"/>.</summary>
     /// <param name="options">The options whose data directory holds the Agents.</param>
-    public static PersonaStore CreatePersonaStore(this IOptions<TeamOptions> options) =>
-        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+    /// <param name="feed">Where a connectors change is recorded, or <see langword="null"/> to record none.</param>
+    public static PersonaStore CreatePersonaStore(this IOptions<TeamOptions> options, IFeedPublisher? feed = null) =>
+        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance, connectors: new PersonaConnectorsStore(options), feed: feed);
 }

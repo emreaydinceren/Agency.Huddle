@@ -292,6 +292,9 @@
                 <MudText Typo="Typo.body1">@this.WorkModeDisplayText</MudText>
             </section>
 
+            @* P6a: the account-connectors switch. View mode only - a new Agent is always off, and the grant is a deliberate act on an existing one. *@
+            <AgentConnectorsRow Name="@this.name" Adapter="@this.adapter" Restarting="@(this.status.State is PersonaState.Starting)" />
+
             @* Spec §6.5, SB-R16: what the next session will be told, part by part, read-only. Absent where the preview is not registered. *@
             @if (this.PromptPreview is { } preview)
             {

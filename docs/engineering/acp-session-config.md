@@ -364,6 +364,69 @@ on or off. Every comparison below uses a third Turn, and the proof is the sessio
   handler with no prompt. The owner's yes is needed to measure that live.
 - Spend: $0.77 reported by the Adapter across 10 sessions (two runs), against a stop at $5.
 
+## Agent-written files and the permission prompt (2026-11-06, issue #357)
+
+An Agent can write files in its own Work Dir, and Huddle sessions load `settingSources: ["project", "local"]`. The
+question: can those files stop a connector call reaching Huddle's permission handler, or bring the connectors back?
+Adapter 0.100.0, Sonnet at low Effort, `default` mode, the isolation `_meta` plus `env.ENABLE_CLAUDEAI_MCP_SERVERS =
+"false"`. The stand-in is a local MCP server in the Work Dir's `.mcp.json` with one no-op tool `ping`. Spend 1.79 USD
+(sum of the last cost the Adapter reported per session, 44 sessions). No real `claude_ai` tool was called.
+
+**Observed, not documented.** The stand-in's request reached the handler with
+`_meta.claudeCode = { toolName: "mcp__claude_ai_probe__ping", mcpServer: { name: "claude_ai_probe", source: "project" } }`,
+title `mcp__claude_ai_probe__ping`, kind `other`, `rawInput {}`, and the options `allow-once` and `reject` only. An
+ordinary server's request also offers `allow-with-updates` (Always), so the Adapter withholds Always for a `claude_ai_`
+name. A real connector's `source` is presumably `claudeai`; the stand-in cannot show that.
+
+| Route | Stand-in `claude_ai_probe` | Ordinary server `sgprobe` |
+| --- | --- | --- |
+| S0 baseline | reached | reached |
+| S1 `settings.local.json` allow (tool, server, `__*`) | reached | not reached, tool ran |
+| S2 `settings.json` allow | reached | reached |
+| S3 `PreToolUse` hook answering allow | reached | not reached, tool ran |
+| S4 subagent with `permissionMode: bypassPermissions` | reached | reached |
+| S6 `defaultMode: bypassPermissions` in the file | reached | reached |
+| S5 `env.ENABLE_CLAUDEAI_MCP_SERVERS=true` in `settings.local.json` or `settings.json`, `options.env` off | no connectors in 3 Turns | |
+
+Controls: a `deny` in the file made the tool unavailable (the files are read); an allow for `Bash(touch ...)` skipped the
+prompt and the same command without it asked; with `options.env` removed the same S5 script listed 61 `claude_ai_`
+names in the log (the detector works).
+
+**Result.** An Agent cannot reach a connector without Huddle's prompt through any of these routes, and cannot bring the
+connectors back: `options.env` wins over the file, so no extra lever is needed (F-e). The `claude_ai_` name itself
+forces the ask. The same file routes do self-grant for every other tool: a `settings.local.json` allow rule or a hook
+answering allow skips the handler for an ordinary MCP server (and for Bash, as the control showed). That is outside
+#357 but is the same hole.
+
+**Fixes tried** (all in `_meta.claudeCode.options`; shallow merge in the Adapter, so `settings` carries our own
+`autoMemoryEnabled: false` and the Adapter only spreads `CLAUDE_MODEL_CONFIG` under it):
+
+| Fix | Result against the ordinary server |
+| --- | --- |
+| `settings.permissions.ask` `mcp__sgprobe__ping`, `mcp__sgprobe__*` and `mcp__sgprobe` | All three match, all beat the file allow and the allow hook, and each sends the request to the handler. |
+| `settings.permissions.deny` `mcp__claude_ai_*` | Tool unavailable (no prompt at all). |
+| `settings.allowManagedHooksOnly` | Does nothing (the hook still ran). |
+| `settings.disableAllHooks` | Closes the hook route, and disables `MergeGateHook` and `DocHistoryStopHook`. |
+| `managedSettings.allowManagedHooksOnly` | Closes the hook route, and disables `MergeGateHook` (it is a file hook). |
+| `managedSettings.strictPluginOnlyCustomization: [hooks, agents, mcp]` | Tool unavailable: `.mcp.json` servers and hooks are locked out. |
+| `managedSettings` with `allowManagedPermissionRulesOnly` and an `ask` rule | Allow rule and hook both beaten, request reached. |
+| `settingSources: []` | File allow and hook inert, but `.mcp.json` servers do not load either. |
+| `settingSources: ["project"]` | Local allow inert, `.mcp.json` still loads; loses `settings.local.json`. |
+| `permissions.disableBypassPermissionsMode` | Not needed: S4 and S6 already reach the handler; not run alone. |
+
+**Precedence as observed.** A `deny` wins wherever it lives. An `ask` in `options.settings` beats an `allow` in
+`settings.local.json` and a hook's allow. An allow in `settings.local.json` and a hook's allow beat the default ask. An
+allow in project `settings.json`, a file `defaultMode`, and a subagent's `bypassPermissions` change nothing. A shell
+command can rewrite any Work Dir file on the next session, but `options.settings` is not on disk in the Work Dir, so an
+`ask` there survives it.
+
+**Recommendation.** Smallest change: add `permissions.ask` rules (the forms `tool`, `server` and `server__*` all matched; the bare `mcp__*` was not tried) for `mcp__claude_ai_*` and every server Huddle gates to the `settings` that `BuildIsolationMeta` already sends, keeping `autoMemoryEnabled`. It closes the
+allow-rule and hook routes for MCP tools without touching `MergeGateHook`. Optionally add `permissions.deny:
+["mcp__claude_ai_*"]` as defence in depth. Do not recommend `disableAllHooks` or `allowManagedHooksOnly`: they disable
+the merge gate. Dropping `local` from `settingSources` also loses `MergeGateHook` and `DocHistoryStopHook`; dropping
+`project` was not tried; it would lose whatever Huddle reads from project settings, which was not checked here. Not closeable by these settings: an allow rule for Bash and
+the other built-in tools needs the same `ask` treatment per tool, which was not tested.
+
 ## Troubleshooting
 
 **The agent returns no `configOptions` at all.** Check whether it needs
@@ -378,3 +441,5 @@ notifications with replies; read and correlate by JSON-RPC `id` as you go.
 on a different model that does not support it — the option is silently clamped to
 `"default"` rather than erroring. Re-read `configOptions` and check whether the
 `thought_level` entry is present at all.
+
+> **Connector approval and `_meta` (unproven).** Huddle reads the tool name and MCP server of a permission request from `_meta.claudeCode.toolName` and `_meta.claudeCode.mcpServer.name`. The Adapter source sets them for an `mcp__*` tool, but that no claude.ai connector request carries them is unproven until the paid check (AGCONN-11). A request with no name and kind `Other` asks anyway.
