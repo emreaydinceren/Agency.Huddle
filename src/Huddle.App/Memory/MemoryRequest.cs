@@ -39,11 +39,11 @@ internal sealed record MemoryRequest(
         ArgumentNullException.ThrowIfNull(arguments);
 
         return new MemoryRequest(
-            Read(arguments, "command"),
+            ReadEither(arguments, "command", "action"),
             Read(arguments, "folder"),
-            Read(arguments, "file"),
+            ReadEither(arguments, "file", "path"),
             Read(arguments, "description"),
-            Read(arguments, "text"),
+            ReadEither(arguments, "text", "content"),
             Read(arguments, "old"),
             Read(arguments, "new"),
             Read(arguments, "version"));
@@ -120,6 +120,16 @@ internal sealed record MemoryRequest(
 
         return this.New is null ? "'new'" : null;
     }
+
+    /// <summary>
+    /// Reads an argument by its documented name, or by the name Agents were seen to guess when the documented one is absent, so a
+    /// first call succeeds instead of being refused and retried in the chat. The documented name wins when both are given.
+    /// </summary>
+    /// <param name="arguments">The tool arguments.</param>
+    /// <param name="name">The documented name.</param>
+    /// <param name="alias">The guessed name.</param>
+    private static string? ReadEither(JsonObject arguments, string name, string alias) =>
+        Read(arguments, name) ?? Read(arguments, alias);
 
     /// <summary>Reads one string argument; a missing or non-string one is <see langword="null"/>.</summary>
     /// <param name="arguments">The tool arguments.</param>
