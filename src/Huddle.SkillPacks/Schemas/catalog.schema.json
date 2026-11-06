@@ -23,7 +23,7 @@
           "license": { "type": "string" },
           "category": { "type": "string" },
           "subCategory": { "type": "string" },
-          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Optional. The folder hash of the Skill at the pinned commit (CRLF read as LF in text files). A fetched folder that hashes differently is refused." },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Optional. The folder hash of the Skill at the pinned commit (CRLF read as LF in every file that is not binary, meaning no NUL in its first 8000 bytes, so a clone made with core.autocrlf=true matches). A fetched folder that hashes differently is refused." },
           "requires":{ "type": "array", "items": { "type": "string" } },
           "path": { "$ref": "#/$defs/path" }
         }

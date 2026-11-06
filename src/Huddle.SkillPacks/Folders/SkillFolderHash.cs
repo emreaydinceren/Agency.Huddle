@@ -24,10 +24,53 @@ public static class SkillFolderHash
     {
         ArgumentNullException.ThrowIfNull(files);
 
+        return HashFiles(files, Normalize);
+    }
+
+    /// <summary>
+    /// The hash a catalog entry's <c>sha256</c> is compared with (S010). It lays the bytes out like
+    /// <see cref="Compute"/> but reads CRLF as LF in every file that is not binary (no NUL in its first 8000 bytes, the
+    /// rule git uses), so a clone made with <c>core.autocrlf=true</c> matches one made without. The hash kept in
+    /// <c>.source.json</c> stays on <see cref="Compute"/>, because changing it would make every recorded hash read as modified.
+    /// </summary>
+    /// <param name="files">File bytes keyed by path relative to the skill folder, using <c>/</c> separators.</param>
+    /// <returns>The lowercase hex SHA-256.</returns>
+    public static string ComputeCatalog(IReadOnlyDictionary<string, byte[]> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+
+        return HashFiles(files, NormalizeForCatalog);
+    }
+
+    /// <summary>Reads every file under <paramref name="folder"/> through <paramref name="reader"/>, skipping any <c>.git</c> folder,
+    /// and hashes it with <see cref="ComputeCatalog"/>.</summary>
+    /// <param name="reader">The reader the caller uses for the rest of its work.</param>
+    /// <param name="folder">The skill folder.</param>
+    /// <returns>The lowercase hex SHA-256.</returns>
+    public static string ComputeCatalogFolder(IFileReader reader, string folder)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+
+        Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        foreach (string file in reader.EnumerateFiles(folder, recursive: true))
+        {
+            string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
+            if (!IsInGitFolder(relative))
+            {
+                files[relative] = reader.ReadAllBytes(file);
+            }
+        }
+
+        return ComputeCatalog(files);
+    }
+
+    private static string HashFiles(IReadOnlyDictionary<string, byte[]> files, Func<string, byte[], byte[]> normalize)
+    {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (string path in files.Keys.Where(static key => !string.Equals(key, SourceFileName, StringComparison.Ordinal) && !IsInGitFolder(key)).Order(StringComparer.Ordinal))
         {
-            byte[] content = Normalize(path, files[path]);
+            byte[] content = normalize(path, files[path]);
             hash.AppendData(Encoding.UTF8.GetBytes(path));
             hash.AppendData([0]);
             hash.AppendData(Encoding.UTF8.GetBytes(content.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)));
@@ -118,6 +161,17 @@ public static class SkillFolderHash
             return content;
         }
 
+        return StripCrlf(content);
+    }
+
+    /// <summary>CRLF to LF unless the file looks binary: a NUL in its first 8000 bytes, as git decides.</summary>
+    private static byte[] NormalizeForCatalog(string _, byte[] content)
+    {
+        return content.AsSpan(0, Math.Min(content.Length, 8000)).Contains((byte)0) ? content : StripCrlf(content);
+    }
+
+    private static byte[] StripCrlf(byte[] content)
+    {
         List<byte> result = new(content.Length);
         for (int index = 0; index < content.Length; index++)
         {

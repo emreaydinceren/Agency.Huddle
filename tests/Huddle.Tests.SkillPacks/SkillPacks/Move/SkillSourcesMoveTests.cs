@@ -408,7 +408,7 @@ public sealed class MoveBoundaryTests
 /// <summary>Pins that the move's output passes the checks (§6.13, "MoveOutputChecksTests").</summary>
 public sealed class MoveOutputChecksTests
 {
-    /// <summary>The full fixture's output has no error, no O002 and no D003, and SKILLS.md reads back.</summary>
+    /// <summary>The full fixture's output has no error but the expected S010 (its stand-in folder is not the pinned one), no O002 and no D003, and SKILLS.md reads back.</summary>
     [Fact]
     public async Task Move_FullFixture_ProducesNoErrorFindings()
     {
@@ -428,7 +428,11 @@ public sealed class MoveOutputChecksTests
         CheckResult result = CheckRunner.Run(resolved, context, new CheckOptions(), Agency.Huddle.SkillPacks.PhysicalFileReader.Instance, TestContext.Current.CancellationToken);
 
         Assert.Empty(registry.Findings);
-        string[] errors = [.. result.Findings.Where(static finding => finding.Severity == Severity.Error).Select(static finding => $"{finding.Code} {Path.GetFileName(finding.File)}: {finding.Message}")];
+
+        // The fixture's folder is stand-in text, not the real Skill's bytes, and the shipped catalog pins the real
+        // folder hash, so the one expected error is S010 for exactly this Skill (the pinned check is live).
+        Assert.Single(result.Findings, static finding => finding.Severity == Severity.Error && finding.Code == "S010" && finding.Message.Contains("\"target-authoring\"", StringComparison.Ordinal));
+        string[] errors = [.. result.Findings.Where(static finding => finding.Severity == Severity.Error && finding.Code != "S010").Select(static finding => $"{finding.Code} {Path.GetFileName(finding.File)}: {finding.Message}")];
         Assert.True(errors.Length == 0, string.Join("\n", errors));
         Assert.DoesNotContain(result.Findings, static finding => finding.Code is "O002" or "D003");
         Assert.Equal(9, registry.Packs.Count + registry.Catalogs.Count);

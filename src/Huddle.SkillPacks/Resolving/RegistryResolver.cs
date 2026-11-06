@@ -386,11 +386,12 @@ public static class RegistryResolver
             }
 
             List<Finding> findings = [];
-            if (state == SkillPathState.Present && pointerHash is not null && entry?.Sha256 is { } pinned
-                && !string.Equals(pointerHash, pinned, StringComparison.OrdinalIgnoreCase))
+            string? catalogHash = state == SkillPathState.Present && pointerHash is not null && entry?.Sha256 is not null && folder is not null ? this.CatalogHash(folder) : null;
+            if (catalogHash is not null && entry?.Sha256 is { } pinned
+                && !string.Equals(catalogHash, pinned, StringComparison.OrdinalIgnoreCase))
             {
                 state = SkillPathState.Altered;
-                findings.Add(Finding.Error("S010", first.ProviderFile, $"Skill \"{name}\": the folder {folder} differs from the pinned commit (its content hash is {pointerHash}, the catalog pins {pinned}). Fetch the whole folder again byte for byte, for example with git at that commit."));
+                findings.Add(Finding.Error("S010", first.ProviderFile, $"Skill \"{name}\": the folder {folder} differs from the pinned commit (its content hash is {catalogHash}, the catalog pins {pinned}). Fetch the whole folder again byte for byte, for example with git at that commit."));
             }
 
             string? source = this.sourceByFile.GetValueOrDefault(first.ProviderFile);
@@ -455,6 +456,24 @@ public static class RegistryResolver
             try
             {
                 return files is IFolderHasher hasher ? hasher.HashFolder(folder) : SkillFolderHash.ComputeFolder(files, folder);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The folder's hash for the catalog's <c>sha256</c> check, which reads CRLF as LF in every text file so a clone
+        /// made with <c>core.autocrlf=true</c> matches; null when the folder cannot be read. Not cached.</summary>
+        private string? CatalogHash(string folder)
+        {
+            try
+            {
+                return SkillFolderHash.ComputeCatalogFolder(files, folder);
             }
             catch (IOException)
             {

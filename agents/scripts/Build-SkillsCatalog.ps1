@@ -68,12 +68,13 @@ function Find-LicenseFile([string]$folder) {
         Sort-Object Name | Select-Object -First 1
 }
 
-# The folder hash Huddle compares (SkillFolderHash.Compute): files ordered by relative path (ordinal, '/'), skipping
-# .source.json and any .git folder; each contributes path, NUL, decimal length, NUL, bytes. CRLF becomes LF in
-# .md .txt .json .yml .yaml files first, so a Windows checkout and a download both match.
+# The folder hash Huddle compares to the catalog (SkillFolderHash.ComputeCatalog): files ordered by relative path
+# (ordinal, '/'), skipping .source.json and any .git folder; each contributes path, NUL, decimal length, NUL, bytes.
+# CRLF becomes LF in every file that is not binary (no NUL in the first 8000 bytes), so a clone made with
+# core.autocrlf=true, one made without it and a download all match.
 function Get-SkillFolderHash([string]$folder) {
     $root = (Resolve-Path -LiteralPath $folder).Path.TrimEnd('\', '/')
-    $textExt = @('.md', '.txt', '.json', '.yml', '.yaml')
+    $latin = [System.Text.Encoding]::Latin1
     $files = @{}
     foreach ($file in Get-ChildItem -LiteralPath $root -File -Recurse -Force) {
         $relative = $file.FullName.Substring($root.Length + 1).Replace('\', '/')
@@ -86,13 +87,10 @@ function Get-SkillFolderHash([string]$folder) {
         [Array]::Sort($keys, [System.StringComparer]::Ordinal)
         foreach ($relative in $keys) {
             [byte[]]$bytes = [System.IO.File]::ReadAllBytes($files[$relative])
-            if ($textExt -contains [System.IO.Path]::GetExtension($relative).ToLowerInvariant()) {
-                $kept = [System.Collections.Generic.List[byte]]::new($bytes.Length)
-                for ($b = 0; $b -lt $bytes.Length; $b++) {
-                    if ($bytes[$b] -eq 13 -and ($b + 1) -lt $bytes.Length -and $bytes[$b + 1] -eq 10) { continue }
-                    $kept.Add($bytes[$b])
-                }
-                $bytes = $kept.ToArray()
+            # Binary means a NUL in the first 8000 bytes (git's rule); every other file has CRLF read as LF.
+            $head = [Math]::Min($bytes.Length, 8000)
+            if ([Array]::IndexOf($bytes, [byte]0, 0, $head) -lt 0) {
+                $bytes = $latin.GetBytes($latin.GetString($bytes).Replace("`r`n", "`n"))
             }
             $hash.AppendData([System.Text.Encoding]::UTF8.GetBytes($relative))
             $hash.AppendData([byte[]]@(0))
@@ -167,8 +165,10 @@ for ($i = $start + 1; $i -lt $lines.Count; $i++) {
         category    = $category
         subCategory = $sub
         requires    = @()
-        sha256      = (Get-SkillFolderHash $skillFolder)
     }
+    # A Skill with an empty path is the whole repository: it holds symlinks and every unrelated file, so a healthy
+    # fetch can differ from the clone that was hashed. It is left unpinned, as the shipped catalog leaves gstack.
+    if ($folderPath) { $entries[$id]['sha256'] = (Get-SkillFolderHash $skillFolder) }
 }
 
 if ($missing.Count -gt 0) {
