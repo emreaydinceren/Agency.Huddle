@@ -1,9 +1,11 @@
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -14,22 +16,49 @@ namespace Agency.Huddle.Tests.Acp;
 /// </summary>
 public sealed class DotAcpPersonaHostWorkModeTests
 {
-    /// <summary>No Work Mode passes through as none, so nothing is sent.</summary>
+    /// <summary>On an Adapter that does not isolate the Human's settings, no Work Mode passes through as none, so nothing is sent.</summary>
     [Fact]
-    public void EffectiveMode_NoWorkMode_IsNull()
+    public void EffectiveMode_NoWorkModeNotIsolated_IsNull()
     {
-        string? mode = Policy().EffectiveMode("nova", null, NullLogger.Instance);
+        string? mode = Policy().EffectiveMode("nova", null, false, NullLogger.Instance);
+
+        Assert.Null(mode);
+    }
+
+    /// <summary>On an isolating Adapter, no Work Mode means the mode Huddle chooses, with no warning: nothing is wrong (issue #414).</summary>
+    [Fact]
+    public void EffectiveMode_NoWorkModeIsolated_IsTheModeHuddleChooses()
+    {
+        RecordingLogger logger = new();
+
+        string? mode = Policy().EffectiveMode("nova", null, true, logger);
+
+        Assert.Equal("default", mode);
+        Assert.Empty(logger.Levels);
+    }
+
+    /// <summary>An operator who hides Manual is obeyed: the hidden list applies to Huddle's own choice as well, and the session keeps the Adapter's mode.</summary>
+    [Fact]
+    public void EffectiveMode_ManualHiddenIsolated_IsNull()
+    {
+        TeamOptions teamOptions = new();
+        teamOptions.Acp.HiddenModes = ["default"];
+        WorkModePolicy policy = new(Options.Create(teamOptions));
+
+        string? mode = policy.EffectiveMode("nova", null, true, NullLogger.Instance);
 
         Assert.Null(mode);
     }
 
     /// <summary>An offered mode passes through unchanged.</summary>
     [Theory]
-    [InlineData("default")]
-    [InlineData("acceptEdits")]
-    public void EffectiveMode_OfferedMode_IsReturned(string workMode)
+    [InlineData("default", false)]
+    [InlineData("acceptEdits", false)]
+    [InlineData("default", true)]
+    [InlineData("acceptEdits", true)]
+    public void EffectiveMode_OfferedMode_IsReturned(string workMode, bool isolated)
     {
-        string? mode = Policy().EffectiveMode("nova", workMode, NullLogger.Instance);
+        string? mode = Policy().EffectiveMode("nova", workMode, isolated, NullLogger.Instance);
 
         Assert.Equal(workMode, mode);
     }
@@ -43,9 +72,24 @@ public sealed class DotAcpPersonaHostWorkModeTests
     {
         RecordingLogger logger = new();
 
-        string? mode = Policy().EffectiveMode("nova", workMode, logger);
+        string? mode = Policy().EffectiveMode("nova", workMode, false, logger);
 
         Assert.Null(mode);
+        Assert.Equal([LogLevel.Warning], logger.Levels);
+    }
+
+    /// <summary>On an isolating Adapter, a dropped hidden mode falls to the mode Huddle chooses, still with the warning (issue #414).</summary>
+    [Theory]
+    [InlineData("bypassPermissions")]
+    [InlineData("auto")]
+    [InlineData("plan")]
+    public void EffectiveMode_HiddenModeIsolated_IsTheModeHuddleChoosesWithAWarning(string workMode)
+    {
+        RecordingLogger logger = new();
+
+        string? mode = Policy().EffectiveMode("nova", workMode, true, logger);
+
+        Assert.Equal("default", mode);
         Assert.Equal([LogLevel.Warning], logger.Levels);
     }
 

@@ -223,7 +223,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     {
         // Enforced here, where the options are built, so a database row written by hand for a hidden
         // mode is inert (ADR-0033). Whether the Adapter advertises the mode is DotAcpAgentHost's check.
-        string? mode = this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
+        // With none, Huddle chooses, so the session does not run in the mode the Human's own Claude settings name (issue #414).
+        string? mode = this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.Profile.IsolateUserSettings, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
 
         return new AgentSessionOptions(
             this.workDir,

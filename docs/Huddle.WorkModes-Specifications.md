@@ -69,7 +69,7 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
 | --- | --- | --- |
 | M1 | The Human gives the Reviewer Persona the **Plan** mode and asks it to review a file | The Reviewer reads and answers. It edits nothing. Its request to leave plan mode is refused. *Hidden by default since 2026-10-01 (D-17): the refused exit ends the Turn cancelled and no reply is posted* |
 | M2 | The Human gives the Builder Persona **Accept edits** | Edits inside its Work Dir stop producing `session/request_permission` requests |
-| M3 | A Persona has no Work Mode | Nothing new is sent. The wire is identical to today |
+| M3 | A Persona has no Work Mode | On an isolating Adapter (`IsolateUserSettings`) the session runs in Manual, whatever the Human's own settings name ([ADR-0079](adr/0079-huddle-chooses-the-mode-of-the-sessions-it-starts.md)). If it already opened in Manual, nothing new is sent. On any other Adapter nothing new is sent |
 | M4 | The Human changes a Persona's Adapter in the card | The Work Mode clears with an inline note, as Model and Effort do |
 | M5 | A Persona with a Work Mode resumes its Room Session after an app restart | The mode is re-applied if the resumed session reports a different one |
 | M6 | The stored mode is no longer advertised, for example after an Adapter upgrade | A warning is logged and the session starts on the Adapter's default |
@@ -99,16 +99,18 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
 
 ## 4. Design principles
 
-1. **The Adapter advertises; Huddle discovers.** A mode id is never a constant in code, with two
-   named exceptions, each a safety rule: the hidden list (§6.6) and the plan guard (§6.9).
+1. **The Adapter advertises; Huddle discovers.** A mode id is never a constant in code, with three
+   named exceptions, each a safety rule: the hidden list (§6.6), the plan guard (§6.9) and the
+   mode Huddle chooses when a Persona chose none (§6.6, ADR-0079).
 2. **Text never guards; code does.** Hiding a mode in the picker is not enough. The refusal is
    in `DotAcpPersonaHost.BuildOptions`, so a database row written by hand cannot select it.
 3. **Copy Effort; do not generalise it.** Same table shape, same probe, same card behaviour,
    same reset rules. Where Work Mode differs, §8 says so, and the ADR records why.
 4. **A stale value never blocks a session.** `rules.md` already says this for Model. It holds
    for a mode.
-5. **Unset is invisible.** A Persona with no Work Mode causes no new request, log line or
-   golden change.
+5. **Unset is invisible to the Human.** A Persona with no Work Mode causes no new log line or
+   golden change. It causes one request only when its session opened in something other than the
+   mode Huddle chooses, which is a user's own `defaultMode` at work (ADR-0079).
 
 ---
 
@@ -329,7 +331,7 @@ internal sealed class WorkModePolicy(IOptions<TeamOptions> options)
 {
     internal bool IsOffered(string modeId);
     internal IReadOnlyList<AgentModeOption> Filter(IReadOnlyList<AgentModeOption> modes);
-    internal string? EffectiveMode(string personaName, string? workMode, ILogger logger);
+    internal string? EffectiveMode(string personaName, string? workMode, bool isolateUserSettings, ILogger logger);
 }
 ```
 

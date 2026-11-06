@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-09-30
+amended-by: 0079
 ---
 
 # A Persona has a Work Mode, chosen from what its Adapter advertises
@@ -29,7 +30,9 @@ ACP has a standard place for this. `session/new` returns a `configOptions` entry
 ## The decision
 
 **A Persona may have a Work Mode.** It is the id of one of the modes its Adapter advertises,
-and unset means the Adapter's default, which is the normal case.
+and unset means the Adapter's default, which is the normal case. *Amended by
+[ADR-0079](0079-huddle-chooses-the-mode-of-the-sessions-it-starts.md): on an isolating Adapter, unset
+now means the mode Huddle chooses, because the Adapter's default turned out to be the Human's own setting.*
 
 - It is stored in its own sibling table, `persona_work_modes`, exactly as Effort is stored in
   `persona_efforts`.

@@ -20,6 +20,14 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 internal sealed class WorkModePolicy
 {
+    /// <summary>
+    /// The mode Huddle chooses for a session whose Persona chose none, on an Adapter that isolates the Human's settings
+    /// (issue #414, ADR-0079): <c>claude-agent-acp</c>'s Manual, where each tool call that needs permission reaches Huddle's
+    /// handler. The Adapter advertises it under this id. A third id named in code, for the same kind of safety reason as the
+    /// hidden list and the plan guard (ADR-0033).
+    /// </summary>
+    internal const string HuddleChosenMode = "default";
+
     private static readonly string[] DefaultHidden = ["bypassPermissions", "auto", "plan"];
 
     private readonly HashSet<string> hidden;
@@ -54,24 +62,32 @@ internal sealed class WorkModePolicy
     /// The Work Mode a session should actually be started in. This is the enforcement: a picker that hides
     /// a mode is only convenience, and a database row written by hand would still name it, so the hidden
     /// list is applied again here, where the options are built. Whether the Adapter advertises the mode
-    /// is not checked here; that is the host's job, where the catalog is in hand.
+    /// is not checked here; that is the host's job, where the catalog is in hand. With no usable Work Mode, an isolating
+    /// Adapter gets <see cref="HuddleChosenMode"/>, because otherwise the session keeps whatever the Human's own
+    /// <c>permissions.defaultMode</c> names: the Adapter reads that for itself, whatever <c>settingSources</c> says (issue #414).
     /// </summary>
     /// <param name="personaName">The Persona's name, for the log line.</param>
     /// <param name="workMode">The Persona's stored Work Mode, or <see langword="null"/>.</param>
+    /// <param name="isolateUserSettings">The Adapter Profile's <see cref="AdapterProfile.IsolateUserSettings"/>.</param>
     /// <param name="logger">Receives a warning when a stored mode is dropped.</param>
     /// <returns>The mode to send, or <see langword="null"/> to send none.</returns>
-    internal string? EffectiveMode(string personaName, string? workMode, ILogger logger)
+    internal string? EffectiveMode(string personaName, string? workMode, bool isolateUserSettings, ILogger logger)
     {
-        if (workMode is null || this.IsOffered(workMode))
+        if (workMode is not null && this.IsOffered(workMode))
         {
             return workMode;
         }
 
-        logger.LogWarning(
-            "Persona '{PersonaName}' has Work Mode '{WorkMode}', which is hidden; starting in the Adapter's own mode.",
-            personaName,
-            workMode);
+        string? chosen = isolateUserSettings && this.IsOffered(HuddleChosenMode) ? HuddleChosenMode : null;
+        if (workMode is not null)
+        {
+            logger.LogWarning(
+                "Persona '{PersonaName}' has Work Mode '{WorkMode}', which is hidden; starting in {Mode}.",
+                personaName,
+                workMode,
+                chosen ?? "the Adapter's own mode");
+        }
 
-        return null;
+        return chosen;
     }
 }

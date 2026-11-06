@@ -85,13 +85,89 @@ public sealed class WorkModeConformanceTests
         Assert.Equal("auto", (string?)call["params"]?["value"]);
     }
 
+    /// <summary>
+    /// Issue #414: a user's own <c>permissions.defaultMode</c> puts a new session in <c>auto</c>. A Persona with no Work Mode on
+    /// an isolating Adapter is moved out of it, so the session runs in the mode Huddle chose and not the one the user's settings named.
+    /// </summary>
+    [Fact]
+    public async Task SessionOpensInUsersAuto_NoWorkMode_HuddleSetsManual()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.");
+
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
+            persona, cancellationToken: ct, scriptAgent: static agent => WorkModeConformanceTests.AdvertiseModes(agent, "auto"));
+
+        JsonObject call = await fixture.Agent.WaitForAsync("session/set_config_option", TimeSpan.FromSeconds(5));
+        Assert.Equal("default", (string?)call["params"]?["value"]);
+    }
+
+    /// <summary>A Work Mode the Human chose still wins over the user's <c>auto</c>, and over Huddle's own choice.</summary>
+    [Fact]
+    public async Task SessionOpensInUsersAuto_ChosenWorkMode_IsTheOneSet()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.", WorkMode: "acceptEdits");
+
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
+            persona, cancellationToken: ct, scriptAgent: static agent => WorkModeConformanceTests.AdvertiseModes(agent, "auto"));
+
+        JsonObject call = await fixture.Agent.WaitForAsync("session/set_config_option", TimeSpan.FromSeconds(5));
+        Assert.Equal("acceptEdits", (string?)call["params"]?["value"]);
+    }
+
+    /// <summary>A stored row for a hidden mode is dropped, and the session still leaves the user's <c>auto</c>.</summary>
+    [Fact]
+    public async Task SessionOpensInUsersAuto_HiddenWorkMode_HuddleSetsManual()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.", WorkMode: "bypassPermissions");
+
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
+            persona, cancellationToken: ct, scriptAgent: static agent => WorkModeConformanceTests.AdvertiseModes(agent, "auto"));
+
+        JsonObject call = await fixture.Agent.WaitForAsync("session/set_config_option", TimeSpan.FromSeconds(5));
+        Assert.Equal("default", (string?)call["params"]?["value"]);
+    }
+
+    /// <summary>
+    /// An Adapter entry that does not opt in to isolation keeps the Adapter's own mode: the operator was warned at startup that
+    /// the Human's settings load there, and other Adapters advertise other modes.
+    /// </summary>
+    [Fact]
+    public async Task SessionOpensInUsersAuto_AdapterNotIsolated_NothingIsSet()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.", Adapter: "plain");
+        Dictionary<string, string?> config = new(StringComparer.Ordinal)
+        {
+            ["Team:Acp:Adapters:0:Id"] = "plain",
+            ["Team:Acp:Adapters:0:Command"] = "plain-acp",
+            ["Team:Acp:Adapters:0:Args:0"] = "plain-acp.js",
+        };
+
+        MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
+            persona, config, cancellationToken: ct, scriptAgent: static agent => WorkModeConformanceTests.AdvertiseModes(agent, "auto"));
+        await fixture.SessionNewAsync(ct);
+        await fixture.DisposeAsync();
+
+        Assert.DoesNotContain(
+            fixture.Agent.Received,
+            message => string.Equals((string?)message["method"], "session/set_config_option", StringComparison.Ordinal));
+    }
+
     /// <summary>Scripts the peer to advertise the five modes <c>claude-agent-acp</c> advertises, under the id "permission".</summary>
-    private static void AdvertiseModes(Agency.Huddle.Acp.Tests.Fakes.FakeAcpAgent agent)
+    private static void AdvertiseModes(Agency.Huddle.Acp.Tests.Fakes.FakeAcpAgent agent) => WorkModeConformanceTests.AdvertiseModes(agent, "default");
+
+    /// <summary>Scripts the peer's modes, with a new session reporting <paramref name="initial"/> as the current one.</summary>
+    /// <param name="agent">The peer.</param>
+    /// <param name="initial">The mode a new session starts in, standing for the Adapter's reading of the user's settings.</param>
+    private static void AdvertiseModes(Agency.Huddle.Acp.Tests.Fakes.FakeAcpAgent agent, string initial)
     {
         agent.OnNewSession = _ => Task.FromResult(new JsonObject
         {
             ["sessionId"] = "sess-1",
-            ["configOptions"] = WorkModeConformanceTests.ModeOptions("default"),
+            ["configOptions"] = WorkModeConformanceTests.ModeOptions(initial),
         });
         agent.OnSetConfigOption = parameters => Task.FromResult(new JsonObject
         {
