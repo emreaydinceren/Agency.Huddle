@@ -27,8 +27,11 @@ namespace Agency.Huddle.App.Pipes;
 /// <param name="pipeName">The pipe to listen on.</param>
 /// <param name="onConnected">Takes ownership of each connected instance, including its disposal.</param>
 /// <param name="logger">Receives a failed accept.</param>
-internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStream> onConnected, ILogger logger)
+/// <param name="timeProvider">Times the wait for a pipe name that is only briefly held; the system clock when omitted.</param>
+internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStream> onConnected, ILogger logger, TimeProvider? timeProvider = null)
 {
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+
     /// <summary>
     /// In and out buffer size for every pipe instance, in bytes. Sized to hold many whole protocol
     /// envelopes rather than to any measured figure - the requirement is only that a normal write never
@@ -40,13 +43,25 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
     /// <summary>The pause after a failed accept before listening again.</summary>
     private static readonly TimeSpan AcceptRetryDelay = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>How long a refused first claim of the pipe name is retried before another copy is concluded to hold it.</summary>
+    private static readonly TimeSpan ClaimWaitBound = TimeSpan.FromSeconds(5);
+
+    /// <summary>The pause between claim attempts.</summary>
+    private static readonly TimeSpan ClaimRetryDelay = TimeSpan.FromMilliseconds(100);
+
     /// <summary>Accepts clients until <paramref name="stoppingToken"/> is cancelled, then disposes the listening instance.</summary>
     /// <param name="stoppingToken">Ends the loop.</param>
     /// <returns>A task that completes when the loop has stopped.</returns>
     /// <exception cref="InvalidOperationException">Another server already listens on the pipe name.</exception>
     public async Task RunAsync(CancellationToken stoppingToken)
     {
-        NamedPipeServerStream listening = this.ClaimPipeName();
+        NamedPipeServerStream? claimed = await this.ClaimPipeNameAsync(stoppingToken).ConfigureAwait(false);
+        if (claimed is null)
+        {
+            return;
+        }
+
+        NamedPipeServerStream listening = claimed;
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -107,19 +122,41 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
     /// refused instead of shared. Shared, two copies of Huddle on one machine each took some of the other's Agents: an Agent
     /// connected to whichever program's listener answered, and stayed Offline in its own with nothing logged.
     /// </summary>
-    /// <returns>The first instance, owned by the caller.</returns>
-    /// <exception cref="InvalidOperationException">Another server already listens on the pipe name.</exception>
-    private NamedPipeServerStream ClaimPipeName()
+    /// <remarks>
+    /// A refusal is retried for <see cref="ClaimWaitBound"/> first: on a quick restart the previous host's listener is still going
+    /// away, and on Linux that shows as <see cref="UnauthorizedAccessException"/> while a same-process instance of the name is
+    /// not yet disposed. A socket file left by a process that is gone is unlinked by the runtime, never by this class, so a file a live copy owns is never touched.
+    /// </remarks>
+    /// <param name="stoppingToken">Ends the wait.</param>
+    /// <returns>The first instance, owned by the caller; <see langword="null"/> when the host stopped during the wait.</returns>
+    /// <exception cref="InvalidOperationException">Another server still listens on the pipe name after the wait.</exception>
+    private async Task<NamedPipeServerStream?> ClaimPipeNameAsync(CancellationToken stoppingToken)
     {
-        try
+        long started = this.clock.GetTimestamp();
+        while (true)
         {
-            return this.CreateInstance(PipeOptions.FirstPipeInstance);
-        }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-        {
-            throw new InvalidOperationException(
-                $"Another program is already listening on the pipe '{pipeName}', most likely another copy of Huddle. Stop it, or give this copy its own pipe with Team:PipeName.",
-                ex);
+            try
+            {
+                return this.CreateInstance(PipeOptions.FirstPipeInstance);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                if (this.clock.GetElapsedTime(started) >= ClaimWaitBound)
+                {
+                    throw new InvalidOperationException(
+                        $"Another program is already listening on the pipe '{pipeName}', most likely another copy of Huddle. Stop it, or give this copy its own pipe with Team:PipeName.",
+                        ex);
+                }
+            }
+
+            try
+            {
+                await Task.Delay(ClaimRetryDelay, this.clock, stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return null;
+            }
         }
     }
 
