@@ -113,7 +113,8 @@ give the page more room. The sidebar opens on **Chats**.
 | **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
-| **Library** | One **Library** link. The Library's roots (**Teams**, **Agents**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
+| **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
+| **Scheduled** | Every Job, for you and for each Agent, and **New job**. See [Scheduling jobs](#scheduling-jobs). |
 | **Remote access** | Who may reach Huddle from other devices. **Strict local** (on by default) means only this computer, no sign-in; turn it off to use the rest: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
 
 The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
@@ -146,7 +147,7 @@ Every page has its own address, so you can bookmark it:
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
 | `/tasks/item/{TaskId}/edit` | One Task in edit mode, in a Tab of its own, for example `/tasks/item/BUSI-0001/edit` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
-| `/settings/{tab}` | Settings: Profile, Prompts, Appearance, Personas, Skills, Team types, Library. A blank system opens on `/settings/profile` until you save a profile |
+| `/settings/{tab}` | Settings: Profile, Prompts, Helpers, Spending, Appearance, Personas, Skills, Team types, Library, Sessions, Remote access. A blank system opens on `/settings/profile` until you save a profile |
 
 ### Needs you
 
@@ -989,7 +990,7 @@ A Team's **process** says how its work is done, in two files in the Team folder:
   steps, the `## Onboarding` section and the Definition of Done. See
   [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 - **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
-  - `gates:` lists the gates the Team enforces, from the four below.
+  - `gates:` lists the gates the Team enforces, from [the five gates](#the-five-gates).
   - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
   - `wip:` sets a limit on work in progress.
   - `retro:` and `digest:` set when a retrospective and a digest run, such as
@@ -1024,7 +1025,7 @@ lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 
 | Gate | Refuses |
 | --- | --- |
-| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Agent is told to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the Agent is told to ask for a fresh Accept. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
+| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
@@ -1074,10 +1075,11 @@ not shown to it. This is a guard against honest mistakes, not a sandbox. With th
 Claude Code Adapter it also works when the Adapter would otherwise run commands
 without asking (its `auto` mode), because Huddle installs a small hook that makes it
 ask before a `git merge` or `git push`. A Codex Adapter has no such hook, so the gate
-only works there in modes where Codex asks. It does not
-catch a git alias, `FOO=1 git push`, `sudo`, a command wrapped in `bash -c`, a script
-that pushes, or a push from an IDE or another tool. Your own approval of a prompt is
-never intercepted.
+only works there in modes where Codex asks. It reads through a `FOO=1` prefix, `sudo`,
+`env`, a command wrapped in `bash -c` or `pwsh -Command`, and redirections. It does not
+catch a git alias, `$(…)`, a script that pushes, a rebase onto main, `gh pr merge`, a
+direct commit on main, or a push from an IDE or another tool. Your own approval of a
+prompt is never intercepted.
 
 > **Example (Scenario 4).** The Team's process lists `failing-test-before-fix`, so a
 > bug Task cannot move to Review until its Evidence shows the test failing and then
@@ -1414,9 +1416,9 @@ it with their own tools.
   box.
 - The paperclip, paste and drop appear only when the Library is on.
 - In a Team's chat, files land in that Team's **`raw/`** folder, kept exactly as
-  they arrived. Other Rooms put their files in **Uploads** in the Library, one
+  they arrived. Other Rooms put their files in the **Raw** root of the Library, one
   folder per Room.
-- Deleting a Room sends its files in **Uploads** to the Recycle Bin. Archiving
+- Deleting a Room sends its files in **Raw** to the Recycle Bin. Archiving
   keeps them.
 - The Message that carries a file's path is the only notice of it. File Changes
   does not report uploads, so an Agent is not told of one by a file change.
@@ -1537,9 +1539,7 @@ and how to use the pattern day to day. Read it before you set up Teams for areas
 work, or when you wonder where something should be saved.
 
 > [!NOTE]
-> **Two limits.** Jobs have no monthly timetable, so the Chief of Staff's monthly check runs
-> from a weekly Job on Mondays and acts only on the first Monday of the month. And Huddle does
-> not restrict what an Agent writes in a Team's workspace.
+> **One limit.** Huddle does not restrict what an Agent writes in a Team's workspace.
 
 ### The principle
 
@@ -1739,11 +1739,11 @@ level. See [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 ## Memory and file changes
 
 Agents do not keep conversations between restarts, so anything worth
-remembering goes into files. There are two kinds of memory, both plain Markdown
-folders.
+remembering goes into files. Memory is kept in plain Markdown folders.
 
 | Memory | Folder | Who sees it |
 | --- | --- | --- |
+| **Huddle-wide memory** | `Teams/memory/` | Every Agent. Only the Chief of Staff writes it. |
 | **Personal memory** | `Agents/<Name>/work/memory/` | That Agent only. Created when the Agent starts. |
 | **Team Memory** | `Teams/<Team>/memory/` | Every member of the Team. |
 | **Project memory** | `Teams/<Team>/<Project>/memory/` | Every member of the Team. |
@@ -2027,7 +2027,7 @@ and you judge the evidence rather than the tone.
 
 A Task goes through five steps: **Draft, Check, Track, Gate, Decide.** The assignee
 drafts. Other Agents supply the Proof the Team asks for. The Task's Change log
-records who did what. When the Proof is complete the assignee moves the Task to
+records who did what. When the Proof is complete Huddle moves the Task from Review to
 **Needs you**, and you **Accept**, **Request changes** or **Decline**. Two rules hold
 however the Team's process is set up: only you can mark a gated Task Done, and a
 Team's process can add Proof but never remove your decision.
@@ -2214,6 +2214,10 @@ A **root** is a top-level folder shown in the Library:
 | --- | --- |
 | **Teams** | `Teams/`: Team and Project folders and their notes. Task folders (`_tasks`) are hidden. |
 | **Agents** | `Agents/`: each Agent's definition and `work/` folder. |
+| **Raw** | `Raw/`: files attached in Rooms outside a Team, one folder per Room. |
+| **Archive** | `Archive/`: archived Teams and Projects. Read-only. |
+| **Prompts** | `Prompts/`: one file per prompt you changed. |
+| **Skill Sources** | The Skill Sources folder. Read-only. |
 | Pinned folders | Any folder on your machine you add with **Add folder** or in **Settings › Library**. |
 
 Pinned folders are saved in `library-roots.json` in the data root. The file is
@@ -2309,9 +2313,10 @@ invalid Skill is listed under **Problems** with the reason.
 
 ### Changing a built-in Skill
 
-Huddle ships four Skills: `team-building` and `team-rollup`, used by the Chief of
+Huddle ships seven Skills: `team-building` and `team-rollup`, used by the Chief of
 Staff, `team-management`, used by Team managers to see other Teams, handle Requests
-and propose Sprints, and `retrospective`, used by the Retro agent. To change one,
+and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
+and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
 others still come from the built-in version. On the **Skills** tab, **Restore default** in the
@@ -2465,6 +2470,7 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
+| **Sessions** | How much a fresh session rereads of a Room: a limit in Messages and an estimated limit in tokens. Applies from the next fresh session, with no restart. | `session-settings.json` |
 
 **Spending** (**Settings › Spending**, read-only) shows what the Adapters have reported as spent: one line per Team, the Chief of Staff, each Agent in no Team and the Helpers, each with its cost and, for Helpers, its calls. Then a **Total** counts every Agent once, however many Teams it is in, so a line appears when an Agent's spend counts in more than one Team. Amounts are shown per currency and are never added across currencies. The panel covers only what the Adapters report, and removing an Agent removes its spend from it. It sets no budgets or limits.
 
