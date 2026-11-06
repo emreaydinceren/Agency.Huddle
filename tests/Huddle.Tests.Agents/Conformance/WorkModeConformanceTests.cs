@@ -143,6 +143,7 @@ public sealed class WorkModeConformanceTests
         {
             ["Team:Acp:Adapters:0:Id"] = "plain",
             ["Team:Acp:Adapters:0:Command"] = "plain-acp",
+            ["Team:Acp:Adapters:0:Args:0"] = "plain-acp.js",
         };
 
         MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(
