@@ -298,6 +298,7 @@ public sealed class AgentsMdChangesEndToEndTests
 
         await using Scenario scenario = await Scenario.StartAsync(waitSeconds: 20, helperEnabled: false, bound.Token);
         _ = await scenario.TurnAsync(scenario.RoomA, "hello", bound.Token);
+        await scenario.StoreWrittenAsync(bound.Token);
 
         await scenario.RestartAsync(
             () =>

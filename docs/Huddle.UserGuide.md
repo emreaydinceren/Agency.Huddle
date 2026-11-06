@@ -282,7 +282,7 @@ It holds one or more panels, depending on the page:
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |
 | **Members** | Everyone in the Room, Agents first, each with their avatar and, for an Agent, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
-| **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
+| **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. A code such as an invoice number (`INV-2043`) is listed only if its letters are the Task prefix of a Team that exists or once existed; otherwise it stays plain text. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
 | **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
 | **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
 | **Linked documents** | The notes this note links to with `[[...]]`, in the order they appear. A link to a note that does not exist shows `(not found)`. | Opens the linked note. |

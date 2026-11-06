@@ -41,6 +41,7 @@ internal sealed class ReferenceFixture : IDisposable
         this.library = library;
         this.Tasks = tasks;
         this.Directory = directory;
+        this.Prefixes = new TaskIdAllocator(options);
         this.Nova = nova;
         this.Options = options;
         this.libraryResolver = new LibraryReferenceResolver(library.Resolver, library.Index, options);
@@ -52,6 +53,9 @@ internal sealed class ReferenceFixture : IDisposable
 
     /// <summary>The Task store, seeded when the fixture was built.</summary>
     public TaskStore Tasks { get; }
+
+    /// <summary>The Task id prefixes ever given to a Team; call <c>PrefixFor</c> to give one.</summary>
+    public TaskIdAllocator Prefixes { get; }
 
     /// <summary>The Rooms and their Members.</summary>
     public SqliteTeamDirectory Directory { get; }
@@ -99,7 +103,7 @@ internal sealed class ReferenceFixture : IDisposable
     /// <param name="libraryOverride">A Library resolver to use instead of the real one, or null.</param>
     /// <returns>The resolver.</returns>
     public ReferenceResolver Resolver(ITeamCatalog? catalog = null, ILibraryReferenceResolver? libraryOverride = null) =>
-        new(this.Tasks, this.Directory, catalog ?? this.Catalog, this.types, libraryOverride ?? this.libraryResolver, this.Options);
+        new(this.Tasks, this.Prefixes, this.Directory, catalog ?? this.Catalog, this.types, libraryOverride ?? this.libraryResolver, this.Options);
 
     /// <summary>Builds the snapshotter over <see cref="Resolver"/>.</summary>
     /// <param name="catalog">A Team catalog to use instead of <see cref="Catalog"/>, or null.</param>

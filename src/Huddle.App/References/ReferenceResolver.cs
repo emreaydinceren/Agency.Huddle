@@ -14,6 +14,7 @@ namespace Agency.Huddle.App.References;
 /// the Library resolver. Tasks and the Library are skipped when their feature is off.
 /// </summary>
 /// <param name="tasks">Where Tasks live.</param>
+/// <param name="prefixes">Which Task id prefixes a Team has carried, so an invoice number is not read as a Task.</param>
 /// <param name="directory">Where Rooms and their Members live.</param>
 /// <param name="teams">The live Team list.</param>
 /// <param name="types">The Team types, for a Team's type label.</param>
@@ -21,6 +22,7 @@ namespace Agency.Huddle.App.References;
 /// <param name="options">Supplies the Tasks and Library feature flags.</param>
 internal sealed class ReferenceResolver(
     TaskStore tasks,
+    ITaskPrefixes prefixes,
     ITeamDirectory directory,
     ITeamCatalog teams,
     TeamTypeCatalog types,
@@ -121,9 +123,15 @@ internal sealed class ReferenceResolver(
             return null;
         }
 
-        if (!TaskId.TryParse(key, out TaskId id) || (tasks.Get(id) ?? tasks.FindArchived(id)) is not TaskItem task)
+        if (!TaskId.TryParse(key, out TaskId id))
         {
             return dropMissing ? null : new GoneReference(ReferenceKind.Task, key);
+        }
+
+        if ((tasks.Get(id) ?? tasks.FindArchived(id)) is not TaskItem task)
+        {
+            // A prefix no Team ever carried (an invoice number such as INV-2043) is not a Task reference at all.
+            return dropMissing || !prefixes.IsKnown(id.Prefix) ? null : new GoneReference(ReferenceKind.Task, key);
         }
 
         return new ResolvedTask(task.Id, task.Title, task.Status, task.Assignee, task.Location.Team);
