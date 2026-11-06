@@ -15,6 +15,9 @@ internal enum GateId
     /// <summary>A bug Task cannot move to Review until an Evidence line shows a failing test before the fix.</summary>
     FailingTestBeforeFix,
 
+    /// <summary>A merge into main waits for an accepted Task of the Team, whoever runs it and however the Task is worded (#401).</summary>
+    AcceptBeforeMerge,
+
     /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in _team.md.</summary>
     HumanGate,
 

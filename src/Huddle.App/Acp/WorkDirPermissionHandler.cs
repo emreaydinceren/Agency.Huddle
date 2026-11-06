@@ -246,38 +246,13 @@ internal sealed class WorkDirPermissionHandler(
         return null;
     }
 
-    /// <summary>Whether any segment of the shell line is <c>git [options] merge|push</c>. See the remarks for what this misses.</summary>
+    /// <summary>
+    /// Whether the shell line runs <c>git merge</c>, <c>git push</c>, or <c>git pull</c> of a branch other than main, also
+    /// after <c>NAME=value</c> words and inside <c>bash -c "…"</c> (see <see cref="GitCommandLine"/>).
+    /// </summary>
     /// <param name="command">The whole shell line.</param>
     /// <returns><see langword="true"/> when a segment runs git merge or git push.</returns>
-    private static bool IsMergeOrPush(string command)
-    {
-        foreach (List<string> words in SplitSegments(command))
-        {
-            if (words.Count < 2 || !IsGit(Unquote(words[0])))
-            {
-                continue;
-            }
-
-            int index = 1;
-            while (index < words.Count && Unquote(words[index]).StartsWith('-'))
-            {
-                string option = Unquote(words[index]);
-                index += GitOptionsWithValue.Contains(option, StringComparer.Ordinal) ? 2 : 1;
-            }
-
-            if (index < words.Count)
-            {
-                string subcommand = Unquote(words[index]);
-                if (string.Equals(subcommand, "merge", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(subcommand, "push", StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
+    private static bool IsMergeOrPush(string command) => GitCommandLine.NeedsGate(command);
 
     /// <summary>Whether the word names the git executable, with or without a directory or <c>.exe</c>.</summary>
     /// <param name="word">The first word of a segment, unquoted.</param>

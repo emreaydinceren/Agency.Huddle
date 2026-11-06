@@ -1915,7 +1915,10 @@ internal static class PromptCatalog
                 Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
                 chat: the Human accepts in Needs You. Only the Human can Accept it, and only the
                 Human can turn human_gate off or clear the Action. After the Accept, the assignee
-                carries out the Action and then moves the Task to Done. Use list_tasks with the
+                carries out the Action and then moves the Task to Done. In a Team with the
+                accept-before-merge gate, a merge into main is refused until a Task of the Team has
+                the Human's Accept, whoever runs it: put the merge in the Task's Action, wait in
+                Needs You, and merge after the Accept. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
                 """,
             Placeholders: [],

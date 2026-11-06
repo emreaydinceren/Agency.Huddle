@@ -185,7 +185,7 @@ internal sealed class TaskService : IDisposable
         lock (this.mutateGate)
         {
             (result, change) = this.UpdateCore(id, patch, baseVersion, actor, humanOverridesGates, out refusedMove);
-            if (change is not null && change.Changes.Any(static field => field.Field is TaskField.Status or TaskField.HumanGate))
+            if (change is not null && change.Changes.Any(static field => field.Field is TaskField.Status or TaskField.HumanGate or TaskField.Action))
             {
                 moved = this.MoveReadyToNeedsYou(change.After, actor);
             }

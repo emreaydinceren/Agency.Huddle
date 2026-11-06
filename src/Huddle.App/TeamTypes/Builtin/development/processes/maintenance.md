@@ -1,7 +1,7 @@
 ---
 title: 'Maintenance'
 template: 'maintenance@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge', 'failing-test-before-fix']
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'failing-test-before-fix', 'accept-before-merge']
 retro: { every: 10, unit: 'done-tasks' }
 wip: 2
 checkCommand: 'dotnet test'
@@ -43,6 +43,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
+- `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
 - `failing-test-before-fix`: Huddle refuses to move a bug Task to Review until an Evidence line shows a failing test written before the fix.
 
 ## Definition of Done

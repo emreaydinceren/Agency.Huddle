@@ -70,6 +70,31 @@ internal static class Acceptance
         return new AcceptanceInfo(state, entry.At, entry.Actor, hash);
     }
 
+    /// <summary>
+    /// When the Human's Accept took the Task straight to Done (a gated Task with no Action), read from its Change log: the
+    /// Task is Done and its last two entries are <c>accepted</c> and the move out of Needs You, written together.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <returns>The time of that Accept, or <see langword="null"/> when the Task did not end that way.</returns>
+    internal static DateTimeOffset? AcceptedIntoDoneAt(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        IReadOnlyList<ChangeLogEntry> log = task.ChangeLog;
+        if (task.Status != TaskState.Done
+            || log.Count < 2
+            || HashOf(log[^2].Summary) is null
+            || !string.Equals(log[^1].Summary, "status: Needs You → Done", StringComparison.Ordinal)
+            || log[^1].At != log[^2].At
+            || !string.Equals(log[^1].Actor, log[^2].Actor, StringComparison.Ordinal))
+        {
+            // Written together by one Accept means one time and one actor; a later move to Done by an Agent has its own.
+            return null;
+        }
+
+        return log[^2].At;
+    }
+
     /// <summary>When the Task last moved into Needs You, read from its Change log.</summary>
     /// <param name="task">The Task.</param>
     /// <returns>The time of the latest entry into Needs You, or <see langword="null"/> when the log records none.</returns>
