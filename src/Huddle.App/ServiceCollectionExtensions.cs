@@ -396,6 +396,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalService>();
         services.AddSingleton<TaskIdAllocator>();
+        services.AddSingleton<ITaskPrefixes>(static provider => provider.GetRequiredService<TaskIdAllocator>());
 
         return services;
     }

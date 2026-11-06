@@ -14,7 +14,7 @@ namespace Agency.Huddle.App.Tasks;
 /// Deliberately synchronous, like <see cref="Data.PersonaModelStore"/>: the only callers are
 /// <c>TaskStore</c>'s synchronous file-scan and write paths.
 /// </remarks>
-internal sealed class TaskIdAllocator
+internal sealed class TaskIdAllocator : ITaskPrefixes
 {
     private const string DdlCreateTaskPrefixes = """
         CREATE TABLE IF NOT EXISTS task_prefixes (
@@ -59,6 +59,22 @@ internal sealed class TaskIdAllocator
             {
                 return candidate;
             }
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Rows are never deleted, so the prefix of a deleted Team stays known.</remarks>
+    public bool IsKnown(string prefix)
+    {
+        ArgumentNullException.ThrowIfNull(prefix);
+
+        lock (this.gate)
+        {
+            using SqliteConnection connection = OpenConnection(this.connectionString);
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT 1 FROM task_prefixes WHERE prefix = $p;";
+            select.Parameters.AddWithValue("$p", prefix);
+            return select.ExecuteScalar() is not null;
         }
     }
 

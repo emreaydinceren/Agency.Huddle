@@ -243,10 +243,11 @@ public sealed class ReferenceResolverTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        string prefix = fixture.Prefixes.PrefixFor("Zeta");
 
         IReadOnlyList<ResolvedReference> result = await fixture.Resolver().ResolveAsync(
             [
-                ReferenceResolverTests.Candidate(ReferenceKind.Task, "ZZZ-0009"),
+                ReferenceResolverTests.Candidate(ReferenceKind.Task, prefix + "-0009"),
                 ReferenceResolverTests.Candidate(ReferenceKind.Room, "no-such-room"),
                 ReferenceResolverTests.Candidate(ReferenceKind.Team, "Nobody"),
             ],
@@ -254,11 +255,37 @@ public sealed class ReferenceResolverTests
 
         Assert.Equal(
             [
-                new GoneReference(ReferenceKind.Task, "ZZZ-0009"),
+                new GoneReference(ReferenceKind.Task, prefix + "-0009"),
                 new GoneReference(ReferenceKind.Room, "no-such-room"),
                 new GoneReference(ReferenceKind.Team, "Nobody"),
             ],
             result);
+    }
+
+    /// <summary>An invoice number whose prefix no Team ever had is not a Task: it resolves to nothing, not to a gone reference (issue 388).</summary>
+    [Fact]
+    public async Task Resolve_UnknownPrefix_YieldsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        _ = fixture.Prefixes.PrefixFor("Harbor");
+
+        IReadOnlyList<ResolvedReference> result = await fixture.Resolver().ResolveAsync([ReferenceResolverTests.Candidate(ReferenceKind.Task, "INV-2043")], ct);
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>A Task id of a prefix a Team has carried, with no Task behind it, is still gone, so a deleted Task shows as unavailable (issue 388).</summary>
+    [Fact]
+    public async Task Resolve_KnownPrefixMissingTask_IsGone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        string prefix = fixture.Prefixes.PrefixFor("Harbor");
+
+        IReadOnlyList<ResolvedReference> result = await fixture.Resolver().ResolveAsync([ReferenceResolverTests.Candidate(ReferenceKind.Task, prefix + "-0042")], ct);
+
+        Assert.Equal([new GoneReference(ReferenceKind.Task, prefix + "-0042")], result);
     }
 
     /// <summary>With Tasks disabled a Task candidate yields nothing, not even a gone reference.</summary>

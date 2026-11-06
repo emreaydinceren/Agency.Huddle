@@ -115,6 +115,7 @@ public sealed class MessageReferencesTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        _ = fixture.Prefixes.PrefixFor("Platform");
         await using MudBunitContext ctx = new();
         ChatMessage message = MessageWith(new MessageReference(ReferenceKind.Task, "PLAT-0009", "PLAT-0009", "Old task", "Todo"));
 

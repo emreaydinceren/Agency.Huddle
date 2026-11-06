@@ -8,6 +8,7 @@
 @inject RoomEvents Events
 @inject TaskEvents TaskEvents
 @inject ITaskReferenceResolver TaskResolver
+@inject ITaskPrefixes Prefixes
 @inject TabService Tabs
 
 @*
@@ -126,7 +127,17 @@ else
         List<TaskRow> resolved = [];
         foreach (RoomMention mention in this.mentions)
         {
-            TaskReference? task = TaskId.TryParse(mention.Key, out TaskId id) ? this.TaskResolver.Resolve(id) : null;
+            TaskReference? task = null;
+            if (TaskId.TryParse(mention.Key, out TaskId id))
+            {
+                task = this.TaskResolver.Resolve(id);
+                if (task is null && !this.Prefixes.IsKnown(id.Prefix))
+                {
+                    // No Team ever carried this prefix (an invoice number such as INV-2043): not a Task.
+                    continue;
+                }
+            }
+
             string shown = task is not null ? task.Id.ToString() : mention.Key;
             resolved.Add(new TaskRow(shown, mention.Label, mention.LatestMessageId, task));
         }

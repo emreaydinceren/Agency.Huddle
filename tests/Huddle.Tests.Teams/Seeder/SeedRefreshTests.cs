@@ -119,7 +119,7 @@ public sealed class SeedRefreshTests
         {
             Teams = [.. plan.Teams.Select(t => new TeamSummary(t.Name, t.Projects, [], true))],
         };
-        ReferenceResolver resolver = new(tasks, directory, catalog, RoleFixtures.Types(typesDir), new LibraryReferenceResolver(library.Resolver, library.Index, options), options);
+        ReferenceResolver resolver = new(tasks, new TaskIdAllocator(options), directory, catalog, RoleFixtures.Types(typesDir), new LibraryReferenceResolver(library.Resolver, library.Index, options), options);
         ReferenceSnapshotter snapshotter = new(resolver, NullLogger<ReferenceSnapshotter>.Instance);
         FileChatStore chat = new(options, NullLogger<FileChatStore>.Instance);
 

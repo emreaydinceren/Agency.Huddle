@@ -32,6 +32,13 @@ public sealed class RoomTasksPanelTests
         }
     }
 
+    /// <summary>A prefix directory that knows exactly the prefixes it is given.</summary>
+    private sealed class FakePrefixes(params string[] known) : ITaskPrefixes
+    {
+        /// <inheritdoc />
+        public bool IsKnown(string prefix) => known.Contains(prefix, StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>The services the panel reads, over a real <see cref="FileChatStore"/>.</summary>
     private sealed class Setup : IAsyncDisposable
     {
@@ -62,6 +69,7 @@ public sealed class RoomTasksPanelTests
             this.Ctx.Services.AddSingleton(this.TaskEvents);
             this.Ctx.Services.AddSingleton<ITaskReferenceResolver>(this.Counting);
             this.Ctx.Services.AddSingleton(this.Tabs);
+            this.Ctx.Services.AddSingleton<ITaskPrefixes>(new FakePrefixes("SUPP"));
         }
 
         public async Task SayAsync(string id, string text, CancellationToken ct, string roomId = RoomId)
@@ -149,6 +157,22 @@ public sealed class RoomTasksPanelTests
 
         cut.WaitForAssertion(() => Assert.Equal("SUPP-0099 (unavailable)", cut.Find(".room-tasks-row").TextContent.Trim()), TimeSpan.FromSeconds(5));
         Assert.Empty(cut.FindAll(".room-tasks-row a"));
+    }
+
+    /// <summary>An invoice number whose prefix no Team ever had is not a Task, so it gets no row and does not count (issue 388).</summary>
+    [Fact]
+    public async Task Tasks_UnknownPrefix_GetsNoRow()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Setup setup = new();
+        setup.Resolver.Add(Ref("SUPP-0010", "Fix login"));
+        await setup.SayAsync("m1", "invoice INV-2043 for SUPP-0010", ct);
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
+
+        cut.WaitForAssertion(() => Assert.Equal(1, setup.Panel.Count), TimeSpan.FromSeconds(5));
+        Assert.Single(cut.FindAll(".room-tasks-row"));
+        Assert.DoesNotContain("INV-2043", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>A Message posted in this Room that mentions a Task adds a row.</summary>
