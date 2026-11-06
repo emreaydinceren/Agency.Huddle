@@ -77,7 +77,7 @@ a Greeting Turn, which is paid
 
 1. Launch with `P-LAUNCH-FREE` and open **Agents** in the sidebar.
 2. On the **Chief of Staff** card choose **Edit** (`AgentProfileCard.razor:165`), set **Model** to
-   Haiku and **Effort** to `low`, then **Save** (`AgentProfileCard.razor:561`).
+   Sonnet and **Effort** to `low`, then **Save** (`AgentProfileCard.razor:561`).
 3. `P-STOP`.
 4. Launch paid, below.
 
@@ -90,7 +90,7 @@ $env:Team__Acp__Enabled       = 'true'
 dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
-Every Persona must already be Haiku / low before the first Message. After the last
+Every Persona must already be Sonnet / low before the first Message. After the last
 paid test of a session, run `O-ADAPTERS` expecting `0`; any survivor is an orphaned
 Adapter holding a live session open, so stop it with `Stop-Process -Id <ProcessId>`.
 
@@ -213,8 +213,8 @@ test says otherwise), one sentence in **Persona body**, choose **Model** and
 Writing `<data>\Agents\<Name>\<Name>.md` by hand (the definition must sit in the
 Agent's own folder; a `.md` at the `Agents` root is rejected) still skips the
 `team.db` rows that store Model and Effort, so the Agent runs on the account
-default — which may be far more expensive than Haiku. Leaving **Model** on `Agent default` does the
-same thing and is not equivalent to choosing Haiku.
+default — which may be far more expensive than Sonnet. Leaving **Model** on `Agent default` does the
+same thing and is not equivalent to choosing Sonnet.
 
 A file that fails to load appears on `/agents` under **Files that didn't load**
 with its reason beside it.
@@ -379,7 +379,7 @@ finds where `Team:DataDir` actually resolved.
 ## Standing conventions
 
 - **Model and Effort** are [§0.3](../manual-tests.md#03-the-model-and-effort-convention)
-  in every area: Haiku and `low` unless a test is the one exercising a switch. No
+  in every area: Sonnet and `low` unless a test is the one exercising a switch. No
   area restates it.
 - **Never set `TEAM_E2E`.** It gates eight money-spending tests in
   `tests/Huddle.Acp.Tests` and has nothing to do with the app.

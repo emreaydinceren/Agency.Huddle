@@ -72,17 +72,17 @@ name. A draft's alias is its name in lower case, so Hana is `@hana`.
 
 | Team | Agent | Role card | Model | Effort |
 | --- | --- | --- | --- | --- |
-| No team | Chief of Staff (`@cos`) | Built in | Haiku | low |
+| No team | Chief of Staff (`@cos`) | Built in | Sonnet | low |
 | Family | **Hana** | Household Manager | Sonnet | low |
-| Family | **Milo** | Meal Planner | Haiku | low |
-| Family | **Fern** | Finance Tracker | Haiku | low |
+| Family | **Milo** | Meal Planner | Sonnet | low |
+| Family | **Fern** | Finance Tracker | Sonnet | low |
 | Harbor Lane Bakery | **Bea** | Business Manager | Sonnet | low |
-| Harbor Lane Bakery | **Cole** | Bookkeeper | Haiku | low |
-| Harbor Lane Bakery | **Cass** | Customer Support | Haiku | low |
+| Harbor Lane Bakery | **Cole** | Bookkeeper | Sonnet | low |
+| Harbor Lane Bakery | **Cass** | Customer Support | Sonnet | low |
 | Dev Team | **Devon** | Development Manager | Sonnet | low |
 | Dev Team | **Ivy** | Developer | Sonnet | medium |
-| Dev Team | **Rex** | Reviewer | Haiku | low |
-| Dev Team | **Quinn** | QA Engineer | Haiku | low |
+| Dev Team | **Rex** | Reviewer | Sonnet | low |
+| Dev Team | **Quinn** | QA Engineer | Sonnet | low |
 
 Huddle draws the names at random, so the cast names are only a guide: if you keep the drawn names, read `@ivy`, `@rex`
 and `@quinn` in the later texts as your Developer, Reviewer and QA Engineer. A drawn name can also equal a cast name
@@ -164,12 +164,12 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
    Chief of Staff
    ```
 
-5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, check **Model** already shows Haiku (a new Chief of Staff starts on it, so the first greeting is cheap), set **Effort** to low, and click **Save**.
+5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, check **Model** already shows Haiku (a new Chief of Staff starts on it, so the first greeting is cheap), set **Model** to Sonnet and **Effort** to low, and click **Save**.
 
 **Expect**: the app opens on **Settings › Profile** with a welcome note, not on a chat. No Team exists. The sidebar's
 **Teams** view shows only **Build a team**.
 
-**Pass if**: the first page is Profile, the listing matches, and the Chief of Staff keeps Haiku after a page reload.
+**Pass if**: the first page is Profile, the listing matches, and the Chief of Staff keeps Sonnet after a page reload.
 **Fail if**: the app shows any seeded Team, Agent other than the Chief of Staff, or Room with Messages.
 
 ### ZERO-02 — The Chief of Staff greets a new Human

@@ -20,6 +20,7 @@ public sealed class RealAdapterNoticeTests
 {
     private const string FallbackTitle = "Auto mode unavailable";
 
+    // The one exception to "live tests run on Sonnet at minimum": this test needs a model with no Auto mode, and judges the notice, not the model's work.
     // The `haiku` alias resolves to Haiku 5.5 as of claude-agent-sdk 0.3.316, which supports Auto mode,
     // so it no longer triggers the fallback. Haiku 4.5 is the one catalog entry the SDK reports
     // without supportsAutoMode (checked with supportedModels(), 2026-11-03).

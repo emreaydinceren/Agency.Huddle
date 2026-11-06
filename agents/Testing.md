@@ -208,7 +208,11 @@ four times because each fix touched one class; the fixture-budget fix went red a
 call sites moved. After finding a root cause, grep for the same shape, fix the siblings or list them
 in the PR, and ask whether a rule can stop the next one (`BannedSymbols.txt`, or `src/Huddle.Analyzers`).
 
-### Passing on Linux CI
+### Live tests run on Sonnet at minimum
+
+A test that spends tokens runs its Agents on Sonnet at low Effort, solution-wide (the owner's rule, 2026-11-06), and never on Opus. Haiku failures read as product bugs. Find the model in the Adapter's catalog and skip as inconclusive if it isn't there, as `LiveAgentLane` does. Two things keep Haiku: `RealAdapterNoticeTests`, which needs a model with no Auto mode, and the live Helper test, because a Helper's model is product configuration. [manual-tests.md §0.3](../docs/engineering/manual-tests.md#03-the-model-and-effort-convention) has the same rule for manual runs.
+
+## Passing on Linux CI
 
 CI runs on Linux; you verify on Windows. Every Linux-only red in late October was one of these, and
 none needs Docker to avoid:
