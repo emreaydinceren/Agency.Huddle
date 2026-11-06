@@ -1155,10 +1155,10 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-09](second-brain-zero.md#zero-09--ingest-the-bakerys-documents) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
 | [ZERO-10](second-brain-zero.md#zero-10--a-member-who-never-saw-the-files-uses-what-was-filed) | 💰 | Pass |  | run 2026-11-05, see the Run log |
 | [ZERO-11](second-brain-zero.md#zero-11--family-members-use-the-filed-memory-too) | 💰 | Fail |  | run 2026-11-05, script fault in the grocery total, rerun it, see the Run log |
-| [ZERO-12](second-brain-zero.md#zero-12--prepare-a-repository-and-hire-the-dev-team) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
+| [ZERO-12](second-brain-zero.md#zero-12--prepare-a-repository-and-hire-the-dev-team) | 💰 | Pass | #347, #348 | rerun 2026-11-05 on the script's models, Pass, see the Run log |
 | [ZERO-13](second-brain-zero.md#zero-13--a-gate-refuses-done-with-no-evidence) | 💰 | Active |  | run 2026-11-05, no verdict on the edit-form clause, see the Run log |
-| [ZERO-14](second-brain-zero.md#zero-14--ingest-the-spec-and-the-teams-conventions) | 💰 | Pass |  | run 2026-11-05, see the Run log |
-| [ZERO-15](second-brain-zero.md#zero-15--the-dev-team-builds-the-app) | 💰 | Pass |  | run 2026-11-05, see the Run log |
+| [ZERO-14](second-brain-zero.md#zero-14--ingest-the-spec-and-the-teams-conventions) | 💰 | Pass | #342 | rerun 2026-11-05 on the script's models, Pass, see the Run log |
+| [ZERO-15](second-brain-zero.md#zero-15--the-dev-team-builds-the-app) | 💰 | Pass | #396, #399, #401, #404 | rerun 2026-11-05 on the script's models, Pass with a finding, see the Run log |
 | [ZERO-16](second-brain-zero.md#zero-16--run-the-app-yourself) |  | Pass |  | run 2026-11-05, see the Run log |
 | [ZERO-17](second-brain-zero.md#zero-17--capture-through-the-chief-of-staff) | 💰 | Pass |  | run 2026-11-05, see the Run log |
 | [ZERO-18](second-brain-zero.md#zero-18--a-huddle-wide-fact-reaches-every-team-and-other-teams-facts-do-not) | 💰 | Pass |  | run 2026-11-05, see the Run log |
@@ -1169,7 +1169,7 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-23](second-brain-zero.md#zero-23--the-weekly-check-finds-planted-drift) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
 | [ZERO-24](second-brain-zero.md#zero-24--the-chief-of-staff-offers-upkeep-and-runs-a-daily-review) | 💰 | Pass |  | run 2026-11-05, see the Run log |
 | [ZERO-25](second-brain-zero.md#zero-25--everything-survives-a-restart) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
-| [ZERO-26](second-brain-zero.md#zero-26--a-request-carries-work-between-teams) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
+| [ZERO-26](second-brain-zero.md#zero-26--a-request-carries-work-between-teams) | 💰 | Fail | #403 | rerun 2026-11-05 on the script's models, stuck before Done, see the Run log |
 | [ZERO-27](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost) |  | Fail |  | run 2026-11-05, Task search matches titles only, see the Run log |
 
 ## doc-history

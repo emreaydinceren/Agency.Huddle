@@ -8,7 +8,7 @@ ready to paste and nothing is seeded.
 **27 tests** · 3 free, 24 paid · budget about 7.8 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
 all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
 ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
-prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13).
+prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13). On 2026-11-05 ZERO-12, 14, 15 and 26 were rerun on the script's models, ZERO-15 needed three product fixes and ZERO-26 is unresolved (#403), and the rerun cost about 13 USD.
 The visible Team spend was 18.70 USD (Dev Team 15.95, Family 1.34, Harbor Lane Bakery 1.35, Chief of Staff 0.03,
 Helpers 0.02), and 19.26 USD with 0.23 of a discarded attempt and 0.335 on Route A's lane. **The Dev Team (Devon, Ana,
 Ines, Felix) ran on the default model, Opus, at default Effort, because the model picks did not take**, so ZERO-12 to

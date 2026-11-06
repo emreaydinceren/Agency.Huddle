@@ -1876,7 +1876,7 @@ Draft the October invoice run and check it against last month.
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
 | `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
-| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The four gates](#the-four-gates). |
+| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The five gates](#the-five-gates). |
 | `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
 
 The Team and Project are not fields. They come from the folder the file is in.
@@ -1953,7 +1953,7 @@ offline, so this change won't reach them."
 Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
 `close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
-[gates](#the-four-gates) and to the [Request](#requests-between-teams) rules, which
+[gates](#the-five-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
 
 ### Chips
