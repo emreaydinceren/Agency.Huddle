@@ -6,7 +6,14 @@ also builds a small working app. This page is for a Human running the whole prod
 ready to paste and nothing is seeded.
 
 **27 tests** · 3 free, 24 paid · budget about 7.8 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
-all 27 with paid Turns on 2026-11-03, on Route B, in about 1 hour 45 minutes and about $6.20 of visible Team spend. The
+all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
+ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
+prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13).
+The visible Team spend was 18.70 USD (Dev Team 15.95, Family 1.34, Harbor Lane Bakery 1.35, Chief of Staff 0.03,
+Helpers 0.02), and 19.26 USD with 0.23 of a discarded attempt and 0.335 on Route A's lane. **The Dev Team (Devon, Ana,
+Ines, Felix) ran on the default model, Opus, at default Effort, because the model picks did not take**, so ZERO-12 to
+ZERO-16 and ZERO-26 ran on a stronger model than this page's cast table asks for. That is why the run cost much more
+than the earlier 6.20 USD. Set Model and Effort on every draft and confirm they stuck before you hire. The
 [Run log](run-log.md) holds each result, and this page carries the script fixes that run found. No person has run it yet.
 
 This page covers the whole journey. For single features in more depth, see [Second Brain](second-brain.md),
@@ -45,6 +52,10 @@ dev
 family
 ```
 
+To use another folder for the lane, change `$z`, every `C:\HuddleZero` in the launch commands, ZERO-01 step 1, and the
+Library folder and `workspace:` path in ZERO-12. A fresh worktree has no Adapter path either: set
+`$env:Team__Acp__AdapterPath` to the Adapter the install step below produces, in both launch commands.
+
 Bring the Adapter up to the version the repository pins. The app installs it only when it is missing, so a checkout that
 pulled a newer pin keeps running the old one. The two versions printed must match.
 
@@ -73,8 +84,17 @@ name. A draft's alias is its name in lower case, so Hana is `@hana`.
 | Dev Team | **Rex** | Reviewer | Haiku | low |
 | Dev Team | **Quinn** | QA Engineer | Haiku | low |
 
+Huddle draws the names at random, so the cast names are only a guide: if you keep the drawn names, read `@ivy`, `@rex`
+and `@quinn` in the later texts as your Developer, Reviewer and QA Engineer. A drawn name can also equal a cast name
+for another role (a Finance Tracker draft drew `Hana`), and **Save draft** then fails with `An Agent with that Name
+exists.` until the other draft is renamed.
+
 Never choose Opus. A role left on **Agent default** runs on your account's default model, which may be Opus. Set the
-Model before you approve, because each manager takes its onboarding Turn straight after the hire.
+Model and Effort on **every** draft before you approve, **Save draft**, and read the card: it must show the Model and
+Effort you chose. In the 2026-11-05 run the Dev Team's picks did not take, all four Agents ran on Opus, and the Dev
+Team cost 15.95 USD against 3.80 on the cheaper run. Each manager takes its onboarding Turn straight after the hire,
+so a mistake is paid for at once. Set the Chief of Staff's Model in ZERO-01, before any paid launch: a blank install
+greets on the default model.
 
 ### The launch commands
 
@@ -108,9 +128,9 @@ Use these rather than `./run.ps1 -DataDir`, which does not hand the folder to th
 ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test gives:
 
 1. Click **Teams** in the Activity bar, then **Build a team**, and click the type's card.
-2. Under **Team details**, set **Team name** and **What it's for**. Leave **Library folder** empty unless the test gives a path.
+2. Under **Team details**, set **Team name** and **What it's for**. Both are pre-filled from the type card, so select all and replace: typing appends. Leave **Library folder** empty unless the test gives a path.
 3. Under **Hire**, click **Add** on each role card. The role cards are in alphabetical order, so the manager is not first.
-4. On each draft, click **Edit**. Set **Name** and **Model** from the cast table, and click **Save draft**.
+4. On each draft, click **Edit**. Set **Name**, **Model** and **Effort** from the cast table, and click **Save draft**. The Model and Effort lists need a real click and a pause before the rows exist. Read the card afterwards: it must show the Model and Effort. If a name collides with another draft, rename that draft first.
 5. Click **Approve & hire**. Huddle opens the Team page.
 
 ## Tests
@@ -122,7 +142,7 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
 1. In `T-B`, check the folder does not exist yet. If it does, stop and read [Starting over](#starting-over).
 
    ```powershell
-   Test-Path C:\HuddleZero
+   Test-Path $z
    ```
 
    ```text
@@ -242,7 +262,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
 
 **Paid** 💰 · about 15 min
 
-1. Click **Chats** and open your one-to-one Room with **Hana**. Huddle posted the onboarding steps there, as you, once she started, and she has replied, probably with questions. Do not answer here.
+1. Click **Chats** and open your one-to-one Room with **Hana**. Huddle posted the onboarding steps there, as you, once she started, and she will reply, probably with questions. Do not answer here. Do not stop the app while her first Turn runs: the reply is lost.
 2. In the **Family** Team Room, click the paperclip and attach `family\family-profile.md` from the test documents. A file attached in the Team's Room goes to its `raw/`.
 3. Send this:
 
@@ -275,7 +295,7 @@ The blue folder is noted as where the documents are, without the policy number, 
 
 **Paid** 💰 · about 20 min
 
-1. In the **Family** Team Room, attach `allergy-action-plan-ines.txt`, `lakeside-newsletter-november-2026.pdf` and `household-subscriptions.csv`, and send:
+1. In the **Family** Team Room, attach `allergy-action-plan-ines.txt`, `lakeside-newsletter-november-2026.pdf` and `household-subscriptions.csv` **one at a time** and wait for each chip: three at once can time out and leave `(2)` and `(3)` copies in `raw\`. Then send:
 
    ```text
    @hana Please ingest these three new files with your ingest Skill. Propose Memory, Tasks and outputs, each with a link to its source. Write nothing until I approve.
@@ -326,7 +346,7 @@ with their dates. The fee's Task has an **Action** or **Requires your acceptance
    @hana The school sent this update. Ingest it and correct what we already hold. Tell me what you changed.
    ```
 
-2. Approve what it proposes.
+2. If it proposes anything, approve it. It may correct and file at once and report afterwards, which also passes.
 3. In `T-B`, look for the old and new dates.
 
    ```powershell
@@ -381,7 +401,7 @@ There is no `_tasks` folder yet: it appears with the Team's first Task, which co
 
 **Paid** 💰 · about 20 min
 
-1. In the **Harbor Lane Bakery** Team Room, attach all five files from `bakery\`, and send:
+1. In the **Harbor Lane Bakery** Team Room, attach the five files from `bakery\` one at a time (several at once can time out), and send:
 
    ```text
    @bea Please ingest these five files with your ingest Skill. Propose Memory, Tasks and outputs, each with a link to its source. Do not reply to any customer. Write nothing until I approve.
@@ -453,20 +473,20 @@ session in a new Room.
 | Cass, to Tess | Closed on Monday, open again Tuesday at 07:00 |
 | Cass, all replies | No exclamation marks; signed `Harbor Lane Bakery` |
 
-**Pass if**: every figure and rule holds, and each Agent names a file under `Teams/Harbor Lane Bakery/`. Cass to Jonas passes on either result in the table; a quote left for the owner must name the wholesale price sheet.
+**Pass if**: every figure and rule holds, and each Agent names a file under `Teams/Harbor Lane Bakery/`; a raw upload under that folder counts. Cass to Jonas passes on either result in the table; a quote left for the owner must name the wholesale price sheet.
 **Fail if**: a figure is wrong (in the draft or in step 3), a refund is promised, a quote is left for the owner without naming the price sheet, or an Agent says it has no access and asks you to paste the facts.
 
 ### ZERO-11 — Family members use the filed memory too
 
 **Paid** 💰 · about 15 min
 
-1. On the Family **Members** tab, click **Message** on **Milo**, and send:
+1. On the Family Team page (`/teams/Family`), scroll to the Roster and click **Message Milo**. The Team Room's right panel only offers a profile card, and the first click after a page change can miss. Send:
 
    ```text
-   Plan five weeknight dinners for next week, one line each, and a grocery total under our budget. Tell me which Memory file you used for dietary limits.
+   Plan five weeknight dinners for next week, one line each. Tell me which Memory file you used for dietary limits.
    ```
 
-2. Click **Message** on **Fern**, and send:
+2. Click **Message Fern** in the same Roster, and send:
 
    ```text
    What do our monthly bills add up to? And what is the monthly figure if you spread the semiannual and annual bills across the year? Which two bills pay for the same kind of service, so that we could drop one? Say which file you used.
@@ -476,7 +496,7 @@ session in a new Room.
 
 | Who | Must say |
 | --- | --- |
-| Milo | No walnut, cashew, pecan, almond, pistachio or hazelnut. Peanuts may appear. Dairy has a swap for Theo. No pork for Alex. Each dinner takes 30 minutes or less. Under $180 |
+| Milo | No walnut, cashew, pecan, almond, pistachio or hazelnut. Peanuts may appear. Dairy has a swap for Theo. No pork for Alex. Each dinner takes 30 minutes or less. No grocery total is asked for: no fixture holds prices, and Milo must not invent one |
 | Fern | Monthly **$659.47**. Spread **$867.22**. Streamline Video and CineBox are both streaming, together $27.98 |
 
 **Pass if**: every limit and figure holds, and each cites a file under `Teams/Family/`.
@@ -503,21 +523,21 @@ session in a new Room.
    | Type card | **Development Team** |
    | Team name | `Dev Team` |
    | What it's for | `Route here for building and changing software, including tools for the bakery.` |
-   | Library folder | `C:\HuddleZero\repos\bakery-quote`. The field shows `Choose this Team's repository.` until you do, and **Hire** stays closed |
+   | Library folder | `$bake` (`C:\HuddleZero\repos\bakery-quote` in the default lane). Type the path into the field; **Browse** opens a native dialog. The field shows `Choose this Team's repository.` until you do, and **Hire** stays closed |
    | Process | Leave it on `lightweight-flow` |
-   | Roles | **Development Manager**, **Developer**, **Reviewer**, **QA Engineer** |
+   | Roles | **Development Manager**, **Developer**, **Reviewer**, **QA Engineer**. The cards draw random names: rename each draft with **Edit**, and set its Model and Effort from the cast table (Sonnet low, Sonnet medium, Haiku low, Haiku low) |
 
 3. The Developer and Reviewer drafts show **Needs setup**, and **Approve & hire** is off with the hint `Some Agents need setup`. Their Skills are not on a blank system. Choose a route.
 
 **Route A, with the Skills.** It downloads Skills from public GitHub repositories through your own AI tool.
 
-1. On the Developer draft, click **Copy prompt**. Read it. Paste it into your AI tool, in a separate terminal.
+1. On the Developer draft, click **Copy prompt**. Read it. Paste it into your AI tool, in a separate terminal. The prompt has the tool run `huddle-packs validate`, move a temporary file into place and clone from GitHub, so the tool needs Bash (for `git clone`, `mv` and `huddle-packs`) plus Read, Write, Edit and WebFetch. With a smaller list it stops with a half-finished `SKILL.md.tmp`; finish the rename yourself and record it.
 2. Wait for the tool to finish, and for the card's **Needs setup** to clear by itself. Reload the page only if it does not.
 3. Repeat for the Reviewer.
 
 **Route B, with no download.**
 
-1. On the Developer draft, click **Edit**, and open **Skills**. The two Skills it brought are at the end of the list, each marked `Not on this computer yet`. Untick both, click an empty part of the card, and click **Save draft**.
+1. On the Developer draft, click **Edit**, and open the **Skills** select (focus it and press Enter if a click does not open it). The two Skills it brought are at the end of the select, each marked `Not on this computer yet. Untick it to go without it.` Click each row's **text** to untick it: clicking the checkbox square toggles twice and leaves it ticked. The `Not on this computer yet` list below the select is read-only. Click an empty part of the card, and click **Save draft**.
 2. Do the same on the Reviewer draft.
 3. **Needs setup** clears from both, and **Approve & hire** turns on.
 
@@ -534,7 +554,7 @@ session in a new Room.
    ---
    teamType: 'development@1.0.0'
    manager: 'Devon'
-   workspace: 'C:\HuddleZero\repos\bakery-quote'
+   workspace: '<your $bake path>'
    owns: 'Route here for building and changing software, including tools for the bakery.'
    onboarded: true
    gates: ['qa-evidence-before-done', 'checks-before-merge']
@@ -557,9 +577,9 @@ session in a new Room.
 
 1. On the Dev Team's **Tasks** tab, click **New task**. Set the title to `Gate check, cancel me`, leave it unassigned, and save.
 2. Switch to the Board and drag the card to **Done**.
-3. Open the Task, set its status to **Done**, and save. Read the warning, but do not press **Move anyway**. Then set the status to **Cancelled** and save.
+3. Open the Task, set its status to **Done** in the edit form, and save. A new Task carries the Human gate, so the form does not refuse it: it moves the Task to **Review** with no warning and no **Move anyway**. The owner is reviewing that behaviour, so record exactly what you see. Do not press **Move anyway** if it shows. Then set the status to **Cancelled** and save.
 
-**Expect**: the card snaps back with `Could not move` and the reason. The Task panel warns that it names `qa-evidence-before-done`, and offers **Move anyway**. Devon may try to close the Task from its title; the gate refuses that too.
+**Expect**: the card snaps back with `Could not move` and the reason. In the edit form the Task does not reach Done: today it goes to **Review**, silently, because a gated Task is decided on its card. If you use a Task without the Human gate, the panel warns that it names `qa-evidence-before-done` and offers **Move anyway**. Devon may try to close the Task from its title; the gate refuses that too.
 
 **Pass if**: both moves are refused and name the gate.
 **Fail if**: the Task reaches Done without **Move anyway**.
@@ -568,13 +588,13 @@ session in a new Room.
 
 **Paid** 💰 · about 15 min
 
-1. In the **Dev Team** Team Room, attach all three files from `dev\`, and send:
+1. In the **Dev Team** Team Room, attach the three files from `dev\` one at a time (three at once time out), and send:
 
    ```text
    @devon This is your first job. First read the workspace, then ingest these three files with your ingest Skill. Propose what goes in Team Memory, what goes in the repository, and the Task for the work, with its acceptance line. Write nothing until I approve.
    ```
 
-2. Read the proposal, then send:
+2. Devon may first ask Questions the spec does not answer (discount rounding, a repeated item, a malformed argument). Press **Dismiss**; it proposes anyway and takes its own recommendation. Read the proposal, then send:
 
    ```text
    @devon Approved. File it, and leave the Task unassigned until I say start.
@@ -599,7 +619,7 @@ the spec is proposed for `docs/`, the repository's stated convention, not filed 
 
 **Paid** 💰 · about 60 min
 
-Send this in the **Dev Team** Team Room, and then watch. Do not write code for it.
+Send this in the **Dev Team** Team Room, and then watch. Do not write code for it. Replace `@ivy`, `@rex` and `@quinn` with the names of your Developer, Reviewer and QA Engineer.
 
 ```text
 @devon Start. Assign the build to @ivy, then review to @rex, then verification to @quinn. Ivy works in the Team's repository on a feat branch. Follow our process, keep each hand-off on the Task, and tell me when something is waiting on me.
@@ -735,7 +755,7 @@ This also answers an open question: can the Chief of Staff file a Task into a Te
    Select-String -Path "$data\Teams\memory\*.md" -Pattern 'Pacific'
    ```
 
-3. Open Cole's Room from ZERO-10, click Cole's avatar in the Room header, then **Start afresh**, and confirm. **New chat** with only Cole would reopen the same Room and session, and a fresh session is what reads a fresh index. Send:
+3. Open Cole's Room from ZERO-10, click Cole's avatar in the Room header, then **Start afresh**, and then the red **Start afresh** confirm in the popover. **New chat** with only Cole would reopen the same Room and session, and a fresh session is what reads a fresh index. Check that a new session began: the log shows `sessionId=... resume=none`, and Cole's old session id is gone from his Persona file. Send:
 
    ```text
    Using only your instructions and memory index, with no tools: what time zone does Sam work in? Where do you know that from?
@@ -805,7 +825,7 @@ lactose topic if there is one. The History shows **Team Memory (Helper)** and na
    From now on, put the invoice number first in every line about an invoice.
    ```
 
-5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`, and press Ctrl+S to save, because the editor has no Save button. No Agent restarts. **New chat** with only Cole reopens the same Room and session, so open that Room, click Cole's avatar in the Room header, then **Start afresh**, and confirm. Then ask Cole:
+5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`, and press Ctrl+S to save, because the editor has no Save button. No Agent restarts. **New chat** with only Cole reopens the same Room and session, so open that Room, click Cole's avatar in the Room header, then **Start afresh**, and the red confirm (it moves when the right panel is open, and a missed click leaves the old session: check the log for `resume=none`). In the Files tab, check the editor is open before you type: the Edit toggle sits at a different height for each file. Then ask Cole:
 
    ```text
    Are there any rules in your instructions about how to write a line about an invoice? Quote them.
@@ -837,7 +857,8 @@ Cole follows the new rule at the next Turn with no Start afresh.
    @hana We cancelled CineBox. Overwrite household-subscriptions.csv in raw with a corrected copy that leaves it out.
    ```
 
-3. In `T-B`:
+3. Hana asks for a go-ahead before she writes anything. Answer with the @, because a reply without it reaches no Agent: `@hana Yes, go ahead.`
+4. In `T-B`:
 
    ```powershell
    (Get-FileHash $csv.FullName).Hash -eq $before
@@ -904,7 +925,7 @@ Cole follows the new rule at the next Turn with no Start afresh.
    See [[missing-page]] for the old plan.
    ```
 
-5. Click **Scheduled**, then **New job**. Set **For** to **Hana**, **Title** to `Timed check`, **Repeats** to **On chosen days** with only today picked, and the time to about 5 minutes from now. Paste this as the instruction, then save the job.
+5. Click **Scheduled**, then **New job**. Set **For** to **Hana**, **Title** to `Timed check`, **Repeats** to **On chosen days** with only today picked (the form starts with Monday ticked: untick it when today is another day), and the time to about 5 minutes from now. Paste this as the instruction, then save the job.
 
    ```text
    Reply with one short line saying this Job ran. Do nothing else.
@@ -938,7 +959,7 @@ the broken link to `missing-page`, the changed raw file, and the rule sitting in
 3. Click **Scheduled**. Open the review job, and click **Run now**. Read the brief in its Room.
 
 **Expect**: exactly one job is created. The brief lists what is due and overdue across Teams, including the 13 November
-slip and the 1 December notice, what waits in **Needs you**, what was filed since the last review, and three things to do today.
+slip and the 1 December notice, and what waits on you. It may also list what was filed since the last review and things to do today, but the job's prompt does not ask for them.
 
 **Pass if**: only the accepted job exists, and the brief names Tasks from at least two Teams.
 **Fail if**: a declined job is created, or the brief invents a Task that does not exist.
@@ -949,7 +970,7 @@ slip and the 1 December notice, what waits in **Needs you**, what was filed sinc
 
 1. In `T-A`, stop the app, and run the paid launch again.
 2. Check that the three Teams, their Tasks and the Scheduled jobs are all there.
-3. Open Fern's Room from ZERO-11, click Fern's avatar in the Room header, then **Start afresh**, and confirm. Send:
+3. Open Fern's Room from ZERO-11, click Fern's avatar in the Room header (the avatar right of `1 member + you`; the first header click may open the right panel instead), then **Start afresh**, and confirm. Send:
 
    ```text
    What is the date of the Science Museum trip, when is the permission slip due, and when is Ines's allergy review? Say where you found each one.
@@ -1010,6 +1031,8 @@ Skip this if the budget is tight. It is a second development cycle.
 
 **Pass if**: the Request moves through triage, both outputs match, an Agent is refused if it tries to close the Request before it is confirmed, and Bea confirms it and it closes.
 
+Nobody normally tries to close it early. If no Agent does, record that clause as not exercised and judge the rest.
+
 **Fail if**: you have to move the Request to Done or close it yourself.
 **Fail if**: a Request leaves Backlog without triage, or the second output changed.
 
@@ -1033,7 +1056,7 @@ Skip this if the budget is tight. It is a second development cycle.
    }
    ```
 
-**Expect**: search finds the raw file's contents, the Task and the Room. The Feed shows Tasks, documents and Helper actions.
+**Expect**: search finds the raw file's contents, the Task and the Room. `task:permission` is a body word: FAMI-0001 holds it only in its action line, and Task search matches titles only today, so this step fails until the owner decides whether it should search the body. `task:museum` finds the Task. The Feed shows Tasks, documents and Helper actions.
 
 **Pass if**: each search finds its item, and you recorded the Spending amounts for all three Teams and the Total in the Run log's Notes.
 **Fail if**: an item that exists on disk cannot be found, or the Feed shows Message text.
@@ -1061,6 +1084,7 @@ To go back to a saved case instead, restore it with `P-CHECKPOINT`, which needs 
 - **Some file output varies.** The order of Skills, and the line number on a `skills:` match, depend on your clicks and the Agent's Adapter.
 - **The dates are fixed.** The documents are written around November 2026, and Cole's question states its "as of" date for that reason.
 - **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New chat** with the same Members reopens the existing Room and session.
+- **Pane and browser traps.** A native file dialog (the paperclip, **Browse**) cannot be driven from an automation pane: attach through the file input, one file at a time. Set the viewport to about 1400 by 900 first, or the Agents view collapses. Screenshots lag one action behind, so a click can look as if it failed. The first click after a page change can miss silently. A click point in an 800 by 600 pane frame is the CSS pixel divided by 1.28. The time field on a job does not take typing in such a pane: set its value from script.
 - **The mock Adapter cannot run this.** It echoes its prompt, so it only proves the Team setup steps.
 - **Save a checkpoint after each case.** Once a case has passed and its result is in the Run log, stop the app and run
   `P-CHECKPOINT` under the test's id, for example `after-ZERO-16`. A later run can then restore that point and carry on,
