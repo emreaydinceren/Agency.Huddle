@@ -1169,7 +1169,7 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-23](second-brain-zero.md#zero-23--the-weekly-check-finds-planted-drift) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
 | [ZERO-24](second-brain-zero.md#zero-24--the-chief-of-staff-offers-upkeep-and-runs-a-daily-review) | 💰 | Pass |  | run 2026-11-05, see the Run log |
 | [ZERO-25](second-brain-zero.md#zero-25--everything-survives-a-restart) | 💰 | Pass |  | run 2026-11-05, Pass with a finding, see the Run log |
-| [ZERO-26](second-brain-zero.md#zero-26--a-request-carries-work-between-teams) | 💰 | Fail | #416 | rerun 2026-11-06 at `4ac25930` on the script's models, stuck in Review with no Action after the #403 wake fired, see the Run log |
+| [ZERO-26](second-brain-zero.md#zero-26--a-request-carries-work-between-teams) | 💰 | Fail | #416 | two reruns on 2026-11-06 (`4ac25930`, `987bf475`) on the script's models, both stuck in Review with no Action after the #403 wake fired, see the Run log |
 | [ZERO-27](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost) |  | Fail |  | run 2026-11-05, Task search matches titles only, see the Run log |
 
 ## doc-history
