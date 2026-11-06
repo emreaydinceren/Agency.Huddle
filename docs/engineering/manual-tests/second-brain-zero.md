@@ -1000,6 +1000,8 @@ Skip this if the budget is tight. It is a second development cycle.
    @devon Please triage the new Request from Harbor Lane Bakery. If you accept it, follow our process through to merged on main.
    ```
 
+   When the Task reaches **Needs You** with its Proof complete, read its Action and press **Accept**. If an Agent asks you something on a card, answer it as you would for real.
+
 4. When it is done, in `T-B`:
 
    ```powershell
