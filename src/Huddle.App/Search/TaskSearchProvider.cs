@@ -12,6 +12,9 @@ namespace Agency.Huddle.App.Search;
 /// </summary>
 internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas, IOptions<TeamOptions> options) : ISearchProvider
 {
+    /// <summary>How much of a Task's description is searched.</summary>
+    private const int BodyScanLimit = 4000;
+
     /// <summary>The group this provider fills.</summary>
     public SearchFilter Group => SearchFilter.Tasks;
 
@@ -19,7 +22,7 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
     public bool IsExpensive => false;
 
     /// <summary>
-    /// Matches each Task by its title, then its id, and then, as a ContentMatch, by its assignee's Name.
+    /// Matches each Task by its title, then its id, and then, as a ContentMatch, by its assignee's Name, its Action or its description.
     /// An exact id gets no special jump behaviour (D-14). A Reference browse with an empty phrase is the Active
     /// Tasks in <see cref="TaskQuery.Suggest"/> order, eight at most.
     /// </summary>
@@ -60,7 +63,7 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
             }
 
             MatchTier? tier = SearchMatch.FirstTier(query.Text, task.Title, task.Id.ToString());
-            if (tier is null && task.Assignee?.Contains(query.Text, StringComparison.OrdinalIgnoreCase) == true)
+            if (tier is null && IsContentMatch(task, query.Text))
             {
                 tier = MatchTier.ContentMatch;
             }
@@ -72,6 +75,21 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
         }
 
         return Task.FromResult(new SearchResult(hits, false));
+    }
+
+    /// <summary>
+    /// Whether the phrase is in the Task's assignee Name, its Action line, or the first <see cref="BodyScanLimit"/>
+    /// characters of its description. The bound keeps one huge description from costing every keystroke.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="phrase">The phrase, with any prefix removed.</param>
+    /// <returns>True when a field holds the phrase, ignoring case.</returns>
+    private static bool IsContentMatch(TaskItem task, string phrase)
+    {
+        string description = task.Description.Length > BodyScanLimit ? task.Description[..BodyScanLimit] : task.Description;
+        return task.Assignee?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true
+            || task.Action?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true
+            || description.Contains(phrase, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Maps one Task to its hit, with the assignee's Persona title when one is found.</summary>
