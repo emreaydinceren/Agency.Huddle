@@ -3,8 +3,16 @@ namespace Agency.Huddle.App.Elicitation;
 /// <summary>A form an agent asked the Human to fill in, read from its JSON Schema.</summary>
 /// <param name="Message">The prompt text the agent sent with the form, carried verbatim.</param>
 /// <param name="Fields">The fields, in the schema's order.</param>
-public sealed record ElicitationForm(string Message, IReadOnlyList<ElicitationField> Fields)
+/// <param name="UntrustedDetail">
+/// Text the host attached that came from the Agent's own request (a connector call's arguments), shown as plain text under a
+/// line that says so, or <see langword="null"/>. Already stripped of control and bidi characters and capped by the host.
+/// </param>
+public sealed record ElicitationForm(string Message, IReadOnlyList<ElicitationField> Fields, string? UntrustedDetail = null)
 {
+    /// <summary>This form with the host's <see cref="UntrustedDetail"/> attached.</summary>
+    /// <param name="detail">The detail, or <see langword="null"/> for none.</param>
+    internal ElicitationForm WithDetail(string? detail) => this with { UntrustedDetail = detail };
+
     /// <summary>
     /// The one thing the form asks, or <see langword="null"/> when it asks several: the only field that is
     /// not the typed "Other" answer of another, so a question with its companion counts as one.

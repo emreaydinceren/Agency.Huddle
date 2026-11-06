@@ -71,7 +71,7 @@ decision about Huddle's own tool is not Huddle's, and in `default` the classifie
 ## Consequences
 
 - **A permission request per command.** Each tool call the Adapter does not count as read-only now comes to
-  `WorkDirPermissionHandler`, which approves it with no Human unless a guard or the merge gate refuses. It is one local
+  `WorkDirPermissionHandler`, which approves it with no Human unless a guard or the merge gate refuses (a claude.ai connector tool is the one exception: it stops and asks, Agent Connectors spec 8.4). It is one local
   JSON-RPC round trip and spends no tokens. Every machine without `defaultMode` has always paid it.
 - **More calls reach the guards.** The `AGENTS.md`, Raw, Prompts and Team Memory guards and the `~/.claude` refusal see an
   edit they would not have seen under a user's `auto` or `acceptEdits`.

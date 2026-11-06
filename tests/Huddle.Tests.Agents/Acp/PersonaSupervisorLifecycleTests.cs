@@ -337,6 +337,38 @@ public sealed class PersonaSupervisorLifecycleTests
         Assert.Equal(PersonaText("nova", "You are Nova."), factory.Calls[^1].Persona.Text);
     }
 
+    /// <summary>
+    /// Flipping the account-connectors switch changes no file text, yet must restart the host: the session <c>_meta</c> is minted once per
+    /// host, and <c>Persona.Connectors</c> reaches <c>NeedsRestart</c> through record equality (AgentConnectors spec T-8, section 8.3).
+    /// </summary>
+    [Fact]
+    public async Task PersonaConnectorsChanged_RestartsItsHostWithTheNewValue()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, cts);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+
+        personaStore.SetConnectors("nova", true);
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.False(factory.Calls[0].Persona.Connectors);
+        Assert.True(factory.Calls[^1].Persona.Connectors);
+    }
+
     [Fact]
     public async Task PersonaUnchanged_DoesNotRestartItsHost()
     {

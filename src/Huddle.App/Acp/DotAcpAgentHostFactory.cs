@@ -141,7 +141,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
-        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile, connectors: false);
+        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile, ConnectorsPassed(profile, EffectiveConnectors(persona, this.workModePolicy)));
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -173,6 +173,27 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             sources,
             this.serviceProvider.GetService<IMergeGate>());
     }
+
+    /// <summary>
+    /// Whether the account connectors are passed to this Persona's sessions: the stored switch, unless its Work Mode never asks before
+    /// a tool runs, where the approval prompt would be skipped and a stored "on" is ignored (Agent Connectors spec 8.4).
+    /// </summary>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="policy">Decides which Work Modes skip approval.</param>
+    /// <returns><see langword="true"/> only when the switch is on and the mode asks.</returns>
+    internal static bool EffectiveConnectors(Persona persona, WorkModePolicy policy)
+    {
+        return persona.Connectors && !policy.SkipsApproval(persona.WorkMode);
+    }
+
+    /// <summary>
+    /// Whether the connectors are passed on this profile. A profile that does not isolate has no per-Agent switch (Agent Connectors
+    /// spec 7.3), so a stored "on" is ignored there and the connectors stay off.
+    /// </summary>
+    /// <param name="profile">The Adapter Profile the session runs on.</param>
+    /// <param name="effective">The result of <see cref="EffectiveConnectors"/>.</param>
+    /// <returns><see langword="true"/> only for an isolating profile whose Agent is on.</returns>
+    internal static bool ConnectorsPassed(AdapterProfile profile, bool effective) => effective && profile.IsolateUserSettings;
 
     /// <summary>Builds the file guards one Persona's permission handler consults.</summary>
     /// <param name="prompts">Renders each guard's refusal reason.</param>
@@ -595,19 +616,36 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
     internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile, bool connectors)
     {
-        if (!profile.IsolateUserSettings)
+        Dictionary<string, object> options = new(StringComparer.Ordinal);
+        if (profile.IsolateUserSettings)
         {
+            options["settingSources"] = new[] { "project", "local" };
+            Dictionary<string, object> settings = new(StringComparer.Ordinal)
+            {
+                ["autoMemoryEnabled"] = false,
+            };
+            if (connectors)
+            {
+                // Huddle's own ask rule (Agent Connectors spec 8.4). `settings` replaces the Adapter's computed settings, so it is sent
+                // here beside autoMemoryEnabled. A spike measured `ask` beating an Agent's local allow rule and allow hook, for the
+                // tool, server and server__* forms, against a stand-in server; `permissions.deny` with this wildcard removed the tool.
+                // `ask` with this wildcard has NOT been run against a real claude.ai connector.
+                settings["permissions"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["ask"] = new[] { "mcp__claude_ai_*" },
+                };
+            }
+
+            options["settings"] = settings;
+        }
+        else if (connectors || !AdapterCatalog.RunsClaude(profile))
+        {
+            // A profile that does not ask for isolation gets no meta, with one exception below: a Claude profile with the connectors off.
             return null;
         }
 
-        Dictionary<string, object> options = new(StringComparer.Ordinal)
-        {
-            ["settingSources"] = new[] { "project", "local" },
-            ["settings"] = new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["autoMemoryEnabled"] = false,
-            },
-        };
+        // A custom profile that runs Claude without isolating gets only the env key, so the connectors are off for it as well and
+        // no isolation key is forced on a profile that did not ask for it. (Agent Connectors spec 7.3, first rows.)
         if (!connectors)
         {
             options["env"] = new Dictionary<string, object>(StringComparer.Ordinal)

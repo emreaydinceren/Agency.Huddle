@@ -7,7 +7,8 @@ namespace Agency.Huddle.Tests.Acp.Sessions.Fakes;
 /// <summary>
 /// A hand-written test double for <see cref="IElicitationBridge"/>. Records every request with the token
 /// it was handed, and by default holds each one open until the test answers it through
-/// <see cref="BridgeCall.Answer"/> or the token is cancelled, exactly as the real bridge waits for the Human.
+/// <see cref="BridgeCall.Answer"/> or the token is cancelled, exactly as the real bridge waits for the Human. On cancel it returns
+/// <see cref="ElicitationCancelled"/> and does not throw, as the real bridge does.
 /// </summary>
 internal sealed class FakeElicitationBridge : IElicitationBridge
 {
@@ -46,7 +47,16 @@ internal sealed class FakeElicitationBridge : IElicitationBridge
             return await handler(call);
         }
 
-        return await call.Answer.Task.WaitAsync(cancellationToken);
+        // The real RoomElicitationBridge never throws on cancel: it resolves the request as cancelled. The fake does the same, because a
+        // fake that threw hid a bug (the Turn latch was only set in a catch the real bridge never reaches).
+        try
+        {
+            return await call.Answer.Task.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new ElicitationCancelled();
+        }
     }
 
     /// <summary>Polls until <paramref name="count"/> requests have arrived, or fails the test after five seconds.</summary>

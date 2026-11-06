@@ -1,0 +1,146 @@
+@namespace Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Acp
+@inject PersonaStore Personas
+@inject AdapterCatalog Adapters
+@inject WorkModePolicy WorkModes
+
+@* Row P6a of the Agent card, View mode only (docs/Huddle.AgentConnectors-Specifications.md section 7): whether this Agent may
+   use the Human's account connectors (the claude.ai sign-in's mail, files and calendar). Off by default. It acts at once and does
+   not wait for Save: turning it on first swaps in an InlineConfirm, turning it off applies straight away. Only the stock Claude
+   Adapter with isolation can be controlled per Agent; any other Adapter gets a sentence that claims nothing it cannot deliver. *@
+<section class="agent-profile-card-section agent-connectors-row" data-connectors-state="@this.State">
+    <div class="group-label">Account connectors</div>
+    @if (this.State == ConnectorsRowState.Switch)
+    {
+        @* MudSwitch keeps its own value once the Human flips it. When the Agent stays off (Cancel, or a refused Work Mode) the bound
+           value never changed, so nothing resets it and it stays drawn on beside an "Off" line (AGCONN-02). A new key replaces it. *@
+        <MudSwitch @key="this.switchKey" T="bool" Value="@this.on" ValueChanged="this.OnSwitchChanged" Color="Color.Primary" Class="agent-connectors-switch"
+                   Label="Account connectors" />
+        @if (this.ModeSkipsPrompt)
+        {
+            <MudText Typo="Typo.body2" Class="d-block mb-1 agent-connectors-mode-note" role="status">This Agent's Work Mode never asks before a tool runs, so account connectors stay off. Choose another Work Mode first.</MudText>
+        }
+        else if (this.confirming)
+        {
+            <MudText Typo="Typo.body2" Class="d-block mb-1 agent-connectors-warning">@this.ConfirmText</MudText>
+            <InlineConfirm Class="agent-connectors-confirm" Prompt="@($"Give {this.Name} access to all your connected accounts?")"
+                           ConfirmText="Give access" OnConfirm="this.Confirm" OnCancel="this.CancelConfirm" />
+        }
+        else if (this.Restarting)
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-connectors-helper" role="status">Restarting @this.Name to apply this.</MudText>
+        }
+        else if (this.on)
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-connectors-helper">On since @this.SinceText. @this.Name can use <strong>all</strong> of your connected accounts.</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-connectors-helper">Off. @this.Name cannot use your connected accounts.</MudText>
+        }
+    }
+    else if (this.State == ConnectorsRowState.PerProfileOnly)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-connectors-note">Huddle cannot switch this Adapter's account connectors per Agent. Set <code>ENABLE_CLAUDEAI_MCP_SERVERS=false</code> in the Adapter's <code>EnvironmentOverrides</code>, or turn on isolation for it.</MudText>
+    }
+    else
+    {
+        @* Deliberately claims nothing: "<Adapter> does not load your claude.ai connectors" is unverified for every shipped
+           preset (spec section 7.3), so the row says only what Huddle can do. *@
+        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-connectors-note">Huddle can't control @this.AdapterName's account connectors.</MudText>
+    }
+</section>
+
+@code {
+    private bool on;
+    private bool confirming;
+    private int switchKey;
+    private DateTimeOffset? since;
+
+    /// <summary>The Agent's name.</summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The id of the Agent's Adapter, or <see langword="null"/> for the installation's default.</summary>
+    [Parameter]
+    public string? Adapter { get; set; }
+
+    /// <summary>True while the Agent's host is restarting, which is when a change is being applied.</summary>
+    [Parameter]
+    public bool Restarting { get; set; }
+
+    private enum ConnectorsRowState
+    {
+        Switch,
+        PerProfileOnly,
+        NotControlled,
+    }
+
+    private AdapterProfile Profile => this.Adapters.Find(this.Adapter) ?? this.Adapters.Default;
+
+    private string AdapterName => this.Profile.DisplayName;
+
+    private ConnectorsRowState State
+    {
+        get
+        {
+            if (!AdapterCatalog.RunsClaude(this.Profile))
+            {
+                return ConnectorsRowState.NotControlled;
+            }
+
+            return this.Profile.IsolateUserSettings ? ConnectorsRowState.Switch : ConnectorsRowState.PerProfileOnly;
+        }
+    }
+
+    private string SinceText => this.since is { } at ? at.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture) : string.Empty;
+
+    private string ConfirmText =>
+        $"{this.Name} will be able to use every account connector on this computer's claude.ai sign-in, for example mail, calendar and files. Each use will ask you first.";
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.on = this.Personas.Get(this.Name)?.Connectors ?? false;
+        this.since = this.on ? this.Personas.ConnectorsEnabledAt(this.Name) : null;
+    }
+
+    /// <summary>Whether the Agent's Work Mode would skip the approval prompt, which refuses turning connectors on (spec 8.4).</summary>
+    private bool ModeSkipsPrompt => this.WorkModes.SkipsApproval(this.Personas.Get(this.Name)?.WorkMode);
+
+    private void OnSwitchChanged(bool value)
+    {
+        if (value && this.ModeSkipsPrompt)
+        {
+            this.switchKey++;
+            return;
+        }
+
+        if (value)
+        {
+            this.confirming = true;
+            return;
+        }
+
+        this.Apply(false);
+    }
+
+    private void Confirm()
+    {
+        this.confirming = false;
+        this.Apply(true);
+    }
+
+    private void CancelConfirm()
+    {
+        this.confirming = false;
+        this.switchKey++;
+    }
+
+    private void Apply(bool enabled)
+    {
+        this.Personas.SetConnectors(this.Name, enabled);
+        this.on = enabled;
+        this.since = enabled ? this.Personas.ConnectorsEnabledAt(this.Name) : null;
+    }
+}

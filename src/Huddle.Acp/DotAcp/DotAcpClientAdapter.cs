@@ -106,11 +106,18 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
             return new dotacp.protocol.RequestPermissionResponse { Outcome = new dotacp.protocol.RequestPermissionOutcomeCancelled() };
         }
 
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, sink.PromptCancellation);
+        // A handler may wait for the Human (the connector approval prompt), so the host's and the session's lifetimes end it
+        // as they end an elicitation: the host's disposal must not block on a question nobody can answer.
+        CancellationToken sessionToken = this.sessionLifetimes.TryGetValue(sessionId, out CancellationLifetime? sessionLifetime)
+            ? sessionLifetime.Token
+            : CancellationToken.None;
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, sink.PromptCancellation, this.hostLifetime.Token, sessionToken);
 
         try
         {
-            PermissionDecision decision = await sink.PermissionHandler.DecideAsync(SessionUpdateMapper.MapPermission(request), linked.Token).ConfigureAwait(false);
+            PermissionDecision decision = await sink.PermissionHandler.DecideAsync(
+                SessionUpdateMapper.MapPermission(request, sink.ElicitationScope), linked.Token).ConfigureAwait(false);
 
             if (decision is SelectedDecision selected)
             {

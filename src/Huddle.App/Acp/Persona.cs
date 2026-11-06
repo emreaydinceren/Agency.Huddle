@@ -32,4 +32,9 @@ namespace Agency.Huddle.App.Acp;
 /// <c>Mode</c>; here it is <c>WorkMode</c> because <c>Mode</c> already means light or dark, the
 /// card state and the system-prompt mode.
 /// </param>
-public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null, string? WorkMode = null);
+/// <param name="Connectors">
+/// Whether the Human let this Persona use the account connectors (the claude.ai sign-in's mail, files and calendar).
+/// Stored in <see cref="Agency.Huddle.App.Data.PersonaConnectorsStore"/>, written only by <c>PersonaStore.SetConnectors</c>; a scalar so the restart
+/// check picks a change up through record equality. Off by default.
+/// </param>
+public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null, string? WorkMode = null, bool Connectors = false);

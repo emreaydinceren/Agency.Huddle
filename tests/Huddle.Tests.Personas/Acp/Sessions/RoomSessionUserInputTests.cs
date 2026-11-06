@@ -276,6 +276,94 @@ public sealed class RoomSessionUserInputTests
         Assert.DoesNotContain(rig.Owner.ReportCalls, reported => reported == nameof(IRoomSessionOwner.ReportTurnFailure));
     }
 
+    /// <summary>
+    /// T-13: a question that ran out of time marks its Turn, so the connector approval prompt refuses every later connector call on
+    /// that Turn without asking; before the bound, and with no timeout, the mark is clear.
+    /// </summary>
+    [Fact]
+    public async Task UserInputTimeout_MarksTheTurn_ForTheConnectorPrompt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TrackedFakeTimeProvider clock = new();
+        FakeElicitationBridge bridge = new();
+        await using Rig rig = new(clock, bridge: bridge, userInputSeconds: 30);
+        rig.Session.EnqueueGatedReply(rig.Release.Task, "reply");
+        await rig.StartTurnAsync(1, expectedTimers: 0, ct);
+        Assert.False(rig.Room.ApprovalTimedOut);
+
+        Task<ElicitationResult> pending = rig.Room.ElicitAsync(Request, ct);
+        _ = await bridge.WaitForCallsAsync(1, ct);
+        await WaitForTimersAsync(clock, 1, ct);
+        clock.Advance(TimeSpan.FromSeconds(29));
+        Assert.False(rig.Room.ApprovalTimedOut);
+        clock.Advance(TimeSpan.FromSeconds(1));
+        _ = await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        Assert.True(rig.Room.ApprovalTimedOut);
+        rig.Release.SetResult();
+    }
+
+    /// <summary>
+    /// F2: with the real <see cref="Agency.Huddle.App.Elicitation.RoomElicitationBridge"/>, which resolves a timed-out request as
+    /// cancelled and never throws, the timeout still marks the Turn, and a later connector call in that Turn is refused with no new card.
+    /// </summary>
+    [Fact]
+    public async Task UserInputTimeout_RealBridge_MarksTheTurn_AndALaterConnectorCallRefusesWithNoCard()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TrackedFakeTimeProvider clock = new();
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        await using Rig rig = new(clock, bridge: fixture.Bridge, userInputSeconds: 30);
+        rig.Session.EnqueueGatedReply(rig.Release.Task, "reply");
+        await rig.StartTurnAsync(1, expectedTimers: 0, ct);
+        ToolCallInfo call = new("call-1", "Send mail", ToolKind.Other, ToolCallStatus.Pending, """{"to":"a@example.com"}""", "mcp__claude_ai_ms365__send", null);
+        IReadOnlyList<PermissionOptionInfo> offered =
+        [
+            new PermissionOptionInfo("allow-1", "Allow once", PermissionOptionKind.AllowOnce),
+            new PermissionOptionInfo("reject-1", "Reject once", PermissionOptionKind.RejectOnce),
+        ];
+        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance, personaName: "Nova");
+
+        Task<PermissionDecision> first = handler.DecideAsync(new PermissionRequestContext("session-1", call, offered, rig.Room), ct);
+        await Eventually.UntilAsync(() => fixture.Elicitations.Get("room-a").Count == 1, ct, timeout: TestBudgets.Standard);
+        await WaitForTimersAsync(clock, 1, ct);
+        clock.Advance(TimeSpan.FromSeconds(30));
+        PermissionDecision firstDecision = await first.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        Assert.True(rig.Room.ApprovalTimedOut);
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(firstDecision).OptionId);
+        Assert.Empty(fixture.Elicitations.Get("room-a"));
+
+        PermissionDecision second = await handler.DecideAsync(new PermissionRequestContext("session-1", call, offered, rig.Room), ct);
+
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(second).OptionId);
+        Assert.Empty(fixture.Elicitations.Get("room-a"));
+        rig.Release.SetResult();
+    }
+
+    /// <summary>A Stop (the run token) is not a timeout: it never marks the Turn, with the real bridge.</summary>
+    [Fact]
+    public async Task Stop_RealBridge_DoesNotMarkTheTurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TrackedFakeTimeProvider clock = new();
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        await using Rig rig = new(clock, bridge: fixture.Bridge, userInputSeconds: 30);
+        rig.Session.EnqueueGatedReply(rig.Release.Task, "reply");
+        await rig.StartTurnAsync(1, expectedTimers: 0, ct);
+        ElicitationRequest form = new("session-1", "tool-1", ElicitationTestSupport.SingleQuestionMessage, ElicitationTestSupport.SingleQuestionSchema);
+        using CancellationTokenSource caller = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        Task<ElicitationResult> pending = rig.Room.ElicitAsync(form, caller.Token);
+        await Eventually.UntilAsync(() => fixture.Elicitations.Get("room-a").Count == 1, ct, timeout: TestBudgets.Standard);
+        await caller.CancelAsync();
+        ElicitationResult result = await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        Assert.IsType<ElicitationCancelled>(result);
+        Assert.False(rig.Room.ApprovalTimedOut);
+        rig.Release.SetResult();
+    }
+
     /// <summary>A question dropped by the upper bound is logged once, as a warning that names the Persona, the Room and the bound.</summary>
     [Fact]
     public async Task UserInputTimeout_LogsAWarningNamingTheRoomAndTheBound()

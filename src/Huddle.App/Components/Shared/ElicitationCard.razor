@@ -53,6 +53,15 @@
                 <MudText Typo="Typo.body1" Class="elicitation-card-message">@current.Form.Message</MudText>
             }
 
+            @if (current.Form.UntrustedDetail is { Length: > 0 } detail)
+            {
+                @* The arguments of a connector call, from the Agent's own request and possibly from an email it read: plain text only, in a pre, never Markdown. *@
+                <div class="elicitation-card-untrusted" role="group" aria-label="What the Agent asked for">
+                    <MudText Typo="Typo.caption" Class="elicitation-card-untrusted-label">What @current.AskerName asked for, in the Agent's own words (Huddle has not checked them):</MudText>
+                    <pre class="elicitation-card-untrusted-text" tabindex="0">@detail</pre>
+                </div>
+            }
+
             <MudStack Spacing="3" Class="elicitation-card-fields">
                 @foreach (ElicitationField field in current.Form.Fields)
                 {

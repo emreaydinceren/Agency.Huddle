@@ -1329,3 +1329,16 @@ AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's
 | [AGENTSMDCHANGES-09](agents-md-changes.md#agentsmdchanges-09--does-a-cold-resume-honour-the-changed-prompt) | 💰 | Pass |  | 2026-11-04 to 05, `0d3dbabe` + uncommitted `feat/agentsmd-changes`. Helper off, app restarted: "Understood. I call the Research Team "the lab." ..." The answer is the notice: the ledger held the Comparison and no Read happened in that Turn. No Turn-detail control in the UI. Haiku |
 | [AGENTSMDCHANGES-10](agents-md-changes.md#agentsmdchanges-10--a-save-loop-and-the-cards-call-count) | 💰 | Pass |  | 2026-11-04 to 05, `0d3dbabe` + uncommitted `feat/agentsmd-changes`. 36 saves 5 s apart (23:22:43 to 23:25:39); card 9, 9, 9, then 10 of 20 after quiet; Leo described one net change. Haiku |
 | [AGENTSMDCHANGES-11](agents-md-changes.md#agentsmdchanges-11--a-waiting-turn-holds-the-agents-other-room) | 💰 | Pass |  | 2026-11-04 to 05, `0d3dbabe` + uncommitted `feat/agentsmd-changes`. Holding clause Pass by timestamps (8.7 s wait; Room B reply 2.3 s after Room A's). Stop during a wait Pass on the build after the fix. OPEN: Stop just after the prompt was published is not settled. Haiku |
+| [AGCONN-01](agent-connectors.md#agconn-01--a-new-agent-has-account-connectors-off) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-02](agent-connectors.md#agconn-02--turning-on-asks-first-and-cancel-leaves-it-off) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-03](agent-connectors.md#agconn-03--give-access-restarts-the-agent-and-records-it-in-the-feed) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-04](agent-connectors.md#agconn-04--turning-off-applies-at-once-and-a-rename-drops-access) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-05](agent-connectors.md#agconn-05--an-adapter-huddle-cannot-control-shows-text-not-a-switch) |  | Skipped |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-06](agent-connectors.md#agconn-06--the-one-time-notice-shows-after-an-upgrade-and-stays-dismissed) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-07](agent-connectors.md#agconn-07--a-new-agent-lists-no-claudeai-tool-by-turn-3) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-08](agent-connectors.md#agconn-08--with-the-switch-on-the-connectors-appear-and-every-use-asks-first) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-09](agent-connectors.md#agconn-09--an-agent-cannot-switch-its-own-connectors-on) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-10](agent-connectors.md#agconn-10--a-turn-running-when-the-switch-flips) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-11](agent-connectors.md#agconn-11--a-connector-call-held-past-the-wait) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-12](agent-connectors.md#agconn-12--the-switch-flipped-while-a-card-is-open) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-13](agent-connectors.md#agconn-13--hostile-arguments) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |

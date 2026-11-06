@@ -66,6 +66,23 @@ public sealed class TeamDuplicatorTests
         Assert.Equal([Source], f.Identity("Ada").Teams);
     }
 
+    /// <summary>A source Agent with account connectors on is hired afresh: every new Agent is off (AgentConnectors spec T-9, section 10).</summary>
+    [Fact]
+    public void Duplicate_SourceWithConnectorsOn_NewAgentsAreOff()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        f.Personas.SetConnectors("Ada", true);
+        Assert.True(f.Personas.Get("Ada")?.Connectors);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.NotEmpty(result.Hired);
+        Assert.All(result.Hired, name => Assert.False(f.Personas.Get(name)?.Connectors));
+        Assert.True(f.Personas.Get("Ada")?.Connectors);
+    }
+
     /// <summary>Nothing from the source Team's Library folder appears in the new Team's folder.</summary>
     [Fact]
     public void Duplicate_SourceLibraryFiles_NotCopied()

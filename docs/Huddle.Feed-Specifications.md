@@ -256,6 +256,7 @@ pins the pairing and is unit-tested for every value.
 | `HelperPaused` | `helper-paused` | `HelperFeed` | Yes | `helper:<id>` | `HelperPausedPayload(HelperId, Name, DailyCap, Granted)` |
 | `HelperFailing` | `helper-failing` | `HelperFeed` | Yes | `helper:<id>` | `HelperFailingPayload(HelperId, Name, Failures, LastError)` |
 | `AgentsMdChangeSkipped` | `agents-md-change-skipped` | `AgentsMdChangeHelper` | No | `helper:<id>` | `AgentsMdChangeSkippedPayload(HelperId, Name, Path, Reason)` |
+| `AgentConnectorsChanged` | `agent-connectors-changed` | `PersonaStore` | No | The Agent's name | `AgentConnectorsPayload(Name, On)` |
 
 The `helper-paused` and `helper-failing` rows and the `Reason` of `task-gate-on` are slice 3 ([Helpers in the Feed](Huddle.HelpersInFeed-Specifications.md)).
 A Helper's `task-gate-on` carries the actor kind `helper` and is resolved when the Human turns the gate off or decides, the Task waits in Needs You, or it

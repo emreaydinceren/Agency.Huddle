@@ -29,6 +29,34 @@ public sealed class ElicitationCardTests
 {
     private static readonly TimeSpan BoundedWait = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// A connector approval's arguments came from the Agent's request, so they are hostile: markup, Markdown and bidi controls
+    /// render as literal text under a line that says whose words they are, and the card has no image or emphasis element.
+    /// </summary>
+    [Fact]
+    public async Task ConnectorApproval_HostileArguments_RenderAsPlainText()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        Room room = await fixture.CreateRoomAsync([nova], ct);
+        string raw = """{"body":"<img src=x onerror=alert(1)> **bold** [x](http://evil) ‮evil"}""";
+        PermissionRequestContext context = new("s", new ToolCallInfo("c", "Send", ToolKind.Other, ToolCallStatus.Pending, raw, "mcp__claude_ai_Gmail__send"), []);
+        Assert.True(Agency.Huddle.App.Elicitation.ElicitationSchemaReader.TryRead(Agency.Huddle.App.Acp.ConnectorApprovalForm.Build("Nova", context), out ElicitationForm? form, out _));
+        Assert.NotNull(form);
+        _ = fixture.Elicitations.Add(room.Id, nova.Id, nova.Name, form);
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        string shown = cut.Find(".elicitation-card-untrusted-text").TextContent;
+        Assert.Contains("<img src=x onerror=alert(1)> **bold** [x](http://evil)", shown, StringComparison.Ordinal); // contains-ok: literal text
+        Assert.DoesNotContain('‮', shown);
+        Assert.Equal("What Nova asked for, in the Agent's own words (Huddle has not checked them):", cut.Find(".elicitation-card-untrusted-label").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".elicitation-card img, .elicitation-card strong, .elicitation-card a"));
+    }
+
     /// <summary>E-5: every waiting card of the Room is shown, in arrival order, each its own labelled region headed by its asker.</summary>
     [Fact]
     public async Task TwoCards_RenderInArrivalOrder_EachAsItsOwnRegionHeadedByItsAsker()

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Profile;
@@ -72,6 +73,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     private readonly PersonaModelStore models;
     private readonly PersonaEffortStore efforts;
     private readonly PersonaWorkModeStore workModes;
+    private readonly PersonaConnectorsStore? connectors;
+    private readonly IFeedPublisher? feed;
     private readonly ILogger<PersonaStore> logger;
     private readonly IHumanIdentity? human;
     private readonly Lock watchGate = new();
@@ -115,13 +118,17 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="workModes">The SQLite-backed store for each Persona's chosen Work Mode.</param>
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
     /// <param name="human">The Human's live identity (rules.md); built by hand without one, no Agent Name is refused for matching it.</param>
+    /// <param name="connectors">The SQLite-backed store of which Personas may use the account connectors; built by hand without one, every Persona reads as off and <see cref="SetConnectors"/> throws.</param>
+    /// <param name="feed">Where a connectors change is recorded for the Human; without one nothing is recorded.</param>
     public PersonaStore(
         AgentPaths agentPaths,
         PersonaModelStore models,
         PersonaEffortStore efforts,
         PersonaWorkModeStore workModes,
         ILogger<PersonaStore> logger,
-        IHumanIdentity? human = null)
+        IHumanIdentity? human = null,
+        PersonaConnectorsStore? connectors = null,
+        IFeedPublisher? feed = null)
     {
         ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(models);
@@ -135,6 +142,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         this.workModes = workModes;
         this.logger = logger;
         this.human = human;
+        this.connectors = connectors;
+        this.feed = feed;
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
         // to watch from the moment the app starts, even before any Persona has been added.
@@ -301,7 +310,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // both PersonaSupervisor and the razor page already go through Get. Adapter is not part of
         // that join - unlike Model and Effort, it travels with the file itself (Spec §7.1), so it
         // is carried straight off the entry rather than looked up in a store.
-        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter, this.workModes.Get(entry.Name));
+        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter, this.workModes.Get(entry.Name), this.connectors?.IsOn(entry.Name) ?? false);
     }
 
     /// <summary>
@@ -372,6 +381,9 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             Directory.CreateDirectory(this.Paths.AgentFolder(identity.Name));
             AtomicFile.WriteText(path, text);
+
+            // A new Agent starts with the connectors off (spec 6.3), whatever row a file deleted outside Remove left behind.
+            this.connectors?.Remove(entry.Name);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
             this.workModes.Set(entry.Name, workMode);
@@ -438,6 +450,10 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 this.models.Remove(current.Name);
                 this.efforts.Remove(current.Name);
                 this.workModes.Remove(current.Name);
+                this.connectors?.Remove(current.Name);
+
+                // The target name starts off as well: a stale row under it must not grant the renamed Agent access.
+                this.connectors?.Remove(entry.Name);
             }
 
             this.models.Set(entry.Name, model);
@@ -513,8 +529,61 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         this.models.Remove(current.Name);
         this.efforts.Remove(current.Name);
         this.workModes.Remove(current.Name);
+        this.connectors?.Remove(current.Name);
 
         this.RefreshIndexAndNotify();
+    }
+
+    /// <summary>When the Human switched account connectors on for a Persona, or <see langword="null"/> when they are off.</summary>
+    /// <param name="name">The Persona's Name.</param>
+    /// <returns>The moment, in UTC, or <see langword="null"/>.</returns>
+    public DateTimeOffset? ConnectorsEnabledAt(string name) => this.connectors?.EnabledAt(name);
+
+    /// <summary>
+    /// Switches the account connectors (the claude.ai sign-in's mail, files and calendar) on or off for one
+    /// Persona. The only writer of <see cref="PersonaConnectorsStore"/>: no Agent Tool, proposal or
+    /// frontmatter key reaches it (docs/Huddle.AgentConnectors-Specifications.md section 6). A change
+    /// raises <see cref="PersonasChanged"/> once, so the supervisor restarts the host and the new session
+    /// <c>_meta</c> takes the setting; the same value again does nothing. Records the change in the Feed.
+    /// </summary>
+    /// <param name="name">The Persona's Name.</param>
+    /// <param name="enabled"><see langword="true"/> to allow the connectors, <see langword="false"/> to withdraw them.</param>
+    /// <exception cref="ChatException">No Persona has that Name.</exception>
+    /// <exception cref="InvalidOperationException">The store was built without a connectors store.</exception>
+    public void SetConnectors(string name, bool enabled)
+    {
+        PersonaConnectorsStore store = this.connectors ?? throw new InvalidOperationException("This PersonaStore has no connectors store.");
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
+        string personaName;
+
+        lock (this.writeGate)
+        {
+            PersonaEntry current = this.index.ByName(name) ?? throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' does not exist.");
+            if (store.IsOn(current.Name) == enabled)
+            {
+                return;
+            }
+
+            personaName = current.Name;
+            store.Set(personaName, enabled);
+            change = this.PublishFreshIndex();
+        }
+
+        this.NotifyChanged(change);
+        this.PostConnectorsChanged(personaName, enabled);
+    }
+
+    private void PostConnectorsChanged(string personaName, bool enabled)
+    {
+        try
+        {
+            this.feed?.Post(new FeedMessage(FeedSourceType.AgentConnectorsChanged, personaName, new FeedActor(FeedActorKind.Human, "You"), false, new AgentConnectorsPayload(personaName, enabled)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The Feed is a record for the Human, not part of the switch: a failed post must not undo it.
+            this.logger.LogWarning(ex, "The Feed could not record the connectors change for {Persona}.", personaName);
+        }
     }
 
     /// <summary>The absolute path of a Persona's file, at whichever path it was actually discovered under, for the "open in default editor" feature.</summary>
@@ -1026,6 +1095,13 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         if (change is not { } value)
         {
             return;
+        }
+
+        // A Persona file that vanished (deleted or moved outside Remove, seen by a rescan) takes its connectors row with it, so a
+        // later Agent of the same name cannot inherit the access.
+        foreach (PersonaEntry gone in value.Previous.Entries.Where(entry => value.Updated.ByName(entry.Name) is null))
+        {
+            this.connectors?.Remove(gone.Name);
         }
 
         // PersonaRenamed BEFORE PersonasChanged - see that event's own remarks for why the ordering

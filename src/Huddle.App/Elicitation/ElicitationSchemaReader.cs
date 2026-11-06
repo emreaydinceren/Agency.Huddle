@@ -39,7 +39,7 @@ internal static partial class ElicitationSchemaReader
         try
         {
             using JsonDocument document = JsonDocument.Parse(request.RequestedSchemaJson);
-            form = ReadForm(document.RootElement, request.Message, out problem);
+            form = ReadForm(document.RootElement, request.Message, out problem)?.WithDetail(request.UntrustedDetail);
             return form is not null;
         }
         catch (JsonException)

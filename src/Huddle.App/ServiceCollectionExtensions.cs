@@ -388,6 +388,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RawBaselineStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
+        services.AddSingleton<PersonaConnectorsStore>();
+        services.AddSingleton<ConnectorsNoticeStore>();
         services.AddSingleton<PersonaSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
         services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
@@ -846,6 +848,7 @@ public static class ServiceCollectionExtensions
         // guarantees the supervisor's first reconciliation already sees the Chief of Staff the
         // seeder just wrote, rather than racing a later PersonasChanged (Spec §6.12 Implementation
         // notes).
+        services.AddHostedService<ConnectorsNoticeDecider>();
         services.AddHostedService<BuiltinAgentSeeder>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair

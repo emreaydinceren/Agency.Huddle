@@ -39,6 +39,7 @@ internal sealed class BuiltinAgentReset(PersonaStore personas)
         var text = PersonaFrontmatter.WriteScalarField(BuiltinAgent.DefaultText, "name", currentName);
         text = PersonaFrontmatter.WriteScalarField(text, "alias", alias);
 
+        personas.SetConnectors(currentName, false);
         return personas.Update(currentName, text, model: null, effort: null, workMode: null);
     }
 }

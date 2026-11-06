@@ -191,7 +191,7 @@ internal static class SessionUpdateMapper
         }
     }
 
-    internal static PermissionRequestContext MapPermission(dotacp.protocol.RequestPermissionRequest request)
+    internal static PermissionRequestContext MapPermission(dotacp.protocol.RequestPermissionRequest request, IElicitationScope? scope = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -203,7 +203,10 @@ internal static class SessionUpdateMapper
             toolCall.Title,
             SessionUpdateMapper.MapToolKind(toolCall.Kind),
             SessionUpdateMapper.MapToolCallStatus(toolCall.Status),
-            SessionUpdateMapper.SerializeRaw(toolCall.RawInput));
+            SessionUpdateMapper.SerializeRaw(toolCall.RawInput),
+            SessionUpdateMapper.ReadClaudeCodeToolName(toolCall.Meta),
+            SessionUpdateMapper.ReadClaudeCodeMcpServerName(toolCall.Meta),
+            SessionUpdateMapper.ReadClaudeCodeMcpServerSource(toolCall.Meta));
 
         List<PermissionOptionInfo> options = new List<PermissionOptionInfo>();
         foreach (dotacp.protocol.PermissionOption option in request.Options)
@@ -217,7 +220,7 @@ internal static class SessionUpdateMapper
         }
 
 #pragma warning disable HAA0601 // The protocol id is a struct with an implicit conversion to string: a method call, not a boxing conversion.
-        return new PermissionRequestContext((string)request.SessionId, toolCallInfo, options);
+        return new PermissionRequestContext((string)request.SessionId, toolCallInfo, options, scope);
 #pragma warning restore HAA0601
     }
 
@@ -307,6 +310,35 @@ internal static class SessionUpdateMapper
         }
 
         return fields["toolName"] is Newtonsoft.Json.Linq.JValue { Value: string name } ? name : null;
+    }
+
+    /// <summary>
+    /// Reads the MCP server's name from <c>_meta.claudeCode.mcpServer.name</c>, which the Adapter sets on a permission request for an
+    /// <c>mcp__*</c> tool. The name is the config key as authored, so it is untrusted text.
+    /// </summary>
+    /// <param name="meta">The tool call's <c>_meta</c>, or <see langword="null"/> when the request carries none.</param>
+    /// <returns>The server name, or <see langword="null"/> when it is absent or not a string.</returns>
+    internal static string? ReadClaudeCodeMcpServerName(Dictionary<string, object>? meta) => ReadClaudeCodeMcpServerField(meta, "name");
+
+    /// <summary>
+    /// Reads where the MCP server's definition came from, <c>_meta.claudeCode.mcpServer.source</c> (<c>sdk</c>, <c>claudeai</c>, <c>project</c>,
+    /// an open set). The Adapter forwards it so a client can key trust on it instead of on the name.
+    /// </summary>
+    /// <param name="meta">The tool call's <c>_meta</c>, or <see langword="null"/> when the request carries none.</param>
+    /// <returns>The source, or <see langword="null"/> when it is absent or not a string.</returns>
+    internal static string? ReadClaudeCodeMcpServerSource(Dictionary<string, object>? meta) => ReadClaudeCodeMcpServerField(meta, "source");
+
+    private static string? ReadClaudeCodeMcpServerField(Dictionary<string, object>? meta, string field)
+    {
+        if (meta is null
+            || !meta.TryGetValue("claudeCode", out object? claudeCode)
+            || claudeCode is not Newtonsoft.Json.Linq.JObject fields
+            || fields["mcpServer"] is not Newtonsoft.Json.Linq.JObject server)
+        {
+            return null;
+        }
+
+        return server[field] is Newtonsoft.Json.Linq.JValue { Value: string text } ? text : null;
     }
 
     /// <summary>

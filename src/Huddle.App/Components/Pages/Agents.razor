@@ -3,6 +3,7 @@
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Data
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Tasks
 @inject PersonaStore Personas
@@ -34,6 +35,15 @@
                 }
             </MudSelect>
         </MudToolBar>
+    }
+
+    @* P1a: the one-time notice for installs that upgraded with Agents already in place (docs/Huddle.AgentConnectors-Specifications.md
+       section 13). Dismissing it is stored, so it never returns. *@
+    @if (this.showConnectorsNotice)
+    {
+        <MudAlert role="status" Severity="Severity.Info" Dense="true" ShowCloseIcon="true" CloseIconClicked="this.DismissConnectorsNotice" Class="mb-4 agents-connectors-notice">
+            Account connectors are now off for every Agent. An Agent that used your mail, files or calendar will not find them until you turn them on: open the Agent and use the Account connectors switch.
+        </MudAlert>
     }
 
     @* Above the list on purpose: a required-field decision only pays off if the file that fails to
@@ -116,6 +126,8 @@
     // group heading, the filter's own options and a tile's Title/Alias never read from three
     // different moments in time.
     private IReadOnlyList<PersonaEntry> entries = [];
+    private bool showConnectorsNotice;
+    private ConnectorsNoticeStore? connectorsNotice;
     private IReadOnlyList<RejectedPersonaFile> rejectedFiles = [];
     private IReadOnlyList<string> teams = [];
     private string selectedTeam = string.Empty;
@@ -146,6 +158,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Resolved on demand, like the card's Snackbar: a page that renders without the store simply has no notice.
+        this.connectorsNotice = this.Services.GetService<ConnectorsNoticeStore>();
+        this.showConnectorsNotice = this.connectorsNotice?.IsShown ?? false;
         this.Personas.PersonasChanged += this.OnPersonasChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
 
@@ -161,6 +176,12 @@
         // unsubscribe in Dispose... the same reasoning applies to any singleton's event.").
         this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
         await this.LoadAsync();
+    }
+
+    private void DismissConnectorsNotice()
+    {
+        this.connectorsNotice?.Dismiss();
+        this.showConnectorsNotice = false;
     }
 
     public void Dispose()

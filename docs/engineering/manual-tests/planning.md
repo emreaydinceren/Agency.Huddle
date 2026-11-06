@@ -66,6 +66,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 41 | [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | 10 | 4 | 1.7h |
 | 42 | [Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app](second-brain-zero.md) | 27 | 23 | 7.8h |
 | 43 | [AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's wording, `/compact`, a real restart and a save loop](agents-md-changes.md) | 11 | 10 | 3.1h |
+| 44 | [Account connectors: the default off, the confirm, the switch, the Feed item, the Adapter text, the notice and the paid log checks](agent-connectors.md) | 10 | 4 | 1.8h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
