@@ -23,7 +23,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 2. **Reproduce**: the developer writes a test that fails on the current code. Done when the failing test is recorded as Evidence.
 3. **Fix**: the developer changes the code until the test passes. Done when the build and the tests pass locally.
 4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. Done when both are recorded.
-5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met.
+5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
 

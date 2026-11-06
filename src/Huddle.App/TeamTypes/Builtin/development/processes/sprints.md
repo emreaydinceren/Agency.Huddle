@@ -23,7 +23,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 2. **In progress**: the developer works the Task and its tests. Done when the build and the tests pass locally.
 3. **Review**: a reviewer reads the diff. Done when no open finding remains.
 4. **Verify**: QA checks the acceptance line and posts an Evidence line. Done when that line exists.
-5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met.
+5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
 

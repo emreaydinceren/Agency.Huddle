@@ -1445,8 +1445,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="decision">The batch's decision, if any.</param>
     /// <param name="note">The note given with it.</param>
     /// <returns>The sentence, or <see langword="null"/> when there is nothing to quote.</returns>
-    private static string? DecisionSentence(TaskItem task, Agency.Huddle.App.Tasks.HumanGate.TaskDecision? decision, string? note) => decision switch
+    /// <param name="toManager">Whether the recipient is the Team's manager: the assignee may be someone who can't do the Action (a reviewer can't merge), so the manager is told to hand it to whoever can.</param>
+    private static string? DecisionSentence(TaskItem task, Agency.Huddle.App.Tasks.HumanGate.TaskDecision? decision, string? note, bool toManager = false) => decision switch
     {
+        Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept when task.Action is { } action && toManager =>
+            $"Accepted: {NeutraliseMentions(action)}. If you or the assignee can't do it, reassign {task.Id} to whoever can. Do not ask the Human; they have accepted it.",
         Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept when task.Action is { } action =>
             $"Accepted: go ahead and {NeutraliseMentions(action)}, then move {task.Id} to Done.",
         Agency.Huddle.App.Tasks.HumanGate.TaskDecision.RequestChanges when note is not null =>
@@ -1491,7 +1494,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     private string WakeText(Batch batch, TaskItem latest, string assigneeName)
     {
         string text = this.Render(latest, batch.Actor, assigneeName, batch.Entries);
-        if (DecisionSentence(latest, batch.Decision, batch.Note) is { } sentence)
+        bool toManager = this.teams?.Find(latest.Location.Team)?.Manager is { Length: > 0 } manager
+            && string.Equals(manager, assigneeName, StringComparison.OrdinalIgnoreCase);
+        if (DecisionSentence(latest, batch.Decision, batch.Note, toManager) is { } sentence)
         {
             text = text + "\n" + sentence;
         }
