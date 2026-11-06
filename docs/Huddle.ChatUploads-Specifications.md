@@ -227,8 +227,9 @@ unmounts the composer (ADR-0045).
   dispatches `change`, so Blazor's `InputFile` handles them exactly as a pick.
 - **Handler.** For each `IBrowserFile`: add a chip, then
   `ChatUploadService.SaveAsync(roomId, file.Name, file.OpenReadStream(maxBytes, ct), ct)`
-  with `maxBytes = MaxUploadBytes + 1` so the writer, not Blazor, reports the cap. Up to three
-  files upload at once; the rest wait.
+  with `maxBytes = MaxUploadBytes + 1` so the writer, not Blazor, reports the cap. Files upload
+  one at a time, in the order given; every file shows its chip at once and the rest wait. Uploads
+  share one connection, and three together timed out in two manual runs (issue 387).
 - **Chips.** Above the textarea, a row of `MudChip`s: an icon by kind, the saved name, the size,
   a progress bar while uploading, an error colour and tooltip when refused, and a close icon
   (*Remove {name}*). A refused chip stays until the Human removes it, so the reason is seen.

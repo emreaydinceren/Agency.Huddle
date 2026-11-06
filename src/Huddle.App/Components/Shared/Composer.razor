@@ -223,7 +223,7 @@
     private void OnPendingChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>
-    /// Saves every picked file as a chip, three at a time (ChatUploads spec 6.5), then resets the picker so the
+    /// Saves every picked file as a chip at once and reads them one at a time (ChatUploads spec 6.5), then resets the picker so the
     /// same file can be picked again. A refusal that leaves no chip (the count cap) is shown as the status line.
     /// </summary>
     /// <param name="files">The files the Human picked, dropped or pasted.</param>
@@ -241,21 +241,17 @@
         long maxBytes = cap + 1;
         this.errorText = null;
         this.infoText = null;
-        await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = 3 }, async (file, ct) =>
-        {
-            // OpenReadStream throws for a file past its limit, so an oversized file is refused before a chip is reserved.
-            if (file.Size > cap)
-            {
-                this.errorText = LibraryFileService.UploadTooLargeMessage(file.Name, cap);
-                return;
-            }
 
-            PendingUpload result = await uploads.AddAsync(roomId, file.Name, token => file.OpenReadStream(maxBytes, token), ct);
-            if (result.State == UploadState.Failed && uploads.For(roomId).All(chip => chip.Id != result.Id))
-            {
-                this.errorText = result.Error;
-            }
-        });
+        // Every file gets its chip at once; one turn at a time reads the bytes, in the order given. Each call runs up to
+        // its wait synchronously, so the turns are taken in list order.
+        using SemaphoreSlim turn = new(1, 1);
+        List<Task> saves = [];
+        foreach (IBrowserFile file in files)
+        {
+            saves.Add(this.SaveFileAsync(uploads, roomId, file, turn, cap, maxBytes));
+        }
+
+        await Task.WhenAll(saves);
 
         if (this.picker is not null)
         {
@@ -263,6 +259,29 @@
         }
 
         this.StateHasChanged();
+    }
+
+    /// <summary>Saves one picked file once it has the turn; a failure is shown on its chip or as the status line and never stops the other files.</summary>
+    /// <param name="uploads">The pending chips.</param>
+    /// <param name="roomId">The Room the file is for.</param>
+    /// <param name="file">The picked file.</param>
+    /// <param name="turn">Lets one file at a time read its bytes.</param>
+    /// <param name="cap">The most bytes a file may have.</param>
+    /// <param name="maxBytes">The read limit to hand the browser, one past the cap.</param>
+    private async Task SaveFileAsync(PendingUploads uploads, string roomId, IBrowserFile file, SemaphoreSlim turn, long cap, long maxBytes)
+    {
+        // OpenReadStream throws for a file past its limit, so an oversized file is refused before a chip is reserved.
+        if (file.Size > cap)
+        {
+            this.errorText = LibraryFileService.UploadTooLargeMessage(file.Name, cap);
+            return;
+        }
+
+        PendingUpload result = await uploads.AddAsync(roomId, file.Name, token => file.OpenReadStream(maxBytes, token), turn, CancellationToken.None);
+        if (result.State == UploadState.Failed && uploads.For(roomId).All(chip => chip.Id != result.Id))
+        {
+            this.errorText = result.Error;
+        }
     }
 
     /// <summary>Drops a chip and deletes its file.</summary>

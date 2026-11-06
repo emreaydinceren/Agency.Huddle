@@ -249,6 +249,164 @@ public sealed class ComposerUploadTests
         cut.WaitForAssertion(() => Assert.False(cut.Find("button[aria-label='Send message']").HasAttribute("disabled")));
     }
 
+    /// <summary>
+    /// Three files picked together all show a chip at once, but only one stream is open at a time, the files are
+    /// read in the order given and all three are saved. Three together timed out in two manual runs (issue 387).
+    /// </summary>
+    [Fact]
+    public async Task Pick_ThreeFiles_ShowAllChipsAtOnceAndReadOneAtATimeInOrder()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Rig rig = await Rig.BuildAsync(ct);
+        IRenderedComponent<ContainerFragment> cut = rig.Render();
+        OpenStreams probe = new();
+        GatedFile[] files = [new("a.txt", probe, gated: true), new("b.txt", probe, gated: true), new("c.txt", probe, gated: true)];
+        MudBlazor.MudFileUpload<IReadOnlyList<IBrowserFile>> picker = cut.FindComponent<MudBlazor.MudFileUpload<IReadOnlyList<IBrowserFile>>>().Instance;
+
+        Task picked = cut.InvokeAsync(() => picker.FilesChanged.InvokeAsync(files));
+        await files[0].Opened.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".upload-chip").Count));
+
+        // The second file must not open while the first is still being read. A parallel run opens it at once, so a
+        // short wait is enough to see it; the wait only costs time when the code is right.
+        await Task.WhenAny(files[1].Opened.Task, Task.Delay(TimeSpan.FromSeconds(1), ct));
+        Assert.False(files[1].Opened.Task.IsCompleted);
+
+        files[0].Gate.SetResult();
+        await files[1].Opened.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
+        files[1].Gate.SetResult();
+        await files[2].Opened.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
+        files[2].Gate.SetResult();
+        await picked.WaitAsync(TimeSpan.FromSeconds(10), ct);
+
+        Assert.Equal(1, probe.MostOpen);
+        Assert.Equal(["a.txt", "b.txt", "c.txt"], probe.Order);
+        Assert.All(rig.Pending.For(rig.RoomId), chip => Assert.Equal(UploadState.Done, chip.State));
+        Assert.Equal(3, rig.Pending.For(rig.RoomId).Count);
+    }
+
+    /// <summary>A file that cannot be opened ends as a failed chip and the files after it are still saved.</summary>
+    [Fact]
+    public async Task Pick_MiddleFileFails_LaterFileIsStillSaved()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Rig rig = await Rig.BuildAsync(ct);
+        IRenderedComponent<ContainerFragment> cut = rig.Render();
+        OpenStreams probe = new();
+        GatedFile[] files = [new("a.txt", probe, gated: false), new("b.txt", probe, gated: false, failsToOpen: true), new("c.txt", probe, gated: false)];
+        MudBlazor.MudFileUpload<IReadOnlyList<IBrowserFile>> picker = cut.FindComponent<MudBlazor.MudFileUpload<IReadOnlyList<IBrowserFile>>>().Instance;
+
+        await cut.InvokeAsync(() => picker.FilesChanged.InvokeAsync(files)).WaitAsync(TimeSpan.FromSeconds(10), ct);
+
+        IReadOnlyList<PendingUpload> chips = rig.Pending.For(rig.RoomId);
+        Assert.Equal(3, chips.Count);
+        Assert.Equal([UploadState.Done, UploadState.Failed, UploadState.Done], chips.Select(static chip => chip.State));
+    }
+
+    /// <summary>Counts how many fake browser streams are open now and the most there have been together.</summary>
+    private sealed class OpenStreams
+    {
+        private readonly Lock gate = new();
+        private int open;
+
+        public int MostOpen { get; private set; }
+
+        public List<string> Order { get; } = [];
+
+        public void Opened(string name)
+        {
+            lock (this.gate)
+            {
+                this.open++;
+                this.MostOpen = Math.Max(this.MostOpen, this.open);
+                this.Order.Add(name);
+            }
+        }
+
+        public void Closed()
+        {
+            lock (this.gate)
+            {
+                this.open--;
+            }
+        }
+    }
+
+    /// <summary>A picked file whose stream can hold its first read until the test opens <see cref="Gate"/>.</summary>
+    private sealed class GatedFile(string name, OpenStreams probe, bool gated, bool failsToOpen = false) : IBrowserFile
+    {
+        public TaskCompletionSource Opened { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public string Name => name;
+
+        public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
+
+        public long Size => 5;
+
+        public string ContentType => "text/plain";
+
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default)
+        {
+            if (failsToOpen)
+            {
+                throw new IOException("The browser stream timed out.");
+            }
+
+            probe.Opened(name);
+            this.Opened.TrySetResult();
+            return new GatedStream(new MemoryStream("hello"u8.ToArray()), gated ? this.Gate.Task : Task.CompletedTask, probe);
+        }
+    }
+
+    /// <summary>A read-only stream that waits for a gate before its first read and reports when it is closed.</summary>
+    private sealed class GatedStream(MemoryStream inner, Task gate, OpenStreams probe) : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            await gate.WaitAsync(cancellationToken);
+            return await inner.ReadAsync(buffer, cancellationToken);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                probe.Closed();
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
     /// <summary>A real Room, upload stack and Composer context over one temp data directory.</summary>
     private sealed class Rig : IAsyncDisposable
     {
