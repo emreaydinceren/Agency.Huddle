@@ -1,7 +1,7 @@
 ---
 title: 'Sprints'
 template: 'sprints@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge']
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge']
 retro: { every: 10, unit: 'done-tasks' }
 digest: { every: 1, unit: 'days' }
 checkCommand: 'dotnet test'
@@ -44,6 +44,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
+- `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
 
 ## Definition of Done
 

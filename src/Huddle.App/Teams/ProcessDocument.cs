@@ -213,6 +213,7 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge,
         GateId.SpecApprovedBeforeBuild,
         GateId.FailingTestBeforeFix,
+        GateId.AcceptBeforeMerge,
     ];
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
@@ -224,6 +225,7 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "checks-before-merge",
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
+        GateId.AcceptBeforeMerge => "accept-before-merge",
         GateId.HumanGate => "human-gate",
         GateId.ProofIncomplete => "proof-incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -240,6 +242,7 @@ internal sealed record ProcessDocument(
         GateId.ChecksBeforeMerge => "Checks before merge",
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
+        GateId.AcceptBeforeMerge => "Accept before merge",
         GateId.HumanGate => "Human gate",
         GateId.ProofIncomplete => "Proof incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.

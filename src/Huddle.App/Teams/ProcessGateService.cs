@@ -25,6 +25,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.ChecksBeforeMerge => "Code can then be merged or pushed without a passing check run on record.",
         GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
         GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
+        GateId.AcceptBeforeMerge => "Code can then be merged into main without the Human's Accept.",
         GateId.HumanGate => "A Task can then reach Done without the Human's acceptance.",
         GateId.ProofIncomplete => "A Task can then reach Needs You with its Proof incomplete.",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.

@@ -557,7 +557,7 @@ session in a new Room.
    workspace: '<your $bake path>'
    owns: 'Route here for building and changing software, including tools for the bakery.'
    onboarded: true
-   gates: ['qa-evidence-before-done', 'checks-before-merge']
+   gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge']
    retro: { every: 10, unit: 'done-tasks' }
    checkCommand: 'dotnet test'
    template: 'lightweight-flow@1.0.0'
@@ -645,7 +645,7 @@ Select-String -Path "$data\logs\*.log" -Pattern 'checks-before-merge|merge gate'
 
 **Expect**: Ivy writes the code and tests on a branch and moves the Task to **Review**. Rex reports on the diff without
 editing files. Quinn runs the tests and posts an Evidence line with `dotnet test` and exit code 0. The branch is merged
-into `main` only after that line exists and you have pressed **Accept**. When the Proof is complete Huddle moves the Task to **Needs you** by itself; you do not have to ask, and no Agent asks you for sign-off in chat. The Task's Change log tells the story.
+into `main` only after that line exists and you have pressed **Accept**. When the Proof is complete Huddle moves the Task to **Needs you** by itself; you do not have to ask, and no Agent asks you for an Accept in chat. Any merge into `main` by any member of the Team waits for your Accept, because the Team's process carries `accept-before-merge`; the Task names the merge in its Action. The Task's Change log tells the story.
 
 **Pass if**: the merge follows the Evidence line and your **Accept**, a Task ends in **Done**, and Rex's commit count is 0.
 **Fail if**: the Task reaches Done with no Evidence, the merge comes before the Evidence, the merge comes before the Accept, you had to tell an Agent to move the Task to **Needs you**, or anyone edits the repository's `main` without a merge.

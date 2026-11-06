@@ -234,6 +234,285 @@ public sealed class ProcessMergeGateTests
         Assert.StartsWith("Cannot merge: Task ", refusal, StringComparison.Ordinal); // contains-ok: the full wording is pinned in RefusalFor_GatedUnacceptedTaskOfAssignee_RefusesMerge.
     }
 
+    private const string AcceptGate = "'accept-before-merge'";
+    private const string FeatureMerge = "git merge --no-ff feat/quote-calculator";
+
+    /// <summary>With the gate on and no accepted Task, a merge into main is refused even when no Task names a merge, and the refusal teaches the way forward.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateNoAcceptedTask_RefusesAndTeaches()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), TaskActors.Human(harness.Options.Value))).Task;
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.Equal(
+            $"Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in Task {task.Id}'s Action with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.",
+            gate.RefusalFor("Nova", FeatureMerge));
+        Assert.NotNull(gate.RefusalFor("Nova", "git push origin main"));
+    }
+
+    /// <summary>With no obvious Task the refusal names no Task but still says where the merge goes.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateNoTasks_RefusalNamesNoTask()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.StartsWith("Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in the Action of the Task this merge belongs to with update_task", gate.RefusalFor("Nova", FeatureMerge), StringComparison.Ordinal); // contains-ok: the tail is pinned in the test above.
+    }
+
+    /// <summary>Any member may merge once a Task of the Team has a valid Accept, not only the Task's assignee.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateTaskAcceptedForAnotherAssignee_AllowsMerge()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        AddGatedTask(harness, "Kai", gated: true, accepted: true, TaskState.NeedsYou);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>A feature branch taking main still runs under the gate.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateMergeOfMain_IsAllowed()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.Null(gate.RefusalFor("Nova", "git merge origin/main"));
+        Assert.Null(gate.RefusalFor("Nova", "git push -u origin feat/x"));
+    }
+
+    /// <summary>An Accept that took a Task with no Action straight to Done lets the merge run up to the last instant of the one-hour window.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateAcceptedStraightToDone_AllowsMergeAtTheWindowEdge()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        AcceptStraightToDone(harness);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+
+        clock.Advance(TimeSpan.FromHours(1));
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>One tick past the one-hour window the Accept no longer carries a merge.</summary>
+    [Fact]
+    public void RefusalFor_AcceptGateAcceptedStraightToDone_RefusesJustAfterTheWindow()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        AcceptStraightToDone(harness);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+
+        clock.Advance(TimeSpan.FromHours(1) + TimeSpan.FromTicks(1));
+
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    private static void AcceptStraightToDone(TaskToolHarness harness)
+    {
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, Assignee: "Nova") { HumanGate = true }, human)).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, new TaskActor(TaskActorKind.Agent, "Nova", "id"))).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, human)).Task;
+        Assert.Equal(TaskState.Done, task.Status);
+    }
+
+    /// <summary>The last live failure: an ungated Task in Review, merge refused, Action set, Task reaches Needs You by itself, Accept, merge allowed, Done.</summary>
+    [Fact]
+    public void RefusalFor_UngatedReviewTask_ActionLeadsToAcceptThenMerge()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskActor nova = new(TaskActorKind.Agent, "Nova", "id");
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), human)).Task;
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Action = Optional<string?>.Set("Merge feat/quote-calculator into main") }, null, nova));
+        task = Assert.IsType<TaskItem>(harness.Store.Get(task.Id));
+
+        Assert.Equal(TaskState.NeedsYou, task.Status);
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, human));
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, nova));
+        Assert.Equal(TaskState.Done, harness.Store.Get(task.Id)?.Status);
+    }
+
+    /// <summary>Spellings that put work on main are refused in a Team with the gate and no Accept.</summary>
+    /// <param name="command">The shell line.</param>
+    [Theory]
+    [InlineData("git push origin HEAD")]
+    [InlineData("git push -u origin HEAD")]
+    [InlineData("git push origin +main")]
+    [InlineData("git push origin 2>&1")]
+    [InlineData("git push origin HEAD:main")]
+    [InlineData("git push origin feat:main")]
+    [InlineData("git push --all origin")]
+    [InlineData("GIT_EDITOR=true git merge feat/x")]
+    [InlineData("bash -c \"git merge feat/x\"")]
+    [InlineData("pwsh -Command \"git merge feat/x\"")]
+    [InlineData("git merge -")]
+    [InlineData("git pull origin feat/x")]
+    [InlineData("git -C \"a(b)\" merge feat/x")]
+    public void RefusalFor_AcceptGateNoAccept_RefusesTheSpelling(string command)
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.NotNull(gate.RefusalFor("Nova", command));
+    }
+
+    /// <summary>Taking main into a feature branch, pushing a feature branch and pulling main are not held, whatever redirection or option surrounds them.</summary>
+    /// <param name="command">The shell line.</param>
+    [Theory]
+    [InlineData("git merge origin/main 2>&1")]
+    [InlineData("git merge -m \"sync\" main")]
+    [InlineData("git merge -X theirs main")]
+    [InlineData("git merge --no-ff -m sync origin/main")]
+    [InlineData("git push origin feat/x")]
+    [InlineData("git push -u origin HEAD:refs/heads/feat/x")]
+    [InlineData("git pull")]
+    [InlineData("git pull origin main")]
+    [InlineData("git pull --rebase origin main")]
+    public void RefusalFor_AcceptGateNoAccept_AllowsTheSpelling(string command)
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+
+        Assert.Null(gate.RefusalFor("Nova", command));
+    }
+
+    /// <summary>A valid Accept on an open Task carries a merge to the last instant of its 24 hours.</summary>
+    [Fact]
+    public void RefusalFor_AcceptOnOpenTask_AllowsMergeAtTwentyFourHours()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        _ = AddGatedTask(harness, "Kai", gated: true, accepted: true, TaskState.NeedsYou);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+
+        clock.Advance(TimeSpan.FromHours(24));
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>One tick past 24 hours the Accept is old: the merge is refused and the refusal says so and how to get a fresh one.</summary>
+    [Fact]
+    public void RefusalFor_AcceptOnOpenTask_RefusesJustAfterTwentyFourHours()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        TaskItem task = AddGatedTask(harness, "Kai", gated: true, accepted: true, TaskState.NeedsYou);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+
+        clock.Advance(TimeSpan.FromHours(24) + TimeSpan.FromTicks(1));
+
+        string? refusal = gate.RefusalFor("Nova", FeatureMerge);
+        Assert.StartsWith($"Cannot merge: the Human's Accept on Task {task.Id} is more than 24 hours old. Ask for a fresh one: move the Task to Needs You again with update_task", refusal, StringComparison.Ordinal); // contains-ok: the tail is the same wording as the other refusals.
+    }
+
+    /// <summary>A closed Task's Accept does not carry a merge.</summary>
+    [Fact]
+    public void RefusalFor_AcceptOnClosedTask_Refuses()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        TaskItem task = AddGatedTask(harness, "Kai", gated: true, accepted: true, TaskState.NeedsYou);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Close(task.Id, TaskActors.Human(harness.Options.Value)));
+
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>Both gates on: an Accept that took the Task straight to Done lets the merge through the checks gate too, on that Task's own Evidence.</summary>
+    [Fact]
+    public void RefusalFor_AcceptStraightToDoneWithEvidence_PassesBothGates()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskActor nova = new(TaskActorKind.Agent, "Nova", "id");
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, Assignee: "Nova") { HumanGate = true }, human)).Task;
+        _ = harness.Service.AddEvidence(task.Id, new EvidenceLine(Noon, "Nova", "dotnet test", 0, null, null, string.Empty), nova);
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, nova)).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, human)).Task;
+        Assert.Equal(TaskState.Done, task.Status);
+        ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge', 'accept-before-merge'", clock);
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>An Accept that left the Task open with an Action, followed by an Agent's move to Done within the hour, does not open the one-hour window.</summary>
+    [Fact]
+    public void RefusalFor_AcceptWithActionThenAgentDone_DoesNotOpenTheWindow()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskActor nova = new(TaskActorKind.Agent, "Nova", "id");
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, Assignee: "Nova") { HumanGate = true, Action = "Merge it" }, human)).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, nova)).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, human)).Task;
+        clock.Advance(TimeSpan.FromMinutes(5));
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, nova)).Task;
+        Assert.Equal(TaskState.Done, task.Status);
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>A Human setting the Action on a Task in Review does not move it to Needs You; only an Agent's write does.</summary>
+    [Fact]
+    public void Update_HumanSetsAction_DoesNotMoveToNeedsYou()
+    {
+        using TaskToolHarness harness = NewHarness();
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), human)).Task;
+
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Action = Optional<string?>.Set("Merge it") }, null, human));
+
+        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+    }
+
+    /// <summary>A Team without the gate keeps the assignee rule for real: the assignee's own unaccepted gated Task holds the merge, another member's does not.</summary>
+    [Fact]
+    public void RefusalFor_NoAcceptGateWithTasks_HoldsOnlyTheAssignee()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        _ = AddGatedTask(harness, "Kai", gated: true, accepted: false, TaskState.ToDo);
+        ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+
+        _ = AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.ToDo);
+
+        Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
     private static TaskItem AddGatedTask(TaskToolHarness harness, string assignee, bool gated, bool accepted, TaskState status)
     {
         TaskDraft draft = new("Quote calculator", Team, null, Assignee: assignee, Description: "Body") { HumanGate = gated, Action = gated ? "Merge it" : null };
@@ -263,7 +542,7 @@ public sealed class ProcessMergeGateTests
         Assert.IsType<TaskResult.Saved>(added);
     }
 
-    private static ProcessMergeGate Build(TaskToolHarness harness, TempDataDir dir, string gates)
+    private static ProcessMergeGate Build(TaskToolHarness harness, TempDataDir dir, string gates, TimeProvider? clock = null)
     {
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
@@ -275,6 +554,6 @@ public sealed class ProcessMergeGateTests
         };
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
         ProcessGateService service = new(catalog, folders, RoleFixtures.Types(dir));
-        return new ProcessMergeGate(harness.Personas, harness.Store, service, catalog);
+        return new ProcessMergeGate(harness.Personas, harness.Store, service, catalog, clock ?? new ManualTimeProvider(Noon));
     }
 }

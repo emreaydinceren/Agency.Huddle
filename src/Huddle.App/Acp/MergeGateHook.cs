@@ -79,12 +79,31 @@ internal static class MergeGateHook
             if (typeof command !== "string") return;
             const unquote = (word) => word.replace(/^["']+|["']+$/g, "");
             const isGit = (word) => /^(.*[\\/])?git(\.exe)?$/i.test(unquote(word));
-            const risky = command.split(/&&|\|\||[;&|\n()`]/).some((segment) => {
-              const words = segment.trim().split(/\s+/);
+            const split = (text) => {
+              const segments = [];
+              let words = [];
+              let word = "";
+              let inWord = false;
+              let quote = "";
+              const endWord = () => { if (inWord) { words.push(word); word = ""; inWord = false; } };
+              const endSegment = () => { endWord(); if (words.length) { segments.push(words); words = []; } };
+              for (const c of text) {
+                if (quote && c === quote) quote = "";
+                else if (quote) word += c;
+                else if (c === '"' || c === "'") { quote = c; inWord = true; }
+                else if (c === " " || c === "\t") endWord();
+                else if (";&|()`\r\n".includes(c)) endSegment();
+                else { word += c; inWord = true; }
+              }
+              endSegment();
+              return segments;
+            };
+            const isRisky = (text, depth) => split(text).some((words) => {
+              if (depth < 3 && words.some((word) => /\s/.test(word) && isRisky(word, depth + 1))) return true;
               const at = words.findIndex(isGit);
-              return at >= 0 && words.slice(at + 1).some((word) => /^(merge|push)$/i.test(unquote(word)));
+              return at >= 0 && words.slice(at + 1).some((word) => /^(merge|push|pull)$/i.test(unquote(word)));
             });
-            if (!risky) return;
+            if (!isRisky(command, 0)) return;
             process.stdout.write(JSON.stringify({
               hookSpecificOutput: {
                 hookEventName: "PreToolUse",

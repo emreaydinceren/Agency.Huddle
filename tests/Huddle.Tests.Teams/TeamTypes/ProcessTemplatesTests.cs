@@ -27,6 +27,7 @@ public sealed partial class ProcessTemplatesTests
     [
         "qa-evidence-before-done",
         "checks-before-merge",
+        "accept-before-merge",
         "spec-approved-before-build",
         "failing-test-before-fix",
     ];
@@ -177,14 +178,14 @@ public sealed partial class ProcessTemplatesTests
         Assert.Equal(processId + "@1.0.0", Scalar(file, "template"));
     }
 
-    /// <summary>Each process declares exactly the gates the plan gives it, and every gate is one of the four known ids.</summary>
+    /// <summary>Each process declares exactly the gates the plan gives it, and every gate is one of the five known ids.</summary>
     /// <param name="processId">The process file to check.</param>
     /// <param name="expectedGates">The expected gate ids, in file order.</param>
     [Theory]
-    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge" })]
-    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build" })]
-    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge" })]
-    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix" })]
+    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge" })]
+    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "accept-before-merge" })]
+    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge" })]
+    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix", "accept-before-merge" })]
     public void Process_Gates_AreExpectedKnownIds(string processId, string[] expectedGates)
     {
         ProcessFile file = LoadProcess(processId);

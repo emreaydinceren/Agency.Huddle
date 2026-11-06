@@ -14,8 +14,29 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="tasks">Supplies the Team's Task files, whose Evidence sections the gate reads.</param>
 /// <param name="gates">Decides the <c>checks-before-merge</c> gate.</param>
 /// <param name="catalog">Maps a Teams-line label to the Team, so a stale label is ignored.</param>
-internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, ProcessGateService gates, ITeamCatalog catalog) : IMergeGate
+/// <param name="timeProvider">The clock for the window after an Accept that went straight to Done; the system clock when <see langword="null"/>.</param>
+internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, ProcessGateService gates, ITeamCatalog catalog, TimeProvider? timeProvider = null) : IMergeGate
 {
+    /// <summary>
+    /// How long after an Accept that took a Task straight to Done its Team may still merge (a Task with no Action has nothing
+    /// left open to hold the Accept). A merge names no Task, so within this hour any merge by the Team is allowed.
+    /// </summary>
+    private static readonly TimeSpan AcceptedDoneWindow = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How long a valid Accept on an open Task carries a merge. A merge names no Task, so within this time another branch's
+    /// merge by the Team is allowed too; after it the Human must Accept again.
+    /// </summary>
+    private static readonly TimeSpan AcceptedOpenWindow = TimeSpan.FromHours(24);
+
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+
+    /// <summary>Whether the Human's Accept took the Task straight to Done less than <see cref="AcceptedDoneWindow"/> ago.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="now">The time now.</param>
+    private static bool InDoneWindow(TaskItem task, DateTimeOffset now) =>
+        Acceptance.AcceptedIntoDoneAt(task) is { } doneAt && now - doneAt <= AcceptedDoneWindow;
+
     /// <inheritdoc />
     public string? RefusalFor(string personaName, string command)
     {
@@ -45,7 +66,11 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
         return this.AcceptRefusalFor(personaName, identity, command);
     }
 
-    /// <summary>Refuses a merge into main while an open gated Task of the Persona has no valid Accept (issue #396).</summary>
+    /// <summary>
+    /// Refuses a merge into main that waits for the Human's Accept. In a Team with <c>accept-before-merge</c> it needs an
+    /// accepted Task of that Team, whoever runs it (issue #401); in any other Team it waits only while an open gated Task of
+    /// the Persona has no valid Accept (issue #396).
+    /// </summary>
     /// <param name="personaName">The Persona running the command.</param>
     /// <param name="identity">The Persona's identity, whose Teams line names its Teams.</param>
     /// <param name="command">The shell line.</param>
@@ -58,20 +83,92 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
         }
 
         HashSet<string> teams = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> acceptTeams = new(StringComparer.OrdinalIgnoreCase);
         foreach (string label in identity.Teams)
         {
             if (catalog.Find(label) is { } team)
             {
                 teams.Add(team.Name);
+                if (gates.EnabledGates(team.Name).Contains(GateId.AcceptBeforeMerge))
+                {
+                    acceptTeams.Add(team.Name);
+                }
             }
         }
 
+        return this.AcceptRequiredRefusal(personaName, acceptTeams) ?? this.AssigneeRefusal(personaName, teams, acceptTeams);
+    }
+
+    /// <summary>The refusal for a Team with <c>accept-before-merge</c> that has no accepted Task to merge, or <see langword="null"/>.</summary>
+    /// <param name="personaName">The Persona running the command.</param>
+    /// <param name="acceptTeams">The Persona's Teams that have the gate on.</param>
+    private string? AcceptRequiredRefusal(string personaName, HashSet<string> acceptTeams)
+    {
+        if (acceptTeams.Count == 0)
+        {
+            return null;
+        }
+
+        DateTimeOffset now = this.clock.GetUtcNow();
+        List<TaskItem> own = [];
+        TaskItem? old = null;
+        foreach (TaskItem task in tasks.All)
+        {
+            if (!acceptTeams.Contains(task.Location.Team))
+            {
+                continue;
+            }
+
+            AcceptanceInfo accepted = Acceptance.Of(task);
+            if (!task.Location.Closed && accepted.State == AcceptanceState.Valid && accepted.At is { } at)
+            {
+                if (now - at <= AcceptedOpenWindow)
+                {
+                    return null;
+                }
+
+                old ??= task;
+            }
+
+            if (InDoneWindow(task, now))
+            {
+                return null;
+            }
+
+            if (!task.Status.IsTerminal() && string.Equals(task.Assignee, personaName, StringComparison.OrdinalIgnoreCase))
+            {
+                own.Add(task);
+            }
+        }
+
+        if (old is not null)
+        {
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"Cannot merge: the Human's Accept on Task {old.Id} is more than 24 hours old. Ask for a fresh one: move the Task to Needs You again with update_task so the Human can Accept it. Do not ask for the Accept in chat.");
+        }
+
+        string where = own.Count == 1
+            ? string.Create(CultureInfo.InvariantCulture, $"Task {own[0].Id}'s Action")
+            : "the Action of the Task this merge belongs to";
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in {where} with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.");
+    }
+
+    /// <summary>The older rule, for Teams without the gate: an open gated Task of the Persona with no valid Accept holds the merge.</summary>
+    /// <param name="personaName">The Persona running the command.</param>
+    /// <param name="teams">All the Persona's Teams.</param>
+    /// <param name="acceptTeams">The ones with <c>accept-before-merge</c>, which the newer rule already decided.</param>
+    private string? AssigneeRefusal(string personaName, HashSet<string> teams, HashSet<string> acceptTeams)
+    {
         foreach (TaskItem task in tasks.All)
         {
             if (!task.Status.IsTerminal()
                 && task.IsGated
                 && string.Equals(task.Assignee, personaName, StringComparison.OrdinalIgnoreCase)
                 && teams.Contains(task.Location.Team)
+                && !acceptTeams.Contains(task.Location.Team)
                 && Acceptance.Of(task).State != AcceptanceState.Valid)
             {
                 return string.Create(
@@ -89,56 +186,8 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
     /// </summary>
     /// <param name="command">The shell line.</param>
     /// <returns><see langword="true"/> when the line would put work on main.</returns>
-    private static bool MergesIntoMain(string command)
-    {
-        foreach (List<string> words in WorkDirPermissionHandler.SplitSegments(command))
-        {
-            if (words.Count < 2 || !WorkDirPermissionHandler.IsGit(WorkDirPermissionHandler.Unquote(words[0])))
-            {
-                continue;
-            }
-
-            int index = 1;
-            while (index < words.Count && WorkDirPermissionHandler.Unquote(words[index]).StartsWith('-'))
-            {
-                string option = WorkDirPermissionHandler.Unquote(words[index]);
-                index += WorkDirPermissionHandler.GitOptionsWithValue.Contains(option, StringComparer.Ordinal) ? 2 : 1;
-            }
-
-            if (index >= words.Count)
-            {
-                continue;
-            }
-
-            List<string> args = [.. words.Skip(index + 1).Select(WorkDirPermissionHandler.Unquote).Where(static word => !word.StartsWith('-'))];
-            string subcommand = WorkDirPermissionHandler.Unquote(words[index]);
-            if (string.Equals(subcommand, "merge", StringComparison.OrdinalIgnoreCase) && !args.TrueForAll(IsMainBranch))
-            {
-                return true;
-            }
-
-            if (string.Equals(subcommand, "push", StringComparison.OrdinalIgnoreCase)
-                && (args.Count < 2 || args.Skip(1).Any(IsMainRef)))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>Whether the name is main or master, local or on origin.</summary>
-    /// <param name="name">The branch name as typed.</param>
-    private static bool IsMainBranch(string name) =>
-        name is "main" or "master" or "origin/main" or "origin/master";
-
-    /// <summary>Whether a push refspec targets main or master, as <c>main</c>, <c>HEAD:main</c> or <c>refs/heads/main</c>.</summary>
-    /// <param name="refspec">The push argument.</param>
-    private static bool IsMainRef(string refspec)
-    {
-        string target = refspec[(refspec.LastIndexOf(':') + 1)..];
-        return target is "main" or "master" or "refs/heads/main" or "refs/heads/master";
-    }
+    private static bool MergesIntoMain(string command) =>
+        GitCommandLine.Parse(command).Exists(static call => call.WouldPutWorkOnMain);
 
     /// <summary>Reads the Evidence lines of every Task of the Team.</summary>
     /// <param name="team">The Team name.</param>
@@ -146,10 +195,12 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
     private List<EvidenceLine> EvidenceOf(string team)
     {
         List<EvidenceLine> evidence = [];
+        DateTimeOffset now = this.clock.GetUtcNow();
         foreach (TaskItem task in tasks.All)
         {
-            // Evidence on a finished Task is stale for a later merge; only open work counts.
-            if (!task.Status.IsTerminal()
+            // Evidence on a finished Task is stale for a later merge; only open work counts, and a Task the Human's Accept
+            // took straight to Done counts while the merge window it opened is still open.
+            if ((!task.Status.IsTerminal() || InDoneWindow(task, now))
                 && string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)
                 && tasks.ReadText(task.Id) is { } text)
             {

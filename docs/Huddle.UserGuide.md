@@ -1020,10 +1020,11 @@ line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab 
 lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 `AGENTS.md` nor a gate says "This Team has no process yet."
 
-### The four gates
+### The five gates
 
 | Gate | Refuses |
 | --- | --- |
+| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Agent is told to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the Agent is told to ask for a fresh Accept. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |

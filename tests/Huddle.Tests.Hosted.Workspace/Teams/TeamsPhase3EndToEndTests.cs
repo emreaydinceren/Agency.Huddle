@@ -113,7 +113,7 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.Single(overriddenTask?.ChangeLog.Where(static entry => entry.Summary.EndsWith("(gate overridden by Human: qa-evidence-before-done)", StringComparison.Ordinal)) ?? []);
     }
 
-    /// <summary>Flow 3: the developer's <c>git push</c> permission request is refused until a passing check Evidence exists on an open Team Task.</summary>
+    /// <summary>Flow 3: the developer's <c>git push</c> permission request is refused until a passing check Evidence exists on an open Team Task. It pushes a feature branch, not main, because a push to main also waits for the Human's Accept (<c>accept-before-merge</c>, issue #401) and this flow pins the checks gate alone.</summary>
     [Fact]
     public async Task GitPush_IsRefused_UntilPassingCheckEvidence()
     {
@@ -132,7 +132,7 @@ public sealed class TeamsPhase3EndToEndTests
             developer.Name);
         PermissionRequestContext push = new(
             "session-1",
-            new ToolCallInfo("call-1", "Bash", ToolKind.Execute, ToolCallStatus.Pending, """{"command":"git push origin main"}"""),
+            new ToolCallInfo("call-1", "Bash", ToolKind.Execute, ToolCallStatus.Pending, """{"command":"git push origin feat/ship"}"""),
             [
                 new PermissionOptionInfo("allow-1", "Allow once", PermissionOptionKind.AllowOnce),
                 new PermissionOptionInfo("reject-1", "Reject once", PermissionOptionKind.RejectOnce),
