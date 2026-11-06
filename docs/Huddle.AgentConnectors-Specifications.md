@@ -1,8 +1,8 @@
 # Huddle.AgentConnectors - Design Specification
 
-**Date:** 2026-11-06 - **Status:** Proposed, awaiting the owner's approval. No product code until approved. -
+**Date:** 2026-11-06 - **Status:** Approved by the owner, 2026-11-06, with every recommendation in section 0. -
 **Issue:** #357 - **Decision record:** [ADR-0080](adr/0080-an-agent-reaches-the-humans-account-connectors-only-when-the-human-switches-them-on.md)
-(Proposed) - **Spike results:** [acp-session-config.md](engineering/acp-session-config.md) ("Switching the claude.ai connectors
+- **Spike results:** [acp-session-config.md](engineering/acp-session-config.md) ("Switching the claude.ai connectors
 off for an Agent") - **Vocabulary:** [language.md](engineering/language.md) (**Agent**, **Adapter**, **Human**, **Turn**)
 
 This page is for the owner, who approves it, and for the developer who builds it afterwards. It designs one switch on the
@@ -11,8 +11,10 @@ turn them on for one Agent. Section 0 lists what the owner must decide. Sections
 
 ## 0. Decisions for the owner
 
-The decisions already made are in section 2 and are not reopened here. These four are open. Each gives the recommendation
-first, then what each choice costs.
+The decisions already made are in section 2 and are not reopened here. The owner took all four recommendations below on
+2026-11-06. Where a section says "if OQ-1 is yes", it is yes. Stage 3 ships in two steps: every Agent goes off by default first,
+with the notice (section 13); the store, the switch and the approval prompt then land together, because the switch doesn't ship
+without the prompt.
 
 | # | Question | Recommendation | What each choice costs |
 | --- | --- | --- | --- |

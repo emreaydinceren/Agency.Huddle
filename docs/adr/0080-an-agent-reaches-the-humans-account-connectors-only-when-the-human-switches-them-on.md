@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-06
 ---
 
@@ -26,8 +26,8 @@ call would run with nobody asked. The connectors also add about 3,900 tokens of 
 | Timing | A change restarts the Agent's host; the next Turn after takes it |
 | Other Adapters | The card says what Huddle cannot control instead of claiming a protection |
 
-Whether a connector call under the switch must stop for the Human's approval is open (spec OQ-1). The spec recommends yes,
-and that the switch does not ship before it does.
+A connector call under the switch stops for the Human's approval (spec OQ-1, the owner's decision), and the switch does not ship
+before it does. Every Agent goes off by default first, so nothing waits on the prompt to close today's exposure.
 
 ## Why
 
