@@ -23,7 +23,7 @@ internal sealed record LiveTurn(string Reply, long ContextUsed, long ContextSize
 /// <summary>
 /// One real Adapter and one <see cref="AppToolServer"/> serving a single tool as <c>mcp__team__*</c>, with a fresh
 /// session for each Turn (DocHistory spec §10, <i>The lane</i>). It copies the shape of the ACP effort's
-/// <c>RealAdapterAppToolTests</c> and does not edit that project. Haiku at low Effort, per manual-tests.md §0.3.
+/// <c>RealAdapterAppToolTests</c> and does not edit that project. Sonnet at low Effort, per manual-tests.md §0.3.
 /// </summary>
 internal sealed class LiveAgentLane : IAsyncDisposable
 {
@@ -42,10 +42,10 @@ internal sealed class LiveAgentLane : IAsyncDisposable
         this.effort = effort;
     }
 
-    /// <summary>Starts the tool server and the Adapter and finds Haiku and its low Effort in the Adapter's catalog.</summary>
+    /// <summary>Starts the tool server and the Adapter and finds Sonnet and its low Effort in the Adapter's catalog.</summary>
     /// <param name="tool">The tool to serve.</param>
     /// <param name="cancellationToken">Cancels the start.</param>
-    /// <returns>The lane; the test is skipped as inconclusive when the Adapter offers no Haiku.</returns>
+    /// <returns>The lane; the test is skipped as inconclusive when the Adapter offers no Sonnet.</returns>
     public static async Task<LiveAgentLane> StartAsync(IAppTool tool, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
@@ -69,19 +69,19 @@ internal sealed class LiveAgentLane : IAsyncDisposable
             try
             {
                 await using IAgentSession catalog = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler()), cancellationToken);
-                AgentModelOption? haiku = catalog.Models.FirstOrDefault(static option =>
-                    option.Id.Contains("haiku", StringComparison.OrdinalIgnoreCase) || option.Name.Contains("haiku", StringComparison.OrdinalIgnoreCase));
-                if (haiku is null)
+                AgentModelOption? sonnet = catalog.Models.FirstOrDefault(static option =>
+                    option.Id.Contains("sonnet", StringComparison.OrdinalIgnoreCase) || option.Name.Contains("sonnet", StringComparison.OrdinalIgnoreCase));
+                if (sonnet is null)
                 {
-                    Assert.Skip("Inconclusive: the Adapter offers no Haiku model, and a live test must never run on Opus (manual-tests.md §0.3).");
+                    Assert.Skip("Inconclusive: the Adapter offers no Sonnet model, and a live test must never run on Opus (manual-tests.md §0.3).");
                 }
 
-                // The effort levels belong to the model, so they are read from a session already on Haiku. No Turn runs.
-                await using IAgentSession onHaiku = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: haiku.Id), cancellationToken);
-                string? low = onHaiku.EffortLevels.FirstOrDefault(static level =>
+                // The effort levels belong to the model, so they are read from a session already on Sonnet. No Turn runs.
+                await using IAgentSession onSonnet = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: sonnet.Id), cancellationToken);
+                string? low = onSonnet.EffortLevels.FirstOrDefault(static level =>
                     level.Id.Contains("low", StringComparison.OrdinalIgnoreCase) || level.Name.Contains("low", StringComparison.OrdinalIgnoreCase))?.Id;
-                AssertNoWarnings(log, "choosing Haiku");
-                return new LiveAgentLane(toolServer, host, log, haiku.Id, low);
+                AssertNoWarnings(log, "choosing Sonnet");
+                return new LiveAgentLane(toolServer, host, log, sonnet.Id, low);
             }
             finally
             {
@@ -123,7 +123,7 @@ internal sealed class LiveAgentLane : IAsyncDisposable
             new AgentSessionOptions(workDirectory, new AutoApprovePermissionHandler(), system, this.toolServer.Endpoint, this.model, this.effort),
             cancellationToken);
 
-        // The host logs a warning and carries on with the Adapter's default model when Haiku cannot be set. That
+        // The host logs a warning and carries on with the Adapter's default model when Sonnet cannot be set. That
         // default may be Opus, which a live test must never spend (manual-tests.md §0.3), so stop before the Turn.
         AssertNoWarnings(this.log, "starting the session");
         _ = await session.PromptAsync(prompt, cancellationToken);

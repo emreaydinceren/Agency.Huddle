@@ -6,7 +6,7 @@ namespace Agency.Huddle.Tests.Live.DocHistory;
 /// DH-T0, the probe before <c>log_change</c> is built (DocHistory spec §10): does a real model call the tool when it
 /// should, and only then? Each scenario runs five times in fresh sessions against a stand-in tool that has the shipped
 /// name, schema and description, and asserts a pass rate. Paid: it never runs unless <c>TEAM_E2E_DOCHISTORY=1</c>, and it
-/// spends roughly two million tokens on Haiku at low Effort. The Human reads the report it writes, not only pass or fail.
+/// runs on Sonnet at low Effort, and spent roughly two million tokens when it was measured on Haiku, so it costs more now. The Human reads the report it writes, not only pass or fail.
 /// </summary>
 public sealed class DocHistoryProbeTests
 {

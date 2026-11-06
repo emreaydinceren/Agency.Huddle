@@ -125,7 +125,7 @@ public sealed class RealAdapterPromptBlockTests
     [Fact(Timeout = 240000, SkipUnless = nameof(E2E.Enabled), SkipType = typeof(E2E), Skip = "Set TEAM_E2E=1 to run")]
     public async Task PdfBlobResource_CodeWord_ReachesTheModel()
     {
-        await using LiveSession live = await LiveSession.StartAsync(TestContext.Current.CancellationToken, model: "haiku");
+        await using LiveSession live = await LiveSession.StartAsync(TestContext.Current.CancellationToken, model: "sonnet");
 
         Assert.True(live.Host.Info.PromptCapabilities?.EmbeddedContext, "The adapter did not advertise promptCapabilities.embeddedContext.");
 

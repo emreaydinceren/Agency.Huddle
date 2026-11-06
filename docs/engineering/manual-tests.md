@@ -98,20 +98,26 @@ decide what every paid test costs, so treat them as binding.
 
 | Situation | Model | Effort |
 | --- | --- | --- |
-| **Every test, unless it says otherwise** | **Haiku** | **low** |
-| A test that exercises *switching the Model* | Haiku **→ Sonnet** | leave at low |
-| A test that exercises *switching the Effort* | leave on Haiku | low **→ medium** |
+| **Every test, unless it says otherwise** | **Sonnet** | **low** |
+| A test that exercises *switching the Model* | Sonnet **→ Haiku**, for that test only | leave at low |
+| A test that exercises *switching the Effort* | leave on Sonnet | low **→ medium** |
+
+**Sonnet is the minimum for live tests, solution-wide** (the owner's rule, 2026-11-06). Haiku was too weak to judge a Team by: it
+left a reviewer's approval in chat and held back Evidence over an optional field, and those failures read as product bugs. A
+script written before the rule says Haiku: read that as Sonnet, unless the step is about the Model list or a switch. Its cost
+estimate assumes Haiku, so expect to spend more. The one place Haiku stays is the second model in a switch test, because the only
+other choice is Opus, and nothing there is judged on what Haiku says.
 
 Three rules follow from that table:
 
 - **Never select Opus**, anywhere, including when a test says "walk every entry in the list".
   Skip any entry whose label contains Opus.
 - **Never raise Effort above `medium`.** `high`, `xhigh` and `max` are out of scope.
-- **Restore afterwards.** A test that switches to Sonnet or to `medium` ends by switching back to
-  Haiku and `low`. Later tests state Haiku/low as a precondition and their cost estimates assume it.
+- **Restore afterwards.** A test that switches the Model or to `medium` ends by switching back to
+  Sonnet and `low`. Later tests state that as a precondition.
 
-If the Model list offers no Haiku entry, that is an **inconclusive** result for any test that
-names one — record it and move on rather than substituting a larger model.
+If the Model list offers no Sonnet entry, that is an **inconclusive** result — record it and move on
+rather than substituting Opus.
 
 ### 0.4 Rollback
 
@@ -143,7 +149,7 @@ applies wins.
 | Outcome | Choose it when | What to do |
 | --- | --- | --- |
 | **Blocked** | A precondition could not be met, or an earlier test this one depends on failed. | Record the blocking test id. Do not guess the result. |
-| **Inconclusive** | You ran the steps but the environment cannot answer — no Adapter installed, no Haiku in the list, `curl.exe` missing. | Record which condition was absent. Not a defect. |
+| **Inconclusive** | You ran the steps but the environment cannot answer — no Adapter installed, no Sonnet in the list, `curl.exe` missing. | Record which condition was absent. Not a defect. |
 | **Fail** | Any line under *Fail if* was observed, **or** any line under *Pass if* was not. | Record what you saw, verbatim, plus the implication the *Fail if* line gives, then open a Gitea issue and link it from the [Tracker](manual-tests/tracker.md). |
 | **Pass** | Every line under *Pass if* held, and no *Fail if* line was observed. | Record it and move on. |
 

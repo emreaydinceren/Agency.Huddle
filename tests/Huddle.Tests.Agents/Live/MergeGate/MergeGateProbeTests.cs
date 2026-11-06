@@ -20,7 +20,7 @@ internal static class LiveMergeGate
 /// git repository, with a <see cref="WorkDirPermissionHandler"/> and a fake gate behind it. With the generated hook
 /// installed, the Adapter must send a permission request for <c>git merge</c> (refused or allowed by the gate) and none for
 /// <c>git status</c>; without the hook, the control run shows the Adapter merging with no request at all. Paid: it never
-/// runs unless <c>TEAM_E2E_MERGEGATE=1</c>, spends well under one dollar on Haiku at low Effort, and must not use a RAM disk
+/// runs unless <c>TEAM_E2E_MERGEGATE=1</c>, runs on Sonnet at low Effort, and must not use a RAM disk
 /// for <c>HUDDLE_TEST_TEMP</c> (the Adapter cannot resolve a working folder on <c>R:</c>).
 /// </summary>
 public sealed class MergeGateProbeTests
@@ -80,7 +80,7 @@ public sealed class MergeGateProbeTests
         }
     }
 
-    /// <summary>One Adapter process, Haiku at low Effort, reused for every scenario.</summary>
+    /// <summary>One Adapter process, Sonnet at low Effort, reused for every scenario.</summary>
     private sealed class ProbeHost : IAsyncDisposable
     {
         private readonly DotAcpAgentHost host;
@@ -94,7 +94,7 @@ public sealed class MergeGateProbeTests
             this.effort = effort;
         }
 
-        /// <summary>Starts the Adapter and finds Haiku in its catalog.</summary>
+        /// <summary>Starts the Adapter and finds Sonnet in its catalog.</summary>
         /// <param name="ct">Cancels the start.</param>
         public static async Task<ProbeHost> StartAsync(CancellationToken ct)
         {
@@ -111,16 +111,16 @@ public sealed class MergeGateProbeTests
             await host.StartAsync(ct);
             string scratch = Folder("catalog");
             await using IAgentSession catalog = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler()), ct);
-            AgentModelOption? haiku = catalog.Models.FirstOrDefault(static option => option.Id.Contains("haiku", StringComparison.OrdinalIgnoreCase));
-            if (haiku is null)
+            AgentModelOption? sonnet = catalog.Models.FirstOrDefault(static option => option.Id.Contains("sonnet", StringComparison.OrdinalIgnoreCase));
+            if (sonnet is null)
             {
                 await host.DisposeAsync();
-                Assert.Skip("Inconclusive: the Adapter offers no Haiku model, and a live test must never run on Opus.");
+                Assert.Skip("Inconclusive: the Adapter offers no Sonnet model, and a live test must never run on Opus.");
             }
 
-            await using IAgentSession onHaiku = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: haiku.Id), ct);
-            string? low = onHaiku.EffortLevels.FirstOrDefault(static level => level.Id.Contains("low", StringComparison.OrdinalIgnoreCase))?.Id;
-            return new ProbeHost(host, haiku.Id, low);
+            await using IAgentSession onSonnet = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: sonnet.Id), ct);
+            string? low = onSonnet.EffortLevels.FirstOrDefault(static level => level.Id.Contains("low", StringComparison.OrdinalIgnoreCase))?.Id;
+            return new ProbeHost(host, sonnet.Id, low);
         }
 
         /// <summary>Runs one scenario in a fresh repository and session, in the Adapter's auto mode.</summary>

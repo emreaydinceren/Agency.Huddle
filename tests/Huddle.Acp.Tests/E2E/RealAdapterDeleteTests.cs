@@ -10,13 +10,13 @@ namespace Agency.Huddle.Acp.Tests.E2E;
 /// <summary>
 /// Session deletion against the real <c>claude-agent-acp</c>: after the production order (one turn, close the
 /// session, <see cref="IAgentSession.DeleteAsync"/>), resuming the old id is refused as not found. One short
-/// Haiku turn, so it spends real tokens.
+/// Sonnet turn, so it spends real tokens.
 /// </summary>
 [Collection("E2E")]
 public sealed class RealAdapterDeleteTests
 {
-    // Haiku 4.5 is the cheapest catalog entry, the same one RealAdapterNoticeTests uses.
-    private const string CheapModel = "claude-haiku-4-5-20251001";
+    // Live tests run on Sonnet at minimum.
+    private const string LiveModel = "sonnet";
 
     /// <summary>A session that was closed and then deleted cannot be resumed by its id: the host raises <see cref="AgentSessionNotFoundException"/>.</summary>
     [Fact(Timeout = 240000, SkipUnless = nameof(E2E.Enabled), SkipType = typeof(E2E), Skip = "Set TEAM_E2E=1 to run")]
@@ -37,7 +37,7 @@ public sealed class RealAdapterDeleteTests
             await host.StartAsync(cancellationToken);
             Assert.True(host.Info.SupportsDeleteSession);
 
-            AgentSessionOptions options = new(workingDirectory, new AutoApprovePermissionHandler(), model: CheapModel);
+            AgentSessionOptions options = new(workingDirectory, new AutoApprovePermissionHandler(), model: LiveModel);
             IAgentSession session = await host.StartSessionAsync(options, cancellationToken);
             string sessionId = session.SessionId;
             PromptResult result = await session.PromptAsync("Reply with exactly the word PONG and nothing else.", cancellationToken);

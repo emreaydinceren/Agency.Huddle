@@ -25,7 +25,7 @@ internal static class LiveSessionMode
 /// Huddle's handler. Then the sessions take their mode from <see cref="WorkModePolicy"/> as <c>DotAcpPersonaHost</c> does: they run in
 /// the mode Huddle chose, the App Tool call comes to the handler and is approved, ordinary work is approved without a Human, the merge
 /// gate still refuses and allows, and a Work Mode the Human chose is kept. Paid: it never runs unless <c>TEAM_E2E_SESSIONMODE=1</c>,
-/// spends well under one dollar, never runs on Opus, and must not use a RAM disk for <c>HUDDLE_TEST_TEMP</c> (the Adapter cannot
+/// runs on Sonnet at low Effort, never on Opus, and must not use a RAM disk for <c>HUDDLE_TEST_TEMP</c> (the Adapter cannot
 /// resolve a working folder on <c>R:</c>).
 /// </summary>
 public sealed class SessionModeProbeTests
@@ -55,10 +55,10 @@ public sealed class SessionModeProbeTests
 
         ProbeRun control = await probe.RunAsync("control-no-mode-sent", probe.Sonnet, null, CallTool, report, ct);
         ProbeRun tool = await probe.RunAsync("chosen-app-tool", probe.Sonnet, huddleChoice, CallTool, report, ct);
-        ProbeRun refused = await probe.RunAsync("chosen-merge-refused", probe.Haiku, huddleChoice, RunCommand + "git merge --no-ff feat-refused -m merged-refused", report, ct);
-        ProbeRun allowed = await probe.RunAsync("chosen-merge-allowed", probe.Haiku, huddleChoice, RunCommand + "git merge --no-ff feat-allowed -m merged-allowed", report, ct);
-        ProbeRun work = await probe.RunAsync("chosen-ordinary-work", probe.Haiku, huddleChoice, RunCommand + "git branch made-by-agent", report, ct);
-        ProbeRun human = await probe.RunAsync("human-work-mode", probe.Haiku, humanChoice, RunCommand + "git merge --no-ff feat-refused -m merged-refused", report, ct);
+        ProbeRun refused = await probe.RunAsync("chosen-merge-refused", probe.Sonnet, huddleChoice, RunCommand + "git merge --no-ff feat-refused -m merged-refused", report, ct);
+        ProbeRun allowed = await probe.RunAsync("chosen-merge-allowed", probe.Sonnet, huddleChoice, RunCommand + "git merge --no-ff feat-allowed -m merged-allowed", report, ct);
+        ProbeRun work = await probe.RunAsync("chosen-ordinary-work", probe.Sonnet, huddleChoice, RunCommand + "git branch made-by-agent", report, ct);
+        ProbeRun human = await probe.RunAsync("human-work-mode", probe.Sonnet, humanChoice, RunCommand + "git merge --no-ff feat-refused -m merged-refused", report, ct);
         string? resumedInherit = await probe.ResumeAsync(control, null, ct);
         string? resumedChosen = await probe.ResumeAsync(control, huddleChoice, ct);
         report.AppendLine("=== resume of the control's session ===").AppendLine("no mode sent: " + resumedInherit).AppendLine("Huddle's choice sent: " + resumedChosen);
@@ -164,24 +164,20 @@ public sealed class SessionModeProbeTests
         private readonly FakeUpdateTaskTool tool;
         private readonly Dictionary<string, string?> lowEffort;
 
-        private ProbeHost(DotAcpAgentHost host, AppToolServer toolServer, FakeUpdateTaskTool tool, string haiku, string sonnet, Dictionary<string, string?> lowEffort)
+        private ProbeHost(DotAcpAgentHost host, AppToolServer toolServer, FakeUpdateTaskTool tool, string sonnet, Dictionary<string, string?> lowEffort)
         {
             this.host = host;
             this.toolServer = toolServer;
             this.tool = tool;
-            this.Haiku = haiku;
             this.Sonnet = sonnet;
             this.lowEffort = lowEffort;
         }
 
-        /// <summary>The Haiku model id.</summary>
-        public string Haiku { get; }
-
         /// <summary>The Sonnet model id, a model the Adapter's <c>auto</c> runs on.</summary>
         public string Sonnet { get; }
 
-        /// <summary>Starts the tool server and the Adapter, and finds the two models.</summary>
-        /// <param name="report">Receives what a session given no mode starts in, per model.</param>
+        /// <summary>Starts the tool server and the Adapter, and finds Sonnet.</summary>
+        /// <param name="report">Receives what a session given no mode starts in.</param>
         /// <param name="ct">Cancels the start.</param>
         public static async Task<ProbeHost> StartAsync(StringBuilder report, CancellationToken ct)
         {
@@ -198,17 +194,16 @@ public sealed class SessionModeProbeTests
             string scratch = Folder("catalog");
             await using IAgentSession catalog = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating)), ct);
             report.AppendLine("no mode sent, Adapter default model: " + catalog.CurrentModeId);
-            string? haiku = catalog.Models.FirstOrDefault(static option => option.Id.Contains("haiku", StringComparison.OrdinalIgnoreCase))?.Id;
             string? sonnet = catalog.Models.FirstOrDefault(static option => option.Id.Contains("sonnet", StringComparison.OrdinalIgnoreCase))?.Id;
-            if (haiku is null || sonnet is null)
+            if (sonnet is null)
             {
                 await host.DisposeAsync();
                 await toolServer.DisposeAsync();
-                Assert.Skip("Inconclusive: the Adapter does not offer both Haiku and Sonnet, and a live test must never run on Opus.");
+                Assert.Skip("Inconclusive: the Adapter does not offer Sonnet, and a live test must never run on Opus.");
             }
 
             Dictionary<string, string?> lowEffort = new(StringComparer.Ordinal);
-            foreach (string model in new[] { haiku, sonnet })
+            foreach (string model in new[] { sonnet })
             {
                 await using IAgentSession onModel = await host.StartSessionAsync(new AgentSessionOptions(scratch, new AutoApprovePermissionHandler(), model: model, meta: DotAcpAgentHostFactory.BuildIsolationMeta(Isolating)), ct);
                 lowEffort[model] = onModel.EffortLevels.FirstOrDefault(static level => level.Id.Contains("low", StringComparison.OrdinalIgnoreCase))?.Id;
@@ -216,7 +211,7 @@ public sealed class SessionModeProbeTests
             }
 
             report.AppendLine();
-            return new ProbeHost(host, toolServer, tool, haiku, sonnet, lowEffort);
+            return new ProbeHost(host, toolServer, tool, sonnet, lowEffort);
         }
 
         /// <summary>Runs one scenario in a fresh repository and session, with the merge gate hook installed as Huddle installs it.</summary>
