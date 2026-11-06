@@ -338,7 +338,7 @@ public sealed class TeamsPhase4EndToEndTests
         string sent = await Tool<ProposeRetroChangesTool>(run, retro).InvokeAsync(ProposeArguments(("Explain bounces", "## When it applies", "## Retro change\n\n- Explain a Review bounce on the Task.\n\n## When it applies")), ct);
 
         Assert.Equal("Proposal sent to the Human.", sent);
-        Room room = await run.Services.GetRequiredService<ITeamDirectory>().CreateRoomAsync("Retro", [KnownIds.Human, retro.UserId ?? string.Empty], ct);
+        Room room = await WebTeamRoomAsync(run, ct);
         RetroProposalService proposals = run.Services.GetRequiredService<RetroProposalService>();
         RetroProposalSet set = Assert.Single(await proposals.PendingAsync(room.Id, ct));
         string before = File.ReadAllText(Path.Combine(run.TeamFolder(WebTeam), TeamPaths.AgentsMdFileName));
@@ -388,7 +388,7 @@ public sealed class TeamsPhase4EndToEndTests
             _ = await Tool<ProposeRetroChangesTool>(first, retro).InvokeAsync(
                 ProposeArguments(("First", "## When it applies", "## When it applies now"), ("Second", "## Who does what", "## Who does what now")),
                 ct);
-            Room room = await first.Services.GetRequiredService<ITeamDirectory>().CreateRoomAsync("Retro", [KnownIds.Human, retro.UserId ?? string.Empty], ct);
+            Room room = await WebTeamRoomAsync(first, ct);
             roomId = room.Id;
             RetroProposalService proposals = first.Services.GetRequiredService<RetroProposalService>();
             setId = Assert.Single(await proposals.PendingAsync(roomId, ct)).Id;
@@ -410,6 +410,27 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal("Second", waiting.Title);
         Assert.Equal(RetroChangeOutcomeKind.Applied, (await reopened.AcceptAsync(roomId, setId, waiting.Id, ct)).Kind);
         Assert.Equal(["R-001", "R-002"], second.Services.GetRequiredService<RetroFileStore>().ReadRegister(WebTeam).Select(static each => each.Id));
+    }
+
+    /// <summary>Waits for the reconciler to create the Web Team's Team Room, the only room the retro card shows in (ADR-0052).</summary>
+    /// <param name="run">The running host.</param>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns>The Team Room.</returns>
+    private static async Task<Room> WebTeamRoomAsync(Run run, CancellationToken ct)
+    {
+        ITeamDirectory directory = run.Services.GetRequiredService<ITeamDirectory>();
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        while (System.Diagnostics.Stopwatch.GetElapsedTime(start) < TestBudgets.Slowest)
+        {
+            if (await directory.FindTeamRoomAsync(WebTeam, ct) is { } found)
+            {
+                return found;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(50), ct);
+        }
+
+        throw new InvalidOperationException("The Web Team has no Team Room.");
     }
 
     /// <summary>Creates a temp folder that looks like a repository, for the Development type's required workspace.</summary>

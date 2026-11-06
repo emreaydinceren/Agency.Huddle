@@ -1183,7 +1183,7 @@ the Team's members posted in it and everyone who posted there is a member of tha
 Team or you. A Room with an outsider in it is refused. An Agent who is not a
 member of the Team, or who lacks the Skill, is refused.
 
-**What it proposes.** The proposals arrive as a card in the Retro agent's Room.
+**What it proposes.** The proposals arrive as a card in the Team's Team Room, and in no other Room. If the Team Room is archived, the card shows in a Room that holds the Retro agent instead.
 Each change shows its title, the file it targets and a diff Huddle computes from the
 file as it is now. A change is an exact-text replacement in one file: the Team's
 `AGENTS.md`, `_team.md`, or one member's file. An accepted change is the only way

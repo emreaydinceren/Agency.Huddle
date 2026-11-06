@@ -270,19 +270,53 @@ public sealed class RetroProposalTests
         Assert.Equal("Rejected 'Title 1': no reason given. @Nova", outcome.Text);
     }
 
-    /// <summary>Only rooms the proposer is in see the set.</summary>
+    /// <summary>The set shows only in its own Team's Team Room (ADR-0052): not in a root room holding the proposer, nor in another Team's Team Room holding the proposer.</summary>
     [Fact]
-    public async Task PendingAsync_OnlyInProposersRoom()
+    public async Task PendingAsync_OnlyInTheProposingTeamsTeamRoom()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
         RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "a", "b"));
 
-        IReadOnlyList<RetroProposalSet> here = await fixture.Service.PendingAsync(fixture.RoomId, ct);
-        IReadOnlyList<RetroProposalSet> there = await fixture.Service.PendingAsync(fixture.OtherRoomId, ct);
+        IReadOnlyList<RetroProposalSet> teamRoom = await fixture.Service.PendingAsync(fixture.RoomId, ct);
+        IReadOnlyList<RetroProposalSet> root = await fixture.Service.PendingAsync(fixture.RootRoomId, ct);
+        IReadOnlyList<RetroProposalSet> otherTeamRoom = await fixture.Service.PendingAsync(fixture.OtherTeamRoomId, ct);
+        IReadOnlyList<RetroProposalSet> other = await fixture.Service.PendingAsync(fixture.OtherRoomId, ct);
 
-        Assert.Equal([set.Id], here.Select(static each => each.Id));
-        Assert.Empty(there);
+        Assert.Equal([set.Id], teamRoom.Select(static each => each.Id));
+        Assert.Empty(root);
+        Assert.Empty(otherTeamRoom);
+        Assert.Empty(other);
+    }
+
+    /// <summary>With the Team Room archived the set falls back to any room holding the proposer, and not to a room without the proposer.</summary>
+    [Fact]
+    public async Task PendingAsync_TeamRoomArchived_FallsBackToTheProposersRooms()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "a", "b"));
+        await fixture.Harness.Directory.SetRoomArchivedAsync(fixture.RoomId, true, ct);
+
+        IReadOnlyList<RetroProposalSet> root = await fixture.Service.PendingAsync(fixture.RootRoomId, ct);
+        IReadOnlyList<RetroProposalSet> without = await fixture.Service.PendingAsync(fixture.OtherRoomId, ct);
+
+        Assert.Equal([set.Id], root.Select(static each => each.Id));
+        Assert.Empty(without);
+    }
+
+    /// <summary>Accept in a root room that holds the proposer finds nothing pending and applies nothing.</summary>
+    [Fact]
+    public async Task AcceptAsync_InARootRoom_IsGone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "AGENTS.md", "One PR per Task.", "One PR per Task, squash merged."));
+
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RootRoomId, set.Id, "1", ct);
+
+        Assert.Equal(RetroChangeOutcomeKind.Gone, outcome.Kind);
+        Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);
     }
 
     /// <summary>The tool stores a set from the arguments and tells the agent it was sent.</summary>

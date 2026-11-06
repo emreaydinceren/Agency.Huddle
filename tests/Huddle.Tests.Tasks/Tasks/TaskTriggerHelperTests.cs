@@ -142,4 +142,23 @@ public sealed class TaskTriggerHelperTests
         Assert.Equal("Working on it.", Assert.Single(harness.Posts).Message.Text);
         Assert.Equal(WakeOutcome.BudgetSpent, harness.Activity.LastWake(task.Id)?.Outcome);
     }
+
+    /// <summary>A post into a spent Room logs a Room reason, not the Task's wake pause, and the Task's wake counter does not move.</summary>
+    [Fact]
+    public async Task HelperWake_IntoASpentRoom_LogsTheRoomReasonAndLeavesTheTaskCounter()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You", AgentMessageBudget = 1 }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Gateway.SetOnline(cast.Nova.Id);
+        _ = await harness.Chat.PostAsync(cast.Room.Id, cast.Kai.Id, "Working on it.", ct: ct);
+        TaskItem task = harness.Seed(TestTasks.Make(id: "PLAT-0001", assignee: "Nova", originRoomId: cast.Room.Id));
+
+        await RaiseAndFireAsync(harness, task, TaskActors.Helper("Needs Human"), GateOnSummary);
+
+        string blocked = Assert.Single(harness.Logger.Messages, static message => message.StartsWith("Not waking the assignee of Task PLAT-0001", StringComparison.Ordinal));
+        Assert.Equal("Not waking the assignee of Task PLAT-0001: RoomBudgetSpent.", blocked);
+        Assert.Equal(0, harness.Activity.Budget(task.Id).Used);
+    }
 }

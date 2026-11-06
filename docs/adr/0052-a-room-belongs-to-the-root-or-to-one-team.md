@@ -114,3 +114,7 @@ direction.
   ones it archived if the Team returns. Re-checking on every run would undo a Human's Unarchive.
 - `RoomInfo` and `MessagePosted` in `Huddle.Contracts` gain an optional `Team`, omitted when
   null, so older clients read every Room as root and `ProtocolVersion` does not change.
+
+## Amendment (2026-11-06): the retro proposal card
+
+A retro proposal card shows only in the proposing Team's Team Room. Before, it showed in any Room that held the proposer, so a root Room or another Team's Team Room could show it. `RetroProposalService.PendingAsync` finds each Team's Team Room (`FindTeamRoomAsync`) and returns that Team's pending sets only for that Room. If the Team Room is archived or missing, the old rule applies for that Team: its sets show in any Room holding the proposer, matching the digest and retro fallback to the Agent's one-to-one. Accept and Decline post their outcome in the same Room. Because of the fallback no set becomes unreachable. Issue #394.

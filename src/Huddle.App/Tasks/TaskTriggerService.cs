@@ -1330,7 +1330,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
                 // Woken while the reply is refused, so it is recorded as an Agent's refused wake is and not posted.
                 if (this.chat.GetBudget(room.Id).Exhausted)
                 {
-                    LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
+                    LogBlocked(this.logger, id, WakeBlock.RoomBudgetSpent);
                     return WakeOutcome.BudgetSpent;
                 }
 
