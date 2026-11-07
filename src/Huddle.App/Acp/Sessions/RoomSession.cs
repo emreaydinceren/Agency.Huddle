@@ -66,12 +66,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     // Context meter: the latest context-window fill of this session, shown in the Members panel.
     // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
     private readonly ContextFill? contextFill;
-    private readonly ISessionSettings? sessionSettings;
-    private readonly LastCatchUpStore? lastCatchUp;
 
-    // The note the current Turn owes after a fresh start; set by AddTranscriptCatchUpAsync and
-    // cleared by SendFreshStartNoteAsync. Touched only from the single consumer thread.
-    private FreshStartNote? noteOwed;
+    // D24: the first-Turn Transcript catch-up and the fresh-start note it owes; consumer-only state.
+    private readonly TranscriptCatchUpStep transcriptCatchUp;
 
     // Spec §6.14, §9.1: adds the Library documents and the Referenced items to a Message Turn. Null
     // means neither is on (PersonaSupervisor is the only place those gates are applied) or this
@@ -149,15 +146,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
     private string? lastModel;
 
-    // D24: consulted and cleared only from ProcessWorkItemAsync, which the single consumer thread
-    // always calls after the open that set them (OpenCoreAsync happens-before ProcessWorkItemAsync
-    // in RunConsumerAsync's own sequence), so these need no lock of their own - the same reasoning
-    // knownRoomNames documents on PersonaRunner.
-    private bool firstTurnPending;
-    private bool resumedOnLastOpen;
-    private string? resumedAfterMessageId;
-
-    // Set alongside firstTurnPending/resumedOnLastOpen and consumed by RunEventReaderAsync's own
+    // Set alongside the first-Turn flag TranscriptCatchUpStep.MarkOpened sets and consumed by RunEventReaderAsync's own
     // single-threaded loop, the same reasoning lastUsed itself relies on (D22 correction 9, built
     // here for D24). It is ALSO set by the consumer when a Command Turn completes (Commands spec,
     // section 6.7), so the two threads share it: volatile, so the reader sees the consumer's write
@@ -249,8 +238,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
-        this.sessionSettings = sessionSettings;
-        this.lastCatchUp = lastCatchUp;
+        this.transcriptCatchUp = new TranscriptCatchUpStep(owner, options, sessionSettings, lastCatchUp, prompts, logger, roomId, this.IsOwn);
         this.enrichers = enrichers;
         this.hooks = hooks;
         this.elicitationBridge = elicitationBridge;
@@ -923,9 +911,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             // instead. usageBaselinePending mirrors resumed: a resumed session's first
             // UsageUpdated reports its whole restored context, not tokens this Turn spent (D22
             // correction 9).
-            this.firstTurnPending = true;
-            this.resumedOnLastOpen = resumed;
-            this.resumedAfterMessageId = resumedAfterId;
+            this.transcriptCatchUp.MarkOpened(resumed, resumedAfterId);
             this.usageBaselinePending = resumed;
 
             // A fresh open starts an empty context, so an earlier reading must not show; a resume keeps it.
@@ -1383,14 +1369,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
+            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, ct).ConfigureAwait(false);
             if (this.enrichers is not null)
             {
                 item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
             }
 
             // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-            this.WriteLastCatchUp(item);
+            this.transcriptCatchUp.WriteLastCatchUp(item);
             run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
             return run;
         }
@@ -1448,121 +1434,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
     }
 
-    /// <summary>
-    /// D24, RS §6.5: the first Turn after any open (per-Room only) reads the Room's Transcript,
-    /// after the File Changes collect and before the locked check-and-publish (D22 correction 3).
-    /// </summary>
-    /// <remarks>
-    /// Open and this read must both finish before the watchdog is armed, so neither counts as
-    /// Adapter silence. The first-Turn flag is cleared here regardless of outcome: RS §9 E-3
-    /// (refused or timed out) and a Greeting or a Turn with no TriggerMessageId all still consume
-    /// this Turn's "first after open" opportunity (D24 correction 19) without ever reading anything.
-    /// A Command Turn sends only the bare command, so it reads no Transcript and must not use the
-    /// opportunity up: the Messages this session has not seen are still unseen, and the next
-    /// ordinary Turn is the one that needs them (Commands spec, section 6.6).
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with its Transcript Catch-up set when one was read.</returns>
-    private async Task<WorkItem> AddTranscriptCatchUpAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
-        {
-            this.firstTurnPending = false;
-            if (this.FreshStartNotePending)
-            {
-                this.noteOwed = new FreshStartNote(item.RoomId, "asked", 0, 0, false);
-            }
-
-            if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
-            {
-                SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
-                TranscriptTail? tail = null;
-                try
-                {
-                    tail = await this.owner.ReadTranscriptAsync(
-                        item.RoomId,
-                        this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
-                        triggerId,
-                        settings.CatchUpMessages,
-                        ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    this.logger.LogWarning(
-                        ex, "Persona '{PersonaName}' Transcript read for room {RoomId} failed.", this.owner.PersonaName, item.RoomId);
-                }
-
-                if (tail is not null)
-                {
-                    // D27 correction 11: own-post lines are dropped only when the Transcript is
-                    // actually set on this Turn's WorkItem - that range already holds those posts,
-                    // whether or not it turned out to hold any Messages. A refused or timed-out read
-                    // (RS §9 E-3, tail null) leaves OwnPostLines untouched, so they still render
-                    // through the ordinary catch-up path below.
-                    item = item with
-                    {
-                        Transcript = this.BuildCatchUp(tail, settings),
-                        OwnPostLines = null,
-                    };
-                }
-                else if (this.noteOwed is not null)
-                {
-                    this.noteOwed = this.noteOwed with { ReadFailed = true };
-                }
-            }
-        }
-
-        return item;
-    }
-
-    /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
-    /// <param name="tail">The tail the owner returned.</param>
-    /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
-    /// <returns>The catch-up for the Turn.</returns>
-    private TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
-    {
-        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.IsOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
-        if (this.noteOwed is not null)
-        {
-            this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };
-        }
-
-        return new TranscriptCatchUp(this.resumedOnLastOpen, result.Kept, tail.Omitted + result.Dropped, result.DroppedOwn);
-    }
-
-    /// <summary>Writes the whole prompt text of the first ordinary Turn after a fresh start to the last-catch-up file (C3). A failure is logged and never fails the Turn.</summary>
-    /// <param name="item">The item about to be prompted, fully enriched.</param>
-    private void WriteLastCatchUp(WorkItem item)
-    {
-        if (this.noteOwed is null || this.lastCatchUp is null)
-        {
-            return;
-        }
-
-        try
-        {
-            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, TurnPromptFramer.BuildPrompt(item, this.prompts));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(
-                ex, "Persona '{PersonaName}' could not write the last catch-up for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-        }
-    }
-
     /// <summary>Sends the fresh-start note the finished Turn owed, if any, and clears the owed flag. A failure is logged and never fails the Turn.</summary>
     /// <param name="ct">The run's own cancellation token.</param>
     /// <returns>A task that completes when the note has been handed to the owner.</returns>
     private async Task SendFreshStartNoteAsync(CancellationToken ct)
     {
-        FreshStartNote? note = this.noteOwed;
+        FreshStartNote? note = this.transcriptCatchUp.TakeNote();
         if (note is null)
         {
             return;
         }
 
-        this.noteOwed = null;
         lock (this.gate)
         {
             this.freshStartNotePending = false;
