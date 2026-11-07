@@ -758,7 +758,8 @@ if ($GroupByFile -and $Scope -eq 'Branch') {
         $summarySource.Add([PSCustomObject]@{ File = $weakRefusal.File; Category = 'WeakRefusalAssert' }) | Out-Null
     }
 
-    $groupedByFile = $summarySource | Group-Object -Property File | ForEach-Object {
+    # @() because StrictMode Latest throws on .Count of $null (no findings) or of one PSCustomObject (one file).
+    $groupedByFile = @($summarySource | Group-Object -Property File | ForEach-Object {
         $kindCounts = ($_.Group | Group-Object -Property Category | Sort-Object -Property Name |
             ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ', '
         [PSCustomObject]@{
@@ -766,7 +767,7 @@ if ($GroupByFile -and $Scope -eq 'Branch') {
             Total  = $_.Count
             Counts = $kindCounts
         }
-    } | Sort-Object -Property Total -Descending
+    } | Sort-Object -Property Total -Descending)
 
     Write-Host ''
     Write-Host 'Findings grouped by file (-GroupByFile):'
