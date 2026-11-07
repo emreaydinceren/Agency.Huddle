@@ -10,7 +10,8 @@ namespace Agency.Huddle.Tests;
 /// Pins what <see cref="ServiceCollectionExtensions.AddTeamServices"/> registers while wiring moves into Feature Modules, so a move
 /// that loses or reorders something fails here. Only registration order that can change behaviour is pinned: services are sorted by
 /// type, entries of a type registered more than once keep their order, because a consumer of the list sees that order, and sidebar
-/// panels sort by <see cref="SidebarPanel.Order"/>, as the catalog does. A change that means to alter the wiring deletes
+/// panels sort by <see cref="SidebarPanel.Order"/>, as the catalog does, then by id: panels that tie apply to different Subjects, and
+/// <c>SidebarPanelRegistrationTests</c> pins each Subject's list. A change that means to alter the wiring deletes
 /// <c>Acp/Golden/composition.txt</c> and reseeds it as the prompt goldens do. This is scaffolding for the move: delete it with the
 /// golden once the migration ends, because it makes every Pull Request that registers a service edit one more shared file.
 /// </summary>
@@ -42,7 +43,9 @@ public sealed class CompositionSnapshotTests
             .OrderBy(static group => group.Key, StringComparer.Ordinal))
         {
             IEnumerable<ServiceDescriptor> ordered = group.Key == typeof(SidebarPanel).ToString()
-                ? group.OrderBy(static descriptor => descriptor.ImplementationInstance is SidebarPanel panel ? panel.Order : int.MaxValue)
+                ? group
+                    .OrderBy(static descriptor => descriptor.ImplementationInstance is SidebarPanel panel ? panel.Order : int.MaxValue)
+                    .ThenBy(static descriptor => descriptor.ImplementationInstance is SidebarPanel panel ? panel.Id : string.Empty, StringComparer.Ordinal)
                 : group;
             foreach (ServiceDescriptor descriptor in ordered)
             {

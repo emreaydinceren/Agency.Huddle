@@ -158,14 +158,14 @@ Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-detail order 5 Ag
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel members order 10 Agency.Huddle.App.Components.Sidebar.MembersPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel outline order 10 Agency.Huddle.App.Components.Sidebar.OutlinePanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-activity order 10 Agency.Huddle.App.Components.Sidebar.TaskActivityPanel
-Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-tasks order 20 Agency.Huddle.App.Components.Sidebar.RoomTasksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel linked-documents order 20 Agency.Huddle.App.Components.Sidebar.LinkedDocumentsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-tasks order 20 Agency.Huddle.App.Components.Sidebar.RoomTasksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blockers order 20 Agency.Huddle.App.Components.Sidebar.TaskBlockersPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel backlinks order 25 Agency.Huddle.App.Components.Sidebar.BacklinksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blocks order 25 Agency.Huddle.App.Components.Sidebar.TaskBlocksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel tags order 27 Agency.Huddle.App.Components.Sidebar.TagsPanel
-Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-documents order 30 Agency.Huddle.App.Components.Sidebar.RoomDocumentsPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel recent-edits order 30 Agency.Huddle.App.Components.Sidebar.RecentEditsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-documents order 30 Agency.Huddle.App.Components.Sidebar.RoomDocumentsPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-documents order 30 Agency.Huddle.App.Components.Sidebar.TaskDocumentsPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanelCatalog -> Agency.Huddle.App.Sidebar.SidebarPanelCatalog
 Singleton Agency.Huddle.App.SkillSources.HiddenStore -> Agency.Huddle.App.SkillSources.HiddenStore
