@@ -1,4 +1,7 @@
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.Tests.Conformance;
 
@@ -32,6 +35,47 @@ public sealed class DocHistoryToolOfferTests
             await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         Assert.DoesNotContain("log_change", await fixture.AppendedSystemPromptAsync(ct), StringComparison.Ordinal);
+    }
+
+    /// <summary>The real factory reaches the module's Work Dir step: a session offered <c>log_change</c> has the Stop hook in its settings before the Adapter opens.</summary>
+    [Fact]
+    public async Task Default_InstallsTheStopHook()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.");
+
+        await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
+        _ = await fixture.SessionNewAsync(ct);
+
+        Assert.Contains("\"Stop\"", await WorkDirSettingsAsync(fixture, persona, ct), StringComparison.Ordinal);
+    }
+
+    /// <summary>A session that is not offered <c>log_change</c> gets no Stop hook.</summary>
+    [Fact]
+    public async Task Disabled_InstallsNoStopHook()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Persona persona = new("nova", "You are Nova.");
+        Dictionary<string, string?> additionalConfig = new(StringComparer.Ordinal) { ["Team:DocHistory:Enabled"] = "false" };
+
+        await using MockAdapterFixture fixture =
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
+        _ = await fixture.SessionNewAsync(ct);
+
+        Assert.DoesNotContain("\"Stop\"", await WorkDirSettingsAsync(fixture, persona, ct), StringComparison.Ordinal);
+    }
+
+    /// <summary>Reads the settings file the Adapter reads from the Persona's Work Dir.</summary>
+    /// <param name="fixture">The started fixture.</param>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The file's text, or an empty string when nothing wrote it.</returns>
+    private static async Task<string> WorkDirSettingsAsync(MockAdapterFixture fixture, Persona persona, CancellationToken cancellationToken)
+    {
+        IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        string path = Path.Combine(new AgentPaths(options).WorkDir(persona.Name), ".claude", WorkDirHookSettings.SettingsFile);
+
+        return File.Exists(path) ? await File.ReadAllTextAsync(path, cancellationToken) : string.Empty;
     }
 
     /// <summary>An Adapter that cannot read files is not asked to log changes to files.</summary>

@@ -221,7 +221,7 @@ Markdown file:
 - When the Agent is about to stop, the script reads the Turn's transcript (everything after the last prompt). If the Turn
   wrote or edited a `.md` file and made no `log_change` call, it sends the Agent back once, naming the files. If it only
   opened a `.md` file, it does this only for an Agent whose role covers `verify` (a reviewer): the script is given
-  `--remind-reads` by `DotAcpAgentHostFactory.InstallDocHistoryHook` (#354), and an Agent with no role, such as the Chief of
+  `--remind-reads` by `DocHistoryModule.InstallStopHook` (#354), and an Agent with no role, such as the Chief of
   Staff, is not sent back for reading. A read of a file named `AGENTS.md` (any case, either slash) is following the rules, not reviewing a document, so even a reviewer is not reminded of it; a write to it still is. The reminder asks whether the Agent reviewed it or disagrees with it, and says that reading
   to answer needs no entry. Both reminders end by telling the Agent to reply with exactly the silent token and nothing else
   (`SilentReply.Token`), so a Turn that ends there posts nothing. A Turn that touched no Markdown, one that already logged, and a second stop in a row (`stop_hook_active`) all pass

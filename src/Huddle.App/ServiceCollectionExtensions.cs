@@ -19,6 +19,7 @@ using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
+using Agency.Huddle.App.Modules;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -61,7 +62,21 @@ public static class ServiceCollectionExtensions
             .AddProbeAndRenameServices()
             .AddStartupHostedServices()
             .AddBackgroundHostedServices()
-            .AddHelperServices();
+            .AddHelperServices()
+            .AddFeatureModules();
+    }
+
+    /// <summary>Registers every Feature Module's services, in the catalog's order.</summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddFeatureModules(this IServiceCollection services)
+    {
+        foreach (IFeatureModule module in ModuleCatalog.All)
+        {
+            module.AddServices(services);
+        }
+
+        return services;
     }
 
     /// <summary>
@@ -646,11 +661,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILibraryReferenceResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
         services.AddSingleton<ILibraryNoteResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
 
-        // A document's History (DocHistory spec §6.2, §6.4): the store and its one writer. Registered
-        // before LibraryFileService, which takes the recorder to log the Human's saves and moves.
-        services.AddSingleton<DocHistory.DocHistoryStore>();
-        services.AddSingleton<DocHistory.DocHistoryRecorder>();
-
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
@@ -770,8 +780,6 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.BacklinksPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("tags", "Tags", MudBlazor.Icons.Material.Filled.Tag, 27,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.TagsPanel), static options => options.Library.Enabled));
-        services.AddSidebarPanel(new Sidebar.SidebarPanel("recent-edits", "History", MudBlazor.Icons.Material.Filled.History, 30,
-            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
         services.AddTaskEditSidebarPanels();
         services.AddScoped<Sidebar.PageCommandBus>();
         services.AddScoped<Components.Shared.AgentProfileCardOpener>();

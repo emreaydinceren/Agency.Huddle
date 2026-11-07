@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,7 +23,7 @@ public sealed class RoleCoversVerifyTests
         Assert.False(gates.CoversVerify(null));
     }
 
-    /// <summary>The factory's install gives the read reminder to an identity whose role covers verify, and to no other: a role that covers nothing, no role, no identity and no gate service all leave the flag out of the installed hook.</summary>
+    /// <summary>The module's install gives the read reminder to an identity whose role covers verify, and to no other: a role that covers nothing, no role, no identity and no gate service all leave the flag out of the installed hook.</summary>
     /// <param name="roleId">The role's id in the <c>web</c> type, or an empty string for an identity with no role.</param>
     /// <param name="expected">Whether the installed hook carries the flag.</param>
     [Theory]
@@ -37,7 +38,7 @@ public sealed class RoleCoversVerifyTests
         PersonaIdentity identity = new("Ana", "Tester", "ana", [], Role: role);
         string workDir = Path.Combine(dir.Path, "work");
 
-        DotAcpAgentHostFactory.InstallDocHistoryHook(workDir, dir.Path, ["mcp__team__log_change"], identity, gates, NullLogger.Instance);
+        DocHistoryModule.InstallStopHook(workDir, dir.Path, ["mcp__team__log_change"], identity, gates, NullLogger.Instance);
 
         Assert.Equal(expected, HookCommand(workDir).Contains("--remind-reads", StringComparison.Ordinal));
     }
@@ -52,8 +53,8 @@ public sealed class RoleCoversVerifyTests
         string second = Path.Combine(dir.Path, "second");
         PersonaIdentity qa = new("Ana", "Tester", "ana", [], Role: new RoleRef("web", "qa", "1.2.0"));
 
-        DotAcpAgentHostFactory.InstallDocHistoryHook(first, dir.Path, ["mcp__team__log_change"], null, gates, NullLogger.Instance);
-        DotAcpAgentHostFactory.InstallDocHistoryHook(second, dir.Path, ["mcp__team__log_change"], qa, null, NullLogger.Instance);
+        DocHistoryModule.InstallStopHook(first, dir.Path, ["mcp__team__log_change"], null, gates, NullLogger.Instance);
+        DocHistoryModule.InstallStopHook(second, dir.Path, ["mcp__team__log_change"], qa, null, NullLogger.Instance);
 
         Assert.DoesNotContain("--remind-reads", HookCommand(first), StringComparison.Ordinal);
         Assert.DoesNotContain("--remind-reads", HookCommand(second), StringComparison.Ordinal);
