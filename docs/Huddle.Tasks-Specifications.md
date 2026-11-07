@@ -457,6 +457,7 @@ public static class TaskFileFormat
 | closed / reopened | `closed` / `reopened` |
 | reason (Cancelled or Rejected) | appended as ` (reason: {text})`, at most 200 characters |
 | outside edit | prefix `edited outside Huddle: `, or the bare `edited outside Huddle` when no diff is possible (§8.5) |
+| outside edit refused by a Request rule | `outside edit refused: <message>`, the same message `update_task` or `close_task` gives, when a file takes a Request out of Backlog without triage or moves it into `_closed/` unconfirmed; the change is undone (ADR-0040) |
 | unknown field | `{key} edited` |
 
 - `ClosedAt` is the `At` of the last `closed` entry that isn't followed by a `reopened` entry, and

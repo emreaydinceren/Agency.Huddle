@@ -106,6 +106,12 @@ Team or the Human, so a Room shared with another Team's Persona is refused.
   Request tools, so the rule does not depend on a prompt.
 - **A Human can move a Request past triage** through the confirmed override, and the Change log
   records it.
+- **An outside edit meets the same two rules** (added 2026-11-07). An Agent's `Bash` and `Write`
+  reach the Task file on disk, so a file that takes a Request out of Backlog without triage has
+  its head written back, and a file moved into `_closed/` before the Request is confirmed or
+  declined is moved back. Each is logged as `outside edit refused: <message>`, with the message the
+  tools give. As with a process gate (ADR-0039), this applies to the Human's own file edits too,
+  because a file edit cannot carry the confirmed override.
 - **Each change to a Request wakes the assignee and the managers named in the table,** through
   the existing Task wake-up rule. No new wake mechanism exists for Requests.
 - **The receiving Team's Task folder holds the record.** Deleting that file deletes the Request,
