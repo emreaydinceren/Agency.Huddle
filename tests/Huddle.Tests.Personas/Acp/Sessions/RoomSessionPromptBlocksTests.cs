@@ -47,23 +47,24 @@ public sealed class RoomSessionPromptBlocksTests
             ? new FakePersonaHost(session, ProfileOf(readsFiles, promptBlocks)) { PromptCapabilities = capabilities ?? AgentPromptCapabilities.None }
             : null;
         FakeRoomSessionOwner owner = new();
-        using CancellationTokenSource runCts = new();
-        await using RoomSession room = new(
-            roomId: "room-1",
-            open: _ => Task.FromResult<IAgentSession>(session),
-            owner: owner,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: new AcpOptions(),
-            logger: logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
-            runToken: runCts.Token,
-            persona: Nova,
-            host: host,
-            enrichers: TurnHookTestFactory.Enrichers(collector, readsFiles, logger: logger));
+        CancellationTokenSource runCts = new();
+        await using RoomSessionHarness harness = RoomSessionHarness.Adopt(
+            new RoomSession(
+                roomId: "room-1",
+                open: _ => Task.FromResult<IAgentSession>(session),
+                owner: owner,
+                scheduler: new ImmediateTurnScheduler(),
+                prompts: new FakePromptSource(),
+                options: new AcpOptions(),
+                logger: logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                runToken: runCts.Token,
+                persona: Nova,
+                host: host,
+                enrichers: TurnHookTestFactory.Enrichers(collector, readsFiles, logger: logger)),
+            runCts);
 
-        room.Enqueue(new QueuedWork(1, item));
+        harness.Room.Enqueue(new QueuedWork(1, item));
         await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);
-        await runCts.CancelAsync();
         return Assert.Single(session.AgentPrompts);
     }
 
