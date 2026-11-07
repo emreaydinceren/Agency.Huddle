@@ -1,0 +1,267 @@
+Singleton Agency.Huddle.Acp.Hosting.IAgentProcessLauncher -> Agency.Huddle.Acp.Hosting.AgentProcessLauncher
+Singleton Agency.Huddle.App.Acp.AdapterCatalog -> Agency.Huddle.App.Acp.AdapterCatalog
+Singleton Agency.Huddle.App.Acp.AdapterProfileResolver -> Agency.Huddle.App.Acp.AdapterProfileResolver
+Singleton Agency.Huddle.App.Acp.AgentFolderMoves -> Agency.Huddle.App.Acp.AgentFolderMoves
+Singleton Agency.Huddle.App.Acp.AgentPaths -> Agency.Huddle.App.Acp.AgentPaths
+Singleton Agency.Huddle.App.Acp.DotAcpAgentHostFactory -> Agency.Huddle.App.Acp.DotAcpAgentHostFactory
+Singleton Agency.Huddle.App.Acp.IAdapterProbeRunner -> Agency.Huddle.App.Acp.AdapterProcessProbeRunner
+Singleton Agency.Huddle.App.Acp.IAgentHostFactory -> factory Agency.Huddle.App.Acp.IAgentHostFactory
+Singleton Agency.Huddle.App.Acp.IMergeGate -> Agency.Huddle.App.Teams.ProcessMergeGate
+Singleton Agency.Huddle.App.Acp.IModelCatalog -> Agency.Huddle.App.Acp.ModelCatalogProbe
+Singleton Agency.Huddle.App.Acp.PersonaCommands -> Agency.Huddle.App.Acp.PersonaCommands
+Singleton Agency.Huddle.App.Acp.PersonaHealth -> Agency.Huddle.App.Acp.PersonaHealth
+Singleton Agency.Huddle.App.Acp.PersonaPromptPreview -> Agency.Huddle.App.Acp.PersonaPromptPreview
+Singleton Agency.Huddle.App.Acp.PersonaSpend -> Agency.Huddle.App.Acp.PersonaSpend
+Singleton Agency.Huddle.App.Acp.PersonaStore -> Agency.Huddle.App.Acp.PersonaStore
+Singleton Agency.Huddle.App.Acp.PersonaSupervisor -> Agency.Huddle.App.Acp.PersonaSupervisor
+Singleton Agency.Huddle.App.Acp.RoomFollows -> Agency.Huddle.App.Acp.RoomFollows
+Singleton Agency.Huddle.App.Acp.Sessions.IElicitationBridge -> Agency.Huddle.App.Elicitation.RoomElicitationBridge
+Singleton Agency.Huddle.App.Acp.Sessions.ISessionSettings -> factory Agency.Huddle.App.Acp.Sessions.ISessionSettings
+Singleton Agency.Huddle.App.Acp.Sessions.LastCatchUpStore -> Agency.Huddle.App.Acp.Sessions.LastCatchUpStore
+Singleton Agency.Huddle.App.Acp.Sessions.OwnPosts -> Agency.Huddle.App.Acp.Sessions.OwnPosts
+Singleton Agency.Huddle.App.Acp.Sessions.RoomSessionStore -> Agency.Huddle.App.Acp.Sessions.RoomSessionStore
+Singleton Agency.Huddle.App.Acp.Sessions.SessionSettingsStore -> Agency.Huddle.App.Acp.Sessions.SessionSettingsStore
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.AgentsMdTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.AgentsMdTurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.FileChangesTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.FileChangesTurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.HuddleMemoryTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.HuddleMemoryTurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Tools.IRequestNotifier -> Agency.Huddle.App.Acp.Tools.RequestNotifier
+Singleton Agency.Huddle.App.Acp.WorkModePolicy -> Agency.Huddle.App.Acp.WorkModePolicy
+Singleton Agency.Huddle.App.Agents.BuiltinAgentReset -> Agency.Huddle.App.Agents.BuiltinAgentReset
+Singleton Agency.Huddle.App.Agents.CandidateChecker -> Agency.Huddle.App.Agents.CandidateChecker
+Singleton Agency.Huddle.App.Agents.HireLimitGuard -> factory Agency.Huddle.App.Agents.HireLimitGuard
+Singleton Agency.Huddle.App.Agents.ProposalService -> Agency.Huddle.App.Agents.ProposalService
+Singleton Agency.Huddle.App.Agents.ProposalStore -> Agency.Huddle.App.Agents.ProposalStore
+Singleton Agency.Huddle.App.AgentsMdChanges.AgentsMdLedger -> factory Agency.Huddle.App.AgentsMdChanges.AgentsMdLedger
+Singleton Agency.Huddle.App.AgentsMdChanges.AgentsMdNoticeRenderer -> factory Agency.Huddle.App.AgentsMdChanges.AgentsMdNoticeRenderer
+Singleton Agency.Huddle.App.AgentsMdChanges.AgentsMdNoticeSource -> factory Agency.Huddle.App.AgentsMdChanges.AgentsMdNoticeSource
+Singleton Agency.Huddle.App.AgentsMdChanges.AgentsMdScopes -> Agency.Huddle.App.AgentsMdChanges.AgentsMdScopes
+Singleton Agency.Huddle.App.Appearance.AppearanceStore -> Agency.Huddle.App.Appearance.AppearanceStore
+Singleton Agency.Huddle.App.Avatars.AvatarLibraryLocator -> factory Agency.Huddle.App.Avatars.AvatarLibraryLocator
+Singleton Agency.Huddle.App.Avatars.AvatarStore -> Agency.Huddle.App.Avatars.AvatarStore
+Singleton Agency.Huddle.App.Avatars.IAvatarLibraryLoader -> Agency.Huddle.App.Avatars.AvatarLibraryLoader
+Scoped Agency.Huddle.App.Circuits.CircuitConnectionTracker -> Agency.Huddle.App.Circuits.CircuitConnectionTracker
+Scoped Agency.Huddle.App.Circuits.ICircuitConnection -> factory Agency.Huddle.App.Circuits.ICircuitConnection
+Scoped Agency.Huddle.App.Circuits.ServerNavigator -> Agency.Huddle.App.Circuits.ServerNavigator
+Scoped Agency.Huddle.App.Components.Layout.TeamShortcutStore -> Agency.Huddle.App.Components.Layout.TeamShortcutStore
+Scoped Agency.Huddle.App.Components.Shared.AgentProfileCardOpener -> Agency.Huddle.App.Components.Shared.AgentProfileCardOpener
+Singleton Agency.Huddle.App.Components.Shared.AgentProfiles -> Agency.Huddle.App.Components.Shared.AgentProfiles
+Singleton Agency.Huddle.App.Data.CadenceStateStore -> Agency.Huddle.App.Data.CadenceStateStore
+Singleton Agency.Huddle.App.Data.ConnectorsNoticeStore -> Agency.Huddle.App.Data.ConnectorsNoticeStore
+Singleton Agency.Huddle.App.Data.HelperSettingsStore -> Agency.Huddle.App.Data.HelperSettingsStore
+Singleton Agency.Huddle.App.Data.HelperStatusStore -> Agency.Huddle.App.Data.HelperStatusStore
+Singleton Agency.Huddle.App.Data.HelperUsageStore -> Agency.Huddle.App.Data.HelperUsageStore
+Singleton Agency.Huddle.App.Data.IChatStore -> Agency.Huddle.App.Data.FileChatStore
+Singleton Agency.Huddle.App.Data.ITeamDirectory -> Agency.Huddle.App.Data.SqliteTeamDirectory
+Singleton Agency.Huddle.App.Data.JobRoomStore -> Agency.Huddle.App.Data.JobRoomStore
+Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStateStore
+Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore
+Singleton Agency.Huddle.App.Data.PersonaConnectorsStore -> Agency.Huddle.App.Data.PersonaConnectorsStore
+Singleton Agency.Huddle.App.Data.PersonaEffortStore -> Agency.Huddle.App.Data.PersonaEffortStore
+Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.PersonaModelStore
+Singleton Agency.Huddle.App.Data.PersonaSpendStore -> Agency.Huddle.App.Data.PersonaSpendStore
+Singleton Agency.Huddle.App.Data.PersonaWorkModeStore -> Agency.Huddle.App.Data.PersonaWorkModeStore
+Singleton Agency.Huddle.App.Data.RawBaselineStore -> Agency.Huddle.App.Data.RawBaselineStore
+Singleton Agency.Huddle.App.DocHistory.DocHistoryRecorder -> Agency.Huddle.App.DocHistory.DocHistoryRecorder
+Singleton Agency.Huddle.App.DocHistory.DocHistoryStore -> Agency.Huddle.App.DocHistory.DocHistoryStore
+Singleton Agency.Huddle.App.Elicitation.ElicitationService -> Agency.Huddle.App.Elicitation.ElicitationService
+Singleton Agency.Huddle.App.Elicitation.ElicitationStore -> Agency.Huddle.App.Elicitation.ElicitationStore
+Singleton Agency.Huddle.App.Feed.FeedEvents -> Agency.Huddle.App.Feed.FeedEvents
+Singleton Agency.Huddle.App.Feed.FeedQueue -> Agency.Huddle.App.Feed.FeedQueue
+Singleton Agency.Huddle.App.Feed.FeedStore -> Agency.Huddle.App.Feed.FeedStore
+Singleton Agency.Huddle.App.Feed.IFeedPublisher -> factory Agency.Huddle.App.Feed.IFeedPublisher
+Singleton Agency.Huddle.App.FileChanges.FileChangeTracker -> Agency.Huddle.App.FileChanges.FileChangeTracker
+Singleton Agency.Huddle.App.FileChanges.FileStateStore -> Agency.Huddle.App.FileChanges.FileStateStore
+Singleton Agency.Huddle.App.FileChanges.WatchedFolderResolver -> Agency.Huddle.App.FileChanges.WatchedFolderResolver
+Singleton Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper -> Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper
+Singleton Agency.Huddle.App.Helpers.HelperBudget -> Agency.Huddle.App.Helpers.HelperBudget
+Singleton Agency.Huddle.App.Helpers.HelperDispatcher -> Agency.Huddle.App.Helpers.HelperDispatcher
+Singleton Agency.Huddle.App.Helpers.HelperFeed -> Agency.Huddle.App.Helpers.HelperFeed
+Singleton Agency.Huddle.App.Helpers.HelperRegistry -> Agency.Huddle.App.Helpers.HelperRegistry
+Singleton Agency.Huddle.App.Helpers.HelperRunner -> Agency.Huddle.App.Helpers.HelperRunner
+Singleton Agency.Huddle.App.Helpers.HelperSettingsResolver -> Agency.Huddle.App.Helpers.HelperSettingsResolver
+Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
+Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
+Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
+Singleton Agency.Huddle.App.Helpers.IHelperProcessRunner -> Agency.Huddle.App.Acp.AdapterProcessHelperRunner
+Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper
+Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger
+Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryHelper -> Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryHelper
+Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryInputBuilder -> Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryInputBuilder
+Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryTrigger -> factory Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryTrigger
+Singleton Agency.Huddle.App.HiringPool.CustomRoleStore -> Agency.Huddle.App.HiringPool.CustomRoleStore
+Singleton Agency.Huddle.App.HiringPool.HiringPoolCatalog -> Agency.Huddle.App.HiringPool.HiringPoolCatalog
+Singleton Agency.Huddle.App.Jobs.IJobRunner -> Agency.Huddle.App.Jobs.JobRunner
+Singleton Agency.Huddle.App.Jobs.JobScheduler -> Agency.Huddle.App.Jobs.JobScheduler
+Singleton Agency.Huddle.App.Jobs.JobStore -> Agency.Huddle.App.Jobs.JobStore
+Singleton Agency.Huddle.App.Library.ILibraryNoteResolver -> factory Agency.Huddle.App.Library.ILibraryNoteResolver
+Singleton Agency.Huddle.App.Library.ILibraryReferenceResolver -> factory Agency.Huddle.App.Library.ILibraryReferenceResolver
+Singleton Agency.Huddle.App.Library.IRecycleBin -> factory Agency.Huddle.App.Library.IRecycleBin
+Singleton Agency.Huddle.App.Library.ITeamFolders -> factory Agency.Huddle.App.Library.ITeamFolders
+Singleton Agency.Huddle.App.Library.LibraryDocumentCollector -> Agency.Huddle.App.Library.LibraryDocumentCollector
+Singleton Agency.Huddle.App.Library.LibraryFileService -> Agency.Huddle.App.Library.LibraryFileService
+Singleton Agency.Huddle.App.Library.LibraryPathResolver -> Agency.Huddle.App.Library.LibraryPathResolver
+Singleton Agency.Huddle.App.Library.LibraryReferenceResolver -> Agency.Huddle.App.Library.LibraryReferenceResolver
+Singleton Agency.Huddle.App.Library.LibraryRootStore -> Agency.Huddle.App.Library.LibraryRootStore
+Singleton Agency.Huddle.App.Library.LibraryTagIndex -> Agency.Huddle.App.Library.LibraryTagIndex
+Singleton Agency.Huddle.App.Library.PropertyTypes -> Agency.Huddle.App.Library.PropertyTypes
+Singleton Agency.Huddle.App.Library.TeamFolderProvisioner -> Agency.Huddle.App.Library.TeamFolderProvisioner
+Singleton Agency.Huddle.App.Library.WikiLinkIndex -> Agency.Huddle.App.Library.WikiLinkIndex
+Singleton Agency.Huddle.App.Memory.MemoryFolderGate -> Agency.Huddle.App.Memory.MemoryFolderGate
+Singleton Agency.Huddle.App.Memory.MemoryPaths -> Agency.Huddle.App.Memory.MemoryPaths
+Singleton Agency.Huddle.App.Memory.MemoryWarnings -> Agency.Huddle.App.Memory.MemoryWarnings
+Singleton Agency.Huddle.App.Memory.MemoryWriter -> Agency.Huddle.App.Memory.MemoryWriter
+Singleton Agency.Huddle.App.Memory.TeamMemoryAccess -> factory Agency.Huddle.App.Memory.TeamMemoryAccess
+Singleton Agency.Huddle.App.NeedsYou.HeldMentions -> factory Agency.Huddle.App.NeedsYou.HeldMentions
+Singleton Agency.Huddle.App.NeedsYou.IHeldMentionWake -> factory Agency.Huddle.App.NeedsYou.IHeldMentionWake
+Singleton Agency.Huddle.App.NeedsYou.NeedsYouTaskSource -> Agency.Huddle.App.NeedsYou.NeedsYouTaskSource
+Singleton Agency.Huddle.App.NeedsYou.NeedsYouTracker -> Agency.Huddle.App.NeedsYou.NeedsYouTracker
+Singleton Agency.Huddle.App.Pipes.AgentGateway -> Agency.Huddle.App.Pipes.AgentGateway
+Singleton Agency.Huddle.App.Pipes.FreshStartNotes -> Agency.Huddle.App.Pipes.FreshStartNotes
+Singleton Agency.Huddle.App.Pipes.IAgentGateway -> factory Agency.Huddle.App.Pipes.IAgentGateway
+Singleton Agency.Huddle.App.Profile.HumanProfileStore -> Agency.Huddle.App.Profile.HumanProfileStore
+Singleton Agency.Huddle.App.Profile.HumanProfileValidator -> Agency.Huddle.App.Profile.HumanProfileValidator
+Singleton Agency.Huddle.App.Profile.HumanRenameCascade -> Agency.Huddle.App.Profile.HumanRenameCascade
+Singleton Agency.Huddle.App.Profile.IHumanIdentity -> factory Agency.Huddle.App.Profile.IHumanIdentity
+Singleton Agency.Huddle.App.Prompts.IPromptSource -> factory Agency.Huddle.App.Prompts.IPromptSource
+Singleton Agency.Huddle.App.Prompts.PromptStore -> Agency.Huddle.App.Prompts.PromptStore
+Singleton Agency.Huddle.App.Questions.QuestionService -> Agency.Huddle.App.Questions.QuestionService
+Singleton Agency.Huddle.App.Questions.QuestionStore -> Agency.Huddle.App.Questions.QuestionStore
+Singleton Agency.Huddle.App.References.IReferenceSnapshotter -> Agency.Huddle.App.References.ReferenceSnapshotter
+Singleton Agency.Huddle.App.References.ReferenceExpander -> Agency.Huddle.App.References.ReferenceExpander
+Singleton Agency.Huddle.App.References.ReferenceResolver -> Agency.Huddle.App.References.ReferenceResolver
+Singleton Agency.Huddle.App.References.ReferenceSearchFactory -> Agency.Huddle.App.References.ReferenceSearchFactory
+Singleton Agency.Huddle.App.Search.ISearchProvider -> Agency.Huddle.App.Search.TeamSearchProvider
+Singleton Agency.Huddle.App.Search.ISearchProvider -> Agency.Huddle.App.Search.AgentSearchProvider
+Singleton Agency.Huddle.App.Search.ISearchProvider -> Agency.Huddle.App.Search.LibrarySearchProvider
+Singleton Agency.Huddle.App.Search.ISearchProvider -> Agency.Huddle.App.Search.TaskSearchProvider
+Singleton Agency.Huddle.App.Search.ISearchProvider -> Agency.Huddle.App.Search.RoomSearchProvider
+Scoped Agency.Huddle.App.Search.SearchOrchestrator -> Agency.Huddle.App.Search.SearchOrchestrator
+Singleton Agency.Huddle.App.SecondBrain.ArchiveService -> Agency.Huddle.App.SecondBrain.ArchiveService
+Singleton Agency.Huddle.App.SecondBrain.IArchiveFileSystem -> Agency.Huddle.App.SecondBrain.PhysicalArchiveFileSystem
+Singleton Agency.Huddle.App.SecondBrain.IArchiveService -> factory Agency.Huddle.App.SecondBrain.IArchiveService
+Singleton Agency.Huddle.App.SecondBrain.OverCapNotifier -> Agency.Huddle.App.SecondBrain.OverCapNotifier
+Singleton Agency.Huddle.App.Services.ChatService -> factory Agency.Huddle.App.Services.ChatService
+Singleton Agency.Huddle.App.Services.ContextFill -> Agency.Huddle.App.Services.ContextFill
+Singleton Agency.Huddle.App.Services.Drafts -> Agency.Huddle.App.Services.Drafts
+Singleton Agency.Huddle.App.Services.IMentionAliasSource -> factory Agency.Huddle.App.Services.IMentionAliasSource
+Singleton Agency.Huddle.App.Services.RoomEvents -> Agency.Huddle.App.Services.RoomEvents
+Singleton Agency.Huddle.App.Services.ToolCallLogWriter -> Agency.Huddle.App.Services.ToolCallLogWriter
+Singleton Agency.Huddle.App.Services.TurnActivity -> Agency.Huddle.App.Services.TurnActivity
+Scoped Agency.Huddle.App.Sidebar.PageCommandBus -> Agency.Huddle.App.Sidebar.PageCommandBus
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-detail order 5 Agency.Huddle.App.Components.Sidebar.TaskDetailPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel members order 10 Agency.Huddle.App.Components.Sidebar.MembersPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel outline order 10 Agency.Huddle.App.Components.Sidebar.OutlinePanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-activity order 10 Agency.Huddle.App.Components.Sidebar.TaskActivityPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-tasks order 20 Agency.Huddle.App.Components.Sidebar.RoomTasksPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel linked-documents order 20 Agency.Huddle.App.Components.Sidebar.LinkedDocumentsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blockers order 20 Agency.Huddle.App.Components.Sidebar.TaskBlockersPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel backlinks order 25 Agency.Huddle.App.Components.Sidebar.BacklinksPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blocks order 25 Agency.Huddle.App.Components.Sidebar.TaskBlocksPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel tags order 27 Agency.Huddle.App.Components.Sidebar.TagsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-documents order 30 Agency.Huddle.App.Components.Sidebar.RoomDocumentsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel recent-edits order 30 Agency.Huddle.App.Components.Sidebar.RecentEditsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-documents order 30 Agency.Huddle.App.Components.Sidebar.TaskDocumentsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanelCatalog -> Agency.Huddle.App.Sidebar.SidebarPanelCatalog
+Singleton Agency.Huddle.App.SkillSources.HiddenStore -> Agency.Huddle.App.SkillSources.HiddenStore
+Singleton Agency.Huddle.App.SkillSources.IInstallFileLocation -> factory Agency.Huddle.App.SkillSources.IInstallFileLocation
+Singleton Agency.Huddle.App.SkillSources.ISkillCopier -> Agency.Huddle.App.SkillSources.SkillCopier
+Singleton Agency.Huddle.App.SkillSources.ISkillSourcesMove -> factory Agency.Huddle.App.SkillSources.ISkillSourcesMove
+Singleton Agency.Huddle.App.SkillSources.InstallFileWriter -> Agency.Huddle.App.SkillSources.InstallFileWriter
+Singleton Agency.Huddle.App.SkillSources.Move.IMoveFiles -> Agency.Huddle.App.SkillSources.Move.PhysicalMoveFiles
+Singleton Agency.Huddle.App.SkillSources.Move.MoveReportStore -> Agency.Huddle.App.SkillSources.Move.MoveReportStore
+Singleton Agency.Huddle.App.SkillSources.Move.SkillSourcesMove -> Agency.Huddle.App.SkillSources.Move.SkillSourcesMove
+Singleton Agency.Huddle.App.SkillSources.PackUpdater -> Agency.Huddle.App.SkillSources.PackUpdater
+Scoped Agency.Huddle.App.SkillSources.PathFormatChoice -> Agency.Huddle.App.SkillSources.PathFormatChoice
+Singleton Agency.Huddle.App.SkillSources.RegistryWatcher -> Agency.Huddle.App.SkillSources.RegistryWatcher
+Singleton Agency.Huddle.App.SkillSources.RoleLister -> Agency.Huddle.App.SkillSources.RoleLister
+Singleton Agency.Huddle.App.SkillSources.SkillPromptBuilder -> Agency.Huddle.App.SkillSources.SkillPromptBuilder
+Singleton Agency.Huddle.App.SkillSources.SkillRegistry -> Agency.Huddle.App.SkillSources.SkillRegistry
+Singleton Agency.Huddle.App.SkillSources.SkillSourcesRemover -> Agency.Huddle.App.SkillSources.SkillSourcesRemover
+Singleton Agency.Huddle.App.SkillSources.SkillSourcesSettings -> Agency.Huddle.App.SkillSources.SkillSourcesSettings
+Singleton Agency.Huddle.App.SkillSources.SkillsMdWriter -> Agency.Huddle.App.SkillSources.SkillsMdWriter
+Singleton Agency.Huddle.App.SkillSources.SourceLog -> Agency.Huddle.App.SkillSources.SourceLog
+Singleton Agency.Huddle.App.Skills.SkillStore -> Agency.Huddle.App.Skills.SkillStore
+Scoped Agency.Huddle.App.Tabs.RightSidebarService -> Agency.Huddle.App.Tabs.RightSidebarService
+Singleton Agency.Huddle.App.Tabs.TabPageRoutes -> instance Agency.Huddle.App.Tabs.TabPageRoutes
+Scoped Agency.Huddle.App.Tabs.TabService -> Agency.Huddle.App.Tabs.TabService
+Singleton Agency.Huddle.App.Tasks.HumanGate.IProofSource -> Agency.Huddle.App.Tasks.HumanGate.ProofSource
+Singleton Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder -> Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder
+Singleton Agency.Huddle.App.Tasks.IRequestConfirmers -> Agency.Huddle.App.Tasks.RequestConfirmers
+Singleton Agency.Huddle.App.Tasks.ISprintCatalog -> factory Agency.Huddle.App.Tasks.ISprintCatalog
+Singleton Agency.Huddle.App.Tasks.ITaskBacklinkSource -> Agency.Huddle.App.Tasks.TaskBacklinkSource
+Singleton Agency.Huddle.App.Tasks.ITaskPrefixes -> factory Agency.Huddle.App.Tasks.ITaskPrefixes
+Singleton Agency.Huddle.App.Tasks.ITaskReferenceResolver -> factory Agency.Huddle.App.Tasks.ITaskReferenceResolver
+Singleton Agency.Huddle.App.Tasks.IWakePauses -> factory Agency.Huddle.App.Tasks.IWakePauses
+Singleton Agency.Huddle.App.Tasks.SprintProposalService -> Agency.Huddle.App.Tasks.SprintProposalService
+Singleton Agency.Huddle.App.Tasks.SprintProposalStore -> Agency.Huddle.App.Tasks.SprintProposalStore
+Singleton Agency.Huddle.App.Tasks.SprintStore -> Agency.Huddle.App.Tasks.SprintStore
+Singleton Agency.Huddle.App.Tasks.TaskActivity -> Agency.Huddle.App.Tasks.TaskActivity
+Singleton Agency.Huddle.App.Tasks.TaskEvents -> Agency.Huddle.App.Tasks.TaskEvents
+Singleton Agency.Huddle.App.Tasks.TaskFeedPublisher -> Agency.Huddle.App.Tasks.TaskFeedPublisher
+Singleton Agency.Huddle.App.Tasks.TaskIdAllocator -> Agency.Huddle.App.Tasks.TaskIdAllocator
+Singleton Agency.Huddle.App.Tasks.TaskService -> Agency.Huddle.App.Tasks.TaskService
+Singleton Agency.Huddle.App.Tasks.TaskStore -> Agency.Huddle.App.Tasks.TaskStore
+Singleton Agency.Huddle.App.Tasks.TaskTriggerService -> Agency.Huddle.App.Tasks.TaskTriggerService
+Singleton Agency.Huddle.App.Tasks.Views.ViewStore -> Agency.Huddle.App.Tasks.Views.ViewStore
+Singleton Agency.Huddle.App.TeamTypes.TeamTypeCatalog -> Agency.Huddle.App.TeamTypes.TeamTypeCatalog
+Singleton Agency.Huddle.App.Teams.CadenceService -> Agency.Huddle.App.Teams.CadenceService
+Singleton Agency.Huddle.App.Teams.HireService -> Agency.Huddle.App.Teams.HireService
+Singleton Agency.Huddle.App.Teams.IConnectorStatus -> Agency.Huddle.App.Teams.FileConnectorStatus
+Singleton Agency.Huddle.App.Teams.IHireContext -> Agency.Huddle.App.Teams.HireContext
+Singleton Agency.Huddle.App.Teams.IOnboardingPoster -> Agency.Huddle.App.Teams.ChatOnboardingPoster
+Singleton Agency.Huddle.App.Teams.IPersonaStartGate -> factory Agency.Huddle.App.Teams.IPersonaStartGate
+Singleton Agency.Huddle.App.Teams.ISkillAvailability -> factory Agency.Huddle.App.Teams.ISkillAvailability
+Singleton Agency.Huddle.App.Teams.ITeamCatalog -> factory Agency.Huddle.App.Teams.ITeamCatalog
+Singleton Agency.Huddle.App.Teams.ITeamMembership -> Agency.Huddle.App.Teams.TeamMembership
+Singleton Agency.Huddle.App.Teams.ProcessGateService -> Agency.Huddle.App.Teams.ProcessGateService
+Singleton Agency.Huddle.App.Teams.ProcessProvisioner -> Agency.Huddle.App.Teams.ProcessProvisioner
+Singleton Agency.Huddle.App.Teams.RecordsBundleBuilder -> Agency.Huddle.App.Teams.RecordsBundleBuilder
+Singleton Agency.Huddle.App.Teams.RetroFileStore -> Agency.Huddle.App.Teams.RetroFileStore
+Singleton Agency.Huddle.App.Teams.RetroProposalService -> Agency.Huddle.App.Teams.RetroProposalService
+Singleton Agency.Huddle.App.Teams.RetroProposalStore -> Agency.Huddle.App.Teams.RetroProposalStore
+Singleton Agency.Huddle.App.Teams.RoleHirer -> Agency.Huddle.App.Teams.RoleHirer
+Singleton Agency.Huddle.App.Teams.TeamCatalog -> Agency.Huddle.App.Teams.TeamCatalog
+Singleton Agency.Huddle.App.Teams.TeamDuplicator -> Agency.Huddle.App.Teams.TeamDuplicator
+Singleton Agency.Huddle.App.Teams.TeamOnboarding -> Agency.Huddle.App.Teams.TeamOnboarding
+Singleton Agency.Huddle.App.Uploads.ChatUploadService -> Agency.Huddle.App.Uploads.ChatUploadService
+Singleton Agency.Huddle.App.Uploads.IRoomUploadFolders -> Agency.Huddle.App.Uploads.RoomUploadFolders
+Scoped Agency.Huddle.App.Uploads.PendingUploads -> Agency.Huddle.App.Uploads.PendingUploads
+Singleton Agency.Huddle.App.Uploads.TaskUploadFolders -> Agency.Huddle.App.Uploads.TaskUploadFolders
+Singleton Agency.Huddle.App.Uploads.TaskUploadService -> Agency.Huddle.App.Uploads.TaskUploadService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Feed.FeedWriter
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Tasks.TaskFeedStartup
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskFeedPublisher
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Helpers.HelperFeedStartup
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.NeedsYou.HeldMentions
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.ArchiveRecoveryService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Library.TeamFolderProvisioner
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.SkillSources.RegistryWatcher
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.SkillSources.InstallFileWriter
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Data.DataInitializer
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.AcceptBeforeMergeMigration
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.RetiredFileScanService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.DefaultAgentsMdService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Profile.HumanRenameCascade
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Pipes.PipeServer
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Demo.DemoAgentHost
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.ConnectorsNoticeDecider
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.BuiltinAgentSeeder
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Acp.PersonaSupervisor
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskTriggerService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Teams.CadenceService
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Jobs.JobScheduler
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Acp.PersonaRenameCascade
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.NeedsYou.NeedsYouStartupScan
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.TeamRoomReconciler
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.HelperDispatcher
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.AgentsMdChanges.AgentsMdWatcher
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger
+Singleton Microsoft.Extensions.Options.IConfigureOptions`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.NamedConfigureFromConfigurationOptions`1[Agency.Huddle.App.TeamOptions]
+Singleton Microsoft.Extensions.Options.IOptionsChangeTokenSource`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.ConfigurationChangeTokenSource`1[Agency.Huddle.App.TeamOptions]
+Singleton Microsoft.Extensions.Options.IPostConfigureOptions`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.PostConfigureOptions`1[Agency.Huddle.App.TeamOptions]
