@@ -1202,6 +1202,7 @@ Human gate: the Proof list, the decision card, Accept and Decline, the board dra
 | [HUMANGATE-07](human-gate.md#humangate-07--decline-closes-the-task-with-its-reason-u-7) |  | Pass |  | 2026-10-19 paid run (Haiku) |
 | [HUMANGATE-08](human-gate.md#humangate-08--an-outside-edit-that-removes-the-action-is-put-back-u-8) |  | Pass |  | 2026-10-19 paid run (Haiku) |
 | [HUMANGATE-09](human-gate.md#humangate-09--restart-keeps-every-waiting-task-on-the-needs-you-page-u-9) |  | Pass |  | 2026-10-19 paid run (Haiku) |
+| [HUMANGATE-10](human-gate.md#humangate-10--an-agent-that-rewrites-its-own-settings-still-waits-for-the-merge-gate-issue-432) | 💰 | Pass |  | run 2026-11-06 by an agent at the handler level, see the Run log |
 
 ## helpers
 

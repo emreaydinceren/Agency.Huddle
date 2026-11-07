@@ -89,3 +89,7 @@ decision about Huddle's own tool is not Huddle's, and in `default` the classifie
 | `_meta.claudeCode.options.permissionMode` | The Adapter overwrites it |
 | Removing `mcp__team__` from the classifier with an allow rule | Leaves the session in the Human's mode, so shell commands still skip Huddle |
 | The first advertised mode that is not hidden | Discovered rather than named, but another Adapter's first mode may be read-only |
+
+## Amendment, 2026-11-06 (issue #432)
+
+The merge gate hook no longer stands alone against a user's or an Agent's own `permissions.allow` rule. `BuildIsolationMeta` sends `options.settings.permissions.ask` for the git merge, push and pull commands, `Edit` and `Write` on every Agent session, so the request reaches the handler even when the Agent has rewritten its settings file or turned the hooks off. A Work Mode that does not ask, and an Adapter entry that does not isolate, can still skip it.

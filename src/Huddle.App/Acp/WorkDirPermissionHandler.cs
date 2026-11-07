@@ -178,7 +178,8 @@ internal sealed class WorkDirPermissionHandler(
 
         string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.Raw.RefusalFor(context.ToolCall)
             ?? guards?.Prompts.RefusalFor(context.ToolCall)
-            ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName);
+            ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName)
+            ?? guards?.Settings?.RefusalFor(context.ToolCall);
         if (guardReason is not null)
         {
             if (logger.IsEnabled(LogLevel.Warning))
