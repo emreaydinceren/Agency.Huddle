@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.DocHistory;
 
 namespace Agency.Huddle.Tests.DocHistory;
@@ -48,7 +49,7 @@ public sealed class DocHistoryStopHookInstallTests
         string workDir = Path.Combine(dir.Path, "work");
         Directory.CreateDirectory(Path.Combine(workDir, ".claude"));
         File.WriteAllText(
-            Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile),
+            Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile),
             """{"model":"haiku","hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo mine"}]}],"PreToolUse":[]}}""");
 
         DocHistoryStopHook.Install(workDir, dir.Path, Tool, NullLogger.Instance);
@@ -67,7 +68,7 @@ public sealed class DocHistoryStopHookInstallTests
         using TempDataDir dir = new();
         string workDir = Path.Combine(dir.Path, "work");
         Directory.CreateDirectory(Path.Combine(workDir, ".claude"));
-        string path = Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile);
+        string path = Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile);
         File.WriteAllText(path, "{ not json");
 
         DocHistoryStopHook.Install(workDir, dir.Path, Tool, NullLogger.Instance);
@@ -104,12 +105,12 @@ public sealed class DocHistoryStopHookInstallTests
                 },
                 ct)));
 
-            Assert.All(workDirs, workDir => Assert.True(File.Exists(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile))));
+            Assert.All(workDirs, workDir => Assert.True(File.Exists(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile))));
         }
 
         Assert.Equal(DocHistoryStopHook.Script, File.ReadAllText(script));
     }
 
     private static JsonObject ReadSettings(string workDir) =>
-        (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile)))!;
+        (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile)))!;
 }

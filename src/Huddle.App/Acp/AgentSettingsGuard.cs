@@ -39,7 +39,7 @@ internal sealed class AgentSettingsGuard(string workDir, string? hooksDir = null
         }
 
         bool removes = toolCall.Kind is ToolKind.Delete or ToolKind.Move;
-        string settingsFile = Path.GetFullPath(Path.Combine(workDir, SettingsFolder, DocHistory.DocHistoryStopHook.SettingsFile));
+        string settingsFile = Path.GetFullPath(Path.Combine(workDir, SettingsFolder, WorkDirHookSettings.SettingsFile));
         foreach (string resolved in ToolCallPaths.From(toolCall, workDir))
         {
             string path = Path.GetFullPath(resolved.Replace('\\', '/'));

@@ -1,5 +1,3 @@
-using Agency.Huddle.App.DocHistory;
-
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
@@ -24,8 +22,6 @@ internal static class MergeGateHook
     /// <summary>The tools the hook watches: the Adapter's shell tools.</summary>
     internal const string Matcher = "Bash|PowerShell";
 
-    private static readonly Lock ScriptGate = new();
-
     /// <summary>
     /// Writes the script under <paramref name="dataDir"/> and adds the hook to the Agent's Work Dir settings, keeping every
     /// other setting and hook. Safe to call on every session start, so an install made before this hook existed gains it.
@@ -40,26 +36,16 @@ internal static class MergeGateHook
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDir);
         ArgumentNullException.ThrowIfNull(logger);
 
-        try
-        {
-            string script = Path.Combine(dataDir, "hooks", ScriptName);
-            lock (ScriptGate)
-            {
-                DocHistoryStopHook.WriteIfChanged(script, Script);
-            }
-
-            DocHistoryStopHook.AddToSettings(
-                Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile),
-                "PreToolUse",
-                Matcher,
-                ScriptName,
-                $"node \"{script}\"",
-                logger);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            logger.LogWarning(exception, "Could not install the merge gate hook in {WorkDir}.", workDir);
-        }
+        WorkDirHookSettings.Install(
+            workDir,
+            dataDir,
+            ScriptName,
+            Script,
+            "PreToolUse",
+            Matcher,
+            string.Empty,
+            logger,
+            "merge gate");
     }
 
     /// <summary>
