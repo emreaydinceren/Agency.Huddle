@@ -1,0 +1,114 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Wake;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Teams;
+
+namespace Agency.Huddle.Tests.Tasks.Wake;
+
+/// <summary>
+/// The collaborators a wake rule reads, built by hand: the Human ("You"), a Persona store, a hand-driven Team catalog, a
+/// scripted set of challengers and the options. The rule tests build each rule from these and call <c>Choose</c> directly.
+/// </summary>
+internal sealed class WakeRuleKit : IDisposable
+{
+    private readonly TempDataDir dir = new();
+
+    /// <summary>Builds the kit with Tasks and wake-ups on, no Teams, no Personas and no challengers.</summary>
+    public WakeRuleKit()
+    {
+        this.Personas = new PersonaStore(
+            new AgentPaths(this.dir.Options()),
+            new PersonaModelStore(this.dir.Options()),
+            new PersonaEffortStore(this.dir.Options()),
+            new PersonaWorkModeStore(this.dir.Options()),
+            NullLogger<PersonaStore>.Instance);
+    }
+
+    /// <summary>The options the rules read <c>Tasks.Enabled</c> and <c>Tasks.WakeEnabled</c> from.</summary>
+    public TeamOptions Options { get; } = new() { HumanName = "You" };
+
+    /// <summary>The Human, whose Name is "You".</summary>
+    public IHumanIdentity Human { get; } = new ConfiguredHumanIdentity("You");
+
+    /// <summary>The Persona store the rules ask whether a Name is a known Persona.</summary>
+    public PersonaStore Personas { get; }
+
+    /// <summary>The Team catalog the rules read a Team's manager and members from.</summary>
+    public FakeTeamCatalog Teams { get; } = new();
+
+    /// <summary>Who counts as able to review in which Team.</summary>
+    public FakeChallengers Challengers { get; } = new();
+
+    /// <summary>Registers each name as a Persona.</summary>
+    /// <param name="names">The Persona names.</param>
+    public void AddPersonas(params string[] names)
+    {
+        foreach (string name in names)
+        {
+            _ = this.Personas.Add(new PersonaIdentity(name, name, name.ToUpperInvariant(), ["Platform"]), $"You are {name}.");
+        }
+    }
+
+    /// <summary>Replaces the catalog with Teams <paramref name="teams"/>.</summary>
+    /// <param name="teams">The Teams: name, manager (or <see langword="null"/>) and members.</param>
+    public void SetTeams(params (string Name, string? Manager, string[] Members)[] teams) =>
+        this.Teams.Teams = [.. teams.Select(static t => new TeamSummary(t.Name, [], t.Members, true) { Manager = t.Manager })];
+
+    /// <summary>Builds the manager rule over this kit's collaborators.</summary>
+    /// <param name="withCatalog">Whether to hand the rule the catalog; <see langword="false"/> hands it none.</param>
+    /// <returns>The rule.</returns>
+    public ManagerWakeRule ManagerRule(bool withCatalog = true) =>
+        new(withCatalog ? this.Teams : null, this.Human, this.Personas, this.Options);
+
+    /// <summary>Builds the challenger rule over this kit's collaborators.</summary>
+    /// <param name="withConfirmers">Whether to hand the rule the challengers; <see langword="false"/> hands it none.</param>
+    /// <returns>The rule.</returns>
+    public ChallengerWakeRule ChallengerRule(bool withConfirmers = true) =>
+        new(this.Teams, this.Human, this.Personas, withConfirmers ? this.Challengers : null, this.Options);
+
+    /// <summary>Builds the requesting-manager rule over this kit's collaborators.</summary>
+    /// <returns>The rule.</returns>
+    public RequestingManagerWakeRule RequestingManagerRule() =>
+        new(this.Teams, this.Human, this.Personas, this.Options);
+
+    /// <summary>A round for the rule under test; the assignee preview is a clear one for nobody, which only the assignee rule reads.</summary>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="actorName">Who made the change.</param>
+    /// <param name="statusChanged">Whether the batch changed the status.</param>
+    /// <param name="movedToReview">Whether the batch moved the Task into Review.</param>
+    /// <returns>The round.</returns>
+    public static TaskWakeRound Round(TaskItem latest, string actorName = "You", bool statusChanged = false, bool movedToReview = false) =>
+        new(latest, new TaskActor(TaskActorKind.Agent, actorName, null), statusChanged, movedToReview, new WakePreview(null, null, WakeBlock.None));
+
+    /// <summary>Disposes the Persona store and the temporary data directory.</summary>
+    public void Dispose()
+    {
+        this.Personas.Dispose();
+        this.dir.Dispose();
+    }
+
+    /// <summary>An <see cref="IRequestConfirmers"/> whose challengers are listed by hand.</summary>
+    internal sealed class FakeChallengers : IRequestConfirmers
+    {
+        private readonly HashSet<(string Team, string Member)> challengers = [];
+
+        /// <summary>Makes <paramref name="member"/> able to review in <paramref name="team"/>.</summary>
+        /// <param name="team">The Team.</param>
+        /// <param name="member">The member.</param>
+        public void Add(string team, string member) => this.challengers.Add((team, member));
+
+        /// <inheritdoc />
+        public bool IsVerifierOf(string team, string member) => false;
+
+        /// <inheritdoc />
+        public bool TeamHasConfirmer(string team) => false;
+
+        /// <inheritdoc />
+        public bool IsChallengerOf(string team, string member) => this.challengers.Contains((team, member));
+    }
+}
