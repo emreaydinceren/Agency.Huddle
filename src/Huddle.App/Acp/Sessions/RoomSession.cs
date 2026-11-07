@@ -1,11 +1,8 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.FileChanges;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using System.Globalization;
@@ -18,7 +15,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <c>RoomId == null</c> means a <b>shared</b> session serving every Room the Agent is in - Phase 0/1's
 /// one <see cref="RoomSession"/> per Persona. <see cref="ProcessWorkItemAsync"/>,
 /// <see cref="WatchForAdapterSilenceAsync"/>, <see cref="RunEventReaderAsync"/> and
-/// <see cref="BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
+/// <see cref="TurnPromptFramer.BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
 /// both traps intact (<c>docs/engineering/rules.md</c>, "A Turn ends four ways").
 /// </summary>
 internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnectorTurnLatch
@@ -69,19 +66,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     // Context meter: the latest context-window fill of this session, shown in the Members panel.
     // Null for a caller that predates it, the same "absent means off" reasoning as turnActivity.
     private readonly ContextFill? contextFill;
-    private readonly ISessionSettings? sessionSettings;
-    private readonly LastCatchUpStore? lastCatchUp;
 
-    // The note the current Turn owes after a fresh start; set by AddTranscriptCatchUpAsync and
-    // cleared by SendFreshStartNoteAsync. Touched only from the single consumer thread.
-    private FreshStartNote? noteOwed;
+    // D24: the first-Turn Transcript catch-up and the fresh-start note it owes; consumer-only state.
+    private readonly TranscriptCatchUpStep transcriptCatchUp;
 
-    // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
-    // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
+    // Spec §6.14, §9.1: adds the Library documents and the Referenced items to a Message Turn. Null
+    // means neither is on (PersonaSupervisor is the only place those gates are applied) or this
     // caller predates it.
-    private readonly LibraryDocumentCollector? libraryDocs;
-    private readonly ReferenceExpander? references;
-    private readonly bool readsFiles;
+    private readonly TurnEnricherPipeline? enrichers;
 
     // Shows the Human an agent's elicitation request (E-3). Null means there is no UI to show it in:
     // every request is then answered as cancelled, which is what an agent with no scope bound gets.
@@ -154,15 +146,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <summary>The latest non-null model a usage update of this session named; kept across updates that name none.</summary>
     private string? lastModel;
 
-    // D24: consulted and cleared only from ProcessWorkItemAsync, which the single consumer thread
-    // always calls after the open that set them (OpenCoreAsync happens-before ProcessWorkItemAsync
-    // in RunConsumerAsync's own sequence), so these need no lock of their own - the same reasoning
-    // knownRoomNames documents on PersonaRunner.
-    private bool firstTurnPending;
-    private bool resumedOnLastOpen;
-    private string? resumedAfterMessageId;
-
-    // Set alongside firstTurnPending/resumedOnLastOpen and consumed by RunEventReaderAsync's own
+    // Set alongside the first-Turn flag TranscriptCatchUpStep.MarkOpened sets and consumed by RunEventReaderAsync's own
     // single-threaded loop, the same reasoning lastUsed itself relies on (D22 correction 9, built
     // here for D24). It is ALSO set by the consumer when a Command Turn completes (Commands spec,
     // section 6.7), so the two threads share it: volatile, so the reader sees the consumer's write
@@ -198,10 +182,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
-    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
-    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
+    /// <param name="enrichers">Adds the Library documents (Spec §6.14) and the Referenced items header (spec section 9.1) to a Message Turn. <see langword="null"/> adds neither, like every caller that predates it.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
-    /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
@@ -223,10 +205,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         OwnPosts? ownPosts = null,
         string? agentId = null,
         TurnActivity? turnActivity = null,
-        LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true,
+        TurnEnricherPipeline? enrichers = null,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
@@ -258,12 +238,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.contextFill = contextFill;
-        this.sessionSettings = sessionSettings;
-        this.lastCatchUp = lastCatchUp;
-        this.libraryDocs = libraryDocs;
+        this.transcriptCatchUp = new TranscriptCatchUpStep(owner, options, sessionSettings, lastCatchUp, prompts, logger, roomId, this.IsOwn);
+        this.enrichers = enrichers;
         this.hooks = hooks;
-        this.references = references;
-        this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
@@ -934,9 +911,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             // instead. usageBaselinePending mirrors resumed: a resumed session's first
             // UsageUpdated reports its whole restored context, not tokens this Turn spent (D22
             // correction 9).
-            this.firstTurnPending = true;
-            this.resumedOnLastOpen = resumed;
-            this.resumedAfterMessageId = resumedAfterId;
+            this.transcriptCatchUp.MarkOpened(resumed, resumedAfterId);
             this.usageBaselinePending = resumed;
 
             // A fresh open starts an empty context, so an earlier reading must not show; a resume keeps it.
@@ -1394,12 +1369,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
-            item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
-            item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
+            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, ct).ConfigureAwait(false);
+            if (this.enrichers is not null)
+            {
+                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
+            }
 
             // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-            this.WriteLastCatchUp(item);
+            this.transcriptCatchUp.WriteLastCatchUp(item);
             run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
             return run;
         }
@@ -1457,121 +1434,17 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
     }
 
-    /// <summary>
-    /// D24, RS §6.5: the first Turn after any open (per-Room only) reads the Room's Transcript,
-    /// after the File Changes collect and before the locked check-and-publish (D22 correction 3).
-    /// </summary>
-    /// <remarks>
-    /// Open and this read must both finish before the watchdog is armed, so neither counts as
-    /// Adapter silence. The first-Turn flag is cleared here regardless of outcome: RS §9 E-3
-    /// (refused or timed out) and a Greeting or a Turn with no TriggerMessageId all still consume
-    /// this Turn's "first after open" opportunity (D24 correction 19) without ever reading anything.
-    /// A Command Turn sends only the bare command, so it reads no Transcript and must not use the
-    /// opportunity up: the Messages this session has not seen are still unseen, and the next
-    /// ordinary Turn is the one that needs them (Commands spec, section 6.6).
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with its Transcript Catch-up set when one was read.</returns>
-    private async Task<WorkItem> AddTranscriptCatchUpAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
-        {
-            this.firstTurnPending = false;
-            if (this.FreshStartNotePending)
-            {
-                this.noteOwed = new FreshStartNote(item.RoomId, "asked", 0, 0, false);
-            }
-
-            if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
-            {
-                SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
-                TranscriptTail? tail = null;
-                try
-                {
-                    tail = await this.owner.ReadTranscriptAsync(
-                        item.RoomId,
-                        this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
-                        triggerId,
-                        settings.CatchUpMessages,
-                        ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    this.logger.LogWarning(
-                        ex, "Persona '{PersonaName}' Transcript read for room {RoomId} failed.", this.owner.PersonaName, item.RoomId);
-                }
-
-                if (tail is not null)
-                {
-                    // D27 correction 11: own-post lines are dropped only when the Transcript is
-                    // actually set on this Turn's WorkItem - that range already holds those posts,
-                    // whether or not it turned out to hold any Messages. A refused or timed-out read
-                    // (RS §9 E-3, tail null) leaves OwnPostLines untouched, so they still render
-                    // through the ordinary catch-up path below.
-                    item = item with
-                    {
-                        Transcript = this.BuildCatchUp(tail, settings),
-                        OwnPostLines = null,
-                    };
-                }
-                else if (this.noteOwed is not null)
-                {
-                    this.noteOwed = this.noteOwed with { ReadFailed = true };
-                }
-            }
-        }
-
-        return item;
-    }
-
-    /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
-    /// <param name="tail">The tail the owner returned.</param>
-    /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
-    /// <returns>The catch-up for the Turn.</returns>
-    private TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
-    {
-        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.IsOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
-        if (this.noteOwed is not null)
-        {
-            this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };
-        }
-
-        return new TranscriptCatchUp(this.resumedOnLastOpen, result.Kept, tail.Omitted + result.Dropped, result.DroppedOwn);
-    }
-
-    /// <summary>Writes the whole prompt text of the first ordinary Turn after a fresh start to the last-catch-up file (C3). A failure is logged and never fails the Turn.</summary>
-    /// <param name="item">The item about to be prompted, fully enriched.</param>
-    private void WriteLastCatchUp(WorkItem item)
-    {
-        if (this.noteOwed is null || this.lastCatchUp is null)
-        {
-            return;
-        }
-
-        try
-        {
-            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, RoomSession.BuildPrompt(item, this.prompts));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(
-                ex, "Persona '{PersonaName}' could not write the last catch-up for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-        }
-    }
-
     /// <summary>Sends the fresh-start note the finished Turn owed, if any, and clears the owed flag. A failure is logged and never fails the Turn.</summary>
     /// <param name="ct">The run's own cancellation token.</param>
     /// <returns>A task that completes when the note has been handed to the owner.</returns>
     private async Task SendFreshStartNoteAsync(CancellationToken ct)
     {
-        FreshStartNote? note = this.noteOwed;
+        FreshStartNote? note = this.transcriptCatchUp.TakeNote();
         if (note is null)
         {
             return;
         }
 
-        this.noteOwed = null;
         lock (this.gate)
         {
             this.freshStartNotePending = false;
@@ -1595,79 +1468,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         this.agentId is { } id
             ? string.Equals(message.SenderId, id, StringComparison.Ordinal)
             : string.Equals(message.SenderName, this.owner.PersonaName, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Spec §6.14, corrections-B6 item 7 / B5 item 28: collects the Library documents the Turn's
-    /// texts mention, after the Transcript Catch-up read and before the locked check-and-publish.
-    /// </summary>
-    /// <remarks>
-    /// Collected before the publish so a slow scan is never counted as Adapter silence, the same
-    /// reasoning the File Changes collect already relies on. Scans the triggering Message's own
-    /// text, the catch-up buffer and, when this Turn set one, the Transcript Catch-up - never
-    /// OwnPostLines (this Agent's own earlier posts, not new documents to fetch) and never a
-    /// Greeting's empty text (the Kind check). A scan or file-read failure must not kill the
-    /// consumer loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with <see cref="WorkItem.LibraryDocuments"/> set when the collect succeeded.</returns>
-    private async Task<WorkItem> AddLibraryDocumentsAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.libraryDocs is not null && item.Kind == WorkItemKind.Message)
-        {
-            try
-            {
-                IReadOnlyList<string> texts =
-                [
-                    item.Text,
-                    .. item.MissedMessages.Select(missed => missed.Text),
-                    .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
-                ];
-                var report = await this.libraryDocs.CollectAsync(texts, this.PromptDeliveryFor(this.libraryDocs), ct).ConfigureAwait(false);
-                item = item with { LibraryDocuments = report };
-                this.LogWithheldImages(report, item.RoomId);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(
-                    ex, "Persona '{PersonaName}' failed to collect Library documents for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-        }
-
-        return item;
-    }
-
-    /// <summary>
-    /// Spec section 9.1: the Referenced items header describes only the references in the triggering
-    /// Message's own text, never the catch-up or Transcript, looked up now.
-    /// </summary>
-    /// <remarks>
-    /// Only an ordinary Message Turn gets one: a Command is the bare command and a Greeting has no
-    /// Message (traps.md, a Command Turn must not drain anything it does not send). Expanded before
-    /// the locked check-and-publish, like the Library collect, so a slow lookup is not counted as
-    /// Adapter silence. A failed lookup must not kill the consumer loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with <see cref="WorkItem.ReferencedItems"/> set when the lookup succeeded.</returns>
-    private async Task<WorkItem> AddReferencedItemsAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.references is not null && item.Kind == WorkItemKind.Message)
-        {
-            try
-            {
-                string? header = await this.references.ExpandAsync(item.Text, this.host?.Profile.UsesToolNamePrefix ?? true, ct).ConfigureAwait(false);
-                item = item with { ReferencedItems = header };
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(
-                    ex, "Persona '{PersonaName}' failed to expand references for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-        }
-
-        return item;
-    }
 
     /// <summary>
     /// Mints the Turn's Message id and publishes the Turn as <see cref="activeTurn"/>, unless a Stop
@@ -1848,8 +1648,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private async Task RunTurnAsync(TurnRun run, CancellationToken ct)
     {
         WorkItem item = run.Item;
-        var prompt = RoomSession.BuildPrompt(item, this.prompts);
-        await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, RoomSession.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
+        var prompt = TurnPromptFramer.BuildPrompt(item, this.prompts);
+        await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, TurnPromptFramer.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
         run.PromptReturned = true;
         var outcome = await run.Completion.Task.WaitAsync(run.TurnCancellation.Token).ConfigureAwait(false);
 
@@ -1961,7 +1761,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // finished compaction from a failed one. A command that did reply keeps its own words.
         if (postText is null && run.Item.Kind == WorkItemKind.Command && run.Item.Command is { } ranCommand)
         {
-            postText = AdapterCommandOutcome.Describe(ranCommand.Name, outcome.Reason, run.Turn.LastOutputJson, run.Turn.ToolCallFailed);
+            postText = AdapterCommandOutcome.Describe(ranCommand.Name, outcome.Reason, run.Turn.ToolCalls.LastOutputJson, run.Turn.ToolCalls.ToolCallFailed);
         }
 
         return postText;
@@ -2104,7 +1904,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         HashSet<string> touched;
         lock (this.gate)
         {
-            touched = [.. run.Turn.Touched];
+            touched = [.. run.Turn.ToolCalls.Touched];
         }
 
         await this.hooks.AfterTurnAsync(run.Item.RoomId, this.hookState, run.HookResult, touched, ct).ConfigureAwait(false);
@@ -2367,17 +2167,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
         else if (agentEvent is ToolCallStarted started)
         {
-            this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
-            this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.ToolName, started.RawInputJson);
-            await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, memoryFile, ct).ConfigureAwait(false);
+            await this.HandleToolCallAsync(started.ToolCallId, isStart: true, started.Kind, started.Title, started.ToolName, started.Status, started.Location, started.Diff, started.RawInputJson, null, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
-            this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
-            this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.ToolName, updated.RawInputJson);
-            await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, memoryFile, ct).ConfigureAwait(false);
+            await this.HandleToolCallAsync(updated.ToolCallId, isStart: false, updated.Kind, updated.Title, updated.ToolName, updated.Status, updated.Location, updated.Diff, updated.RawInputJson, updated.RawOutputJson, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
         {
@@ -2646,17 +2440,34 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     }
 
     /// <summary>
-    /// Keeps, for the Turn in flight, the last tool output that is a JSON object and whether any tool
-    /// call failed, which is all an Adapter command's outcome line is built from. Only calls this Turn
-    /// itself started count: a Stop or an idle timeout lets the consumer move on without waiting for
-    /// the aborted Turn's tail, so a late update for an earlier Turn's call must not be read as this
-    /// Turn's failure.
+    /// Records one tool call on the Turn in flight, then publishes its activity. The steps run in this
+    /// order: the call's result, the paths it touched, the memory file it names, the activity row. Each
+    /// recording step finds the active Turn afresh, and the <see cref="TurnToolCalls.Touched"/> changes
+    /// happen under the gate in that same step, so a late event after the Turn ended records nothing.
     /// </summary>
-    /// <param name="toolCallId">The tool call the update belongs to.</param>
-    /// <param name="isStart">Whether this is the call's first event, which enrols it in the Turn.</param>
-    /// <param name="status">The tool call's status on this update.</param>
-    /// <param name="rawOutputJson">The tool call's output, if this update carries one.</param>
-    private void RecordToolCallResult(string toolCallId, bool isStart, ToolCallStatus status, string? rawOutputJson)
+    /// <param name="toolCallId">The id of the tool call.</param>
+    /// <param name="isStart">Whether this is the call's first event.</param>
+    /// <param name="kind">The tool call's category, as ACP reported it.</param>
+    /// <param name="title">A human-readable label for the call, if the agent supplied one.</param>
+    /// <param name="toolName">The Adapter's own tool name, when it sends one.</param>
+    /// <param name="status">The call's lifecycle state on this event.</param>
+    /// <param name="location">The call's first location, or <see langword="null"/> when this event has none.</param>
+    /// <param name="diff">The call's first change, or <see langword="null"/> when this event has none.</param>
+    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
+    /// <param name="rawOutputJson">The tool call's output, if this event carries one.</param>
+    /// <param name="ct">The reader's own cancellation token.</param>
+    private async Task HandleToolCallAsync(
+        string toolCallId,
+        bool isStart,
+        ToolKind kind,
+        string? title,
+        string? toolName,
+        ToolCallStatus status,
+        ToolCallLocationInfo? location,
+        ToolCallDiffInfo? diff,
+        string? rawInputJson,
+        string? rawOutputJson,
+        CancellationToken ct)
     {
         ActiveTurn? turn;
         lock (this.gate)
@@ -2664,64 +2475,19 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             turn = this.activeTurn;
         }
 
-        if (turn is null)
-        {
-            return;
-        }
-
-        if (isStart)
-        {
-            turn.ToolCallIds.Add(toolCallId);
-        }
-        else if (!turn.ToolCallIds.Contains(toolCallId))
-        {
-            return;
-        }
-
-        if (status == ToolCallStatus.Failed)
-        {
-            turn.ToolCallFailed = true;
-        }
-
-        if (rawOutputJson is not null && rawOutputJson.AsSpan().TrimStart().StartsWith('{'))
-        {
-            turn.LastOutputJson = rawOutputJson;
-        }
-    }
-
-    /// <summary>
-    /// Adds every rooted path found in <paramref name="rawInputJson"/> to the active Turn's
-    /// <see cref="ActiveTurn.Touched"/> set, per FC §6.8 item 2 and FC D-3b - but only for
-    /// <see cref="ToolKind.Edit"/>, <see cref="ToolKind.Delete"/> or <see cref="ToolKind.Move"/>: an
-    /// <see cref="ToolKind.Execute"/> call is not parsed, because a shell command is not a path and
-    /// guessing at one could claim another Agent's change as this Agent's own. A no-op when there
-    /// is no active Turn.
-    /// </summary>
-    /// <param name="kind">The tool call's category, as ACP reported it.</param>
-    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
-    private void RecordTouchedPaths(ToolKind kind, string? rawInputJson)
-    {
-        if (kind is not (ToolKind.Edit or ToolKind.Delete or ToolKind.Move))
-        {
-            return;
-        }
+        turn?.ToolCalls.RecordResult(toolCallId, isStart, status, rawOutputJson);
 
         lock (this.gate)
         {
-            if (this.activeTurn is not { } turn)
-            {
-                return;
-            }
-
-            foreach (var path in TouchedPaths.From(rawInputJson))
-            {
-                turn.Touched.Add(path);
-            }
+            this.activeTurn?.ToolCalls.RecordTouched(kind, rawInputJson);
         }
+
+        string? memoryFile = this.RecordMemoryToolPath(kind, title, toolName, rawInputJson);
+        await this.WriteToolActivityAsync(toolCallId, title, MapToolCallStatus(status), location, diff, memoryFile, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="ActiveTurn.Touched"/> set, so File
+    /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="TurnToolCalls.Touched"/> set, so File
     /// Changes counts a save through the tool as the Agent's own, like an <see cref="ToolKind.Edit"/> (Instructions spec §6.1), and
     /// returns the file any <c>memory</c> call names, which is the only argument the tool-call log would otherwise lose.
     /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
@@ -2759,416 +2525,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         {
             lock (this.gate)
             {
-                this.activeTurn?.Touched.Add(path);
+                this.activeTurn?.ToolCalls.AddTouched(path);
             }
         }
 
         return path;
     }
-
-    /// <summary>
-    /// What precedes a prompt that would otherwise open with a slash. An Adapter reads a command only
-    /// at the very start of a prompt, so this makes the text plain. A Prompt template can be edited to
-    /// open with another Agent's text, and <c>PromptValidator</c> reports but never refuses, so the
-    /// guard is applied to every prompt rather than trusted to the templates (Commands spec, D-9).
-    /// </summary>
-    internal const string CommandGuardMarker = "Message: ";
-
-    /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
-    /// <param name="item">The Turn's Room, sender, text, any catch-up context, and its <see cref="WorkItemKind"/>.</param>
-    /// <param name="prompts">Resolves each <c>turn.*</c> prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
-    /// <returns>
-    /// For a <see cref="WorkItemKind.Command"/>, the bare command: <c>/compact</c>, or
-    /// <c>/compact arguments</c>, and nothing else. For a <see cref="WorkItemKind.Greeting"/>, the
-    /// <c>turn.greeting</c> prompt alone. Otherwise: with
-    /// no catch-up context, the <c>turn.message</c> line alone; with catch-up context, a
-    /// <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a blank line,
-    /// then the <c>turn.message</c> line.
-    /// </returns>
-    internal static string BuildPrompt(WorkItem item, IPromptSource prompts)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(prompts);
-
-        if (item.Kind == WorkItemKind.Command)
-        {
-            // Exactly the command, one text block, no Room label: the Adapter recognises it only at
-            // the start of the prompt, and its input is the rest of this line.
-            AdapterCommandCall command = item.Command
-                ?? throw new InvalidOperationException("A Command work item carries no command.");
-            return command.Arguments.Length == 0 ? $"/{command.Name}" : $"/{command.Name} {command.Arguments}";
-        }
-
-        string prompt = RoomSession.BuildFramedPrompt(item, prompts);
-        return prompt.AsSpan().TrimStart().StartsWith('/') ? CommandGuardMarker + prompt : prompt;
-    }
-
-    /// <summary>
-    /// The Prompt blocks that follow the prompt's text on the wire (design §6.6): the block of each of
-    /// the Turn's Library documents, in order. Only an ordinary Message Turn can carry one: a
-    /// <see cref="WorkItemKind.Command"/> is the bare command and a <see cref="WorkItemKind.Greeting"/>
-    /// has no triggering Message, and neither collects Library documents in the first place.
-    /// </summary>
-    /// <param name="item">The Turn's work item.</param>
-    /// <returns>The blocks, possibly none.</returns>
-    internal static IReadOnlyList<AgentPromptBlock> BuildPromptBlocks(WorkItem item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-
-        if (item.Kind != WorkItemKind.Message || item.LibraryDocuments is not { } report)
-        {
-            return [];
-        }
-
-        return [.. report.Items.Select(document => document.Block).OfType<AgentPromptBlock>()];
-    }
-
-    /// <summary>
-    /// What this Turn's prompt may carry beyond text, built from what the Adapter advertised at
-    /// <c>initialize</c> and the profile's <c>PromptBlocks</c> kill switch. No host (every caller that
-    /// predates resume) means nothing was advertised, so nothing is sent.
-    /// </summary>
-    /// <param name="collector">Supplies the per-Turn caps.</param>
-    private PromptDelivery PromptDeliveryFor(LibraryDocumentCollector collector)
-    {
-        AgentPromptCapabilities capabilities = this.host?.PromptCapabilities ?? AgentPromptCapabilities.None;
-        bool allowed = this.host?.Profile.PromptBlocks ?? false;
-        return collector.DeliveryFor(
-            this.readsFiles,
-            images: capabilities.Image && allowed,
-            embeddedText: capabilities.EmbeddedContext && allowed && !this.readsFiles);
-    }
-
-    /// <summary>Logs one Information line when an image that could have gone as a block did not: counts by reason, never the path's contents.</summary>
-    private void LogWithheldImages(LibraryDocumentsReport report, string roomId)
-    {
-        List<string> reasons =
-        [
-            .. report.Items
-                .Where(document => document.Withheld != PromptBlockWithheld.None)
-                .GroupBy(document => document.Withheld)
-                .OrderBy(group => group.Key)
-                .Select(group => string.Create(CultureInfo.InvariantCulture, $"{group.Key}={group.Count()}")),
-        ];
-
-        if (reasons.Count > 0 && this.logger.IsEnabled(LogLevel.Information))
-        {
-            string summary = string.Join(", ", reasons);
-            this.logger.LogInformation(
-                "Persona '{PersonaName}' sent library file paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
-                this.owner.PersonaName,
-                roomId,
-                summary);
-        }
-    }
-
-    private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
-    {
-        // The Room's id rides along with its name because it is the only way an Agent can learn one.
-        // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
-        // in a turn carries it: without this they reach only Rooms the Agent created itself.
-        var room = RoomSession.RoomLabel(item, prompts);
-
-        if (item.Kind == WorkItemKind.Greeting)
-        {
-            // No triggering Message and no catch-up (Spec §6.14): the trigger is this Prompt, not
-            // Transcript text, and a Greeting is by definition the first Turn in an empty Room. FC
-            // §6.8: the File Changes block never applies to a Greeting either.
-            return prompts.Render("turn.greeting", new Dictionary<string, string> { ["{{roomLabel}}"] = room });
-        }
-
-        var builder = new StringBuilder();
-
-        // Spec 6.7: hook blocks (File Changes is one of them) lead the framed prompt, each followed by a blank line.
-        if (item.HookBlocks is { } hookBlocks)
-        {
-            foreach (string hookBlock in hookBlocks)
-            {
-                builder.Append(hookBlock);
-                builder.Append("\n\n");
-            }
-        }
-
-        RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
-
-        // Spec section 9.3: after the Library documents block and before any catch-up or the Message.
-        // Absent means unchanged, so every prompt without a header stays byte-identical.
-        if (item.ReferencedItems is { } referencedItems)
-        {
-            builder.Append(referencedItems);
-            builder.Append("\n\n");
-        }
-
-        // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
-        // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
-        // this Room's first Turn ever has nothing before the trigger) falls through to today's
-        // buffer-based catch-up untouched, keeping every pre-D24 prompt byte-identical.
-        if (item.Transcript is { Messages.Count: > 0 } transcript)
-        {
-            RoomSession.AppendTranscriptBlock(builder, room, transcript, prompts);
-            builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-            return builder.ToString();
-        }
-
-        var ownPostLines = item.OwnPostLines ?? [];
-        if (item.MissedMessages.Count == 0 && ownPostLines.Count == 0)
-        {
-            builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-            return builder.ToString();
-        }
-
-        RoomSession.AppendCatchUpAndMessage(builder, room, item, ownPostLines, prompts);
-
-        return builder.ToString();
-    }
-
-    /// <summary>Writes the Catch-up block (missed Messages and own posts) and then the triggering Message.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="room">The Room label.</param>
-    /// <param name="item">The item being prompted.</param>
-    /// <param name="ownPostLines">This Agent's own earlier posts, rendered as lines.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendCatchUpAndMessage(StringBuilder builder, string room, WorkItem item, IReadOnlyList<string> ownPostLines, IPromptSource prompts)
-    {
-        // RS §6.7: a block of only own posts still gets turn.catchUpHeader, exactly like a block of
-        // only missed Messages - the header introduces the whole Catch-up block, not just one kind
-        // of line inside it.
-        builder.Append(prompts.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
-        builder.Append('\n');
-        foreach (var missed in item.MissedMessages)
-        {
-            builder.Append(prompts.Render(
-                "turn.catchUpLine",
-                new Dictionary<string, string> { ["{{sender}}"] = missed.SenderName, ["{{text}}"] = missed.Text }));
-            builder.Append('\n');
-        }
-
-        foreach (var line in ownPostLines)
-        {
-            builder.Append(prompts.Render("turn.ownPostLine", new Dictionary<string, string> { ["{{text}}"] = line }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-        builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-    }
-
-    /// <summary>
-    /// Writes RS §6.5's Transcript block: the fresh-or-resumed header, an omitted-count line when
-    /// <see cref="TranscriptCatchUp.Omitted"/> is positive, one <c>turn.catchUpLine</c> per Message
-    /// (the Agent's own Messages appear under its own Name, per RS §6.9), then a blank line.
-    /// </summary>
-    private static void AppendTranscriptBlock(StringBuilder builder, string room, TranscriptCatchUp transcript, IPromptSource prompts)
-    {
-        var headerKey = transcript.Resumed ? "turn.transcriptResumedHeader" : "turn.transcriptHeader";
-        builder.Append(prompts.Render(headerKey, new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
-        builder.Append('\n');
-
-        if (transcript.Omitted > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.transcriptOmitted",
-                new Dictionary<string, string> { ["{{count}}"] = transcript.Omitted.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        if (transcript.OmittedOwn > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.transcriptOmittedOwn",
-                new Dictionary<string, string> { ["{{count}}"] = transcript.OmittedOwn.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        foreach (var message in transcript.Messages)
-        {
-            builder.Append(prompts.Render(
-                "turn.catchUpLine",
-                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>
-    /// Spec §6.14: with a non-empty <paramref name="report"/>, writes the Library documents block
-    /// directly after File Changes — the header, one line per document (a too-large document's line
-    /// replaces the ordinary one), the document's text fenced and truncation-noted when inlined, an
-    /// "…and N more documents." line when the cap left some out, then a blank line. Writes nothing for
-    /// a <see langword="null"/> or empty report: "absent means unchanged", as for File Changes.
-    /// </summary>
-    private static void AppendLibraryDocumentsBlock(StringBuilder builder, LibraryDocumentsReport? report, IPromptSource prompts)
-    {
-        if (report is null || report.IsEmpty)
-        {
-            return;
-        }
-
-        builder.Append(prompts.Render("turn.libraryDocsHeader", new Dictionary<string, string>()));
-        builder.Append('\n');
-
-        foreach (var item in report.Items)
-        {
-            RoomSession.AppendLibraryDocument(builder, report, item, prompts);
-        }
-
-        if (report.NotListed > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.libraryDocsMore",
-                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>Writes the line for a Library document that travels as a block, or an image the model cannot be given, plus its truncation note.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="report">The report the document belongs to, for its inline-size cap.</param>
-    /// <param name="item">The document to write.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendNonPathLibraryDocument(StringBuilder builder, LibraryDocumentsReport report, LibraryDocumentItem item, IPromptSource prompts)
-    {
-        var deliveryKey = item.Delivery == LibraryDocumentDelivery.Block ? "turn.libraryDocIncluded" : "turn.libraryImageUnavailable";
-        builder.Append(prompts.Render(
-            deliveryKey,
-            new Dictionary<string, string>
-            {
-                ["{{path}}"] = item.FullPath,
-                ["{{location}}"] = item.Location,
-                ["{{size}}"] = item.Size,
-            }));
-        builder.Append('\n');
-
-        if (item.Block is AgentTextResourceBlock && item.Truncated)
-        {
-            builder.Append(prompts.Render(
-                "turn.libraryDocTruncated",
-                new Dictionary<string, string>
-                {
-                    ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
-                    ["{{size}}"] = item.Size,
-                }));
-            builder.Append('\n');
-        }
-    }
-
-    /// <summary>Writes one Library document's line, and its inlined text and truncation note when it has them.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="report">The report the document belongs to, for its inline-size cap.</param>
-    /// <param name="item">The document to write.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendLibraryDocument(StringBuilder builder, LibraryDocumentsReport report, LibraryDocumentItem item, IPromptSource prompts)
-    {
-        // A document that travels with the message, or an image the model cannot be given, is worded
-        // by that fact before anything else: an image over the editable limit is "too large to read"
-        // as a path, and still arrives as a block (design §6.5).
-        if (item.Delivery != LibraryDocumentDelivery.Path)
-        {
-            RoomSession.AppendNonPathLibraryDocument(builder, report, item, prompts);
-            return;
-        }
-
-        if (item.TooLarge)
-        {
-            var sizeKb = (item.Length + 1023) / 1024;
-            builder.Append(prompts.Render(
-                "turn.libraryDocTooLarge",
-                new Dictionary<string, string>
-                {
-                    ["{{label}}"] = item.Location,
-                    ["{{path}}"] = item.FullPath,
-                    ["{{sizeKb}}"] = sizeKb.ToString(CultureInfo.InvariantCulture),
-                }));
-            builder.Append('\n');
-            return;
-        }
-
-        builder.Append(prompts.Render(
-            "turn.libraryDoc",
-            new Dictionary<string, string>
-            {
-                ["{{path}}"] = item.FullPath,
-                ["{{location}}"] = item.Location,
-                ["{{size}}"] = item.Size,
-            }));
-        builder.Append('\n');
-
-        if (item.Text is not null)
-        {
-            var fence = RoomSession.ChooseFence(item.Text);
-            builder.Append(prompts.Render(
-                "turn.libraryDocInline",
-                new Dictionary<string, string> { ["{{fence}}"] = fence, ["{{text}}"] = item.Text }));
-            builder.Append('\n');
-
-            if (item.Truncated)
-            {
-                builder.Append(prompts.Render(
-                    "turn.libraryDocTruncated",
-                    new Dictionary<string, string>
-                    {
-                        ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
-                        ["{{size}}"] = item.Size,
-                    }));
-                builder.Append('\n');
-            }
-        }
-    }
-
-    /// <summary>
-    /// Corrections-B5 item 32: the fence for an inlined document's text is the longest run of
-    /// backticks already in that text, plus one, never shorter than three — so the fence can never be
-    /// closed early by a backtick run the text itself contains.
-    /// </summary>
-    /// <param name="text">The document's text about to be fenced.</param>
-    /// <returns>A run of backticks safe to wrap <paramref name="text"/> in.</returns>
-    private static string ChooseFence(string text)
-    {
-        var longestRun = 0;
-        var currentRun = 0;
-        foreach (var c in text)
-        {
-            if (c == '`')
-            {
-                currentRun++;
-                longestRun = Math.Max(longestRun, currentRun);
-            }
-            else
-            {
-                currentRun = 0;
-            }
-        }
-
-        return new string('`', Math.Max(3, longestRun + 1));
-    }
-
-    /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
-    /// <param name="item">The work item whose Room is being labelled.</param>
-    /// <param name="prompts">Resolves the <c>turn.roomLabel</c> prompt's current text.</param>
-    /// <returns>The label, carrying both the Room's name and its id.</returns>
-    private static string RoomLabel(WorkItem item, IPromptSource prompts) =>
-        prompts.Render(
-            "turn.roomLabel",
-            new Dictionary<string, string>
-            {
-                ["{{roomName}}"] = item.RoomName,
-                ["{{roomId}}"] = item.RoomId,
-                ["{{teamSuffix}}"] = item.Team is null ? string.Empty : $", Team: {item.Team}",
-            });
-
-    /// <summary>Renders one <c>turn.message</c> line: a Room label, its sender, and its text.</summary>
-    /// <param name="prompts">Resolves the <c>turn.message</c> prompt's current text.</param>
-    /// <param name="roomLabel">The already-rendered Room label to open the line with.</param>
-    /// <param name="sender">The message's sender name.</param>
-    /// <param name="text">The message's text.</param>
-    /// <returns>The rendered <c>turn.message</c> line.</returns>
-    private static string RenderMessage(IPromptSource prompts, string roomLabel, string sender, string text) =>
-        prompts.Render(
-            "turn.message",
-            new Dictionary<string, string> { ["{{roomLabel}}"] = roomLabel, ["{{sender}}"] = sender, ["{{text}}"] = text });
 
     /// <summary>Maps an ACP tool call's lifecycle state to the wire enum shown to the Human.</summary>
     /// <param name="status">The ACP status to map.</param>
@@ -3268,17 +2630,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         public int StreamedLength { get; set; }
 
         /// <summary>
-        /// The last tool output of this Turn that was a JSON object, which is where an Adapter command
-        /// reports its figures. Written by the single-threaded event-reader loop and read by the
-        /// consumer only after <see cref="Completion"/> has been awaited, so it needs no lock.
+        /// What this Turn keeps of its tool calls. Threading as <see cref="TurnToolCalls"/> describes:
+        /// the event reader is the only writer, except <see cref="TurnToolCalls.Touched"/>, which
+        /// goes through <see cref="RoomSession.gate"/>.
         /// </summary>
-        public string? LastOutputJson { get; set; }
-
-        /// <summary>Whether any tool call of this Turn reached <see cref="ToolCallStatus.Failed"/>. Same threading as <see cref="LastOutputJson"/>.</summary>
-        public bool ToolCallFailed { get; set; }
-
-        /// <summary>The ids of the tool calls this Turn started, so an update belonging to an earlier Turn is ignored. Same threading as <see cref="LastOutputJson"/>.</summary>
-        public HashSet<string> ToolCallIds { get; } = new(StringComparer.Ordinal);
+        public TurnToolCalls ToolCalls { get; } = new();
 
         /// <summary>
         /// The last <see cref="EditChange"/> written for each tool call of this Turn, keyed by tool
@@ -3286,14 +2642,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         /// event-reader loop, so it needs no lock, and it dies with the Turn.
         /// </summary>
         public Dictionary<string, EditChange> LastSentEdits { get; } = new(StringComparer.Ordinal);
-
-        /// <summary>
-        /// Full paths this Agent's own tool calls touched this Turn (FC §6.8 item 2), read and
-        /// written only under <see cref="RoomSession.gate"/>: <see cref="RecordTouchedPaths"/> adds
-        /// to it from the event-reader loop, and <see cref="ProcessWorkItemAsync"/>'s <c>finally</c>
-        /// copies it once the Turn has ended.
-        /// </summary>
-        public HashSet<string> Touched { get; } = new(FolderSnapshot.PathComparer);
 
         /// <summary>
         /// Whether a Stop has already been latched for this Turn. Set by

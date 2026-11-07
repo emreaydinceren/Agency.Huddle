@@ -110,7 +110,7 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
 - **An Adapter reads a command only at the very start of a prompt, so no ordinary prompt may
   start with `/`.** `claude-agent-acp` runs `/compact` when it is the first characters of the
   prompt and answers `[Room: r] Human: /compact` as plain text (observed 2026-09-30).
-  `RoomSession.BuildPrompt` therefore prefixes `Message: ` to any Message or Greeting prompt that
+  `TurnPromptFramer.BuildPrompt` therefore prefixes `Message: ` to any Message or Greeting prompt that
   would open with a slash, leading whitespace ignored. The guard is not redundant with today's templates: every one opens
   with a Room label, but `prompts.json` is hand-editable and `PromptValidator` reports and never
   refuses, so a `turn.message` of `{{text}}` would otherwise let another Agent's text start a

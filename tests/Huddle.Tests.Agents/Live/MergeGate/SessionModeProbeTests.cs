@@ -284,7 +284,7 @@ public sealed class SessionModeProbeTests
         /// <summary>Builds one session's options the way <c>DotAcpPersonaHost</c> does: isolation, the real handler, the App Tool.</summary>
         private AgentSessionOptions Options(string repo, string model, string? mode, List<string> requests)
         {
-            RecordingHandler handler = new(new WorkDirPermissionHandler(null, NullLogger<WorkDirPermissionHandler>.Instance, new FakeGate(), "Ivy"), requests);
+            RecordingHandler handler = new(new WorkDirPermissionHandler(NullLogger<WorkDirPermissionHandler>.Instance, [new MergeGateGuard(new FakeGate())], "Ivy"), requests);
             SystemPromptOptions prompt = new("The Team application exposes this tool, which runs inside the application: mcp__team__update_task. Use it when asked.", SystemPromptMode.Append);
             return new AgentSessionOptions(repo, handler, prompt, this.toolServer.Endpoint, model, this.lowEffort[model], DotAcpAgentHostFactory.BuildIsolationMeta(Isolating, connectors: false), mode);
         }

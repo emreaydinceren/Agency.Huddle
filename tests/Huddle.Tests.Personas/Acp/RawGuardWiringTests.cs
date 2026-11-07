@@ -27,19 +27,20 @@ public sealed class RawGuardWiringTests
         FakePromptSource prompts = new();
         RawGuard guard = new(teamsRoot, Path.Combine(root, "Raw"), Path.Combine(root, "Archive"), workDir, prompts);
         string inert = Path.Combine(root, "Inert");
-        PermissionGuards guards = new(
+        IReadOnlyList<IToolCallGuard> guards = PermissionGuardList.InOrder(
             new AgentsMdGuard(inert, workDir, prompts),
             new TeamMemoryWriteGuard(inert, workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
             guard,
-            new PromptsRootGuard(Path.Combine(inert, "Prompts"), workDir, prompts));
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), workDir, prompts),
+            protectedDirectory: new ProtectedDirectoryGuard(Path.Combine(root, ".claude"), workDir));
         string path = Path.Combine(teamsRoot, "Home", "raw", "r1", "a.pdf");
         PermissionRequestContext request = new(
             "session-1",
             new ToolCallInfo("call-1", "Tool", ToolKind.Delete, ToolCallStatus.Pending, $$"""{"file_path":{{JsonSerializer.Serialize(path)}}}"""),
             BothKinds);
 
-        WorkDirPermissionHandler guarded = new(Path.Combine(root, ".claude"), NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir, guards: guards);
-        WorkDirPermissionHandler unguarded = new(Path.Combine(root, ".claude"), NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir);
+        WorkDirPermissionHandler guarded = new(NullLogger<WorkDirPermissionHandler>.Instance, guards, workDir: workDir);
+        WorkDirPermissionHandler unguarded = new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(Path.Combine(root, ".claude"), workDir)], workDir: workDir);
 
         PermissionDecision refused = await guarded.DecideAsync(request, TestContext.Current.CancellationToken);
         PermissionDecision approved = await unguarded.DecideAsync(request, TestContext.Current.CancellationToken);

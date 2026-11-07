@@ -335,7 +335,7 @@ public sealed class AgentsMdTurnHookTests : IDisposable
         FileChangesTurnHook fileChanges = new(tracker, new FakePromptSource(), NullLogger<FileChangesTurnHook>.Instance);
         TurnHookScope scope = new("Vera", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []);
 
-        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(scope, this.NewHook(), fileChanges, NullLogger.Instance);
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(scope, [fileChanges, this.NewHook()], NullLogger.Instance);
 
         Assert.Equal(["AgentsMd", "FileChanges"], pipeline.HookNames);
     }

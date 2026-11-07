@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.DocHistory;
 
 namespace Agency.Huddle.Tests.DocHistory;
@@ -43,7 +44,7 @@ public sealed class DocHistoryStopHookRemindReadsTests
         string workDir = Path.Combine(dir.Path, "work");
         Directory.CreateDirectory(Path.Combine(workDir, ".claude"));
         File.WriteAllText(
-            Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile),
+            Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile),
             """{"model":"haiku","hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo mine"}]}]}}""");
 
         DocHistoryStopHook.Install(workDir, dir.Path, Tool, NullLogger.Instance);
@@ -61,7 +62,7 @@ public sealed class DocHistoryStopHookRemindReadsTests
         Assert.Contains("echo mine", text, StringComparison.Ordinal); // contains-ok: another hook's command in a JSON settings file
     }
 
-    private static string SettingsPath(string workDir) => Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile);
+    private static string SettingsPath(string workDir) => Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile);
 
     private static string CommandIn(string workDir)
     {

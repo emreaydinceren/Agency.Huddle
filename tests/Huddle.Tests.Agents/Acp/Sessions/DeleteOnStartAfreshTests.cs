@@ -359,7 +359,6 @@ public sealed class DeleteOnStartAfreshTests
                 persona: Nova,
                 agentId: "agent-1",
                 contextFill: new ContextFill(),
-                readsFiles: true,
                 roomSessions: store,
                 host: host);
             return new DeleteRig(dataDir, RoomSessionHarness.Adopt(room, runCts), host, owner, store, first);

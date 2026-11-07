@@ -30,7 +30,7 @@ public sealed class ConnectorApprovalTests
         new("session-1", call, options ?? Offered, scope);
 
     private static WorkDirPermissionHandler Handler(string? protectedDirectory = null) =>
-        new(protectedDirectory ?? Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance, personaName: "Nova");
+        new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(protectedDirectory ?? Path.Combine(Path.GetTempPath(), "huddle-protected"))], personaName: "Nova");
 
     private static ElicitationAccepted Answer(object value) =>
         new(new Dictionary<string, object> { [ConnectorApprovalForm.DecisionKey] = value });
@@ -291,7 +291,7 @@ public sealed class ConnectorApprovalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         CapturingLogger log = new();
-        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), log, personaName: "Nova");
+        WorkDirPermissionHandler handler = new(log, [new ProtectedDirectoryGuard(Path.Combine(Path.GetTempPath(), "huddle-protected"))], personaName: "Nova");
         FakeScope allowed = new() { ActiveRoomId = "room-7" };
         FakeScope refused = new() { ActiveRoomId = "room-7" };
         allowed.Reply.SetResult(Answer(ConnectorApprovalForm.AllowOnce));
@@ -322,7 +322,7 @@ public sealed class ConnectorApprovalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         CapturingLogger log = new();
-        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), log, personaName: "Nova");
+        WorkDirPermissionHandler handler = new(log, [new ProtectedDirectoryGuard(Path.Combine(Path.GetTempPath(), "huddle-protected"))], personaName: "Nova");
         FakeScope scope = new() { ActiveRoomId = "room-7" };
         ToolCallInfo call = Call("Probe echo", ToolKind.Other, raw: """{"to":"secret@example.com"}""", toolName: Connector, server: "claude_ai_probe", source: "project");
 

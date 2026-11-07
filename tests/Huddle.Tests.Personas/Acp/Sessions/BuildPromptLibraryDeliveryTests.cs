@@ -7,7 +7,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 /// <summary>
-/// Pins how <see cref="RoomSession.BuildPrompt"/> words each Library document by how it reaches the
+/// Pins how <see cref="TurnPromptFramer.BuildPrompt"/> words each Library document by how it reaches the
 /// model (design §6.5): a Block says the file is included with the message, an Unavailable image says the
 /// model cannot see it, and a Path line is exactly what it was before Prompt blocks existed.
 /// </summary>
@@ -39,7 +39,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Block, block: new AgentImageBlock("image/png", new byte[] { 1 })));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal(
             "- E:\\Data\\Design\\checkout.png (pinned root \"Design\", 412 KB): included with this message",
@@ -52,7 +52,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Unavailable));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal(
             "- E:\\Data\\Design\\checkout.png (pinned root \"Design\", 412 KB): an image you cannot see",
@@ -65,7 +65,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Path));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("- E:\\Data\\Design\\checkout.png (pinned root \"Design\", 412 KB)", Lines(prompt));
     }
@@ -76,7 +76,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Block, tooLarge: true, block: new AgentImageBlock("image/png", new byte[] { 1 })));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal(
             "- E:\\Data\\Design\\checkout.png (pinned root \"Design\", 412 KB): included with this message",
@@ -89,7 +89,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Unavailable, tooLarge: true));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal(
             "- E:\\Data\\Design\\checkout.png (pinned root \"Design\", 412 KB): an image you cannot see",
@@ -102,7 +102,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Path, tooLarge: true));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("- pinned root \"Design\": E:\\Data\\Design\\checkout.png (too large to include: 412 KB; open it with your file tools)", Lines(prompt));
     }
@@ -118,7 +118,7 @@ public sealed class BuildPromptLibraryDeliveryTests
             truncated: true,
             block: new AgentTextResourceBlock("file:///E:/Data/notes.md", "text/markdown", "# cut")));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.DoesNotContain("```", prompt, StringComparison.Ordinal);
         Assert.Contains("included with this message\n(cut at 16384 bytes; the file is 412 KB.)", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
@@ -133,7 +133,7 @@ public sealed class BuildPromptLibraryDeliveryTests
             path: @"E:\Data\notes.md",
             block: new AgentTextResourceBlock("file:///E:/Data/notes.md", "text/markdown", "# t")));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.DoesNotContain("(cut at", prompt, StringComparison.Ordinal);
     }
@@ -147,7 +147,7 @@ public sealed class BuildPromptLibraryDeliveryTests
             Document(LibraryDocumentDelivery.Path, @"E:\b.png"),
             Document(LibraryDocumentDelivery.Unavailable, @"E:\c.png"));
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal(
             [
@@ -166,12 +166,12 @@ public sealed class BuildPromptLibraryDeliveryTests
         prompts.SetOverride("turn.libraryDocIncluded", "ATTACHED {{path}} {{location}} {{size}}");
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Block, block: new AgentImageBlock("image/png", new byte[] { 1 })));
 
-        string prompt = RoomSession.BuildPrompt(item, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
         Assert.Contains("ATTACHED E:\\Data\\Design\\checkout.png pinned root \"Design\" 412 KB", prompt, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
-    /// <summary><see cref="RoomSession.BuildPromptBlocks"/> returns the blocks of the Turn's documents in order, and nothing for Path and Unavailable.</summary>
+    /// <summary><see cref="TurnPromptFramer.BuildPromptBlocks"/> returns the blocks of the Turn's documents in order, and nothing for Path and Unavailable.</summary>
     [Fact]
     public void BuildPromptBlocks_ReturnsBlocksInOrder()
     {
@@ -183,7 +183,7 @@ public sealed class BuildPromptLibraryDeliveryTests
             Document(LibraryDocumentDelivery.Unavailable, @"E:\c.png"),
             Document(LibraryDocumentDelivery.Block, @"E:\n.md", block: second));
 
-        IReadOnlyList<AgentPromptBlock> blocks = RoomSession.BuildPromptBlocks(item);
+        IReadOnlyList<AgentPromptBlock> blocks = TurnPromptFramer.BuildPromptBlocks(item);
 
         Assert.Equal([first, second], blocks);
     }
@@ -194,7 +194,7 @@ public sealed class BuildPromptLibraryDeliveryTests
     {
         WorkItem item = new("room-1", "Room", "You", "hi", []);
 
-        Assert.Empty(RoomSession.BuildPromptBlocks(item));
+        Assert.Empty(TurnPromptFramer.BuildPromptBlocks(item));
     }
 
     /// <summary>A Command Turn never carries a block, even if its work item were handed a report.</summary>
@@ -204,7 +204,7 @@ public sealed class BuildPromptLibraryDeliveryTests
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Block, block: new AgentImageBlock("image/png", new byte[] { 1 })))
             with { Kind = WorkItemKind.Command, Command = new AdapterCommandCall("compact", string.Empty) };
 
-        Assert.Empty(RoomSession.BuildPromptBlocks(item));
+        Assert.Empty(TurnPromptFramer.BuildPromptBlocks(item));
     }
 
     /// <summary>A Greeting Turn never carries a block.</summary>
@@ -214,6 +214,6 @@ public sealed class BuildPromptLibraryDeliveryTests
         WorkItem item = ItemWith(Document(LibraryDocumentDelivery.Block, block: new AgentImageBlock("image/png", new byte[] { 1 })))
             with { Kind = WorkItemKind.Greeting };
 
-        Assert.Empty(RoomSession.BuildPromptBlocks(item));
+        Assert.Empty(TurnPromptFramer.BuildPromptBlocks(item));
     }
 }

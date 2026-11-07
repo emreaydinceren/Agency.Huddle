@@ -19,8 +19,11 @@ namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSource prompts, ILogger<FileChangesTurnHook> logger, AgentsMdScopes? scopes = null)
     : TurnHook<CollectedChanges>
 {
+    /// <summary>The hook's name, as the pipeline's production order and the session's hook state know it.</summary>
+    internal const string HookName = "FileChanges";
+
     /// <inheritdoc />
-    public override string Name => "FileChanges";
+    public override string Name => HookName;
 
     /// <inheritdoc />
     public override bool AppliesTo(TurnHookScope scope)

@@ -203,7 +203,7 @@ internal static class ReferencedItemsFormatter
 
     /// <summary>
     /// The fence for the item lines: three backticks, or one more than the longest backtick run in
-    /// them, so no line can close it. The rule <c>RoomSession.ChooseFence</c> uses.
+    /// them, so no line can close it. The rule <c>TurnPromptFramer.ChooseFence</c> uses.
     /// </summary>
     /// <param name="text">The item lines, joined.</param>
     /// <returns>The fence.</returns>

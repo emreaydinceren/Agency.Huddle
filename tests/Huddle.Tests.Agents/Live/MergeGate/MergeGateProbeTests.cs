@@ -139,7 +139,7 @@ public sealed class MergeGateProbeTests
             }
 
             List<string> requests = [];
-            RecordingHandler handler = new(new WorkDirPermissionHandler(null, NullLogger<WorkDirPermissionHandler>.Instance, new FakeGate(), "Ivy"), requests);
+            RecordingHandler handler = new(new WorkDirPermissionHandler(NullLogger<WorkDirPermissionHandler>.Instance, [new MergeGateGuard(new FakeGate())], "Ivy"), requests);
             StringBuilder reply = new();
             await using (IAgentSession session = await this.host.StartSessionAsync(new AgentSessionOptions(repo, handler, null, null, this.model, this.effort, null, "auto"), ct))
             {

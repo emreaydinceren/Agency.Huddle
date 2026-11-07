@@ -5,7 +5,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 /// <summary>
-/// Pins how <see cref="RoomSession.BuildPrompt"/> renders a trimmed Transcript block (LR-R12): the
+/// Pins how <see cref="TurnPromptFramer.BuildPrompt"/> renders a trimmed Transcript block (LR-R12): the
 /// omitted line, and the own-omitted line that follows it only when some of the left-out Messages
 /// were the Agent's own.
 /// </summary>
@@ -56,7 +56,7 @@ public sealed class TranscriptBlockTests
     private static string[] Render(TranscriptCatchUp transcript)
     {
         WorkItem item = new WorkItem("01J8PORTO", "Porto trip", "Human", "go with option 2", []) with { Transcript = transcript };
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
         return prompt.Split('\n', StringSplitOptions.TrimEntries);
     }
 

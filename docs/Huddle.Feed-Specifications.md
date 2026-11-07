@@ -302,6 +302,11 @@ exception of the Human's Library saves (§9 D-10).
 
 #### 6.5.1 `TaskService`
 
+> [!NOTE]
+> As built since 2026-11-06: the Feed calls below live in `TaskFeedPublisher`, which subscribes to `TaskEvents.TaskChanged`
+> and a new `TaskMoveRefused` event, so `TaskService` takes neither parameter. The rules and policy 4 are unchanged. A
+> `TaskChanged` subscriber no longer always runs before the Feed; none of them depends on the order.
+
 `TaskService` gains `IFeedPublisher? feed = null` and `IRequestConfirmers? confirmers = null` as
 trailing constructor parameters. After each public mutator (`Create`, `Update`, `Decide`, `Close`,
 `Reopen`, `AddEvidence`) and the outside-edit path (`OnOutsideEdit`) raises `TaskChanged`, it calls

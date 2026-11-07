@@ -24,7 +24,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="workDir">The Agent's Work Dir, where a relative path resolves.</param>
 /// <param name="access">Who manages and who belongs to which Team.</param>
 /// <param name="prompts">Renders the refusal reasons (<c>systemPrompt.memoryManagerOnly</c> and <c>systemPrompt.memoryNoManager</c>).</param>
-internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, TeamMemoryAccess access, IPromptSource prompts)
+internal sealed class TeamMemoryWriteGuard(string teamsRoot, string workDir, TeamMemoryAccess access, IPromptSource prompts) : IToolCallGuard
 {
     private const string MemoryFolder = "memory";
 

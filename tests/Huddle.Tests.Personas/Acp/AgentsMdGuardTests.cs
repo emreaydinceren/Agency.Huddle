@@ -255,12 +255,13 @@ public sealed class AgentsMdGuardTests : IDisposable
     {
         FakePromptSource prompts = new();
         string inert = Path.Combine(this.sandbox, "Inert");
-        PermissionGuards guards = new(
+        IReadOnlyList<IToolCallGuard> guards = PermissionGuardList.InOrder(
             this.guard,
             new TeamMemoryWriteGuard(inert, this.workDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
             new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), this.workDir, prompts),
-            new PromptsRootGuard(Path.Combine(inert, "Prompts"), this.workDir, prompts));
-        return new WorkDirPermissionHandler(protectedDirectory, logger, workDir: this.workDir, guards: guards);
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), this.workDir, prompts),
+            protectedDirectory: protectedDirectory is null ? null : new ProtectedDirectoryGuard(protectedDirectory, this.workDir));
+        return new WorkDirPermissionHandler(logger, guards, workDir: this.workDir);
     }
 
     /// <summary>A permission request for a call of one kind carrying one path argument, with an allow and a reject option.</summary>

@@ -389,6 +389,12 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   [ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md).
 : Not a Claude Code hook, and not a plugin: Huddle's developers add them in code, and
   nothing loads at runtime.
+
+**Turn Enricher**
+: A compiled class that adds to a Message Turn's work item after the Transcript catch-up,
+  which a Turn Hook runs too early to read. Library documents and Referenced items are Turn
+  Enrichers. One that throws is logged by name and skipped, and the Turn goes on.
+: Not a Turn Hook: it keeps no state and has no point after the Turn.
 : *Avoid*: plugin, middleware, callback.
 
 **Turn**

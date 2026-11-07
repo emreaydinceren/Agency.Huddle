@@ -23,8 +23,11 @@ internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSour
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>The hook's name, as the pipeline's production order and the session's hook state know it.</summary>
+    internal const string HookName = "AgentsMd";
+
     /// <inheritdoc />
-    public override string Name => "AgentsMd";
+    public override string Name => HookName;
 
     /// <inheritdoc />
     public override bool AppliesTo(TurnHookScope scope)

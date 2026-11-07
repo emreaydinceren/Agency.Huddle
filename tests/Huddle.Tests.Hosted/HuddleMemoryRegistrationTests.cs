@@ -17,6 +17,17 @@ public sealed class HuddleMemoryRegistrationTests
         Assert.NotNull(factory.Services.GetService<HuddleMemoryTurnHook>());
     }
 
+    /// <summary>The real container registers all three hooks as <see cref="ITurnHook"/>, so a new hook is one class and one registration.</summary>
+    [Fact]
+    public async Task Container_RegistersEveryTurnHook()
+    {
+        await using TeamWebApplicationFactory factory = new();
+
+        IEnumerable<string> names = factory.Services.GetServices<ITurnHook>().Select(static hook => hook.Name).Order(StringComparer.Ordinal);
+
+        Assert.Equal(["AgentsMd", "FileChanges", "HuddleMemory"], names);
+    }
+
     /// <summary>The supervisor the real container builds plans a pipeline that runs AGENTS.md, then the Huddle-wide hook, so it is wired and not only registered.</summary>
     [Fact]
     public async Task Container_SupervisorBuildsAPipelineWithHuddleMemoryAfterAgentsMd()

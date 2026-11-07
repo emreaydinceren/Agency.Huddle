@@ -32,8 +32,11 @@ internal sealed class HuddleMemoryTurnHook(IOptions<TeamOptions> options, IPromp
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>The hook's name, as the pipeline's production order and the session's hook state know it.</summary>
+    internal const string HookName = "HuddleMemory";
+
     /// <inheritdoc />
-    public override string Name => "HuddleMemory";
+    public override string Name => HookName;
 
     private string MemoryFolder => Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir, "memory"));
 

@@ -1,8 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -31,13 +29,11 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly OwnPosts? ownPosts;
     private readonly string? agentId;
     private readonly TurnActivity? turnActivity;
-    private readonly LibraryDocumentCollector? libraryDocs;
-    private readonly ReferenceExpander? references;
+    private readonly TurnHooks.TurnEnricherPipeline? enrichers;
     private readonly ContextFill? contextFill;
     private readonly ISessionSettings? sessionSettings;
     private readonly LastCatchUpStore? lastCatchUp;
     private readonly TurnHooks.TurnHookPipeline? hooks;
-    private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
@@ -70,10 +66,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="ownPosts">Marks each Room Session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This Persona's Agent id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room each Room Session's Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
-    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14), passed to every Room Session this pool creates. <see langword="null"/> when the Library is off, like every caller that predates it.</param>
-    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart), passed to every Room Session this pool creates.</param>
+    /// <param name="enrichers">Adds the Library documents (Spec §6.14) and the Referenced items header to a Message Turn, passed to every Room Session this pool creates. <see langword="null"/> adds neither, like every caller that predates it.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
-    /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records each Room Session's context-window fill, passed to every Room Session this pool creates. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings passed to every Room Session, for the first Turn's Transcript catch-up. <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">The store every Room Session writes its first post-fresh-start prompt to. <see langword="null"/> writes no file.</param>
@@ -92,10 +86,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         OwnPosts? ownPosts = null,
         string? agentId = null,
         TurnActivity? turnActivity = null,
-        LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true,
+        TurnHooks.TurnEnricherPipeline? enrichers = null,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
@@ -123,13 +115,11 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.ownPosts = ownPosts;
         this.agentId = agentId;
         this.turnActivity = turnActivity;
-        this.libraryDocs = libraryDocs;
-        this.references = references;
+        this.enrichers = enrichers;
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
         this.hooks = hooks;
-        this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
@@ -448,10 +438,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             ownPosts: this.ownPosts,
             agentId: this.agentId,
             turnActivity: this.turnActivity,
-            libraryDocs: this.libraryDocs,
-            readsFiles: this.readsFiles,
+            enrichers: this.enrichers,
             elicitationBridge: this.elicitationBridge,
-            references: this.references,
             contextFill: this.contextFill,
             sessionSettings: this.sessionSettings,
             lastCatchUp: this.lastCatchUp,

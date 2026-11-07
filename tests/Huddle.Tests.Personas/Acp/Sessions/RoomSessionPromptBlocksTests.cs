@@ -59,8 +59,7 @@ public sealed class RoomSessionPromptBlocksTests
             runToken: runCts.Token,
             persona: Nova,
             host: host,
-            libraryDocs: collector,
-            readsFiles: readsFiles);
+            enrichers: TurnHookTestFactory.Enrichers(collector, readsFiles, logger: logger));
 
         room.Enqueue(new QueuedWork(1, item));
         await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);

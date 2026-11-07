@@ -44,7 +44,7 @@ public sealed class MergeGateHookInstallTests
         using TempDataDir dir = new();
         string workDir = Path.Combine(dir.Path, "work");
         DocHistoryStopHook.Install(workDir, dir.Path, "mcp__team__log_change", NullLogger.Instance);
-        string path = Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile);
+        string path = Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile);
         JsonObject before = ReadSettings(workDir);
         before["model"] = "haiku";
         (before["hooks"] as JsonObject)?.Add("PreToolUse", new JsonArray(new JsonObject
@@ -85,7 +85,7 @@ public sealed class MergeGateHookInstallTests
         using TempDataDir dir = new();
         string workDir = Path.Combine(dir.Path, "work");
         Directory.CreateDirectory(Path.Combine(workDir, ".claude"));
-        string path = Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile);
+        string path = Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile);
         File.WriteAllText(path, "{ not json");
 
         MergeGateHook.Install(workDir, dir.Path, NullLogger.Instance);
@@ -109,7 +109,7 @@ public sealed class MergeGateHookInstallTests
     }
 
     private static JsonObject ReadSettings(string workDir) =>
-        JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile))) as JsonObject
+        JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile))) as JsonObject
         ?? throw new InvalidOperationException("The settings file is not a JSON object.");
 
     private static JsonArray Hooks(string workDir, string eventName) =>

@@ -1,5 +1,4 @@
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -63,5 +62,5 @@ public sealed class RoleCoversVerifyTests
     /// <summary>The Stop hook's command line as installed in a Work Dir.</summary>
     /// <param name="workDir">The Work Dir.</param>
     private static string HookCommand(string workDir) =>
-        File.ReadAllText(Path.Combine(workDir, ".claude", DocHistoryStopHook.SettingsFile));
+        File.ReadAllText(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile));
 }

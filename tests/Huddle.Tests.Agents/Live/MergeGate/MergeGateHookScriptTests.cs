@@ -97,7 +97,7 @@ public sealed class MergeGateHookScriptTests : IDisposable
     public async Task EveryCommandTheHandlerGates_IsOneTheScriptAsksAbout(string command)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        WorkDirPermissionHandler handler = new(null, NullLogger<WorkDirPermissionHandler>.Instance, new RefuseAllGate(), "Ivy");
+        WorkDirPermissionHandler handler = new(NullLogger<WorkDirPermissionHandler>.Instance, [new MergeGateGuard(new RefuseAllGate())], "Ivy");
         ToolCallInfo call = new("c1", "Terminal", ToolKind.Execute, ToolCallStatus.Pending, new JsonObject { ["command"] = command }.ToJsonString());
         PermissionRequestContext context = new("s1", call, [new PermissionOptionInfo("allow", "Allow", PermissionOptionKind.AllowOnce), new PermissionOptionInfo("reject", "Reject", PermissionOptionKind.RejectOnce)]);
 

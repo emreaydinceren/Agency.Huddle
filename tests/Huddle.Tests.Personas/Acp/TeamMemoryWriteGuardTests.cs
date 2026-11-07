@@ -48,10 +48,9 @@ public sealed class TeamMemoryWriteGuardTests
         FakePromptSource prompts = new();
 
         return new WorkDirPermissionHandler(
-            Path.Combine(Root, ".claude"),
             logger,
-            personaName: persona,
-            guards: OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, prompts)));
+            OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, prompts)),
+            personaName: persona);
     }
 
     /// <summary>
@@ -59,15 +58,16 @@ public sealed class TeamMemoryWriteGuardTests
     /// guard can refuse a path under <see cref="TeamsRoot"/>.
     /// </summary>
     /// <param name="teamMemory">The guard under test.</param>
-    private static PermissionGuards OnlyTeamMemory(TeamMemoryWriteGuard teamMemory)
+    private static IReadOnlyList<IToolCallGuard> OnlyTeamMemory(TeamMemoryWriteGuard teamMemory)
     {
         string inert = Path.Combine(Root, "Inert");
         FakePromptSource prompts = new();
-        return new PermissionGuards(
+        return PermissionGuardList.InOrder(
             new AgentsMdGuard(inert, WorkDir, prompts),
             teamMemory,
             new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), WorkDir, prompts),
-            new PromptsRootGuard(Path.Combine(inert, "Prompts"), WorkDir, prompts));
+            new PromptsRootGuard(Path.Combine(inert, "Prompts"), WorkDir, prompts),
+            protectedDirectory: new ProtectedDirectoryGuard(Path.Combine(Root, ".claude")));
     }
 
     /// <summary>Decides a tool call of one kind on one path and returns the chosen option id.</summary>
@@ -306,10 +306,9 @@ public sealed class TeamMemoryWriteGuardTests
         };
         TeamMemoryAccess access = new(catalog, name => { lookups++; return string.Equals(name, "Chief", StringComparison.Ordinal); });
         WorkDirPermissionHandler handler = new(
-            Path.Combine(Root, ".claude"),
             NullLogger<WorkDirPermissionHandler>.Instance,
-            personaName: "Chief",
-            guards: OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, new FakePromptSource())));
+            OnlyTeamMemory(new TeamMemoryWriteGuard(TeamsRoot, WorkDir, access, new FakePromptSource())),
+            personaName: "Chief");
 
         string chosen = await DecideAsync(handler, ToolKind.Delete, TeamsRoot);
 

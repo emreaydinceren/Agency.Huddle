@@ -1256,7 +1256,7 @@ public sealed class PersonaRunnerTests
         await rig.Server.SendAsync(AgentPosts("@nova /compact"), ct);
 
         var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
-        Assert.Equal(RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "luna", "@nova /compact", []), new FakePromptSource()), prompts[1]);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(new WorkItem("room-1", "Room", "luna", "@nova /compact", []), new FakePromptSource()), prompts[1]);
     }
 
     /// <summary>A name the profile does not allow is an ordinary Message, however the Adapter advertises it.</summary>
@@ -1271,7 +1271,7 @@ public sealed class PersonaRunnerTests
         await rig.Server.SendAsync(HumanPosts("@nova /config"), ct);
 
         var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
-        Assert.Equal(RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova /config", []), new FakePromptSource()), prompts[1]);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova /config", []), new FakePromptSource()), prompts[1]);
         Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Information && entry.Message.Contains("not offered", StringComparison.Ordinal));
     }
 
@@ -1322,7 +1322,7 @@ public sealed class PersonaRunnerTests
 
         Assert.Equal("/compact", afterCommand[1]);
         Assert.Equal(
-            RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [new CaughtUpMessage("You", "a missed remark")]), new FakePromptSource()),
+            TurnPromptFramer.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [new CaughtUpMessage("You", "a missed remark")]), new FakePromptSource()),
             afterNext[2]);
     }
 
@@ -1342,7 +1342,7 @@ public sealed class PersonaRunnerTests
 
         Assert.Equal("/compact", afterCommand[1]);
         Assert.Equal(
-            RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [], OwnPostLines: ["my earlier post"]), new FakePromptSource()),
+            TurnPromptFramer.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [], OwnPostLines: ["my earlier post"]), new FakePromptSource()),
             afterNext[2]);
     }
 
@@ -2171,7 +2171,7 @@ public sealed class PersonaRunnerTests
 
     /// <summary>
     /// Proves the same feature for the per-turn prompt: a configured override for the Room label prompt
-    /// reaches the text <see cref="RoomSession.BuildPrompt"/> produces, in place of the catalog
+    /// reaches the text <see cref="TurnPromptFramer.BuildPrompt"/> produces, in place of the catalog
     /// default.
     /// </summary>
     [Fact]
@@ -2181,7 +2181,7 @@ public sealed class PersonaRunnerTests
         prompts.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
         var item = new WorkItem("room-9", "Nova & You", "You", "hello", []);
 
-        var prompt = RoomSession.BuildPrompt(item, prompts);
+        var prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
         Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }

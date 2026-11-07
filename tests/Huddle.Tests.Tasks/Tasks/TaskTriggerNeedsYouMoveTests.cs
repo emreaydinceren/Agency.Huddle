@@ -58,7 +58,8 @@ public sealed class TaskTriggerNeedsYouMoveTests
         IOptions<TeamOptions> options = dir.Options();
         TaskService service = new(
             harness.Store, new TaskIdAllocator(options), harness.Events, harness.Personas, new EmptySprintCatalog(), options,
-            TimeProvider.System, NullLogger<TaskService>.Instance, proof: proof, feed: harness.Feed);
+            TimeProvider.System, NullLogger<TaskService>.Instance, proof: proof);
+        _ = TaskFeedPublishers.Over(harness.Events, harness.Feed, options, proof);
         return new Arrangement(harness, service, proof, seeded, cast);
     }
 

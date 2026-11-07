@@ -148,6 +148,12 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
+        services.AddSingleton<FileChangesTurnHook>();
+
+        // The pipeline sorts these by its own production order, so the order here does not matter.
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<FileChangesTurnHook>());
     }
 
     /// <summary>
@@ -171,6 +177,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Feed.IFeedPublisher>(static sp => sp.GetRequiredService<Feed.FeedQueue>());
         services.AddHostedService<Feed.FeedWriter>();
         services.AddHostedService<TaskFeedStartup>();
+
+        // The publisher subscribes to the Task events in its constructor, so it must be built before the first Task write: AddHostedService has the host build it at start.
+        services.AddSingleton<TaskFeedPublisher>();
+        services.AddHostedService(static sp => sp.GetRequiredService<TaskFeedPublisher>());
         services.AddHostedService<HelperFeedStartup>();
         services.AddSingleton(static sp => new NeedsYou.HeldMentions(
             sp.GetRequiredService<Services.RoomEvents>(),

@@ -16,8 +16,11 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="promptsRoot">The Prompts folder.</param>
 /// <param name="workDir">The Agent's own Work Dir, where a relative path resolves.</param>
 /// <param name="prompts">Renders the refusal reason (<c>systemPrompt.promptsRefusal</c>).</param>
-internal sealed class PromptsRootGuard(string promptsRoot, string workDir, IPromptSource prompts)
+internal sealed class PromptsRootGuard(string promptsRoot, string workDir, IPromptSource prompts) : IToolCallGuard
 {
+    /// <inheritdoc />
+    string? IToolCallGuard.RefusalFor(ToolCallInfo toolCall, string personaName) => this.RefusalFor(toolCall);
+
     /// <summary>Decides whether the tool call must be refused.</summary>
     /// <param name="toolCall">The call the Agent is asking permission for.</param>
     /// <returns>The refusal reason, or <see langword="null"/> when the call does not write to or remove the Prompts folder.</returns>

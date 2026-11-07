@@ -16,7 +16,7 @@ public sealed class RoomLabelTeamTests
     {
         WorkItem item = new("abc123", "Nova", "You", "hi", []);
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("[Room: Nova (id: abc123)] You: hi", prompt);
     }
@@ -27,7 +27,7 @@ public sealed class RoomLabelTeamTests
     {
         WorkItem item = new("abc123", "Nova", "You", "hi", [], Team: "Marketing");
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("[Room: Nova (id: abc123, Team: Marketing)] You: hi", prompt);
     }
@@ -38,7 +38,7 @@ public sealed class RoomLabelTeamTests
     {
         WorkItem item = new("abc123", "Nova", string.Empty, string.Empty, [], WorkItemKind.Greeting, Team: "Marketing");
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("[Room: Nova (id: abc123, Team: Marketing)]", prompt.Split('\n')[0]);
     }
@@ -51,7 +51,7 @@ public sealed class RoomLabelTeamTests
         prompts.SetOverride("turn.roomLabel", "[Room: {{roomName}} (id: {{roomId}})]");
         WorkItem item = new("abc123", "Nova", "You", "hi", [], Team: "Marketing");
 
-        string prompt = RoomSession.BuildPrompt(item, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
         Assert.Equal("[Room: Nova (id: abc123)] You: hi", prompt);
     }

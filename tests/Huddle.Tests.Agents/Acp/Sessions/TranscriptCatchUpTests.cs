@@ -111,7 +111,7 @@ public sealed class TranscriptCatchUpTests
         Assert.Equal("trig-2", call.BeforeMessageId);
         Assert.Equal("/compact", session.Prompts[0]);
         Assert.Equal(
-            RoomSession.BuildPrompt(
+            TurnPromptFramer.BuildPrompt(
                 new WorkItem(
                     "room-1",
                     "Room 1",
@@ -139,7 +139,7 @@ public sealed class TranscriptCatchUpTests
         await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
 
         var prompt = Assert.Single(session.Prompts);
-        var expected = RoomSession.BuildPrompt(new WorkItem("room-1", "Nova & You", "You", "hello there", []), new FakePromptSource());
+        var expected = TurnPromptFramer.BuildPrompt(new WorkItem("room-1", "Nova & You", "You", "hello there", []), new FakePromptSource());
         Assert.Equal(expected, prompt);
     }
 
