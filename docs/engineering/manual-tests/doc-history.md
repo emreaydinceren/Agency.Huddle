@@ -11,7 +11,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The lane gives you **Ada** and **Bo** on the free mock adapter and `<data>` is `C:\seeds\huddle\uat\data`. This area adds:
 
 1. A pinned Library root, as in [the Library page](library.md): in `T-B` create `$vault = 'C:\seeds\huddle\uat\vault'` and `Set-Content "$vault\findings.md" "# Findings`n`nThree findings.`n"`, then add `$vault` in **Settings → Library** with the Name `Vault`.
-2. For the paid tests, a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, **Teams** blank. Ask it to work in `$vault`.
+2. For the paid tests, a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Sonnet, **Effort** `low`, **Teams** blank. Ask it to work in `$vault`.
 3. History files live under `<data>\doc-history\<root id>\`, one `.jsonl` per document. Open them only to check a result; never edit one while the app runs.
 4. The Stop hook script is `<data>\hooks\doc-history-stop.js`, and each Agent offered `log_change` has an entry for it in `<data>\Agents\<Name>\work\.claude\settings.local.json`. The hook needs `node` on PATH, which the Adapter needs anyway.
 
