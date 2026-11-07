@@ -6,11 +6,9 @@ using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.Contracts;
@@ -101,9 +99,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly ISessionSettings? sessionSettings;
     private readonly LastCatchUpStore? lastCatchUp;
     private readonly TurnHookPipeline? hooks;
-    private readonly LibraryDocumentCollector? libraryDocs;
-    private readonly ReferenceExpander? references;
-    private readonly bool readsFiles;
+    private readonly TurnEnricherPipeline? enrichers;
 
     // Shows the Human the questions this Persona's agent asks (elicitation bridge); handed to every
     // Room Session through the pool. Null answers every question as cancelled.
@@ -148,12 +144,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
         TurnActivity? turnActivity = null,
-        LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true,
+        TurnEnricherPipeline? enrichers = null,
         PersonaSpend? spend = null,
         PersonaCommands? commands = null,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
@@ -182,9 +176,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
         this.hooks = hooks;
-        this.libraryDocs = libraryDocs;
-        this.references = references;
-        this.readsFiles = readsFiles;
+        this.enrichers = enrichers;
         this.spend = spend;
         this.commands = commands;
         this.elicitationBridge = elicitationBridge;
@@ -559,10 +551,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.ownPosts,
             this.agentId,
             this.turnActivity,
-            this.libraryDocs,
-            this.readsFiles,
+            this.enrichers,
             this.elicitationBridge,
-            this.references,
             this.contextFill,
             this.sessionSettings,
             this.lastCatchUp,

@@ -8,6 +8,7 @@ using Agency.Huddle.App.References;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Tests.Waiting;
@@ -61,7 +62,7 @@ public sealed class BuildPromptReferencesTests
             runToken: runCts.Token,
             persona: Nova,
             host: host,
-            references: expander);
+            enrichers: TurnHookTestFactory.Enrichers(references: expander));
 
         room.Enqueue(new QueuedWork(1, item));
         await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);

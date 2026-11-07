@@ -1,10 +1,8 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
-using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using System.Globalization;
@@ -75,12 +73,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     // cleared by SendFreshStartNoteAsync. Touched only from the single consumer thread.
     private FreshStartNote? noteOwed;
 
-    // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
-    // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
+    // Spec §6.14, §9.1: adds the Library documents and the Referenced items to a Message Turn. Null
+    // means neither is on (PersonaSupervisor is the only place those gates are applied) or this
     // caller predates it.
-    private readonly LibraryDocumentCollector? libraryDocs;
-    private readonly ReferenceExpander? references;
-    private readonly bool readsFiles;
+    private readonly TurnEnricherPipeline? enrichers;
 
     // Shows the Human an agent's elicitation request (E-3). Null means there is no UI to show it in:
     // every request is then answered as cancelled, which is what an agent with no scope bound gets.
@@ -197,10 +193,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
-    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
-    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
+    /// <param name="enrichers">Adds the Library documents (Spec §6.14) and the Referenced items header (spec section 9.1) to a Message Turn. <see langword="null"/> adds neither, like every caller that predates it.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
-    /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     /// <param name="contextFill">Records how full this session's context window is, for the Members panel's context meter. <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="sessionSettings">The resolved Session settings the first Turn's Transcript catch-up reads (the Message cap and the token budget). <see langword="null"/> uses the <see cref="AcpOptions"/> values, like every caller that predates it.</param>
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
@@ -222,10 +216,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         OwnPosts? ownPosts = null,
         string? agentId = null,
         TurnActivity? turnActivity = null,
-        LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true,
+        TurnEnricherPipeline? enrichers = null,
         IElicitationBridge? elicitationBridge = null,
-        ReferenceExpander? references = null,
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
@@ -259,10 +251,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         this.contextFill = contextFill;
         this.sessionSettings = sessionSettings;
         this.lastCatchUp = lastCatchUp;
-        this.libraryDocs = libraryDocs;
+        this.enrichers = enrichers;
         this.hooks = hooks;
-        this.references = references;
-        this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
@@ -1394,8 +1384,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             }
 
             item = await this.AddTranscriptCatchUpAsync(item, ct).ConfigureAwait(false);
-            item = await this.AddLibraryDocumentsAsync(item, ct).ConfigureAwait(false);
-            item = await this.AddReferencedItemsAsync(item, ct).ConfigureAwait(false);
+            if (this.enrichers is not null)
+            {
+                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
+            }
 
             // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
             this.WriteLastCatchUp(item);
@@ -1594,79 +1586,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         this.agentId is { } id
             ? string.Equals(message.SenderId, id, StringComparison.Ordinal)
             : string.Equals(message.SenderName, this.owner.PersonaName, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Spec §6.14, corrections-B6 item 7 / B5 item 28: collects the Library documents the Turn's
-    /// texts mention, after the Transcript Catch-up read and before the locked check-and-publish.
-    /// </summary>
-    /// <remarks>
-    /// Collected before the publish so a slow scan is never counted as Adapter silence, the same
-    /// reasoning the File Changes collect already relies on. Scans the triggering Message's own
-    /// text, the catch-up buffer and, when this Turn set one, the Transcript Catch-up - never
-    /// OwnPostLines (this Agent's own earlier posts, not new documents to fetch) and never a
-    /// Greeting's empty text (the Kind check). A scan or file-read failure must not kill the
-    /// consumer loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with <see cref="WorkItem.LibraryDocuments"/> set when the collect succeeded.</returns>
-    private async Task<WorkItem> AddLibraryDocumentsAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.libraryDocs is not null && item.Kind == WorkItemKind.Message)
-        {
-            try
-            {
-                IReadOnlyList<string> texts =
-                [
-                    item.Text,
-                    .. item.MissedMessages.Select(missed => missed.Text),
-                    .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
-                ];
-                var report = await this.libraryDocs.CollectAsync(texts, this.PromptDeliveryFor(this.libraryDocs), ct).ConfigureAwait(false);
-                item = item with { LibraryDocuments = report };
-                this.LogWithheldImages(report, item.RoomId);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(
-                    ex, "Persona '{PersonaName}' failed to collect Library documents for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-        }
-
-        return item;
-    }
-
-    /// <summary>
-    /// Spec section 9.1: the Referenced items header describes only the references in the triggering
-    /// Message's own text, never the catch-up or Transcript, looked up now.
-    /// </summary>
-    /// <remarks>
-    /// Only an ordinary Message Turn gets one: a Command is the bare command and a Greeting has no
-    /// Message (traps.md, a Command Turn must not drain anything it does not send). Expanded before
-    /// the locked check-and-publish, like the Library collect, so a slow lookup is not counted as
-    /// Adapter silence. A failed lookup must not kill the consumer loop, which nothing else drains.
-    /// </remarks>
-    /// <param name="item">The item about to be prompted.</param>
-    /// <param name="ct">The run's own cancellation token.</param>
-    /// <returns>The item, with <see cref="WorkItem.ReferencedItems"/> set when the lookup succeeded.</returns>
-    private async Task<WorkItem> AddReferencedItemsAsync(WorkItem item, CancellationToken ct)
-    {
-        if (this.references is not null && item.Kind == WorkItemKind.Message)
-        {
-            try
-            {
-                string? header = await this.references.ExpandAsync(item.Text, this.host?.Profile.UsesToolNamePrefix ?? true, ct).ConfigureAwait(false);
-                item = item with { ReferencedItems = header };
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                this.logger.LogWarning(
-                    ex, "Persona '{PersonaName}' failed to expand references for room {RoomId}.", this.owner.PersonaName, item.RoomId);
-            }
-        }
-
-        return item;
-    }
 
     /// <summary>
     /// Mints the Turn's Message id and publishes the Turn as <see cref="activeTurn"/>, unless a Stop
@@ -2729,45 +2648,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
 
         return path;
-    }
-
-    /// <summary>
-    /// What this Turn's prompt may carry beyond text, built from what the Adapter advertised at
-    /// <c>initialize</c> and the profile's <c>PromptBlocks</c> kill switch. No host (every caller that
-    /// predates resume) means nothing was advertised, so nothing is sent.
-    /// </summary>
-    /// <param name="collector">Supplies the per-Turn caps.</param>
-    private PromptDelivery PromptDeliveryFor(LibraryDocumentCollector collector)
-    {
-        AgentPromptCapabilities capabilities = this.host?.PromptCapabilities ?? AgentPromptCapabilities.None;
-        bool allowed = this.host?.Profile.PromptBlocks ?? false;
-        return collector.DeliveryFor(
-            this.readsFiles,
-            images: capabilities.Image && allowed,
-            embeddedText: capabilities.EmbeddedContext && allowed && !this.readsFiles);
-    }
-
-    /// <summary>Logs one Information line when an image that could have gone as a block did not: counts by reason, never the path's contents.</summary>
-    private void LogWithheldImages(LibraryDocumentsReport report, string roomId)
-    {
-        List<string> reasons =
-        [
-            .. report.Items
-                .Where(document => document.Withheld != PromptBlockWithheld.None)
-                .GroupBy(document => document.Withheld)
-                .OrderBy(group => group.Key)
-                .Select(group => string.Create(CultureInfo.InvariantCulture, $"{group.Key}={group.Count()}")),
-        ];
-
-        if (reasons.Count > 0 && this.logger.IsEnabled(LogLevel.Information))
-        {
-            string summary = string.Join(", ", reasons);
-            this.logger.LogInformation(
-                "Persona '{PersonaName}' sent library file paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
-                this.owner.PersonaName,
-                roomId,
-                summary);
-        }
     }
 
     /// <summary>Maps an ACP tool call's lifecycle state to the wire enum shown to the Human.</summary>

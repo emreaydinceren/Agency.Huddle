@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Library;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.FileChanges;
@@ -33,6 +36,28 @@ public static class TurnHookTestFactory
         AgentsMdTurnHook? agentsMd = includeAgentsMd ? services.GetRequiredService<AgentsMdTurnHook>() : null;
         TurnHookScope scope = new(persona.Name, ReadsFiles: true, FileChangesOn: true, watches);
         return (TurnHookPipeline.ForPersona(scope, [.. new ITurnHook?[] { agentsMd, hook }.OfType<ITurnHook>()], loggerFactory.CreateLogger<TurnHookPipeline>()), tracker.MemoryPaths);
+    }
+
+    /// <summary>Builds the Turn enricher pipeline a hand-built <c>RoomSession</c> needs for Library documents and Referenced items, as <c>PersonaSupervisor</c> builds it.</summary>
+    /// <param name="libraryDocs">The Library collector, or <see langword="null"/> for none.</param>
+    /// <param name="readsFiles">Whether the Adapter can read files.</param>
+    /// <param name="references">The Referenced items expander, or <see langword="null"/> for none.</param>
+    /// <param name="logger">Receives the Library enricher's log lines, or <see langword="null"/> for none.</param>
+    /// <returns>The pipeline, or <see langword="null"/> when neither collaborator is given.</returns>
+    internal static TurnEnricherPipeline? Enrichers(LibraryDocumentCollector? libraryDocs = null, bool readsFiles = true, ReferenceExpander? references = null, ILogger? logger = null)
+    {
+        List<ITurnEnricher> enrichers = [];
+        if (libraryDocs is not null)
+        {
+            enrichers.Add(new LibraryDocumentsEnricher(libraryDocs, readsFiles, logger ?? NullLogger.Instance));
+        }
+
+        if (references is not null)
+        {
+            enrichers.Add(new ReferencedItemsEnricher(references));
+        }
+
+        return enrichers.Count == 0 ? null : TurnEnricherPipeline.ForPersona(enrichers, NullLogger.Instance);
     }
 
     /// <summary>Builds the hook list a hand-built <c>PersonaSupervisor</c> needs for File Changes: the File Changes hook over <paramref name="tracker"/>, or none when there is no tracker.</summary>

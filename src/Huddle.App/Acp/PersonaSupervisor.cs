@@ -632,13 +632,13 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         }
     }
 
-    /// <summary>What <see cref="PlanStart"/> decided for one start: the file-reading flag, the hooks, the memory paths and the Degraded warnings.</summary>
-    /// <param name="ReadsFiles">Whether the resolved Adapter Profile can read files.</param>
+    /// <summary>What <see cref="PlanStart"/> decided for one start: the enrichers, the hooks, the memory paths and the Degraded warnings.</summary>
+    /// <param name="Enrichers">The Turn enricher pipeline the runner gets (Library documents and Referenced items).</param>
     /// <param name="Warnings">The Adapter, Skill and watch warnings to report as one Degraded reason; empty when there are none.</param>
     /// <param name="Hooks">The Turn hook pipeline the runner gets.</param>
     /// <param name="MemoryPaths">The Memory Tool's path resolver while File Changes is on; otherwise <see langword="null"/>.</param>
     internal readonly record struct StartPlan(
-        bool ReadsFiles,
+        TurnEnricherPipeline Enrichers,
         IReadOnlyList<string> Warnings,
         TurnHookPipeline Hooks,
         MemoryPaths? MemoryPaths);
@@ -763,7 +763,30 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         TurnHookScope scope = new(persona.Name, profile.ReadsFiles, fileChangesOn, declaredWatches);
         TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.turnHooks, this.loggerFactory.CreateLogger<TurnHookPipeline>());
-        return new StartPlan(profile.ReadsFiles, warnings, hooks, tracker?.MemoryPaths);
+        return new StartPlan(this.BuildEnrichers(profile.ReadsFiles), warnings, hooks, tracker?.MemoryPaths);
+    }
+
+    /// <summary>
+    /// Builds the Turn enrichers for one start. Spec §6.14, corrections-B6 item 8: the Library.Enabled gate lives in exactly
+    /// this one place - the collector itself carries no IOptions gate of its own - so a disabled Library adds no enricher,
+    /// the same "absent means off" shape File Changes and every other optional collaborator here already use.
+    /// </summary>
+    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files.</param>
+    /// <returns>The pipeline; it holds no enricher when neither the Library nor references are on.</returns>
+    private TurnEnricherPipeline BuildEnrichers(bool readsFiles)
+    {
+        List<ITurnEnricher> enrichers = [];
+        if (this.options.Library.Enabled && this.libraryDocs is not null)
+        {
+            enrichers.Add(new LibraryDocumentsEnricher(this.libraryDocs, readsFiles, this.loggerFactory.CreateLogger<LibraryDocumentsEnricher>()));
+        }
+
+        if (this.references is not null)
+        {
+            enrichers.Add(new ReferencedItemsEnricher(this.references));
+        }
+
+        return TurnEnricherPipeline.ForPersona(enrichers, this.loggerFactory.CreateLogger<TurnEnricherPipeline>());
     }
 
     /// <summary>Creates the runner for a Persona from its start plan.</summary>
@@ -777,7 +800,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         // Library reaches every runner as a null collector, the same "absent means off" shape
         // File Changes and every other optional collaborator here already use.
         return new PersonaRunner(
-            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: plan.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references, contextFill: this.contextFill, sessionSettings: this.sessionSettings, lastCatchUp: this.lastCatchUp, hooks: plan.Hooks, memoryPaths: plan.MemoryPaths);
+            persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, enrichers: plan.Enrichers, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, contextFill: this.contextFill, sessionSettings: this.sessionSettings, lastCatchUp: this.lastCatchUp, hooks: plan.Hooks, memoryPaths: plan.MemoryPaths);
     }
 
     /// <summary>Reports Starting, then any Degraded warnings, then starts the runner; a start failure is reported Offline and the runner disposed.</summary>
