@@ -1,9 +1,10 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// Reads the git commands out of a shell line for the merge gate (issues #396, #401): what <see cref="WorkDirPermissionHandler"/>
+/// Reads the git commands out of a shell line for the merge gate (issues #396, #401): what <see cref="MergeGateGuard"/>
 /// sends to the gate and what <see cref="Teams.ProcessMergeGate"/> holds for the Human's Accept. It skips leading
 /// <c>NAME=value</c> words, unwraps <c>bash -c</c>, <c>sh -c</c>, <c>pwsh -Command</c> and <c>cmd /c</c>, and drops
 /// redirections (<c>2&gt;&amp;1</c>), so a spelling around the command does not hide it. It is a guard against an Agent's
@@ -83,9 +84,96 @@ internal static partial class GitCommandLine
         return IsMainBranch(target) || target is "HEAD" or "@";
     }
 
+    /// <summary>Git options that consume the next word.</summary>
+    internal static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
+
+    /// <summary>
+    /// Splits one shell line into commands of words. A word may be wrapped in double or single quotes (so a quoted
+    /// path with spaces stays one word, and a separator inside quotes does not split); commands end at <c>;</c>,
+    /// <c>&amp;</c>, <c>|</c> (so also <c>&amp;&amp;</c> and <c>||</c>), parentheses and line breaks. Still not handled:
+    /// backslash escapes, <c>$(…)</c> or backtick substitution, here-documents and aliases, so a hostile spelling
+    /// can still pass; the gate is a guard against honest mistakes, not a sandbox.
+    /// </summary>
+    /// <param name="command">The shell command line.</param>
+    /// <returns>One word list per command, in order.</returns>
+    internal static List<List<string>> SplitSegments(string command)
+    {
+        List<List<string>> segments = [];
+        List<string> words = [];
+        StringBuilder word = new();
+        bool inWord = false;
+        char quote = '\0';
+
+        void EndWord()
+        {
+            if (inWord)
+            {
+                words.Add(word.ToString());
+                word.Clear();
+                inWord = false;
+            }
+        }
+
+        void EndSegment()
+        {
+            EndWord();
+            if (words.Count > 0)
+            {
+                segments.Add(words);
+                words = [];
+            }
+        }
+
+        foreach (char c in command)
+        {
+            if (quote != '\0' && c == quote)
+            {
+                quote = '\0';
+            }
+            else if (quote != '\0')
+            {
+                word.Append(c);
+            }
+            else if (c is '"' or '\'')
+            {
+                quote = c;
+                inWord = true;
+            }
+            else if (c is ' ' or '\t')
+            {
+                EndWord();
+            }
+            else if (c is ';' or '&' or '|' or '(' or ')' or '\r' or '\n')
+            {
+                EndSegment();
+            }
+            else
+            {
+                word.Append(c);
+                inWord = true;
+            }
+        }
+
+        EndSegment();
+        return segments;
+    }
+
+    /// <summary>Whether the word names the git executable, with or without a directory or <c>.exe</c>.</summary>
+    /// <param name="word">The first word of a segment, unquoted.</param>
+    internal static bool IsGit(string word)
+    {
+        string name = word[(word.LastIndexOfAny(['/', '\\']) + 1)..];
+        return string.Equals(name, "git", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "git.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Strips surrounding quote characters from a shell word.</summary>
+    /// <param name="word">The word.</param>
+    internal static string Unquote(string word) => word.Trim('"', '\'');
+
     private static void Collect(string command, int depth, List<Call> calls)
     {
-        foreach (List<string> raw in WorkDirPermissionHandler.SplitSegments(command))
+        foreach (List<string> raw in SplitSegments(command))
         {
             List<string> words = CleanWords(raw);
             if (words.Count == 0)
@@ -142,7 +230,7 @@ internal static partial class GitCommandLine
 
     private static Call? ReadGit(List<string> words)
     {
-        if (words.Count < 2 || !WorkDirPermissionHandler.IsGit(words[0]))
+        if (words.Count < 2 || !IsGit(words[0]))
         {
             return null;
         }
@@ -150,7 +238,7 @@ internal static partial class GitCommandLine
         int index = 1;
         while (index < words.Count && words[index].StartsWith('-') && words[index] != "-")
         {
-            index += WorkDirPermissionHandler.GitOptionsWithValue.Contains(words[index], StringComparer.Ordinal) ? 2 : 1;
+            index += GitOptionsWithValue.Contains(words[index], StringComparer.Ordinal) ? 2 : 1;
         }
 
         if (index >= words.Count)

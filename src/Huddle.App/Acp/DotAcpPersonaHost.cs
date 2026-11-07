@@ -37,7 +37,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<string> teamLabels;
     private readonly ITeamCatalog teamCatalog;
     private readonly string teamsRoot;
-    private readonly PermissionGuards guards;
+    private readonly IReadOnlyList<IToolCallGuard> guards;
     private readonly TeamsOptions teamsOptions;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
@@ -45,7 +45,6 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly ILoggerFactory loggerFactory;
     private readonly WorkModePolicy workModePolicy;
     private readonly Func<RoleBlockInput?> roleBlock;
-    private readonly IMergeGate? mergeGate;
     private readonly SessionPromptSources sources;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
@@ -65,7 +64,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
     /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
     /// <param name="teamsRoot">The full path of the Teams root folder.</param>
-    /// <param name="guards">The file guards every opened session's permission handler consults.</param>
+    /// <param name="guards">The guards every opened session's permission handler consults, in order.</param>
     /// <param name="teamsOptions">The Teams options: <c>MaxMemoryEntries</c> is the cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams, and <c>MaxHuddleMemoryEntries</c> the cap on <c>Teams/memory/</c>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
@@ -74,7 +73,6 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
     /// <param name="sources">Reads the Human's AGENTS.md files, decides who writes a Team's Memory and warns about malformed memory files.</param>
-    /// <param name="mergeGate">Decides the Persona's <c>git merge</c> and <c>git push</c> requests (PR-7); <see langword="null"/> approves them.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -92,7 +90,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyList<string> teamLabels,
         ITeamCatalog teamCatalog,
         string teamsRoot,
-        PermissionGuards guards,
+        IReadOnlyList<IToolCallGuard> guards,
         TeamsOptions teamsOptions,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
@@ -100,10 +98,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ILoggerFactory loggerFactory,
         WorkModePolicy workModePolicy,
         Func<RoleBlockInput?> roleBlock,
-        SessionPromptSources sources,
-        IMergeGate? mergeGate = null)
+        SessionPromptSources sources)
     {
-        this.mergeGate = mergeGate;
         ValidateSessionPromptSources(roleBlock, sources, guards);
         this.sources = sources;
         this.roleBlock = roleBlock;
@@ -150,7 +146,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="roleBlock">The role block factory.</param>
     /// <param name="sources">The AGENTS.md reader, Team Memory access rules and memory warnings.</param>
     /// <param name="guards">The file guards the permission handler consults.</param>
-    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources, PermissionGuards guards)
+    private static void ValidateSessionPromptSources(Func<RoleBlockInput?> roleBlock, SessionPromptSources sources, IReadOnlyList<IToolCallGuard> guards)
     {
         ArgumentNullException.ThrowIfNull(roleBlock);
         ArgumentNullException.ThrowIfNull(sources);
@@ -242,20 +238,18 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// agent configuration directory - see <see cref="WorkDirPermissionHandler"/> for why that one
     /// exception is drawn there and not around the Work Dir - and except for a write to an Instructions
     /// file and a non-manager's write into a Team's Memory. If the profile directory cannot be resolved the
-    /// handler has no path to protect there, rather than inventing one, and the two file guards still apply. Built fresh per call: the handler itself holds no
+    /// guard list has no ~/.claude guard, rather than inventing a path, and the other guards still apply. Built fresh per call: the handler itself holds no
     /// state worth reusing across opens. A plan-mode Persona's handler is wrapped so the Adapter's
     /// request to leave plan mode is refused (see <see cref="PlanModePermissionHandler"/>).
     /// </summary>
     /// <returns>The handler this session's permission requests go to.</returns>
     private WorkDirPermissionHandler CreatePermissionHandler()
     {
-        // Both file guards stay on even when the profile directory cannot be resolved: that case only switches the ~/.claude refusal off.
+        // The file guards stay on even when the profile directory cannot be resolved: that case only leaves the ~/.claude guard out of the list.
         return new WorkDirPermissionHandler(
-            WorkDirPermissionHandler.DefaultProtectedDirectory(),
             this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(),
-            this.mergeGate,
-            this.persona.Name,
             this.guards,
+            this.persona.Name,
             this.workDir);
     }
 

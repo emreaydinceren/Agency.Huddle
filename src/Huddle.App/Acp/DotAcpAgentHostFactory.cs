@@ -170,8 +170,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
-            sources,
-            this.serviceProvider.GetService<IMergeGate>());
+            sources);
     }
 
     /// <summary>
@@ -195,20 +194,27 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <returns><see langword="true"/> only for an isolating profile whose Agent is on.</returns>
     internal static bool ConnectorsPassed(AdapterProfile profile, bool effective) => effective && profile.IsolateUserSettings;
 
-    /// <summary>Builds the file guards one Persona's permission handler consults.</summary>
+    /// <summary>
+    /// Builds the guards one Persona's permission handler consults, in the order it consults them. There is no <c>~/.claude</c> guard when
+    /// the profile directory cannot be resolved, and no merge gate guard when no <see cref="IMergeGate"/> is registered.
+    /// </summary>
     /// <param name="prompts">Renders each guard's refusal reason.</param>
     /// <param name="workDir">The Persona's Work Dir, where a relative path resolves.</param>
     /// <param name="sources">Supplies the Team Memory access rules.</param>
     /// <returns>The guards.</returns>
-    private PermissionGuards CreateGuards(IPromptSource prompts, string workDir, SessionPromptSources sources)
+    private IReadOnlyList<IToolCallGuard> CreateGuards(IPromptSource prompts, string workDir, SessionPromptSources sources)
     {
         string teamsRoot = this.TeamsRoot();
-        return new PermissionGuards(
+        string? protectedDirectory = WorkDirPermissionHandler.DefaultProtectedDirectory();
+        IMergeGate? mergeGate = this.serviceProvider.GetService<IMergeGate>();
+        return PermissionGuardList.InOrder(
             new AgentsMdGuard(teamsRoot, workDir, prompts),
             new TeamMemoryWriteGuard(teamsRoot, workDir, sources.TeamMemory, prompts),
             new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts),
             new PromptsRootGuard(Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Prompts.Dir)), workDir, prompts),
-            new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")));
+            new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")),
+            protectedDirectory is null ? null : new ProtectedDirectoryGuard(protectedDirectory, workDir),
+            mergeGate is null ? null : new MergeGateGuard(mergeGate));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>

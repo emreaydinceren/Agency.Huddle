@@ -322,7 +322,7 @@ public sealed class RoomSessionUserInputTests
             new PermissionOptionInfo("allow-1", "Allow once", PermissionOptionKind.AllowOnce),
             new PermissionOptionInfo("reject-1", "Reject once", PermissionOptionKind.RejectOnce),
         ];
-        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance, personaName: "Nova");
+        WorkDirPermissionHandler handler = new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(Path.Combine(Path.GetTempPath(), "huddle-protected"))], personaName: "Nova");
 
         Task<PermissionDecision> first = handler.DecideAsync(new PermissionRequestContext("session-1", call, offered, rig.Room), ct);
         await Eventually.UntilAsync(() => fixture.Elicitations.Get("room-a").Count == 1, ct, timeout: TestBudgets.Standard);

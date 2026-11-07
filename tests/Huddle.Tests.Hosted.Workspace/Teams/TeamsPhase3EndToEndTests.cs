@@ -126,9 +126,8 @@ public sealed class TeamsPhase3EndToEndTests
         TaskActor human = TaskActors.Human(run.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>().Value);
         TaskActor developer = await cast.ActorAsync(run, DeveloperRole, ct);
         WorkDirPermissionHandler handler = new(
-            Path.Combine(Path.GetTempPath(), "huddle-phase3-protected"),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkDirPermissionHandler>.Instance,
-            run.Services.GetRequiredService<IMergeGate>(),
+            [new ProtectedDirectoryGuard(Path.Combine(Path.GetTempPath(), "huddle-phase3-protected")), new MergeGateGuard(run.Services.GetRequiredService<IMergeGate>())],
             developer.Name);
         PermissionRequestContext push = new(
             "session-1",

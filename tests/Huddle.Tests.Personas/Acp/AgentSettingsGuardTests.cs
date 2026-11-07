@@ -105,13 +105,13 @@ public sealed class AgentSettingsGuardTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakePromptSource prompts = new();
         string inert = Path.Combine(Root, "inert");
-        PermissionGuards guards = new(
+        IReadOnlyList<IToolCallGuard> guards = PermissionGuardList.InOrder(
             new AgentsMdGuard(inert, WorkDir, prompts),
             new TeamMemoryWriteGuard(inert, WorkDir, new TeamMemoryAccess(new FakeTeamCatalog(), static _ => false), prompts),
             new RawGuard(inert, Path.Combine(inert, "Raw"), Path.Combine(inert, "Archive"), WorkDir, prompts),
             new PromptsRootGuard(Path.Combine(inert, "Prompts"), WorkDir, prompts),
             Guard);
-        WorkDirPermissionHandler handler = new(null, NullLogger<WorkDirPermissionHandler>.Instance, personaName: "Nova", guards: guards, workDir: WorkDir);
+        WorkDirPermissionHandler handler = new(NullLogger<WorkDirPermissionHandler>.Instance, guards, personaName: "Nova", workDir: WorkDir);
         CountingScope scope = new();
 
         PermissionDecision refused = await handler.DecideAsync(

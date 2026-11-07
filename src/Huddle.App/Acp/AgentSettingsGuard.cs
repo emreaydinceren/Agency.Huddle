@@ -16,8 +16,11 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 /// <param name="workDir">The Agent's own Work Dir, where a relative path resolves.</param>
 /// <param name="hooksDir">Huddle's hooks folder (<c>{DataDir}/hooks</c>), or <see langword="null"/> when there is none to guard.</param>
-internal sealed class AgentSettingsGuard(string workDir, string? hooksDir = null)
+internal sealed class AgentSettingsGuard(string workDir, string? hooksDir = null) : IToolCallGuard
 {
+    /// <inheritdoc />
+    string? IToolCallGuard.RefusalFor(ToolCallInfo toolCall, string personaName) => this.RefusalFor(toolCall);
+
     private const string SettingsFolder = ".claude";
 
     /// <summary>The refusal text. It is logged only, because the permission reply carries no reason.</summary>

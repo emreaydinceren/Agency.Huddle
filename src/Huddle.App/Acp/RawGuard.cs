@@ -19,8 +19,11 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="archiveRoot">The Archive root folder.</param>
 /// <param name="workDir">The Agent's own Work Dir, where a relative path resolves.</param>
 /// <param name="prompts">Renders the refusal reason (<c>systemPrompt.rawRefusal</c>).</param>
-internal sealed class RawGuard(string teamsRoot, string rawRoot, string archiveRoot, string workDir, IPromptSource prompts)
+internal sealed class RawGuard(string teamsRoot, string rawRoot, string archiveRoot, string workDir, IPromptSource prompts) : IToolCallGuard
 {
+    /// <inheritdoc />
+    string? IToolCallGuard.RefusalFor(ToolCallInfo toolCall, string personaName) => this.RefusalFor(toolCall);
+
     /// <summary>Decides whether the tool call must be refused.</summary>
     /// <param name="toolCall">The call the Agent is asking permission for.</param>
     /// <returns>The refusal reason, or <see langword="null"/> when the call does not touch an original.</returns>

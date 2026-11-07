@@ -28,7 +28,7 @@ public sealed class WorkDirPermissionHandlerTests
     /// <param name="protectedDirectory">The directory to refuse writes into.</param>
     /// <returns>The handler.</returns>
     private static WorkDirPermissionHandler Handler(string protectedDirectory) =>
-        new(protectedDirectory, NullLogger<WorkDirPermissionHandler>.Instance);
+        new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(protectedDirectory)]);
 
     /// <summary>A write into the protected directory is refused, not approved.</summary>
     [Fact]
@@ -52,7 +52,7 @@ public sealed class WorkDirPermissionHandlerTests
         var root = Path.Combine(Path.GetTempPath(), "huddle-protected");
         var workDir = Path.Combine(Path.GetTempPath(), "huddle-protected-agents", "nova", "work");
         var relative = Path.GetRelativePath(workDir, Path.Combine(root, "memory", "x.md"));
-        WorkDirPermissionHandler handler = new(root, NullLogger<WorkDirPermissionHandler>.Instance, workDir: workDir);
+        WorkDirPermissionHandler handler = new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(root, workDir)], workDir: workDir);
 
         var decision = await handler.DecideAsync(Request($$"""{"file_path":{{System.Text.Json.JsonSerializer.Serialize(relative)}}}"""), ct);
 
@@ -176,7 +176,7 @@ public sealed class WorkDirPermissionHandlerTests
     /// <returns>The selected option id.</returns>
     private static async Task<string> DecideShellAsync(FakeMergeGate gate, string command, CancellationToken ct)
     {
-        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance, gate, "Nova");
+        WorkDirPermissionHandler handler = new(NullLogger<WorkDirPermissionHandler>.Instance, [new ProtectedDirectoryGuard(Path.Combine(Path.GetTempPath(), "huddle-protected")), new MergeGateGuard(gate)], "Nova");
         PermissionDecision decision = await handler.DecideAsync(ShellRequest(command), ct);
         return Assert.IsType<SelectedDecision>(decision).OptionId;
     }

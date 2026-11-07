@@ -1,13 +1,11 @@
-using System.Text;
-using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
 /// Approves an Agent's permission requests the way <see cref="AutoApprovePermissionHandler"/> does,
-/// with one refusal: a tool call that writes inside the Agent's own home configuration directory
-/// (<c>~/.claude</c>) is declined.
+/// with refusals: a tool call that writes inside the Agent's own home configuration directory
+/// (<c>~/.claude</c>) is declined, and so is each call an <see cref="IToolCallGuard"/> in its list refuses.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,7 +14,7 @@ namespace Agency.Huddle.App.Acp;
 /// blast radius that a Turn reached in practice: asked to remember a word, a Persona wrote a new file
 /// into <c>~/.claude/projects/&lt;repo&gt;/memory/</c> and edited the <c>MEMORY.md</c> index beside it.
 /// That directory belongs to the human's own coding agent, not to this application, and nothing in
-/// the chat surface asked for it.
+/// the chat surface asked for it (<see cref="ProtectedDirectoryGuard"/>).
 /// </para>
 /// <para>
 /// Two things made it worth a code change rather than a note. The write is invisible: tool activity
@@ -39,119 +37,29 @@ namespace Agency.Huddle.App.Acp;
 /// </para>
 /// <para>
 /// The one shell command it does read is <c>git merge</c> / <c>git push</c>, and only to ask the optional
-/// <see cref="IMergeGate"/> whether the Team's <c>checks-before-merge</c> gate lets it run (PR-7). The
-/// match is a convenience guard for an Agent that follows the process, not a boundary. It catches the
-/// command at the start of a segment split on <c>&amp;&amp;</c>, <c>||</c>, <c>;</c>, <c>|</c> and newlines,
-/// after git's own <c>-C</c>/<c>-c</c>/<c>--option</c> flags, case-insensitively, with <c>git.exe</c> and
-/// quoted words accepted. It does NOT catch: a shell alias or git alias for push or merge, an
-/// environment-variable prefix (<c>FOO=1 git push</c>), <c>command git push</c>, <c>sudo</c>, a command
-/// wrapped in <c>bash -c "..."</c>, <c>$(...)</c> or backticks, a script that runs the push, a push made
-/// by another tool (an IDE, <c>gh</c>), or a command in an Adapter work mode that never asks permission.
+/// <see cref="IMergeGate"/> whether the Team's <c>checks-before-merge</c> gate lets it run (PR-7); that is the
+/// <see cref="MergeGateGuard"/>, which says what it does and does not catch.
 /// The Human's own approval of a prompt is never intercepted: only the Agent's requests are answered here.
 /// </para>
 /// <para>
-/// Two further refusals protect files the Human owns, and both look at the tool call's kind, so a read is never refused
+/// The further refusals protect files the Human owns, and all look at the tool call's kind, so a read is never refused
 /// (Instructions spec §3.3, §5.6): an edit, delete or move of an <c>AGENTS.md</c> (<see cref="AgentsMdGuard"/>),
-/// of a Raw original (<see cref="RawGuard"/>) and of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>), consulted in that order.
-/// The permission reply carries no reason text, so the reason is logged.
+/// of a Raw original (<see cref="RawGuard"/>) and of a Team's Memory by anyone but its manager (<see cref="TeamMemoryWriteGuard"/>).
+/// The guards are consulted in the order of the list given (see <see cref="PermissionGuardList"/>), and the first reason refuses.
+/// The permission reply carries no reason text, so the reason is logged. A guard that throws does not approve: the exception propagates.
 /// </para>
 /// </remarks>
-/// <param name="protectedDirectory">
-/// The directory to refuse writes into, already absolute, or <see langword="null"/> when the profile directory cannot be resolved (the
-/// ~/.claude refusal is then off but the other guards still apply). Passed in rather than read from the
-/// environment here so a test can point it somewhere harmless.
-/// </param>
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
-/// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
-/// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
-/// <param name="guards">The file guards consulted in order (<c>AGENTS.md</c>, Raw, Prompts, Team Memory; Spec §6.6); <see langword="null"/> leaves those writes approved.</param>
-/// <param name="workDir">The Agent's Work Dir, the Adapter's working directory, where a relative path in a tool call resolves (the <c>~/.claude</c> check resolves it the way the other guards do); the process's current directory when <see langword="null"/>.</param>
+/// <param name="guards">The guards consulted in order; the first reason refuses. <see langword="null"/> leaves every call approved.</param>
+/// <param name="personaName">The Persona this handler answers for, passed to each guard.</param>
+/// <param name="workDir">The Agent's Work Dir, where a relative path in a tool call resolves for the log line; the process's current directory when <see langword="null"/>.</param>
 internal sealed class WorkDirPermissionHandler(
-    string? protectedDirectory,
     ILogger<WorkDirPermissionHandler> logger,
-    IMergeGate? mergeGate = null,
+    IReadOnlyList<IToolCallGuard>? guards = null,
     string personaName = "",
-    PermissionGuards? guards = null,
     string? workDir = null)
     : IPermissionHandler
 {
-    /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
-    private static readonly string[] CommandArgumentNames = ["command", "cmd"];
-
-    /// <summary>
-    /// Splits one shell line into commands of words. A word may be wrapped in double or single quotes (so a quoted
-    /// path with spaces stays one word, and a separator inside quotes does not split); commands end at <c>;</c>,
-    /// <c>&amp;</c>, <c>|</c> (so also <c>&amp;&amp;</c> and <c>||</c>), parentheses and line breaks. Still not handled:
-    /// backslash escapes, <c>$(…)</c> or backtick substitution, here-documents and aliases, so a hostile spelling
-    /// can still pass; the gate is a guard against honest mistakes, not a sandbox.
-    /// </summary>
-    /// <param name="command">The shell command line.</param>
-    /// <returns>One word list per command, in order.</returns>
-    internal static List<List<string>> SplitSegments(string command)
-    {
-        List<List<string>> segments = [];
-        List<string> words = [];
-        StringBuilder word = new();
-        bool inWord = false;
-        char quote = '\0';
-
-        void EndWord()
-        {
-            if (inWord)
-            {
-                words.Add(word.ToString());
-                word.Clear();
-                inWord = false;
-            }
-        }
-
-        void EndSegment()
-        {
-            EndWord();
-            if (words.Count > 0)
-            {
-                segments.Add(words);
-                words = [];
-            }
-        }
-
-        foreach (char c in command)
-        {
-            if (quote != '\0' && c == quote)
-            {
-                quote = '\0';
-            }
-            else if (quote != '\0')
-            {
-                word.Append(c);
-            }
-            else if (c is '"' or '\'')
-            {
-                quote = c;
-                inWord = true;
-            }
-            else if (c is ' ' or '\t')
-            {
-                EndWord();
-            }
-            else if (c is ';' or '&' or '|' or '(' or ')' or '\r' or '\n')
-            {
-                EndSegment();
-            }
-            else
-            {
-                word.Append(c);
-                inWord = true;
-            }
-        }
-
-        EndSegment();
-        return segments;
-    }
-
-    /// <summary>Git options that consume the next word.</summary>
-    internal static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
-
     /// <summary>The Agent's home configuration directory for the current user, or null when it cannot be resolved.</summary>
     /// <returns>The absolute path to <c>~/.claude</c>, or <see langword="null"/> when the profile directory is unknown.</returns>
     public static string? DefaultProtectedDirectory()
@@ -166,45 +74,9 @@ internal sealed class WorkDirPermissionHandler(
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (this.TargetsProtectedDirectory(context.ToolCall, out var path))
+        if (this.Refusal(context.ToolCall) is { } refusal)
         {
-            logger.LogWarning(
-                "Refused a tool call writing to '{Path}': it is inside the agent's own configuration directory '{ProtectedDirectory}'.",
-                path,
-                protectedDirectory);
-
-            return Refuse(context.Options);
-        }
-
-        string? guardReason = guards?.AgentsMd.RefusalFor(context.ToolCall) ?? guards?.Raw.RefusalFor(context.ToolCall)
-            ?? guards?.Prompts.RefusalFor(context.ToolCall)
-            ?? guards?.TeamMemory.RefusalFor(context.ToolCall, personaName)
-            ?? guards?.Settings?.RefusalFor(context.ToolCall);
-        if (guardReason is not null)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning(
-                    "Refused a tool call for '{PersonaName}' on '{Path}': {Reason}",
-                    personaName,
-                    string.Join(", ", ToolCallPaths.From(context.ToolCall, workDir ?? Directory.GetCurrentDirectory())),
-                    guardReason);
-            }
-
-            return Refuse(context.Options);
-        }
-
-        if (mergeGate is not null
-            && ReadCommand(context.ToolCall) is { } command
-            && IsMergeOrPush(command)
-            && mergeGate.RefusalFor(personaName, command) is { } reason)
-        {
-            logger.LogWarning(
-                "Refused '{Command}' for '{PersonaName}': {Reason}",
-                command,
-                personaName,
-                reason);
-
+            this.LogRefusal(context.ToolCall, refusal.Guard, refusal.Reason);
             return Refuse(context.Options);
         }
 
@@ -212,6 +84,49 @@ internal sealed class WorkDirPermissionHandler(
         return ConnectorCallClassifier.AsksHuman(context.ToolCall)
             ? await this.AskHumanAsync(context, cancellationToken).ConfigureAwait(false)
             : Approve(context.Options);
+    }
+
+    /// <summary>Asks each guard in order and stops at the first reason. A guard that throws is not caught here.</summary>
+    /// <param name="toolCall">The call the Agent is asking permission for.</param>
+    /// <returns>The first guard to refuse and its reason, or <see langword="null"/> when every guard passes.</returns>
+    private (IToolCallGuard Guard, string Reason)? Refusal(ToolCallInfo toolCall)
+    {
+        if (guards is null)
+        {
+            return null;
+        }
+
+        foreach (IToolCallGuard guard in guards)
+        {
+            if (guard.RefusalFor(toolCall, personaName) is { } reason)
+            {
+                return (guard, reason);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Logs one Warning for a refusal: the Persona, the paths the call names and the guard's reason, with the guard's type in a scope. The
+    /// message is the one the file guards have always logged; a tool call's raw input is never logged beyond the paths and the reason.
+    /// </summary>
+    /// <param name="toolCall">The refused call.</param>
+    /// <param name="guard">The guard that refused it.</param>
+    /// <param name="reason">Why.</param>
+    private void LogRefusal(ToolCallInfo toolCall, IToolCallGuard guard, string reason)
+    {
+        if (!logger.IsEnabled(LogLevel.Warning))
+        {
+            return;
+        }
+
+        using IDisposable? scope = logger.BeginScope("Guard {Guard}", guard.GetType().Name);
+        logger.LogWarning(
+            "Refused a tool call for '{PersonaName}' on '{Path}': {Reason}",
+            personaName,
+            string.Join(", ", ToolCallPaths.From(toolCall, workDir ?? Directory.GetCurrentDirectory())),
+            reason);
     }
 
     /// <summary>
@@ -305,63 +220,6 @@ internal sealed class WorkDirPermissionHandler(
             answer);
     }
 
-    /// <summary>Reads the shell command out of a tool call's raw input.</summary>
-    /// <param name="toolCall">The call the Agent is asking permission for.</param>
-    /// <returns>The command text, or <see langword="null"/> when the input carries none or is not JSON.</returns>
-    private static string? ReadCommand(ToolCallInfo toolCall)
-    {
-        if (toolCall.RawInputJson is not { Length: > 0 } json)
-        {
-            return null;
-        }
-
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            foreach (string name in CommandArgumentNames)
-            {
-                if (document.RootElement.TryGetProperty(name, out JsonElement value)
-                    && value.ValueKind == JsonValueKind.String
-                    && value.GetString() is { Length: > 0 } command)
-                {
-                    return command;
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            // Not something this type can judge; approving matches the "identify positively" rule above.
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Whether the shell line runs <c>git merge</c>, <c>git push</c>, or <c>git pull</c> of a branch other than main, also
-    /// after <c>NAME=value</c> words and inside <c>bash -c "…"</c> (see <see cref="GitCommandLine"/>).
-    /// </summary>
-    /// <param name="command">The whole shell line.</param>
-    /// <returns><see langword="true"/> when a segment runs git merge or git push.</returns>
-    private static bool IsMergeOrPush(string command) => GitCommandLine.NeedsGate(command);
-
-    /// <summary>Whether the word names the git executable, with or without a directory or <c>.exe</c>.</summary>
-    /// <param name="word">The first word of a segment, unquoted.</param>
-    internal static bool IsGit(string word)
-    {
-        string name = word[(word.LastIndexOfAny(['/', '\\']) + 1)..];
-        return string.Equals(name, "git", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "git.exe", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Strips surrounding quote characters from a shell word.</summary>
-    /// <param name="word">The word.</param>
-    internal static string Unquote(string word) => word.Trim('"', '\'');
-
     /// <summary>Picks a refusal option, preferring a one-time refusal, and cancels when none is offered.</summary>
     /// <param name="options">The options the Agent offered.</param>
     /// <returns>The decision to send back.</returns>
@@ -393,37 +251,5 @@ internal sealed class WorkDirPermissionHandler(
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Whether this tool call names a path inside the protected directory. Malformed or absent input
-    /// is not a match: this refuses what it can positively identify and approves everything else,
-    /// because the alternative — refusing whatever it cannot parse — would break ordinary work for
-    /// every tool whose arguments it does not recognise.
-    /// </summary>
-    /// <param name="toolCall">The call the Agent is asking permission for.</param>
-    /// <param name="path">The offending path, when this returns true.</param>
-    /// <returns><see langword="true"/> when the call targets the protected directory.</returns>
-    private bool TargetsProtectedDirectory(ToolCallInfo toolCall, out string? path)
-    {
-        path = null;
-
-        if (protectedDirectory is null)
-        {
-            return false;
-        }
-
-        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(protectedDirectory));
-        foreach (string candidate in ToolCallPaths.From(toolCall, workDir ?? Directory.GetCurrentDirectory()))
-        {
-            // The separator matters: without it "…\.claudex" would count as inside "…\.claude".
-            if (ToolCallPaths.IsInside(candidate, root))
-            {
-                path = candidate;
-                return true;
-            }
-        }
-
-        return false;
     }
 }
