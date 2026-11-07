@@ -148,6 +148,12 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
+        services.AddSingleton<FileChangesTurnHook>();
+
+        // The pipeline sorts these by its own production order, so the order here does not matter.
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<FileChangesTurnHook>());
     }
 
     /// <summary>

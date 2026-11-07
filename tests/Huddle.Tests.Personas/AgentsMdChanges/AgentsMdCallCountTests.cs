@@ -160,7 +160,7 @@ public sealed class AgentsMdCallCountTests : IDisposable
         CancellationToken ct = TestContext.Current.CancellationToken;
         await this.RecordHeadAsync(ct);
         AgentsMdTurnHook hook = this.NewHook();
-        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, hook, null, NullLogger.Instance);
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, [hook], NullLogger.Instance);
         Dictionary<string, string?> state = new(StringComparer.Ordinal)
         {
             [hook.Name] = await hook.OnSessionOpeningAsync(new SessionOpening(Scope, SessionOpenReason.Fresh, null), ct),

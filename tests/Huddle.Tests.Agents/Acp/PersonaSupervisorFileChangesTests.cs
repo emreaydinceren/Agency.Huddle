@@ -10,6 +10,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Acp.Sessions;
 using Agency.Huddle.Tests.Conformance;
 using Agency.Huddle.Tests.Pipes;
 using Agency.Huddle.Tests.Waiting;
@@ -44,7 +45,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker, turnHooks: TurnHookTestFactory.FileChangesHooks(tracker, new FakePromptSource()));
 
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -78,7 +79,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker, turnHooks: TurnHookTestFactory.FileChangesHooks(tracker, new FakePromptSource()));
 
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -124,7 +125,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker, turnHooks: TurnHookTestFactory.FileChangesHooks(tracker, new FakePromptSource()));
 
         personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []) { Adapter = "agency" }, "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -539,7 +540,7 @@ public sealed class PersonaSupervisorFileChangesTests
         var tracker = withTracker ? fixture.Services.GetRequiredService<FileChangeTracker>() : null;
         using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            options, fixture.Services.GetRequiredService<PersonaStore>(), new FakeAgentHostFactory(), resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+            options, fixture.Services.GetRequiredService<PersonaStore>(), new FakeAgentHostFactory(), resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker, turnHooks: TurnHookTestFactory.FileChangesHooks(tracker, new FakePromptSource()));
         return supervisor.PlanStart(persona);
     }
 

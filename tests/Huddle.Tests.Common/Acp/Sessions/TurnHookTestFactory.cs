@@ -32,6 +32,18 @@ public static class TurnHookTestFactory
         FileChangesTurnHook hook = new(tracker, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>(), includeAgentsMd ? services.GetRequiredService<AgentsMdScopes>() : null);
         AgentsMdTurnHook? agentsMd = includeAgentsMd ? services.GetRequiredService<AgentsMdTurnHook>() : null;
         TurnHookScope scope = new(persona.Name, ReadsFiles: true, FileChangesOn: true, watches);
-        return (TurnHookPipeline.ForPersona(scope, agentsMd, hook, loggerFactory.CreateLogger<TurnHookPipeline>()), tracker.MemoryPaths);
+        return (TurnHookPipeline.ForPersona(scope, [.. new ITurnHook?[] { agentsMd, hook }.OfType<ITurnHook>()], loggerFactory.CreateLogger<TurnHookPipeline>()), tracker.MemoryPaths);
+    }
+
+    /// <summary>Builds the hook list a hand-built <c>PersonaSupervisor</c> needs for File Changes: the File Changes hook over <paramref name="tracker"/>, or none when there is no tracker.</summary>
+    /// <param name="tracker">The tracker the supervisor was given, or <see langword="null"/>.</param>
+    /// <param name="prompts">Supplies the block's wording.</param>
+    /// <returns>The hooks to pass as the supervisor's <c>turnHooks</c>.</returns>
+    internal static IReadOnlyList<ITurnHook> FileChangesHooks(FileChangeTracker? tracker, IPromptSource prompts)
+    {
+        ArgumentNullException.ThrowIfNull(prompts);
+        return tracker is null
+            ? []
+            : [new FileChangesTurnHook(tracker, prompts, Microsoft.Extensions.Logging.Abstractions.NullLogger<FileChangesTurnHook>.Instance)];
     }
 }

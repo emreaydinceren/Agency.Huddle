@@ -14,6 +14,56 @@ public sealed class TurnHookPipelineTests
 
     private static readonly TurnHookScope Scope = new("nova", true, true, []);
 
+    /// <summary>Hooks handed over in reverse run in production order: AGENTS.md, then Huddle-wide Memory, then File Changes.</summary>
+    [Fact]
+    public void ForPersona_HooksInReverse_RunInProductionOrder()
+    {
+        ITurnHook[] reversed = [new NamedHook("FileChanges"), new NamedHook("HuddleMemory"), new NamedHook("AgentsMd")];
+
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, reversed, NullLogger.Instance);
+
+        Assert.Equal(["AgentsMd", "HuddleMemory", "FileChanges"], pipeline.HookNames);
+    }
+
+    /// <summary>A hook whose name is not in the production order is refused, and the message names it.</summary>
+    [Fact]
+    public void ForPersona_UnlistedHook_ThrowsNamingIt()
+    {
+        ITurnHook[] hooks = [new NamedHook("AgentsMd"), new NamedHook("Unlisted")];
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => TurnHookPipeline.ForPersona(Scope, hooks, NullLogger.Instance));
+
+        Assert.Equal(
+            "Turn hook 'Unlisted' is not in the production order; add its name to TurnHookPipeline.ProductionOrder.",
+            error.Message);
+    }
+
+    /// <summary>A listed hook that is not registered is skipped, and the rest keep their order.</summary>
+    [Fact]
+    public void ForPersona_ListedHookAbsent_IsSkipped()
+    {
+        ITurnHook[] hooks = [new NamedHook("FileChanges"), new NamedHook("AgentsMd")];
+
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, hooks, NullLogger.Instance);
+
+        Assert.Equal(["AgentsMd", "FileChanges"], pipeline.HookNames);
+    }
+
+    /// <summary>A hook that only has a name, to pin the order the pipeline sorts hooks into.</summary>
+    private sealed class NamedHook(string name) : ITurnHook
+    {
+        public string Name => name;
+
+        public bool AppliesTo(TurnHookScope scope) => true;
+
+        public Task<string?> OnSessionOpeningAsync(SessionOpening opening, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+
+        public Task<TurnAddition?> BeforeTurnAsync(TurnStarting turn, CancellationToken cancellationToken) => Task.FromResult<TurnAddition?>(null);
+
+        public Task<string?> AfterTurnAsync(TurnEnded turn, TurnAddition? addition, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+    }
+
     /// <summary>Two applicable hooks run Before in list order and their blocks come back in that order.</summary>
     [Fact]
     public async Task BeforeTurn_RunsHooksInListOrder()

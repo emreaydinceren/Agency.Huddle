@@ -13,32 +13,44 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     /// <summary>Gets the names of the applicable hooks, in the order they run.</summary>
     internal IReadOnlyList<string> HookNames => [.. this.applicable.Select(hook => hook.Name)];
 
-    /// <summary>Builds the production pipeline for one Persona: the explicit, ordered list of hooks, minus any that is absent.</summary>
+    /// <summary>
+    /// The one place that knows the production order of the hooks, by name: AGENTS.md first because a rule change governs how the Agent
+    /// reads everything after it, then the Huddle-wide Memory hook, then File Changes. A new hook is one class and one entry here.
+    /// </summary>
+    private static readonly List<string> ProductionOrder =
+    [
+        AgentsMdTurnHook.HookName,
+        HuddleMemoryTurnHook.HookName,
+        FileChangesTurnHook.HookName,
+    ];
+
+    /// <summary>Builds the production pipeline for one Persona from the registered hooks, sorted into the production order.</summary>
     /// <param name="scope">Who the pipeline serves.</param>
-    /// <param name="agentsMd">The AGENTS.md hook, first because a rule change governs how the Agent reads everything after it; <see langword="null"/> when absent.</param>
-    /// <param name="fileChanges">The File Changes hook, or <see langword="null"/> when no tracker exists.</param>
+    /// <param name="hooks">The registered hooks, in any order; one that is absent from the production order is skipped.</param>
     /// <param name="logger">Receives the pipeline's warnings and timings.</param>
-    /// <param name="huddleMemory">The Huddle-wide Memory hook, between AGENTS.md and File Changes; <see langword="null"/> when absent.</param>
     /// <returns>The pipeline; its applicable list is empty when nothing applies to <paramref name="scope"/>.</returns>
-    internal static TurnHookPipeline ForPersona(
-        TurnHookScope scope,
-        AgentsMdTurnHook? agentsMd,
-        FileChangesTurnHook? fileChanges,
-        ILogger logger,
-        HuddleMemoryTurnHook? huddleMemory = null)
+    /// <exception cref="InvalidOperationException">A hook's name is not in the production order.</exception>
+    internal static TurnHookPipeline ForPersona(TurnHookScope scope, IEnumerable<ITurnHook> hooks, ILogger logger)
     {
-        return new TurnHookPipeline(InProductionOrder(agentsMd, huddleMemory, fileChanges), scope, logger);
+        return new TurnHookPipeline(InProductionOrder(hooks), scope, logger);
     }
 
-    /// <summary>The production order of the hooks, minus any that is absent: AGENTS.md, then the Huddle-wide Memory hook, then File Changes.</summary>
-    /// <param name="agentsMd">The AGENTS.md hook, or <see langword="null"/>.</param>
-    /// <param name="huddleMemory">The Huddle-wide Memory hook, or <see langword="null"/>.</param>
-    /// <param name="fileChanges">The File Changes hook, or <see langword="null"/>.</param>
-    /// <returns>The hooks that are present, in the order they run.</returns>
-    internal static IReadOnlyList<ITurnHook> InProductionOrder(ITurnHook? agentsMd, ITurnHook? huddleMemory, ITurnHook? fileChanges)
+    /// <summary>Sorts the hooks into the production order.</summary>
+    private static List<ITurnHook> InProductionOrder(IEnumerable<ITurnHook> hooks)
     {
-        ITurnHook?[] production = [agentsMd, huddleMemory, fileChanges];
-        return [.. production.OfType<ITurnHook>()];
+        List<ITurnHook> sorted = [];
+        foreach (ITurnHook hook in hooks)
+        {
+            if (!ProductionOrder.Contains(hook.Name, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Turn hook '{hook.Name}' is not in the production order; add its name to TurnHookPipeline.ProductionOrder.");
+            }
+
+            sorted.Add(hook);
+        }
+
+        return [.. sorted.OrderBy(hook => ProductionOrder.IndexOf(hook.Name))];
     }
 
     /// <summary>Runs every applicable hook's Before point in list order.</summary>

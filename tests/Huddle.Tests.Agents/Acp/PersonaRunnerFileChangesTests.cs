@@ -513,8 +513,7 @@ public sealed class PersonaRunnerFileChangesTests
         var fileChangesHook = new FileChangesTurnHook(tracker, prompts, fixture.Services.GetRequiredService<ILogger<FileChangesTurnHook>>());
         var hooks = TurnHookPipeline.ForPersona(
             new TurnHookScope("nova", ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
-            null,
-            fileChangesHook,
+            [fileChangesHook],
             fixture.Services.GetRequiredService<ILogger<PersonaRunner>>());
 
         await using var agentHost = new PersonaRunner(
@@ -561,8 +560,7 @@ public sealed class PersonaRunnerFileChangesTests
             FileChangesTurnHook hook = new(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>());
             hooks = TurnHookPipeline.ForPersona(
                 new TurnHookScope(persona.Name, ReadsFiles: true, FileChangesOn: true, DeclaredWatches: []),
-                null,
-                hook,
+                [hook],
                 loggerFactory.CreateLogger<TurnHookPipeline>());
         }
 

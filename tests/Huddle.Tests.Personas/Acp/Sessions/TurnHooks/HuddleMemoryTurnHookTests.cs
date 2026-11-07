@@ -280,21 +280,12 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
         await this.OpenAsync("r1");
         HuddleMemoryTurnHookTests.Write(this.MemoryDir, "sam.md", Alpha);
         HuddleMemoryTurnHook broken = new(this.dir.Options(), new ThrowingPrompts(), NullLogger<HuddleMemoryTurnHook>.Instance);
-        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, null, null, NullLogger.Instance, broken);
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, [broken], NullLogger.Instance);
         CancellationToken ct = TestContext.Current.CancellationToken;
 
         TurnHookBeforeResult result = await pipeline.BeforeTurnAsync("r1", this.StateOf("r1"), ct, ct);
 
         Assert.Empty(result.Blocks);
-    }
-
-    /// <summary>The Huddle-wide hook sits after AGENTS.md and before File Changes, so a rule change still governs how the Agent reads a fact; a swap in the production order fails this.</summary>
-    [Fact]
-    public void InProductionOrder_PutsHuddleMemoryBetweenAgentsMdAndFileChanges()
-    {
-        IReadOnlyList<ITurnHook> hooks = TurnHookPipeline.InProductionOrder(new NamedHook("AgentsMd"), new NamedHook("HuddleMemory"), new NamedHook("FileChanges"));
-
-        Assert.Equal(["AgentsMd", "HuddleMemory", "FileChanges"], hooks.Select(static hook => hook.Name));
     }
 
     /// <summary>A description with line breaks and tabs cannot forge a line of the block: it is one quoted line, and the file's own words are marked as the file's.</summary>
@@ -491,10 +482,8 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
     private TurnHookPipeline Pipeline() =>
         TurnHookPipeline.ForPersona(
             Scope,
-            null,
-            null,
-            NullLogger.Instance,
-            new HuddleMemoryTurnHook(this.dir.Options(), new FakePromptSource(), NullLogger<HuddleMemoryTurnHook>.Instance));
+            [new HuddleMemoryTurnHook(this.dir.Options(), new FakePromptSource(), NullLogger<HuddleMemoryTurnHook>.Instance)],
+            NullLogger.Instance);
 
     private Task OpenAsync(string room) =>
         this.Pipeline().OnSessionOpeningAsync(SessionOpenReason.Fresh, this.StateOf(room), TestContext.Current.CancellationToken);
@@ -511,20 +500,6 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
         await pipeline.AfterTurnAsync(room, state, before, touched ?? [], ct);
 
         return before.Blocks.Count == 0 ? null : Assert.Single(before.Blocks);
-    }
-
-    /// <summary>A hook that only has a name, to pin the order the pipeline lists hooks in.</summary>
-    private sealed class NamedHook(string name) : ITurnHook
-    {
-        public string Name => name;
-
-        public bool AppliesTo(TurnHookScope scope) => true;
-
-        public Task<string?> OnSessionOpeningAsync(SessionOpening opening, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
-
-        public Task<TurnAddition?> BeforeTurnAsync(TurnStarting turn, CancellationToken cancellationToken) => Task.FromResult<TurnAddition?>(null);
-
-        public Task<string?> AfterTurnAsync(TurnEnded turn, TurnAddition? addition, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
     }
 
     /// <summary>A prompt source whose every render fails.</summary>

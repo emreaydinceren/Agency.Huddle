@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
-using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
@@ -40,9 +39,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     // Optional (finding P-13): null means File Changes is off for every Persona this supervisor
     // starts, the same as an explicit Team:FileChanges:Enabled=false.
     private readonly FileChangeTracker? fileChanges;
-    private readonly FileChangesTurnHook? fileChangesHook;
-    private readonly AgentsMdTurnHook? agentsMdHook;
-    private readonly HuddleMemoryTurnHook? huddleMemoryHook;
+    private readonly List<ITurnHook> turnHooks;
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
@@ -115,9 +112,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         ContextFill? contextFill = null,
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
-        AgentsMdTurnHook? agentsMdHook = null,
-        AgentsMdScopes? agentsMdScopes = null,
-        HuddleMemoryTurnHook? huddleMemoryHook = null)
+        IEnumerable<ITurnHook>? turnHooks = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -141,11 +136,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         this.logger = logger;
         this.skills = skills;
         this.fileChanges = fileChanges;
-        this.fileChangesHook = fileChanges is null
-            ? null
-            : new FileChangesTurnHook(fileChanges, prompts, loggerFactory.CreateLogger<FileChangesTurnHook>(), agentsMdScopes);
-        this.agentsMdHook = agentsMdHook;
-        this.huddleMemoryHook = huddleMemoryHook;
+        this.turnHooks = [.. turnHooks ?? []];
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
@@ -771,7 +762,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
 
         TurnHookScope scope = new(persona.Name, profile.ReadsFiles, fileChangesOn, declaredWatches);
-        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.agentsMdHook, this.fileChangesHook, this.loggerFactory.CreateLogger<TurnHookPipeline>(), this.huddleMemoryHook);
+        TurnHookPipeline hooks = TurnHookPipeline.ForPersona(scope, this.turnHooks, this.loggerFactory.CreateLogger<TurnHookPipeline>());
         return new StartPlan(profile.ReadsFiles, warnings, hooks, tracker?.MemoryPaths);
     }
 
