@@ -45,6 +45,66 @@ public sealed class DocHistoryLibraryListenerTests
         Assert.Equal(DocChangeKind.Created, Assert.Single(store.Read(path)).Kind);
     }
 
+    /// <summary>An uploaded Markdown file, through the real service, listener and store, has one Human <c>Created</c> entry (SU1).</summary>
+    [Fact]
+    public async Task Upload_Markdown_RecordsOneHumanCreated()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        (DocHistoryLibraryListener listener, DocHistoryStore store) = Build(fixture, events);
+        using DocHistoryLibraryListener owned = listener;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+
+        LibraryResult<LibraryUpload> saved = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "notes.md", new MemoryStream("# Notes"u8.ToArray()), 1024 * 1024, ct);
+
+        Assert.NotNull(saved.Value);
+        DocHistoryEntry entry = Assert.Single(store.Read(saved.Value.File));
+        Assert.Equal(("Emre", DocActorKind.Human, DocChangeKind.Created), (entry.Actor, entry.ActorKind, entry.Kind));
+    }
+
+    /// <summary>An uploaded PNG, through the same chain, has no History (only Markdown has one).</summary>
+    [Fact]
+    public async Task Upload_Png_RecordsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        (DocHistoryLibraryListener listener, DocHistoryStore store) = Build(fixture, events);
+        using DocHistoryLibraryListener owned = listener;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x01, 0x02, 0x03];
+
+        LibraryResult<LibraryUpload> saved = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "photo.png", new MemoryStream(png), 1024 * 1024, ct);
+
+        Assert.NotNull(saved.Value);
+        Assert.Empty(store.Read(saved.Value.File));
+    }
+
+    /// <summary>Deleting an unsent Markdown upload takes its History file with it, so a later upload of the same name starts clean (SU2).</summary>
+    [Fact]
+    public async Task DeleteUnsentUpload_Markdown_RemovesItsHistory()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        (DocHistoryLibraryListener listener, DocHistoryStore store) = Build(fixture, events);
+        using DocHistoryLibraryListener owned = listener;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+        LibraryResult<LibraryUpload> saved = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "notes.md", new MemoryStream("# Notes"u8.ToArray()), 1024 * 1024, ct);
+        Assert.NotNull(saved.Value);
+        store.Append(saved.Value.File, new DocHistoryEntry(DateTimeOffset.UnixEpoch, "Miriam", DocActorKind.Agent, DocChangeKind.Edited, "Tidied"));
+        Assert.True(File.Exists(store.FileFor(saved.Value.File)));
+
+        await service.DeleteUnsentUploadAsync(saved.Value.File, ct);
+
+        Assert.False(File.Exists(store.FileFor(saved.Value.File)));
+        Assert.Empty(store.Read(saved.Value.File));
+    }
+
     /// <summary>A Moved event carries the History from the old path to the new one.</summary>
     [Fact]
     public void Moved_MovesTheHistory()

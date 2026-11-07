@@ -24,6 +24,7 @@ internal sealed class DocHistoryLibraryListener : IDisposable, IHostedService
         this.recorder = recorder;
         events.HumanSaved += this.recorder.HumanSaved;
         events.HumanCreated += this.recorder.HumanCreated;
+        events.UploadDiscarded += this.recorder.Discarded;
         events.Moved += this.OnMoved;
     }
 
@@ -42,6 +43,7 @@ internal sealed class DocHistoryLibraryListener : IDisposable, IHostedService
     {
         this.events.HumanSaved -= this.recorder.HumanSaved;
         this.events.HumanCreated -= this.recorder.HumanCreated;
+        this.events.UploadDiscarded -= this.recorder.Discarded;
         this.events.Moved -= this.OnMoved;
     }
 

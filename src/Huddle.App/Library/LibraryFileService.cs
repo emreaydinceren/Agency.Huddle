@@ -996,6 +996,7 @@ internal sealed class LibraryFileService(
         }
 
         InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
+        this.events?.RaiseUploadDiscarded(fresh);
         return Task.CompletedTask;
     }
 
@@ -1148,9 +1149,13 @@ internal sealed class LibraryFileService(
 
             InvalidateOverlapping(this.resolver, this.index, target.FullPath);
             LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, candidate);
-            return created.Value is null
-                ? new LibraryResult<LibraryUpload>(null, created.Error)
-                : new LibraryResult<LibraryUpload>(new LibraryUpload(created.Value, kind, size), null);
+            if (created.Value is null)
+            {
+                return new LibraryResult<LibraryUpload>(null, created.Error);
+            }
+
+            this.events?.RaiseHumanCreated(created.Value);
+            return new LibraryResult<LibraryUpload>(new LibraryUpload(created.Value, kind, size), null);
         }
 
         return new LibraryResult<LibraryUpload>(null, couldNotSave);
