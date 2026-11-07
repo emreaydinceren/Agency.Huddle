@@ -249,6 +249,7 @@ pins the pairing and is unit-tested for every value.
 | `RoomQuestion` | `room-question` | `NeedsYouTracker` | Yes | Room id | `RoomWaitPayload` |
 | `RoomForm` | `room-form` | `NeedsYouTracker` | Yes | Room id | `RoomWaitPayload` |
 | `RoomBudget` | `room-budget` | `NeedsYouTracker` | Yes | Room id | `RoomWaitPayload` |
+| `RoomMentionHeld` | `room-mention-held` | `HeldMentions` (#428) | Yes | `{roomId}\|{agentId}` | `RoomMentionHeldPayload` |
 | `RoomCreated` | `room-created` | `ChatService`, `TeamRoomReconciler` | No | Room id | `RoomCreatedPayload(RoomId, RoomName, Team?, Members)` |
 | `RoomJoined` | `room-joined` | `ChatService` | No | Room id | `RoomJoinedPayload(RoomId, RoomName, Team?, Member)` |
 | `RoomArchived` | `room-archived` | `ChatService` | No | Room id | `RoomArchivedPayload(RoomId, RoomName, Team?)` |

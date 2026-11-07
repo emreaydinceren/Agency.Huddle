@@ -8,6 +8,7 @@
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Feed
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.NeedsYou
 @using Agency.Huddle.App.Tabs
 @inject TimeProvider Clock
 @inject ITeamCatalog Catalog
@@ -294,6 +295,13 @@
     {
         get
         {
+            if (this.Lead is { Notify: true, ResolvedAt: null, Payload: RoomMentionHeldPayload heldMention }
+                && this.Services.GetService<IHeldMentionWake>() is { } mentions
+                && !mentions.IsHeld(heldMention.RoomId))
+            {
+                return heldMention.Waiting;
+            }
+
             if (this.Lead is { Notify: true, ResolvedAt: null, Payload: TaskWakesPausedPayload paused }
                 && this.task is { Status: not TaskState.Done, Location.Closed: false } open
                 && this.Services.GetService<IWakePauses>() is { } pauses
@@ -308,6 +316,12 @@
 
     private async Task WakeAgent()
     {
+        if (this.Lead.Payload is RoomMentionHeldPayload heldMention && this.Services.GetService<IHeldMentionWake>() is { } mentions)
+        {
+            _ = await mentions.WakeAsync(heldMention.RoomId, heldMention.AgentId, CancellationToken.None);
+            return;
+        }
+
         if (this.Lead.Payload is TaskWakesPausedPayload paused
             && this.task is { } open
             && this.Services.GetService<IWakePauses>() is { } pauses)

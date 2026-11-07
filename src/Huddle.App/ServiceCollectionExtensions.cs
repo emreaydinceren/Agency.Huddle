@@ -172,6 +172,19 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<Feed.FeedWriter>();
         services.AddHostedService<TaskFeedStartup>();
         services.AddHostedService<HelperFeedStartup>();
+        services.AddSingleton(static sp => new NeedsYou.HeldMentions(
+            sp.GetRequiredService<Services.RoomEvents>(),
+            sp.GetRequiredService<Feed.IFeedPublisher>(),
+            sp.GetRequiredService<Feed.FeedStore>(),
+            sp.GetRequiredService<Services.ChatService>(),
+            sp.GetRequiredService<Data.ITeamDirectory>(),
+            sp.GetRequiredService<Data.IChatStore>(),
+            name => sp.GetRequiredService<Acp.PersonaStore>().Get(name) is not null,
+            sp.GetRequiredService<Prompts.IPromptSource>(),
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<ILogger<NeedsYou.HeldMentions>>()));
+        services.AddSingleton<NeedsYou.IHeldMentionWake>(static sp => sp.GetRequiredService<NeedsYou.HeldMentions>());
+        services.AddHostedService(static sp => sp.GetRequiredService<NeedsYou.HeldMentions>());
         return services;
     }
 

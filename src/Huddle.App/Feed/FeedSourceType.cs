@@ -89,4 +89,7 @@ public enum FeedSourceType
 
     /// <summary>The Human switched account connectors on or off for an Agent.</summary>
     AgentConnectorsChanged,
+
+    /// <summary>An Agent's Message mentioned another Agent in a Room whose Budget was spent, so the Turn was refused and waits for the Human (#428).</summary>
+    RoomMentionHeld,
 }

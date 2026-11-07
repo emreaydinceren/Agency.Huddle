@@ -1746,6 +1746,19 @@ internal static class PromptCatalog
             Placeholders: ["{{taskId}}", "{{title}}"],
             RequiredPlaceholders: ["{{taskId}}"],
             Timing: PromptTiming.Live),
+        new PromptDefinition(
+            Key: "turn.wake.restart",
+            Label: "Room wake-up after a restart",
+            HelperText:
+                "The Message the Human's Wake button posts for an Agent whose mention was held when its Room " +
+                "ran out of Budget and Huddle then restarted (#428).",
+            Default:
+                """
+                {{agent}} a Message to you in this Room was held when its Budget ran out, and Huddle restarted before it reached you. Read Message {{messageId}} and do what it asks of you.
+                """,
+            Placeholders: ["{{agent}}", "{{messageId}}"],
+            RequiredPlaceholders: ["{{agent}}"],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds the line a Request's move to Done adds to the requesting manager's wake-up (#350).</summary>

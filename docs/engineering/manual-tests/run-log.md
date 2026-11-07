@@ -4211,6 +4211,14 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-21--a-hand-off-h
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | Pass | `eb1b8c78` | #353 | Mock lane, free. A wrapper around `mock-acp` counted Turns, and `update_task` was called over the Agent's tool server, because a mock calls no tools. The Notification survived the restart, no Turn ran at startup, and one click on Wake Ada ran one Turn and closed the card. Also tried a Task hand-off held on a Room with a spent Budget: same result, with the Room's Budget card resolved at startup. Finding, fixed in the same PR: that card still told the Human to press a Continue that was gone. Not covered: a chat Mention refused by a spent Budget (see the follow-up issue). No pre-restart Turn count for the first case. |
 
+### TASKS-22 — A request held by a spent Room Budget survives a restart, and Wake starts the Agent once
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-22--a-request-held-by-a-spent-room-budget-survives-a-restart-and-wake-starts-the-agent-once)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-06 | Pass *(run by an agent, mock lane)* | `ca083f0f` + uncommitted #428 fix | #428 | Mock lane, free, `Team__AgentMessageBudget=1`. A wrapper around `mock-acp` counted `session/prompt` lines, and Ada's Message was posted through her `post_message` tool. Case 1 (no restart): Continue gave Bo one Turn and the Notification closed. Case 2 (restart): the Notification stayed with the Room no longer paused and no Budget card, zero Turns at startup, one click on Wake Ada gave one Turn and one Message from You, the Notification closed and the button went. Case 3 (restart, then "@Bo go ahead and merge it" typed): one Turn, the Notification closed. Finding fixed in the same run: the card said "the Room is paused, press Continue" after a restart when neither was true; it now says the Budget ran out and names Continue and Wake. A mock echoes the Room's history, so its replies mention people; that made extra held requests, not a defect. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

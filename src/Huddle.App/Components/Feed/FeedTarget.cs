@@ -25,6 +25,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             RequestAwaitsPayload p => new(FeedTargetKind.Task, p.Id),
             GateDecisionPayload p => new(FeedTargetKind.Task, p.Id),
             RoomWaitPayload p => new(FeedTargetKind.Room, p.RoomId),
+            RoomMentionHeldPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomCreatedPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomJoinedPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomArchivedPayload p => new(FeedTargetKind.Room, p.RoomId),
