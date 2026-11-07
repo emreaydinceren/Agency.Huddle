@@ -24,7 +24,7 @@ using Agency.Huddle.Tests.Factories;
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
 /// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the six real chat tools, and
-/// <see cref="RoomSession.BuildPrompt(WorkItem, Agency.Huddle.App.Prompts.IPromptSource)"/> is captured here as committed text
+/// <see cref="TurnPromptFramer.BuildPrompt(WorkItem, Agency.Huddle.App.Prompts.IPromptSource)"/> is captured here as committed text
 /// under <c>Acp/Golden</c>, so the later move of these strings into a JSON config file can prove it
 /// changed no behaviour, byte-for-byte.
 /// </summary>
@@ -565,18 +565,18 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("toolDescriptions.txt", actual);
     }
 
-    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/> for a turn with no catch-up messages.</summary>
+    /// <summary>Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a turn with no catch-up messages.</summary>
     [Fact]
     public void BuildPrompt_NoCatchUp_MatchesGolden()
     {
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []);
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptPlain.txt", actual);
     }
 
-    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/> for a turn carrying two catch-up messages.</summary>
+    /// <summary>Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a turn carrying two catch-up messages.</summary>
     [Fact]
     public void BuildPrompt_WithCatchUp_MatchesGolden()
     {
@@ -587,13 +587,13 @@ public sealed class PromptGoldenTests
         ];
         var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed);
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptCatchUp.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="RoomSession.BuildPrompt"/> for a Greeting Turn (Spec §6.14): no triggering
+    /// Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a Greeting Turn (Spec §6.14): no triggering
     /// Message and no catch-up context, built through the same path the runner uses to queue one.
     /// </summary>
     [Fact]
@@ -602,13 +602,13 @@ public sealed class PromptGoldenTests
         var item = new WorkItem(
             "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting);
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptGreeting.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="RoomSession.BuildPrompt"/> for a Turn carrying a non-empty File Changes
+    /// Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a Turn carrying a non-empty File Changes
     /// report together with Catch-up context, per FC §6.8: the File Changes block goes first, ahead
     /// of Catch-up, then exactly what today's Catch-up path already writes. The golden file was
     /// written by hand from FC §6.8's sample, not seeded from this test's own output.
@@ -632,13 +632,13 @@ public sealed class PromptGoldenTests
         ];
         var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptFileChanges.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="RoomSession.BuildPrompt"/>'s <c>by you</c> suffix (FC §6.15, D13): a change
+    /// Pins <see cref="TurnPromptFramer.BuildPrompt"/>'s <c>by you</c> suffix (FC §6.15, D13): a change
     /// carrying <see cref="FileChange.ByYouRoomName"/> gets <c>turn.fileByYouSuffix</c> appended to
     /// its line.
     /// </summary>
@@ -651,7 +651,7 @@ public sealed class PromptGoldenTests
             Unchecked: []);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptFileChangesByYou.txt", actual);
     }
@@ -664,10 +664,10 @@ public sealed class PromptGoldenTests
     public void BuildPrompt_EmptyReport_ByteIdenticalToExistingGoldens()
     {
         var plainWithEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(FileChangesReport.Empty, new FakePromptSource()) };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithEmpty, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(plainWithEmpty, new FakePromptSource()));
 
         var plainWithNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(null, new FakePromptSource()) };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithNull, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(plainWithNull, new FakePromptSource()));
 
         CaughtUpMessage[] missed =
         [
@@ -675,10 +675,10 @@ public sealed class PromptGoldenTests
             new("Bob", "I have not, checking now"),
         ];
         var catchUpWithEmpty = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(FileChangesReport.Empty, new FakePromptSource()) };
-        AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptCatchUp.txt", TurnPromptFramer.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
 
         var catchUpWithNull = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { HookBlocks = FileChangesTestBlocks.Of(null, new FakePromptSource()) };
-        AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithNull, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptCatchUp.txt", TurnPromptFramer.BuildPrompt(catchUpWithNull, new FakePromptSource()));
     }
 
     /// <summary>A Greeting Turn never carries a File Changes block, even with a non-empty report.</summary>
@@ -692,13 +692,13 @@ public sealed class PromptGoldenTests
         var item = new WorkItem(
             "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()) };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptGreeting.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="RoomSession.BuildPrompt"/> for a fresh Room Session's first Turn (RS §6.5):
+    /// Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a fresh Room Session's first Turn (RS §6.5):
     /// the Transcript header, the omitted-count line, two Transcript lines, a blank line, then the
     /// triggering Message line. The golden file was written by hand from RS §6.5's sample, not
     /// seeded from this test's own output. It also guards LR-R2: at the catch-up defaults
@@ -717,13 +717,13 @@ public sealed class PromptGoldenTests
             Omitted: 12);
         var item = new WorkItem("01J8PORTO", "Porto trip", "Human", "go with option 2", []) with { Transcript = transcript };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptTranscript.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="RoomSession.BuildPrompt"/> for a resumed Room Session's first Turn (RS §6.5):
+    /// Pins <see cref="TurnPromptFramer.BuildPrompt"/> for a resumed Room Session's first Turn (RS §6.5):
     /// the resumed header, no omitted-count line (<c>Omitted</c> is zero), the Messages posted while
     /// closed, then the triggering Message line. It also guards LR-R2: at the catch-up defaults the
     /// golden is unchanged, so a later change that alters it fails here.
@@ -737,7 +737,7 @@ public sealed class PromptGoldenTests
             Omitted: 0);
         var item = new WorkItem("01J8PORTO", "Porto trip", "Human", "go with option 2", []) with { Transcript = transcript };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptTranscriptResumed.txt", actual);
     }
@@ -753,7 +753,7 @@ public sealed class PromptGoldenTests
         CaughtUpMessage[] missed = [new("Alice", "from the buffer, must not appear")];
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", missed) with { Transcript = transcript };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.DoesNotContain("from the buffer, must not appear", actual, StringComparison.Ordinal);
         Assert.Contains("from the transcript", actual, StringComparison.Ordinal);
@@ -773,7 +773,7 @@ public sealed class PromptGoldenTests
             Omitted: 0);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = FileChangesTestBlocks.Of(report, new FakePromptSource()), Transcript = transcript };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         var fileChangesIndex = actual.IndexOf("Since your last Turn", StringComparison.Ordinal);
         var transcriptIndex = actual.IndexOf("This is a new session", StringComparison.Ordinal);
@@ -787,13 +787,13 @@ public sealed class PromptGoldenTests
     {
         var emptyTranscript = new TranscriptCatchUp(Resumed: false, Messages: [], Omitted: 0);
         var withEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { Transcript = emptyTranscript };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withEmpty, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(withEmpty, new FakePromptSource()));
 
         var withNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { Transcript = null };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withNull, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(withNull, new FakePromptSource()));
     }
 
-    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/>'s Library documents block (Spec §6.14) for two documents with no inlined text, matching the Spec's own sample.</summary>
+    /// <summary>Pins <see cref="TurnPromptFramer.BuildPrompt"/>'s Library documents block (Spec §6.14) for two documents with no inlined text, matching the Spec's own sample.</summary>
     [Fact]
     public void BuildPrompt_LibraryDocuments_MatchesGolden()
     {
@@ -806,12 +806,12 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 16384);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptLibraryDocs.txt", actual);
     }
 
-    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/>'s Library documents block when a document's text is inlined (Spec §6.14): one document with its full text fenced, one truncated with the cut note appended.</summary>
+    /// <summary>Pins <see cref="TurnPromptFramer.BuildPrompt"/>'s Library documents block when a document's text is inlined (Spec §6.14): one document with its full text fenced, one truncated with the cut note appended.</summary>
     [Fact]
     public void BuildPrompt_LibraryDocumentsInlined_MatchesGolden()
     {
@@ -824,7 +824,7 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 20);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptLibraryDocsInline.txt", actual);
     }
@@ -849,7 +849,7 @@ public sealed class PromptGoldenTests
             with
         { HookBlocks = FileChangesTestBlocks.Of(fileChanges, new FakePromptSource()), LibraryDocuments = library, Transcript = transcript };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         var fileChangesIndex = actual.IndexOf("Since your last Turn", StringComparison.Ordinal);
         var libraryIndex = actual.IndexOf("Library documents mentioned", StringComparison.Ordinal);
@@ -864,10 +864,10 @@ public sealed class PromptGoldenTests
     {
         LibraryDocumentsReport empty = new([], 0, 16384);
         var withEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = empty };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withEmpty, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(withEmpty, new FakePromptSource()));
 
         var withNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = null };
-        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withNull, new FakePromptSource()));
+        AssertMatchesGolden("turnPromptPlain.txt", TurnPromptFramer.BuildPrompt(withNull, new FakePromptSource()));
     }
 
     /// <summary>When more documents were mentioned than the cap kept, the closing line reuses <c>turn.libraryDocsMore</c> (corrections-B6 item 1), not <c>turn.fileChangesMore</c>.</summary>
@@ -880,7 +880,7 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 16384);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Contains("\u2026and 5 more documents.", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
@@ -896,7 +896,7 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 16384);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Contains("````\nline one\n```\nline two\n```\nline three\n````", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
@@ -911,7 +911,7 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 16384);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         // contains-ok: prompt text, not markup
         Assert.Contains(
@@ -920,7 +920,7 @@ public sealed class PromptGoldenTests
             StringComparison.Ordinal);
     }
 
-    /// <summary>A document's inlined text is written verbatim: placeholder-looking syntax inside it is never expanded by <see cref="RoomSession.BuildPrompt"/>'s own rendering.</summary>
+    /// <summary>A document's inlined text is written verbatim: placeholder-looking syntax inside it is never expanded by <see cref="TurnPromptFramer.BuildPrompt"/>'s own rendering.</summary>
     [Fact]
     public void BuildPrompt_LibraryDocumentText_WithPlaceholderSyntax_IsNotExpanded()
     {
@@ -931,7 +931,7 @@ public sealed class PromptGoldenTests
             MaxInlineBytes: 16384);
         var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
 
-        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+        var actual = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Contains("See {{path}} for details.", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }

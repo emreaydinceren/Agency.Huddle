@@ -83,7 +83,7 @@ public sealed class BuildPromptReferencesTests
             ReferencedItems = "HEADER-TEXT",
         };
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         int library = prompt.IndexOf("E:\\Data\\notes.md", StringComparison.Ordinal);
         int header = prompt.IndexOf("HEADER-TEXT\n\n", StringComparison.Ordinal);
@@ -211,7 +211,7 @@ public sealed class BuildPromptReferencesTests
 
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, expander, logger: logger);
 
-        Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(item, new FakePromptSource()), prompt.Text);
         Assert.DoesNotContain(logger.Messages, message => message.Contains("expand references", StringComparison.Ordinal));
     }
 
@@ -225,7 +225,7 @@ public sealed class BuildPromptReferencesTests
 
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, BuildPromptReferencesTests.ExpanderOver(fixture));
 
-        Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(item, new FakePromptSource()), prompt.Text);
         Assert.DoesNotContain("Fix login", prompt.Text, StringComparison.Ordinal);
     }
 
@@ -240,7 +240,7 @@ public sealed class BuildPromptReferencesTests
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(
             item, BuildPromptReferencesTests.ExpanderOver(fixture, options => options.References.ExpandInPrompt = false));
 
-        Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(item, new FakePromptSource()), prompt.Text);
     }
 
     /// <summary>A Message with no reference gets today's prompt.</summary>
@@ -252,7 +252,7 @@ public sealed class BuildPromptReferencesTests
 
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, BuildPromptReferencesTests.ExpanderOver(fixture));
 
-        Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(item, new FakePromptSource()), prompt.Text);
     }
 
     /// <summary>An Adapter whose tools carry the prefix is told the prefixed <c>list_agents</c> name.</summary>
@@ -294,7 +294,7 @@ public sealed class BuildPromptReferencesTests
 
         AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(item, expander);
 
-        Assert.Equal(RoomSession.BuildPrompt(item, new FakePromptSource()), prompt.Text);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(item, new FakePromptSource()), prompt.Text);
     }
 
     private sealed class ThrowingCatalog : ITeamCatalog

@@ -54,7 +54,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
-        var expected = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
+        var expected = TurnPromptFramer.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
 
         Assert.Single(factory.Session.Prompts);
         Assert.Equal(expected, factory.Session.Prompts[0]);
@@ -483,8 +483,8 @@ public sealed class PersonaRunnerFileChangesTests
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
-        var expected1 = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
-        var expected2 = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi again", []), new FakePromptSource());
+        var expected1 = TurnPromptFramer.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
+        var expected2 = TurnPromptFramer.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi again", []), new FakePromptSource());
 
         Assert.Equal(2, factory.Session.Prompts.Count);
         Assert.Equal(expected1, factory.Session.Prompts[0]);

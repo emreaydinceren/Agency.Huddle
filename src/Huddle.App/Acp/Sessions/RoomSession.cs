@@ -1,7 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
@@ -18,7 +17,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <c>RoomId == null</c> means a <b>shared</b> session serving every Room the Agent is in - Phase 0/1's
 /// one <see cref="RoomSession"/> per Persona. <see cref="ProcessWorkItemAsync"/>,
 /// <see cref="WatchForAdapterSilenceAsync"/>, <see cref="RunEventReaderAsync"/> and
-/// <see cref="BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
+/// <see cref="TurnPromptFramer.BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
 /// both traps intact (<c>docs/engineering/rules.md</c>, "A Turn ends four ways").
 /// </summary>
 internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnectorTurnLatch
@@ -1551,7 +1550,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         try
         {
-            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, RoomSession.BuildPrompt(item, this.prompts));
+            this.lastCatchUp.Write(this.owner.PersonaName, item.RoomId, TurnPromptFramer.BuildPrompt(item, this.prompts));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -1848,8 +1847,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private async Task RunTurnAsync(TurnRun run, CancellationToken ct)
     {
         WorkItem item = run.Item;
-        var prompt = RoomSession.BuildPrompt(item, this.prompts);
-        await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, RoomSession.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
+        var prompt = TurnPromptFramer.BuildPrompt(item, this.prompts);
+        await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, TurnPromptFramer.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
         run.PromptReturned = true;
         var outcome = await run.Completion.Task.WaitAsync(run.TurnCancellation.Token).ConfigureAwait(false);
 
@@ -1961,7 +1960,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // finished compaction from a failed one. A command that did reply keeps its own words.
         if (postText is null && run.Item.Kind == WorkItemKind.Command && run.Item.Command is { } ranCommand)
         {
-            postText = AdapterCommandOutcome.Describe(ranCommand.Name, outcome.Reason, run.Turn.LastOutputJson, run.Turn.ToolCallFailed);
+            postText = AdapterCommandOutcome.Describe(ranCommand.Name, outcome.Reason, run.Turn.ToolCalls.LastOutputJson, run.Turn.ToolCalls.ToolCallFailed);
         }
 
         return postText;
@@ -2104,7 +2103,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         HashSet<string> touched;
         lock (this.gate)
         {
-            touched = [.. run.Turn.Touched];
+            touched = [.. run.Turn.ToolCalls.Touched];
         }
 
         await this.hooks.AfterTurnAsync(run.Item.RoomId, this.hookState, run.HookResult, touched, ct).ConfigureAwait(false);
@@ -2367,17 +2366,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
         else if (agentEvent is ToolCallStarted started)
         {
-            this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
-            this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(started.Kind, started.Title, started.ToolName, started.RawInputJson);
-            await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, memoryFile, ct).ConfigureAwait(false);
+            await this.HandleToolCallAsync(started.ToolCallId, isStart: true, started.Kind, started.Title, started.ToolName, started.Status, started.Location, started.Diff, started.RawInputJson, null, ct).ConfigureAwait(false);
         }
         else if (agentEvent is ToolCallUpdated updated)
         {
-            this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
-            this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-            string? memoryFile = this.RecordMemoryToolPath(updated.Kind, updated.Title, updated.ToolName, updated.RawInputJson);
-            await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, memoryFile, ct).ConfigureAwait(false);
+            await this.HandleToolCallAsync(updated.ToolCallId, isStart: false, updated.Kind, updated.Title, updated.ToolName, updated.Status, updated.Location, updated.Diff, updated.RawInputJson, updated.RawOutputJson, ct).ConfigureAwait(false);
         }
         else if (agentEvent is TurnCompleted completed)
         {
@@ -2646,17 +2639,34 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     }
 
     /// <summary>
-    /// Keeps, for the Turn in flight, the last tool output that is a JSON object and whether any tool
-    /// call failed, which is all an Adapter command's outcome line is built from. Only calls this Turn
-    /// itself started count: a Stop or an idle timeout lets the consumer move on without waiting for
-    /// the aborted Turn's tail, so a late update for an earlier Turn's call must not be read as this
-    /// Turn's failure.
+    /// Records one tool call on the Turn in flight, then publishes its activity. The steps run in this
+    /// order: the call's result, the paths it touched, the memory file it names, the activity row. Each
+    /// recording step finds the active Turn afresh, and the <see cref="TurnToolCalls.Touched"/> changes
+    /// happen under the gate in that same step, so a late event after the Turn ended records nothing.
     /// </summary>
-    /// <param name="toolCallId">The tool call the update belongs to.</param>
-    /// <param name="isStart">Whether this is the call's first event, which enrols it in the Turn.</param>
-    /// <param name="status">The tool call's status on this update.</param>
-    /// <param name="rawOutputJson">The tool call's output, if this update carries one.</param>
-    private void RecordToolCallResult(string toolCallId, bool isStart, ToolCallStatus status, string? rawOutputJson)
+    /// <param name="toolCallId">The id of the tool call.</param>
+    /// <param name="isStart">Whether this is the call's first event.</param>
+    /// <param name="kind">The tool call's category, as ACP reported it.</param>
+    /// <param name="title">A human-readable label for the call, if the agent supplied one.</param>
+    /// <param name="toolName">The Adapter's own tool name, when it sends one.</param>
+    /// <param name="status">The call's lifecycle state on this event.</param>
+    /// <param name="location">The call's first location, or <see langword="null"/> when this event has none.</param>
+    /// <param name="diff">The call's first change, or <see langword="null"/> when this event has none.</param>
+    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
+    /// <param name="rawOutputJson">The tool call's output, if this event carries one.</param>
+    /// <param name="ct">The reader's own cancellation token.</param>
+    private async Task HandleToolCallAsync(
+        string toolCallId,
+        bool isStart,
+        ToolKind kind,
+        string? title,
+        string? toolName,
+        ToolCallStatus status,
+        ToolCallLocationInfo? location,
+        ToolCallDiffInfo? diff,
+        string? rawInputJson,
+        string? rawOutputJson,
+        CancellationToken ct)
     {
         ActiveTurn? turn;
         lock (this.gate)
@@ -2664,64 +2674,19 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             turn = this.activeTurn;
         }
 
-        if (turn is null)
-        {
-            return;
-        }
-
-        if (isStart)
-        {
-            turn.ToolCallIds.Add(toolCallId);
-        }
-        else if (!turn.ToolCallIds.Contains(toolCallId))
-        {
-            return;
-        }
-
-        if (status == ToolCallStatus.Failed)
-        {
-            turn.ToolCallFailed = true;
-        }
-
-        if (rawOutputJson is not null && rawOutputJson.AsSpan().TrimStart().StartsWith('{'))
-        {
-            turn.LastOutputJson = rawOutputJson;
-        }
-    }
-
-    /// <summary>
-    /// Adds every rooted path found in <paramref name="rawInputJson"/> to the active Turn's
-    /// <see cref="ActiveTurn.Touched"/> set, per FC §6.8 item 2 and FC D-3b - but only for
-    /// <see cref="ToolKind.Edit"/>, <see cref="ToolKind.Delete"/> or <see cref="ToolKind.Move"/>: an
-    /// <see cref="ToolKind.Execute"/> call is not parsed, because a shell command is not a path and
-    /// guessing at one could claim another Agent's change as this Agent's own. A no-op when there
-    /// is no active Turn.
-    /// </summary>
-    /// <param name="kind">The tool call's category, as ACP reported it.</param>
-    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
-    private void RecordTouchedPaths(ToolKind kind, string? rawInputJson)
-    {
-        if (kind is not (ToolKind.Edit or ToolKind.Delete or ToolKind.Move))
-        {
-            return;
-        }
+        turn?.ToolCalls.RecordResult(toolCallId, isStart, status, rawOutputJson);
 
         lock (this.gate)
         {
-            if (this.activeTurn is not { } turn)
-            {
-                return;
-            }
-
-            foreach (var path in TouchedPaths.From(rawInputJson))
-            {
-                turn.Touched.Add(path);
-            }
+            this.activeTurn?.ToolCalls.RecordTouched(kind, rawInputJson);
         }
+
+        string? memoryFile = this.RecordMemoryToolPath(kind, title, toolName, rawInputJson);
+        await this.WriteToolActivityAsync(toolCallId, title, MapToolCallStatus(status), location, diff, memoryFile, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="ActiveTurn.Touched"/> set, so File
+    /// Adds the file a <c>memory</c> App Tool call changes to the active Turn's <see cref="TurnToolCalls.Touched"/> set, so File
     /// Changes counts a save through the tool as the Agent's own, like an <see cref="ToolKind.Edit"/> (Instructions spec §6.1), and
     /// returns the file any <c>memory</c> call names, which is the only argument the tool-call log would otherwise lose.
     /// The tool cannot record it itself: one tool server serves every Room Session of the Agent and never learns the Room.
@@ -2759,68 +2724,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         {
             lock (this.gate)
             {
-                this.activeTurn?.Touched.Add(path);
+                this.activeTurn?.ToolCalls.AddTouched(path);
             }
         }
 
         return path;
-    }
-
-    /// <summary>
-    /// What precedes a prompt that would otherwise open with a slash. An Adapter reads a command only
-    /// at the very start of a prompt, so this makes the text plain. A Prompt template can be edited to
-    /// open with another Agent's text, and <c>PromptValidator</c> reports but never refuses, so the
-    /// guard is applied to every prompt rather than trusted to the templates (Commands spec, D-9).
-    /// </summary>
-    internal const string CommandGuardMarker = "Message: ";
-
-    /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
-    /// <param name="item">The Turn's Room, sender, text, any catch-up context, and its <see cref="WorkItemKind"/>.</param>
-    /// <param name="prompts">Resolves each <c>turn.*</c> prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
-    /// <returns>
-    /// For a <see cref="WorkItemKind.Command"/>, the bare command: <c>/compact</c>, or
-    /// <c>/compact arguments</c>, and nothing else. For a <see cref="WorkItemKind.Greeting"/>, the
-    /// <c>turn.greeting</c> prompt alone. Otherwise: with
-    /// no catch-up context, the <c>turn.message</c> line alone; with catch-up context, a
-    /// <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a blank line,
-    /// then the <c>turn.message</c> line.
-    /// </returns>
-    internal static string BuildPrompt(WorkItem item, IPromptSource prompts)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(prompts);
-
-        if (item.Kind == WorkItemKind.Command)
-        {
-            // Exactly the command, one text block, no Room label: the Adapter recognises it only at
-            // the start of the prompt, and its input is the rest of this line.
-            AdapterCommandCall command = item.Command
-                ?? throw new InvalidOperationException("A Command work item carries no command.");
-            return command.Arguments.Length == 0 ? $"/{command.Name}" : $"/{command.Name} {command.Arguments}";
-        }
-
-        string prompt = RoomSession.BuildFramedPrompt(item, prompts);
-        return prompt.AsSpan().TrimStart().StartsWith('/') ? CommandGuardMarker + prompt : prompt;
-    }
-
-    /// <summary>
-    /// The Prompt blocks that follow the prompt's text on the wire (design §6.6): the block of each of
-    /// the Turn's Library documents, in order. Only an ordinary Message Turn can carry one: a
-    /// <see cref="WorkItemKind.Command"/> is the bare command and a <see cref="WorkItemKind.Greeting"/>
-    /// has no triggering Message, and neither collects Library documents in the first place.
-    /// </summary>
-    /// <param name="item">The Turn's work item.</param>
-    /// <returns>The blocks, possibly none.</returns>
-    internal static IReadOnlyList<AgentPromptBlock> BuildPromptBlocks(WorkItem item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-
-        if (item.Kind != WorkItemKind.Message || item.LibraryDocuments is not { } report)
-        {
-            return [];
-        }
-
-        return [.. report.Items.Select(document => document.Block).OfType<AgentPromptBlock>()];
     }
 
     /// <summary>
@@ -2861,314 +2769,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 summary);
         }
     }
-
-    private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
-    {
-        // The Room's id rides along with its name because it is the only way an Agent can learn one.
-        // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
-        // in a turn carries it: without this they reach only Rooms the Agent created itself.
-        var room = RoomSession.RoomLabel(item, prompts);
-
-        if (item.Kind == WorkItemKind.Greeting)
-        {
-            // No triggering Message and no catch-up (Spec §6.14): the trigger is this Prompt, not
-            // Transcript text, and a Greeting is by definition the first Turn in an empty Room. FC
-            // §6.8: the File Changes block never applies to a Greeting either.
-            return prompts.Render("turn.greeting", new Dictionary<string, string> { ["{{roomLabel}}"] = room });
-        }
-
-        var builder = new StringBuilder();
-
-        // Spec 6.7: hook blocks (File Changes is one of them) lead the framed prompt, each followed by a blank line.
-        if (item.HookBlocks is { } hookBlocks)
-        {
-            foreach (string hookBlock in hookBlocks)
-            {
-                builder.Append(hookBlock);
-                builder.Append("\n\n");
-            }
-        }
-
-        RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
-
-        // Spec section 9.3: after the Library documents block and before any catch-up or the Message.
-        // Absent means unchanged, so every prompt without a header stays byte-identical.
-        if (item.ReferencedItems is { } referencedItems)
-        {
-            builder.Append(referencedItems);
-            builder.Append("\n\n");
-        }
-
-        // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
-        // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
-        // this Room's first Turn ever has nothing before the trigger) falls through to today's
-        // buffer-based catch-up untouched, keeping every pre-D24 prompt byte-identical.
-        if (item.Transcript is { Messages.Count: > 0 } transcript)
-        {
-            RoomSession.AppendTranscriptBlock(builder, room, transcript, prompts);
-            builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-            return builder.ToString();
-        }
-
-        var ownPostLines = item.OwnPostLines ?? [];
-        if (item.MissedMessages.Count == 0 && ownPostLines.Count == 0)
-        {
-            builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-            return builder.ToString();
-        }
-
-        RoomSession.AppendCatchUpAndMessage(builder, room, item, ownPostLines, prompts);
-
-        return builder.ToString();
-    }
-
-    /// <summary>Writes the Catch-up block (missed Messages and own posts) and then the triggering Message.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="room">The Room label.</param>
-    /// <param name="item">The item being prompted.</param>
-    /// <param name="ownPostLines">This Agent's own earlier posts, rendered as lines.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendCatchUpAndMessage(StringBuilder builder, string room, WorkItem item, IReadOnlyList<string> ownPostLines, IPromptSource prompts)
-    {
-        // RS §6.7: a block of only own posts still gets turn.catchUpHeader, exactly like a block of
-        // only missed Messages - the header introduces the whole Catch-up block, not just one kind
-        // of line inside it.
-        builder.Append(prompts.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
-        builder.Append('\n');
-        foreach (var missed in item.MissedMessages)
-        {
-            builder.Append(prompts.Render(
-                "turn.catchUpLine",
-                new Dictionary<string, string> { ["{{sender}}"] = missed.SenderName, ["{{text}}"] = missed.Text }));
-            builder.Append('\n');
-        }
-
-        foreach (var line in ownPostLines)
-        {
-            builder.Append(prompts.Render("turn.ownPostLine", new Dictionary<string, string> { ["{{text}}"] = line }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-        builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
-    }
-
-    /// <summary>
-    /// Writes RS §6.5's Transcript block: the fresh-or-resumed header, an omitted-count line when
-    /// <see cref="TranscriptCatchUp.Omitted"/> is positive, one <c>turn.catchUpLine</c> per Message
-    /// (the Agent's own Messages appear under its own Name, per RS §6.9), then a blank line.
-    /// </summary>
-    private static void AppendTranscriptBlock(StringBuilder builder, string room, TranscriptCatchUp transcript, IPromptSource prompts)
-    {
-        var headerKey = transcript.Resumed ? "turn.transcriptResumedHeader" : "turn.transcriptHeader";
-        builder.Append(prompts.Render(headerKey, new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
-        builder.Append('\n');
-
-        if (transcript.Omitted > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.transcriptOmitted",
-                new Dictionary<string, string> { ["{{count}}"] = transcript.Omitted.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        if (transcript.OmittedOwn > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.transcriptOmittedOwn",
-                new Dictionary<string, string> { ["{{count}}"] = transcript.OmittedOwn.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        foreach (var message in transcript.Messages)
-        {
-            builder.Append(prompts.Render(
-                "turn.catchUpLine",
-                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>
-    /// Spec §6.14: with a non-empty <paramref name="report"/>, writes the Library documents block
-    /// directly after File Changes — the header, one line per document (a too-large document's line
-    /// replaces the ordinary one), the document's text fenced and truncation-noted when inlined, an
-    /// "…and N more documents." line when the cap left some out, then a blank line. Writes nothing for
-    /// a <see langword="null"/> or empty report: "absent means unchanged", as for File Changes.
-    /// </summary>
-    private static void AppendLibraryDocumentsBlock(StringBuilder builder, LibraryDocumentsReport? report, IPromptSource prompts)
-    {
-        if (report is null || report.IsEmpty)
-        {
-            return;
-        }
-
-        builder.Append(prompts.Render("turn.libraryDocsHeader", new Dictionary<string, string>()));
-        builder.Append('\n');
-
-        foreach (var item in report.Items)
-        {
-            RoomSession.AppendLibraryDocument(builder, report, item, prompts);
-        }
-
-        if (report.NotListed > 0)
-        {
-            builder.Append(prompts.Render(
-                "turn.libraryDocsMore",
-                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
-            builder.Append('\n');
-        }
-
-        builder.Append('\n');
-    }
-
-    /// <summary>Writes the line for a Library document that travels as a block, or an image the model cannot be given, plus its truncation note.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="report">The report the document belongs to, for its inline-size cap.</param>
-    /// <param name="item">The document to write.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendNonPathLibraryDocument(StringBuilder builder, LibraryDocumentsReport report, LibraryDocumentItem item, IPromptSource prompts)
-    {
-        var deliveryKey = item.Delivery == LibraryDocumentDelivery.Block ? "turn.libraryDocIncluded" : "turn.libraryImageUnavailable";
-        builder.Append(prompts.Render(
-            deliveryKey,
-            new Dictionary<string, string>
-            {
-                ["{{path}}"] = item.FullPath,
-                ["{{location}}"] = item.Location,
-                ["{{size}}"] = item.Size,
-            }));
-        builder.Append('\n');
-
-        if (item.Block is AgentTextResourceBlock && item.Truncated)
-        {
-            builder.Append(prompts.Render(
-                "turn.libraryDocTruncated",
-                new Dictionary<string, string>
-                {
-                    ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
-                    ["{{size}}"] = item.Size,
-                }));
-            builder.Append('\n');
-        }
-    }
-
-    /// <summary>Writes one Library document's line, and its inlined text and truncation note when it has them.</summary>
-    /// <param name="builder">The prompt being built.</param>
-    /// <param name="report">The report the document belongs to, for its inline-size cap.</param>
-    /// <param name="item">The document to write.</param>
-    /// <param name="prompts">Where the prompt templates come from.</param>
-    private static void AppendLibraryDocument(StringBuilder builder, LibraryDocumentsReport report, LibraryDocumentItem item, IPromptSource prompts)
-    {
-        // A document that travels with the message, or an image the model cannot be given, is worded
-        // by that fact before anything else: an image over the editable limit is "too large to read"
-        // as a path, and still arrives as a block (design §6.5).
-        if (item.Delivery != LibraryDocumentDelivery.Path)
-        {
-            RoomSession.AppendNonPathLibraryDocument(builder, report, item, prompts);
-            return;
-        }
-
-        if (item.TooLarge)
-        {
-            var sizeKb = (item.Length + 1023) / 1024;
-            builder.Append(prompts.Render(
-                "turn.libraryDocTooLarge",
-                new Dictionary<string, string>
-                {
-                    ["{{label}}"] = item.Location,
-                    ["{{path}}"] = item.FullPath,
-                    ["{{sizeKb}}"] = sizeKb.ToString(CultureInfo.InvariantCulture),
-                }));
-            builder.Append('\n');
-            return;
-        }
-
-        builder.Append(prompts.Render(
-            "turn.libraryDoc",
-            new Dictionary<string, string>
-            {
-                ["{{path}}"] = item.FullPath,
-                ["{{location}}"] = item.Location,
-                ["{{size}}"] = item.Size,
-            }));
-        builder.Append('\n');
-
-        if (item.Text is not null)
-        {
-            var fence = RoomSession.ChooseFence(item.Text);
-            builder.Append(prompts.Render(
-                "turn.libraryDocInline",
-                new Dictionary<string, string> { ["{{fence}}"] = fence, ["{{text}}"] = item.Text }));
-            builder.Append('\n');
-
-            if (item.Truncated)
-            {
-                builder.Append(prompts.Render(
-                    "turn.libraryDocTruncated",
-                    new Dictionary<string, string>
-                    {
-                        ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
-                        ["{{size}}"] = item.Size,
-                    }));
-                builder.Append('\n');
-            }
-        }
-    }
-
-    /// <summary>
-    /// Corrections-B5 item 32: the fence for an inlined document's text is the longest run of
-    /// backticks already in that text, plus one, never shorter than three — so the fence can never be
-    /// closed early by a backtick run the text itself contains.
-    /// </summary>
-    /// <param name="text">The document's text about to be fenced.</param>
-    /// <returns>A run of backticks safe to wrap <paramref name="text"/> in.</returns>
-    private static string ChooseFence(string text)
-    {
-        var longestRun = 0;
-        var currentRun = 0;
-        foreach (var c in text)
-        {
-            if (c == '`')
-            {
-                currentRun++;
-                longestRun = Math.Max(longestRun, currentRun);
-            }
-            else
-            {
-                currentRun = 0;
-            }
-        }
-
-        return new string('`', Math.Max(3, longestRun + 1));
-    }
-
-    /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
-    /// <param name="item">The work item whose Room is being labelled.</param>
-    /// <param name="prompts">Resolves the <c>turn.roomLabel</c> prompt's current text.</param>
-    /// <returns>The label, carrying both the Room's name and its id.</returns>
-    private static string RoomLabel(WorkItem item, IPromptSource prompts) =>
-        prompts.Render(
-            "turn.roomLabel",
-            new Dictionary<string, string>
-            {
-                ["{{roomName}}"] = item.RoomName,
-                ["{{roomId}}"] = item.RoomId,
-                ["{{teamSuffix}}"] = item.Team is null ? string.Empty : $", Team: {item.Team}",
-            });
-
-    /// <summary>Renders one <c>turn.message</c> line: a Room label, its sender, and its text.</summary>
-    /// <param name="prompts">Resolves the <c>turn.message</c> prompt's current text.</param>
-    /// <param name="roomLabel">The already-rendered Room label to open the line with.</param>
-    /// <param name="sender">The message's sender name.</param>
-    /// <param name="text">The message's text.</param>
-    /// <returns>The rendered <c>turn.message</c> line.</returns>
-    private static string RenderMessage(IPromptSource prompts, string roomLabel, string sender, string text) =>
-        prompts.Render(
-            "turn.message",
-            new Dictionary<string, string> { ["{{roomLabel}}"] = roomLabel, ["{{sender}}"] = sender, ["{{text}}"] = text });
 
     /// <summary>Maps an ACP tool call's lifecycle state to the wire enum shown to the Human.</summary>
     /// <param name="status">The ACP status to map.</param>
@@ -3268,17 +2868,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         public int StreamedLength { get; set; }
 
         /// <summary>
-        /// The last tool output of this Turn that was a JSON object, which is where an Adapter command
-        /// reports its figures. Written by the single-threaded event-reader loop and read by the
-        /// consumer only after <see cref="Completion"/> has been awaited, so it needs no lock.
+        /// What this Turn keeps of its tool calls. Threading as <see cref="TurnToolCalls"/> describes:
+        /// the event reader is the only writer, except <see cref="TurnToolCalls.Touched"/>, which
+        /// goes through <see cref="RoomSession.gate"/>.
         /// </summary>
-        public string? LastOutputJson { get; set; }
-
-        /// <summary>Whether any tool call of this Turn reached <see cref="ToolCallStatus.Failed"/>. Same threading as <see cref="LastOutputJson"/>.</summary>
-        public bool ToolCallFailed { get; set; }
-
-        /// <summary>The ids of the tool calls this Turn started, so an update belonging to an earlier Turn is ignored. Same threading as <see cref="LastOutputJson"/>.</summary>
-        public HashSet<string> ToolCallIds { get; } = new(StringComparer.Ordinal);
+        public TurnToolCalls ToolCalls { get; } = new();
 
         /// <summary>
         /// The last <see cref="EditChange"/> written for each tool call of this Turn, keyed by tool
@@ -3286,14 +2880,6 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         /// event-reader loop, so it needs no lock, and it dies with the Turn.
         /// </summary>
         public Dictionary<string, EditChange> LastSentEdits { get; } = new(StringComparer.Ordinal);
-
-        /// <summary>
-        /// Full paths this Agent's own tool calls touched this Turn (FC §6.8 item 2), read and
-        /// written only under <see cref="RoomSession.gate"/>: <see cref="RecordTouchedPaths"/> adds
-        /// to it from the event-reader loop, and <see cref="ProcessWorkItemAsync"/>'s <c>finally</c>
-        /// copies it once the Turn has ended.
-        /// </summary>
-        public HashSet<string> Touched { get; } = new(FolderSnapshot.PathComparer);
 
         /// <summary>
         /// Whether a Stop has already been latched for this Turn. Set by

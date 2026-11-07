@@ -5,7 +5,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 namespace Agency.Huddle.Tests.Acp.Sessions;
 
 /// <summary>
-/// Pins how <see cref="RoomSession.BuildPrompt"/> treats an Adapter command: a command Turn sends the
+/// Pins how <see cref="TurnPromptFramer.BuildPrompt"/> treats an Adapter command: a command Turn sends the
 /// bare command and nothing else, and every other prompt is guarded so it can never open with a slash,
 /// which is the one thing an Adapter reads as a command (Commands spec, section 6.6 and D-9).
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class BuildPromptCommandTests
     [Fact]
     public void BuildPrompt_CommandWithoutArguments_IsExactlyTheSlashName()
     {
-        string prompt = RoomSession.BuildPrompt(CommandItem("compact", string.Empty), new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(CommandItem("compact", string.Empty), new FakePromptSource());
 
         Assert.Equal("/compact", prompt);
     }
@@ -36,7 +36,7 @@ public sealed class BuildPromptCommandTests
     [Fact]
     public void BuildPrompt_CommandWithArguments_AppendsThemVerbatim()
     {
-        string prompt = RoomSession.BuildPrompt(CommandItem("compact", "keep the decisions\nand the open questions"), new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(CommandItem("compact", "keep the decisions\nand the open questions"), new FakePromptSource());
 
         Assert.Equal("/compact keep the decisions\nand the open questions", prompt);
     }
@@ -47,7 +47,7 @@ public sealed class BuildPromptCommandTests
     {
         WorkItem item = new("room-1", "Room", "You", "@nova /compact", [], WorkItemKind.Command);
 
-        Assert.Throws<InvalidOperationException>(() => RoomSession.BuildPrompt(item, new FakePromptSource()));
+        Assert.Throws<InvalidOperationException>(() => TurnPromptFramer.BuildPrompt(item, new FakePromptSource()));
     }
 
     /// <summary>
@@ -62,9 +62,9 @@ public sealed class BuildPromptCommandTests
         prompts.SetOverride("turn.message", "{{text}}");
         WorkItem item = new("room-1", "Room", "Luna", "/config", []);
 
-        string prompt = RoomSession.BuildPrompt(item, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
-        Assert.Equal($"{RoomSession.CommandGuardMarker}/config", prompt);
+        Assert.Equal($"{TurnPromptFramer.CommandGuardMarker}/config", prompt);
     }
 
     /// <summary>
@@ -82,9 +82,9 @@ public sealed class BuildPromptCommandTests
         prompts.SetOverride("turn.message", template);
         WorkItem item = new("room-1", "Room", "Luna", "/config", []);
 
-        string prompt = RoomSession.BuildPrompt(item, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
-        Assert.Equal($"{RoomSession.CommandGuardMarker}{template.Replace("{{text}}", "/config", StringComparison.Ordinal)}", prompt);
+        Assert.Equal($"{TurnPromptFramer.CommandGuardMarker}{template.Replace("{{text}}", "/config", StringComparison.Ordinal)}", prompt);
     }
 
     /// <summary>The same guard covers a Greeting whose prompt has been overridden to open with a slash.</summary>
@@ -95,7 +95,7 @@ public sealed class BuildPromptCommandTests
         prompts.SetOverride("turn.greeting", "/init {{roomLabel}}");
         WorkItem item = new("room-1", "Room", string.Empty, string.Empty, [], WorkItemKind.Greeting);
 
-        string prompt = RoomSession.BuildPrompt(item, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(item, prompts);
 
         Assert.False(prompt.StartsWith('/'));
     }
@@ -106,7 +106,7 @@ public sealed class BuildPromptCommandTests
     {
         WorkItem item = new("room-1", "Room", "You", "/compact", []);
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("[Room: Room (id: room-1)] You: /compact", prompt);
     }

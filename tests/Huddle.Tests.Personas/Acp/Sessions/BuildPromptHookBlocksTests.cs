@@ -20,7 +20,7 @@ public sealed class BuildPromptHookBlocksTests
     {
         WorkItem item = BuildPromptHookBlocksTests.Message(["HOOK-A", "HOOK-B"]);
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("HOOK-A\n\nHOOK-B\n\n[Room: Room (id: room-1)] Human: hello", prompt);
     }
@@ -39,7 +39,7 @@ public sealed class BuildPromptHookBlocksTests
             LibraryDocuments: new LibraryDocumentsReport([document], NotListed: 0, MaxInlineBytes: 16384),
             HookBlocks: ["HOOK-A"]);
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         // contains-ok: the library block's rendered text is not pinned here; the test asserts only that the hook block leads the prompt.
         Assert.StartsWith("HOOK-A\n\n", prompt, StringComparison.Ordinal);
@@ -52,9 +52,9 @@ public sealed class BuildPromptHookBlocksTests
     {
         WorkItem withoutProperty = new("room-1", "Room", "Human", "hello", []);
 
-        string withNull = RoomSession.BuildPrompt(BuildPromptHookBlocksTests.Message(null), new FakePromptSource());
+        string withNull = TurnPromptFramer.BuildPrompt(BuildPromptHookBlocksTests.Message(null), new FakePromptSource());
 
-        Assert.Equal(RoomSession.BuildPrompt(withoutProperty, new FakePromptSource()), withNull);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(withoutProperty, new FakePromptSource()), withNull);
         Assert.Equal("[Room: Room (id: room-1)] Human: hello", withNull);
     }
 
@@ -66,9 +66,9 @@ public sealed class BuildPromptHookBlocksTests
         WorkItem plain = new("room-1", "Room", string.Empty, string.Empty, [], WorkItemKind.Greeting);
         WorkItem hooked = new("room-1", "Room", string.Empty, string.Empty, [], WorkItemKind.Greeting, HookBlocks: ["HOOK-A"]);
 
-        string prompt = RoomSession.BuildPrompt(hooked, prompts);
+        string prompt = TurnPromptFramer.BuildPrompt(hooked, prompts);
 
-        Assert.Equal(RoomSession.BuildPrompt(plain, prompts), prompt);
+        Assert.Equal(TurnPromptFramer.BuildPrompt(plain, prompts), prompt);
         Assert.DoesNotContain("HOOK-A", prompt, StringComparison.Ordinal);
     }
 
@@ -86,7 +86,7 @@ public sealed class BuildPromptHookBlocksTests
             Command: new AdapterCommandCall("compact", string.Empty),
             HookBlocks: ["HOOK-A"]);
 
-        string prompt = RoomSession.BuildPrompt(item, new FakePromptSource());
+        string prompt = TurnPromptFramer.BuildPrompt(item, new FakePromptSource());
 
         Assert.Equal("/compact", prompt);
     }
