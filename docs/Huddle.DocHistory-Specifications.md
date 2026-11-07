@@ -241,8 +241,9 @@ measure it (§10).
 | Member | Called on | Writes |
 | --- | --- | --- |
 | `HumanSaved(LibraryPath file)` | `LibraryEvents.HumanSaved`, which `LibraryFileService.WriteTextAsync` raises after a successful write | `Edited`, empty summary |
-| `HumanCreated(LibraryPath file)` | `LibraryEvents.HumanCreated`, which `LibraryFileService.CreateFileAsync` raises after a successful create | `Created`, empty summary |
+| `HumanCreated(LibraryPath file)` | `LibraryEvents.HumanCreated`, which `LibraryFileService.CreateFileAsync` raises after a successful create, and `CreateFromStreamAsync` after a successful chat or Task upload | `Created`, empty summary |
 | `Moved(LibraryPath from, LibraryPath to)` | `LibraryEvents.Moved`, which `LibraryFileService.RenameAsync` and `MoveAsync` raise after success | Moves the history (§6.5) |
+| `Discarded(LibraryPath file)` | `LibraryEvents.UploadDiscarded`, which `LibraryFileService.DeleteUnsentUploadAsync` raises when the Human removes an upload before sending it | Deletes the history file, so a later upload under the same name starts clean. Not guarded by `Enabled`, like `Moved` |
 
 Each does nothing for a file that is not Markdown or when `Enabled` is false, except `Moved`, which carries a history
 that exists whether or not `Enabled` is true: moving a file is not recording, and a document moved while History is

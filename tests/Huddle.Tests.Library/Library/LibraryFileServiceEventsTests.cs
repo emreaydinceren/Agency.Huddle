@@ -156,6 +156,62 @@ public sealed class LibraryFileServiceEventsTests
         Assert.Empty(moved);
     }
 
+    /// <summary>Uploading a Markdown file raises HumanCreated once with the saved path (SU1).</summary>
+    [Fact]
+    public async Task CreateFromStreamAsync_Markdown_RaisesHumanCreatedOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        List<LibraryPath> created = [];
+        events.HumanCreated += created.Add;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+
+        LibraryResult<LibraryUpload> result = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "notes.md", new MemoryStream("# Notes"u8.ToArray()), 1024 * 1024, ct);
+
+        Assert.NotNull(result.Value);
+        Assert.Equal(result.Value.File.FullPath, Assert.Single(created).FullPath);
+    }
+
+    /// <summary>A refused upload (over the cap) raises nothing (SU1).</summary>
+    [Fact]
+    public async Task CreateFromStreamAsync_Refused_RaisesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        List<LibraryPath> created = [];
+        events.HumanCreated += created.Add;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+
+        LibraryResult<LibraryUpload> result = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "notes.md", new MemoryStream("# Notes, far over the cap"u8.ToArray()), 4, ct);
+
+        Assert.Null(result.Value);
+        Assert.Empty(created);
+    }
+
+    /// <summary>Deleting an unsent upload raises UploadDiscarded once with the deleted file's path (SU2).</summary>
+    [Fact]
+    public async Task DeleteUnsentUploadAsync_RaisesUploadDiscardedOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryEvents events = new();
+        List<LibraryPath> discarded = [];
+        events.UploadDiscarded += discarded.Add;
+        LibraryFileService service = fixture.CreateServiceWithEvents(events);
+        LibraryResult<LibraryUpload> saved = await service.CreateFromStreamAsync(fixture.Resolve(vault, string.Empty), "notes.md", new MemoryStream("# Notes"u8.ToArray()), 1024 * 1024, ct);
+        Assert.NotNull(saved.Value);
+
+        await service.DeleteUnsentUploadAsync(saved.Value.File, ct);
+
+        Assert.Equal(saved.Value.File.FullPath, Assert.Single(discarded).FullPath);
+        Assert.False(File.Exists(Path.Combine(vault, "notes.md")));
+    }
+
     /// <summary>The link rewrite after a rename is not a Human save: it raises Moved once and HumanSaved never.</summary>
     [Fact]
     public async Task RenameAsync_RewritesLinks_RaisesNoHumanSavedForTheLinkingNote()

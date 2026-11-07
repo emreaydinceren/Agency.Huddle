@@ -623,7 +623,8 @@ internal sealed class TaskService : IDisposable
         }
 
         IReadOnlyList<FieldChange> changes = this.LabelSprintChange(TaskDiff.Compare(edit.Before, edit.After), edit.Before, edit.After);
-        if (changes.Count == 0)
+        string? closeToken = CloseToken(edit.Before, edit.After);
+        if (changes.Count == 0 && closeToken is null)
         {
             return null;
         }
@@ -660,11 +661,38 @@ internal sealed class TaskService : IDisposable
             }
         }
 
-        string summary = string.Create(CultureInfo.InvariantCulture, $"edited outside Huddle: {TaskDiff.Summarise(changes)}");
+        string summary = string.Create(CultureInfo.InvariantCulture, $"edited outside Huddle: {WithCloseToken(TaskDiff.Summarise(changes), closeToken)}");
         ChangeLogEntry entry = new(at, actor.Name, summary);
         TaskItem? written = this.store.AppendEntry(edit.After.Id, edit.After.Version, entry);
 
         return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
+    }
+
+    /// <summary>The log token for an outside move across the <c>_closed/</c> boundary, which <see cref="TaskDiff"/> does not report.</summary>
+    /// <param name="before">The Task before the edit.</param>
+    /// <param name="after">The Task after the edit.</param>
+    /// <returns><c>closed</c>, <c>reopened</c>, or <see langword="null"/> when the Task did not cross the boundary.</returns>
+    private static string? CloseToken(TaskItem before, TaskItem after)
+    {
+        if (before.Location.Closed == after.Location.Closed)
+        {
+            return null;
+        }
+
+        return after.Location.Closed ? "closed" : "reopened";
+    }
+
+    /// <summary>Appends the close token to the field summary with the separator <see cref="TaskDiff.Summarise"/> uses between fields.</summary>
+    /// <param name="fieldSummary">The field summary, possibly empty.</param>
+    /// <param name="closeToken">The token from <see cref="CloseToken"/>, or <see langword="null"/>.</param>
+    private static string WithCloseToken(string fieldSummary, string? closeToken)
+    {
+        if (closeToken is null)
+        {
+            return fieldSummary;
+        }
+
+        return fieldSummary.Length == 0 ? closeToken : string.Create(CultureInfo.InvariantCulture, $"{fieldSummary}; {closeToken}");
     }
 
     /// <summary>An outside edit that moves an unconfirmed Request into <c>_closed/</c> meets the refusal the tools give: the file is moved back and the refusal logged.</summary>

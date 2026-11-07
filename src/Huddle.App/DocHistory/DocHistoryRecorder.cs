@@ -122,6 +122,21 @@ internal sealed class DocHistoryRecorder
         }
     }
 
+    /// <summary>Deletes the History of an unsent upload that was removed, so a later upload under the same name starts clean.</summary>
+    /// <param name="file">The deleted upload.</param>
+    internal void Discarded(LibraryPath file)
+    {
+        // Not guarded by Enabled: removing a history that exists is not recording (see Moved).
+        try
+        {
+            this.store.Delete(file);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(exception, "Could not delete the history of {Path}.", file.FullPath);
+        }
+    }
+
     /// <summary>Appends one Human entry with an empty summary, when History is on and the file is Markdown.</summary>
     /// <param name="file">The document.</param>
     /// <param name="kind">What the Human did.</param>

@@ -174,6 +174,39 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
         }
     }
 
+    /// <summary>
+    /// Deletes the history file of <paramref name="file"/>. A file with no history is a no-op. An IO failure is
+    /// logged at Warning and swallowed. <see cref="Changed"/> is raised only when a file was removed.
+    /// </summary>
+    /// <param name="file">The document whose history goes.</param>
+    internal void Delete(LibraryPath file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        string path = this.FileFor(file);
+        bool deleted = false;
+        lock (this.gate)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                    deleted = true;
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(exception, "Could not delete the history file {Path}.", path);
+            }
+        }
+
+        if (deleted)
+        {
+            EventRaise.Isolated(this.Changed, file, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
+        }
+    }
+
     /// <summary>Parses one line. A blank line, a line that is not an entry, or one with another <c>v</c> is <see langword="false"/>.</summary>
     /// <param name="line">One line of a history file.</param>
     /// <param name="entry">The entry, when the line is one.</param>

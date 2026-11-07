@@ -159,6 +159,38 @@ public sealed class DocHistoryStoreTests
         Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "doc-history")));
     }
 
+    /// <summary>Deleting a file that has no History does nothing: no throw, no event, no folder created (SU2).</summary>
+    [Fact]
+    public void Delete_NoHistory_IsANoOp()
+    {
+        using TempDataDir dataDir = new();
+        DocHistoryStore store = new(dataDir.Options(), NullLogger<DocHistoryStore>.Instance);
+        List<LibraryPath> changed = [];
+        store.Changed += changed.Add;
+
+        store.Delete(Document("a.md"));
+
+        Assert.Empty(changed);
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "doc-history")));
+    }
+
+    /// <summary>Deleting a file's History removes its history file and raises <c>Changed</c> once for that path (SU2).</summary>
+    [Fact]
+    public void Delete_WithHistory_RemovesTheFileAndRaisesChangedOnce()
+    {
+        using TempDataDir dataDir = new();
+        DocHistoryStore store = new(dataDir.Options(), NullLogger<DocHistoryStore>.Instance);
+        LibraryPath file = Document("a.md");
+        store.Append(file, At(9, 0, "A", DocChangeKind.Created, "x"));
+        List<string> changed = [];
+        store.Changed += path => changed.Add(path.RelativePath);
+
+        store.Delete(file);
+
+        Assert.False(File.Exists(store.FileFor(file)));
+        Assert.Equal(["a.md"], changed);
+    }
+
     /// <summary><c>Changed</c> fires once for an append, and for both paths of a move.</summary>
     [Fact]
     public void Changed_FiresForAppendAndBothMovePaths()

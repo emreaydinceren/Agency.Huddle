@@ -19,6 +19,9 @@ internal sealed class LibraryEvents(ILogger<LibraryEvents>? logger = null)
     /// <summary>Raised after the Human created a document.</summary>
     public event Action<LibraryPath>? HumanCreated;
 
+    /// <summary>Raised after an unsent upload was deleted, so what was recorded for it can go too.</summary>
+    public event Action<LibraryPath>? UploadDiscarded;
+
     /// <summary>Raised after a file or folder was renamed or moved.</summary>
     public event Action<LibraryItemMoved>? Moved;
 
@@ -36,6 +39,14 @@ internal sealed class LibraryEvents(ILogger<LibraryEvents>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         EventRaise.Isolated(this.HumanCreated, file, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.HumanCreated)));
+    }
+
+    /// <summary>Invokes every <see cref="UploadDiscarded"/> subscriber in turn; one that throws is logged and skipped.</summary>
+    /// <param name="file">The deleted upload.</param>
+    internal void RaiseUploadDiscarded(LibraryPath file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        EventRaise.Isolated(this.UploadDiscarded, file, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.UploadDiscarded)));
     }
 
     /// <summary>Invokes every <see cref="Moved"/> subscriber in turn; one that throws is logged and skipped.</summary>
