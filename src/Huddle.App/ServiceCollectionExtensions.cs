@@ -11,7 +11,6 @@ using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
-using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.AgentsMdChange;
 using Agency.Huddle.App.Helpers.NeedsHuman;
@@ -163,12 +162,10 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
-        services.AddSingleton<FileChangesTurnHook>();
 
         // The pipeline sorts these by its own production order, so the order here does not matter.
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
-        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<FileChangesTurnHook>());
     }
 
     /// <summary>
@@ -344,14 +341,6 @@ public static class ServiceCollectionExtensions
         // looping Agent. A leaf singleton, same shape as TurnActivity just above.
         services.AddSingleton<TaskActivity>();
 
-        // FC §6.3: resolves a Watched Folder entry (an Agent Name, a full path, or a path
-        // relative to DataDir) into a full path, or refuses it with a reason.
-        services.AddSingleton<WatchedFolderResolver>();
-
-        // FC §6.6: one JSON file per Agent under {DataDir}/file-state/, holding what that Agent
-        // last saw per Room.
-        services.AddSingleton<FileStateStore>();
-
         // RS §6.6: a singleton like RoomFollows above - touches files, never the Team Directory -
         // one JSON file per Agent under {DataDir}/room-sessions/, holding what is kept about each
         // Room Session so it can be resumed.
@@ -381,10 +370,6 @@ public static class ServiceCollectionExtensions
         // Unconditional: this is what lets the /agents page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
-
-        // FC §6.7: a singleton, like RoomFollows above - the watch_folder/unwatch_folder tools and
-        // every runner share it through DI.
-        services.AddSingleton<FileChangeTracker>();
 
         return services;
     }
