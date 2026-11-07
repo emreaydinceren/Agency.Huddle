@@ -241,6 +241,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0078](adr/0078-a-merge-into-main-waits-for-the-humans-accept-by-team.md) | A Team with the `accept-before-merge` gate refuses a merge into main by any member until a Task of the Team has the Human's Accept. Decided by Team, not Task wording; one-hour window after an Accept straight to Done; installed development Teams migrated once. | Accepted |
 | [0079](adr/0079-huddle-chooses-the-mode-of-the-sessions-it-starts.md) | On an isolating Adapter, a session whose Persona has no usable Work Mode runs in Manual, set at every open and resume, rather than in the Human's own `defaultMode`. So Huddle's permission handler, not an Adapter classifier, answers for its own App Tools. | Accepted |
 | [0080](adr/0080-an-agent-reaches-the-humans-account-connectors-only-when-the-human-switches-them-on.md) | An Agent reaches the Human's claude.ai account connectors only when the Human switches them on for that Agent, on its card. Off by default for every Agent; the setting is stored outside the Agent's file. | Accepted |
+| [0081](adr/0081-a-features-wiring-lives-in-a-compiled-module-on-a-hand-written-list.md) | A feature may declare its services, tools and Work Dir setup in one compiled class on a hand-written list, for organising Huddle's own code. Guards and hook order stay central; re-measure before moving more features. | Accepted |
 
 ## 5. Manual tests
 
