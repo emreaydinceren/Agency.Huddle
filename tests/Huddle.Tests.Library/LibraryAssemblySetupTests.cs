@@ -13,6 +13,15 @@ public sealed class LibraryAssemblySetupTests
         Assert.True(TestTempRedirect.HasRun);
     }
 
+    /// <summary>The assembly initializer raises the thread pool's minimum, so tests blocked in a bUnit wait cannot hold every thread the work they wait for needs.</summary>
+    [Fact]
+    public void ModuleInitializer_RaisedTheThreadPoolMinimum()
+    {
+        ThreadPool.GetMinThreads(out int workers, out int _);
+
+        Assert.True(workers >= TestThreadPool.RaisedMinimum, $"Minimum workers {workers}, expected at least {TestThreadPool.RaisedMinimum}.");
+    }
+
     /// <summary>The runner file pins parallelism to one thread per core, matching the other test projects.</summary>
     [Fact]
     public void RunnerConfig_MaxParallelThreads_IsPinned()

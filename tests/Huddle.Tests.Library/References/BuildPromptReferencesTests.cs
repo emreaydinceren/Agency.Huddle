@@ -50,23 +50,24 @@ public sealed class BuildPromptReferencesTests
         session.EnqueueReply("ok");
         AdapterProfile profile = new("claude", "Claude", null, "node", null, null, usesPrefix);
         FakePersonaHost host = new(session, profile);
-        using CancellationTokenSource runCts = new();
-        await using RoomSession room = new(
-            roomId: "room-1",
-            open: _ => Task.FromResult<IAgentSession>(session),
-            owner: new FakeRoomSessionOwner(),
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: new FakePromptSource(),
-            options: new AcpOptions(),
-            logger: logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
-            runToken: runCts.Token,
-            persona: Nova,
-            host: host,
-            enrichers: TurnHookTestFactory.Enrichers(references: expander));
+        CancellationTokenSource runCts = new();
+        await using RoomSessionHarness harness = RoomSessionHarness.Adopt(
+            new RoomSession(
+                roomId: "room-1",
+                open: _ => Task.FromResult<IAgentSession>(session),
+                owner: new FakeRoomSessionOwner(),
+                scheduler: new ImmediateTurnScheduler(),
+                prompts: new FakePromptSource(),
+                options: new AcpOptions(),
+                logger: logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                runToken: runCts.Token,
+                persona: Nova,
+                host: host,
+                enrichers: TurnHookTestFactory.Enrichers(references: expander)),
+            runCts);
 
-        room.Enqueue(new QueuedWork(1, item));
+        harness.Room.Enqueue(new QueuedWork(1, item));
         await Eventually.UntilAsync(() => session.AgentPrompts.Count == 1, ct, timeout: TestBudgets.Slow);
-        await runCts.CancelAsync();
         return Assert.Single(session.AgentPrompts);
     }
 
