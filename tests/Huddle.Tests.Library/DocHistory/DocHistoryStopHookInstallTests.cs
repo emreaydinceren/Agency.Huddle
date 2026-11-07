@@ -112,5 +112,5 @@ public sealed class DocHistoryStopHookInstallTests
     }
 
     private static JsonObject ReadSettings(string workDir) =>
-        (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile)))!;
+        Assert.IsType<JsonObject>(JsonNode.Parse(File.ReadAllText(Path.Combine(workDir, ".claude", WorkDirHookSettings.SettingsFile))));
 }
