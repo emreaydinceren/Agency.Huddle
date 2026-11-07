@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**21 tests** · 16 free, 5 paid 💰 · about 3.7 hours.
+**22 tests** · 17 free, 5 paid 💰 · about 3.8 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -609,6 +609,40 @@ restart, nobody wakes at startup, and **Wake {Agent}** on the card wakes the ass
 
 - The Notification is gone after the restart -> the hold is not persisted across a restart (#353).
 - A Turn runs at startup -> a held hand-off was re-sent without the Human asking.
+- A second Turn starts from the one click -> Wake is not closing the Notification or is delivering twice.
+
+### TASKS-22 — A request held by a spent Room Budget survives a restart, and Wake starts the Agent once
+
+**Free (mock lane)** · about 6 min · one mock Turn
+
+*Proves #428: an Agent's mention refused because the Room's Budget was spent is kept as a Notification across an app
+restart, nobody wakes at startup, and **Wake {Agent}** on the card starts the mentioned Agent once.*
+
+**Before you start**
+
+- App running on the mock Adapter, with a Room holding you, `Ada` and `Bo`, and `Team__AgentMessageBudget` set to `1`.
+- A mock calls no tools, so make Ada's Message through her `post_message` tool, using the URL and header from her `session/new`.
+
+**Steps**
+
+1. Say "Ada, ask Bo to merge the branch" in the Room. As Ada, post "@Bo please merge the branch". The Room pauses; the Feed shows a "held a request to Bo" Notification.
+2. Note the Turn count for `Bo` (none). Stop the app, then start it again on the same data directory.
+3. Open the Feed and expand the Notification's row with its chevron. Read the Notification and its buttons.
+4. Confirm that no Turn ran at startup.
+5. Click **Wake Bo** once.
+6. Watch for one Turn for `Bo`, and check that the Notification closes and the button goes.
+
+**Pass if — all of these**
+
+- The Notification is still in the Feed after the restart, and **Wake Bo** shows behind the chevron.
+- No Turn runs at startup.
+- One click starts exactly one Turn for `Bo`, and the Notification closes.
+- Before a restart (repeat steps 1 only), **Continue** on the Room's Budget card sends the request and the Notification closes; **Wake** is not shown.
+
+**Fail if — any of these**
+
+- The Notification is gone after the restart -> the held request is not kept (#428).
+- A Turn runs at startup -> a held request was re-sent without the Human asking.
 - A second Turn starts from the one click -> Wake is not closing the Notification or is delivering twice.
 
 ### TASKS-12 — An Agent that creates a Task with `originRoomId` wakes the assignee in that Room

@@ -761,6 +761,17 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     card's **Wake {Agent}** button wakes the Agent once, with the Human as the actor, and closes the
     Notification. Before a restart, `Allow 10 more` and the paused Room's Continue still deliver it.
     The counts still reset, so nothing wakes on its own after a restart; the Human decides.
+  - **A request held by a spent Room Budget survives a restart as a Notification (#428).** The Room
+    Budget is in memory and resets on restart. When an Agent's Message mentions another Agent in a
+    Room whose Budget is spent, the Turn is refused and Huddle keeps one "held a request" Notification
+    per Room and Agent (a Message that mentions two Agents makes two, so each Wake starts exactly one
+    Turn). It is kept at startup only while the Room exists and is not archived, the Agent is still a
+    Member and a known Persona, and the Agent has not posted in the Room since. Its **Wake {Agent}**
+    button shows only when the Room is no longer paused in memory; it posts one Message from you that
+    mentions the Agent and points at the held Message, then closes the Notification. Before a restart,
+    **Continue** still re-delivers it and closes it. Only a mention is kept: an Agent that follows the
+    Room, or a refusal for another reason, is not. Nothing wakes at startup. An Agent's Turn that posts
+    nothing does not close it; a later Agent Message in the Room does.
   - **Tags can't contain `,` or `;`.** `TaskFileFormat` reuses `PersonaFrontmatter`'s list-join
     convention (`"; "`), so a tag containing either character would corrupt the round trip (D-18).
   - **A Task link reflects the index when the Message was last rendered.** `MarkdownRenderer`

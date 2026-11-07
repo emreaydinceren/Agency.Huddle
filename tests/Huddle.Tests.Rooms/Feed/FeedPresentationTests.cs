@@ -172,6 +172,20 @@ public sealed class FeedPresentationTests
         Assert.Equal("Paused 16:00 · after a restart, Wake is on this card", FeedSummary.StatusOf(item, Utc)?.Text);
     }
 
+    /// <summary>A request held by a spent Budget names Continue and, for after a restart when that card is gone, Wake; it never claims the Room is paused.</summary>
+    [Fact]
+    public void RoomMentionHeld_TextHoldsBeforeAndAfterARestart()
+    {
+        DateTimeOffset at = new(2026, 10, 20, 16, 0, 0, TimeSpan.Zero);
+        FeedItem item = Item(FeedSourceType.RoomMentionHeld, new RoomMentionHeldPayload("room-1", "Plan", null, "Bo", "u-bo", "m-1"), true, at);
+
+        FeedSummaryLine line = FeedSummary.Of(item);
+
+        Assert.Equal("held a request to Bo in Plan: the Room's Budget ran out", Flatten(line));
+        Assert.Equal("Nothing was sent to Bo. Continue on the Room's Budget card sends it; after a restart that card is gone, so use Wake Bo", line.Context);
+        Assert.Equal("Paused 16:00 · after a restart, Wake is on this card", FeedSummary.StatusOf(item, Utc)?.Text);
+    }
+
     /// <summary>The Helper items wear a gauge (paused) and an alert (failing) badge, say "Helpers", and open the Helper's settings anchor.</summary>
     [Fact]
     public void HelperItems_BadgeContextWordAndTarget()

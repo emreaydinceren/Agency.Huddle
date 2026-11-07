@@ -38,6 +38,7 @@ internal static class FeedSourceTypes
         FeedSourceType.TeamArchived => "team-archived",
         FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         FeedSourceType.AgentConnectorsChanged => "agent-connectors-changed",
+        FeedSourceType.RoomMentionHeld => "room-mention-held",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

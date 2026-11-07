@@ -4,6 +4,7 @@ using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
@@ -487,6 +488,51 @@ public sealed class FeedCardTests
 
         Assert.Equal("Wake Kai", Words(card.Find(".feed-btn-wake").TextContent));
         Assert.Equal("Nova no longer has this Task. It is now assigned to Kai, so Wake starts Kai.", Words(card.Find(".feed-wake-note").TextContent));
+    }
+
+    /// <summary>#428: Wake {Agent} shows on a held-request Notification only while the Room is no longer paused in memory, and a press wakes once.</summary>
+    [Fact]
+    public async Task Buttons_WakeHeldRequest_OnlyWhenTheRoomIsNoLongerPaused_AndWakesOnce()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = host.NewContext();
+        FakeHeldMentionWake wake = new();
+        ctx.Services.AddSingleton<IHeldMentionWake>(wake);
+        FeedItem Held(bool resolved = false) =>
+            FeedTestData.Item(
+                FeedSourceType.RoomMentionHeld,
+                new RoomMentionHeldPayload("room-1", "Merge", null, "Bo", "u-bo", "m-1"),
+                notify: true,
+                at: Now.AddMinutes(-20),
+                resolved: resolved ? Now.AddMinutes(-5) : null) with { TargetKey = "room-1|u-bo" };
+
+        wake.Paused = true;
+        IRenderedComponent<FeedCard> paused = Render(ctx, Held(), expanded: true);
+        wake.Paused = false;
+        IRenderedComponent<FeedCard> lost = Render(ctx, Held(), expanded: true);
+        IRenderedComponent<FeedCard> closed = Render(ctx, Held(resolved: true), expanded: true);
+        lost.Find(".feed-btn-wake").Click();
+
+        Assert.Empty(paused.FindAll(".feed-btn-wake"));
+        Assert.Empty(closed.FindAll(".feed-btn-wake"));
+        Assert.Equal("Wake Bo", Words(lost.Find(".feed-btn-wake").TextContent));
+        Assert.Equal([("room-1", "u-bo")], wake.Woken);
+    }
+
+    /// <summary>Stands in for the held-request service: whether the Room is paused, and the Wakes it was asked for.</summary>
+    private sealed class FakeHeldMentionWake : IHeldMentionWake
+    {
+        public bool Paused { get; set; }
+
+        public List<(string Room, string Agent)> Woken { get; } = [];
+
+        public bool IsHeld(string roomId) => this.Paused;
+
+        public Task<string?> WakeAsync(string roomId, string agentId, CancellationToken ct)
+        {
+            this.Woken.Add((roomId, agentId));
+            return Task.FromResult<string?>("Bo");
+        }
     }
 
     /// <summary>Stands in for the wake service: whether a hand-off is held, and the Wakes it was asked for.</summary>

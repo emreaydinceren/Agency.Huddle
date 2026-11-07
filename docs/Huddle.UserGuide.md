@@ -1958,6 +1958,13 @@ Call get_task with taskId BUSI-0002 for the full task.
   waiting on a spent budget stays in the Feed as a Notification on the Task, with
   **Wake {Agent}** on its card. Nobody wakes at startup; **Wake** starts the Agent once.
 
+When an Agent asks another Agent for something in a Room that has reached its Budget, the request
+is held, not sent. The Feed shows a "held a request" Notification for each Agent asked. Before a
+restart, **Continue** on the Room sends it. After a restart the Room starts fresh and the
+Notification stays; expand its row and select **Wake {Agent}** to send one Message that starts that
+Agent once. Nothing is sent at startup. The Notification goes if the Agent, or the Room, is gone, or
+the Agent has already written in the Room.
+
 The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
 

@@ -34,6 +34,9 @@ internal static class FeedSummary
             RequestAwaitsPayload p => new([Text("finished the Request "), TaskChip(p.Id, p.Title), Text(" from "), Strong(p.FromTeam)], "only you can confirm it"),
             GateDecisionPayload p => new([Text("was stopped by a gate moving "), TaskChip(p.Id, p.Title), Text(" to " + p.ToStatus)], p.Message),
             RoomWaitPayload p => RoomWait(item.SourceType, p),
+            RoomMentionHeldPayload p => new(
+                [Text("held a request to "), Strong(p.Waiting), Text(" in "), RoomChip(p.RoomId, p.RoomName ?? "a Room that was deleted"), Text(": the Room's Budget ran out")],
+                $"Nothing was sent to {p.Waiting}. Continue on the Room's Budget card sends it; after a restart that card is gone, so use Wake {p.Waiting}"),
             RoomCreatedPayload p => new([Text("opened "), RoomChip(p.RoomId, RoomLabel(p))], Agents(p)),
             RoomJoinedPayload p => new([Strong(p.Member), Text(" joined "), RoomChip(p.RoomId, p.RoomName)], null, OmitActor: true),
             RoomArchivedPayload p => new([Text("archived "), RoomChip(p.RoomId, p.RoomName)], null),
@@ -80,7 +83,7 @@ internal static class FeedSummary
 
         string opening = item.SourceType switch
         {
-            FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused => "Paused ",
+            FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => "Paused ",
             FeedSourceType.HelperFailing => "Since ",
             _ => "Asked ",
         } + Clock(item.At, zone);
@@ -96,7 +99,7 @@ internal static class FeedSummary
             RoomWaitPayload when item.SourceType == FeedSourceType.RoomBudget => " · waiting for you to continue or wrap up",
             TaskGatePayload => " · you can turn it off on the Task",
             HelperPausedPayload => " · Continue is on the Helper's card",
-            TaskWakesPausedPayload => " · after a restart, Wake is on this card",
+            TaskWakesPausedPayload or RoomMentionHeldPayload => " · after a restart, Wake is on this card",
             HelperFailingPayload => " · Tasks are not being judged",
             _ => " · waiting for you",
         });
@@ -115,6 +118,7 @@ internal static class FeedSummary
         RequestAwaitsPayload p => p.Team,
         GateDecisionPayload p => p.Team,
         RoomWaitPayload p => p.Team,
+        RoomMentionHeldPayload p => p.Team,
         RoomCreatedPayload p => p.Team,
         RoomJoinedPayload p => p.Team,
         RoomArchivedPayload p => p.Team,
@@ -134,7 +138,7 @@ internal static class FeedSummary
         FeedSourceType.TeamMemoryNotFiled => "proposals",
         FeedSourceType.AgentsMdChangeSkipped => "AGENTS.md files",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };
