@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -159,13 +160,24 @@ public sealed class WikiLinkIndexLinksFromTests
         string rootId = note.Root.Id;
         _ = index.LinksFrom(note);
         bool finished = false;
+        using ManualResetEventSlim probed = new();
+        Thread probe = new(() =>
+        {
+            _ = index.IsAvailable(rootId);
+            probed.Set();
+        })
+        {
+            IsBackground = true,
+        };
         index.Invalidated += _ =>
         {
-            Task<bool> probe = Task.Run(() => index.IsAvailable(rootId));
-            finished = SpinWait.SpinUntil(() => probe.IsCompleted, TimeSpan.FromSeconds(5));
+            // A thread of its own and a blocking wait: through the thread pool, under load, the probe queued behind other work for longer than this budget.
+            probe.Start();
+            finished = probed.Wait(TestBudgets.Standard);
         };
 
         index.Invalidate(rootId);
+        probe.Join();
 
         Assert.True(finished);
     }
