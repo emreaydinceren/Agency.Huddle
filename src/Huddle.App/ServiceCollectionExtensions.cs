@@ -648,6 +648,7 @@ public static class ServiceCollectionExtensions
 
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
+        services.AddSingleton<LibraryEvents>();
         services.AddSingleton<LibraryFileService>();
 
         // Chat uploads (ChatUploads spec 5): the folder lookup is an interface so the Room delete can be

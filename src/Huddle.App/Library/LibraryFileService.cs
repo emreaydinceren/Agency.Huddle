@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Search;
 
@@ -22,8 +21,8 @@ namespace Agency.Huddle.App.Library;
 /// <param name="beforeRewriteWriteForTests">The D8 rewrite-loop test seam (8.5.i-b): stored here, invoked
 /// by the rewrite loop after a linking note's rewritten text is computed and before it is written.
 /// <see langword="null"/> for the ordinary path.</param>
-/// <param name="history">Records the Human's saves, creates, renames and moves in a document's History
-/// (DocHistory spec §6.4, §6.5). <see langword="null"/> when built by hand without one: nothing is recorded.</param>
+/// <param name="events">The hub on which the Human's saves, creates, renames and moves are announced, for whoever
+/// keeps a record of them. <see langword="null"/> when built by hand without one: nothing is announced.</param>
 internal sealed class LibraryFileService(
     LibraryPathResolver resolver,
     IRecycleBin recycleBin,
@@ -31,7 +30,7 @@ internal sealed class LibraryFileService(
     IOptions<TeamOptions> options,
     ILogger<LibraryFileService> logger,
     Func<LibraryPath, Task>? beforeRewriteWriteForTests = null,
-    DocHistoryRecorder? history = null) : IDisposable
+    LibraryEvents? events = null) : IDisposable
 {
     /// <summary>The most of a file read up front to detect its kind (Spec §6.4).</summary>
     private const int DetectionHeadBytes = 8192;
@@ -131,7 +130,7 @@ internal sealed class LibraryFileService(
     /// <see cref="ApplyNoteRewriteAsync"/> after a linking note's rewritten text is computed and before it is
     /// written, so a test can mutate the note on disk to prove the stamp check without a race.</summary>
     private readonly Func<LibraryPath, Task>? beforeRewriteWriteForTests = beforeRewriteWriteForTests;
-    private readonly DocHistoryRecorder? history = history;
+    private readonly LibraryEvents? events = events;
 
     /// <summary>Serialises rename and move (with their D8 rewrite loop) so two never interleave
     /// (corrections-B5 D8 item 10). An instance field: <see cref="LibraryFileService"/> owns it and disposes
@@ -719,9 +718,9 @@ internal sealed class LibraryFileService(
         LibraryResult<LibraryEntry> result = await this.WriteTextCoreAsync(file, editorText, format, ct).ConfigureAwait(false);
         if (result.Value is { } saved)
         {
-            // Only a save the Human made is a Human entry (DocHistory spec §6.4). A link rewrite after a rename or
-            // move goes through WriteTextCoreAsync, so it records nothing.
-            this.history?.HumanSaved(saved.Path);
+            // Only a save the Human made is announced. A link rewrite after a rename or
+            // move goes through WriteTextCoreAsync, so it announces nothing.
+            this.events?.RaiseHumanSaved(saved.Path);
         }
 
         return result;
@@ -889,7 +888,7 @@ internal sealed class LibraryFileService(
         LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, finalName);
         if (created.Value is { } createdPath)
         {
-            this.history?.HumanCreated(createdPath);
+            this.events?.RaiseHumanCreated(createdPath);
         }
 
         return created;
@@ -1173,11 +1172,11 @@ internal sealed class LibraryFileService(
     internal async Task<LibraryResult<LibraryMoveResult>> RenameAsync(LibraryPath item, string newName, CancellationToken ct)
     {
         LibraryResult<LibraryMoveResult> result = await this.RenameCoreAsync(item, newName, ct).ConfigureAwait(false);
-        this.CarryHistory(item, result);
+        this.AnnounceMove(item, result);
         return result;
     }
 
-    /// <summary>The body of <see cref="RenameAsync"/>, before the History follows the item.</summary>
+    /// <summary>The body of <see cref="RenameAsync"/>, before the move is announced.</summary>
     /// <param name="item">The already-resolved item to rename; re-resolved before use.</param>
     /// <param name="newName">The item's new name, in the same folder.</param>
     /// <param name="ct">Cancels the rename.</param>
@@ -1483,11 +1482,11 @@ internal sealed class LibraryFileService(
     internal async Task<LibraryResult<LibraryMoveResult>> MoveAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
     {
         LibraryResult<LibraryMoveResult> result = await this.MoveCoreAsync(item, targetFolder, ct).ConfigureAwait(false);
-        this.CarryHistory(item, result);
+        this.AnnounceMove(item, result);
         return result;
     }
 
-    /// <summary>The body of <see cref="MoveAsync"/>, before the History follows the item.</summary>
+    /// <summary>The body of <see cref="MoveAsync"/>, before the move is announced.</summary>
     /// <param name="item">The already-resolved item to move; re-resolved before use.</param>
     /// <param name="targetFolder">The folder to move it into.</param>
     /// <param name="ct">Cancels the move.</param>
@@ -1634,14 +1633,14 @@ internal sealed class LibraryFileService(
         return Directory.EnumerateDirectories(folderFullPath, TasksFolderName, SearchOption.AllDirectories).Any();
     }
 
-    /// <summary>After a successful rename or move, moves the item's History with it (DocHistory spec §6.5).</summary>
+    /// <summary>After a successful rename or move, announces it so whoever keeps a record of the item can follow it.</summary>
     /// <param name="item">The item before the move.</param>
     /// <param name="result">The rename or move outcome.</param>
-    private void CarryHistory(LibraryPath item, LibraryResult<LibraryMoveResult> result)
+    private void AnnounceMove(LibraryPath item, LibraryResult<LibraryMoveResult> result)
     {
         if (result.Value is { } moved)
         {
-            this.history?.Moved(item, moved.NewPath);
+            this.events?.RaiseMoved(new LibraryItemMoved(item, moved.NewPath));
         }
     }
 
