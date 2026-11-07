@@ -1185,7 +1185,7 @@ Document history: the byline, the History and the History panel — [area file](
 | [DOCHISTORY-04](doc-history.md#dochistory-04--renaming-and-moving-a-document-carries-its-history) |  | Active |  |  |
 | [DOCHISTORY-05](doc-history.md#dochistory-05--how-often-do-real-agents-log-their-edits) | 💰 | Active |  |  |
 | [DOCHISTORY-06](doc-history.md#dochistory-06--the-history-is-grouped-by-day-whole-and-the-byline-leads-to-it) |  | Active |  |  |
-| [DOCHISTORY-07](doc-history.md#dochistory-07--an-agent-offered-log_change-gets-the-stop-hook-and-existing-settings-stay) |  | Active |  |  |
+| [DOCHISTORY-07](doc-history.md#dochistory-07--an-agent-offered-log_change-gets-the-stop-hook-and-existing-settings-stay) |  | Pass |  | run 2026-11-06 by an agent on `779b1aa5`, with Keeper on Sonnet 5.5 and the real Adapter |
 | [DOCHISTORY-08](doc-history.md#dochistory-08--the-hook-sends-an-agent-back-to-log-and-leaves-other-turns-alone) | 💰 | Pass |  | run 2026-11-06 by an agent on `779b1aa5`, Sonnet 5.5, 0.087 USD. Keeper logged unprompted, so an extra Turn told it to use only Write: the hook sent it back and it logged |
 
 ## human-gate
