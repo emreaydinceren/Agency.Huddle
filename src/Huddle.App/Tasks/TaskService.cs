@@ -615,6 +615,13 @@ internal sealed class TaskService : IDisposable
             return null;
         }
 
+        // TaskDiff ignores a move into _closed/, so the close rule runs before the no-change return below. As with a forged
+        // acceptance, the rest of the same write is then judged against the moved-back Task, so closing cannot carry another edit past the rules.
+        if (this.RefuseOutsideRequestClose(edit, actor, at) is { } closeReverted)
+        {
+            return this.ContinueOutsideEdit(new OutsideEdit(edit.Before, closeReverted.After), actor, at) ?? closeReverted;
+        }
+
         IReadOnlyList<FieldChange> changes = this.LabelSprintChange(TaskDiff.Compare(edit.Before, edit.After), edit.Before, edit.After);
         if (changes.Count == 0)
         {
@@ -637,6 +644,11 @@ internal sealed class TaskService : IDisposable
             return humanReverted;
         }
 
+        if (this.RefuseOutsideRequestLeavingBacklog(edit, actor, at) is { } backlogReverted)
+        {
+            return backlogReverted;
+        }
+
         if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
             && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
@@ -653,6 +665,51 @@ internal sealed class TaskService : IDisposable
         TaskItem? written = this.store.AppendEntry(edit.After.Id, edit.After.Version, entry);
 
         return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
+    }
+
+    /// <summary>An outside edit that moves an unconfirmed Request into <c>_closed/</c> meets the refusal the tools give: the file is moved back and the refusal logged.</summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    private TaskChange? RefuseOutsideRequestClose(OutsideEdit edit, TaskActor actor, DateTimeOffset at)
+    {
+        if (edit.Before is null || edit.Before.Location.Closed || !edit.After.Location.Closed || !ClosesUnconfirmedRequest(edit.After))
+        {
+            return null;
+        }
+
+        string? text = this.store.ReadText(edit.After.Id);
+        if (text is null)
+        {
+            return null;
+        }
+
+        ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused: {CloseRequestRefusal}"));
+        TaskItem? restored = this.store.Move(edit.After, edit.After.Version, edit.After.Location with { Closed = false }, TaskFileFormat.AppendEntry(text, refused));
+        return restored is null ? null : new TaskChange(edit.After, restored, TaskDiff.Compare(edit.After, restored), actor, refused);
+    }
+
+    /// <summary>An outside edit that takes a Request out of Backlog without triage meets the refusal the tools give: the old head is written back, the body and Evidence stay, and the refusal is logged.</summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    /// <param name="actor">The outside-edit actor.</param>
+    /// <param name="at">When the edit was seen.</param>
+    private TaskChange? RefuseOutsideRequestLeavingBacklog(OutsideEdit edit, TaskActor actor, DateTimeOffset at)
+    {
+        if (edit.Before is null || !LeavesBacklogWithoutTriage(edit.Before, edit.After))
+        {
+            return null;
+        }
+
+        string? text = this.store.ReadText(edit.After.Id);
+        if (text is null)
+        {
+            return null;
+        }
+
+        ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused: {LeaveBacklogRefusal}"));
+        string reverted = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, edit.Before), refused);
+        TaskItem? restored = this.store.Write(edit.After, edit.After.Version, reverted);
+        return restored is null ? null : new TaskChange(edit.After, restored, TaskDiff.Compare(edit.After, restored), actor, refused);
     }
 
     /// <summary>A file created outside Huddle: reset when the Human gate refuses its status, else logged with the bare summary.</summary>
