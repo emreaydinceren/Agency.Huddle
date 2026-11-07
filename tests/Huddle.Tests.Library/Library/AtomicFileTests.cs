@@ -62,14 +62,10 @@ public sealed class AtomicFileTests
         string path = Path.Combine(dir.Path, "doc.md");
         File.WriteAllText(path, "old");
 
-        bool written;
-        using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            Task<bool> write = AtomicFile.TryWriteAsync(path, Encoding.UTF8.GetBytes("new"), ct);
-            await Task.Delay(50, ct);
-            reader.Dispose();
-            written = await write;
-        }
+        using FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        ReleaseShortly(reader);
+
+        bool written = await AtomicFile.TryWriteAsync(path, Encoding.UTF8.GetBytes("new"), ct);
 
         Assert.True(written);
         Assert.Equal("new", File.ReadAllText(path));
@@ -85,13 +81,10 @@ public sealed class AtomicFileTests
         string path = Path.Combine(dir.Path, "doc.json");
         File.WriteAllText(path, "old");
 
-        using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            Task write = Task.Run(() => AtomicFile.WriteBytes(path, "new"u8.ToArray()), ct);
-            await Task.Delay(50, ct);
-            reader.Dispose();
-            await write;
-        }
+        using FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        ReleaseShortly(reader);
+
+        await Task.Run(() => AtomicFile.WriteBytes(path, "new"u8.ToArray()), ct);
 
         Assert.Equal("new", File.ReadAllText(path));
         Assert.Equal([path], Directory.GetFileSystemEntries(dir.Path));
@@ -127,5 +120,23 @@ public sealed class AtomicFileTests
 
         Assert.Equal(bytes, File.ReadAllBytes(path));
         Assert.Equal([path], Directory.GetFileSystemEntries(dir.Path));
+    }
+
+    /// <summary>
+    /// Lets go of the file after 50 ms on a thread of its own. An <c>await</c> in the test would resume through the test framework's
+    /// limited scheduler, and under load that outlasted the writer's whole retry budget, so a healthy retry looked refused.
+    /// </summary>
+    /// <param name="reader">The stream holding the file open.</param>
+    private static void ReleaseShortly(FileStream reader)
+    {
+        Thread release = new(() =>
+        {
+            Thread.Sleep(50);
+            reader.Dispose();
+        })
+        {
+            IsBackground = true,
+        };
+        release.Start();
     }
 }

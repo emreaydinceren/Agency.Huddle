@@ -243,7 +243,8 @@ public sealed class RoomSessionTests
         RoomSession room = harness.Room;
         room.Enqueue(new QueuedWork(1, RoomAItem));
 
-        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+        // The final delta is written after the PostMessage, so wait for the later of the two.
+        await Eventually.UntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct, timeout: TestBudgets.Standard);
 
         Assert.Equal(1, openCalls);
         PostMessage posted = Assert.Single(owner.Written.OfType<PostMessage>());
