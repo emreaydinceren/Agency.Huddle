@@ -19,6 +19,9 @@ internal sealed class TaskEvents(ILogger<TaskEvents>? logger = null)
     /// <summary>Raised after a Task is created, updated, closed or reopened.</summary>
     public event Action<TaskChange>? TaskChanged;
 
+    /// <summary>Raised after a gate refused an Agent's move that only the Human can override, so the Human can be told.</summary>
+    public event Action<TaskMoveRefusal>? TaskMoveRefused;
+
     /// <summary>Raised whenever the Task index was rebuilt, for UI lists that don't need to know what changed.</summary>
     public event Action? TasksReloaded;
 
@@ -31,6 +34,14 @@ internal sealed class TaskEvents(ILogger<TaskEvents>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(change);
         EventRaise.Isolated(this.TaskChanged, change, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.TaskChanged)));
+    }
+
+    /// <summary>Invokes every <see cref="TaskMoveRefused"/> subscriber in turn; a handler that throws is logged and skipped.</summary>
+    /// <param name="refusal">The refused move.</param>
+    internal void RaiseTaskMoveRefused(TaskMoveRefusal refusal)
+    {
+        ArgumentNullException.ThrowIfNull(refusal);
+        EventRaise.Isolated(this.TaskMoveRefused, refusal, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.TaskMoveRefused)));
     }
 
     /// <summary>Invokes every <see cref="TasksReloaded"/> subscriber in turn (Settled corrections-B2 item 15, for D11/D14 bUnit tests to drive it directly).</summary>

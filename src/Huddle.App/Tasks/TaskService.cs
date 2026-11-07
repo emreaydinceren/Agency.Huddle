@@ -3,7 +3,6 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Teams;
@@ -52,8 +51,6 @@ internal sealed class TaskService : IDisposable
     private readonly ProcessGateService? gates;
     private readonly IHumanIdentity human;
     private readonly IProofSource? proofSource;
-    private readonly IFeedPublisher? feed;
-    private readonly IRequestConfirmers? confirmers;
 
     /// <summary>
     /// Wires this service to the Task index and to the Change log's clock. Deliberately does not
@@ -72,8 +69,6 @@ internal sealed class TaskService : IDisposable
     /// <param name="gates">Decides whether the Team's process gates refuse a status change (PR-7); <see langword="null"/> enforces none.</param>
     /// <param name="human">The Human's live identity; <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="proof">Evaluates a Task's Proof for the Human gate rules; <see langword="null"/> means an empty, complete Proof.</param>
-    /// <param name="feed">Receives the Feed items each change produces (Feed spec §6.5.1); <see langword="null"/> posts nothing.</param>
-    /// <param name="confirmers">Tells whether a Team has a member who can confirm a Request; <see langword="null"/> means none can.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -85,9 +80,7 @@ internal sealed class TaskService : IDisposable
         ILogger<TaskService> logger,
         ProcessGateService? gates = null,
         IHumanIdentity? human = null,
-        IProofSource? proof = null,
-        IFeedPublisher? feed = null,
-        IRequestConfirmers? confirmers = null)
+        IProofSource? proof = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
@@ -107,8 +100,6 @@ internal sealed class TaskService : IDisposable
         this.logger = logger;
         this.gates = gates;
         this.proofSource = proof;
-        this.feed = feed;
-        this.confirmers = confirmers;
         this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
 
         // Settled corrections-B2 D6 item 13: TaskEvents is a plain hub; this is the one place that
@@ -149,7 +140,7 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         return result;
@@ -193,17 +184,17 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         if (moved is not null)
         {
-            this.RaiseChange(moved);
+            this.events.RaiseTaskChanged(moved);
         }
 
-        if (refusedMove is not null)
+        if (refusedMove is not null && result is TaskResult.GateRefused refusal)
         {
-            this.PublishRefusal(refusedMove, result, actor);
+            this.events.RaiseTaskMoveRefused(new TaskMoveRefusal(refusedMove.Current, refusedMove.Requested, actor, refusal.Gate, refusal.Message));
         }
 
         return result;
@@ -231,7 +222,7 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         return result;
@@ -410,7 +401,7 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         return result;
@@ -435,7 +426,7 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         return result;
@@ -468,12 +459,12 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
 
         if (moved is not null)
         {
-            this.RaiseChange(moved);
+            this.events.RaiseTaskChanged(moved);
         }
 
         return result;
@@ -579,7 +570,7 @@ internal sealed class TaskService : IDisposable
 
         if (change is not null)
         {
-            this.RaiseChange(change);
+            this.events.RaiseTaskChanged(change);
         }
     }
 
@@ -1055,67 +1046,6 @@ internal sealed class TaskService : IDisposable
     /// <param name="Current">The Task as it is.</param>
     /// <param name="Requested">The status the Agent asked for.</param>
     private sealed record RefusedMove(TaskItem Current, TaskState Requested);
-
-    /// <summary>Raises <see cref="TaskEvents.TaskChanged"/>, then hands the change to the Feed.</summary>
-    /// <param name="change">The change that was just written.</param>
-    private void RaiseChange(TaskChange change)
-    {
-        this.events.RaiseTaskChanged(change);
-        this.PublishFeed(change);
-    }
-
-    /// <summary>Posts and resolves the Feed items for a change. The Feed can never hurt the work, so a failure is logged and dropped.</summary>
-    /// <param name="change">The change that was just written.</param>
-    private void PublishFeed(TaskChange change)
-    {
-        if (this.feed is null)
-        {
-            return;
-        }
-
-        try
-        {
-            FeedEffects effects = TaskFeedRules.For(change, this.human.Name, team => this.confirmers?.TeamHasConfirmer(team) ?? false, this.ProofOf);
-            foreach (FeedMessage message in effects.Posts)
-            {
-                this.feed.Post(message);
-            }
-
-            foreach (FeedResolution resolution in effects.Resolutions)
-            {
-                this.feed.Resolve(resolution.TargetKey, resolution.Type);
-            }
-        }
-        catch (Exception ex)
-        {
-            // The Feed records and never decides (Feed spec policy 4): a failing rule or publisher must not fail the Task write that caused it.
-            this.logger.LogWarning(ex, "The Feed could not record the change to Task {TaskId}.", change.After.Id.ToString());
-        }
-    }
-
-    /// <summary>Posts the Notification for a refused move that only the Human can override (Feed spec §6.5.1).</summary>
-    /// <param name="move">The refused move.</param>
-    /// <param name="result">The refusal that was returned.</param>
-    /// <param name="actor">The Agent that asked.</param>
-    private void PublishRefusal(RefusedMove move, TaskResult result, TaskActor actor)
-    {
-        if (this.feed is null || result is not TaskResult.GateRefused refusal)
-        {
-            return;
-        }
-
-        try
-        {
-            string id = move.Current.Id.ToString();
-            GateDecisionPayload payload = new(id, move.Current.Title, move.Current.Location.Team, ProcessDocument.ToId(refusal.Gate), refusal.Message, move.Current.Status.ToWire(), move.Requested.ToWire());
-            this.feed.Post(new FeedMessage(FeedSourceType.GateDecisionDue, id, new FeedActor(FeedActorKind.Agent, actor.Name), true, payload));
-        }
-        catch (Exception ex)
-        {
-            // Same rule as PublishFeed: the refusal the Agent sees must not change because the Feed failed.
-            this.logger.LogWarning(ex, "The Feed could not record the refused move of Task {TaskId}.", move.Current.Id.ToString());
-        }
-    }
 
     /// <summary>Evaluates a Task's Proof, or returns the empty (complete) Proof when no source is wired.</summary>
     /// <param name="task">The Task.</param>

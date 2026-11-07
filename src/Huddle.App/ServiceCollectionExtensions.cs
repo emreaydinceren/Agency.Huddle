@@ -177,6 +177,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Feed.IFeedPublisher>(static sp => sp.GetRequiredService<Feed.FeedQueue>());
         services.AddHostedService<Feed.FeedWriter>();
         services.AddHostedService<TaskFeedStartup>();
+
+        // The publisher subscribes to the Task events in its constructor, so it must be built before the first Task write: AddHostedService has the host build it at start.
+        services.AddSingleton<TaskFeedPublisher>();
+        services.AddHostedService(static sp => sp.GetRequiredService<TaskFeedPublisher>());
         services.AddHostedService<HelperFeedStartup>();
         services.AddSingleton(static sp => new NeedsYou.HeldMentions(
             sp.GetRequiredService<Services.RoomEvents>(),

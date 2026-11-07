@@ -46,6 +46,7 @@ internal sealed class TaskToolHarness : IDisposable
 {
     private readonly TempDataDir dir = new();
     private readonly Agency.Huddle.App.Teams.ProcessGateService? gates;
+    private readonly TaskFeedPublisher? feedPublisher;
 
     /// <summary>
     /// Builds the whole stack: a fresh <see cref="TempDataDir"/>, a real <see cref="PersonaStore"/>
@@ -100,8 +101,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Clock,
             NullLogger<TaskService>.Instance,
             gates,
-            proof: proof,
-            feed: feed);
+            proof: proof);
+        this.feedPublisher = feed is null ? null : Agency.Huddle.Tests.Tasks.TaskFeedPublishers.Over(this.Events, feed, this.Options, proof);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
         this.TaskActivity = new TaskActivity(this.Options);
@@ -349,6 +350,7 @@ internal sealed class TaskToolHarness : IDisposable
     public void Dispose()
     {
         this.Triggers.Dispose();
+        this.feedPublisher?.Dispose();
         (this.Sprints as IDisposable)?.Dispose();
         this.Service.Dispose();
         this.Store.Dispose();
