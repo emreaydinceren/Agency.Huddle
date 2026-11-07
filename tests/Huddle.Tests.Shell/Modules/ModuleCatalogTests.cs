@@ -9,6 +9,6 @@ public sealed class ModuleCatalogTests
     [Fact]
     public void All_ListsTheModulesInOrder()
     {
-        Assert.Equal(["doc-history"], ModuleCatalog.All.Select(static module => module.Id));
+        Assert.Equal(["file-changes", "doc-history"], ModuleCatalog.All.Select(static module => module.Id));
     }
 }

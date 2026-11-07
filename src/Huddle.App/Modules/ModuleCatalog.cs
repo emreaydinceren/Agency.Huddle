@@ -1,4 +1,5 @@
 using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.FileChanges;
 
 namespace Agency.Huddle.App.Modules;
 
@@ -9,5 +10,5 @@ namespace Agency.Huddle.App.Modules;
 internal static class ModuleCatalog
 {
     /// <summary>Gets the modules, in the order they contribute.</summary>
-    internal static IReadOnlyList<IFeatureModule> All { get; } = [new DocHistoryModule()];
+    internal static IReadOnlyList<IFeatureModule> All { get; } = [new FileChangesModule(), new DocHistoryModule()];
 }

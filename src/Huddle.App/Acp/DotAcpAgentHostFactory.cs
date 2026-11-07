@@ -5,7 +5,6 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Modules;
 using Agency.Huddle.App.Prompts;
@@ -531,7 +530,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         return chatTools;
     }
 
-    /// <summary>Applies Skill gating to the chat tools, then appends the File Changes folder-watch tools when they apply and each Feature Module's tools.</summary>
+    /// <summary>Applies Skill gating to the chat tools, then appends each Feature Module's tools.</summary>
     /// <param name="chatTools">The ungated chat tools.</param>
     /// <param name="persona">The Persona being started.</param>
     /// <param name="profile">The resolved Adapter Profile.</param>
@@ -548,19 +547,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // "GetHelpTool is constructed from the offered list, so get_help and tools/list agree").
         chatTools = SkillGrants.Offer(chatTools, skillResolution.Skills);
 
-        // FC §6.9, §6.11: watch_folder/unwatch_folder are offered only when File Changes is on for
-        // this installation AND the resolved Adapter Profile can read files at all - an Adapter with
-        // no file tools (agency-acp) would otherwise be handed paths it cannot open. Appended after
-        // Skill gating and before GetHelpTool is built, so get_help lists them too (rules.md row 34).
-        if (this.options.FileChanges.Enabled && profile.ReadsFiles)
-        {
-            _ = this.serviceProvider.GetRequiredService<FileChangeTracker>();
-            IAppTool watchFolderTool = ActivatorUtilities.CreateInstance<WatchFolderTool>(this.serviceProvider, persona.Name);
-            IAppTool unwatchFolderTool = ActivatorUtilities.CreateInstance<UnwatchFolderTool>(this.serviceProvider, persona.Name);
-            chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
-        }
-
-        // Feature Modules add theirs here, before GetHelpTool is built, so get_help lists them too.
+        // Feature Modules add theirs after Skill gating and before GetHelpTool is built, so get_help lists them too (rules.md row 34).
         ModuleToolOffer offer = new(persona, profile, this.options, this.serviceProvider);
         foreach (IFeatureModule module in ModuleCatalog.All)
         {
