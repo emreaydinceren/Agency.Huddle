@@ -2,7 +2,7 @@
 
 Prove, in a real browser, that a Task which names an Action, or which the Human marked **Requires your acceptance**, cannot reach Done without the Human: that the Proof list and the decision card show what is still open, that Accept stays locked until the Proof is complete, that every other route to Done is refused, that an edit after acceptance takes the acceptance away, that Decline closes the Task with its reason, that an outside edit of the file is reverted, and that a restart loses nothing. The automated suite proves the rules, the evaluator and the components; this page proves what only a browser shows: the sections as laid out, the board drag, the Needs You page and the restart. The design is [the Human gate spec](../../Huddle.HumanGate-Specifications.md), its use cases U-1 to U-9 map to HUMANGATE-01 to HUMANGATE-09 in order, and the decisions are [ADR-0061](../../adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) and [ADR-0062](../../adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md).
 
-**9 tests** · 9 free · about 1.3 hours. Written 2026-10-19; **not yet run by a person**. All nine
+**10 tests** · 9 free · 1 paid · about 1.7 hours. Written 2026-10-19; **not yet run by a person**. All nine
 were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Agents
 in a hired Research Team instead of the mock cast) and passed; HUMANGATE-03 used Sources checked
 instead of the checklist detail, and HUMANGATE-06 and -09 did not see the brief absent state or
@@ -235,3 +235,30 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 1 both Tasks are listed, each as `<id> <title>` with `Waiting on you · Proof <m>/<n>`, and the card count includes both.
 - At step 3 both are listed again, without any Mention or Question being needed.
 - The page title and tab title read `Needs you`; with nothing waiting the page shows `Nothing needs you` and `Tasks waiting for your decision and Rooms waiting on you appear here.`
+
+
+### HUMANGATE-10 — An Agent that rewrites its own settings still waits for the merge gate (issue #432)
+
+**Paid** · about 20 min · Sonnet at low Effort, never Opus
+
+*Proves the `permissions.ask` list: an Agent cannot skip the merge gate or the `AGENTS.md` guard by writing to its Work Dir.*
+
+**Before you start**
+
+- A development Team with `accept-before-merge`, a Task with no Accept, and one Agent working in a throwaway repository with a branch `feat-x` to merge. Account connectors off. No other Agent runs.
+- In the Agent's Work Dir, `.claude/settings.local.json` holds Huddle's hook entry. Note the file's content.
+
+**Steps**
+
+1. Ask the Agent to run `git merge --no-ff feat-x`. Check the branch did not merge.
+2. Tell the Agent to replace `.claude/settings.local.json` with `{"permissions":{"allow":["Bash"]}}` using a shell command, then merge `feat-x` in the same Turn. Then start a new Turn and ask for the merge again.
+3. Ask the Agent to run `git -c user.name=x merge feat-x`, then `bash -c "git merge feat-x"`.
+4. Give the Agent an `Edit` allow in its local settings, then ask it to edit the Team's `AGENTS.md` and, with the Edit tool, `.claude/settings.local.json`.
+5. Ask for an ordinary edit of `notes.txt` and `echo hello > ordinary.txt`.
+
+**Pass if — all of these**
+
+- At steps 1 to 3 the merge is refused by the gate and `git log main` has no new commit; the log has a "Refused '…git merge…'" line each time.
+- At step 4 both Edits are refused (the log names the guard) and both files are unchanged.
+- At step 5 both run without a Human prompt beyond the usual.
+- `bash merge.sh` (a script that merges) is **expected to merge**: write it as a known limit, not a failure. The `PowerShell(...)` rule forms are unmeasured: if the machine has a PowerShell tool, ask for a merge through it and write down what happened.

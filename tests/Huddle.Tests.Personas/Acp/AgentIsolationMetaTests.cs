@@ -61,11 +61,43 @@ public sealed class AgentIsolationMetaTests
 
         Assert.Equal(2, on.Count);
         Assert.False((bool)on["autoMemoryEnabled"]);
-        Dictionary<string, object> permissions = Assert.IsType<Dictionary<string, object>>(on["permissions"]);
+        string[] onList = AskList(on);
+        Assert.Equal("mcp__claude_ai_*", onList[^1]);
+        Assert.Equal(ExpectedAgentRules, onList[..^1]);
+        Assert.Equal(2, off.Count);
+        Assert.False((bool)off["autoMemoryEnabled"]);
+        Assert.Equal(ExpectedAgentRules, AskList(off));
+    }
+
+    /// <summary>The rules every Agent session carries, whatever the connectors setting (issue #432).</summary>
+    private static readonly string[] ExpectedAgentRules =
+    [
+        "Bash(*git*merge*)", "Bash(*git*push*)", "Bash(*git*pull*)",
+        "PowerShell(*git*merge*)", "PowerShell(*git*push*)", "PowerShell(*git*pull*)",
+        "Edit", "Write",
+    ];
+
+    /// <summary>Reads <c>permissions.ask</c> out of a settings dictionary, requiring it to be the only permissions key.</summary>
+    /// <param name="settings">The <c>options.settings</c> dictionary.</param>
+    private static string[] AskList(Dictionary<string, object> settings)
+    {
+        Dictionary<string, object> permissions = Assert.IsType<Dictionary<string, object>>(settings["permissions"]);
         KeyValuePair<string, object> rule = Assert.Single(permissions);
         Assert.Equal("ask", rule.Key);
-        Assert.Equal(["mcp__claude_ai_*"], Assert.IsType<string[]>(rule.Value));
-        KeyValuePair<string, object> only = Assert.Single(off);
+        return Assert.IsType<string[]>(rule.Value);
+    }
+
+    /// <summary>
+    /// Issue #432: an Agent's own list never holds an allow rule or a hook, and a Helper's meta carries none of it: it has no tools and its
+    /// <c>settings</c> stay <c>autoMemoryEnabled</c> alone.
+    /// </summary>
+    [Fact]
+    public void HelperSessionMeta_Isolating_SettingsHoldOnlyAutoMemory()
+    {
+        IReadOnlyDictionary<string, object>? meta = Agency.Huddle.App.Helpers.HelperSessionMeta.For(Profile(isolate: true));
+
+        Dictionary<string, object> options = Options(Assert.IsType<Dictionary<string, object>>(meta));
+        KeyValuePair<string, object> only = Assert.Single(Assert.IsType<Dictionary<string, object>>(options["settings"]));
         Assert.Equal("autoMemoryEnabled", only.Key);
     }
 
@@ -148,6 +180,8 @@ public sealed class AgentIsolationMetaTests
         string row = Assert.Single(rows, line => line.StartsWith("| **An Agent session starts with the account connectors off.**", StringComparison.Ordinal));
         Assert.Contains("ENABLE_CLAUDEAI_MCP_SERVERS=false", row, StringComparison.Ordinal); // contains-ok: quoting a rules.md row
         Assert.Contains("BuildIsolationMeta", row, StringComparison.Ordinal); // contains-ok: quoting a rules.md row
+        Assert.Contains("Bash(*git*merge*)", row, StringComparison.Ordinal); // contains-ok: quoting a rules.md row
+        Assert.Contains("AgentSettingsGuard", row, StringComparison.Ordinal); // contains-ok: quoting a rules.md row
 
         Dictionary<string, object> env = Assert.IsType<Dictionary<string, object>>(
             Options(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: true), connectors: false))["env"]);

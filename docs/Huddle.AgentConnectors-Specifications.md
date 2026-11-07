@@ -278,6 +278,10 @@ There is no "always allow".
   the session's `IElicitationScope` in `PermissionRequestContext.Scope`. `WorkDirPermissionHandler.DecideAsync` asks through it, so the
   card is an `ElicitationCard` in the Turn's Room, the idle watchdog is paused, `UserInputTimeoutSeconds` (600 s) bounds the wait, and
   the card is dropped on cancel. Nothing goes through `NeedsYouTracker`.
+- **The ask list (issue #432).** With the connectors on, `options.settings.permissions.ask` holds `mcp__claude_ai_*`; since issue #432 it
+  is one list on every Agent session, connectors on or off: `Bash(*git*merge*)`, `Bash(*git*push*)`, `Bash(*git*pull*)`, the three
+  `PowerShell(...)` forms, `Edit` and `Write`, plus `mcp__claude_ai_*` only when the connectors are on (`DotAcpAgentHostFactory.AskRules`).
+  Helpers get none of it. A guard refusal precedes this ask, so a refused call never posts a card.
 - **Name.** The tool name and MCP server are in `_meta.claudeCode.toolName` and `_meta.claudeCode.mcpServer.name` of the permission
   request (`acp-agent.js`, `canUseTool`), read into `ToolCallInfo.ToolName` and `McpServerName`. **Unproven for a real connector request
   until the paid check (AGCONN-11).** `ConnectorCallClassifier.AsksHuman` fails safe: a name or server containing `claude_ai_` asks; a

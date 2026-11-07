@@ -112,3 +112,7 @@ final. Nothing rests on an Agent's wording.
 
 See [ADR-0039](0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md) for the gate mechanism and the
 [HumanGate specification](../Huddle.HumanGate-Specifications.md) OD-1.
+
+## Amendment, 2026-11-06 (issue #432)
+
+The consequences above say the hook makes the gate reachable. That held only while the hook stood: an Agent that rewrote its `.claude/settings.local.json`, overwrote `merge-gate-ask.js` or set `disableAllHooks` skipped it. Every Agent session now also sends `options.settings.permissions.ask` with `Bash(*git*merge*)`, `Bash(*git*push*)` and `Bash(*git*pull*)`, which is not on disk and which beats those routes, and `AgentSettingsGuard` refuses an Agent's `Edit` or `Write` of the settings file and the hook script. The hook stays as a second layer. A script that merges, a shell write to the settings file, a Claude profile that does not isolate and the Codex Adapter are still not covered (known limits).

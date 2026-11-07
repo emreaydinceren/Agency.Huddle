@@ -207,7 +207,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             new AgentsMdGuard(teamsRoot, workDir, prompts),
             new TeamMemoryWriteGuard(teamsRoot, workDir, sources.TeamMemory, prompts),
             new RawGuard(teamsRoot, this.RawRoot(), this.ArchiveRoot(), workDir, prompts),
-            new PromptsRootGuard(Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Prompts.Dir)), workDir, prompts));
+            new PromptsRootGuard(Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Library.Prompts.Dir)), workDir, prompts),
+            new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
@@ -613,8 +614,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// future writer of <c>options.env</c> must add to that dictionary, not replace it. <see langword="true"/> adds nothing.
     /// No <c>strict-mcp-config</c> and no <c>tools</c> entry is added either way.
     /// </param>
+    /// <param name="askRules">
+    /// Whether the isolating profile's settings carry the <c>permissions.ask</c> list (<see cref="AskRules"/>). Only an Agent wants it: a Helper
+    /// has no tools and passes <see langword="false"/>. A profile that runs Claude without isolating never gets <c>settings</c>, because it would
+    /// replace the Adapter's computed settings and is known to drop a <c>CLAUDE_MODEL_CONFIG</c> override: for it the merge gate keeps only the hook
+    /// (see known-limits.md).
+    /// </param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
-    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile, bool connectors)
+    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile, bool connectors, bool askRules = true)
     {
         Dictionary<string, object> options = new(StringComparer.Ordinal);
         if (profile.IsolateUserSettings)
@@ -624,15 +631,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             {
                 ["autoMemoryEnabled"] = false,
             };
-            if (connectors)
+            if (askRules)
             {
-                // Huddle's own ask rule (Agent Connectors spec 8.4). `settings` replaces the Adapter's computed settings, so it is sent
-                // here beside autoMemoryEnabled. A spike measured `ask` beating an Agent's local allow rule and allow hook, for the
-                // tool, server and server__* forms, against a stand-in server; `permissions.deny` with this wildcard removed the tool.
-                // `ask` with this wildcard has NOT been run against a real claude.ai connector.
+                // `settings` replaces the Adapter's computed settings and a `permissions` key replaces any other, so the one list is
+                // sent here beside autoMemoryEnabled, whatever `connectors` is (issue #432).
                 settings["permissions"] = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
-                    ["ask"] = new[] { "mcp__claude_ai_*" },
+                    ["ask"] = AskRules(connectors),
                 };
             }
 
@@ -662,6 +667,32 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             },
         };
     }
+
+    /// <summary>
+    /// The rules every Agent session sends as <c>options.settings.permissions.ask</c> (issue #432). An <c>ask</c> rule is not on disk, so an
+    /// Agent that rewrites <c>.claude/settings.local.json</c>, overwrites the merge hook script or sets <c>disableAllHooks</c> cannot remove it, and
+    /// it beats the Agent's own local allow rule and allow hook: the request reaches <see cref="WorkDirPermissionHandler"/>, which decides.
+    /// The git verbs are the ones <see cref="GitCommandLine"/> and <see cref="MergeGateHook"/> look for (merge, push, pull). The wildcard form
+    /// matches <c>git -c x=y merge</c> and <c>bash -c "git merge"</c>, which the prefix form <c>Bash(git merge:*)</c> does not. <c>Edit</c> and
+    /// <c>Write</c> send every file edit to the handler, so the <c>AGENTS.md</c>, Raw, Prompts, Team Memory and settings guards see it even
+    /// when the Agent holds a local allow for them. MEASURED live (Sonnet, Adapter 0.100.0): the three <c>Bash</c> forms, <c>Edit</c>, <c>Write</c>
+    /// and <c>mcp__claude_ai_*</c> against a stand-in server. UNMEASURED: the three <c>PowerShell(...)</c> forms (the Adapter's PowerShell tool is
+    /// guarded by the same handler and hook matcher, but its rule form was not run), <c>auto</c> and <c>acceptEdits</c> mode, and a real connector.
+    /// <c>MultiEdit</c> and <c>NotebookEdit</c> are left out: the Adapter reports neither as an edit (the file guards only read kind edit,
+    /// delete and move), so no guard applies to them.
+    /// </summary>
+    private static readonly string[] AgentAskRules =
+    [
+        "Bash(*git*merge*)", "Bash(*git*push*)", "Bash(*git*pull*)",
+        "PowerShell(*git*merge*)", "PowerShell(*git*push*)", "PowerShell(*git*pull*)",
+        "Edit", "Write",
+    ];
+
+    /// <summary>The Agent's <c>permissions.ask</c> list: <see cref="AgentAskRules"/>, plus every claude.ai connector tool when the connectors are on (Agent Connectors spec 8.4).</summary>
+    /// <param name="connectors">Whether the account connectors are passed.</param>
+    /// <returns>A new array.</returns>
+    internal static string[] AskRules(bool connectors) =>
+        connectors ? [.. AgentAskRules, "mcp__claude_ai_*"] : [.. AgentAskRules];
 
     /// <summary>Builds the factory that produces the Persona's role block at each session start.</summary>
     /// <param name="parsed">The Persona's parsed identity, or <see langword="null"/> when it has none.</param>

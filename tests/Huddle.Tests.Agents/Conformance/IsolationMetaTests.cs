@@ -10,7 +10,7 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </summary>
 public sealed class IsolationMetaTests
 {
-    /// <summary>With the resolved Adapter Profile's <c>IsolateUserSettings</c> true (the legacy default), <c>session/new</c>'s <c>_meta.claudeCode.options</c> carries the isolation settings verbatim, with the account connectors switched off (Agent Connectors Spec 8.1).</summary>
+    /// <summary>With the resolved Adapter Profile's <c>IsolateUserSettings</c> true (the legacy default), <c>session/new</c>'s <c>_meta.claudeCode.options</c> carries the isolation settings verbatim, with the account connectors switched off (Agent Connectors Spec 8.1) and Huddle's ask rules on the wire (issue #432).</summary>
     [Fact]
     public async Task IsolateUserSettingsTrue_SessionNewCarriesSettingSourcesAndAutoMemoryOff()
     {
@@ -26,7 +26,7 @@ public sealed class IsolationMetaTests
 
         Assert.NotNull(options);
 
-        JsonNode? expected = JsonNode.Parse("""{"settingSources":["project","local"],"settings":{"autoMemoryEnabled":false},"env":{"ENABLE_CLAUDEAI_MCP_SERVERS":"false"}}""");
+        JsonNode? expected = JsonNode.Parse("""{"settingSources":["project","local"],"settings":{"autoMemoryEnabled":false,"permissions":{"ask":["Bash(*git*merge*)","Bash(*git*push*)","Bash(*git*pull*)","PowerShell(*git*merge*)","PowerShell(*git*push*)","PowerShell(*git*pull*)","Edit","Write"]}},"env":{"ENABLE_CLAUDEAI_MCP_SERVERS":"false"}}""");
         Assert.NotNull(expected);
         Assert.True(JsonNode.DeepEquals(expected, options), $"Expected {expected} but got {options}.");
     }

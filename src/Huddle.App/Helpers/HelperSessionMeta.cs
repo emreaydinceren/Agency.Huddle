@@ -16,7 +16,7 @@ internal static class HelperSessionMeta
         ArgumentNullException.ThrowIfNull(profile);
 
         // A non-isolating profile gets no Helper meta even though an Agent's now carries the connectors env key there.
-        if (!profile.IsolateUserSettings || DotAcpAgentHostFactory.BuildIsolationMeta(profile, connectors: false) is not { } meta)
+        if (!profile.IsolateUserSettings || DotAcpAgentHostFactory.BuildIsolationMeta(profile, connectors: false, askRules: false) is not { } meta)
         {
             return null;
         }
