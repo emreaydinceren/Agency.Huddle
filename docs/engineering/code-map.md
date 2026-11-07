@@ -277,6 +277,7 @@ order decides per Token, independently.
 | `TaskService.cs` | The only way to change a Task (Spec §9): validates, builds the Change log entry, writes through `TaskStore`, and raises `TaskEvents.TaskChanged`, or `TaskMoveRefused` for a move a gate refused. It knows nothing of the Feed. |
 | `TaskActors.cs` | Builds the `TaskActor` for the Human, the one actor `PersonaStore` knows nothing about. |
 | `TaskTriggerService.cs` | What saving a Task change would do to its assignee (Spec §10.1): who it would notify, their presence, and which guard stops it. `ChooseRoomAsync` still prefers a usable origin Room; its fallback Room (the Human, the creator and the assignee) is found and created scoped to the Task's Team (ADR-0052). |
+| `Wake/` (`ITaskWakeRule.cs`, `TaskWakeRules.cs`, `TaskWakeRound.cs`, `TaskWakeChoice.cs`, `AssigneeWakeRule.cs`, `ManagerWakeRule.cs`, `ChallengerWakeRule.cs`, `RequestingManagerWakeRule.cs`) | Who a fired batch wakes, one rule per recipient, run by `TaskTriggerService` in `TaskWakeRules.ProductionOrder`. A rule only chooses (Wake, HoldForBudget or Skip); the service delivers. A rule that throws is logged by name and skipped, and the later rules still run. |
 | `TaskActivity.cs` | `WakeOutcome`, `WakeRecord` and `WakeBudget`, plus the in-memory per-Task record of Agent-made wake attempts (Spec §10.6-§10.7). |
 | `AssigneeOption.cs` | One candidate in `TaskDetail`'s Assignee autocomplete (Spec §13.6): a known Persona's Name, title and presence. |
 | `TaskPresence.cs` | Resolves the Tasks UI's presence badge (Awake/Asleep/Offline) from an Agent's online and busy state (Spec §10.8). |
@@ -448,6 +449,7 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LibraryRootStore.cs` | The Library Roots: `teams`, `agents` and the pinned roots, saved from Settings. |
 | `Library/LibraryPathResolver.cs` | The only code that turns input into a path; every path operation goes through it. |
 | `Library/LibraryFileService.cs`, `Library/AtomicFile.cs` | List, read, write, create, rename, move and recycle; every write is atomic. |
+| `Library/LibraryEvents.cs`, `Library/LibraryItemMoved.cs`, `DocHistory/DocHistoryLibraryListener.cs` | The hub on which `LibraryFileService` announces the Human's saves, creates and moves, and the DocHistory subscriber that records them, so the Library names no DocHistory type. A subscriber that throws is logged and skipped. |
 | `Library/TextFileCodec.cs` | Detects and restores encoding, BOM and line ending. |
 | `Library/WikiLinkParser.cs`, `WikiLinkResolver.cs`, `WikiLinkRewriter.cs`, `WikiLinkIndex.cs` | Parse, resolve (case-insensitive), rewrite on rename, and the per-root Backlinks index. |
 | `Library/LibraryReferenceResolver.cs`, `Library/LibraryPathPatterns.cs` | Turn a Library path in a chat Message or note into a link. |

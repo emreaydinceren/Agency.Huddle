@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -147,7 +148,8 @@ internal static class TaskTriggerTestSupport
     /// <param name="ct">Cancels the directory's async setup.</param>
     /// <param name="teams">The Team catalog the trigger reads a Team's manager from, or <see langword="null"/> for none (a Team with no <c>_team.md</c>).</param>
     /// <param name="confirmers">Who may confirm a Team's Requests, for the line a Request's move to Done adds, or <see langword="null"/> for nobody.</param>
-    internal static async Task<Harness> CreateHarnessAsync(TempDataDir dir, TeamOptions options, CancellationToken ct, ITeamCatalog? teams = null, IRequestConfirmers? confirmers = null)
+    /// <param name="human">The Human's identity the trigger reads, or <see langword="null"/> for one fixed at <see cref="TeamOptions.HumanName"/>.</param>
+    internal static async Task<Harness> CreateHarnessAsync(TempDataDir dir, TeamOptions options, CancellationToken ct, ITeamCatalog? teams = null, IRequestConfirmers? confirmers = null, IHumanIdentity? human = null)
     {
         IOptions<TeamOptions> teamOptions = Options.Create(options);
 
@@ -180,7 +182,7 @@ internal static class TaskTriggerTestSupport
         RecordingFeedPublisher feed = new();
         TaskTriggerService trigger = new(
             events, store, activity, turns, chat, directory, personas, gateway, health, prompts,
-            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams, roomEvents: roomEvents, feed: feed, confirmers: confirmers);
+            teamOptions, clock, logger, ownPosts: ownPosts, teams: teams, roomEvents: roomEvents, human: human, feed: feed, confirmers: confirmers);
 
         Harness harness = new()
         {

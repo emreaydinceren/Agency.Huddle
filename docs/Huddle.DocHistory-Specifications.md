@@ -238,28 +238,32 @@ measure it (§10).
 `DocHistoryRecorder`, a singleton holding the store, `IHumanIdentity` (rules.md: the Human's Name is never read from
 `TeamOptions.HumanName`), the `TimeProvider` and the options, owns every write that is not an Agent's:
 
-| Member | Called by | Writes |
+| Member | Called on | Writes |
 | --- | --- | --- |
-| `HumanSaved(LibraryPath file)` | `LibraryFileService.WriteTextAsync`, after a successful write | `Edited`, empty summary |
-| `HumanCreated(LibraryPath file)` | `LibraryFileService.CreateFileAsync`, after a successful create | `Created`, empty summary |
-| `Moved(LibraryPath from, LibraryPath to)` | `LibraryFileService.RenameAsync` and `MoveAsync`, after success | Moves the history (§6.5) |
+| `HumanSaved(LibraryPath file)` | `LibraryEvents.HumanSaved`, which `LibraryFileService.WriteTextAsync` raises after a successful write | `Edited`, empty summary |
+| `HumanCreated(LibraryPath file)` | `LibraryEvents.HumanCreated`, which `LibraryFileService.CreateFileAsync` raises after a successful create | `Created`, empty summary |
+| `Moved(LibraryPath from, LibraryPath to)` | `LibraryEvents.Moved`, which `LibraryFileService.RenameAsync` and `MoveAsync` raise after success | Moves the history (§6.5) |
 
 Each does nothing for a file that is not Markdown or when `Enabled` is false, except `Moved`, which carries a history
 that exists whether or not `Enabled` is true: moving a file is not recording, and a document moved while History is
-off must find its history where it is when History is turned back on. `HumanSaved` is called by `WriteTextAsync`
+off must find its history where it is when History is turned back on. `HumanSaved` is raised by `WriteTextAsync`
 only: the links the Library rewrites in other notes after a rename or move are written without it, because the
-Human did not edit those notes. `LibraryFileService` takes it as an
-optional trailing constructor parameter, so the many tests that build the service by hand need no change. It is the
-service, not `LibraryDocument.razor`, so every Human write path is covered and the component stays thin. Every caller
-of these four methods is a Human action in the Library UI; Agents never reach `LibraryFileService`.
+Human did not edit those notes.
+
+The Library does not know the History exists. `LibraryFileService` raises each event on `LibraryEvents`, a plain hub
+it takes as an optional trailing constructor parameter, so the many tests that build the service by hand need no
+change. `DocHistoryLibraryListener`, registered by `DocHistoryModule`, subscribes in its constructor and calls the
+recorder. It is the service, not `LibraryDocument.razor`, that raises the events, so every Human write path is covered
+and the component stays thin. Every event is a Human action in the Library UI; Agents never reach
+`LibraryFileService`. A subscriber that throws is logged and skipped, so it can never fail the save.
 
 A history failure (an I/O error appending the line) is logged at `Warning` and never fails the save: the document
 matters more than its history.
 
 ### 6.5 Rename and move
 
-`LibraryFileService.RenameAsync` and `MoveAsync`, after a successful move, call `DocHistoryStore.Move(item,
-result.NewPath)`. A failure is logged and does not fail the move. Recycling a document leaves its history in place;
+`LibraryFileService.RenameAsync` and `MoveAsync`, after a successful move, raise `LibraryEvents.Moved`, and the
+listener calls `DocHistoryStore.Move(item, result.NewPath)` through the recorder. A failure is logged and does not fail the move. Recycling a document leaves its history in place;
 restoring it from the Recycle Bin finds it again.
 
 ### 6.6 `DocHistoryView`

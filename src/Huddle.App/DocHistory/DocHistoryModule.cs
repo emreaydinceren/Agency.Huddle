@@ -18,9 +18,11 @@ internal sealed class DocHistoryModule : IFeatureModule
     /// <inheritdoc />
     public void AddServices(IServiceCollection services)
     {
-        // DocHistory spec §6.2, §6.4: the store and its one writer, which LibraryFileService takes to log the Human's saves and moves.
+        // DocHistory spec §6.2, §6.4: the store, its one writer, and the listener that records the Human's saves and moves from LibraryEvents.
         services.AddSingleton<DocHistoryStore>();
         services.AddSingleton<DocHistoryRecorder>();
+        services.AddSingleton<DocHistoryLibraryListener>();
+        services.AddHostedService(static sp => sp.GetRequiredService<DocHistoryLibraryListener>());
         services.AddSidebarPanel(new SidebarPanel("recent-edits", "History", MudBlazor.Icons.Material.Filled.History, 30,
             static subject => subject is DocumentSubject { Kind: LibraryFileKind.Markdown }, typeof(RecentEditsPanel), static options => options.Library.Enabled && options.DocHistory.Enabled));
     }

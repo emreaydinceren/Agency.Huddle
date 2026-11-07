@@ -6,6 +6,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks.Wake;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Microsoft.Extensions.Options;
@@ -148,6 +149,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
     /// <summary>Says who on a Team may confirm its Requests, for the line that names them (#350); <see langword="null"/> names nobody.</summary>
     private readonly IRequestConfirmers? confirmers;
+
+    /// <summary>The wake rules, in <see cref="TaskWakeRules.ProductionOrder"/>.</summary>
+    private readonly IReadOnlyList<ITaskWakeRule> wakeRules;
     private OutsideWindow? outsideWindow;
     private bool subscribed;
     private bool stopped;
@@ -228,6 +232,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         this.roomEvents = roomEvents;
         this.feed = feed;
         this.confirmers = confirmers;
+        this.wakeRules =
+        [
+            new AssigneeWakeRule(),
+            new ManagerWakeRule(teams, this.human, personas, this.teamOptions),
+            new ChallengerWakeRule(teams, this.human, personas, confirmers, this.teamOptions),
+            new RequestingManagerWakeRule(teams, this.human, personas, this.teamOptions, logger),
+        ];
     }
 
     /// <summary>
@@ -791,57 +802,55 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        await this.WakeAssigneeAsync(batch, latest, ct).ConfigureAwait(false);
-        await this.WakeManagerAsync(batch, latest, ct).ConfigureAwait(false);
-        await this.WakeChallengerAsync(batch, latest, ct).ConfigureAwait(false);
-        await this.WakeRequestingManagerAsync(batch, latest, ct).ConfigureAwait(false);
+        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, batch.MovedToReview, this.Preview(null, latest, batch.Actor));
+        foreach (ITaskWakeRule rule in this.wakeRules)
+        {
+            try
+            {
+                TaskWakeChoice choice = rule.Choose(round);
+                await this.ActOnAsync(choice, batch, latest, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // One failing rule (or its delivery) must not stop the rules after it (S-B2).
+                LogWakeRuleFailed(this.logger, rule.Name, id, ex);
+            }
+        }
     }
 
-    /// <summary>
-    /// RQ-4: wakes the manager of the Team that filed a Request on every status change of that Request,
-    /// unless that manager made the change, is the assignee or the receiving Team's manager (both woken
-    /// above), is the Human, or is no known Persona. A Request whose requesting Team has no manager wakes
-    /// nobody and is logged. Goes through <see cref="DeliverAsync"/>, so it shares the per-Task wake budget.
-    /// </summary>
+    /// <summary>Carries out one rule's choice: delivers a wake, holds one for the Task's wake budget, or logs the guard that stopped it.</summary>
+    /// <param name="choice">What the rule chose.</param>
     /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
     /// <param name="latest">The Task's latest state.</param>
     /// <param name="ct">The service lifetime.</param>
-    /// <returns>A task that completes when the wake was posted or skipped.</returns>
-    private async Task WakeRequestingManagerAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    /// <returns>A task that completes when the choice was carried out.</returns>
+    private async Task ActOnAsync(TaskWakeChoice choice, Batch batch, TaskItem latest, CancellationToken ct)
     {
-        if (!batch.StatusChanged || !this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
+        switch (choice)
         {
-            return;
-        }
+            case TaskWakeChoice.Wake wake:
+                if (wake.AsChallenger)
+                {
+                    batch.Challenger = wake.Name;
+                }
 
-        Dictionary<string, string> frontmatter = new(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, string> field in latest.UnknownFields)
-        {
-            frontmatter[field.Key] = field.Value;
+                _ = await this.DeliverAsync(batch, latest, wake.Name, ct).ConfigureAwait(false);
+                break;
+            case TaskWakeChoice.HoldForBudget hold:
+                LogBlocked(this.logger, latest.Id, WakeBlock.BudgetPaused);
+                this.RecordOutcome(latest.Id, hold.Name, null, WakeOutcome.WakePaused);
+                this.HoldForWakeBudget(batch, latest, hold.Name);
+                break;
+            case TaskWakeChoice.Skip { Block: { } block }:
+                LogBlocked(this.logger, latest.Id, block);
+                break;
+            default:
+                break;
         }
-
-        if (!RequestFields.TryRead(frontmatter, out RequestFields? request) || request is null)
-        {
-            return;
-        }
-
-        string? manager = this.teams?.Find(request.FromTeam)?.Manager;
-        if (string.IsNullOrEmpty(manager))
-        {
-            LogNoRequestingManager(this.logger, latest.Id, request.FromTeam);
-            return;
-        }
-
-        if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(manager, this.teams?.Find(latest.Location.Team)?.Manager, StringComparison.OrdinalIgnoreCase)
-            || this.human.Matches(manager)
-            || this.personas.Get(manager) is null)
-        {
-            return;
-        }
-
-        await this.DeliverAsync(batch, latest, manager, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -916,114 +925,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         lock (this.gate)
         {
             return this.requestWakes.TryGetValue(RequestWakeKey(id, name), out DateTimeOffset woken) && woken >= batchStart;
-        }
-    }
-
-    /// <summary>Applies the Spec §10.2 guards to the Task's assignee and, when none stops it, delivers the assignee's wake.</summary>
-    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
-    /// <param name="latest">The Task's latest state.</param>
-    /// <param name="ct">The service lifetime.</param>
-    /// <returns>A task that completes when the wake was posted or skipped.</returns>
-    private async Task WakeAssigneeAsync(Batch batch, TaskItem latest, CancellationToken ct)
-    {
-        TaskId id = latest.Id;
-        WakePreview preview = this.Preview(null, latest, batch.Actor);
-        if (preview.Block == WakeBlock.BudgetPaused && preview.AssigneeName is { } pausedAssignee)
-        {
-            LogBlocked(this.logger, id, preview.Block);
-            this.RecordOutcome(id, pausedAssignee, null, WakeOutcome.WakePaused);
-            this.HoldForWakeBudget(batch, latest, pausedAssignee);
-            return;
-        }
-
-        if (preview.Block != WakeBlock.None || preview.AssigneeName is not { } assigneeName)
-        {
-            LogBlocked(this.logger, id, preview.Block);
-            return;
-        }
-
-        await this.DeliverAsync(batch, latest, assigneeName, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// OR-2: wakes the Team's manager (from <c>_team.md</c>) about the same change, unless wake-ups
-    /// are off, the manager made the change, already is the assignee (so was woken above), is the
-    /// Human, or is no known Persona. The wake goes through <see cref="DeliverAsync"/>, so it consumes
-    /// the same per-Task Agent-made wake budget as the assignee's. A Team with no manager, or no
-    /// catalog, behaves as before.
-    /// </summary>
-    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
-    /// <param name="latest">The Task's latest state.</param>
-    /// <param name="ct">The service lifetime.</param>
-    /// <returns>A task that completes when the wake was posted or skipped.</returns>
-    private async Task WakeManagerAsync(Batch batch, TaskItem latest, CancellationToken ct)
-    {
-        if (this.teams?.Find(latest.Location.Team)?.Manager is not { Length: > 0 } manager
-            || !this.teamOptions.Tasks.Enabled
-            || !this.teamOptions.Tasks.WakeEnabled)
-        {
-            return;
-        }
-
-        if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            || this.human.Matches(manager)
-            || this.personas.Get(manager) is null)
-        {
-            return;
-        }
-
-        await this.DeliverAsync(batch, latest, manager, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// #403: a Task that entered Review in this batch must reach someone who can review it. When the assignee can't (the builder
-    /// still holds it), the Team's first member who can review is woken once, through <see cref="DeliverAsync"/> so the same wake budget
-    /// applies. Nobody is woken when the assignee can review (they were woken above), when the one who can made the change, or is the
-    /// manager (woken above); a Team with nobody who can review is left as before.
-    /// </summary>
-    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
-    /// <param name="latest">The Task's latest state.</param>
-    /// <param name="ct">The service lifetime.</param>
-    /// <returns>A task that completes when the wake was posted or skipped.</returns>
-    private async Task WakeChallengerAsync(Batch batch, TaskItem latest, CancellationToken ct)
-    {
-        if (!batch.MovedToReview
-            || latest.Status != TaskState.Review
-            || this.confirmers is not { } challengers
-            || !this.teamOptions.Tasks.Enabled
-            || !this.teamOptions.Tasks.WakeEnabled)
-        {
-            return;
-        }
-
-        string team = latest.Location.Team;
-        string? manager = this.teams?.Find(team)?.Manager;
-        if (latest.Assignee is { Length: > 0 } assignee && challengers.IsChallengerOf(team, assignee))
-        {
-            return;
-        }
-
-        if (manager is { Length: > 0 }
-            && !string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase))
-        {
-            // The manager was woken for this entry and hands it to whoever reviews; only an entry that reached nobody capable needs this wake.
-            return;
-        }
-
-        IReadOnlyList<string> members = this.teams?.Find(team)?.Members ?? [];
-        string? challenger = members.FirstOrDefault(member =>
-            challengers.IsChallengerOf(team, member)
-            && !string.Equals(member, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(member, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(member, manager, StringComparison.OrdinalIgnoreCase)
-            && !this.human.Matches(member)
-            && this.personas.Get(member) is not null);
-        if (challenger is not null)
-        {
-            batch.Challenger = challenger;
-            _ = await this.DeliverAsync(batch, latest, challenger, ct).ConfigureAwait(false);
         }
     }
 
@@ -1680,12 +1581,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Not waking the assignee of Task {TaskId}: the actor '{Actor}' has no user to post as.")]
     private static partial void LogNoSender(ILogger logger, TaskId taskId, string actor);
 
-    /// <summary>Logs that a Request's requesting Team has no manager to wake.</summary>
+    /// <summary>Logs that a wake rule threw and was skipped.</summary>
     /// <param name="logger">The logger to write to.</param>
-    /// <param name="taskId">The Request.</param>
-    /// <param name="team">The requesting Team.</param>
-    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking the requesting manager of Request {TaskId}: team '{Team}' has no manager.")]
-    private static partial void LogNoRequestingManager(ILogger logger, TaskId taskId, string team);
+    /// <param name="ruleName">The rule.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Wake rule {RuleName} failed for Task {TaskId} and was skipped.")]
+    private static partial void LogWakeRuleFailed(ILogger logger, string ruleName, TaskId taskId, Exception exception);
 
     /// <summary>Logs that the Room refused the wake-up Message.</summary>
     /// <param name="logger">The logger to write to.</param>

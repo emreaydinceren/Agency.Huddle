@@ -46,6 +46,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     private readonly TempDataDir? temp;
     private readonly TeamOptions teamOptions;
     private readonly List<LibraryFileService> createdServices = [];
+    private readonly List<DocHistoryLibraryListener> createdListeners = [];
 
     private LibraryFileServiceFixture(TempDataDir? temp, TeamOptions teamOptions)
     {
@@ -172,13 +173,32 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     public LibraryFileService CreateServiceWithHistory(DocHistoryRecorder history)
     {
         this.RecycleBin = new RecordingRecycleBin();
+        LibraryEvents events = new();
+        this.createdListeners.Add(new DocHistoryLibraryListener(events, history));
         LibraryFileService service = new(
             this.Resolver,
             this.RecycleBin,
             index: this.Index,
             options: Options.Create(this.teamOptions),
             logger: NullLogger<LibraryFileService>.Instance,
-            history: history);
+            events: events);
+        this.createdServices.Add(service);
+        return service;
+    }
+
+    /// <summary>Constructs the service under test as <see cref="CreateService()"/> does, publishing its Human saves, creates and moves to <paramref name="events"/>.</summary>
+    /// <param name="events">The hub the service raises its Library events on.</param>
+    /// <returns>The service.</returns>
+    public LibraryFileService CreateServiceWithEvents(LibraryEvents events)
+    {
+        this.RecycleBin = new RecordingRecycleBin();
+        LibraryFileService service = new(
+            this.Resolver,
+            this.RecycleBin,
+            index: this.Index,
+            options: Options.Create(this.teamOptions),
+            logger: NullLogger<LibraryFileService>.Instance,
+            events: events);
         this.createdServices.Add(service);
         return service;
     }
@@ -253,6 +273,11 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     /// <summary>Disposes the temp <c>DataDir</c>, when this fixture owns one (see <see cref="Attach"/>).</summary>
     public void Dispose()
     {
+        foreach (DocHistoryLibraryListener listener in this.createdListeners)
+        {
+            listener.Dispose();
+        }
+
         foreach (LibraryFileService service in this.createdServices)
         {
             service.Dispose();
