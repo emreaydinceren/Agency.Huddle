@@ -5,9 +5,9 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Memory;
+using Agency.Huddle.App.Modules;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
@@ -136,7 +136,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
 
-        InstallDocHistoryHook(workDir, this.options.DataDir, toolNames, parsed, this.serviceProvider.GetService<ProcessGateService>(), this.logger);
+        this.PrepareModuleWorkDirs(workDir, toolNames, parsed);
         InstallMergeGateHook(workDir, this.options.DataDir, this.serviceProvider.GetService<IMergeGate>(), this.logger);
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
@@ -333,22 +333,16 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         return profile;
     }
 
-    /// <summary>
-    /// DocHistory spec section 10: when the session offers <c>log_change</c>, puts the Stop hook in the Work Dir before the
-    /// Adapter process reads that folder's settings.
-    /// </summary>
+    /// <summary>Lets each Feature Module prepare the Work Dir, before the Adapter process reads that folder's settings.</summary>
     /// <param name="workDir">The Persona's Work Dir.</param>
-    /// <param name="dataDir">The App's data folder, which keeps the hook script.</param>
     /// <param name="toolNames">The session's tool names, already prefixed.</param>
-    /// <param name="identity">The Persona's parsed identity, or <see langword="null"/>. An Agent whose role covers verify also gets the read reminder (#354); one with no role, such as the Chief of Staff, does not.</param>
-    /// <param name="gates">Tells which roles cover verify, or <see langword="null"/> when the service is not registered.</param>
-    /// <param name="logger">Receives an install failure.</param>
-    internal static void InstallDocHistoryHook(string workDir, string dataDir, IReadOnlyList<string> toolNames, PersonaIdentity? identity, ProcessGateService? gates, ILogger logger)
+    /// <param name="identity">The Persona's parsed identity, or <see langword="null"/>.</param>
+    private void PrepareModuleWorkDirs(string workDir, IReadOnlyList<string> toolNames, PersonaIdentity? identity)
     {
-        if (SystemPromptComposer.FindLogChangeTool(toolNames) is { } logChangeToolName)
+        ModuleWorkDir moduleWorkDir = new(workDir, this.options.DataDir, toolNames, identity, this.serviceProvider, this.logger);
+        foreach (IFeatureModule module in ModuleCatalog.All)
         {
-            bool remindReads = gates?.CoversVerify(identity?.Role) == true;
-            DocHistoryStopHook.Install(workDir, dataDir, logChangeToolName, logger, remindReads);
+            module.PrepareWorkDir(moduleWorkDir);
         }
     }
 
@@ -537,7 +531,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         return chatTools;
     }
 
-    /// <summary>Applies Skill gating to the chat tools, then appends the File Changes folder-watch tools when they apply.</summary>
+    /// <summary>Applies Skill gating to the chat tools, then appends the File Changes folder-watch tools when they apply and each Feature Module's tools.</summary>
     /// <param name="chatTools">The ungated chat tools.</param>
     /// <param name="persona">The Persona being started.</param>
     /// <param name="profile">The resolved Adapter Profile.</param>
@@ -566,12 +560,11 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
         }
 
-        // DocHistory spec §6.3: log_change is offered on the same terms, so an Agent that cannot write files is
-        // not asked to report writing one. Appended before GetHelpTool is built, so get_help lists it.
-        if (this.options.DocHistory.Enabled && profile.ReadsFiles)
+        // Feature Modules add theirs here, before GetHelpTool is built, so get_help lists them too.
+        ModuleToolOffer offer = new(persona, profile, this.options, this.serviceProvider);
+        foreach (IFeatureModule module in ModuleCatalog.All)
         {
-            IAppTool logChangeTool = ActivatorUtilities.CreateInstance<LogChangeTool>(this.serviceProvider, persona.Name);
-            chatTools = [.. chatTools, logChangeTool];
+            chatTools = [.. chatTools, .. module.OfferTools(offer)];
         }
 
         return chatTools;
