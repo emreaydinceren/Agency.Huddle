@@ -132,6 +132,16 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
 - **A system prompt and a Model are both fixed at `session/new`.** Changing
   either on a Persona means restarting the session. There is no other way, and
   the session's conversation memory goes with it.
+- **A `session/update` can arrive before its session is registered.** The agent
+  may send one for a new session right after (or just before) its `session/new`
+  answer, and dotacp dispatches it on the reader while `StartSessionAsync` is
+  still awaiting that answer. The real Claude adapter does it with its command
+  list. `DotAcpClientAdapter` holds such updates while a start is in flight
+  (`BeginSessionStart`) and replays them on `Register`; a session that never
+  registers gets the usual "Dropping update for unknown session" Warning when
+  the last start ends. Register a sink any other way and the race is back: the
+  Warning failed paid live tests, which treat any host Warning as a
+  wrong-model fallback.
 - **The `thought_level` entry is rebuilt on every model switch.** Resolve effort
   against the `set_config_option` **response**, not the `session/new` snapshot.
   The adapter clamps a level the new model does not support back to `"default"`
