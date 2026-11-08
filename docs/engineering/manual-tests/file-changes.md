@@ -46,7 +46,8 @@ adds:
    @Mentioned, so every Message in a shared Room below carries `@<Name>`.
 3. **Define the Keeper.** The *Keeper* is an Agent you create for these tests with
    [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, one sentence in
-   **Persona body** ("You keep one short note per client in your Work Dir."), **Model** Haiku,
+   **Persona body** ("You keep one short note per client in your Work Dir."), **Model** Sonnet
+   (the owner's rule: never Haiku for a test Agent),
    **Effort** `low`, **Teams** blank. Its Work Dir is `<data>\Agents\Keeper\work\` and its memory
    folder is `<data>\Agents\Keeper\work\memory\` (`AgentPaths.cs`,
    `DotAcpAgentHostFactory.cs:131-136`). Several tests also use a second Agent, `Aide`, made the
@@ -260,7 +261,10 @@ that the Human never had auto-memory on to begin with. Use the Keeper.
 
 **Steps**
 
-1. In one Room, tell the Keeper "I prefer C# for any code. Please remember that."
+1. In one Room, tell the Keeper "I prefer C# for any code. Please remember that." A standing rule
+   belongs in an AGENTS.md, which an Agent does not edit, so the Keeper may propose the line for
+   you to add and offer to keep it in its own notes meanwhile: reply "Yes, keep it in your own
+   notes for now."
 2. Restart the Keeper from the Agents page (not the whole app).
 3. In a different Room (the Keeper and Aide Room B from FM-0, `@Keeper` in every Message), ask it
    for code and then "What do you remember about my coding preferences, and from which file?"

@@ -987,11 +987,11 @@ File Changes, Watched Folders and Memory — [area file](file-changes.md)
 | [FM-3](file-changes.md#fm-3--a-note-the-agent-writes-itself-is-not-listed-back-on-its-next-turn) | 💰 | Active | |  |
 | [FM-4](file-changes.md#fm-4--watch_folder-on-a-shared-folder-then-a-restart-then-an-outside-edit) | 💰 | Active | |  |
 | [FM-5](file-changes.md#fm-5--renaming-a-watched-agent-does-not-spuriously-list-anything) | 💰 | Active | |  |
-| [FM-6](file-changes.md#fm-6--isolation-and-memory-across-a-restart-with-a-real-preference) | 💰 | Active | |  |
+| [FM-6](file-changes.md#fm-6--isolation-and-memory-across-a-restart-with-a-real-preference) | 💰 | Pass | | passed 2026-11-07 with FC-V2 (see the Run log) |
 | [FM-7](file-changes.md#fm-7--room-only-instructions-stay-out-of-memory) | 💰 | Active | |  |
 | [FM-8](file-changes.md#fm-8--an-agent-describes-its-own-memory-honestly) | 💰 | Active | |  |
-| [FC-V1](file-changes.md#fc-v1--does-isolation-actually-drop-the-humans-own-settings-and-claudemd) | 💰 | Active | |  |
-| [FC-V2](file-changes.md#fc-v2--does-automemoryenabled-false-actually-stop-auto-memory) | 💰 | Active | |  |
+| [FC-V1](file-changes.md#fc-v1--does-isolation-actually-drop-the-humans-own-settings-and-claudemd) | 💰 | Pass | | passed 2026-11-07: no output style or `CLAUDE.md` line leaked (see the Run log) |
+| [FC-V2](file-changes.md#fc-v2--does-automemoryenabled-false-actually-stop-auto-memory) | 💰 | Pass | | passed 2026-11-07: no Claude Code auto-memory written (see the Run log) |
 | [FC-V4](file-changes.md#fc-v4--does-a-per-profile-claude_config_dir-move-the-login-only-if-fc-v1-or-fc-v2-fails) | 💰 | Active | |  |
 
 ## room-sessions
