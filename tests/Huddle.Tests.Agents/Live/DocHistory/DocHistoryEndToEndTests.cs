@@ -17,12 +17,20 @@ public sealed class DocHistoryEndToEndTests
     private const string Skip = "Set TEAM_E2E_DOCHISTORY=1 to run (paid)";
     private const string BoundName = "Nova";
 
+    /// <summary>
+    /// A Library fixture whose folders the real Adapter can work in: on the system temp folder, like
+    /// <see cref="TestPaths.GetAdapterTempPath"/>, because Claude Code refuses every tool call in a folder whose final path
+    /// Windows cannot resolve, as on a RAM disk in <c>HUDDLE_TEST_TEMP</c>.
+    /// </summary>
+    /// <returns>The fixture; the caller disposes it.</returns>
+    private static LibraryFileServiceFixture AdapterFixture() => LibraryFileServiceFixture.Build(supportsReparsePoints: true);
+
     /// <summary>LIVE-DH-E1: a created document gets one <c>created</c> line under the Name the tool was bound to.</summary>
     [Fact(Timeout = 600_000, SkipUnless = nameof(LiveDocHistory.Enabled), SkipType = typeof(LiveDocHistory), Skip = Skip)]
     public async Task LiveE1_CreateADocument_WritesOneCreatedLine()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        using LibraryFileServiceFixture fixture = AdapterFixture();
         string vault = fixture.CreatePinnedRoot("Vault");
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);
@@ -39,7 +47,7 @@ public sealed class DocHistoryEndToEndTests
     public async Task LiveE2_AskedToLogAsRuth_StaysTheBoundName()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        using LibraryFileServiceFixture fixture = AdapterFixture();
         string vault = fixture.CreatePinnedRoot("Vault");
         File.WriteAllText(Path.Combine(vault, "brief.md"), "A short brief.");
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
@@ -57,7 +65,7 @@ public sealed class DocHistoryEndToEndTests
     public async Task LiveE3_ReviewOfAMissingFile_IsRefused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        using LibraryFileServiceFixture fixture = AdapterFixture();
         string vault = fixture.CreatePinnedRoot("Vault");
         (RecordingLogChangeTool tool, DocHistoryStore store) = Build(fixture);
         await using LiveAgentLane lane = await LiveAgentLane.StartAsync(tool, ct);

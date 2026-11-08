@@ -20,4 +20,13 @@ internal static class TestPaths
 
         return Path.GetTempPath();
     }
+
+    /// <summary>
+    /// The temp folder for anything the real Adapter works in or runs: its working folders and the hook scripts installed
+    /// there. Claude Code resolves its working folder's final path before every tool call and refuses the call when Windows
+    /// cannot, and a RAM disk that is not registered with the mount manager cannot (<c>Incorrect function</c>), the same
+    /// failure that keeps link tests off it. So this is the system temp folder, as for <c>supportsReparsePoints</c>.
+    /// </summary>
+    /// <returns>The folder to build a live test's Adapter folders under.</returns>
+    public static string GetAdapterTempPath() => GetTempPath(supportsReparsePoints: true);
 }

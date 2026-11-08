@@ -20,8 +20,8 @@ internal static class LiveMergeGate
 /// git repository, with a <see cref="WorkDirPermissionHandler"/> and a fake gate behind it. With the generated hook
 /// installed, the Adapter must send a permission request for <c>git merge</c> (refused or allowed by the gate) and none for
 /// <c>git status</c>; without the hook, the control run shows the Adapter merging with no request at all. Paid: it never
-/// runs unless <c>TEAM_E2E_MERGEGATE=1</c>, runs on Sonnet at low Effort, and must not use a RAM disk
-/// for <c>HUDDLE_TEST_TEMP</c> (the Adapter cannot resolve a working folder on <c>R:</c>).
+/// runs unless <c>TEAM_E2E_MERGEGATE=1</c> and runs on Sonnet at low Effort. Its folders sit under
+/// <see cref="TestPaths.GetAdapterTempPath"/>, so a RAM disk in <c>HUDDLE_TEST_TEMP</c> does not reach the Adapter.
 /// </summary>
 public sealed class MergeGateProbeTests
 {
@@ -135,7 +135,7 @@ public sealed class MergeGateProbeTests
             Seed(repo);
             if (withHook)
             {
-                MergeGateHook.Install(repo, Path.Combine(Path.GetTempPath(), "merge-gate-probe-hooks"), NullLogger.Instance);
+                MergeGateHook.Install(repo, Path.Combine(TestPaths.GetAdapterTempPath(), "merge-gate-probe-hooks"), NullLogger.Instance);
             }
 
             List<string> requests = [];
@@ -170,11 +170,11 @@ public sealed class MergeGateProbeTests
         /// <inheritdoc />
         public ValueTask DisposeAsync() => this.host.DisposeAsync();
 
-        /// <summary>Creates an empty folder under the temp folder.</summary>
+        /// <summary>Creates an empty folder under <see cref="TestPaths.GetAdapterTempPath"/>, where the Adapter can work.</summary>
         /// <param name="label">A short label.</param>
         private static string Folder(string label)
         {
-            string path = Path.Combine(Path.GetTempPath(), "mergegate-live-" + label + "-" + Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(TestPaths.GetAdapterTempPath(), "mergegate-live-" + label + "-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
         }
