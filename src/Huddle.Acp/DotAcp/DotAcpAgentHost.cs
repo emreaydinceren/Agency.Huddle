@@ -138,6 +138,9 @@ public sealed partial class DotAcpAgentHost(
             Meta = DotAcpAgentHost.BuildMeta(options),
         };
 
+        // Until the session is registered, an update the agent sends for it is held rather than dropped (the scope ends
+        // when this method returns, after RegisterAndConfigureAsync registered it, or when the call failed).
+        using IDisposable starting = activeAdapter.BeginSessionStart();
         dotacp.protocol.NewSessionResponse response;
         try
         {
@@ -185,6 +188,8 @@ public sealed partial class DotAcpAgentHost(
             Meta = DotAcpAgentHost.BuildMeta(options),
         };
 
+        // As in StartSessionAsync: an update for the resumed session that arrives before it is registered is held.
+        using IDisposable starting = activeAdapter.BeginSessionStart();
         dotacp.protocol.ResumeSessionResponse response;
         try
         {

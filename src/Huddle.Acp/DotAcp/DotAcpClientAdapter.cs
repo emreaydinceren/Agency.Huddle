@@ -20,7 +20,24 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
     // strips the leading underscore before calling ExtNotificationAsync.
     private const string SessionNoticeMethod = "session/notice";
 
+    // At most this many early updates are held across all starting sessions; more are dropped with the Warning.
+    private const int MaxEarlyEvents = 256;
+
     private readonly ConcurrentDictionary<string, ISessionSink> sinks = new ConcurrentDictionary<string, ISessionSink>();
+
+    // Serialises delivery against registration, so an update dispatched while its session is being registered is
+    // published exactly once and in wire order, after any update held for it.
+    private readonly Lock gate = new Lock();
+
+    // Updates for a session not yet registered, held while a session/new or session/resume is in flight: the agent can
+    // send one for the new session before the host has read the answer and registered it. Guarded by gate.
+    private readonly Dictionary<string, List<AgentEvent>> early = new Dictionary<string, List<AgentEvent>>(StringComparer.Ordinal);
+
+    // Guarded by gate.
+    private int earlyCount;
+
+    // How many session/new or session/resume calls are between BeginSessionStart and the end of their scope. Guarded by gate.
+    private int startsInFlight;
 
     // One cancellation source per registered session, cancelled when that session is unregistered, so
     // an elicitation request open for a disposed session is ended rather than left waiting for the
@@ -37,7 +54,18 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
     internal void Register(ISessionSink sink)
     {
         ArgumentNullException.ThrowIfNull(sink);
-        this.sinks[sink.SessionId] = sink;
+        lock (this.gate)
+        {
+            this.sinks[sink.SessionId] = sink;
+            if (this.early.Remove(sink.SessionId, out List<AgentEvent>? held))
+            {
+                this.earlyCount -= held.Count;
+                foreach (AgentEvent agentEvent in held)
+                {
+                    sink.TryPublish(agentEvent);
+                }
+            }
+        }
 
         CancellationLifetime lifetime = new CancellationLifetime();
         this.sessionLifetimes.AddOrUpdate(
@@ -48,6 +76,23 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
                 previous.Dispose();
                 return lifetime;
             });
+    }
+
+    /// <summary>
+    /// Marks a <c>session/new</c> or <c>session/resume</c> as in flight until the returned scope is disposed. Meanwhile an
+    /// update for a session that is not registered yet is held and replayed by <see cref="Register"/>, because the agent
+    /// can send one for the new session before the host has read the answer. When the last scope ends, whatever is still
+    /// held belongs to no session and is dropped with the usual Warning.
+    /// </summary>
+    /// <returns>The scope; the host disposes it after it has registered the session, or when the start failed.</returns>
+    internal IDisposable BeginSessionStart()
+    {
+        lock (this.gate)
+        {
+            this.startsInFlight++;
+        }
+
+        return new SessionStart(this);
     }
 
     internal bool Unregister(string sessionId)
@@ -80,13 +125,7 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
         // not count here would stall that Turn until the safety cap.
         try
         {
-            if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
-            {
-                DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
-                return Task.CompletedTask;
-            }
-
-            sink.TryPublish(SessionUpdateMapper.Map(sessionId, notification.Update));
+            this.Deliver(sessionId, SessionUpdateMapper.Map(sessionId, notification.Update));
             return Task.CompletedTask;
         }
         finally
@@ -298,12 +337,6 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
                 return;
             }
 
-            if (!this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
-            {
-                DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
-                return;
-            }
-
             NoticeSeverity severity = fields.Value<string>("severity") switch
             {
                 "warning" => NoticeSeverity.Warning,
@@ -311,11 +344,70 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
                 _ => NoticeSeverity.Info,
             };
             string? description = fields.Value<string>("description") is { Length: > 0 } text ? text : null;
-            sink.TryPublish(new AgentNotice(sessionId, severity, title, description));
+            this.Deliver(sessionId, new AgentNotice(sessionId, severity, title, description));
         }
         finally
         {
             ledger.NoteDispatched(sessionId);
+        }
+    }
+
+    /// <summary>
+    /// Publishes <paramref name="agentEvent"/> to its session's sink. For a session not registered yet, it is held while a
+    /// start is in flight (see <see cref="BeginSessionStart"/>) and otherwise dropped with a Warning.
+    /// </summary>
+    /// <param name="sessionId">The session the update names.</param>
+    /// <param name="agentEvent">The mapped update.</param>
+    private void Deliver(string sessionId, AgentEvent agentEvent)
+    {
+        lock (this.gate)
+        {
+            if (this.sinks.TryGetValue(sessionId, out ISessionSink? sink))
+            {
+                sink.TryPublish(agentEvent);
+                return;
+            }
+
+            if (this.startsInFlight > 0 && this.earlyCount < DotAcpClientAdapter.MaxEarlyEvents)
+            {
+                if (!this.early.TryGetValue(sessionId, out List<AgentEvent>? held))
+                {
+                    held = [];
+                    this.early[sessionId] = held;
+                }
+
+                held.Add(agentEvent);
+                this.earlyCount++;
+                DotAcpClientAdapter.LogEarlyUpdateHeld(logger, sessionId);
+                return;
+            }
+        }
+
+        DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
+    }
+
+    /// <summary>Ends one start; when it was the last, drops what is still held, one Warning per update as if it had just arrived.</summary>
+    private void EndSessionStart()
+    {
+        List<string> dropped = [];
+        lock (this.gate)
+        {
+            this.startsInFlight--;
+            if (this.startsInFlight == 0)
+            {
+                foreach (KeyValuePair<string, List<AgentEvent>> entry in this.early)
+                {
+                    dropped.AddRange(Enumerable.Repeat(entry.Key, entry.Value.Count));
+                }
+
+                this.early.Clear();
+                this.earlyCount = 0;
+            }
+        }
+
+        foreach (string sessionId in dropped)
+        {
+            DotAcpClientAdapter.LogUnknownSessionUpdate(logger, sessionId);
         }
     }
 
@@ -370,6 +462,9 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Dropping update for unknown session {SessionId}")]
     private static partial void LogUnknownSessionUpdate(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Holding an update for session {SessionId} until it is registered.")]
+    private static partial void LogEarlyUpdateHeld(ILogger logger, string sessionId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Dropping permission request for unknown session {SessionId}")]
     private static partial void LogUnknownPermissionSession(ILogger logger, string sessionId);
@@ -432,6 +527,21 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
         {
             this.Cancel();
             this.source.Dispose();
+        }
+    }
+
+    /// <summary>The scope <see cref="BeginSessionStart"/> returns: ends its start once, however often it is disposed.</summary>
+    /// <param name="owner">The adapter whose start this is.</param>
+    private sealed class SessionStart(DotAcpClientAdapter owner) : IDisposable
+    {
+        private int ended;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref this.ended, 1) == 0)
+            {
+                owner.EndSessionStart();
+            }
         }
     }
 }
