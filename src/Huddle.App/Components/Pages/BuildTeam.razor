@@ -203,7 +203,10 @@
             <div class="build-team-roster">
                 <div class="build-team-subhead">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
-                    <span class="chip-meta build-team-roster-summary">@this.RosterSummary</span>
+                    @if (this.drafts.Count > 0)
+                    {
+                        <span class="chip-meta build-team-roster-summary">@this.RosterSummary</span>
+                    }
                 </div>
                 @if (this.drafts.Count > 0)
                 {
@@ -270,7 +273,11 @@
                 }
                 else
                 {
-                    <div class="roster-empty">Draft Agents appear here, each with a name and an avatar.</div>
+                    @* An empty roster is the EmptyState, not a caption after the heading (#476). *@
+                    <div class="roster-empty">
+                        <EmptyState Icon="@Icons.Material.Outlined.GroupAdd" Title="No Agents yet"
+                                    Text="@(this.EditMode ? "Add a role above to hire the first Agent." : "Add a role above to draft the first Agent, with a name and an avatar.")" />
+                    </div>
                 }
             </div>
 
@@ -427,11 +434,6 @@
     {
         get
         {
-            if (this.drafts.Count == 0)
-            {
-                return "No Agents yet. Add a role above.";
-            }
-
             if (!this.EditMode)
             {
                 string drafted = Plural.Of(this.drafts.Count, "draft Agent", "draft Agents");

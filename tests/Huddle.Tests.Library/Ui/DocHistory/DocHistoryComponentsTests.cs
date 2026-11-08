@@ -58,7 +58,7 @@ public sealed class DocHistoryComponentsTests
         Assert.Contains("Emre", text, StringComparison.Ordinal);
         Assert.Contains("Reviewed by", text, StringComparison.Ordinal);
         Assert.Contains("Ruth", text, StringComparison.Ordinal);
-        Assert.Contains("today 11:02", text, StringComparison.Ordinal);
+        Assert.Contains("Today 11:02", text, StringComparison.Ordinal);
         Assert.Equal(1, opened);
     }
 

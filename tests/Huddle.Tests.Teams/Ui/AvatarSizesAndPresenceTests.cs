@@ -19,7 +19,7 @@ public sealed class AvatarSizesAndPresenceTests
     /// <summary>The darkening every filled badge tone gets so the white glyph reads: the tone mixed this far toward black.</summary>
     private const int BadgeTowardBlackPercent = 20;
 
-    /// <summary>The Large avatar (a profile) is 72px, the Transcript avatar 32px, and the letters stay 40% of the diameter with a 10px floor.</summary>
+    /// <summary>The Large avatar (a profile) is 72px, the Transcript avatar 32px, and the letters stay 40% of the diameter on the ADR-0056 scale: 11px at 24px and 13px at 32px.</summary>
     [Fact]
     public void Stylesheet_AvatarSizes_AreTheFourDiameters()
     {
@@ -33,8 +33,8 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Contains("calc(72px * 0.4)", large, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("width: 32px;", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("height: 32px;", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("max(10px, calc(32px * 0.4))", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("max(10px, calc(24px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-small", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("max(13px, calc(32px * 0.4))", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("max(11px, calc(24px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-small", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("max(10px, calc(40px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-medium", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 

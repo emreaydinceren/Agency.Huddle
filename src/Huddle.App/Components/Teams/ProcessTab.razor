@@ -15,7 +15,12 @@
 <div class="process-tab">
     @if (this.text is null && this.gates.Count == 0)
     {
-        <EmptyState Title="This Team has no process yet" Text="A process lists the steps the Team follows to deliver work." />
+        <EmptyState Icon="@Icons.Material.Outlined.AccountTree" Title="No process yet"
+                    Text="A process lists the steps the Team follows to deliver work. Add one in the Team's AGENTS.md.">
+            <Action>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.Edit" Class="process-tab-add">Add a process</MudButton>
+            </Action>
+        </EmptyState>
     }
     else
     {

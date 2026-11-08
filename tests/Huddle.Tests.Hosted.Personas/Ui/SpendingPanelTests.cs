@@ -133,6 +133,19 @@ public sealed class SpendingPanelTests
         Assert.Equal("3 calls", cut.Find(".spending-helper-calls").TextContent.Trim());
     }
 
+    /// <summary>When only calls are known and no Adapter reported a cost, the Total row still shows a figure: a dash, never a bare label (#479).</summary>
+    [Fact]
+    public async Task Total_WithCallsButNoCost_ShowsADash()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        HelperUsageStore helpers = factory.Services.GetRequiredService<HelperUsageStore>();
+        helpers.AddCall(new HelperId("NeedsHuman"), "2026-11-01");
+        IRenderedComponent<SpendingPanel> cut = Render(factory, out MudBunitContext ctx);
+        await using MudBunitContext _ = ctx;
+
+        Assert.Equal(["—"], TotalAmounts(cut));
+    }
+
     /// <summary>An Agent in two Teams is counted once in the Total, and a note says why the Team rows add up to more.</summary>
     [Fact]
     public async Task AgentInTwoTeams_IsCountedOnceInTheTotal()

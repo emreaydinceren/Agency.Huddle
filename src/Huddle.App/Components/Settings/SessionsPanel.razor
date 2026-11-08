@@ -36,6 +36,7 @@
 
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start" Class="sessions-panel-budget-row">
     <MudNumericField T="int" Label="Size of what a fresh session rereads" Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="true"
+                     Format="N0" Culture="CultureInfo.InvariantCulture"
                      Value="@this.BudgetShown" ValueChanged="@this.SaveBudget" Validation="@((Func<int, string?>)SessionSettingsRules.CheckTokens)" HelperText="@this.BudgetHelper"
                      Error="@(this.budgetError is not null)" ErrorText="@this.budgetError" />
     @if (this.Settings.TokensOverride is not null)

@@ -472,8 +472,10 @@ public sealed class BuildTeamTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
-        Assert.Equal("No Agents yet. Add a role above.", cut.Find(".build-team-roster-summary").TextContent.Trim());
-        Assert.Equal("Draft Agents appear here, each with a name and an avatar.", cut.Find(".roster-empty").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-roster-summary"));
+        Assert.Equal("No Agents yet", cut.Find(".roster-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("Add a role above to draft the first Agent, with a name and an avatar.", cut.Find(".roster-empty .empty-state-text").TextContent.Trim());
+        Assert.NotEmpty(cut.FindAll(".roster-empty .empty-state-icon"));
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 

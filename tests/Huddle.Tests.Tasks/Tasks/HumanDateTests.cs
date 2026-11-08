@@ -52,7 +52,7 @@ public sealed class HumanDateTests
         Assert.Equal(expected, text);
     }
 
-    /// <summary>The activity log shows the local day and a 12-hour time, such as <c>Today 1:15 PM</c>.</summary>
+    /// <summary>The activity log shows the local day and a 24-hour time, such as <c>Today 13:15</c>, never AM or PM (#472).</summary>
     [Fact]
     public void HumanMoment_LocalDayAndTime_ReadsLikeTheActivityLog()
     {
@@ -61,9 +61,34 @@ public sealed class HumanDateTests
 
         string today = TaskDates.HumanMoment(new DateTimeOffset(2026, 10, 16, 11, 15, 0, TimeSpan.Zero), clock);
         string earlier = TaskDates.HumanMoment(new DateTimeOffset(2026, 10, 12, 14, 20, 0, TimeSpan.Zero), clock);
+        string morning = TaskDates.HumanMoment(new DateTimeOffset(2026, 10, 15, 6, 5, 0, TimeSpan.Zero), clock);
 
-        Assert.Equal("Today 1:15 PM", today);
-        Assert.Equal("Mon 4:20 PM", earlier);
+        Assert.Equal("Today 13:15", today);
+        Assert.Equal("Mon 16:20", earlier);
+        Assert.Equal("Yesterday 08:05", morning);
+    }
+
+    /// <summary>In the middle of a phrase the relative day word is lower case and the time stays 24-hour; a weekday keeps its capital, and null is empty (#472).</summary>
+    [Fact]
+    public void HumanMomentInPhrase_LowercasesTheRelativeWordOnly()
+    {
+        ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 11, 30, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+
+        Assert.Equal("today 08:30", TaskDates.HumanMomentInPhrase(new DateTimeOffset(2026, 10, 16, 8, 30, 0, TimeSpan.Zero), clock));
+        Assert.Equal("yesterday 21:00", TaskDates.HumanMomentInPhrase(new DateTimeOffset(2026, 10, 15, 21, 0, 0, TimeSpan.Zero), clock));
+        Assert.Equal("Mon 16:20", TaskDates.HumanMomentInPhrase(new DateTimeOffset(2026, 10, 12, 16, 20, 0, TimeSpan.Zero), clock));
+        Assert.Equal(string.Empty, TaskDates.HumanMomentInPhrase(null, clock));
+    }
+
+    /// <summary>InPhrase lowercases Today, Tomorrow and Yesterday and leaves a weekday or a date alone (#472).</summary>
+    [Fact]
+    public void InPhrase_LowercasesOnlyTheRelativeWords()
+    {
+        Assert.Equal("today", HumanDate.InPhrase("Today"));
+        Assert.Equal("tomorrow", HumanDate.InPhrase("Tomorrow"));
+        Assert.Equal("yesterday 08:30", HumanDate.InPhrase("Yesterday 08:30"));
+        Assert.Equal("Fri", HumanDate.InPhrase("Fri"));
+        Assert.Equal("Oct 27", HumanDate.InPhrase("Oct 27"));
     }
 
     /// <summary>Each boundary around today formats as the settled rule says.</summary>

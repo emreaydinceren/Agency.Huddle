@@ -56,6 +56,10 @@
 
         <div class="spending-total">
             <span class="spending-total-label">Total</span>
+            @if (this.total.Count == 0)
+            {
+                <span class="spending-total-amount" title="No Adapter has reported a cost yet.">—</span>
+            }
             @foreach (StoredSpend amount in this.total)
             {
                 <span class="spending-total-amount">@Money(amount)</span>

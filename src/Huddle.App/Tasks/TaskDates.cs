@@ -1,17 +1,12 @@
-using System.Globalization;
-
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
 /// How the Tasks UI shows a date to a Human: <see cref="HumanDate"/> ("Today", "Fri", "Oct 27") with the full date as a
 /// tooltip, resolved against the clock's local day. <see cref="Format"/> (<c>yyyy-MM-dd</c>) stays the format of
-/// every file or wire date, while a date picker's input shows <see cref="PickerFormat"/>; the Change log shows <see cref="HumanMoment"/> ("Today 1:15 PM").
+/// every file or wire date, while a date picker's input shows <see cref="PickerFormat"/>; the Change log shows <see cref="HumanMoment"/> ("Today 13:15").
 /// </summary>
 internal static class TaskDates
 {
-    /// <summary>The 12-hour time <see cref="HumanMoment"/> shows after the day.</summary>
-    private const string MomentTimeFormat = "h:mm tt";
-
     /// <summary>The invariant format string every stored date uses.</summary>
     public const string Format = "yyyy-MM-dd";
 
@@ -37,17 +32,28 @@ internal static class TaskDates
     }
 
     /// <summary>
-    /// The local day and time of <paramref name="at"/> as the activity log shows it: <c>Today 1:15 PM</c>, <c>Mon 4:20 PM</c>,
-    /// <c>Oct 3 9:05 AM</c>. The day is <see cref="HumanDate.FormatPast"/>; the time is 12-hour, in the clock's local zone.
+    /// The local day and time of <paramref name="at"/> as the activity log shows it: <c>Today 13:15</c>, <c>Mon 16:20</c>,
+    /// <c>Oct 3 09:05</c>. The day is <see cref="HumanDate.FormatPast"/>; the time is 24-hour, in the clock's local zone
+    /// (<see cref="HumanDate.Moment"/>).
     /// </summary>
     /// <param name="at">The instant to show.</param>
     /// <param name="clock">The clock that says what today is and which zone is local.</param>
     public static string HumanMoment(DateTimeOffset at, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(clock);
-        DateTimeOffset local = TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone);
-        string day = HumanDate.FormatPast(DateOnly.FromDateTime(local.DateTime), TaskDates.Today(clock));
-        return string.Join(' ', day, local.ToString(MomentTimeFormat, CultureInfo.InvariantCulture));
+        return HumanDate.Moment(at, TaskDates.Today(clock), clock.LocalTimeZone);
+    }
+
+    /// <summary>
+    /// <see cref="HumanMoment(DateTimeOffset, TimeProvider)"/> for the middle of a phrase ("Created today 13:15"), where the relative day
+    /// word is not capitalised (<see cref="HumanDate.InPhrase"/>), or an empty string when <see langword="null"/>.
+    /// </summary>
+    /// <param name="at">The instant to show.</param>
+    /// <param name="clock">The clock that says what today is and which zone is local.</param>
+    public static string HumanMomentInPhrase(DateTimeOffset? at, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        return at is { } value ? HumanDate.InPhrase(TaskDates.HumanMoment(value, clock)) : string.Empty;
     }
 
     /// <summary>The form of <paramref name="date"/> for a table column: month and day, never a weekday (<see cref="HumanDate.FormatColumn"/>), or an empty string when <see langword="null"/>.</summary>

@@ -4,6 +4,7 @@
     and TaskReadView share it so the two never drift apart.
 *@
 @inject TimeProvider Clock
+@inject Agency.Huddle.App.Avatars.AvatarStore Avatars
 
 <MudTimeline TimelinePosition="TimelinePosition.Start" Modifiers="false" Class="doc-history-timeline task-detail-history-list">
     @foreach (ChangeLogEntry entry in this.Entries.Reverse())
@@ -12,7 +13,7 @@
             <div class="doc-history-body task-detail-history-entry">
                 <div class="doc-history-head">
                     <span class="doc-history-actor">
-                        <AgentAvatar Name="@entry.Actor" Size="Size.Small" />
+                        <AgentAvatar Name="@entry.Actor" Avatar="this.Avatars.Get(entry.Actor)" Size="Size.Small" />
                         <strong class="doc-history-actor-name task-detail-history-actor">@entry.Actor</strong>
                     </span>
                     @if (string.Equals(entry.Actor, this.HumanName, StringComparison.Ordinal))

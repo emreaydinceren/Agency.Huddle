@@ -277,7 +277,7 @@ It holds one or more panels, depending on the page:
 | A Markdown note in the Library | **Outline**, **Linked documents** |
 | A Task you opened on the Tasks page | **Task**: its details, read-only, with **Edit** (the sidebar opens by itself when you open a Task) |
 | A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Linked documents** (the last three only when they have something to show) |
-| Any other page | None. The sidebar says `Nothing to show for this page.` |
+| Any other page | None. The sidebar says `Nothing to show here`, with a line on where panels appear. |
 
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |

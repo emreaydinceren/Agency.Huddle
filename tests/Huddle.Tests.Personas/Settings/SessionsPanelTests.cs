@@ -115,7 +115,16 @@ public sealed class SessionsPanelTests : IAsyncDisposable
         Assert.Equal("Size of what a fresh session rereads", Label(Budget(cut)));
     }
 
-    /// <summary>With no override the budget helper is T5 over the default 100,000 formatted with a thousands separator.</summary>
+    /// <summary>The budget field shows its value with the same thousands separator as the hint under it ("100,000"), not "100000" (#479).</summary>
+    [Fact]
+    public void BudgetField_ShowsTheValueWithAThousandsSeparator()
+    {
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+
+        Assert.Equal("100,000", cut.Find(".sessions-panel-budget-row input").GetAttribute("value"));
+    }
+
+    /// <summary>With no override the budget helper is T5over the default 100,000 formatted with a thousands separator.</summary>
     [Fact]
     public void BudgetHelper_ShowsTheCurrentDefaultWithThousandsSeparator()
     {
