@@ -3823,7 +3823,7 @@ body.sidebar-resizing {
 /* Only the label field fills the card; the upload control is a mud-input-control too, and must stay as wide as its
    button, like "Choose from library". */
 .avatar-choice-body .mud-input-control:not(.mud-file-upload) {
-    flex: 1 1 auto;
+    flex: 1 1 8rem;
 }
 
 .avatar-choice-body .mud-file-upload {
@@ -3835,8 +3835,8 @@ body.sidebar-resizing {
    wrapping row, not inside it as MudBlazor's own counter is. It takes a row of its own under the field, right-aligned,
    and the negative margin cancels the row gap so it sits as close as the stock counter did. */
 .avatar-choice-body > .mud-input-control-helper-container {
-    flex-basis: 100%;
-    margin-top: -8px;
+    flex: 0 0 auto;
+    margin-top: 0;
 }
 
 /* An image card's status line (the file name, or the not-yet-saved note) takes its own row under the card's two buttons,
@@ -3850,6 +3850,12 @@ body.sidebar-resizing {
 /* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height (B8i). */
 .avatar-editor-background-hidden {
     visibility: hidden;
+}
+
+/* In the dialog the hidden Background takes no space (#482): the dialog is anchored to the top of the window
+   (AvatarEditorDialog.Options), so it no longer re-centres when the Human moves between cards, and the band it held is gone. */
+.avatar-editor-dialog .avatar-editor-background-hidden {
+    display: none;
 }
 
 /* The buttons stop their click from reaching the card; the wrapper is only as wide as its button, so a click on the
@@ -4119,6 +4125,12 @@ body.sidebar-resizing {
     font-weight: 600;
 }
 
+/* A sub-section of a tab sits one level under the tab title (#473): 14px at 600, the Prompts groups too, whose shared
+   heading rule would otherwise draw them at the title's 16px. */
+.settings-section .prompts-group-heading {
+    font-size: var(--mud-typography-subtitle1-size);
+}
+
 .settings-stored-at code {
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
@@ -4178,6 +4190,23 @@ body.sidebar-resizing {
     color: var(--hu-current-icon);
 }
 
+/* A Library Root's last cell keeps "Read only" beside its Hide switch, on one line, so every row is one height and the
+   switches share a column at the cell's right edge (#480). */
+.library-panel-roots-table td:last-child {
+    white-space: nowrap;
+    text-align: end;
+}
+
+.library-panel-switch-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.library-panel-roots-table .library-panel-hide-switch {
+    margin-inline-end: 0;
+}
+
 /* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
 .library-panel-add-row {
     align-items: center;
@@ -4200,6 +4229,41 @@ body.sidebar-resizing {
 /* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
 .skills-grid .skills-name {
     font-weight: 500;
+}
+
+/* The grid fits its panel (#474): fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
+   sideways at the standard desktop width; the description stops at two lines (its full text is the cell's tooltip). */
+.skills-grid table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.skills-grid th:nth-child(2),
+.skills-grid td:nth-child(2) {
+    width: 20%;
+}
+
+.skills-grid th:nth-child(3),
+.skills-grid td:nth-child(3) {
+    width: 22%;
+}
+
+.skills-grid th:nth-child(4),
+.skills-grid td:nth-child(4) {
+    width: 14%;
+}
+
+.skills-grid th:nth-child(5),
+.skills-grid td:nth-child(5) {
+    width: 48px;
+}
+
+.skills-grid .skills-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 /* A phone has no room for two columns: the menu sits above the section and stops sticking. */
@@ -6709,9 +6773,20 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     gap: 12px;
 }
 
-/* The roles and the roster are two rows of cards that fill down and then across; what does not fit is reached by scrolling
-   sideways, so a long pool or a large roster stays two rows tall (B9a, B9c, B12). The padding keeps the scrollbar off the cards. */
-.role-grid,
+/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width (#474); the first dozen show and
+   "Show all roles" reveals the rest (BuildTeam). */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.role-grid-toggle {
+    margin-top: 4px;
+}
+
+/* The roster is two rows of cards that fill down and then across; what does not fit is reached by scrolling
+   sideways, so a large roster stays two rows tall (B9c, B12). The padding keeps the scrollbar off the cards. */
 .roster-grid {
     display: grid;
     grid-template-rows: repeat(2, auto);
@@ -6726,24 +6801,17 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     scrollbar-color: transparent transparent;
 }
 
-.role-grid:hover,
-.role-grid:focus-within,
 .roster-grid:hover,
 .roster-grid:focus-within {
     scrollbar-color: var(--ink-edge) transparent;
 }
 
-/* The roles are narrower cards, 220px wide; the roster's are 20rem. */
-.role-grid {
-    grid-auto-columns: 220px;
-}
-
+/* The roster's cards are 20rem wide. */
 .roster-grid {
     grid-auto-columns: 20rem;
 }
 
 /* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
-.role-grid:not(:has(> :nth-child(2))),
 .roster-grid:not(:has(> :nth-child(2))) {
     grid-template-rows: auto;
 }

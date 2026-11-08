@@ -54,7 +54,7 @@ public sealed class PromptsPanelTests
 
     /// <summary>
     /// Each prompt group is an outlined paper with a hairline, not an elevation-1 shadow, as the Appearance
-    /// and Skills sections are (UX-013), and its heading is the shared <c>Typo.subtitle2</c> <c>h2</c> (CV6, DS-3).
+    /// and Skills sections are (UX-013), and its heading is a <c>Typo.subtitle1</c> <c>h3</c>, one level under the tab's own <c>h2</c> title (#473).
     /// </summary>
     [Fact]
     public async Task Group_IsAnOutlinedPaper_NotElevated()
@@ -66,7 +66,8 @@ public sealed class PromptsPanelTests
 
         Assert.Single(cut.FindAll(".mud-paper-outlined"));
         Assert.Empty(cut.FindAll(".mud-elevation-1"));
-        Assert.True(cut.Find("h2").ClassList.Contains("mud-typography-subtitle2"));
+        Assert.Empty(cut.FindAll("h2"));
+        Assert.True(cut.Find("h3").ClassList.Contains("mud-typography-subtitle1"));
     }
 
     /// <summary>A prompt's text area carries the shared <c>long-text-field</c> class, so it is body text (400) and not the 600 MudBlazor gives an input.</summary>

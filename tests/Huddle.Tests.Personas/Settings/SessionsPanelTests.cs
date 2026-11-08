@@ -51,6 +51,15 @@ public sealed class SessionsPanelTests : IAsyncDisposable
         return this.ctx.RenderWithPopovers<SessionsPanel>();
     }
 
+    /// <summary>The panel draws no heading of its own: the Settings page's tab title already says "Sessions", and a second one repeated its parent (#473).</summary>
+    [Fact]
+    public void Panel_DrawsNoHeadingOfItsOwn()
+    {
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+
+        Assert.Empty(cut.FindAll("h1, h2, h3, h4, h5, h6"));
+    }
+
     private static IRenderedComponent<MudNumericField<int>> Cap(IRenderedComponent<ContainerFragment> cut) =>
         cut.FindComponents<MudNumericField<int>>()[0];
 

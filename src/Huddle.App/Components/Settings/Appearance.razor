@@ -41,7 +41,7 @@
 
 <StoredAt Label="The selection is stored at" Path="@this.AppearanceStore.FilePath" />
 
-<MudText Typo="Typo.subtitle2" HtmlTag="h2">Light theme</MudText>
+<MudText Typo="Typo.subtitle1" HtmlTag="h3">Light theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -62,7 +62,7 @@
     }
 </MudList>
 
-<MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Dark theme</MudText>
+<MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="mt-4">Dark theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -89,7 +89,7 @@
    what clamps it for contrast when it renders, so what MainLayout paints can differ slightly from what is
    shown here - by design, see AccentPalette's own remarks. The control belongs to the Theme being shown and
    writes customizations[its id].palette.primary. *@
-<MudColorPicker Label="@this.AccentLabel" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
+<MudColorPicker Label="@this.AccentLabel" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false" Variant="Variant.Outlined" Margin="Margin.Dense"
                 Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
                 Class="mt-4 theme-picker-accent-colour" />
 @if (this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id) is not null)

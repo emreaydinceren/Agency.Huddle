@@ -91,6 +91,20 @@ public sealed class LibraryPanelTests
         Assert.Empty(cut.Find(".library-panel-root-row[data-root-id='teams']").QuerySelectorAll(".library-panel-read-only"));
     }
 
+    /// <summary>The Read only caption and the Hide switch share one cell wrapper, so the caption sits beside the switch and every row keeps the switch on one line (#480).</summary>
+    [Fact]
+    public async Task ReadOnlyCaption_SitsBesideTheSwitch_InOneCell()
+    {
+        using PanelFixture fixture = PanelFixture.Build(pinnedName: "Docs", pinnedPath: null, createPinned: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+
+        var cell = cut.Find(".library-panel-root-row[data-root-id='skill-sources'] .library-panel-switch-cell");
+        Assert.NotNull(cell.QuerySelector(".library-panel-read-only"));
+        Assert.NotNull(cell.QuerySelector(".library-panel-hide-switch"));
+    }
+
     /// <summary>Adding an existing folder saves it as a new pinned root, which then shows in the table.</summary>
     [Fact]
     public async Task Add_ValidFolder_Saves()

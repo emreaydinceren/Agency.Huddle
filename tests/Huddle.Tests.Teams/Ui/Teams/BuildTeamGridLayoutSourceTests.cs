@@ -10,13 +10,23 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class BuildTeamGridLayoutSourceTests
 {
-    /// <summary>The roles and the roster share one rule: two rows that fill down, then across, with the gap and scrollbar room of the spacing scale, and no wrapping columns.</summary>
+    /// <summary>The roles wrap into rows of whole cards (#474): an auto-fill grid of 200px-or-wider columns, never a sideways scroller that cuts a card through.</summary>
     [Fact]
-    public void AppCss_RoleGridAndRosterGrid_ShareOneTwoRowScrollingRule()
+    public void AppCss_RoleGrid_WrapsIntoWholeCards()
+    {
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".role-grid");
+
+        Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("overflow-x", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("grid-auto-flow", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>The roster is two rows that fill down, then across, with the gap and scrollbar room of the spacing scale, and no wrapping columns.</summary>
+    [Fact]
+    public void AppCss_RosterGrid_IsATwoRowScrollingRule()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Contains("\n.role-grid,\n.roster-grid {", Normalised(css), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         string body = CssText.RuleBody(css, ".roster-grid");
         Assert.Contains("display: grid;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("grid-template-rows: repeat(2, auto);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -28,24 +38,23 @@ public sealed class BuildTeamGridLayoutSourceTests
         Assert.DoesNotContain("grid-template-columns", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>The roles keep their 220px cards and the roster its 20rem cards, now as fixed column widths.</summary>
+    /// <summary>The roster keeps its 20rem cards as a fixed column width.</summary>
     [Fact]
-    public void AppCss_RoleGridAndRosterGrid_KeepTheirCardWidths()
+    public void AppCss_RosterGrid_KeepsItsCardWidth()
     {
         string css = Normalised(CssText.AppCss(CssNewlines.AsIs));
 
-        Assert.Contains("\n.role-grid {\n    grid-auto-columns: 220px;\n}", css, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("\n.roster-grid {\n    grid-auto-columns: 20rem;\n}", css, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>A lone card gets one row, so an empty second row does not leave its row gap below the card.</summary>
+    /// <summary>A lone roster card gets one row, so an empty second row does not leave its row gap below the card.</summary>
     [Fact]
-    public void AppCss_RoleGridAndRosterGrid_ALoneCardHasOneRow()
+    public void AppCss_RosterGrid_ALoneCardHasOneRow()
     {
         string css = Normalised(CssText.AppCss(CssNewlines.AsIs));
 
         Assert.Contains(
-            "\n.role-grid:not(:has(> :nth-child(2))),\n.roster-grid:not(:has(> :nth-child(2))) {\n    grid-template-rows: auto;\n}",
+            "\n.roster-grid:not(:has(> :nth-child(2))) {\n    grid-template-rows: auto;\n}",
             css,
             StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }

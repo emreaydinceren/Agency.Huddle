@@ -74,14 +74,14 @@ public sealed partial class R3OpenItemsTests
         Assert.Contains(".agent-profile-card-row { display: flex;", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>UX-E16: the role and roster grids use a thin scrollbar that is transparent at rest and takes the Edge rung on hover or focus-within.</summary>
+    /// <summary>UX-E16: the roster grid, the one that still scrolls sideways (the roles wrap, #474), uses a thin scrollbar that is transparent at rest and takes the Edge rung on hover or focus-within.</summary>
     [Fact]
-    public void RoleAndRosterGrids_HideTheScrollbarUntilHoverOrFocus()
+    public void RosterGrid_HidesTheScrollbarUntilHoverOrFocus()
     {
         string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
 
         Assert.Contains("scrollbar-width: thin; scrollbar-color: transparent transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains(".role-grid:hover, .role-grid:focus-within, .roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-edge) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains(".roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-edge) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>B8i: every swatch has its own colour name, none is a numbered repeat ("Red 2"), and all 30 are different.</summary>
