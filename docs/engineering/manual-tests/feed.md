@@ -366,7 +366,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Before you start**
 
 - Setup is done for the paid lane, with the real Claude adapter ([Helpers setup](helpers.md#setup)) and `Keeper` in the Team `Growth`. **Settings › Helpers** shows Needs Human **On**.
-- Open the Keeper's chat in the Team: on the **Growth** row of the sidebar choose `⋯` then **New chat** and tick **Keeper**, or open the `Keeper` chat already listed under Growth. A wake-up for a Growth Task that names no origin Room goes to this chat, not to the root `Keeper` Room, so every step happens here.
+- Open the Keeper's chat in the Team: on the **Growth** row of the sidebar choose `⋯` then **New chat** and tick **Keeper**, or open the `Keeper` chat already listed under Growth. A Task the Keeper creates here takes this chat as its origin, so its wake-up comes back here; and this is also where a Growth Task with no origin is woken. Every step happens here.
 - Pick a title no open Growth Task has: the Keeper refuses a duplicate. The steps use `Email the pricing sheet to Globex`.
 
 **Steps**

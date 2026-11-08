@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 
 /// <summary>
@@ -16,13 +17,19 @@ using Agency.Huddle.App.Tasks;
 /// who will be notified via <see cref="TaskTriggerService.Preview"/>. Every expected failure is
 /// text; this never throws (corrections-B4 D10 items 2, 4 and 5).
 /// </summary>
+/// <remarks>
+/// With no <c>originRoomId</c> the origin is the Room of the caller's one running Turn, when the caller is a Member of it
+/// (<see cref="TurnActivity.SoleRoom"/>). Models leave the argument out, and a Task with no origin is woken in a
+/// {Human, assignee} Team chat rather than in the Room it was asked for in.
+/// </remarks>
 internal sealed class CreateTaskTool(
     TaskService tasks,
     TaskTriggerService triggers,
     ITeamDirectory directory,
     ISprintCatalog sprints,
     IPromptSource prompts,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    TurnActivity? turnActivity = null) : IAppTool
 {
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
@@ -101,6 +108,10 @@ internal sealed class CreateTaskTool(
             {
                 return membershipRefusal;
             }
+        }
+        else if (await this.TurnRoomAsync(cancellationToken).ConfigureAwait(false) is { } turnRoomId)
+        {
+            raw = raw with { OriginRoomId = turnRoomId };
         }
 
         if (!this.TryParseValues(raw, out ParsedValues? values, out string valuesRefusal))
@@ -367,6 +378,18 @@ internal sealed class CreateTaskTool(
         return string.Create(
             CultureInfo.InvariantCulture,
             $"You are not a member of room '{room.Name}' (id {room.Id}); pass an originRoomId only for a Room you belong to, or omit it.");
+    }
+
+    /// <summary>The Room of the caller's one running Turn, when the caller is a Member of it; otherwise <see langword="null"/> and the origin stays empty.</summary>
+    /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory"/>.</param>
+    private async Task<string?> TurnRoomAsync(CancellationToken cancellationToken)
+    {
+        if (turnActivity?.SoleRoom(callerAgentId) is not { } roomId)
+        {
+            return null;
+        }
+
+        return await this.CheckOriginRoomMembershipAsync(roomId, cancellationToken).ConfigureAwait(false) is null ? roomId : null;
     }
 
     /// <summary>Builds the §11.2 success text: what was created, its assignee, and who is notified.</summary>
