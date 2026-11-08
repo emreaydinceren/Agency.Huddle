@@ -106,6 +106,28 @@
     text-overflow: ellipsis;
 }
 
+/* A Task chip's title is a flex child inside the link, so it kept its full text width and was cut at the link's edge
+   with no ellipsis; letting it shrink makes the ellipsis land inside the chip's border. */
+.feed-row-summary ::deep .feed-chip .mud-nav-link-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.feed-row-summary ::deep .feed-chip-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A flex child is as wide as its text unless told otherwise, which pushed the status past a 280px Right sidebar. */
+.feed-row-status-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .feed-dot,
 .feed-time-dot {
     display: inline-block;
