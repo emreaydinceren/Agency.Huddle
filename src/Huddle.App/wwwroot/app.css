@@ -466,6 +466,30 @@ b {
     stroke-linejoin: round;
 }
 
+/* A select's visible text is a div (its input is hidden) that MudBlazor gives an inline display:inline and a height of its own
+   (a dense one 32px, the compact toolbar's 28px): the text sat on the first line of that block, on the top border, while the caret
+   was centred (issue 463). The block keeps whatever height the field gives it and centres its one line in it, which holds at any
+   field height, labelled or not; the inline style rules out display:flex without !important, so align-content does it. */
+.mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-select-input {
+    align-content: center;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A select's options are menu items (ADR-0056: menus and rows are body2). MudBlazor's MudSelectItem is a list row with 8px gutters and a
+   body1 label, 46px tall, so a six-word list covered most of its dialog (issue 492). The same dense row a MudMenu item is - 2px
+   padding, the label's own 4px margin, body2 text, about 30px - read by role, so the autocomplete's options match too. */
+.mud-popover .mud-list-item[role="option"] {
+    padding-block: 2px;
+}
+
+.mud-popover .mud-list-item[role="option"] .mud-list-item-text .mud-typography {
+    font-size: var(--mud-typography-body2-size);
+    line-height: var(--mud-typography-body2-lineheight);
+}
+
 /* ---- Measure: prose never runs wider than 75 characters (ADR-0056) --------------------------------
    An intro, a lead, helper text and an empty state are blocks of sentences; the pane may be wider, the line is not. */
 .settings-intro,
@@ -8430,16 +8454,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding-block: 4px;
     font-size: var(--mud-typography-body2-size);
     height: auto;
-}
-
-/* A select's visible text is a div, not an input (its element carries an inline display), so it sat on the field's top line: a line as tall as the
-   field's inside (34px less its two 1px borders) centres it (issue 491). */
-.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined div.mud-select-input.mud-input-slot {
-    padding-block: 0;
-    line-height: 32px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .task-edit-page .task-human-gate,
