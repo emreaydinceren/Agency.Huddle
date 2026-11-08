@@ -650,6 +650,9 @@ else if (this.loaded is { } task)
     private string? sprintInput;
     private string? baseVersion;
     private TaskResult.Conflict? conflict;
+
+    // The id of a Task this panel created in the save that just ran, until RaiseCreatedAsync hands it to the host (#453).
+    private TaskId? justCreated;
     private TaskResult.GateRefused? gateRefusal;
     private Proof proof = Proof.Empty;
     private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
@@ -1808,7 +1811,30 @@ else if (this.loaded is { } task)
     /// <see cref="HasPending"/> afterwards. An <see cref="IOException"/> from the store (Spec §13.6
     /// "Save errors") is shown in <see cref="saveError"/>, following <c>AgentProfileCard.SaveAsync</c>.
     /// </summary>
-    public Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
+    public async Task SaveAsync()
+    {
+        await this.SaveCore(humanOverridesGates: false);
+        await this.RaiseCreatedAsync();
+    }
+
+    /// <summary>
+    /// Raises <see cref="OnCreated"/> for a Task this panel has just created, after the render that turns the exit prompt off.
+    /// The host navigates to the new Task's address in its handler, and a prompt still holding its pre-save state would stop
+    /// that move and ask about edits already saved (#453).
+    /// </summary>
+    /// <returns>A task that completes when the host has handled the event, or at once when nothing was created.</returns>
+    private async Task RaiseCreatedAsync()
+    {
+        if (this.justCreated is not { } id)
+        {
+            return;
+        }
+
+        this.justCreated = null;
+        this.StateHasChanged();
+        await Task.Yield();
+        await this.OnCreated.InvokeAsync(id);
+    }
 
     /// <summary>
     /// The Team's process gates, or <see langword="null"/> when none are registered (a host without Teams enforces
@@ -1835,6 +1861,7 @@ else if (this.loaded is { } task)
         if (confirmed == true)
         {
             await this.SaveCore(humanOverridesGates: true);
+            await this.RaiseCreatedAsync();
         }
     }
 
@@ -1898,7 +1925,8 @@ else if (this.loaded is { } task)
                     this.SetTitleEditing(false);
                     if (wasCreate)
                     {
-                        _ = this.OnCreated.InvokeAsync(saved.Task.Id);
+                        // Raised by RaiseCreatedAsync once this panel has re-rendered, never from here (#453).
+                        this.justCreated = saved.Task.Id;
                     }
 
                     break;
