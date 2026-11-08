@@ -16,6 +16,8 @@
 @inject NavigationManager Navigation
 @inject LibraryPathResolver LibraryResolver
 @inject TaskStore Store
+@inject AvatarStore Avatars
+@inject IHumanIdentity Human
 @inject IServiceProvider Services
 
 <div class="@this.RootClass" data-feed-id="@this.Group.Lead.Id">
@@ -216,6 +218,9 @@
 
     private string ActorName => this.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Lead.Actor.Name;
 
+    /// <summary>The Name the avatar store knows this card's actor by: the Human's own Name for the Human, whose card says "You".</summary>
+    private string AvatarOwner => this.Lead.Actor.Kind == FeedActorKind.Human ? this.Human.Name : this.Lead.Actor.Name;
+
     private string RootClass =>
         "feed-card feed-kind-" + this.Category
         + (this.Unseen ? " feed-card-unseen" : string.Empty)
@@ -381,7 +386,8 @@
             builder.AddAttribute(11, "aria-label", actor.Name);
             builder.AddAttribute(12, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => this.OnAgent.InvokeAsync(actor.Name)));
             builder.OpenComponent<AgentAvatar>(0);
-            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.AvatarOwner);
+            builder.AddComponentParameter(3, nameof(AgentAvatar.Avatar), this.Avatars.Get(this.AvatarOwner));
             builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
             builder.CloseComponent();
             builder.CloseElement();
@@ -391,7 +397,8 @@
         if (actor.Kind is FeedActorKind.Agent or FeedActorKind.Human)
         {
             builder.OpenComponent<AgentAvatar>(0);
-            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.ActorName);
+            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.AvatarOwner);
+            builder.AddComponentParameter(3, nameof(AgentAvatar.Avatar), this.Avatars.Get(this.AvatarOwner));
             builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
             builder.CloseComponent();
             return;

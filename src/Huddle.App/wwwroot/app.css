@@ -830,9 +830,9 @@ a.team-ref,
 
 /* ---- Avatars (DS-6, C2) ---------------------------------------------------------------------------
    Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px in the Transcript (.avatar-transcript),
-   40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter and never
-   under 10px, a floor set by the avatar spec rather than the 11px text floor, since a 24px row avatar has no room
-   for more; the declaration uses max() so it stays a computed size, not a literal one.
+   40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter, held to the ADR-0056
+   scale: 11px at 24px and below (the 18px Team avatar on a Feed card is a Small avatar resized, so it gets 11px too),
+   13px at 32px (12.8px rounded up), 16px and 28.8px above. The declaration uses max() so it stays a computed size, not a literal one.
    Monogram: the Agent's colour (AgentAvatar overrides --mud-palette-primary on the avatar itself; the Theme
    accent when none is chosen) at 40% over Surface, with letters mixed 75% toward TextPrimary at weight 600. A Dark
    Theme (MainLayout renders .theme-mode-dark) runs the colour at 40% over its Surface with letters mixed 75% toward
@@ -847,13 +847,13 @@ a.team-ref,
    does not hold (a 6-character label cannot fit a 32px circle at 10px), so they use a 7px floor instead. The 24px
    avatar never gets a length class: AgentAvatar draws only the first three text elements of a label there. */
 .mud-avatar.mud-avatar-small {
-    font-size: max(10px, calc(24px * 0.4));
+    font-size: max(11px, calc(24px * 0.4));
 }
 
 .mud-avatar.avatar-transcript {
     width: 32px;
     height: 32px;
-    font-size: max(10px, calc(32px * 0.4));
+    font-size: max(13px, calc(32px * 0.4));
 }
 
 /* The Teams icon in the Feed's Team select. The dropdown renders in the popover provider, outside the page, so a rule scoped to the page never reaches it. */

@@ -1,4 +1,5 @@
 using Agency.Huddle.App;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Feed;
@@ -31,6 +32,8 @@ internal sealed class FeedCardHost : IDisposable
     private readonly TaskToolHarness tasks;
     private readonly LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
     private readonly TempDataDir helperDir = new();
+    private readonly TempDataDir avatarDir = new();
+    private AvatarStore? avatars;
 
     private FeedCardHost(NeedsYouFixture needsYou)
     {
@@ -43,6 +46,9 @@ internal sealed class FeedCardHost : IDisposable
         this.HelperBudget = new HelperBudget(new HelperUsageStore(helperOptions), this.Clock);
         this.HelperSettings = new HelperSettingsResolver(new HelperSettingsStore(helperOptions), helperOptions, NullLogger<HelperSettingsResolver>.Instance);
     }
+
+    /// <summary>The avatar store the card and its previews draw faces from; empty until a test saves an avatar.</summary>
+    public AvatarStore Avatars => this.avatars ??= new AvatarStore(this.avatarDir.Options(), NullLogger<AvatarStore>.Instance);
 
     /// <summary>The Team catalog the card's Team chip reads its avatar from; empty until a test sets <see cref="FakeTeamCatalog.Teams"/>.</summary>
     public FakeTeamCatalog Teams { get; } = new();
@@ -108,6 +114,7 @@ internal sealed class FeedCardHost : IDisposable
         ctx.Services.AddSingleton(this.HelperBudget);
         ctx.Services.AddSingleton(this.HelperSettings);
         ctx.Services.AddSingleton<ITeamCatalog>(this.Teams);
+        ctx.Services.AddSingleton(this.Avatars);
         return ctx;
     }
 
@@ -152,6 +159,8 @@ internal sealed class FeedCardHost : IDisposable
         this.feed.Dispose();
         this.library.Dispose();
         this.helperDir.Dispose();
+        this.avatars?.Dispose();
+        this.avatarDir.Dispose();
         this.NeedsYou.Dispose();
     }
 
