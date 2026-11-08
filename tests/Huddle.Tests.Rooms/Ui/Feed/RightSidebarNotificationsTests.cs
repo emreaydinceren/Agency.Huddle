@@ -38,7 +38,7 @@ public sealed class RightSidebarNotificationsTests
             Assert.Equal("Notifications", sidebar.Find("section.sidebar-panel").GetAttribute("aria-label"));
             Assert.Equal("2", sidebar.Find(".sidebar-panel-count").TextContent.Trim());
             Assert.Equal(2, sidebar.FindAll(".feed-row").Count);
-            Assert.DoesNotContain("Nothing to show for this page.", sidebar.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("Nothing to show here", sidebar.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -56,7 +56,7 @@ public sealed class RightSidebarNotificationsTests
         sidebar.WaitForAssertion(() =>
         {
             Assert.Empty(sidebar.FindAll("section.sidebar-panel"));
-            Assert.Equal("Nothing to show for this page.", sidebar.Find("[role='status']").TextContent.Trim());
+            Assert.Equal("Nothing to show here", sidebar.Find("[role='status']").TextContent.Trim());
         });
     }
 

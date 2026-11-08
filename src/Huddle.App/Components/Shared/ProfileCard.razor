@@ -46,6 +46,7 @@
     }
     <span class="roster-description">@profile.Description</span>
     <span class="roster-chips">
+        @* The facts on this line are separated by " · ", as the Agents page cards do ("@dana · Online"). *@
         @if (this.Membership == ProfileMembership.Member)
         {
             <span class="roster-state roster-state-member">Member</span>
@@ -56,10 +57,12 @@
         }
         @if (profile.Tier is { } tier)
         {
+            @this.Separator(this.Membership != ProfileMembership.None)
             <span class="@($"roster-tier roster-tier-{tier.ToString().ToLowerInvariant()}")">@tier.ToString().ToLowerInvariant()</span>
         }
         @if (profile.SkillNames.Count > 0)
         {
+            @this.Separator(this.Membership != ProfileMembership.None || profile.Tier is not null)
             <span class="roster-skills" title="@string.Join(", ", profile.SkillNames)">@Plural.Of(profile.SkillNames.Count, "skill", "skills")</span>
         }
     </span>
@@ -86,6 +89,20 @@
 }
 
 @code {
+    /// <summary>The " · " between two facts on the chips line, drawn only when a fact comes before it.</summary>
+    /// <param name="after">Whether an earlier fact is on the line.</param>
+    private RenderFragment Separator(bool after) => builder =>
+    {
+        if (after)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "roster-sep");
+            builder.AddAttribute(2, "aria-hidden", "true");
+            builder.AddContent(3, "·");
+            builder.CloseElement();
+        }
+    };
+
     /// <summary>The Agent to draw; nothing is drawn while it is <see langword="null"/>.</summary>
     [Parameter]
     [EditorRequired]

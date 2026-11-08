@@ -655,6 +655,17 @@ a.team-ref,
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
+/* The " · " between the Task footer's facts: the footer's 16px gap, pulled in to 8px each side so the dot reads as a separator (#479). */
+.task-detail-footer-sep {
+    margin-inline: -8px;
+}
+
+/* The " · " between two facts on a Roster card's chips line: quiet, like the facts it separates (#479). */
+.roster-sep {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
 /* ---- New chat and the agent status dots ------------------------------------------------------ */
 
 /* The picker floats under the link or the Team row like Invite's panel (audit B10 "New chat"): the .floating-panel Edge and
@@ -1074,23 +1085,9 @@ emoji-picker {
     max-width: 45ch;
 }
 
-/* The Right sidebar with nothing for the page says so quietly, like a panel's own "Nothing links here.": left at the
-   panel's padding, body2 in the secondary colour. A bold centred sentence was the loudest thing in an empty panel. */
-.right-sidebar .mud-drawer-content > .empty-state {
-    align-items: flex-start;
-    margin-inline: 0;
-    padding: 16px;
-    text-align: start;
-}
-
-.right-sidebar .mud-drawer-content > .empty-state .empty-state-title {
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 400;
-}
-
-.right-sidebar .mud-drawer-content > .empty-state .empty-state-text:empty {
-    display: none;
+/* Balance the lines, inline or full-pane, so a short sentence never leaves one orphaned word on the last (#476). */
+.empty-state-text {
+    text-wrap: balance;
 }
 
 .tab-empty.empty-state-centered {

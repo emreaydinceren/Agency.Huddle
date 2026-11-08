@@ -296,11 +296,13 @@ else if (this.loaded is { } task)
     </section>
 
     <div class="task-detail-footer-meta">
-        <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
-        <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
+        <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.HumanMomentInPhrase(task.Created, this.Clock)}")</span>
+        <span class="task-detail-footer-sep" aria-hidden="true">·</span>
+        <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.HumanMomentInPhrase(task.Updated, this.Clock)}")</span>
         @if (task.ClosedAt is { } closedAt)
         {
-            <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
+            <span class="task-detail-footer-sep" aria-hidden="true">·</span>
+            <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.HumanMomentInPhrase(closedAt, this.Clock)}")</span>
         }
     </div>
 }

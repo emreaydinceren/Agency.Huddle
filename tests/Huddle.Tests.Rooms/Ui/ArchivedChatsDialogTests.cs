@@ -46,6 +46,26 @@ public sealed class ArchivedChatsDialogTests
         Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Unarchive", StringComparison.Ordinal));
     }
 
+    /// <summary>A Room archived just now reads "Archived today": the relative day word is lower case in the middle of a phrase (#472).</summary>
+    [Fact]
+    public async Task Dialog_RoomArchivedToday_ReadsArchivedTodayInLowerCase()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = await OpenDialogAsync(ctx);
+
+        Assert.Equal("Archived today", cut.Find(".archived-chats-date").TextContent.Trim());
+    }
+
     /// <summary>A Room that was never archived has nothing to do with this dialog.</summary>
     [Fact]
     public async Task Dialog_NonArchivedRoom_IsNotListed()

@@ -138,7 +138,7 @@ public sealed class DocHistoryViewTests
         Assert.Empty(DocHistoryView.ByDay([], DateTimeOffset.UnixEpoch, TimeZoneInfo.Utc, Window));
     }
 
-    /// <summary>A time reads as "today 11:02", "yesterday 16:20" or "11 Oct" in the viewer's zone.</summary>
+    /// <summary>A time reads as "Today 11:02", "Yesterday 16:20" (capitalised, 24-hour, like every other screen) or "11 Oct" in the viewer's zone.</summary>
     [Fact]
     public void RelativeTime_ReadsTodayYesterdayAndDate()
     {
@@ -151,7 +151,7 @@ public sealed class DocHistoryViewTests
             DocHistoryView.RelativeTime(new DateTimeOffset(2026, 10, 11, 9, 12, 0, TimeSpan.Zero), now, TimeZoneInfo.Utc),
         ];
 
-        Assert.Equal(["today 11:02", "yesterday 16:20", "11 Oct"], texts);
+        Assert.Equal(["Today 11:02", "Yesterday 16:20", "11 Oct"], texts);
     }
 
     /// <summary>A bare Human save is labelled Saved; every other entry carries its kind.</summary>
