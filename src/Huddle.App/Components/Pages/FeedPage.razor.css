@@ -53,8 +53,17 @@
     border-radius: var(--mud-default-borderradius);
 }
 
-.feed-filter-bar ::deep .feed-category-control {
+/* Nine segments are wider than a narrow column. MudToggleGroup writes minmax(0, 1fr) columns inline, so a control capped at the
+   column's width squeezes each segment below its label and the labels overlap. Laid out at its own content width, every column is
+   as wide as the widest label (the slide of the indicator needs equal segments), and the scroller around it scrolls sideways. */
+.feed-filter-bar .feed-category-scroller {
     max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.feed-filter-bar ::deep .feed-category-control {
+    width: max-content;
     background: var(--hu-control-track);
 }
 

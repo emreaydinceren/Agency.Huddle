@@ -4842,6 +4842,7 @@ File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fm-6--is
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `9d2c785f` |  | By an agent, run with FC-V2 on the paid lane; Keeper on Sonnet low, `"autoMemoryEnabled": true` in the owner's `~/.claude/settings.json` (owner's consent). The Room B with Aide was the Keeper's Growth chat instead (no Aide on the lane). Step 1: the Keeper first declined, saying a standing rule belongs in AGENTS.md, and offered its own notes; told "Yes, keep it in your own notes", it wrote `memory\tester-preferences.md` (266 bytes). After a restart from the Agent card (new session in the log), it answered in another Room with a C# `Add` and named `tester-preferences.md`. Step 5: see FC-V2. Script updated for the AGENTS.md offer. |
 
 ### FM-7 — Room-only instructions stay out of Memory
 
@@ -4863,6 +4864,7 @@ File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fc-v1--d
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `9d2c785f` |  | By an agent with the owner's consent; stock Adapter profile; Keeper on Sonnet low. Markers in the owner's `~/.claude`: `"outputStyle": "Explanatory"` (its replies carry `★ Insight` blocks; the user-level Explanatory plugin was already on too) and a new `CLAUDE.md` telling an Agent named Keeper in Huddle to end every reply with PINEAPPLE. The lane started after both were set. The reply to "What is a good name for a spreadsheet of client notes?" was `I'd name it client-notes.xlsx. Keep it plain, and add a date or quarter (for example client-notes-2026-q4) if you keep one per period.`: no PINEAPPLE, no Insight block. Two later replies, one after a restart, carried neither. `~/.claude` restored afterwards (`settings.json` hash matches the backup; `CLAUDE.md` removed, as there was none). |
 
 ### FC-V2 — Does `autoMemoryEnabled: false` actually stop auto-memory?
 
@@ -4870,6 +4872,7 @@ File: [`docs/engineering/manual-tests/file-changes.md`](file-changes.md#fc-v2--d
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `9d2c785f` |  | By an agent with FM-6, Keeper on Sonnet low, `"autoMemoryEnabled": true` in the owner's `~/.claude/settings.json`. From the markers (21:28) to the end, the only new files under `~\.claude\projects\C--seeds-huddle-paid-data-*` were session transcripts (`.jsonl`), and no file under any `memory\` folder in `~\.claude\projects` changed. `C--seeds-huddle-paid-data-Agents\memory\` exists but is empty, made at the lane's first start (19:09), before this run. Settings restored afterwards. |
 
 ### FC-V4 — Does a per-profile `CLAUDE_CONFIG_DIR` move the login? (only if FC-V1 or FC-V2 fails)
 

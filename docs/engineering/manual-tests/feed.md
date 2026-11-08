@@ -14,7 +14,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 2. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. The Feed lives in `$data\team.db`; never open it while the app runs.
 3. Find the Human's Name in **Settings → Profile**. The steps call it `<Human>`.
 4. The mock Agents cannot call Task tools or Mention you, so the free tests make a Notification in two ways. A Form: send `[elicit:one]` in the `Ada` Room and Ada puts one Form to you. A Task handed to you: create a Task on the Tasks page with no assignee, find its file with `Get-ChildItem $data -Recurse -Filter '<ID>.md'`, change its `assignee:` line to `<Human>` in an editor and save. The file edit counts as an edit made outside Huddle, so its Feed item has the outside-edit mark where an Agent's avatar would be; the Notification itself is the same. A Task you create or assign in the UI makes Activity only, never a Notification, because a Notification is never posted for the Human's own action.
-5. The paid tests need a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Haiku, **Effort** `low`, in a Team named `Growth` whose `Process.md` has a Definition of Done as in [the Human gate page](human-gate.md#setup). Launch them with `P-LAUNCH-PAID` instead of `P-LAUNCH-UAT`.
+5. The paid tests need a real Agent made with [`P-NEW-PERSONA`](common.md#p-new-persona): Name `Keeper`, Title `Keeper`, **Model** Sonnet (the owner's rule: never Haiku for a test Agent), **Effort** `low`, in a Team named `Growth` whose `Process.md` has a Definition of Done as in [the Human gate page](human-gate.md#setup). Launch them with `P-LAUNCH-PAID` instead of `P-LAUNCH-UAT`.
 6. Restarting means `P-STOP`, then the same launch command **without** re-running the seeder, so the data stays.
 7. The bell is the button labelled `Notifications` at the right of the Top Bar, just left of the Right sidebar toggle. With a count, its label reads `Notifications, <n> new`. The Feed link is the `Feed` icon at the top of the Activity bar, above Chats.
 
@@ -366,14 +366,15 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Before you start**
 
 - Setup is done for the paid lane, with the real Claude adapter ([Helpers setup](helpers.md#setup)) and `Keeper` in the Team `Growth`. **Settings › Helpers** shows Needs Human **On**.
-- In the `Keeper` Room make `Keeper` Mention you: send `Ask me which colour, then wait.` and let it reply with `@<Human>`. The Room is now in the **Needs you** card with a Mention.
+- Open the Keeper's chat in the Team: on the **Growth** row of the sidebar choose `⋯` then **New chat** and tick **Keeper**, or open the `Keeper` chat already listed under Growth. A wake-up for a Growth Task that names no origin Room goes to this chat, not to the root `Keeper` Room, so every step happens here.
+- Pick a title no open Growth Task has: the Keeper refuses a duplicate. The steps use `Email the pricing sheet to Globex`.
 
 **Steps**
 
-1. In the `Keeper` Room send `Create a Task in Growth: Email the pricing sheet to Acme.` Wait 40 seconds.
+1. In the Growth `Keeper` chat send `Create a Task in Growth assigned to yourself: Email the pricing sheet to Globex. Then ask me which colour, writing @<Human> in your reply, and wait.` Wait 40 seconds. The Keeper's reply Mentions you after your own message, so the Mention is unanswered.
 2. Look at the bell, then open the Feed Tab on `Gates`.
 3. Read the top card: the avatar, the summary, the pill and, after expanding it, the preview.
-4. Open the `Keeper` Room and read the line after the Task change.
+4. In the Growth `Keeper` chat read the line after the Keeper's Mention.
 5. Look at the **Needs you** card and the Feed Tab on `Needs you`.
 6. Open the Task. If it names no Action, switch `Requires your acceptance` off and Save. If the Helper also set an Action, the switch is locked on and Decline only shows once the Task waits for you: set **Status** to `Review` and Save, then choose **Decline** from the ⋮ menu on the **Your decision** card and give a reason. Look at the Feed Tab.
 
@@ -381,8 +382,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 - At step 2 the bell shows a count and the card sits under `Gates` as well as under `Needs you`.
 - At step 3 the avatar is the Helper mark (a head outline), not an Agent's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, or `Needs Human (Helper) set the Action "<step>" on` when the Helper named the step, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`, or `Asked <hh:mm> · accept or decline it on the Task` with an Action; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …` with no doubled full stop.
-- At step 4 the wake-up is a muted one-line row, not a bubble, and it is not written under your Name.
-- At step 5 the Room is still in **Needs you** with its Mention, and its Mention Notification is still unresolved.
+- At step 4 the wake-up comes after the Keeper's Mention, names `Needs Human (Helper)`, and is a muted one-line row, not a bubble, not written under your Name. If the wake-up came before the Mention, the order proves nothing: record Inconclusive and rerun with a new title.
+- At step 5 the Growth `Keeper` chat is still in **Needs you** with its Mention, and its Mention Notification is still unresolved.
 - At step 6 the card is dimmed with a `Done` pill and has left the `Needs you` count; it is still listed under `All` and `Gates`.
 
 ### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it

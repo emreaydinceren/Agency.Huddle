@@ -987,11 +987,11 @@ File Changes, Watched Folders and Memory — [area file](file-changes.md)
 | [FM-3](file-changes.md#fm-3--a-note-the-agent-writes-itself-is-not-listed-back-on-its-next-turn) | 💰 | Active | |  |
 | [FM-4](file-changes.md#fm-4--watch_folder-on-a-shared-folder-then-a-restart-then-an-outside-edit) | 💰 | Active | |  |
 | [FM-5](file-changes.md#fm-5--renaming-a-watched-agent-does-not-spuriously-list-anything) | 💰 | Active | |  |
-| [FM-6](file-changes.md#fm-6--isolation-and-memory-across-a-restart-with-a-real-preference) | 💰 | Active | |  |
+| [FM-6](file-changes.md#fm-6--isolation-and-memory-across-a-restart-with-a-real-preference) | 💰 | Pass | | passed 2026-11-07 with FC-V2 (see the Run log) |
 | [FM-7](file-changes.md#fm-7--room-only-instructions-stay-out-of-memory) | 💰 | Active | |  |
 | [FM-8](file-changes.md#fm-8--an-agent-describes-its-own-memory-honestly) | 💰 | Active | |  |
-| [FC-V1](file-changes.md#fc-v1--does-isolation-actually-drop-the-humans-own-settings-and-claudemd) | 💰 | Active | |  |
-| [FC-V2](file-changes.md#fc-v2--does-automemoryenabled-false-actually-stop-auto-memory) | 💰 | Active | |  |
+| [FC-V1](file-changes.md#fc-v1--does-isolation-actually-drop-the-humans-own-settings-and-claudemd) | 💰 | Pass | | passed 2026-11-07: no output style or `CLAUDE.md` line leaked (see the Run log) |
+| [FC-V2](file-changes.md#fc-v2--does-automemoryenabled-false-actually-stop-auto-memory) | 💰 | Pass | | passed 2026-11-07: no Claude Code auto-memory written (see the Run log) |
 | [FC-V4](file-changes.md#fc-v4--does-a-per-profile-claude_config_dir-move-the-login-only-if-fc-v1-or-fc-v2-fails) | 💰 | Active | |  |
 
 ## room-sessions
@@ -1241,7 +1241,7 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-12](feed.md#feed-12--a-restart-resolves-a-form-notification) |  | Active |  | not yet run by a person |
 | [FEED-13](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link) |  | Active |  | not yet run by a person |
 | [FEED-14](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed) |  | Active |  | not yet run by a person |
-| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Partial | #452 | rerun 2026-11-07 at `63fea285`: steps 2, 3 and 6 pass once the Feed preview fix lands; steps 4 and 5 cannot be judged as written (see the Run log) |
+| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Partial | #452 | rerun 2026-11-07 at `63fea285`: steps 2, 3 and 6 pass once the Feed preview fix lands; steps 4 and 5 rewritten to run in the Growth `Keeper` chat Huddle wakes, so they need a paid rerun (see the Run log) |
 | [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | run 2026-11-07, Blocked: an unknown Needs Human Adapter now falls back to claude (`The adapter 'nope' is not configured. It will run on 'claude'.`), so the Helper never fails this way. HELPERS-07's expected text is stale for the same reason. |
 | [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Pass |  | run 2026-11-07 by an agent; cap set to 3 because 2 calls were already used. One item by Huddle, `2 skipped while paused`, resolved by Continue (+10 today); Needs you fell 3 to 2. |
 

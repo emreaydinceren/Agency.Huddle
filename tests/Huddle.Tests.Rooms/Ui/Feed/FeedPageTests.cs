@@ -419,4 +419,52 @@ public sealed partial class FeedPageTests
         Assert.Equal("All 0", Text(cut.Find(".huddle-segmented-active-item")));
         Assert.Empty(cut.FindAll(".feed-agent-chip"));
     }
+
+    /// <summary>
+    /// The Category control sits alone in its scroller, so a narrow column scrolls the nine segments sideways rather than squeezing
+    /// them until their labels overlap; the Agent chip and the Team select stay outside it.
+    /// </summary>
+    [Fact]
+    public async Task CategoryControl_SitsInItsOwnScroller()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = NewContext(host);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, agent: "Nova");
+
+        IElement scroller = cut.Find(".feed-filter-bar > .feed-category-scroller");
+        Assert.Single(scroller.Children);
+        Assert.Equal(9, scroller.QuerySelectorAll(".feed-category-control .mud-toggle-item").Length);
+        Assert.Empty(scroller.QuerySelectorAll(".feed-agent-chip, .feed-team-select"));
+    }
+
+    /// <summary>
+    /// A Tab opened on a later Category, such as Gates, scrolls its segment into view: in a narrow column the scroller starts at All,
+    /// so without this the chosen Category is off screen.
+    /// </summary>
+    [Fact]
+    public async Task LoadedCategory_IsScrolledIntoView()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = NewContext(host);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "gates");
+
+        JSRuntimeInvocation reveal = Assert.Single(ctx.JSInterop.Invocations["huddleFeed.revealSelected"]);
+        Assert.Equal("Gates 0", Text(cut.Find(".huddle-segmented-active-item")));
+        Assert.IsType<ElementReference>(Assert.Single(reveal.Arguments));
+    }
+
+    /// <summary>A render that keeps the same filter does not scroll the Category control again, so it never fights the Human's own scroll.</summary>
+    [Fact]
+    public async Task Rerender_WithTheSameFilter_DoesNotScrollAgain()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = NewContext(host);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "gates");
+
+        cut.Render();
+
+        Assert.Single(ctx.JSInterop.Invocations["huddleFeed.revealSelected"]);
+    }
 }

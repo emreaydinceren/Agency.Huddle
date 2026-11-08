@@ -39,3 +39,16 @@
 .huddle-segmented-control:has(.mud-toggle-item:nth-child(5).huddle-segmented-active-item) .huddle-segmented-indicator {
     transform: translateX(400%);
 }
+/* Six to nine: the Feed's Category control has nine segments (wireframes F3a). */
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(6).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(500%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(7).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(600%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(8).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(700%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(9).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(800%);
+}
