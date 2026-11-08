@@ -245,7 +245,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id);
 
 
-        Assert.Equal("Today 12:30 PM", cut.Find(".task-detail-history-date").TextContent.Trim());
+        Assert.Equal("Today 12:30", cut.Find(".task-detail-history-date").TextContent.Trim());
     }
 
     /// <summary><c>MudExitPrompt</c> is disabled with nothing pending, and enabled once an edit is made (Spec §13.6 "Leaving with unsaved edits").</summary>

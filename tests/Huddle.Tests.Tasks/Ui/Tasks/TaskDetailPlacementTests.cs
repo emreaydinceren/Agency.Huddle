@@ -146,8 +146,9 @@ public sealed class TaskDetailPlacementTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderDetail(ctx, task.Id);
 
-        Assert.Equal("Created Today", TextOf(cut, ".task-detail-created"));
-        Assert.Equal("Updated Today", TextOf(cut, ".task-detail-updated"));
+        Assert.Matches(@"^Created today \d\d:\d\d$", TextOf(cut, ".task-detail-created"));
+        Assert.Matches(@"^Updated today \d\d:\d\d$", TextOf(cut, ".task-detail-updated"));
+        Assert.Equal("·", cut.Find(".task-detail-footer-sep").TextContent);
         Assert.Equal("Fri, Oct 16, 2026", cut.Find(".task-detail-created").GetAttribute("title"));
     }
 
@@ -167,6 +168,6 @@ public sealed class TaskDetailPlacementTests
         await using MudBunitContext closedCtx = UiTestHost.Create().WithHarness(harness);
         var closedCut = RenderDetail(closedCtx, closedTask.Id);
 
-        Assert.Equal("Closed Today", TextOf(closedCut, ".task-detail-closed"));
+        Assert.Equal("Closed today 12:00",TextOf(closedCut, ".task-detail-closed"));
     }
 }

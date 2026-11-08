@@ -146,4 +146,4 @@ Every page has its own address:
 | **Linked documents** | The notes this one links to, with `(not found)` for a missing one | Opens the note |
 
 Press a panel's header to fold it, and your browser remembers. With two panes, the sidebar follows the pane you last
-clicked. On a page with no panels it says `Nothing to show for this page.`
+clicked. On a page with no panels it says `Nothing to show here`, with a line on where panels appear.

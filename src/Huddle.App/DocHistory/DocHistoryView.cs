@@ -1,4 +1,5 @@
 using System.Globalization;
+using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.DocHistory;
 
@@ -88,7 +89,7 @@ internal static class DocHistoryView
         return days;
     }
 
-    /// <summary>A time the way the byline and the panel read it: "today 11:02", "yesterday 16:40", or "11 Oct".</summary>
+    /// <summary>A time the way the byline and the panel read it: "Today 11:02", "Yesterday 16:40" (the day words and 24-hour clock of <see cref="HumanDate.Moment"/>), or "11 Oct".</summary>
     /// <param name="at">The entry's time.</param>
     /// <param name="now">The current time, so the function stays pure.</param>
     /// <param name="zone">The viewer's time zone.</param>
@@ -100,13 +101,9 @@ internal static class DocHistoryView
         DateTime local = TimeZoneInfo.ConvertTime(at, zone).DateTime;
         DateOnly today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
         DateOnly day = DateOnly.FromDateTime(local);
-        string clock = local.ToString("HH:mm", CultureInfo.InvariantCulture);
-        if (day == today)
-        {
-            return "today " + clock;
-        }
-
-        return day == today.AddDays(-1) ? "yesterday " + clock : local.ToString("d MMM", CultureInfo.InvariantCulture);
+        return day == today || day == today.AddDays(-1)
+            ? HumanDate.Moment(at, today, zone)
+            : local.ToString("d MMM", CultureInfo.InvariantCulture);
     }
 
     /// <summary>The label of an entry's kind in the History: Created, Edited, Reviewed, Objected, or Saved for a bare Human save.</summary>

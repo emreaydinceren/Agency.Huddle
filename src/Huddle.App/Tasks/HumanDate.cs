@@ -54,6 +54,39 @@ internal static class HumanDate
             ? date.ToString("ddd", CultureInfo.InvariantCulture)
             : Format(date, today);
 
+    /// <summary>The 24-hour clock every screen shows after a day word ("08:30"), the form the transcript, the Needs You card and the Settings pages already use.</summary>
+    public const string ClockFormat = "HH:mm";
+
+    /// <summary>
+    /// The form of <paramref name="humanDate"/> for the middle of a phrase ("Archived today", "Created yesterday 08:30"): the relative words
+    /// Today, Tomorrow and Yesterday lose their capital, since a capital belongs only to the start of a phrase. A weekday or a date is
+    /// unchanged, because it is a name.
+    /// </summary>
+    /// <param name="humanDate">A string that starts with a result of <see cref="Format(DateOnly, DateOnly)"/> or <see cref="FormatPast"/>.</param>
+    public static string InPhrase(string humanDate)
+    {
+        ArgumentNullException.ThrowIfNull(humanDate);
+        return humanDate.StartsWith("Today", StringComparison.Ordinal)
+            || humanDate.StartsWith("Tomorrow", StringComparison.Ordinal)
+            || humanDate.StartsWith("Yesterday", StringComparison.Ordinal)
+            ? string.Concat(char.ToLowerInvariant(humanDate[0]).ToString(), humanDate.AsSpan(1))
+            : humanDate;
+    }
+
+    /// <summary>
+    /// The day and the 24-hour time of <paramref name="at"/> in <paramref name="zone"/>, such as <c>Today 08:30</c>, <c>Mon 16:20</c> or
+    /// <c>Oct 3 09:05</c>: the day is <see cref="FormatPast"/>, the time is <see cref="ClockFormat"/>.
+    /// </summary>
+    /// <param name="at">The instant to show.</param>
+    /// <param name="today">The local date that counts as today.</param>
+    /// <param name="zone">The zone whose wall clock is shown.</param>
+    public static string Moment(DateTimeOffset at, DateOnly today, TimeZoneInfo zone)
+    {
+        ArgumentNullException.ThrowIfNull(zone);
+        DateTime local = TimeZoneInfo.ConvertTime(at, zone).DateTime;
+        return string.Join(' ', FormatPast(DateOnly.FromDateTime(local), today), local.ToString(ClockFormat, CultureInfo.InvariantCulture));
+    }
+
     /// <summary>The full form for a tooltip, such as <c>Tue, Oct 27, 2026</c>.</summary>
     /// <param name="date">The date to show.</param>
     public static string Full(DateOnly date) => date.ToString("ddd, MMM d, yyyy", CultureInfo.InvariantCulture);

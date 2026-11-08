@@ -256,8 +256,30 @@ public sealed class ProfileCardTests
 
         var cut = RenderIt(ctx, Plain with { Tier = ModelTier.Fast, SkillNames = ["lint"] }, p => p.Add(c => c.Membership, ProfileMembership.New));
 
-        string[] classes = [.. cut.Find(".roster-chips").Children.Select(static child => child.ClassList[0])];
+        string[] classes = [.. cut.Find(".roster-chips").Children.Select(static child => child.ClassList[0]).Where(static name => name != "roster-sep")];
         Assert.Equal(["roster-state", "roster-tier", "roster-skills"], classes);
+    }
+
+    /// <summary>The facts on the chips line are separated by " ·", so "Member" and "1 skill" no longer read as one phrase (#479).</summary>
+    [Fact]
+    public async Task Chips_FactsAreSeparatedByMiddleDots()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain with { SkillNames = ["lint"] }, p => p.Add(c => c.Membership, ProfileMembership.Member));
+
+        Assert.Equal(["Member", "·", "1 skill"], cut.Find(".roster-chips").Children.Select(static child => child.TextContent.Trim()).ToArray());
+    }
+
+    /// <summary>A lone fact has no separator (#479).</summary>
+    [Fact]
+    public async Task Chips_ALoneFact_HasNoSeparator()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain with { SkillNames = ["lint"] });
+
+        Assert.Empty(cut.FindAll(".roster-sep"));
     }
 
     /// <summary>RemovingText adds the removed class and the removing line with that text.</summary>

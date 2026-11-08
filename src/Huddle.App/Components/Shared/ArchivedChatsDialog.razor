@@ -77,10 +77,10 @@
         DateOnly today = DateOnly.FromDateTime(now.Date);
         if (room.ArchivedAt is DateTimeOffset archivedAt)
         {
-            return $"Archived {HumanDate.Format(DateOnly.FromDateTime(archivedAt.ToOffset(now.Offset).Date), today)}";
+            return $"Archived {HumanDate.InPhrase(HumanDate.Format(DateOnly.FromDateTime(archivedAt.ToOffset(now.Offset).Date), today))}";
         }
 
-        return $"Created {HumanDate.Format(DateOnly.FromDateTime(room.Created.ToOffset(now.Offset).Date), today)}";
+        return $"Created {HumanDate.InPhrase(HumanDate.Format(DateOnly.FromDateTime(room.Created.ToOffset(now.Offset).Date), today))}";
     }
 
     private IReadOnlyList<Room> rooms = [];
