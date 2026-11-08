@@ -5464,6 +5464,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | fix/451-pane-focus | #451 | run 2026-11-07 by an agent after the fix for #451 (`FocusOnNavigate` now targets `.tab-group.focused h1`): all three steps hold, and focus lands on the focused pane's heading. The first run that day failed. |
 | 2026-11-07 | Fail | `83da2ce2` |  | By an agent. Clicking the right pane focuses it, then `FocusOnNavigate Selector="h1"` (Routes.razor) focuses the left pane's Room heading, whose focusin refocuses the left pane and navigates back, so the Right sidebar keeps the Room panels. Issue to file. |
 
 ### RSIDE-09 — An Agent's context bar appears, grows during a Turn and falls after /compact

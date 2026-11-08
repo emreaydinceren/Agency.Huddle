@@ -1093,7 +1093,7 @@ Right sidebar: the panels by Subject, Outline scrolling, collapse and focus — 
 | [RSIDE-05](right-sidebar.md#rside-05--typing-a-heading-in-split-updates-the-outline) |  | Pass |  | run 2026-11-07 by an agent. Risks appeared after Scope within 2 s and stayed one entry. |
 | [RSIDE-06](right-sidebar.md#rside-06--a-linked-note-opens-from-the-linked-documents-panel) |  | Pass |  | run 2026-11-07 by an agent. The panel names notes without `.md`. |
 | [RSIDE-07](right-sidebar.md#rside-07--a-collapsed-panel-stays-collapsed-after-a-reload) |  | Pass |  | run 2026-11-07 by an agent. Real reload; the collapsed panel stayed collapsed. |
-| [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Fail |  | run 2026-11-07 by an agent. Clicking the right pane focuses it, then `FocusOnNavigate Selector="h1"` (Routes.razor) focuses the left pane's Room heading, whose focusin refocuses the left pane and navigates back, so the Right sidebar keeps the Room panels. Issue to file. |
+| [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Pass | #451 | run 2026-11-07 by an agent after the fix for #451 (`FocusOnNavigate` now targets `.tab-group.focused h1`): all three steps hold, and focus lands on the focused pane's heading. The first run that day failed. |
 | [RSIDE-09](right-sidebar.md#rside-09--an-agents-context-bar-appears-grows-during-a-turn-and-falls-after-compact) | 💰 | Pass |  |  |
 | [RSIDE-10](right-sidebar.md#rside-10--the-backlinks-panel-lists-the-open-tasks-that-link-to-a-document) |  | Pass |  | run 2026-11-07 by an agent. The Task description has no `@` picker, so the path was typed in a code span. |
 

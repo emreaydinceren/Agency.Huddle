@@ -1,6 +1,8 @@
 ﻿<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        @* The focused pane's heading, not the first one in the document: with two panes the first may be the other pane's,
+           and focusing it would refocus that pane and navigate back (#451). A single pane is always the focused one. *@
+        <FocusOnNavigate RouteData="routeData" Selector=".tab-group.focused h1" />
     </Found>
 </Router>
