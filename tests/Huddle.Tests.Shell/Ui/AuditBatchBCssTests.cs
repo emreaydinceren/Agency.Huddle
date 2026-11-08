@@ -50,7 +50,8 @@ public sealed partial class AuditBatchBCssTests
         string declarations = AuditBatchBCssTests.DeclarationsFor(".room-notice-column");
 
         Assert.Matches(@"max-width:\s*760px", declarations);
-        Assert.Matches(@"margin-inline:\s*max\(24px, calc\(50% - 380px - var\(--room-scrollbar\) / 2\)\) auto", declarations);
+        Assert.Matches(@"margin-inline:\s*auto", declarations);
+        Assert.Matches(@"translate:\s*calc\(var\(--room-scrollbar\) / -2\) 0", declarations);
         Assert.Matches(@"width:\s*calc\(100% - 48px - var\(--room-scrollbar\)\)", declarations);
     }
 

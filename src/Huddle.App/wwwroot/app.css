@@ -3368,7 +3368,8 @@ body.sidebar-resizing {
     box-sizing: border-box;
     width: calc(100% - 48px - var(--room-scrollbar));
     max-width: 760px;
-    margin-inline: max(24px, calc(50% - 380px - var(--room-scrollbar) / 2)) auto;
+    margin-inline: auto;
+    translate: calc(var(--room-scrollbar) / -2) 0;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -5205,6 +5206,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     z-index: 1;
     box-sizing: border-box;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     min-height: 61px;
@@ -5213,10 +5215,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-ground-sidebar);
 }
 
-/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the actions wrap to a second line instead of squeezing it. */
-.library-explorer-tree-header {
-    flex-wrap: wrap;
-}
+/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the header
+   wraps (flex-wrap above) and the actions take a second line instead of squeezing it (#481). */
 
 .library-explorer-tree-header > .library-explorer-search {
     flex: 1 1 10rem;

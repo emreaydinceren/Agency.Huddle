@@ -15,7 +15,3 @@
     min-width: 0;
     margin-right: 12px;
 }
-
-.scheduled-list-host ::deep .scheduled-row .mud-list-item-icon .mud-icon-root {
-    font-size: 20px;
-}

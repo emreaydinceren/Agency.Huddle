@@ -30,6 +30,10 @@ internal static class MudVariables
         // The 18px icon of a sidebar row and of a tab-rail label, declared beside the row height (S2, C6).
         "--icon-size-row",
 
+        // The width a Room's message list reserves for its scrollbar, declared on :root in app.css "Composer", so the
+        // Composer, the notices and the reference picker keep the Transcript's column (#485).
+        "--room-scrollbar",
+
         "--mud-appbar-height",
         "--mud-default-borderradius",
         "--mud-drawer-width-left",

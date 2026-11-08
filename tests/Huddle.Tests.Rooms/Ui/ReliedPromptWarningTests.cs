@@ -73,8 +73,8 @@ public sealed class ReliedPromptWarningTests
             .Add(p => p.Groups, groups)
             .Add(p => p.UnknownOverrides, ["alpha", "zeta"]));
 
-        Assert.DoesNotContain(empty.FindAll("h2"), h => h.TextContent.Contains("Unknown overrides", StringComparison.Ordinal));
-        Assert.Contains(listed.FindAll("h2"), h => string.Equals(h.TextContent.Trim(), "Unknown overrides", StringComparison.Ordinal));
+        Assert.DoesNotContain(empty.FindAll("h3"), h => h.TextContent.Contains("Unknown overrides", StringComparison.Ordinal));
+        Assert.Contains(listed.FindAll("h3"), h => string.Equals(h.TextContent.Trim(), "Unknown overrides", StringComparison.Ordinal));
         Assert.Equal(["alpha", "zeta"], listed.FindAll(".prompts-unknown-overrides li").Select(li => li.TextContent.Trim()));
     }
 

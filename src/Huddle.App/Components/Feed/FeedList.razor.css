@@ -38,7 +38,7 @@
 /* Nordic's day heading is a Literata title with a line beneath it, not an inline rule. */
 :root:has([data-hu-reading="book"]) .feed-day-word {
     font-family: var(--font-read);
-    font-size: 20px;
+    font-size: var(--mud-typography-h5-size);
     line-height: 1.25;
     font-weight: 600;
     text-transform: none;
