@@ -375,7 +375,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 3. Read the top card: the avatar, the summary, the pill and, after expanding it, the preview.
 4. Open the `Keeper` Room and read the line after the Task change.
 5. Look at the **Needs you** card and the Feed Tab on `Needs you`.
-6. Open the Task. If it names no Action, switch `Requires your acceptance` off and Save. If the Helper also set an Action, the switch is locked on: Decline the Task instead. Look at the Feed Tab.
+6. Open the Task. If it names no Action, switch `Requires your acceptance` off and Save. If the Helper also set an Action, the switch is locked on and Decline only shows once the Task waits for you: set **Status** to `Review` and Save, then choose **Decline** from the ⋮ menu on the **Your decision** card and give a reason. Look at the Feed Tab.
 
 **Pass if — all of these**
 
