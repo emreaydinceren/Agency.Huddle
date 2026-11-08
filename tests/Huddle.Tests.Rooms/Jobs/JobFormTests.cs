@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Components.Jobs;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Tabs;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Agency.Huddle.Tests.Jobs;
 
@@ -8,6 +9,8 @@ namespace Agency.Huddle.Tests.Jobs;
 public sealed class JobFormTests
 {
     private static readonly DateTimeOffset Monday0800 = new(2026, 11, 2, 8, 0, 0, TimeSpan.Zero);
+
+    private static readonly FakeTimeProvider Clock = new(Monday0800);
 
     /// <summary>Each preset's fields become the same <c>when</c> text the file and the tool use.</summary>
     [Fact]
@@ -121,19 +124,56 @@ public sealed class JobFormTests
     {
         Job job = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Daily(new TimeOnly(9, 0)), null, null, false);
 
-        Assert.Equal("Next: Mon 2 Nov, 09:00", JobText.NextRun(job, Monday0800.AddHours(1), TimeZoneInfo.Utc));
-        Assert.Equal("Paused", JobText.NextRun(job with { Paused = true }, Monday0800, TimeZoneInfo.Utc));
-        Assert.Equal("Will not run again", JobText.NextRun(job, null, TimeZoneInfo.Utc));
+        Assert.Equal("Next: Mon 2 Nov, 09:00", JobText.NextRun(job, Monday0800.AddHours(1), TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Paused", JobText.NextRun(job with { Paused = true }, Monday0800, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Will not run again", JobText.NextRun(job, null, TimeZoneInfo.Utc, Clock));
+    }
+
+    /// <summary>A run in another year than the clock's shows its year, in the next-run line, the last-run line and the preview.</summary>
+    [Fact]
+    public void Moment_OutsideTheCurrentYear_ShowsTheYear()
+    {
+        Job job = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Daily(new TimeOnly(9, 0)), null, null, false);
+        DateTimeOffset far = new(2099, 12, 31, 9, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal("Thu 31 Dec 2099, 09:00", JobText.Moment(far, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Thu 31 Dec 2099, 09:00", JobText.NextRun(job, far, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Last ran Wed 31 Dec 2025, 09:00", JobText.LastRun(new DateTimeOffset(2025, 12, 31, 9, 0, 0, TimeSpan.Zero), JobOutcome.Delivered, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Thu 1 Jan, 09:00", JobText.Moment(new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc, Clock));
+    }
+
+    /// <summary>The year is the one in the shown zone: 23:30 UTC on 31 Dec is already next year in Tokyo.</summary>
+    [Fact]
+    public void Moment_ComparesTheYearInTheShownZone()
+    {
+        TimeZoneInfo tokyo = TimeZoneInfo.CreateCustomTimeZone("tokyo", TimeSpan.FromHours(9), "Tokyo", "Tokyo");
+        DateTimeOffset at = new(2026, 12, 31, 23, 30, 0, TimeSpan.Zero);
+
+        Assert.Equal("Fri 1 Jan 2027, 08:30", JobText.Moment(at, tokyo, Clock));
+    }
+
+    /// <summary>A list row adds Next only when the timetable does not already name the date.</summary>
+    [Fact]
+    public void RowNextRun_OnlyWhenItAddsSomething()
+    {
+        Job once = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Once(new DateOnly(2099, 12, 31), new TimeOnly(9, 0)), null, null, false);
+        Job daily = once with { When = JobRecurrence.Daily(new TimeOnly(9, 0)) };
+        DateTimeOffset next = Monday0800.AddHours(1);
+
+        Assert.Null(JobText.RowNextRun(once, next, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Mon 2 Nov, 09:00", JobText.RowNextRun(daily, next, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Paused", JobText.RowNextRun(once with { Paused = true }, next, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Will not run again", JobText.RowNextRun(once, null, TimeZoneInfo.Utc, Clock));
     }
 
     /// <summary>The last-run line names why a run did not post.</summary>
     [Fact]
     public void LastRun_NamesWhyARunDidNotPost()
     {
-        Assert.Null(JobText.LastRun(null, null, TimeZoneInfo.Utc));
-        Assert.Equal("Last ran Mon 2 Nov, 08:00", JobText.LastRun(Monday0800, JobOutcome.Delivered, TimeZoneInfo.Utc));
-        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Room's Budget is spent", JobText.LastRun(Monday0800, JobOutcome.BudgetSpent, TimeZoneInfo.Utc));
-        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Agent has never come online", JobText.LastRun(Monday0800, JobOutcome.NoAgent, TimeZoneInfo.Utc));
+        Assert.Null(JobText.LastRun(null, null, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Last ran Mon 2 Nov, 08:00", JobText.LastRun(Monday0800, JobOutcome.Delivered, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Room's Budget is spent", JobText.LastRun(Monday0800, JobOutcome.BudgetSpent, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Agent has never come online", JobText.LastRun(Monday0800, JobOutcome.NoAgent, TimeZoneInfo.Utc, Clock));
     }
 
     /// <summary>The form's own answers: no title or instruction, a zone it does not know, and a one-off already past.</summary>
@@ -162,7 +202,7 @@ public sealed class JobFormTests
         Assert.Equal("\"Ping\" did not run: its Agent has never come online.", JobText.RanNow("Ping", JobOutcome.NoAgent));
         Assert.Equal("\"Ping\" no longer exists.", JobText.RanNow("Ping", null));
         Assert.Equal("\"Ping\" did not run.", JobText.RanNow("Ping", JobOutcome.Failed));
-        Assert.Equal("Last ran Mon 2 Nov, 08:00: failed, trying again", JobText.LastRun(Monday0800, JobOutcome.Failed, TimeZoneInfo.Utc));
+        Assert.Equal("Last ran Mon 2 Nov, 08:00: failed, trying again", JobText.LastRun(Monday0800, JobOutcome.Failed, TimeZoneInfo.Utc, Clock));
     }
 
     /// <summary>The Scheduled page and a Job's page each get their own Tab, with the Scheduled icon.</summary>
