@@ -210,8 +210,9 @@ public sealed class AppCssTokensDTests
             Assert.DoesNotContain($"color-mix(in srgb, var(--mud-palette-{hue}) 50%, var(--mud-palette-text-primary))", range, StringComparison.Ordinal);
         }
 
-        // The three decorations the architecture leaves literal: the Build a team section number, the selected team-type icon and the strongest roster tier.
-        Assert.Equal(3, CssText.CountOccurrences(range, PrimaryOverSurface14));
+        // The two decorations the architecture leaves literal: the selected team-type icon and the strongest roster tier. The Build a team section number left
+        // this list for --hu-tone-primary-tint, which gives Fluent Light's accent ink 4.5:1 (AccentInkCssTests).
+        Assert.Equal(2,CssText.CountOccurrences(range, PrimaryOverSurface14));
         Assert.Equal(1, CssText.CountOccurrences(range, "color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface))"));
     }
 

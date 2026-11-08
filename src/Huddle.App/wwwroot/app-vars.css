@@ -82,7 +82,7 @@
     --hu-feed-day-rule: var(--hu-ink-rule);
     --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
     --hu-feed-live-line: transparent;
-    --hu-feed-live-ink: var(--mud-palette-success);
+    --hu-feed-live-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
     --hu-feed-note-background: transparent;
     --hu-feed-note-line: transparent;
     --hu-feed-card-radius: 8px;
