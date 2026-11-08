@@ -25,8 +25,8 @@ internal static class LiveSessionMode
 /// Huddle's handler. Then the sessions take their mode from <see cref="WorkModePolicy"/> as <c>DotAcpPersonaHost</c> does: they run in
 /// the mode Huddle chose, the App Tool call comes to the handler and is approved, ordinary work is approved without a Human, the merge
 /// gate still refuses and allows, and a Work Mode the Human chose is kept. Paid: it never runs unless <c>TEAM_E2E_SESSIONMODE=1</c>,
-/// runs on Sonnet at low Effort, never on Opus, and must not use a RAM disk for <c>HUDDLE_TEST_TEMP</c> (the Adapter cannot
-/// resolve a working folder on <c>R:</c>).
+/// runs on Sonnet at low Effort, never on Opus. Its folders sit under <see cref="TestPaths.GetAdapterTempPath"/>, so a RAM disk
+/// in <c>HUDDLE_TEST_TEMP</c> does not reach the Adapter.
 /// </summary>
 public sealed class SessionModeProbeTests
 {
@@ -225,7 +225,7 @@ public sealed class SessionModeProbeTests
         {
             string repo = Folder(label);
             Seed(repo);
-            MergeGateHook.Install(repo, Path.Combine(Path.GetTempPath(), "session-mode-probe-hooks"), NullLogger.Instance);
+            MergeGateHook.Install(repo, Path.Combine(TestPaths.GetAdapterTempPath(), "session-mode-probe-hooks"), NullLogger.Instance);
 
             int toolRunsBefore = this.tool.Runs;
             List<string> requests = [];
@@ -296,11 +296,11 @@ public sealed class SessionModeProbeTests
             new DotAcpHostOptions(TraceWire: false),
             NullLoggerFactory.Instance);
 
-        /// <summary>Creates an empty folder under the temp folder.</summary>
+        /// <summary>Creates an empty folder under <see cref="TestPaths.GetAdapterTempPath"/>, where the Adapter can work.</summary>
         /// <param name="label">A short label.</param>
         private static string Folder(string label)
         {
-            string path = Path.Combine(Path.GetTempPath(), "sessionmode-live-" + label + "-" + Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(TestPaths.GetAdapterTempPath(), "sessionmode-live-" + label + "-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
         }

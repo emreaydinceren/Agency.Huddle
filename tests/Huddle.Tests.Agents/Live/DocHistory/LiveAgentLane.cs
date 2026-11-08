@@ -115,7 +115,7 @@ internal sealed class LiveAgentLane : IAsyncDisposable
         // What the app does when it starts a Persona that is offered the tool: put the Stop hook in the Work Dir first.
         if (this.toolServer.ToolNames.Contains("log_change", StringComparer.Ordinal))
         {
-            DocHistoryStopHook.Install(workDirectory, Path.Combine(Path.GetTempPath(), "dochistory-live-hooks"), "mcp__team__log_change", NullLogger.Instance, remindReads);
+            DocHistoryStopHook.Install(workDirectory, Path.Combine(TestPaths.GetAdapterTempPath(), "dochistory-live-hooks"), "mcp__team__log_change", NullLogger.Instance, remindReads);
         }
 
         Stopwatch clock = Stopwatch.StartNew();
@@ -175,12 +175,12 @@ internal sealed class LiveAgentLane : IAsyncDisposable
     private static void AssertNoWarnings(RecordingLoggerProvider log, string stage) =>
         Assert.True(log.CountAtLeast(LogLevel.Warning) == 0, $"The Adapter host warned while {stage}, so the lane may be on the wrong model: {string.Join(" | ", log.Messages)}");
 
-    /// <summary>Creates an empty folder under the temp folder for one run.</summary>
+    /// <summary>Creates an empty folder for one run under <see cref="TestPaths.GetAdapterTempPath"/>, where the Adapter can work.</summary>
     /// <param name="label">A short label, for finding the folder.</param>
     /// <returns>The folder's full path.</returns>
     public static string NewFolder(string label)
     {
-        string path = Path.Combine(Path.GetTempPath(), "dochistory-live-" + label + "-" + Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(TestPaths.GetAdapterTempPath(), "dochistory-live-" + label + "-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }
