@@ -12,8 +12,11 @@ internal static class JobText
     /// <summary>The empty Scheduled page's next step.</summary>
     public const string EmptyText = "A job posts an instruction on a timetable, in its own Room. Schedule one for yourself or an Agent with New job.";
 
-    /// <summary>How an instant is shown: "Mon 3 Nov, 09:00".</summary>
+    /// <summary>How an instant is shown in the current year: "Mon 3 Nov, 09:00".</summary>
     private const string MomentFormat = "ddd d MMM, HH:mm";
+
+    /// <summary>How an instant is shown in any other year: "Thu 31 Dec 2099, 09:00".</summary>
+    private const string MomentYearFormat = "ddd d MMM yyyy, HH:mm";
 
     /// <summary>The form's answer to Save with no title or no instruction.</summary>
     public const string NeedsTitleAndInstruction = "Give the job a title and an instruction.";
@@ -41,34 +44,53 @@ internal static class JobText
     /// <param name="job">The Job.</param>
     /// <param name="next">Its next run, or <see langword="null"/>.</param>
     /// <param name="zone">The zone to show times in.</param>
+    /// <param name="clock">The clock that says which year is the current one.</param>
     /// <returns>The line.</returns>
-    public static string NextRun(Job job, DateTimeOffset? next, TimeZoneInfo zone)
+    public static string NextRun(Job job, DateTimeOffset? next, TimeZoneInfo zone, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(job);
         ArgumentNullException.ThrowIfNull(zone);
+        ArgumentNullException.ThrowIfNull(clock);
 
         if (job.Paused)
         {
             return "Paused";
         }
 
-        return next is { } at ? "Next: " + Moment(at, zone) : "Will not run again";
+        return next is { } at ? "Next: " + Moment(at, zone, clock) : "Will not run again";
+    }
+
+    /// <summary>
+    /// The next-run text a list row adds after the timetable: nothing for a pending one-off, whose timetable already names
+    /// its date, and <see cref="NextRun"/> for the rest.
+    /// </summary>
+    /// <param name="job">The Job.</param>
+    /// <param name="next">Its next run, or <see langword="null"/>.</param>
+    /// <param name="zone">The zone to show times in.</param>
+    /// <param name="clock">The clock that says which year is the current one.</param>
+    /// <returns>The line, or <see langword="null"/> when the timetable already says it.</returns>
+    public static string? RowNextRun(Job job, DateTimeOffset? next, TimeZoneInfo zone, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+        return !job.Paused && next is not null && job.When.Cadence == JobCadence.Once ? null : NextRun(job, next, zone, clock);
     }
 
     /// <summary>What the last run did: "Last ran Mon 2 Nov, 09:00", with why it did not post when it did not.</summary>
     /// <param name="lastRun">When it last ran, or <see langword="null"/>.</param>
     /// <param name="outcome">What that run did.</param>
     /// <param name="zone">The zone to show times in.</param>
+    /// <param name="clock">The clock that says which year is the current one.</param>
     /// <returns>The line, or <see langword="null"/> when it never ran.</returns>
-    public static string? LastRun(DateTimeOffset? lastRun, JobOutcome? outcome, TimeZoneInfo zone)
+    public static string? LastRun(DateTimeOffset? lastRun, JobOutcome? outcome, TimeZoneInfo zone, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(zone);
+        ArgumentNullException.ThrowIfNull(clock);
         if (lastRun is not { } at)
         {
             return null;
         }
 
-        string when = "Last ran " + Moment(at, zone);
+        string when = "Last ran " + Moment(at, zone, clock);
         return outcome switch
         {
             JobOutcome.BudgetSpent => when + ": not posted, the Room's Budget is spent",
@@ -91,13 +113,17 @@ internal static class JobText
         _ => $"\"{title}\" did not run.",
     };
 
-    /// <summary>An instant as the view shows it: "Mon 3 Nov, 09:00".</summary>
+    /// <summary>An instant as the view shows it: "Mon 3 Nov, 09:00", with the year ("Thu 31 Dec 2099, 09:00") outside the current one.</summary>
     /// <param name="at">The instant.</param>
     /// <param name="zone">The zone to show it in.</param>
+    /// <param name="clock">The clock that says which year is the current one.</param>
     /// <returns>The text.</returns>
-    public static string Moment(DateTimeOffset at, TimeZoneInfo zone)
+    public static string Moment(DateTimeOffset at, TimeZoneInfo zone, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(zone);
-        return TimeZoneInfo.ConvertTime(at, zone).ToString(MomentFormat, CultureInfo.InvariantCulture);
+        ArgumentNullException.ThrowIfNull(clock);
+        DateTimeOffset shown = TimeZoneInfo.ConvertTime(at, zone);
+        int thisYear = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).Year;
+        return shown.ToString(shown.Year == thisYear ? MomentFormat : MomentYearFormat, CultureInfo.InvariantCulture);
     }
 }
