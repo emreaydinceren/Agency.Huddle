@@ -5408,6 +5408,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent on the UAT lane. Order, counts, 280px width and right-edge placement hold at 90% zoom. The heading icon is hidden by the default skin's hairline surface (app.css, `data-hu-surface="hairline"`), so the Pass-if line about an icon needs rewording for skins. |
 
 ### RSIDE-02 — A Message that references a Task appears, and its jump works
 
@@ -5415,6 +5416,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. The Task form has no Room field, so the precondition cannot be met as written and is not needed. The `#` picker inserts the Task id. |
 
 ### RSIDE-03 — A Markdown document shows Outline and Linked documents
 
@@ -5422,6 +5424,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. A Markdown document now shows five panels (Outline, Linked documents, Backlinks, Tags, History), not the two the test names. |
 
 ### RSIDE-04 — An Outline heading scrolls the document in Read, Split and Edit
 
@@ -5429,6 +5432,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. Read: Scope at offset 0. Split: the preview scrolls and the editor does not, as the spec says. Edit: the editor scrolls (offset 3). |
 
 ### RSIDE-05 — Typing a heading in Split updates the Outline
 
@@ -5436,6 +5440,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. Risks appeared after Scope within 2 s and stayed one entry. |
 
 ### RSIDE-06 — A linked note opens from the Linked documents panel
 
@@ -5443,6 +5448,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. The panel names notes without `.md`. |
 
 ### RSIDE-07 — A collapsed panel stays collapsed after a reload
 
@@ -5450,6 +5456,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. Real reload; the collapsed panel stayed collapsed. |
 
 ### RSIDE-08 — Two panes follow focus
 
@@ -5457,6 +5464,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Fail | `83da2ce2` |  | By an agent. Clicking the right pane focuses it, then `FocusOnNavigate Selector="h1"` (Routes.razor) focuses the left pane's Room heading, whose focusin refocuses the left pane and navigates back, so the Right sidebar keeps the Room panels. Issue to file. |
 
 ### RSIDE-09 — An Agent's context bar appears, grows during a Turn and falls after /compact
 
@@ -5472,6 +5480,7 @@ File: [`docs/engineering/manual-tests/right-sidebar.md`](right-sidebar.md#rside-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. The Task description has no `@` picker, so the path was typed in a code span. |
 
 ## References in a Message: the @ picker, Copy link and the Referenced items header
 
@@ -5697,7 +5706,7 @@ File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-10
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `db2a10d0` + uncommitted fix | #432 | Run by an agent (Sonnet at low Effort, 51 sessions, 1.80 USD), at the handler and Adapter level with the real `_meta`, not through the running app. Steps 1 to 5 as written: merge refused, also after a `settings.local.json` rewrite, a hook-script overwrite and `disableAllHooks` (same and new session, and with no hook); `git -c`, `bash -c` and `git push` refused; `Edit` of `AGENTS.md` and `settings.local.json` refused; ordinary `Edit`, `Write` and `echo` ran. Known limit confirmed: `bash merge.sh` still merges. PowerShell and `acceptEdits` and resume also checked. No Human prompt tested. |
+| 2026-11-06 | Pass | `db2a10d0` + uncommitted fix | #432 | By an agent (Sonnet at low Effort, 51 sessions, 1.80 USD), at the handler and Adapter level with the real `_meta`, not through the running app. Steps 1 to 5 as written: merge refused, also after a `settings.local.json` rewrite, a hook-script overwrite and `disableAllHooks` (same and new session, and with no hook); `git -c`, `bash -c` and `git push` refused; `Edit` of `AGENTS.md` and `settings.local.json` refused; ordinary `Edit`, `Write` and `echo` ran. Known limit confirmed: `bash merge.sh` still merges. PowerShell and `acceptEdits` and resume also checked. No Human prompt tested. |
 
 ## Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter
 
@@ -5756,6 +5765,7 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-08--the-wa
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Partial | `83da2ce2` |  | By an agent; Keeper on Sonnet low. Step 2 passes: a muted one-line row by Huddle, no avatar or name of yours, and Keeper answered; it lands in a new Task Room, not the Room the Task came from. Step 3: the Budget was not reset (1 of 6). The Mention part cannot be judged as written, since the Human's ask answers it. |
 
 ## Second Brain: the use cases as a Human's checklist
 
@@ -6204,6 +6214,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-15--a-helpers-gate-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Fail | `83da2ce2` |  | By an agent; Keeper on Sonnet low (owner rule), Helper on Haiku. Step 3: the summary reads `set the Action ... on`, not `turned on Requires your acceptance for`, and the preview line ends `customer..` (double stop). Step 5 cannot be judged as written: the Human's ask answers the Mention, and the wake-up goes to a separate Task Room. Step 6 blocked: the Helper also set an Action, which locks the gate switch (`This Task names an Action that leaves the team.`) while the card and the Task say you can turn it off. A Task with no assignee gets no wake-up at all. Issue to file. |
 
 ### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it
 
@@ -6211,6 +6222,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-16--a-helper-that-k
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Active | `83da2ce2` |  | Blocked: an unknown Needs Human Adapter now falls back to claude (`The adapter 'nope' is not configured. It will run on 'claude'.`), so the Helper never fails this way. HELPERS-07's expected text is stale for the same reason. |
 
 ### FEED-17 — A Helper at its cap reaches the Feed once, and Continue clears it
 
@@ -6218,6 +6230,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-17--a-helper-at-its
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent; cap set to 3 because 2 calls were already used. One item by Huddle, `2 skipped while paused`, resolved by Continue (+10 today); Needs you fell 3 to 2. |
 
 ## Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action
 
@@ -6234,6 +6247,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent on a dev run. `dashboard` and `stop` find the copy through `instance.json`, which a dev run writes only with `--Team:Desktop:Enabled=true`. |
 
 ### REMOTE-03 — Tailscale Serve: a phone gets in with no token and no approval, limited, then asks for admin
 
@@ -6262,6 +6276,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Partial | `83da2ce2` |  | By an agent. Step 4 passes: loopback 401s slowed 267, 506, 1005, 2018 ms, then a 5 s cap, and the correct token signed in on the 11th try. Steps 1 to 3 need a phone. |
 
 ### REMOTE-07 — Revoking a phone with a Room streaming disconnects it at once
 
@@ -6276,6 +6291,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `83da2ce2` |  | By an agent. Both tabs stayed signed in after reloads; each copy lists only its own device. |
 
 ### REMOTE-09 — A hand-made Serve route is refused and shown in the Security check
 
@@ -6318,6 +6334,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Partial | `83da2ce2` |  | By an agent. Steps 1, 3, 4, 5 and 6 pass. Step 2 is inconclusive: with `--urls http://localhost:<port>` nothing listens on the LAN address, so the request is refused at TCP rather than answered 403. |
 
 ### REMOTE-15 — Turning Strict local on disconnects remote devices
 
@@ -6588,7 +6605,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. A new Agent's switch reads off. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. A new Agent's switch reads off. |
 
 ### AGCONN-02 — Turning on asks first, and Cancel leaves it off
 
@@ -6596,7 +6613,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Failed at `a07e0a0e`: after Cancel the switch was drawn on while the line said Off. Fixed, then passed on the rebuilt app. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Failed at `a07e0a0e`: after Cancel the switch was drawn on while the line said Off. Fixed, then passed on the rebuilt app. |
 
 ### AGCONN-03 — Give access restarts the Agent and records it in the Feed
 
@@ -6604,7 +6621,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Give access with real mouse clicks, 4 of 4, coordinates checked first. An earlier failure most likely clicked Cancel, about 30 px away, in a downscaled screenshot; that cause is not proven. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Give access with real mouse clicks, 4 of 4, coordinates checked first. An earlier failure most likely clicked Cancel, about 30 px away, in a downscaled screenshot; that cause is not proven. |
 
 ### AGCONN-04 — Turning off applies at once, and a rename drops access
 
@@ -6612,7 +6629,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Turning off applied at once. The rename step was not run; `PersonaConnectorsTests` covers it. |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Turning off applied at once. The rename step was not run; `PersonaConnectorsTests` covers it. |
 
 ### AGCONN-05 — An Adapter Huddle cannot control shows text, not a switch
 
@@ -6620,7 +6637,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Skipped | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Only `claude-agent-acp` is configured on the lane. |
+| 2026-11-06 | Skipped | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Only `claude-agent-acp` is configured on the lane. |
 
 ### AGCONN-06 — The one-time notice shows after an upgrade and stays dismissed
 
@@ -6628,7 +6645,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. The first two clauses passed. The rest of the case was not run; `AgentConnectorsPageTests` covers the dismissal. |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | By an agent acting as the Human, on Sonnet at low Effort. The first two clauses passed. The rest of the case was not run; `AgentConnectorsPageTests` covers the dismissal. |
 
 ### AGCONN-07 — A new Agent lists no claude.ai tool by Turn 3
 
@@ -6636,7 +6653,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. 0 `claude_ai` strings in a new Agent's log at Turn 3. |
+| 2026-11-06 | Pass | `a07e0a0e` | #357 | By an agent acting as the Human, on Sonnet at low Effort. 0 `claude_ai` strings in a new Agent's log at Turn 3. |
 
 ### AGCONN-08 — With the switch on the connectors appear, and every use asks first
 
@@ -6644,7 +6661,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. The card appeared for `mcp__claude_ai_ms365__get_me`, and one Allow once ran it: the one real connector call of all these runs. With an Agent-written `allow` in `settings.local.json`, a card still appeared; refused. Logged: McpServerName `claude.ai ms365`, McpServerSource `claudeai`, Kind Other. |
+| 2026-11-06 | Pass | `a07e0a0e` | #357 | By an agent acting as the Human, on Sonnet at low Effort. The card appeared for `mcp__claude_ai_ms365__get_me`, and one Allow once ran it: the one real connector call of all these runs. With an Agent-written `allow` in `settings.local.json`, a card still appeared; refused. Logged: McpServerName `claude.ai ms365`, McpServerSource `claudeai`, Kind Other. |
 
 ### AGCONN-09 — An Agent cannot switch its own connectors on
 
@@ -6652,7 +6669,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Asked to turn its own connectors on, Devon said it had no way and made no tool call. `persona_connectors` and `settings.local.json` unchanged. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Asked to turn its own connectors on, Devon said it had no way and made no tool call. `persona_connectors` and `settings.local.json` unchanged. |
 
 ### AGCONN-10 — A Turn running when the switch flips
 
@@ -6660,7 +6677,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Partial | `a07e0a0e` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Switched off mid-Turn: the card showed off at once, and the running Turn and its pending call did not change. No pass line was reached. |
+| 2026-11-06 | Partial | `a07e0a0e` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Switched off mid-Turn: the card showed off at once, and the running Turn and its pending call did not change. No pass line was reached. |
 
 ### AGCONN-11 — A connector call held past the wait
 
@@ -6668,7 +6685,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Partial | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Timeout lowered to 30 s. Refused with "no answer", the call did not run, and the Turn was not killed. The model tried no second call, so "refused with no new card" is pinned only by tests. |
+| 2026-11-06 | Partial | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Timeout lowered to 30 s. Refused with "no answer", the call did not run, and the Turn was not killed. The model tried no second call, so "refused with no new card" is pinned only by tests. |
 
 ### AGCONN-12 — The switch flipped while a card is open
 
@@ -6676,7 +6693,7 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. Flipping the switch off closed the card as refused and the call never ran. The Turn then ended with no message to the Human. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. Flipping the switch off closed the card as refused and the call never ran. The Turn then ended with no message to the Human. |
 
 ### AGCONN-13 — Hostile arguments
 
@@ -6684,4 +6701,4 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-11-06 | Pass | `bca0f249` | #357 | Run by an agent acting as the Human, on Sonnet at low Effort. On the stand-in `claude_ai_probe`. Markup, `**bold**` and a `javascript:` link showed as plain text, short fields were all shown, and a 6000-character body was cut with a count. Bidi was not tested: the model dropped the character. An earlier apparent hang was most likely a stale binary. |
+| 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. On the stand-in `claude_ai_probe`. Markup, `**bold**` and a `javascript:` link showed as plain text, short fields were all shown, and a 6000-character body was cut with a count. Bidi was not tested: the model dropped the character. An earlier apparent hang was most likely a stale binary. |
