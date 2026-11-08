@@ -91,7 +91,7 @@ public sealed class RoomLayoutSourceTests
     {
         string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-option");
 
-        Assert.Contains("min-height: 32px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("min-height: 28px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 

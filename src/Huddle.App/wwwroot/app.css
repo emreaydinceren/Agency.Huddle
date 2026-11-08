@@ -637,8 +637,13 @@ a.team-ref,
    elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
 .new-chat {
     position: relative;
+    anchor-name: --new-chat;
 }
 
+/* Fixed, not absolute (#465): the link sits at the end of a long Room list inside a scrolling folder, and an absolute panel was
+   clipped by that folder and pushed below the window. A fixed panel is clipped by neither. It hangs from the link by anchor
+   positioning (8px in from each side, the link's width) and flips above it when the window has no room below. A browser
+   without anchor positioning keeps the absolute panel under the link, as before. */
 .new-chat-panel {
     position: absolute;
     inset-inline: 8px;
@@ -647,6 +652,20 @@ a.team-ref,
     padding: 8px;
     background: var(--mud-palette-surface);
     font-size: var(--mud-typography-body2-size);
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+}
+
+@supports (position-anchor: --new-chat) {
+    .new-chat-panel {
+        position: fixed;
+        position-anchor: --new-chat;
+        inset-inline: auto;
+        left: calc(anchor(left) + 8px);
+        width: calc(anchor-size(width) - 16px);
+        top: anchor(bottom);
+        position-try-fallbacks: flip-block;
+    }
 }
 
 .new-chat-heading {
@@ -1107,6 +1126,22 @@ emoji-picker {
     margin-bottom: 0;
 }
 
+/* The Room's title never gets less width than its longest word (#466): the page header lets the h1 break anywhere and shrink to
+   nothing, which drew "Launch crew" a letter a line when the Workspace was narrow. Here the h1 only breaks inside a word that is
+   itself wider than the row, and the members and Invite drop to a line of their own, at the right, before the title gives way. */
+.room-header .page-header-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.room-header .page-header-h1.mud-typography {
+    overflow-wrap: break-word;
+}
+
+.room-header .page-header-actions {
+    margin-inline-start: auto;
+}
+
 /* The Room's title is the h6 role at 600 in every Theme: each Theme's mockup sets it at 15-18px semibold, and the page
    h5 it inherited (20px) was the outlier (side-by-side audit, 2026-10-30, LL-C01, FL-06, CL-03). */
 .room-header .page-header-h1.mud-typography {
@@ -1235,7 +1270,7 @@ emoji-picker {
 
 .top-bar-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 32rem) minmax(0, 1fr);
+    grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 32rem) minmax(max-content, 1fr);
     align-items: center;
     column-gap: 16px;
     width: 100%;
@@ -1647,6 +1682,21 @@ body.sidebar-resizing {
     display: none;
 }
 
+/* A narrow window (#466): the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
+   left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
+   floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
+   the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
+@media (max-width: 1099px) {
+    .mud-layout.mud-drawer-open-persistent-right .mud-main-content.main-column {
+        margin-right: 0;
+    }
+
+    .mud-drawer.mud-drawer--open.right-sidebar {
+        box-shadow: var(--hu-shadow-panel);
+        max-width: calc(100vw - 48px);
+    }
+}
+
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
    A top-level left-menu row (Agents, Settings) is a MudNavLink with no MudNavGroup
    ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
@@ -1822,7 +1872,9 @@ body.sidebar-resizing {
    the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
 .room-row-avatar {
     flex: 0 0 auto;
-    margin-inline-end: var(--nav-gap);
+    /* The avatar is 32px in a 24px slot (#475): it overhangs the slot by 4px a side, so its centre stays on the icon line and
+       the name starts where a group Room's name does. */
+    margin-inline: calc((var(--nav-slot) - 32px) / 2) calc((var(--nav-slot) - 32px) / 2 + var(--nav-gap));
     vertical-align: middle;
 }
 
@@ -1830,7 +1882,6 @@ body.sidebar-resizing {
     display: flex;
     align-items: center;
     min-width: 0;
-    padding-block: 2px;
 }
 
 /* Two lines at every sidebar width: the name, then the Agent's title muted below it. Each truncates with an ellipsis
@@ -2353,6 +2404,21 @@ body.sidebar-resizing {
     margin-bottom: 0;
 }
 
+/* A list's markers belong inside the text column: the 24px indent (the nearest step of the spacing scale to the audit's
+   20px) leaves room for "10." in the column instead of hanging it out into the avatar gutter. Nested lists indent from
+   their parent's text. */
+.message-body ul,
+.message-body ol {
+    padding-left: 24px;
+}
+
+/* The Members row reads the same context figure as .message-context above, so it wears the same type. The :root
+   prefix outweighs the sidebar trait that sets every .sidebar-row-meta to weight 500. */
+:root .members-body .members-context.sidebar-row-meta {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---- A Persona's ad-hoc "**Header**" line, marked by MarkdownRenderer.
    MarkStandaloneBoldParagraphsAsHeadings ------------------------------------------------------
    Renders to the same <strong> as a bullet's own "**Label:**" lead-in, so a rule keyed on that tag
@@ -2380,7 +2446,9 @@ body.sidebar-resizing {
 .draft-caret {
     display: inline-block;
     width: 0.5em;
+    height: 1em;
     margin-left: 0.1em;
+    vertical-align: text-bottom;
     border-right: 2px solid var(--mud-palette-text-secondary);
     animation: draft-caret-blink 1s step-end infinite;
 }
@@ -2531,7 +2599,7 @@ body.sidebar-resizing {
 /* ---- Composer --------------------------------------------------------------------------------- */
 
 .composer {
-    padding: 16px 24px;
+    padding: 16px calc(24px + var(--room-scrollbar)) 16px 24px;
 }
 
 /* The Composer belongs to the Transcript column (F2): the same 760px, centred, so the box lines up with the
@@ -2692,6 +2760,19 @@ body.sidebar-resizing {
     color: var(--mud-palette-success);
     margin-bottom: 8px;
     font-size: var(--mud-typography-body2-size);
+}
+
+/* One left edge for the Transcript, the notices and the Composer (C4, C9, C10). The message list scrolls and draws a
+   scrollbar on its right; the notices and the Composer do not, so each centred its 760px column in a pane the
+   scrollbar's width wider than the Transcript's, and the columns sat half that width apart. The list now always
+   reserves the gutter, and the Composer and the notices reserve the same width on their right. --room-scrollbar is
+   the thin scrollbar's width (the * rule above), so the columns match wherever the pane is wide or narrow. */
+:root {
+    --room-scrollbar: 10px;
+}
+
+.room-column > .message-list {
+    scrollbar-gutter: stable;
 }
 
 /* ---- Task read view (T15) and Task edit page (K): docs/Huddle.TaskReadView-Specifications.md ---- */
@@ -3070,11 +3151,8 @@ body.sidebar-resizing {
 
 /* ---- Trait marks=chip: names, references, mentions, quotes and tool summaries are drawn as shapes ----------- */
 
-/* The sender reads at body size, the time is tabular and quiet, and paragraphs sit 4px apart. */
-:root:has([data-hu-marks="chip"]) .message-sender {
-    font-size: var(--mud-typography-body1-size);
-}
-
+/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps the 13px/600 of C5b (it used to be
+   raised to body size here, which made it 14px beside the 12px time). */
 :root:has([data-hu-marks="chip"]) .message-time {
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
@@ -3178,7 +3256,7 @@ body.sidebar-resizing {
    tool row with attach on the left and Send on the right. The stream fades under it. */
 :root:has([data-hu-composer="card"]) .composer {
     border-top: 0;
-    padding: 8px 24px 16px;
+    padding: 8px calc(24px + var(--room-scrollbar)) 16px 24px;
     background: linear-gradient(transparent, var(--hu-ground-page) 22%);
 }
 
@@ -3192,7 +3270,8 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-composer="card"]) .composer-box:focus-within {
-    border-color: var(--mud-palette-info);
+    border-color: var(--mud-palette-primary);
+    box-shadow: var(--hu-shadow-card-hover), inset 0 0 0 0.5px var(--mud-palette-primary);
 }
 
 :root:has([data-hu-composer="card"]) .composer-input,
@@ -3287,9 +3366,10 @@ body.sidebar-resizing {
    Transcript's padding and the Composer's, so the Transcript, the notice and the Composer share one left edge. */
 .room-notice-column {
     box-sizing: border-box;
-    width: calc(100% - 48px);
+    width: calc(100% - 48px - var(--room-scrollbar));
     max-width: 760px;
     margin-inline: auto;
+    translate: calc(var(--room-scrollbar) / -2) 0;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -3315,10 +3395,9 @@ body.sidebar-resizing {
 }
 
 .budget-note {
-    margin: 0;
-    padding: 8px 16px 0;
+    margin-block: 8px 0;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
 }
 
 /* Neutral, unlike .budget-prompt-text above: these two report a fact about a delivery, not an
@@ -3745,7 +3824,7 @@ body.sidebar-resizing {
 /* Only the label field fills the card; the upload control is a mud-input-control too, and must stay as wide as its
    button, like "Choose from library". */
 .avatar-choice-body .mud-input-control:not(.mud-file-upload) {
-    flex: 1 1 auto;
+    flex: 1 1 8rem;
 }
 
 .avatar-choice-body .mud-file-upload {
@@ -3757,8 +3836,8 @@ body.sidebar-resizing {
    wrapping row, not inside it as MudBlazor's own counter is. It takes a row of its own under the field, right-aligned,
    and the negative margin cancels the row gap so it sits as close as the stock counter did. */
 .avatar-choice-body > .mud-input-control-helper-container {
-    flex-basis: 100%;
-    margin-top: -8px;
+    flex: 0 0 auto;
+    margin-top: 0;
 }
 
 /* An image card's status line (the file name, or the not-yet-saved note) takes its own row under the card's two buttons,
@@ -3772,6 +3851,12 @@ body.sidebar-resizing {
 /* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height (B8i). */
 .avatar-editor-background-hidden {
     visibility: hidden;
+}
+
+/* In the dialog the hidden Background takes no space (#482): the dialog is anchored to the top of the window
+   (AvatarEditorDialog.Options), so it no longer re-centres when the Human moves between cards, and the band it held is gone. */
+.avatar-editor-dialog .avatar-editor-background-hidden {
+    display: none;
 }
 
 /* The buttons stop their click from reaching the card; the wrapper is only as wide as its button, so a click on the
@@ -4041,6 +4126,12 @@ body.sidebar-resizing {
     font-weight: 600;
 }
 
+/* A sub-section of a tab sits one level under the tab title (#473): 14px at 600, the Prompts groups too, whose shared
+   heading rule would otherwise draw them at the title's 16px. */
+.settings-section .prompts-group-heading {
+    font-size: var(--mud-typography-subtitle1-size);
+}
+
 .settings-stored-at code {
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
@@ -4100,6 +4191,23 @@ body.sidebar-resizing {
     color: var(--hu-current-icon);
 }
 
+/* A Library Root's last cell keeps "Read only" beside its Hide switch, on one line, so every row is one height and the
+   switches share a column at the cell's right edge (#480). */
+.library-panel-roots-table td:last-child {
+    white-space: nowrap;
+    text-align: end;
+}
+
+.library-panel-switch-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.library-panel-roots-table .library-panel-hide-switch {
+    margin-inline-end: 0;
+}
+
 /* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
 .library-panel-add-row {
     align-items: center;
@@ -4122,6 +4230,41 @@ body.sidebar-resizing {
 /* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
 .skills-grid .skills-name {
     font-weight: 500;
+}
+
+/* The grid fits its panel (#474): fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
+   sideways at the standard desktop width; the description stops at two lines (its full text is the cell's tooltip). */
+.skills-grid table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.skills-grid th:nth-child(2),
+.skills-grid td:nth-child(2) {
+    width: 20%;
+}
+
+.skills-grid th:nth-child(3),
+.skills-grid td:nth-child(3) {
+    width: 22%;
+}
+
+.skills-grid th:nth-child(4),
+.skills-grid td:nth-child(4) {
+    width: 14%;
+}
+
+.skills-grid th:nth-child(5),
+.skills-grid td:nth-child(5) {
+    width: 48px;
+}
+
+.skills-grid .skills-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 /* A phone has no room for two columns: the menu sits above the section and stops sticking. */
@@ -4789,9 +4932,16 @@ body.sidebar-resizing {
     overflow-wrap: anywhere;
 }
 
-/* On the toolbar the path follows the Copy path button, so it needs no gutter of its own on that side. */
+/* On the toolbar the path follows the Copy path button, so it needs no gutter of its own on that side.
+   It stays on one line and truncates from the start (the file name is the part worth keeping); the full path is in its title. */
 .library-document-path-inline {
     padding: 0 16px 0 4px;
+    overflow: hidden;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
 }
 
 /* ---- A toolbar ends in a hairline (design-system.md "Lines") ------------------------------------
@@ -5056,6 +5206,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     z-index: 1;
     box-sizing: border-box;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     min-height: 61px;
@@ -5064,9 +5215,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-ground-sidebar);
 }
 
+/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the header
+   wraps (flex-wrap above) and the actions take a second line instead of squeezing it (#481). */
+
 .library-explorer-tree-header > .library-explorer-search {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 10rem;
+    min-width: 10rem;
 }
 
 .library-explorer-tree-actions {
@@ -5487,7 +5641,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 /* The "·" between the groups; the avatars carry no text, so only the Names are bold. */
 .doc-byline-sep {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .doc-byline .doc-history-actor-name {
@@ -5519,7 +5673,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .doc-byline-label {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .doc-history {
@@ -6027,14 +6181,31 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-top: 12px;
 }
 
-/* The options are a column of one-line 32px answer rows, flush left (audit C8), the same height as the Dismiss and
-   Send buttons beside them; an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+/* The options are a column of one-line 28px answer rows, flush left (audit C8), the same height as the Dismiss and
+   Send buttons beside them (a Small button is 28px, so the card has one button height); an option keeps the case the
+   Agent wrote instead of MudBlazor's button default. They sit 12px under the question, as the question sits 12px
+   under the card's title. */
 .question-card-options {
     align-items: flex-start;
 }
 
+.question-card-options,
+.question-card-rank {
+    margin-top: 12px;
+}
+
+.question-card-caption {
+    display: block;
+    margin-top: 4px;
+}
+
+.question-card-caption + .question-card-options,
+.question-card-caption + .question-card-rank {
+    margin-top: 8px;
+}
+
 .question-card-option {
-    min-height: 32px;
+    min-height: 28px;
     justify-content: flex-start;
     text-align: left;
     text-transform: none;
@@ -6602,9 +6773,20 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     gap: 12px;
 }
 
-/* The roles and the roster are two rows of cards that fill down and then across; what does not fit is reached by scrolling
-   sideways, so a long pool or a large roster stays two rows tall (B9a, B9c, B12). The padding keeps the scrollbar off the cards. */
-.role-grid,
+/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width (#474); the first dozen show and
+   "Show all roles" reveals the rest (BuildTeam). */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.role-grid-toggle {
+    margin-top: 4px;
+}
+
+/* The roster is two rows of cards that fill down and then across; what does not fit is reached by scrolling
+   sideways, so a large roster stays two rows tall (B9c, B12). The padding keeps the scrollbar off the cards. */
 .roster-grid {
     display: grid;
     grid-template-rows: repeat(2, auto);
@@ -6619,24 +6801,17 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     scrollbar-color: transparent transparent;
 }
 
-.role-grid:hover,
-.role-grid:focus-within,
 .roster-grid:hover,
 .roster-grid:focus-within {
     scrollbar-color: var(--ink-edge) transparent;
 }
 
-/* The roles are narrower cards, 220px wide; the roster's are 20rem. */
-.role-grid {
-    grid-auto-columns: 220px;
-}
-
+/* The roster's cards are 20rem wide. */
 .roster-grid {
     grid-auto-columns: 20rem;
 }
 
 /* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
-.role-grid:not(:has(> :nth-child(2))),
 .roster-grid:not(:has(> :nth-child(2))) {
     grid-template-rows: auto;
 }
@@ -6865,6 +7040,30 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-inline-start: auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
+}
+
+/* The card's title is a link with no leading mark, so the sidebar's rule gives its text the slot's step as a margin; the title's own
+   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers (#475). */
+.sidebar-views .needs-you-title .mud-nav-link > .mud-nav-link-text {
+    margin-inline-start: 0;
+}
+
+/* The Dismiss button floats over the end of its row instead of taking a slot of its own, so the name and the time use the row's whole
+   width up to the trailing line (#475). Where there is a hover, the button replaces the time while it shows; on touch it is always
+   shown and the row's padding (above) keeps the time clear of it. */
+.sidebar-views .needs-you-row > .mud-tooltip-root {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--nav-inset);
+    display: flex;
+    align-items: center;
+}
+
+@media (hover: hover) {
+    .needs-you-row:not(.needs-you-task-row):hover .needs-you-detail,
+    .needs-you-row:not(.needs-you-task-row):focus-within .needs-you-detail {
+        visibility: hidden;
+    }
 }
 
 /* ---- Segmented control: MudBlazor's toggle group inside HuddleSegmentedControl ------------------
@@ -7128,14 +7327,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     opacity: 0.6;
 }
 
-/* Group headings are upper case by style only; the text stays "Closed Tasks" for a screen reader. */
+/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers (UX rule 9, #477). */
 .search-group-heading {
     padding: 8px 8px 4px;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
 }
 
 /* The dropdown is the popover's direct child; it is at most 80% of the window high. */
@@ -7182,8 +7379,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 /* ---- References ------------------------------------------------------------------------------- */
 .composer-picker {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: max(24px, calc(50% - 380px - var(--room-scrollbar) / 2));
+    width: min(760px, calc(100% - 48px - var(--room-scrollbar)));
+    box-sizing: border-box;
     bottom: 100%;
     max-height: min(320px, 40vh);
     overflow-y: auto;
@@ -7203,8 +7401,26 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .composer-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 4px 12px;
     cursor: pointer;
+}
+
+/* The card fills the row and the note, when there is one, sits on the same line at its end: a row is one card tall
+   whatever its kind, and the note cannot be read as a heading for the rows below it. */
+.composer-picker-item > .search-card {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* One text column for every kind: an Agent's 24px avatar and a Task's 18px icon take the same slot, so the titles
+   start at one x. */
+.composer-picker .search-card-icon {
+    flex: none;
+    width: 24px;
+    justify-content: center;
 }
 
 .composer-picker-item:hover {
@@ -7231,8 +7447,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .composer-picker-note {
-    display: block;
-    font-size: var(--mud-typography-body2-size);
+    flex: none;
+    font-size: var(--mud-typography-caption-size);
+    white-space: nowrap;
 }
 
 .composer-picker-footer {
@@ -7735,9 +7952,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    flex: 0 0 72px;
+    flex: 0 0 96px;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-caption-size);
+    font-size: var(--mud-typography-body2-size);
     white-space: nowrap;
 }
 
@@ -7772,16 +7989,28 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: none;
 }
 
-/* The Status field is the Board's second cue, a state dot, beside the select (audit B4r). */
-.task-detail-status-field {
+/* The Priority select wears its priority's icon (TaskColors.Icon, one set in every Theme) inside the field's start; the select keeps its own caret (issue 470). */
+.task-detail-priority-field {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
 }
 
-.task-detail-status-field .mud-input-control {
-    flex: 1 1 auto;
-    min-width: 0;
+.task-detail-priority-field .task-detail-priority-icon.mud-icon-root {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The select's visible text is a div (its input is hidden), so the icon's room is padded on that. */
+.task-detail-priority-field .task-detail-priority .mud-select-input.mud-input-slot {
+    padding-inline-start: 32px;
 }
 
 /* The History is always open: a Group label over the list, no panel and no expand glyph. */
@@ -7798,8 +8027,15 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-bottom: 8px;
 }
 
+/* The Description heads a field the width of the form, so it is a section heading (14px/600, TextPrimary; issue 491), not the 12px Group label of the
+   property groups above it, which it would otherwise inherit from .group-label. The size is body1's, not subtitle2's: a Theme's subtitle2 is
+   16px, and the form's title is its only 16px text. */
 .task-detail-description-header .group-label {
     margin: 0;
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-body1-lineheight);
+    color: var(--mud-palette-text-primary);
 }
 
 .task-detail-description-field .mud-input-label {
@@ -8156,18 +8392,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The strip's fields are compact: 28px tall, in the caption's size. */
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined {
-    min-height: 28px;
-    font-size: var(--mud-typography-caption-size);
-}
-
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined .mud-input-slot,
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined > input.mud-input-root {
-    height: auto;
-    padding-block: 0;
-    font-size: var(--mud-typography-caption-size);
-}
+/* The strip's fields are the form's fields (issue 491): the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
+   label (.task-detail-strip-label, 96px) is the groups' label column. The strip used to override that with a 28px caption-size field. */
 
 /* The strip carries the page's one rule under the header, so the header has none of its own. */
 .task-edit-page-header .page-header.has-chrome {
@@ -8204,6 +8430,16 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding-block: 4px;
     font-size: var(--mud-typography-body2-size);
     height: auto;
+}
+
+/* A select's visible text is a div, not an input (its element carries an inline display), so it sat on the field's top line: a line as tall as the
+   field's inside (34px less its two 1px borders) centres it (issue 491). */
+.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined div.mud-select-input.mud-input-slot {
+    padding-block: 0;
+    line-height: 32px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .task-edit-page .task-human-gate,
@@ -8457,6 +8693,11 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-radius: var(--hu-control-radius);
 }
 
+/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it (issue 469). */
+.task-toolbar .task-toolbar-search {
+    margin-right: 8px;
+}
+
 /* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
 .task-filter-chip-set {
     border-color: var(--hu-chip-set-line);
@@ -8625,6 +8866,21 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-color: var(--hu-detail-decision-line);
 }
 
+/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls (issue 469), as the design system sets for every toolbar row: the shared
+   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 1px;
+    align-items: center;
+}
+
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 1px;
+    bottom: 1px;
+    left: 1px;
+}
+
 /* ---- Traits: phase 4 (status, send, composer) ---------------------------------------------------------------
    Variants of the status, send and composer traits that the Lumen, Fluent and Cobalt Soft Themes choose. Scoped to
    the marker attribute the layout renders, so a Theme that keeps the default never sees them. Colours are palette
@@ -8644,8 +8900,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-text-subtle);
 }
 
-:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon,
-:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip .mud-chip-icon {
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon {
     display: none;
 }
 
@@ -8691,44 +8946,10 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--mud-palette-error);
 }
 
-/* -- status=glyph: priority is three rising bars, filled up to the level; Urgent is one filled square ---------- */
-:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip::before {
-    content: "";
-    flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
-    background:
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-low::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-medium::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-high::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent::before {
-    width: 12px;
-    height: 12px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.25);
-    background: var(--mud-palette-error);
+/* -- status=glyph: priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme (issue 470); only
+   the chip's fill and border are dropped above. Urgent wears the error hue. ---------------------------------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent {
+    color: var(--mud-palette-error);
 }
 
 /* -- send=square: Send is a 28px square on the shared Send colours with no word; the hover darkens the accent --- */

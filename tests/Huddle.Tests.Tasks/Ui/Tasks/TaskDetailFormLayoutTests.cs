@@ -84,6 +84,39 @@ public sealed class TaskDetailFormLayoutTests
         Assert.Equal("Project", RowLabel(cut.Find(".task-detail-project")));
     }
 
+    /// <summary>Start and Due date are the same kind of field and wear the same adornment (#491): the picker's own calendar at the end, neither overridden.</summary>
+    [Fact]
+    public async Task Form_BothDateFieldsHaveTheSameAdornment()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        var cut = RenderDetail(ctx, task.Id);
+
+        IReadOnlyList<MudDatePicker> pickers = [.. cut.FindComponents<MudDatePicker>().Select(picker => picker.Instance)];
+
+        Assert.Equal(2, pickers.Count);
+        Assert.All(pickers, picker => Assert.Equal(Adornment.End, picker.Adornment));
+        Assert.Equal(pickers[0].AdornmentIcon, pickers[1].AdornmentIcon);
+        Assert.DoesNotContain(Icons.Material.Filled.Warning, pickers.Select(picker => picker.AdornmentIcon));
+    }
+
+    /// <summary>The Description is headed like a section (body1's size, 14px/600), and the property strip and the groups share one label size and one field size (#491).</summary>
+    [Fact]
+    public void AppCss_EditPageFields_ShareOneLabelColumnAndOneFieldSize()
+    {
+        string css = Agency.Huddle.Tests.Css.CssText.AppCss(Agency.Huddle.Tests.Css.CssNewlines.AsIs);
+        string strip = Agency.Huddle.Tests.Css.CssText.RuleBody(css, ".task-detail-strip-label");
+        string heading = Agency.Huddle.Tests.Css.CssText.RuleBody(css, ".task-detail-description-header .group-label");
+
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("flex: 0 0 96px;", strip, StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-body2-size);", strip, StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-body1-size);", heading, StringComparison.Ordinal);
+        Assert.Contains("font-weight: 600;", heading, StringComparison.Ordinal);
+        Assert.DoesNotContain(".task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined {", css, StringComparison.Ordinal);
+    }
+
     /// <summary>The visible label of the property row that holds <paramref name="control"/>.</summary>
     /// <param name="control">A control somewhere inside a <c>.task-detail-prop</c> or a strip item.</param>
     private static string RowLabel(IElement control)

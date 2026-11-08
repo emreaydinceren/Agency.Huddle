@@ -5,3 +5,13 @@
     font-size: var(--mud-typography-body1-size);
     line-height: var(--mud-typography-body1-lineheight);
 }
+
+/* A Job row (MudList carries no scope attribute, so the host div does): the icon on the 20px step and flush with the page heading, 12px before the text; the title is the row's name. */
+.scheduled-list-host ::deep .scheduled-row {
+    padding-left: 0;
+}
+
+.scheduled-list-host ::deep .scheduled-row .mud-list-item-icon {
+    min-width: 0;
+    margin-right: 12px;
+}

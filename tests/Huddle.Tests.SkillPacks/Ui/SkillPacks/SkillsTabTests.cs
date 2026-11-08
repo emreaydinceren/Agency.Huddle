@@ -56,6 +56,20 @@ public sealed class SkillsTabTests : IDisposable
         Assert.Equal(PromptClipboard.CopiedMessage, shown.Message);
     }
 
+    /// <summary>A Skill's description carries its full text as the cell's tooltip, because the grid clamps it to two lines (#474).</summary>
+    [Fact]
+    public async Task Description_IsClampedByCssAndCarriesItsFullTextAsATooltip()
+    {
+        await this.fixture.SeedAsync("alpha");
+        await using MudBunitContext ctx = this.fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        IElement description = Assert.IsAssignableFrom<IElement>(Row(cut, "alpha").QuerySelector(".skills-description"));
+        Assert.False(string.IsNullOrWhiteSpace(description.TextContent));
+        Assert.Equal(description.TextContent.Trim(), description.GetAttribute("title")?.Trim());
+    }
+
     /// <summary>A built-in Skill shows Built in and no registry state.</summary>
     [Fact]
     public async Task BuiltIn_ShowsBuiltIn()

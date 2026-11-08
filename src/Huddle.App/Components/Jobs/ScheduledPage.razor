@@ -40,18 +40,20 @@
         }
         else
         {
-            <MudList T="string" Class="scheduled-list" Dense="true">
-                @foreach (Job job in this.Store.Jobs)
-                {
-                    <MudListItem T="string" @key="job.Id" Href="@($"/scheduled/{job.Id}")" Class="scheduled-row"
-                                 Icon="@(job.Paused ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.Schedule)">
-                        <MudText Typo="Typo.body1">@job.Title</MudText>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                            For @JobText.OwnerName(job.Owner, this.Human.Name) · @job.When.Describe() · @JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone)
-                        </MudText>
-                    </MudListItem>
-                }
-            </MudList>
+            <div class="scheduled-list-host">
+                <MudList T="string" Class="scheduled-list" Dense="true">
+                    @foreach (Job job in this.Store.Jobs)
+                    {
+                        <MudListItem T="string" @key="job.Id" Href="@($"/scheduled/{job.Id}")" Class="scheduled-row"
+                                     Icon="@(job.Paused ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.Schedule)" IconSize="Size.Small">
+                            <MudText Typo="Typo.subtitle1" Class="scheduled-row-title">@job.Title</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                For @JobText.OwnerName(job.Owner, this.Human.Name) · @job.When.Describe()@(JobText.RowNextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock) is { } next ? " · " + next : string.Empty)
+                            </MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            </div>
         }
     }
     else if (this.Store.Find(this.JobId) is { } job)
@@ -73,8 +75,8 @@
         </PageHeader>
 
         <MudStack Spacing="2" Class="scheduled-detail">
-            <MudText Typo="Typo.body2" Class="scheduled-next">@JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone)</MudText>
-            @if (this.Scheduler.StateOf(job) is { } state && JobText.LastRun(state.LastRunUtc, state.LastOutcome, this.Zone) is { } last)
+            <MudText Typo="Typo.body2" Class="scheduled-next">@JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock)</MudText>
+            @if (this.Scheduler.StateOf(job) is { } state && JobText.LastRun(state.LastRunUtc, state.LastOutcome, this.Zone, this.Clock) is { } last)
             {
                 <MudText Typo="Typo.body2" Class="scheduled-last mud-text-secondary">@last</MudText>
             }

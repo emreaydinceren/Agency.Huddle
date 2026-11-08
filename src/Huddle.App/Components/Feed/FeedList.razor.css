@@ -16,7 +16,7 @@
 }
 
 .feed-day-date {
-    font-weight: 450;
+    font-weight: 400;
     color: var(--mud-palette-text-secondary);
 }
 
@@ -31,14 +31,14 @@
 :root:has([data-hu-labels="upper"]) .feed-day-word {
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-weight: 650;
+    font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
 
 /* Nordic's day heading is a Literata title with a line beneath it, not an inline rule. */
 :root:has([data-hu-reading="book"]) .feed-day-word {
     font-family: var(--font-read);
-    font-size: clamp(20px, 1.05rem + 0.5vw, 24px);
+    font-size: var(--mud-typography-h5-size);
     line-height: 1.25;
     font-weight: 600;
     text-transform: none;

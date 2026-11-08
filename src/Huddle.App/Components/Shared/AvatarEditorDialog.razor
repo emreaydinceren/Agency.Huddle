@@ -47,8 +47,12 @@
 </MudDialog>
 
 @code {
-    /// <summary>How the editor is shown: the shared small form, with a close button and Escape but no backdrop click, so a stray click outside cannot throw away a half-made choice.</summary>
-    internal static DialogOptions Options => HuddleDialogOptions.SmallForm;
+    /// <summary>
+    /// How the editor is shown: the shared small form, with a close button and Escape but no backdrop click, so a stray click outside cannot throw away a half-made choice.
+    /// It is anchored to the top of the window, so the Background appearing under the first two cards and leaving under the image cards moves only the dialog's foot and the
+    /// dialog does not re-centre under the pointer (B8i); the hidden Background takes no space, so there is no empty band (#482).
+    /// </summary>
+    internal static DialogOptions Options { get; } = HuddleDialogOptions.SmallForm with { Position = DialogPosition.TopCenter };
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

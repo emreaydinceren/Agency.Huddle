@@ -525,6 +525,21 @@ public sealed class MessageListTests
         Assert.Equal("Tool call", cut.Find(".turn-detail-row .tool-activity").TextContent.Trim());
     }
 
+    /// <summary>A Huddle tool call shows as plain words, with the raw tool id kept in the row's tooltip.</summary>
+    [Fact]
+    public async Task Row_TeamTool_ShowsPlainWordsWithTheIdInATitle()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "mcp__team__ask_human", ToolActivityStatus.Completed, null, null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        var row = cut.Find(".turn-detail-row .tool-activity");
+        Assert.Equal("Asking you", row.TextContent.Trim());
+        Assert.Equal("mcp__team__ask_human", row.GetAttribute("title"));
+    }
+
     /// <summary>A known line shows at the end of the row, and an unknown one shows nothing.</summary>
     [Fact]
     public async Task Line_ShowsOnlyWhenKnown()

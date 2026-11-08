@@ -5,6 +5,7 @@
 
 @using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.Search
+@using Agency.Huddle.App.TeamTypes
 
 <SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
     <Icon><TeamAvatar Team="@this.Hit.Name" Avatar="this.Hit.Avatar" Size="Size.Small" /></Icon>
@@ -21,15 +22,24 @@
     [Parameter]
     public string Phrase { get; set; } = string.Empty;
 
-    /// <summary>The meta line: the type and the count, or the count alone when there is no type.</summary>
+    /// <summary>The meta line: the type's display name and the count, or the count alone when there is no type.</summary>
     private string Meta
     {
         get
         {
-            string count = Plural.Of(this.Hit.AgentCount, "agent", "agents");
-            return this.Hit.TypeLabel is { } type ? $"{type} · {count}" : count;
+            string count = Plural.Of(this.Hit.AgentCount, "Agent", "Agents");
+            return this.Hit.TypeLabel is { } type ? $"{TypeName(type)} · {count}" : count;
         }
     }
+
+    /// <summary>
+    /// The type's display name. The Blank Team is not a team type file, so the search provider finds no display name for it and
+    /// hands over its id; the card names it as the Build a team page does.
+    /// </summary>
+    /// <param name="type">The type's display name, or its id when no type of that id is listed.</param>
+    /// <returns>The name to show.</returns>
+    private static string TypeName(string type) =>
+        string.Equals(type, BlankTeamType.Id, StringComparison.Ordinal) ? BlankTeamType.Manifest.DisplayName : type;
 
     /// <summary>The accessible name: the title, then the meta line (spec §11).</summary>
     private string AccessibleName => $"{this.Hit.Title}, {this.Meta}";

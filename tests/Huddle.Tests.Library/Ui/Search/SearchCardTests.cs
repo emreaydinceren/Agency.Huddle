@@ -29,7 +29,7 @@ public sealed class SearchCardTests : IDisposable
     /// <summary>Releases the temporary data directory backing the avatar store.</summary>
     public void Dispose() => this.dataDir.Dispose();
 
-    /// <summary>A Team with a type and four Agents shows its name, then <c>Development Team · 4 agents</c>.</summary>
+    /// <summary>A Team with a type and four Agents shows its name, then <c>Development Team · 4 Agents</c>.</summary>
     [Fact]
     public async Task TeamCard_RendersNameTypeAndCount()
     {
@@ -39,10 +39,35 @@ public sealed class SearchCardTests : IDisposable
         IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, hit));
 
         Assert.Equal("Marketing", cut.Find(".search-card-title").TextContent.Trim());
-        Assert.Equal("Development Team · 4 agents", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("Development Team · 4 Agents", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Team with one Agent and no type says <c>1 agent</c>, not <c>1 agents</c>.</summary>
+    /// <summary>A Blank Team reaches the card with its id as the type, and the card shows the display name <c>Blank Team</c>, never the raw <c>blank</c> (#477).</summary>
+    [Fact]
+    public async Task TeamCard_BlankType_ShowsItsDisplayName()
+    {
+        await using MudBunitContext ctx = new();
+        TeamHit hit = new("Sandbox", "blank", 4, MatchTier.ExactName);
+
+        IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, hit));
+
+        Assert.Equal("Blank Team · 4 Agents", cut.Find(".search-card-meta").TextContent.Trim());
+    }
+
+    /// <summary>A Library folder result draws the outlined folder glyph, like the file results and the rest of the app, not the solid one (#477).</summary>
+    [Fact]
+    public async Task LibraryCard_Folder_UsesTheOutlinedFolderIcon()
+    {
+        await using MudBunitContext ctx = new();
+        LibraryHit hit = new("root", "Marketing", "Launch", string.Empty, true, null, null, MatchTier.ExactName);
+
+        IRenderedComponent<LibrarySearchCard> cut = ctx.Render<LibrarySearchCard>(p => p.Add(c => c.Hit, hit));
+
+        string? drawn = cut.FindAll("svg path")[^1].GetAttribute("d");
+        Assert.Equal(MudBlazor.Icons.Material.Outlined.Folder.Split("d=\"")[^1].Split('"')[0], drawn);
+    }
+
+    /// <summary>A Team with one Agent and no type says <c>1 Agent</c>, not <c>1 Agents</c>.</summary>
     [Fact]
     public async Task TeamCard_OneAgent_IsSingular()
     {
@@ -51,7 +76,7 @@ public sealed class SearchCardTests : IDisposable
 
         IRenderedComponent<TeamSearchCard> cut = ctx.Render<TeamSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("1 agent", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("1 Agent", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
     /// <summary>An Agent shows its Name, then its Title and Teams, joined as <c>Product Manager · Marketing, Platform</c>.</summary>

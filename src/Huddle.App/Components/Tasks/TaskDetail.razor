@@ -258,7 +258,7 @@ else if (this.loaded is { } task)
             <div class="task-detail-strip">
 
             <div class="task-detail-strip-item">
-                <MudTooltip Text="Assigned to"><span class="task-detail-strip-label"><MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" aria-label="Assigned to" /></span></MudTooltip>
+                <span class="task-detail-strip-label" aria-hidden="true">Assignee</span>
                 <div class="task-detail-prop-value task-detail-assignee-value">
                                 <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
                                                   Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
@@ -281,30 +281,32 @@ else if (this.loaded is { } task)
                         <div class="task-detail-strip-item">
                             <span class="task-detail-strip-label" aria-hidden="true">Status</span>
                             <div class="task-detail-prop-value">
-                                @* The Board's second cue: the state dot beside the Status, the glyph in the Priority's adornment (audit B4r). *@
-                                <div class="task-detail-status-field">
-                                    <TaskStateDot State="effective.Status" />
-                                    <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                                               Label="Status" Class="task-detail-status">
-                                        @foreach (TaskState state in TaskStates.All)
-                                        {
-                                            <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
-                                        }
-                                    </MudSelect>
-                                </div>
+                                @* One mark per row, and none before the field: the Status row has no state dot, like every other row (#471). *@
+                                <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                           Label="Status" Class="task-detail-status">
+                                    @foreach (TaskState state in TaskStates.All)
+                                    {
+                                        <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                                    }
+                                </MudSelect>
                             </div>
                         </div>
 
                         <div class="task-detail-strip-item">
                             <span class="task-detail-strip-label" aria-hidden="true">Priority</span>
                             <div class="task-detail-prop-value">
-                                <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
-                                           Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
-                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
-                                </MudSelect>
+                                @* The priority's icon (TaskColors.Icon, the one set every screen and Theme uses) sits inside the field's start. It is not the
+                                   select's own adornment: MudSelect draws its caret from AdornmentIcon, so setting it there removed the caret (#470). *@
+                                <div class="task-detail-priority-field">
+                                    <MudIcon Icon="@TaskColors.Icon(effective.Priority)" Size="Size.Small" Class="task-detail-priority-icon" aria-hidden="true" />
+                                    <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+                                               Label="Priority">
+                                        <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
+                                        <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
+                                        <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
+                                        <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
+                                    </MudSelect>
+                                </div>
                             </div>
                         </div>
 
@@ -443,8 +445,7 @@ else if (this.loaded is { } task)
                                 <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
                                                DateChanged="this.OnDueDateChanged" Label="Due date"
                                                Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
-                                               Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
-                                               AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
+                                               AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : Icons.Material.Filled.Event)"
                                                DateFormat="@TaskDates.PickerFormat" Placeholder="None" />
                             </div>
                         </div>

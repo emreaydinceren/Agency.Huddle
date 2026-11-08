@@ -76,6 +76,21 @@ public sealed class TaskReadViewTests
         Assert.Equal("bold", cut.Find(".task-read-view-description strong").TextContent);
     }
 
+    /// <summary>The Status row carries one mark (#471): the status chip's own, with no state dot before it.</summary>
+    [Fact]
+    public async Task Render_StatusRow_HasTheChipAndNoStateDot()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        (TaskItem task, _, _) = CreateFullTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
+
+        Assert.Single(cut.FindAll(".task-read-view-status .task-status-chip"));
+        Assert.Empty(cut.FindAll(".task-read-view-status .task-state-dot"));
+    }
+
     /// <summary>A Task id in the property grid is a link that opens that Task, so a Human can follow the Parent and a blocker.</summary>
     [Fact]
     public async Task Render_ParentAndBlocker_AreLinksToThoseTasks()

@@ -75,11 +75,10 @@ public sealed class TaskToolbarEditorControlsTests
         await using MudBunitContext ctx = NewToolbarContext(harness, store);
         (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, ListView(), effectiveViewChanged: EventCallback.Factory.Create<TaskView>(ctx, view => raised = view));
 
-        await OpenGroupSortAsync(root);
+        await OpenGroupByAsync(root);
 
-        Assert.Contains(TaskGroupField.State, GroupChoices(root));
-        IRenderedComponent<MudSelect<TaskGroupField?>> grouping = root.FindComponents<MudSelect<TaskGroupField?>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-grouping", StringComparison.Ordinal));
-        await root.InvokeAsync(() => grouping.Instance.ValueChanged.InvokeAsync(TaskGroupField.State));
+        Assert.Contains("Status", GroupChoices(root));
+        await root.InvokeAsync(() => root.FindAll(".mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "Status", StringComparison.Ordinal)).ClickAsync());
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Equal(TaskGroupField.State, Assert.Single(updated.Grouping));
     }
@@ -95,10 +94,10 @@ public sealed class TaskToolbarEditorControlsTests
         TaskView board = ListView() with { Kind = ViewKind.Kanban, Columns = [new BoardColumn("Backlog", [TaskState.Backlog])] };
         (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, board);
 
-        await OpenGroupSortAsync(root);
+        await OpenGroupByAsync(root);
 
-        Assert.DoesNotContain(TaskGroupField.State, GroupChoices(root));
-        Assert.Contains(TaskGroupField.Team, GroupChoices(root));
+        Assert.DoesNotContain("Status", GroupChoices(root));
+        Assert.Contains("Team", GroupChoices(root));
     }
 
     /// <summary>The Filter menu's Team options are the union of the Persona and Task stores' Teams, deduplicated.</summary>
@@ -230,15 +229,15 @@ public sealed class TaskToolbarEditorControlsTests
     /// <summary>A List View with no filter, grouping or search.</summary>
     private static TaskView ListView() => new() { Id = "v1", Name = "All", Kind = ViewKind.List };
 
-    /// <summary>Opens the toolbar's "Group, Sort" menu.</summary>
+    /// <summary>Opens the toolbar's Group by chip menu.</summary>
     /// <param name="root">The rendered toolbar host.</param>
-    private static Task OpenGroupSortAsync(IRenderedComponent<ContainerFragment> root) =>
-        root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Group, Sort", StringComparison.Ordinal)).ClickAsync());
+    private static Task OpenGroupByAsync(IRenderedComponent<ContainerFragment> root) =>
+        root.InvokeAsync(() => root.Find(".task-toolbar-group .task-filter-chip-button").ClickAsync());
 
-    /// <summary>The Group by choices the open menu offers.</summary>
+    /// <summary>The Group by choices the open menu offers, after None.</summary>
     /// <param name="root">The rendered toolbar host.</param>
-    private static IReadOnlyList<TaskGroupField?> GroupChoices(IRenderedComponent<ContainerFragment> root) =>
-        [.. root.FindComponents<MudSelectItem<TaskGroupField?>>().Select(item => item.Instance.Value)];
+    private static IReadOnlyList<string> GroupChoices(IRenderedComponent<ContainerFragment> root) =>
+        [.. root.FindAll(".mud-menu-item").Select(item => item.TextContent.Trim()).Where(text => !string.Equals(text, "None", StringComparison.Ordinal))];
 
     /// <summary>A context holding the harness's services, the given View store and an empty sprint catalogue.</summary>
     /// <param name="harness">Supplies the Task and Persona stores.</param>

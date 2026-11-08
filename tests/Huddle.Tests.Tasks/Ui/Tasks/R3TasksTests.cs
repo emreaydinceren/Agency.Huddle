@@ -304,7 +304,7 @@ public sealed class R3TasksTests
         IElement create = cut.Find(".tasks-header .task-toolbar-header .tasks-new-task");
         Assert.Equal("New task", create.TextContent.Trim());
         Assert.Contains("mud-button-filled", create.ClassList);
-        Assert.Empty(cut.FindAll(".tasks-header .btn-action-tight"));
+        Assert.Contains("btn-action-tight", create.ClassList);
     }
 
     /// <summary>
@@ -598,9 +598,12 @@ public sealed class R3TasksTests
         Assert.Equal("yyyy-MM-dd", TaskDates.Format);
     }
 
-    /// <summary>Status has the Board's state dot beside it, in the state's colour, and Priority keeps its glyph (audit B4r).</summary>
+    /// <summary>
+    /// One mark per row (#471): the Status row has no state dot before its select, every row has a text label and the Assignee row's is the word, not a person icon,
+    /// and the Priority select keeps its caret (its icon is drawn inside the field, not as the select's own adornment) beside the priority's icon (#470).
+    /// </summary>
     [Fact]
-    public async Task Status_HasTheStateDot_AndPriorityItsGlyph()
+    public async Task StatusRow_HasNoStateDot_EveryRowHasATextLabel_AndPriorityKeepsItsCaretAndIcon()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, "Alpha", status: TaskState.InProgress, priority: TaskPriority.High);
@@ -608,11 +611,16 @@ public sealed class R3TasksTests
 
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
-        IElement dot = cut.Find(".task-detail-status-field .task-state-dot");
-        Assert.Contains("task-state-dot-info", dot.ClassList);
-        Assert.Equal("true", dot.GetAttribute("aria-hidden"));
+        Assert.Empty(cut.FindAll(".task-detail-strip .task-state-dot"));
+        Assert.Equal(
+            ["Assignee", "Status", "Priority", "Team", "Project", "Sprint"],
+            cut.FindAll(".task-detail-strip-item > .task-detail-strip-label").Select(label => label.TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".task-detail-strip-label .mud-icon-root"));
         IRenderedComponent<MudSelect<TaskPriority>> priority = cut.FindComponents<MudSelect<TaskPriority>>().Single();
-        Assert.Equal(TaskColors.Icon(TaskPriority.High), priority.Instance.AdornmentIcon);
+        Assert.Null(priority.Instance.AdornmentIcon);
+        Assert.Equal(Adornment.End, priority.Instance.Adornment);
+        MudIcon icon = cut.FindComponents<MudIcon>().Single(i => string.Equals(i.Instance.Class, "task-detail-priority-icon", StringComparison.Ordinal)).Instance;
+        Assert.Equal(TaskColors.Icon(TaskPriority.High), icon.Icon);
     }
 
     /// <summary>The state dot is the Board's: Backlog is dashed and hollow, and the Board header draws it through the same component.</summary>

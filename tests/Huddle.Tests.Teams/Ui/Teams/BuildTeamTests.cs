@@ -1059,6 +1059,46 @@ public sealed class BuildTeamTests
         Assert.Equal(["Tutor", "Bookkeeper"], RoleNames(cut));
     }
 
+    /// <summary>
+    /// A long pool wraps into whole cards and shows only the first dozen, with a "Show all" button that reveals the rest and "Show fewer roles" that folds
+    /// them again, so the grid never scrolls sideways and cuts a card through (#474).
+    /// </summary>
+    [Fact]
+    public async Task Members_ALongPool_ShowsTheFirstRolesThenAllOnRequest()
+    {
+        using Fixture fixture = new(typeCount: 3, extraJobs: 20);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        Assert.Equal(11, RoleNames(cut).Count);
+        IElement toggle = cut.Find(".role-grid-toggle");
+        Assert.Equal("Show all 22 roles", toggle.TextContent.Trim());
+        Assert.Equal("false", toggle.GetAttribute("aria-expanded"));
+
+        await cut.InvokeAsync(() => toggle.ClickAsync());
+
+        Assert.Equal(22, RoleNames(cut).Count);
+        Assert.Equal("Show fewer roles", cut.Find(".role-grid-toggle").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".role-grid-toggle").ClickAsync());
+
+        Assert.Equal(11, RoleNames(cut).Count);
+    }
+
+    /// <summary>A pool that fits in the first dozen cards has no "Show all" button.</summary>
+    [Fact]
+    public async Task Members_AShortPool_HasNoShowAllButton()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        Assert.Empty(cut.FindAll(".role-grid-toggle"));
+    }
+
     /// <summary>Pressing another type in the cloud changes the filter to it instead, and the type that was chosen goes back among the chips.</summary>
     [Fact]
     public async Task Members_PickingAnotherTeamType_ReplacesTheFilter()
@@ -1280,8 +1320,10 @@ public sealed class BuildTeamTests
         /// <param name="filterTypes">Whether to add the two types the role filter tests use.</param>
         /// <param name="managedJob">Whether to add Type 97, whose manager is the pool's Bookkeeper by job and which offers two processes, one with onboarding steps.</param>
         /// <param name="tutorSuggestedName">A Name the pool's Tutor suggests for itself, or <see langword="null"/> for none.</param>
-        public Fixture(int typeCount, bool filterTypes = false, bool managedJob = false, string? tutorSuggestedName = null)
+        /// <param name="extraJobs">How many more pool jobs, after Tutor and Bookkeeper, to add, so the roles run past one screen.</param>
+        public Fixture(int typeCount, bool filterTypes = false, bool managedJob = false, string? tutorSuggestedName = null, int extraJobs = 0)
         {
+            string extraJobsJson = string.Concat(Enumerable.Range(1, extraJobs).Select(i => $", {{ \"id\": \"extra{i:D2}\", \"title\": \"Extra {i:D2}\", \"description\": \"Does extra work.\" }}"));
             string tutorNames = tutorSuggestedName is null ? string.Empty : $", \"suggestedNames\": [ \"{tutorSuggestedName}\" ]";
             this.Personas = this.dir.CreatePersonaStore();
             this.Catalog = new FakeTeamCatalog();
@@ -1319,12 +1361,18 @@ public sealed class BuildTeamTests
             }
 
             this.Roles = new CustomRoleStore(this.dir.Options());
-            this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
+            Dictionary<string, string> poolFiles = new(StringComparer.Ordinal)
             {
-                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches.", "requires": [ "email:read" ]""" + tutorNames + """ }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ], "skillRefs": [ { "name": "ext-skill", "source": "acme/skills", "path": "skills/ext-skill" } ] } ] }""",
+                ["hiringpool.json"] ="""{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches.", "requires": [ "email:read" ]""" + tutorNames + """ }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ], "skillRefs": [ { "name": "ext-skill", "source": "acme/skills", "path": "skills/ext-skill" } ] }""" + extraJobsJson + """ ] }""",
                 ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
-            });
+            };
+            for (int i = 1; i <= extraJobs; i++)
+            {
+                poolFiles[$"personas/extra{i:D2}.md"] = $"---\ntitle: Extra {i:D2}\nconsult_when: asked\n---\nYou do extra work.";
+            }
+
+            this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, poolFiles);
 
             // With the pool behind it the catalog pads every type with the pool jobs it does not list, as Pooled roles,
             // which the team type filter must not count as the type's own. Left off otherwise, so the other tests keep the roles they list.

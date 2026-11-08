@@ -223,11 +223,11 @@ else
         }
         else if (this.budget.Exhausted)
         {
-            <MudText Typo="Typo.caption" Class="budget-note">Paused — @this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
+            <MudText Typo="Typo.caption" Class="budget-note room-notice-column">Paused — @this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
         else if (this.budget.Used > 0 && this.budget.Granted > 0)
         {
-            <MudText Typo="Typo.caption" Class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
+            <MudText Typo="Typo.caption" Class="budget-note room-notice-column">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
         @* Rendered inline rather than as a component for the same reason every other strip on this
            page is - see docs/engineering/rules.md. Granted + Expected deliberately renders nothing:

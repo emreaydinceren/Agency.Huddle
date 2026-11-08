@@ -57,7 +57,7 @@ public sealed partial class Phase4ContentTraitsTests
 
     /// <summary>
     /// <c>status=glyph</c> turns the Task state and priority chips into a transparent row: a 10px ring glyph before a
-    /// 12px label in the subtle ink, with no icon and no chip fill.
+    /// 12px label in the subtle ink, with no state icon and no chip fill.
     /// </summary>
     [Fact]
     public void StatusGlyph_PinsTransparentRowAndRing()
@@ -96,19 +96,19 @@ public sealed partial class Phase4ContentTraitsTests
     }
 
     /// <summary>
-    /// <c>status=glyph</c> draws priority as three rising bars filled by level, and Urgent as a filled square in the
-    /// error hue.
+    /// <c>status=glyph</c> keeps the app's one priority icon set (#470): the priority chip's icon is not hidden and no rule draws bars or
+    /// a square in its place, so every Theme shows the same marks. Urgent alone takes the error hue.
     /// </summary>
     [Fact]
-    public void StatusGlyph_PinsPriorityBars()
+    public void StatusGlyph_KeepsThePriorityIconSet()
     {
-        string bars = Body("status", "glyph", ".mud-chip.task-priority-chip::before");
-        string urgent = Body("status", "glyph", ".mud-chip.priority-urgent::before");
-        string high = Body("status", "glyph", ".mud-chip.priority-high::before");
+        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
+        string urgent = Body("status", "glyph", ".mud-chip.priority-urgent");
 
-        Declares(bars, "linear-gradient(", "3px");
-        Declares(urgent, "var(--mud-palette-error)", "12px");
-        Declares(high, "var(--mud-palette-primary)");
+        Assert.DoesNotContain("task-priority-chip .mud-chip-icon", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("task-priority-chip::before", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("priority-high::before", section, StringComparison.Ordinal);
+        Declares(urgent, "var(--mud-palette-error)");
     }
 
     /// <summary>Tags keep today's chip under <c>status=glyph</c>: no glyph rule names a tag selector.</summary>

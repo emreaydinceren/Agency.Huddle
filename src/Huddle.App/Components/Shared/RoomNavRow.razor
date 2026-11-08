@@ -82,10 +82,11 @@
                                OnClick="menuContext.ToggleAsync" />
             </ActivatorContent>
             <ChildContent>
-                <MudMenuItem Icon="@Icons.Material.Filled.Link" OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Archive" Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
+                @* One icon weight in this menu (#477): Copy link has only a line glyph, so Archive and Delete take their outlined forms. *@
+                <MudMenuItem Icon="@Icons.Material.Outlined.Link" OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Archive" Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
                 <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Filled.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
             </ChildContent>
         </MudMenu>
     }

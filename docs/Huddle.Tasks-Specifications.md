@@ -1442,7 +1442,7 @@ separates the view controls from **+ New task**. Don't write flex CSS for it.
 | --- | --- | --- |
 | Active / Closed | `MudToggleGroup<ViewScope>` | Disabled, with a tooltip, on a Board. Changes the page state, not the saved View |
 | Filter | `MudMenu` showing the active filters as a `MudChipSet` of closable chips | Saved to the View as it is changed. Filters that are set also show as `TaskFilterChip`s with a clear button |
-| Group, Sort | `MudMenu` | Group by is a `TaskFilterChip` in the header row; saved to the View as it is changed |
+| Group by | `TaskFilterChip` | The toolbar row's last control, on the Tasks page and the Team page's Tasks tab alike; saved to the View as it is changed |
 | Search | `MudTextField Immediate="true" DebounceInterval="200" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"` | `SearchField`. Never saved. Matches are highlighted with `MudHighlighter` in the List's title cells and on cards |
 | List / Kanban | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Kanban applies the default columns if there are none |
 | View ⋮ menu | `MudMenu` | **Rename** and **Fields…** open the dialogs of §13.5; **Delete view** (not for built-ins) asks first |

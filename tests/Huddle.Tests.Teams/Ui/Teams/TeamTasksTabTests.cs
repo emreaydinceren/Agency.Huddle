@@ -25,7 +25,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 public sealed class TeamTasksTabTests
 {
     /// <summary>The toolbar's action button ("New task").</summary>
-    private const string ActionButton = ".task-toolbar > button.btn-action-tight";
+    private const string ActionButton = ".task-toolbar-header > button.tasks-new-task";
 
     /// <summary>The toolbar's search input.</summary>
     private const string SearchInput = "input[aria-label='Search tasks']";
@@ -184,7 +184,32 @@ public sealed class TeamTasksTabTests
         _ = rig.Tab.FindComponent<TaskToolbar>();
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-kind"));
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-filter"));
-        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-group-sort"));
+        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-group"));
+        Assert.Empty(rig.Tab.FindAll(".task-toolbar-group-sort"));
+    }
+
+    /// <summary>
+    /// The tab draws the Tasks page's toolbar, not a one-row variant of it (#469): List | Kanban then <c>New task</c> in a first row, the Filter icon first and the
+    /// Group by chip last in the second, and every control in both rows a Small one.
+    /// </summary>
+    [Fact]
+    public async Task Toolbar_IsTheTasksPagesToolbar_TwoRowsOfSmallControls()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        _ = Seed(harness);
+        await using MudBunitContext ctx = new();
+
+        Rig rig = Render(ctx, harness, "Business");
+
+        AngleSharp.Dom.IElement header = rig.Tab.Find(".task-toolbar-header");
+        Assert.Contains("task-toolbar-kind", header.Children[0].ClassList);
+        Assert.Contains("tasks-new-task", header.Children[^1].ClassList);
+        Assert.Contains("mud-button-filled-size-small", header.Children[^1].ClassList);
+        AngleSharp.Dom.IElement filters = rig.Tab.Find(".task-toolbar");
+        Assert.Contains("task-toolbar-filter", filters.Children[0].ClassList);
+        Assert.Contains("task-toolbar-group", filters.Children[^1].ClassList);
+        Assert.Empty(rig.Tab.FindAll(".task-toolbar button[class*='-size-medium'], .task-toolbar-header button[class*='-size-medium']"));
     }
 
     /// <summary>Typing in the toolbar raises <c>SearchChanged</c> with the text; the tab owns no search state of its own.</summary>
