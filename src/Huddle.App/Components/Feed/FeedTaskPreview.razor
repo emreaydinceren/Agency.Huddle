@@ -122,8 +122,11 @@
     /// <summary>Who last set the assignee, from the Change log.</summary>
     private string? AssignedBy => this.Item.ChangeLog.LastOrDefault(static entry => entry.Summary.StartsWith("assignee:", StringComparison.Ordinal))?.Actor;
 
-    /// <summary>What the Needs Human Helper said when it turned the gate on, while its latest "human gate on" entry is a Helper's.</summary>
-    private string? HelperLine => HelperGateNote.For(this.Item.ChangeLog, this.Item.IsGated, this.Helpers.All);
+    /// <summary>
+    /// What the Needs Human Helper said when it turned the gate on, while its latest "human gate on" entry is a Helper's. When the Task
+    /// names an Action the gate is locked on, so the line says to decide the Task, as the Task page does (#452).
+    /// </summary>
+    private string? HelperLine => HelperGateNote.For(this.Item.ChangeLog, this.Item.IsGated, this.Helpers.All, !string.IsNullOrWhiteSpace(this.Item.Action));
 
     private string GateSentence
     {

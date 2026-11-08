@@ -757,4 +757,27 @@ public sealed class FeedCardTests
             Words(helperGated.Find(".feed-preview-helper-line").TextContent));
         Assert.Empty(personGated.FindAll(".feed-preview-helper-line"));
     }
+
+    /// <summary>
+    /// Issue #452, second caller: when the Helper also named the step, the expanded preview says to decide the Task, as the Task page
+    /// does, instead of offering a switch the Action has locked on.
+    /// </summary>
+    [Fact]
+    public async Task Preview_Task_HelperSetAnAction_SaysToDecideInsteadOfTurningItOff()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        _ = host.Tasks.SeedOnDisk(TestTasks.Make(
+            id: "GRO-3",
+            title: "Email the pricing sheet to Globex",
+            status: TaskState.Backlog,
+            location: new TaskLocation("Growth", null, false),
+            changeLog: [TestTasks.Entry("2026-10-20T11:00:00Z", "Scripted (Helper)", "human gate on; action set: Email the pricing sheet to Globex (reason: Sends pricing outside the Team.)")]) with { HumanGate = true, Action = "Email the pricing sheet to Globex" });
+        await using MudBunitContext ctx = host.NewContext();
+
+        IRenderedComponent<FeedCard> card = Render(ctx, FeedTestData.Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-3", "Email the pricing sheet to Globex", "Growth", "Email the pricing sheet to Globex", "Sends pricing outside the Team."), notify: true) with { TargetKey = "GRO-3" }, expanded: true);
+
+        Assert.Equal(
+            "Turned on by the Scripted Helper: Sends pricing outside the Team. It also named the step, which keeps the gate on: accept or decline the Task to decide.",
+            Words(card.Find(".feed-preview-helper-line").TextContent));
+    }
 }
