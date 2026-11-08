@@ -71,7 +71,7 @@
     /// <summary>The line telling the Human a Helper turned the gate on and that turning it off is final, or null.</summary>
     private string? HelperNote =>
         this.Services.GetService(typeof(Agency.Huddle.App.Helpers.HelperRegistry)) is Agency.Huddle.App.Helpers.HelperRegistry registry
-            ? HelperGateNote.For(this.ChangeLog, this.HumanGate, registry.All)
+            ? HelperGateNote.For(this.ChangeLog, this.HumanGate || this.HasAction, registry.All, this.HasAction)
             : null;
 
     /// <summary>Whether an Action is set, which locks the gate on.</summary>

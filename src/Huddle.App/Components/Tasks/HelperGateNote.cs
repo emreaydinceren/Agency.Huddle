@@ -18,7 +18,8 @@ internal static class HelperGateNote
     /// <param name="changeLog">The Task's Change log, oldest first.</param>
     /// <param name="gateOn">Whether the gate is on as the panel now shows it.</param>
     /// <param name="helpers">The registered Helpers; an entry counts when its actor is one of their Change log names.</param>
-    public static string? For(IReadOnlyList<ChangeLogEntry>? changeLog, bool gateOn, IReadOnlyList<IHelperAgent> helpers)
+    /// <param name="hasAction">Whether the Task names an Action, which locks the gate on, so the line cannot offer to turn it off (#452).</param>
+    public static string? For(IReadOnlyList<ChangeLogEntry>? changeLog, bool gateOn, IReadOnlyList<IHelperAgent> helpers, bool hasAction = false)
     {
         ArgumentNullException.ThrowIfNull(helpers);
         if (!gateOn || changeLog is null)
@@ -42,7 +43,7 @@ internal static class HelperGateNote
 
             // The latest "human gate on" entry decides: a Human who turned the gate on again after a Helper did made it their own.
             IHelperAgent? helper = helpers.FirstOrDefault(candidate => string.Equals(TaskActors.Helper(candidate.DisplayName).Name, entry.Actor, StringComparison.Ordinal));
-            return helper is null ? null : HelpersCopy.TaskPanel(helper.DisplayName, ReasonOf(entry.Summary));
+            return helper is null ? null : HelpersCopy.TaskPanel(helper.DisplayName, ReasonOf(entry.Summary), hasAction);
         }
 
         return null;

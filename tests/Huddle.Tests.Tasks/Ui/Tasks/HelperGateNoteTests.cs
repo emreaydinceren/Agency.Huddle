@@ -115,6 +115,38 @@ public sealed class HelperGateNoteTests
         Assert.Empty(leoCut.FindAll(".task-human-gate-helper-note"));
     }
 
+    /// <summary>Issue #452: a reason that already ends in a full stop is not given a second one.</summary>
+    [Fact]
+    public void HelperTurnedItOn_ReasonEndingInAStop_HasOneStop()
+    {
+        IReadOnlyList<ChangeLogEntry> log = [Entry("Scripted (Helper)", "human gate on (reason: Sends a reply to a customer.)")];
+
+        string? note = HelperGateNote.For(log, gateOn: true, [NeedsHuman]);
+
+        Assert.Equal("Turned on by the Scripted Helper: Sends a reply to a customer. If you turn it off, the Helper won't ask about this Task again.", note);
+    }
+
+    /// <summary>
+    /// Issue #452: when the Helper also named the step, the Action locks the gate on, so the line says how to decide instead of
+    /// promising a switch the panel has disabled.
+    /// </summary>
+    [Fact]
+    public async Task Panel_HelperSetAnAction_SaysToDecideInsteadOfTurningItOff()
+    {
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(new HelperRegistry([NeedsHuman]));
+        IReadOnlyList<ChangeLogEntry> log = [Entry("Scripted (Helper)", "human gate on; action set: Email the sheet to Acme (reason: outward)")];
+
+        IRenderedComponent<TaskHumanGate> cut = ctx.Render<TaskHumanGate>(parameters => parameters
+            .Add(p => p.HumanGate, true)
+            .Add(p => p.Action, "Email the sheet to Acme")
+            .Add(p => p.ChangeLog, log));
+
+        Assert.Equal(
+            "Turned on by the Scripted Helper: outward. It also named the step, which keeps the gate on: accept or decline the Task to decide.",
+            cut.Find(".task-human-gate-helper-note").TextContent.Trim());
+    }
+
     /// <summary>A host with no Helpers registered renders the panel as it always did.</summary>
     [Fact]
     public async Task Panel_WithoutHelpers_RendersNoLine()

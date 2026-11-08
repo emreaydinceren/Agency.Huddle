@@ -375,12 +375,12 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 3. Read the top card: the avatar, the summary, the pill and, after expanding it, the preview.
 4. Open the `Keeper` Room and read the line after the Task change.
 5. Look at the **Needs you** card and the Feed Tab on `Needs you`.
-6. Open the Task and switch `Requires your acceptance` off. Save. Look at the Feed Tab.
+6. Open the Task. If it names no Action, switch `Requires your acceptance` off and Save. If the Helper also set an Action, the switch is locked on: Decline the Task instead. Look at the Feed Tab.
 
 **Pass if — all of these**
 
 - At step 2 the bell shows a count and the card sits under `Gates` as well as under `Needs you`.
-- At step 3 the avatar is the Helper mark (a head outline), not an Agent's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …`.
+- At step 3 the avatar is the Helper mark (a head outline), not an Agent's picture; the summary reads `Needs Human (Helper) turned on Requires your acceptance for` with a chip for the Task, or `Needs Human (Helper) set the Action "<step>" on` when the Helper named the step, followed by a reason in the same sentence; the pill reads `Waiting for you`; the status line reads `Asked <hh:mm> · you can turn it off on the Task`, or `Asked <hh:mm> · accept or decline it on the Task` with an Action; and the expanded Task preview ends with a line `Turned on by the Needs Human Helper: …` with no doubled full stop.
 - At step 4 the wake-up is a muted one-line row, not a bubble, and it is not written under your Name.
 - At step 5 the Room is still in **Needs you** with its Mention, and its Mention Notification is still unresolved.
 - At step 6 the card is dimmed with a `Done` pill and has left the `Needs you` count; it is still listed under `All` and `Gates`.

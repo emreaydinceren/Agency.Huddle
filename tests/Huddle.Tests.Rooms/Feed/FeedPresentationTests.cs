@@ -146,6 +146,17 @@ public sealed class FeedPresentationTests
         Assert.Null(FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", null)), Utc));
     }
 
+    /// <summary>Issue #452: a Helper's gate-on that also set an Action cannot be turned off, so its status line says to decide the Task.</summary>
+    [Fact]
+    public void StatusOf_HelperGateWithAnAction_SaysToDecide()
+    {
+        DateTimeOffset at = new(2026, 10, 20, 16, 0, 0, TimeSpan.Zero);
+
+        string? status = FeedSummary.StatusOf(Item(FeedSourceType.TaskGateOn, new TaskGatePayload("G-1", "T", "G", "Email the sheet", "r"), true, at), Utc)?.Text;
+
+        Assert.Equal("Asked 16:00 · accept or decline it on the Task", status);
+    }
+
     /// <summary>A hand-off held by the Task's own pause tells the Human what to do: press Allow more on the Task or change it, with no number the Task page does not show.</summary>
     [Fact]
     public void TaskWakesPaused_TaskPaused_SaysWhatToDo()

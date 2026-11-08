@@ -97,7 +97,7 @@ These are stated to the Human in the User Guide and on the Helpers tab.
 | A warm adapter process kept between calls | A fresh process per call is simpler to reason about and cannot leak one judgement into the next. A warm runner can come later behind the same `IHelperProcessRunner` seam (§6.2), and nothing here depends on the process being fresh except isolation |
 | Tools for Helpers | Huddle builds everything a Helper needs into its prompt. A Helper with tools is an Agent |
 | Other Helpers | Named in §6.1 only to check that the contract fits them |
-| The Helper setting an Action, or turning the gate off | An Action locks the gate and is the Agent's statement of what it will do. Turning off is the Human's alone (H-1) |
+| The Helper turning the gate off | Turning off is the Human's alone (H-1). Since 2026-11-05 (`a4aa0ff8`) the Helper may *add* an Action when its Verdict names the step, because a gated Task with no Action finished on Accept with nothing done; that Action locks the gate on, so the Human decides the Task instead of turning the gate off (§6.13, #452) |
 | Judging the Human's own Tasks or edits | The Human decides for themselves (U-6) |
 | Judging Tasks saved before Helpers shipped, or while Huddle was stopped | The trigger is a save, as for wake-ups (ADR-0026, Rejected: waking at startup) |
 | Remembering pending judgements across a restart | A save made seconds before shutdown is not judged. §10 OD-5 |
@@ -698,7 +698,9 @@ In `TaskHumanGate.razor` (the Human gate section of `TaskDetail`), when the gate
 latest `human gate on` Change log entry's actor is a registered Helper's actor name, a line
 under the switch reads: "Turned on by the Needs Human Helper: <reason>. If you turn it off, the
 Helper won't ask about this Task again." It tells the Human, before they act, that their override
-is final (Policy 3).
+is final (Policy 3). When the Task names an Action the switch is locked on, so the line instead
+ends "It also named the step, which keeps the gate on: accept or decline the Task to decide."
+(#452). A reason that already ends in a full stop is not given a second one.
 
 ---
 
@@ -718,7 +720,7 @@ is final (Policy 3).
 | Paused | `Paused — daily cap reached` · button `Continue (+<n> today)` |
 | Buttons | `Save` · `Reset to defaults` |
 | Change log actor | `Needs Human (Helper)` |
-| Task panel | `Turned on by the Needs Human Helper: <reason>. If you turn it off, the Helper won't ask about this Task again.` |
+| Task panel | `Turned on by the Needs Human Helper: <reason>. If you turn it off, the Helper won't ask about this Task again.`; with an Action, `Turned on by the Needs Human Helper: <reason>. It also named the step, which keeps the gate on: accept or decline the Task to decide.` |
 | Unparseable | `The answer wasn't the JSON the prompt asks for (<problem>)` |
 | Model not offered | `<Adapter> doesn't offer the model <id>. Pick another on this card.` |
 | Timeout | `Timed out after <n> s` |

@@ -97,6 +97,8 @@ internal static class FeedSummary
             TaskNeedsYouPayload p => string.Create(CultureInfo.InvariantCulture, $" · proof {p.ProofMet}/{p.ProofTotal} · waiting for you"),
             GateDecisionPayload => " · only you can move it anyway",
             RoomWaitPayload when item.SourceType == FeedSourceType.RoomBudget => " · waiting for you to continue or wrap up",
+            // An Action locks the gate on, so a Helper's gate that named the step cannot be turned off (#452).
+            TaskGatePayload { Action.Length: > 0 } => " · accept or decline it on the Task",
             TaskGatePayload => " · you can turn it off on the Task",
             HelperPausedPayload => " · Continue is on the Helper's card",
             TaskWakesPausedPayload or RoomMentionHeldPayload => " · after a restart, Wake is on this card",
