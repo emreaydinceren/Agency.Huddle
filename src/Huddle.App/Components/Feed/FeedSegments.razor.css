@@ -33,7 +33,7 @@
 
 .feed-segments ::deep .feed-chip-id {
     font-family: var(--mud-typography-code-family, ui-monospace, monospace);
-    color: var(--mud-palette-primary);
+    color: var(--hu-accent-ink);
 }
 
 .feed-segments ::deep .feed-chip-path {

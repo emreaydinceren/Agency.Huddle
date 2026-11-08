@@ -55,7 +55,7 @@ internal static class SkinTokens
         Add(tokens, "feed.day.rule", "ref(ink.rule)", "The rule after a Feed day heading.");
         Add(tokens, "feed.live.background", "mix(palette.success 6%, palette.surface)", "The Live chip's fill.");
         Add(tokens, "feed.live.line", "transparent", "The Live chip's outline.");
-        Add(tokens, "feed.live.ink", "palette.success", "The Live chip's text.");
+        Add(tokens, "feed.live.ink", "mix(palette.success 70%, palette.textPrimary)", "The Live chip's text.");
         Add(tokens, "feed.note.background", "transparent", "The Feed's read-only note fill.");
         Add(tokens, "feed.note.line", "transparent", "The Feed's read-only note outline.");
         Add(tokens, "feed.card.radius", "8px", "A Feed card's corner radius.");

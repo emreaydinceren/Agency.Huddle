@@ -5822,7 +5822,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .backlink-item-ref {
     padding: 0 2px;
     border-radius: var(--mud-default-borderradius);
-    color: var(--mud-palette-primary);
+    color: var(--hu-accent-ink);
     background: var(--hu-tone-primary-tint);
 }
 
@@ -6776,7 +6776,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     width: 1.5rem;
     height: 1.5rem;
     border-radius: var(--mud-default-borderradius);
-    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    background: var(--hu-tone-primary-tint);
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--hu-accent-ink);
