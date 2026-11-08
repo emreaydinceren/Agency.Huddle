@@ -177,20 +177,24 @@
                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
                     <span class="role-add-label">Add a role</span>
                 </button>
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
+                @foreach (RoleEntry entry in this.VisibleRoleEntries)
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
-                }
-                @foreach (CustomRole role in this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)))
-                {
-                    <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true" Taken="@this.OnRoster(role.Id)"
-                              OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
-                }
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
-                {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
+                    @if (entry.Custom)
+                    {
+                        <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Custom="true" Taken="@this.OnRoster(entry.Id)"
+                                  OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
+                    }
+                    else
+                    {
+                        <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Suggested="@entry.Suggested" Taken="@this.OnRoster(entry.Id)" OnAdd="this.AddDraftAsync" />
+                    }
                 }
             </div>
+            @if (this.RoleEntries.Count > CollapsedRoleLimit)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
+                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</MudButton>
+            }
             @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
             {
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-role-type-empty" role="status">@emptyType.DisplayName has no roles to hire from here.</MudText>
@@ -861,6 +865,33 @@
     /// <summary>Whether a role card shows: always while the roles are not filtered, otherwise only when the filter's team type defines the role.</summary>
     /// <param name="roleId">The pool job's or the Human's own role's id.</param>
     private bool ShowsRole(string roleId) => this.RoleTypeFilter is not { } type || DefinesRole(type, roleId);
+
+    /// <summary>How many role cards show before "Show all": a dozen cards with the "Add a role" tile, which fills whole rows at two, three, four or six columns, so the grid never ends on a gap and no card is cut.</summary>
+    private const int CollapsedRoleLimit = 11;
+
+    /// <summary>Whether the Human pressed "Show all roles"; the roles show in full until they press "Show fewer roles".</summary>
+    private bool allRolesShown;
+
+    /// <summary>One role card to draw: a pool job (suggested by the chosen type or not) or one of the Human's own roles.</summary>
+    /// <param name="Id">The pool job's or the custom role's id.</param>
+    /// <param name="Title">The card's title.</param>
+    /// <param name="Description">The card's description.</param>
+    /// <param name="Suggested">Whether the chosen type's template defines this pool job as a role.</param>
+    /// <param name="Custom">Whether this is one of the Human's own roles, which can be edited and deleted.</param>
+    private sealed record RoleEntry(string Id, string Title, string Description, bool Suggested, bool Custom);
+
+    /// <summary>Every role card the current filter allows, in the order they are drawn: the type's suggested roles, the Human's own, then the rest of the pool.</summary>
+    private IReadOnlyList<RoleEntry> RoleEntries => [
+        .. this.Pool.Jobs.Where(job => this.IsSuggested(job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, true, false)),
+        .. this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)).Select(static role => new RoleEntry(role.Id, role.Title, role.Description, false, true)),
+        .. this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, false, false)),
+    ];
+
+    /// <summary>The role cards drawn now: all of them once shown in full, otherwise the first <see cref="CollapsedRoleLimit"/>.</summary>
+    private IReadOnlyList<RoleEntry> VisibleRoleEntries => this.allRolesShown ? this.RoleEntries : [.. this.RoleEntries.Take(CollapsedRoleLimit)];
+
+    /// <summary>Flips between the first few roles and all of them.</summary>
+    private void ToggleAllRoles() => this.allRolesShown = !this.allRolesShown;
 
     /// <summary>Whether any role card shows under the current filter, so a type that defines nothing hireable here can say so.</summary>
     private bool AnyRoleShown => this.Pool.Jobs.Any(job => this.ShowsRole(job.Id)) || this.CustomRoles.Roles.Any(role => this.ShowsRole(role.Id));

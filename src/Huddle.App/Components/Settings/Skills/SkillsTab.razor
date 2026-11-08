@@ -77,7 +77,7 @@
         <TemplateColumn T="SkillRow" Title="Name" Sortable="false">
             <CellTemplate>
                 <div class="skills-name" data-skill="@context.Item.Name">@SkillNames.Display(context.Item.Name)</div>
-                <MudText Typo="Typo.caption" Class="skills-description mud-text-secondary">@context.Item.Description</MudText>
+                <MudText Typo="Typo.caption" Class="skills-description mud-text-secondary" title="@context.Item.Description">@context.Item.Description</MudText>
             </CellTemplate>
         </TemplateColumn>
         <TemplateColumn T="SkillRow" Title="Source" Sortable="false">

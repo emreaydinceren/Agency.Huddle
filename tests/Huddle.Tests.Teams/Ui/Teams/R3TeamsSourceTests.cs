@@ -1,6 +1,8 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.Tests.Css;
+using MudBlazor;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -46,6 +48,20 @@ public sealed class R3TeamsSourceTests
         Assert.DoesNotContain("min-height", card, StringComparison.Ordinal);
         Assert.Contains("visibility: hidden;", CssText.RuleBodyLoose(css, ".avatar-editor-background-hidden"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("justify-content: flex-end;", CssText.RuleBodyLoose(css, ".avatar-choice-body"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+    }
+
+    /// <summary>
+    /// The avatar dialog has no empty band (#482): its hidden Background takes no space, because the dialog is anchored to the top of the window and so does
+    /// not re-centre when the Background comes and goes; and the label's counter sits beside the field, so the three option rows share one height.
+    /// </summary>
+    [Fact]
+    public void AvatarDialog_HasNoEmptyBand_AndTheOptionRowsShareOneHeight()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.Equal(DialogPosition.TopCenter, AvatarEditorDialog.Options.Position);
+        Assert.Contains("display: none;", CssText.RuleBodyLoose(css, ".avatar-editor-dialog .avatar-editor-background-hidden"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.DoesNotContain("flex-basis: 100%", CssText.RuleBodyLoose(css, ".avatar-choice-body > .mud-input-control-helper-container"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>A swatch is a 32px circle drawn with the avatar recipe: the colour at 40% over Surface, in a Light and a Dark Theme alike (B8h).</summary>

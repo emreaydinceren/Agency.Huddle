@@ -100,7 +100,7 @@ public sealed class HelperCardTests : IDisposable
 
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
 
-        Assert.Equal("Scripted", cut.Find("h2").TextContent.Trim());
+        Assert.Equal("Scripted", cut.Find("h3").TextContent.Trim());
         Assert.Equal("A scripted Helper.", cut.Find(".helper-card p.mud-text-secondary").TextContent.Trim());
         Assert.Equal("On", Chip(cut));
         Assert.Equal("0 of 50 calls today", cut.Find(".helper-card-usage").TextContent.Trim());

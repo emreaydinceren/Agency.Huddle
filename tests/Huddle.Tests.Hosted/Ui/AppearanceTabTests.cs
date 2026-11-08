@@ -43,6 +43,21 @@ public sealed class AppearanceTabTests
         Assert.Single(cut.FindAll("a[href='/settings/profile']"));
     }
 
+    /// <summary>The Light and Dark theme headings are <c>h3</c> sub-sections under the tab's <c>h2</c> title (#473), and the accent field is outlined, not underlined (#480).</summary>
+    [Fact]
+    public async Task Tab_SubSectionsAreH3_AndTheAccentFieldIsOutlined()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        Assert.Equal(["Light theme", "Dark theme"], cut.FindAll("h3").Select(heading => heading.TextContent.Trim()));
+        Assert.Empty(cut.FindAll("h2"));
+        Assert.NotEmpty(cut.FindAll(".theme-picker-accent-colour .mud-input-outlined"));
+        Assert.Empty(cut.FindAll(".theme-picker-accent-colour .mud-input-underline"));
+    }
+
     /// <summary>The picker lists four light and four dark Themes, and the retired Custom Accent Themes are gone from the tab (P5-D4).</summary>
     [Fact]
     public async Task ThemePicker_ListsFourLightAndFourDarkThemes_AndNoCustomAccent()

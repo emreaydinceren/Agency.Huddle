@@ -67,7 +67,7 @@
                 <div data-palette-key="@key">
                     @if (IsPlainHex(this.model.Palette[key]))
                     {
-                        <MudColorPicker Label="@key" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false" Margin="Margin.Dense"
+                        <MudColorPicker Label="@key" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false" Variant="Variant.Outlined" Margin="Margin.Dense"
                                         Text="@this.PaletteText(key)" TextChanged="@(value => this.OnPaletteChangedAsync(key, value))" />
                     }
                     else
