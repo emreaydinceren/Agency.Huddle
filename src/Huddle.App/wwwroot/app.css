@@ -2531,7 +2531,7 @@ body.sidebar-resizing {
 /* ---- Composer --------------------------------------------------------------------------------- */
 
 .composer {
-    padding: 16px 24px;
+    padding: 16px calc(24px + var(--room-scrollbar)) 16px 24px;
 }
 
 /* The Composer belongs to the Transcript column (F2): the same 760px, centred, so the box lines up with the
@@ -2692,6 +2692,19 @@ body.sidebar-resizing {
     color: var(--mud-palette-success);
     margin-bottom: 8px;
     font-size: var(--mud-typography-body2-size);
+}
+
+/* One left edge for the Transcript, the notices and the Composer (C4, C9, C10). The message list scrolls and draws a
+   scrollbar on its right; the notices and the Composer do not, so each centred its 760px column in a pane the
+   scrollbar's width wider than the Transcript's, and the columns sat half that width apart. The list now always
+   reserves the gutter, and the Composer and the notices reserve the same width on their right. --room-scrollbar is
+   the thin scrollbar's width (the * rule above), so the columns match wherever the pane is wide or narrow. */
+:root {
+    --room-scrollbar: 10px;
+}
+
+.room-column > .message-list {
+    scrollbar-gutter: stable;
 }
 
 /* ---- Task read view (T15) and Task edit page (K): docs/Huddle.TaskReadView-Specifications.md ---- */
@@ -3178,7 +3191,7 @@ body.sidebar-resizing {
    tool row with attach on the left and Send on the right. The stream fades under it. */
 :root:has([data-hu-composer="card"]) .composer {
     border-top: 0;
-    padding: 8px 24px 16px;
+    padding: 8px calc(24px + var(--room-scrollbar)) 16px 24px;
     background: linear-gradient(transparent, var(--hu-ground-page) 22%);
 }
 
@@ -3192,7 +3205,8 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-composer="card"]) .composer-box:focus-within {
-    border-color: var(--mud-palette-info);
+    border-color: var(--mud-palette-primary);
+    box-shadow: var(--hu-shadow-card-hover), inset 0 0 0 0.5px var(--mud-palette-primary);
 }
 
 :root:has([data-hu-composer="card"]) .composer-input,
@@ -3287,9 +3301,9 @@ body.sidebar-resizing {
    Transcript's padding and the Composer's, so the Transcript, the notice and the Composer share one left edge. */
 .room-notice-column {
     box-sizing: border-box;
-    width: calc(100% - 48px);
+    width: calc(100% - 48px - var(--room-scrollbar));
     max-width: 760px;
-    margin-inline: auto;
+    margin-inline: max(24px, calc(50% - 380px - var(--room-scrollbar) / 2)) auto;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -3315,10 +3329,9 @@ body.sidebar-resizing {
 }
 
 .budget-note {
-    margin: 0;
-    padding: 8px 16px 0;
+    margin-block: 8px 0;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
 }
 
 /* Neutral, unlike .budget-prompt-text above: these two report a fact about a delivery, not an
@@ -7182,8 +7195,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 /* ---- References ------------------------------------------------------------------------------- */
 .composer-picker {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: max(24px, calc(50% - 380px - var(--room-scrollbar) / 2));
+    width: min(760px, calc(100% - 48px - var(--room-scrollbar)));
+    box-sizing: border-box;
     bottom: 100%;
     max-height: min(320px, 40vh);
     overflow-y: auto;
@@ -7203,8 +7217,26 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .composer-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 4px 12px;
     cursor: pointer;
+}
+
+/* The card fills the row and the note, when there is one, sits on the same line at its end: a row is one card tall
+   whatever its kind, and the note cannot be read as a heading for the rows below it. */
+.composer-picker-item > .search-card {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* One text column for every kind: an Agent's 24px avatar and a Task's 18px icon take the same slot, so the titles
+   start at one x. */
+.composer-picker .search-card-icon {
+    flex: none;
+    width: 24px;
+    justify-content: center;
 }
 
 .composer-picker-item:hover {
@@ -7231,8 +7263,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .composer-picker-note {
-    display: block;
-    font-size: var(--mud-typography-body2-size);
+    flex: none;
+    font-size: var(--mud-typography-caption-size);
+    white-space: nowrap;
 }
 
 .composer-picker-footer {
