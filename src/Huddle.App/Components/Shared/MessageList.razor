@@ -176,7 +176,7 @@
                                         <MudIcon Icon="@MessageList.StatusIcon(call.Status)" Size="Size.Small" />
                                     }
                                 </span>
-                                <span class="tool-activity" title="@call.Path">@MessageList.RowText(call)</span>
+                                <span class="tool-activity" title="@ToolActivityText.Tooltip(call.Title, call.Path)">@MessageList.RowText(call)</span>
                                 @if (call.Line is not null)
                                 {
                                     <span class="turn-detail-line">line @call.Line</span>
@@ -434,7 +434,7 @@
 
     /// <summary>What a row says: the Adapter's title, else the file name of its path, else a plain fallback.</summary>
     /// <param name="call">The tool call.</param>
-    private static string RowText(ToolCallDetail call) => call.Title ?? MessageDisplay.FileName(call.Path) ?? "Tool call";
+    private static string RowText(ToolCallDetail call) => ToolActivityText.Row(call.Title, call.Path);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

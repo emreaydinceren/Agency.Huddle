@@ -2353,6 +2353,21 @@ body.sidebar-resizing {
     margin-bottom: 0;
 }
 
+/* A list's markers belong inside the text column: the 24px indent (the nearest step of the spacing scale to the audit's
+   20px) leaves room for "10." in the column instead of hanging it out into the avatar gutter. Nested lists indent from
+   their parent's text. */
+.message-body ul,
+.message-body ol {
+    padding-left: 24px;
+}
+
+/* The Members row reads the same context figure as .message-context above, so it wears the same type. The :root
+   prefix outweighs the sidebar trait that sets every .sidebar-row-meta to weight 500. */
+:root .members-body .members-context.sidebar-row-meta {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---- A Persona's ad-hoc "**Header**" line, marked by MarkdownRenderer.
    MarkStandaloneBoldParagraphsAsHeadings ------------------------------------------------------
    Renders to the same <strong> as a bullet's own "**Label:**" lead-in, so a rule keyed on that tag
@@ -2380,7 +2395,9 @@ body.sidebar-resizing {
 .draft-caret {
     display: inline-block;
     width: 0.5em;
+    height: 1em;
     margin-left: 0.1em;
+    vertical-align: text-bottom;
     border-right: 2px solid var(--mud-palette-text-secondary);
     animation: draft-caret-blink 1s step-end infinite;
 }
@@ -3070,11 +3087,8 @@ body.sidebar-resizing {
 
 /* ---- Trait marks=chip: names, references, mentions, quotes and tool summaries are drawn as shapes ----------- */
 
-/* The sender reads at body size, the time is tabular and quiet, and paragraphs sit 4px apart. */
-:root:has([data-hu-marks="chip"]) .message-sender {
-    font-size: var(--mud-typography-body1-size);
-}
-
+/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps the 13px/600 of C5b (it used to be
+   raised to body size here, which made it 14px beside the 12px time). */
 :root:has([data-hu-marks="chip"]) .message-time {
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
@@ -6027,14 +6041,31 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-top: 12px;
 }
 
-/* The options are a column of one-line 32px answer rows, flush left (audit C8), the same height as the Dismiss and
-   Send buttons beside them; an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+/* The options are a column of one-line 28px answer rows, flush left (audit C8), the same height as the Dismiss and
+   Send buttons beside them (a Small button is 28px, so the card has one button height); an option keeps the case the
+   Agent wrote instead of MudBlazor's button default. They sit 12px under the question, as the question sits 12px
+   under the card's title. */
 .question-card-options {
     align-items: flex-start;
 }
 
+.question-card-options,
+.question-card-rank {
+    margin-top: 12px;
+}
+
+.question-card-caption {
+    display: block;
+    margin-top: 4px;
+}
+
+.question-card-caption + .question-card-options,
+.question-card-caption + .question-card-rank {
+    margin-top: 8px;
+}
+
 .question-card-option {
-    min-height: 32px;
+    min-height: 28px;
     justify-content: flex-start;
     text-align: left;
     text-transform: none;
