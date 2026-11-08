@@ -1086,16 +1086,16 @@ Right sidebar: the panels by Subject, Outline scrolling, collapse and focus — 
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [RSIDE-01](right-sidebar.md#rside-01--a-room-shows-members-tasks-and-documents) |  | Active |  |  |
-| [RSIDE-02](right-sidebar.md#rside-02--a-message-that-references-a-task-appears-and-its-jump-works) |  | Active |  |  |
-| [RSIDE-03](right-sidebar.md#rside-03--a-markdown-document-shows-outline-and-linked-documents) |  | Active |  |  |
-| [RSIDE-04](right-sidebar.md#rside-04--an-outline-heading-scrolls-the-document-in-read-split-and-edit) |  | Active |  |  |
-| [RSIDE-05](right-sidebar.md#rside-05--typing-a-heading-in-split-updates-the-outline) |  | Active |  |  |
-| [RSIDE-06](right-sidebar.md#rside-06--a-linked-note-opens-from-the-linked-documents-panel) |  | Active |  |  |
-| [RSIDE-07](right-sidebar.md#rside-07--a-collapsed-panel-stays-collapsed-after-a-reload) |  | Active |  |  |
-| [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Active |  |  |
+| [RSIDE-01](right-sidebar.md#rside-01--a-room-shows-members-tasks-and-documents) |  | Pass |  | run 2026-11-07 by an agent on the UAT lane. Order, counts, 280px width and right-edge placement hold at 90% zoom. The heading icon is hidden by the default skin's hairline surface (app.css, `data-hu-surface="hairline"`), so the Pass-if line about an icon needs rewording for skins. |
+| [RSIDE-02](right-sidebar.md#rside-02--a-message-that-references-a-task-appears-and-its-jump-works) |  | Pass |  | run 2026-11-07 by an agent. The Task form has no Room field, so the precondition cannot be met as written and is not needed. The `#` picker inserts the Task id. |
+| [RSIDE-03](right-sidebar.md#rside-03--a-markdown-document-shows-outline-and-linked-documents) |  | Pass |  | run 2026-11-07 by an agent. A Markdown document now shows five panels (Outline, Linked documents, Backlinks, Tags, History), not the two the test names. |
+| [RSIDE-04](right-sidebar.md#rside-04--an-outline-heading-scrolls-the-document-in-read-split-and-edit) |  | Pass |  | run 2026-11-07 by an agent. Read: Scope at offset 0. Split: the preview scrolls and the editor does not, as the spec says. Edit: the editor scrolls (offset 3). |
+| [RSIDE-05](right-sidebar.md#rside-05--typing-a-heading-in-split-updates-the-outline) |  | Pass |  | run 2026-11-07 by an agent. Risks appeared after Scope within 2 s and stayed one entry. |
+| [RSIDE-06](right-sidebar.md#rside-06--a-linked-note-opens-from-the-linked-documents-panel) |  | Pass |  | run 2026-11-07 by an agent. The panel names notes without `.md`. |
+| [RSIDE-07](right-sidebar.md#rside-07--a-collapsed-panel-stays-collapsed-after-a-reload) |  | Pass |  | run 2026-11-07 by an agent. Real reload; the collapsed panel stayed collapsed. |
+| [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Fail |  | run 2026-11-07 by an agent. Clicking the right pane focuses it, then `FocusOnNavigate Selector="h1"` (Routes.razor) focuses the left pane's Room heading, whose focusin refocuses the left pane and navigates back, so the Right sidebar keeps the Room panels. Issue to file. |
 | [RSIDE-09](right-sidebar.md#rside-09--an-agents-context-bar-appears-grows-during-a-turn-and-falls-after-compact) | 💰 | Pass |  |  |
-| [RSIDE-10](right-sidebar.md#rside-10--the-backlinks-panel-lists-the-open-tasks-that-link-to-a-document) |  | Active |  |  |
+| [RSIDE-10](right-sidebar.md#rside-10--the-backlinks-panel-lists-the-open-tasks-that-link-to-a-document) |  | Pass |  | run 2026-11-07 by an agent. The Task description has no `@` picker, so the path was typed in a code span. |
 
 ## needs-you
 
@@ -1218,7 +1218,7 @@ Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the overrid
 | [HELPERS-05](helpers.md#helpers-05--the-humans-override-is-final-u-5) | 💰 | Active |  |  |
 | [HELPERS-06](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7) | 💰 | Active |  |  |
 | [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) |  | Active |  |  |
-| [HELPERS-08](helpers.md#helpers-08--the-wake-up-is-huddles-and-it-leaves-your-mentions-alone-helpers-in-the-feed-56) | 💰 | Active |  |  |
+| [HELPERS-08](helpers.md#helpers-08--the-wake-up-is-huddles-and-it-leaves-your-mentions-alone-helpers-in-the-feed-56) | 💰 | Partial |  | run 2026-11-07 by an agent; Keeper on Sonnet low. Step 2 passes: a muted one-line row by Huddle, no avatar or name of yours, and Keeper answered; it lands in a new Task Room, not the Room the Task came from. Step 3: the Budget was not reset (1 of 6). The Mention part cannot be judged as written, since the Human's ask answers it. |
 
 
 ## feed
@@ -1241,9 +1241,9 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-12](feed.md#feed-12--a-restart-resolves-a-form-notification) |  | Active |  | not yet run by a person |
 | [FEED-13](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link) |  | Active |  | not yet run by a person |
 | [FEED-14](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed) |  | Active |  | not yet run by a person |
-| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Active |  | not yet run by a person |
-| [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | not yet run by a person |
-| [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Active |  | not yet run by a person |
+| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Fail |  | run 2026-11-07 by an agent; Keeper on Sonnet low (owner rule), Helper on Haiku. Step 3: the summary reads `set the Action ... on`, not `turned on Requires your acceptance for`, and the preview line ends `customer..` (double stop). Step 5 cannot be judged as written: the Human's ask answers the Mention, and the wake-up goes to a separate Task Room. Step 6 blocked: the Helper also set an Action, which locks the gate switch (`This Task names an Action that leaves the team.`) while the card and the Task say you can turn it off. A Task with no assignee gets no wake-up at all. Issue to file. |
+| [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | run 2026-11-07, Blocked: an unknown Needs Human Adapter now falls back to claude (`The adapter 'nope' is not configured. It will run on 'claude'.`), so the Helper never fails this way. HELPERS-07's expected text is stale for the same reason. |
+| [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Pass |  | run 2026-11-07 by an agent; cap set to 3 because 2 calls were already used. One item by Huddle, `2 skipped while paused`, resolved by Continue (+10 today); Needs you fell 3 to 2. |
 
 ## remote-access
 
@@ -1252,19 +1252,19 @@ Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bi
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [REMOTE-01](remote-access.md#remote-01--the-installed-app-opens-signed-in-and-a-second-launch-opens-another-signed-in-tab) |  | Active |  | not yet run by a person |
-| [REMOTE-02](remote-access.md#remote-02--a-second-browser-on-the-host-sees-the-connect-page-and-dashboard-and-auth-token-work-as-documented) |  | Active |  | not yet run by a person |
+| [REMOTE-02](remote-access.md#remote-02--a-second-browser-on-the-host-sees-the-connect-page-and-dashboard-and-auth-token-work-as-documented) |  | Pass |  | run 2026-11-07 by an agent on a dev run. `dashboard` and `stop` find the copy through `instance.json`, which a dev run writes only with `--Team:Desktop:Enabled=true`. |
 | [REMOTE-03](remote-access.md#remote-03--tailscale-serve-a-phone-gets-in-with-no-token-and-no-approval-limited-then-asks-for-admin) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-04](remote-access.md#remote-04--tailscale-serve-a-shared-tailnet-user-is-marked-and-revoking-disconnects-them) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-05](remote-access.md#remote-05--lan-the-qr-setup-link-on-iphone-and-android-with-approval-and-the-downgraded-warnings) |  | Active |  | not yet run by a person |
-| [REMOTE-06](remote-access.md#remote-06--rate-limit-ten-wrong-tokens-lock-a-phone-out-for-five-minutes-and-loopback-is-only-slowed) |  | Active |  | not yet run by a person |
+| [REMOTE-06](remote-access.md#remote-06--rate-limit-ten-wrong-tokens-lock-a-phone-out-for-five-minutes-and-loopback-is-only-slowed) |  | Partial |  | run 2026-11-07 by an agent. Step 4 passes: loopback 401s slowed 267, 506, 1005, 2018 ms, then a 5 s cap, and the correct token signed in on the 11th try. Steps 1 to 3 need a phone. |
 | [REMOTE-07](remote-access.md#remote-07--revoking-a-phone-with-a-room-streaming-disconnects-it-at-once) |  | Active |  | not yet run by a person |
-| [REMOTE-08](remote-access.md#remote-08--two-copies-on-ports-5101-and-5102-keep-separate-devices-and-no-sign-outs) |  | Active |  | not yet run by a person |
+| [REMOTE-08](remote-access.md#remote-08--two-copies-on-ports-5101-and-5102-keep-separate-devices-and-no-sign-outs) |  | Pass |  | run 2026-11-07 by an agent. Both tabs stayed signed in after reloads; each copy lists only its own device. |
 | [REMOTE-09](remote-access.md#remote-09--a-hand-made-serve-route-is-refused-and-shown-in-the-security-check) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-10](remote-access.md#remote-10--funnel-refused-in-token-mode-and-in-password-mode-a-phone-off-the-tailnet-needs-the-password-and-approval) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-11](remote-access.md#remote-11--with-remote-access-configured-the-open-action-and-library-open-and-reveal-are-gone) |  | Active |  | not yet run by a person |
 | [REMOTE-12](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-13](remote-access.md#remote-13--killing-the-tailscale-child-removes-the-serve-route) |  | Active |  | not yet run by a person; needs Tailscale |
-| [REMOTE-14](remote-access.md#remote-14--strict-local-default) |  | Active |  | not yet run by a person |
+| [REMOTE-14](remote-access.md#remote-14--strict-local-default) |  | Partial |  | run 2026-11-07 by an agent. Steps 1, 3, 4, 5 and 6 pass. Step 2 is inconclusive: with `--urls http://localhost:<port>` nothing listens on the LAN address, so the request is refused at TCP rather than answered 403. |
 | [REMOTE-15](remote-access.md#remote-15--turning-strict-local-on-disconnects-remote-devices) |  | Active |  | not yet run by a person; needs a second device |
 
 ---
