@@ -4789,9 +4789,16 @@ body.sidebar-resizing {
     overflow-wrap: anywhere;
 }
 
-/* On the toolbar the path follows the Copy path button, so it needs no gutter of its own on that side. */
+/* On the toolbar the path follows the Copy path button, so it needs no gutter of its own on that side.
+   It stays on one line and truncates from the start (the file name is the part worth keeping); the full path is in its title. */
 .library-document-path-inline {
     padding: 0 16px 0 4px;
+    overflow: hidden;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
 }
 
 /* ---- A toolbar ends in a hairline (design-system.md "Lines") ------------------------------------
@@ -5064,9 +5071,14 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-ground-sidebar);
 }
 
+/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the actions wrap to a second line instead of squeezing it. */
+.library-explorer-tree-header {
+    flex-wrap: wrap;
+}
+
 .library-explorer-tree-header > .library-explorer-search {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 10rem;
+    min-width: 10rem;
 }
 
 .library-explorer-tree-actions {
@@ -5487,7 +5499,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 /* The "·" between the groups; the avatars carry no text, so only the Names are bold. */
 .doc-byline-sep {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .doc-byline .doc-history-actor-name {
@@ -5519,7 +5531,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .doc-byline-label {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .doc-history {
