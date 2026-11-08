@@ -7952,9 +7952,9 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    flex: 0 0 72px;
+    flex: 0 0 96px;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-caption-size);
+    font-size: var(--mud-typography-body2-size);
     white-space: nowrap;
 }
 
@@ -7989,16 +7989,28 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: none;
 }
 
-/* The Status field is the Board's second cue, a state dot, beside the select (audit B4r). */
-.task-detail-status-field {
+/* The Priority select wears its priority's icon (TaskColors.Icon, one set in every Theme) inside the field's start; the select keeps its own caret (issue 470). */
+.task-detail-priority-field {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
 }
 
-.task-detail-status-field .mud-input-control {
-    flex: 1 1 auto;
-    min-width: 0;
+.task-detail-priority-field .task-detail-priority-icon.mud-icon-root {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The select's visible text is a div (its input is hidden), so the icon's room is padded on that. */
+.task-detail-priority-field .task-detail-priority .mud-select-input.mud-input-slot {
+    padding-inline-start: 32px;
 }
 
 /* The History is always open: a Group label over the list, no panel and no expand glyph. */
@@ -8015,8 +8027,15 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-bottom: 8px;
 }
 
+/* The Description heads a field the width of the form, so it is a section heading (14px/600, TextPrimary; issue 491), not the 12px Group label of the
+   property groups above it, which it would otherwise inherit from .group-label. The size is body1's, not subtitle2's: a Theme's subtitle2 is
+   16px, and the form's title is its only 16px text. */
 .task-detail-description-header .group-label {
     margin: 0;
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-body1-lineheight);
+    color: var(--mud-palette-text-primary);
 }
 
 .task-detail-description-field .mud-input-label {
@@ -8373,18 +8392,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The strip's fields are compact: 28px tall, in the caption's size. */
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined {
-    min-height: 28px;
-    font-size: var(--mud-typography-caption-size);
-}
-
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined .mud-input-slot,
-.task-edit-page .task-detail-strip .task-detail-prop-value .mud-input.mud-input-outlined > input.mud-input-root {
-    height: auto;
-    padding-block: 0;
-    font-size: var(--mud-typography-caption-size);
-}
+/* The strip's fields are the form's fields (issue 491): the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
+   label (.task-detail-strip-label, 96px) is the groups' label column. The strip used to override that with a 28px caption-size field. */
 
 /* The strip carries the page's one rule under the header, so the header has none of its own. */
 .task-edit-page-header .page-header.has-chrome {
@@ -8421,6 +8430,16 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding-block: 4px;
     font-size: var(--mud-typography-body2-size);
     height: auto;
+}
+
+/* A select's visible text is a div, not an input (its element carries an inline display), so it sat on the field's top line: a line as tall as the
+   field's inside (34px less its two 1px borders) centres it (issue 491). */
+.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined div.mud-select-input.mud-input-slot {
+    padding-block: 0;
+    line-height: 32px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .task-edit-page .task-human-gate,
@@ -8674,6 +8693,11 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-radius: var(--hu-control-radius);
 }
 
+/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it (issue 469). */
+.task-toolbar .task-toolbar-search {
+    margin-right: 8px;
+}
+
 /* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
 .task-filter-chip-set {
     border-color: var(--hu-chip-set-line);
@@ -8842,6 +8866,21 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-color: var(--hu-detail-decision-line);
 }
 
+/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls (issue 469), as the design system sets for every toolbar row: the shared
+   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 1px;
+    align-items: center;
+}
+
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 1px;
+    bottom: 1px;
+    left: 1px;
+}
+
 /* ---- Traits: phase 4 (status, send, composer) ---------------------------------------------------------------
    Variants of the status, send and composer traits that the Lumen, Fluent and Cobalt Soft Themes choose. Scoped to
    the marker attribute the layout renders, so a Theme that keeps the default never sees them. Colours are palette
@@ -8861,8 +8900,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-text-subtle);
 }
 
-:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon,
-:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip .mud-chip-icon {
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon {
     display: none;
 }
 
@@ -8908,44 +8946,10 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--mud-palette-error);
 }
 
-/* -- status=glyph: priority is three rising bars, filled up to the level; Urgent is one filled square ---------- */
-:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip::before {
-    content: "";
-    flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
-    background:
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-low::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-medium::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-high::before {
-    background:
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
-        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 9px 100% / 3px 11px no-repeat;
-}
-
-:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent::before {
-    width: 12px;
-    height: 12px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.25);
-    background: var(--mud-palette-error);
+/* -- status=glyph: priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme (issue 470); only
+   the chip's fill and border are dropped above. Urgent wears the error hue. ---------------------------------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent {
+    color: var(--mud-palette-error);
 }
 
 /* -- send=square: Send is a 28px square on the shared Send colours with no word; the hover darkens the accent --- */

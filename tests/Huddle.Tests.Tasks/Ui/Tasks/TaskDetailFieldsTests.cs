@@ -2,6 +2,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using AngleSharp.Dom;
 using Bunit;
+using Bunit.Rendering;
 using MudBlazor;
 using MudBlazor.Extensions;
 using Agency.Huddle.App.Components.Tasks;
@@ -22,11 +23,16 @@ using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
 /// </summary>
 public sealed class TaskDetailFieldsTests
 {
+    /// <summary>The icon drawn inside the Priority field.</summary>
+    /// <param name="cut">The rendered Task detail.</param>
+    private static string? PriorityIcon(IRenderedComponent<ContainerFragment> cut) =>
+        cut.FindComponents<MudIcon>().Single(icon => string.Equals(icon.Instance.Class, "task-detail-priority-icon", StringComparison.Ordinal)).Instance.Icon;
+
     // ---------------------------------------------------------------------------------------------
     // Priority icon (corrections-B7 "14.2"): the select shows the priority's icon as its adornment.
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>The Priority <c>MudSelect</c> shows <see cref="TaskColors.Icon(TaskPriority)"/> as its start adornment, and it follows the current value (Spec §13.6).</summary>
+    /// <summary>The Priority field shows <see cref="TaskColors.Icon(TaskPriority)"/> inside it, and it follows the current value (Spec §13.6). The select keeps its own caret (#470).</summary>
     [Fact]
     public async Task PriorityRow_ShowsPriorityIconAdornment_AndFollowsTheValue()
     {
@@ -36,11 +42,12 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id);
 
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
-        Assert.Equal(TaskColors.Icon(TaskPriority.Low), prioritySelect.Instance.AdornmentIcon);
+        Assert.Equal(TaskColors.Icon(TaskPriority.Low), PriorityIcon(cut));
+        Assert.Null(prioritySelect.Instance.AdornmentIcon);
 
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
 
-        Assert.Equal(TaskColors.Icon(TaskPriority.Urgent), cut.FindComponents<MudSelect<TaskPriority>>().Single().Instance.AdornmentIcon);
+        Assert.Equal(TaskColors.Icon(TaskPriority.Urgent), PriorityIcon(cut));
     }
 
     // ---------------------------------------------------------------------------------------------

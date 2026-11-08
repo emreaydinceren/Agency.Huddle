@@ -121,7 +121,7 @@
         <div class="tasks-header">
             <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
                          Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
-                         SplitHeader="true">
+                         OnNewTask="this.OnCreateClickedAsync">
                 <HeaderLeading>
                     @* Wireframe counts: open and need-you are over the Tasks this View shows (the search included); all is every Task in the store. *@
                     <div class="tasks-counts" role="status">
@@ -135,9 +135,6 @@
                     <AiReactingChip Watched="this.WatchedTaskIds" />
                 </HeaderActions>
                 <HeaderTrailing>
-                    @* Filled because it is the page's one primary action (audit B1). *@
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="this.OnCreateClickedAsync" Class="tasks-new-task">New task</MudButton>
                     @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Rename and Fields for every
                        View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
                        Disabled while views.json cannot be read, since the store refuses every write then. *@
@@ -498,12 +495,10 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>The page header's "New task" button: opens the edit page on a new Task, with the Team and Project the effective View's filter names.</summary>
-    /// <param name="args">The click, unused.</param>
-    private Task OnCreateClickedAsync(MouseEventArgs args)
+    /// <summary>The toolbar's "New task" button: opens the edit page on a new Task, with the Team and Project the effective View's filter names, or the route's Team when the filter names another.</summary>
+    /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
+    private Task OnCreateClickedAsync(NewTaskDefaults defaults)
     {
-        _ = args;
-        NewTaskDefaults defaults = NewTaskDefaults.For(this.effectiveView);
         return this.OnNewTaskAsync(this.Team is { } team && !string.Equals(team, defaults.Team, StringComparison.OrdinalIgnoreCase)
             ? new NewTaskDefaults(team, null)
             : defaults);
