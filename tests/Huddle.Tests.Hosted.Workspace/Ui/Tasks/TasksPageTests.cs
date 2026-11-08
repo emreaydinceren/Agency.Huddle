@@ -74,7 +74,6 @@ public sealed class TasksPageTests
         IElement toolbar = document.QuerySelector(".tasks-header .task-toolbar") ?? throw new InvalidOperationException("No toolbar row in the response.");
         Assert.Contains("task-toolbar-group", toolbar.Children[^1].ClassList);
         Assert.StartsWith("Group by:", NormalizeWhitespace(toolbar.Children[^1].TextContent), StringComparison.Ordinal);
-        Assert.Null(header.QuerySelector(".btn-action-tight")); // the one-row toolbar's "+ New task" is the Team tab's, not this page's
         Assert.Equal("New task", NormalizeWhitespace(header.QuerySelector(".tasks-new-task")?.TextContent ?? string.Empty));
         Assert.Null(document.QuerySelector(".page-header")); // T2: no visible page header
         Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));

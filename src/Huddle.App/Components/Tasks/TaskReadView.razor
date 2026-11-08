@@ -111,7 +111,7 @@ else if (this.loaded is { } task)
     <dl class="task-read-view-props">
         <div class="task-read-view-prop task-read-view-status">
             <dt>Status</dt>
-            <dd><TaskStateDot State="task.Status" /> <TaskStatusChip Status="task.Status" /></dd>
+            <dd><TaskStatusChip Status="task.Status" /></dd>
         </div>
 
         @if (task.Status == TaskState.Duplicate)

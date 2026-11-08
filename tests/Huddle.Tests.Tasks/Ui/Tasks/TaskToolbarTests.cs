@@ -54,7 +54,7 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
         Assert.Empty(toolbar.FindAll(".task-toolbar-blocked"));
         await root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
@@ -94,9 +94,12 @@ public sealed class TaskToolbarTests
         Assert.Equal("urgent", searched);
     }
 
-    /// <summary>The toolbar has no Active/Closed toggle (Scope is set in the View editor); the <c>Filter</c> icon leads it, then <c>+ New task</c>, then the List | Board control.</summary>
+    /// <summary>
+    /// The toolbar has no Active/Closed toggle (Scope is set in the View editor). It is two rows, the same wherever it is hosted (the Tasks page and a Team page's
+    /// Tasks tab, #469): List | Kanban then <c>New task</c> in the first, every one a Small control; the <c>Filter</c> icon first and Group by last in the second.
+    /// </summary>
     [Fact]
-    public async Task Toolbar_LeadsWithFilter_ThenNewTask_ThenListBoardControl_AndHasNoScopeToggle()
+    public async Task Toolbar_IsTwoRows_ListKanbanThenNewTask_ThenFilterToGroupBy_AndHasNoScopeToggle()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
@@ -106,10 +109,14 @@ public sealed class TaskToolbarTests
         var (_, toolbar) = RenderToolbar(ctx, saved);
 
         Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewScope>>());
+        var header = toolbar.Find(".task-toolbar-header").Children;
+        Assert.Contains("task-toolbar-kind", header[0].ClassList);
+        Assert.Contains("tasks-new-task", header[^1].ClassList);
+        Assert.Contains("mud-button-filled-size-small", header[^1].ClassList);
         var children = toolbar.Find(".task-toolbar").Children;
         Assert.Contains("task-toolbar-filter", children[0].ClassList);
-        Assert.Contains("btn-action-tight", children[1].ClassList);
-        Assert.Contains("task-toolbar-kind", children[2].ClassList);
+        Assert.Contains("task-toolbar-group", children[^1].ClassList);
+        Assert.Empty(toolbar.FindAll(".task-toolbar-group-sort, .task-toolbar-grouping"));
         Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
         Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
     }
@@ -184,19 +191,19 @@ public sealed class TaskToolbarTests
         NewTaskDefaults? oneTeamDefaults = null;
         await using var oneTeamCtx = NewContext(store);
         var (_, oneTeamToolbar) = RenderToolbar(oneTeamCtx, oneTeam, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => oneTeamDefaults = v));
-        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".btn-action-tight").ClickAsync());
+        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".tasks-new-task").ClickAsync());
         Assert.Equal("Atlas", oneTeamDefaults?.Team);
 
         NewTaskDefaults? twoTeamsDefaults = null;
         await using var twoTeamsCtx = NewContext(store);
         var (_, twoTeamsToolbar) = RenderToolbar(twoTeamsCtx, twoTeams, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => twoTeamsDefaults = v));
-        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".btn-action-tight").ClickAsync());
+        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".tasks-new-task").ClickAsync());
         Assert.Null(twoTeamsDefaults?.Team);
     }
 
-    /// <summary>With the split header, the second row leads with the filter icon and shows a chip only for a filter that is set - none for an unfiltered View - and without the header (the Team tab) there are never any.</summary>
+    /// <summary>The second row leads with the filter icon and shows a chip only for a filter that is set - none for an unfiltered View.</summary>
     [Fact]
-    public async Task FilterChips_AppearOnlyForSetFilters_AndOnlyWithTheSplitHeader()
+    public async Task FilterChips_AppearOnlyForSetFilters()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
@@ -215,7 +222,7 @@ public sealed class TaskToolbarTests
         };
 
         await using var splitCtx = NewContext(store);
-        var (_, split) = RenderToolbar(splitCtx, saved, splitHeader: true);
+        var (_, split) = RenderToolbar(splitCtx, saved);
         Assert.Contains("task-toolbar-filter", split.Find(".task-toolbar").Children[0].ClassList);
         // Group by is a chip in this row too (its last control), but it is not a filter.
         Assert.Empty(split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)"));
@@ -225,10 +232,6 @@ public sealed class TaskToolbarTests
             ["Team: Platform", "Project: Platform/Backend", "Assignee: Me", "Sprint: Current sprint", "Priority: High", "Status: To Do"],
             split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)").Select(chip => string.Join(' ', chip.QuerySelector(".task-filter-chip-button")!.TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
         Assert.Equal(6, split.FindAll(".task-toolbar .task-filter-chip-clear").Count);
-
-        await using var plainCtx = NewContext(store);
-        var (_, plain) = RenderToolbar(plainCtx, filtered);
-        Assert.Empty(plain.FindAll(".task-filter-chip"));
     }
 
     /// <summary>The clear button on each filter chip empties just that filter, so its chip disappears.</summary>
@@ -242,7 +245,7 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (_, toolbar) = RenderToolbar(ctx, filtered, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+        var (_, toolbar) = RenderToolbar(ctx, filtered, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
         await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-team .task-filter-chip-clear").ClickAsync());
         Assert.Empty(raised?.Filter.Teams ?? [Guid.NewGuid().ToString()]);
@@ -267,7 +270,7 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (_, toolbar) = RenderToolbar(ctx, notDoneMine, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+        var (_, toolbar) = RenderToolbar(ctx, notDoneMine, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
         Assert.Equal("Open", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
         Assert.Equal("Me", toolbar.Find(".task-toolbar-assignee .task-filter-chip-value").TextContent.Trim());
@@ -291,7 +294,7 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+        var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
         Assert.Equal("None", toolbar.Find(".task-toolbar-group .task-filter-chip-value").TextContent.Trim());
         Assert.Empty(toolbar.FindAll(".task-toolbar-group .task-filter-chip-clear"));
 
@@ -315,7 +318,7 @@ public sealed class TaskToolbarTests
         TaskView review = saved with { Filter = new TaskFilter { States = [TaskState.Review] } };
 
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, closed, splitHeader: true);
+        var (root, toolbar) = RenderToolbar(ctx, closed);
         Assert.Equal("Closed", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, review));
         Assert.Equal("Review", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
@@ -362,14 +365,12 @@ public sealed class TaskToolbarTests
         TaskView view,
         EventCallback<TaskView>? effectiveViewChanged = null,
         EventCallback<string?>? searchChanged = null,
-        EventCallback<NewTaskDefaults>? onNewTask = null,
-        bool splitHeader = false)
+        EventCallback<NewTaskDefaults>? onNewTask = null)
     {
         IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskToolbar>(0);
             builder.AddAttribute(1, nameof(TaskToolbar.EffectiveView), view);
-            builder.AddAttribute(5, nameof(TaskToolbar.SplitHeader), splitHeader);
             if (effectiveViewChanged is { } evc)
             {
                 builder.AddAttribute(2, nameof(TaskToolbar.EffectiveViewChanged), evc);
