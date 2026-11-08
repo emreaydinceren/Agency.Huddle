@@ -637,8 +637,13 @@ a.team-ref,
    elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
 .new-chat {
     position: relative;
+    anchor-name: --new-chat;
 }
 
+/* Fixed, not absolute (#465): the link sits at the end of a long Room list inside a scrolling folder, and an absolute panel was
+   clipped by that folder and pushed below the window. A fixed panel is clipped by neither. It hangs from the link by anchor
+   positioning (8px in from each side, the link's width) and flips above it when the window has no room below. A browser
+   without anchor positioning keeps the absolute panel under the link, as before. */
 .new-chat-panel {
     position: absolute;
     inset-inline: 8px;
@@ -647,6 +652,20 @@ a.team-ref,
     padding: 8px;
     background: var(--mud-palette-surface);
     font-size: var(--mud-typography-body2-size);
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+}
+
+@supports (position-anchor: --new-chat) {
+    .new-chat-panel {
+        position: fixed;
+        position-anchor: --new-chat;
+        inset-inline: auto;
+        left: calc(anchor(left) + 8px);
+        width: calc(anchor-size(width) - 16px);
+        top: anchor(bottom);
+        position-try-fallbacks: flip-block;
+    }
 }
 
 .new-chat-heading {
@@ -1107,6 +1126,22 @@ emoji-picker {
     margin-bottom: 0;
 }
 
+/* The Room's title never gets less width than its longest word (#466): the page header lets the h1 break anywhere and shrink to
+   nothing, which drew "Launch crew" a letter a line when the Workspace was narrow. Here the h1 only breaks inside a word that is
+   itself wider than the row, and the members and Invite drop to a line of their own, at the right, before the title gives way. */
+.room-header .page-header-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.room-header .page-header-h1.mud-typography {
+    overflow-wrap: break-word;
+}
+
+.room-header .page-header-actions {
+    margin-inline-start: auto;
+}
+
 /* The Room's title is the h6 role at 600 in every Theme: each Theme's mockup sets it at 15-18px semibold, and the page
    h5 it inherited (20px) was the outlier (side-by-side audit, 2026-10-30, LL-C01, FL-06, CL-03). */
 .room-header .page-header-h1.mud-typography {
@@ -1235,7 +1270,7 @@ emoji-picker {
 
 .top-bar-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 32rem) minmax(0, 1fr);
+    grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 32rem) minmax(max-content, 1fr);
     align-items: center;
     column-gap: 16px;
     width: 100%;
@@ -1647,6 +1682,21 @@ body.sidebar-resizing {
     display: none;
 }
 
+/* A narrow window (#466): the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
+   left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
+   floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
+   the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
+@media (max-width: 1099px) {
+    .mud-layout.mud-drawer-open-persistent-right .mud-main-content.main-column {
+        margin-right: 0;
+    }
+
+    .mud-drawer.mud-drawer--open.right-sidebar {
+        box-shadow: var(--hu-shadow-panel);
+        max-width: calc(100vw - 48px);
+    }
+}
+
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
    A top-level left-menu row (Agents, Settings) is a MudNavLink with no MudNavGroup
    ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
@@ -1822,7 +1872,9 @@ body.sidebar-resizing {
    the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
 .room-row-avatar {
     flex: 0 0 auto;
-    margin-inline-end: var(--nav-gap);
+    /* The avatar is 32px in a 24px slot (#475): it overhangs the slot by 4px a side, so its centre stays on the icon line and
+       the name starts where a group Room's name does. */
+    margin-inline: calc((var(--nav-slot) - 32px) / 2) calc((var(--nav-slot) - 32px) / 2 + var(--nav-gap));
     vertical-align: middle;
 }
 
@@ -1830,7 +1882,6 @@ body.sidebar-resizing {
     display: flex;
     align-items: center;
     min-width: 0;
-    padding-block: 2px;
 }
 
 /* Two lines at every sidebar width: the name, then the Agent's title muted below it. Each truncates with an ellipsis
@@ -6867,6 +6918,30 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
+/* The card's title is a link with no leading mark, so the sidebar's rule gives its text the slot's step as a margin; the title's own
+   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers (#475). */
+.sidebar-views .needs-you-title .mud-nav-link > .mud-nav-link-text {
+    margin-inline-start: 0;
+}
+
+/* The Dismiss button floats over the end of its row instead of taking a slot of its own, so the name and the time use the row's whole
+   width up to the trailing line (#475). Where there is a hover, the button replaces the time while it shows; on touch it is always
+   shown and the row's padding (above) keeps the time clear of it. */
+.sidebar-views .needs-you-row > .mud-tooltip-root {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--nav-inset);
+    display: flex;
+    align-items: center;
+}
+
+@media (hover: hover) {
+    .needs-you-row:not(.needs-you-task-row):hover .needs-you-detail,
+    .needs-you-row:not(.needs-you-task-row):focus-within .needs-you-detail {
+        visibility: hidden;
+    }
+}
+
 /* ---- Segmented control: MudBlazor's toggle group inside HuddleSegmentedControl ------------------
    The indicator that slides under the active item is scoped to the component; these rules reach the
    toggle group's own markup, so they live here. Each selector starts at .huddle-segmented-control, which
@@ -7128,14 +7203,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     opacity: 0.6;
 }
 
-/* Group headings are upper case by style only; the text stays "Closed Tasks" for a screen reader. */
+/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers (UX rule 9, #477). */
 .search-group-heading {
     padding: 8px 8px 4px;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
 }
 
 /* The dropdown is the popover's direct child; it is at most 80% of the window high. */

@@ -9,7 +9,7 @@
 <SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName"
                  Snippet="@(this.Hit.Snippet is { } snippet ? this.Highlighted(snippet) : null)">
     <Icon>
-        <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Filled.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
+        <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
     </Icon>
     <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
     <Meta>@this.Meta</Meta>
