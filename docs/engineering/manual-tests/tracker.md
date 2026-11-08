@@ -831,7 +831,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-09](tasks.md#tasks-09--keyboard-only-move-to-the-fields-dialog-and-the-task-panel-with-no-dragging) |  | Active |  |  |
 | [TASKS-10](tasks.md#tasks-10--assigning-to-a-live-claude-persona-wakes-it-in-the-right-room-and-it-calls-update_task-to-set-in-progress) | 💰 | Active |  |  |
 | [TASKS-11](tasks.md#tasks-11--two-personas-reassigning-to-each-other-stop-at-the-wake-budget-and-allow-10-more-resumes-them) | 💰 | Active |  |  |
-| [TASKS-12](tasks.md#tasks-12--an-agent-that-creates-a-task-with-originroomid-wakes-the-assignee-in-that-room) | 💰 | Active |  |  |
+| [TASKS-12](tasks.md#tasks-12--an-agent-that-creates-a-task-with-originroomid-wakes-the-assignee-in-that-room) | 💰 | Pass |  | passed 2026-11-07 at `bfe93189`, with and without the argument (see the Run log) |
 | [TASKS-13](tasks.md#tasks-13--the-copy-button-works-on-localhost-and-from-another-machine-and-the-pasted-id-shows-as-a-link) |  | Active |  |  |
 | [TASKS-14](tasks.md#tasks-14--the--picker-keyboard-only) |  | Active |  |  |
 | [TASKS-15](tasks.md#tasks-15--an-agent-sent-please-look-at-plat-0042-calls-get_task-with-that-id-without-being-told-the-tool-name) | 💰 | Active |  |  |
@@ -1217,7 +1217,7 @@ Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the overrid
 | [HELPERS-04](helpers.md#helpers-04--a-harmless-task-is-left-alone-u-2-u-4-u-11) | 💰 | Active |  |  |
 | [HELPERS-05](helpers.md#helpers-05--the-humans-override-is-final-u-5) | 💰 | Active |  |  |
 | [HELPERS-06](helpers.md#helpers-06--the-daily-cap-pauses-the-helper-and-continue-allows-a-few-more-u-7) | 💰 | Active |  |  |
-| [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) |  | Active |  |  |
+| [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) | 💰 | Pass |  | passed 2026-11-07 at `bfe93189` (see the Run log) |
 | [HELPERS-08](helpers.md#helpers-08--the-wake-up-is-huddles-and-it-leaves-your-mentions-alone-helpers-in-the-feed-56) | 💰 | Partial |  | run 2026-11-07 by an agent; Keeper on Sonnet low. Step 2 passes: a muted one-line row by Huddle, no avatar or name of yours, and Keeper answered; it lands in a new Task Room, not the Room the Task came from. Step 3: the Budget was not reset (1 of 6). The Mention part cannot be judged as written, since the Human's ask answers it. |
 
 
@@ -1241,8 +1241,8 @@ Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-it
 | [FEED-12](feed.md#feed-12--a-restart-resolves-a-form-notification) |  | Active |  | not yet run by a person |
 | [FEED-13](feed.md#feed-13--turning-the-feed-off-hides-the-bell-and-the-link) |  | Active |  | not yet run by a person |
 | [FEED-14](feed.md#feed-14--no-message-text-appears-anywhere-in-the-feed) |  | Active |  | not yet run by a person |
-| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Partial | #452 | rerun 2026-11-07 at `63fea285`: steps 2, 3 and 6 pass once the Feed preview fix lands; steps 4 and 5 rewritten to run in the Growth `Keeper` chat Huddle wakes, so they need a paid rerun (see the Run log) |
-| [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) |  | Active |  | run 2026-11-07, Blocked: an unknown Needs Human Adapter now falls back to claude (`The adapter 'nope' is not configured. It will run on 'claude'.`), so the Helper never fails this way. HELPERS-07's expected text is stale for the same reason. |
+| [FEED-15](feed.md#feed-15--a-helpers-gate-change-is-a-notification-with-its-reason-and-the-wake-up-is-huddles) | 💰 | Pass | #452 | passed 2026-11-07 at `b887218a` with the rewritten script (see the Run log) |
+| [FEED-16](feed.md#feed-16--a-helper-that-keeps-failing-reaches-the-feed-and-turning-it-off-clears-it) | 💰 | Pass |  | passed 2026-11-07 at `bfe93189`; the earlier "blocked" was a saved card overriding the configuration (see the Run log) |
 | [FEED-17](feed.md#feed-17--a-helper-at-its-cap-reaches-the-feed-once-and-continue-clears-it) | 💰 | Pass |  | run 2026-11-07 by an agent; cap set to 3 because 2 calls were already used. One item by Huddle, `2 skipped while paused`, resolved by Continue (+10 today); Needs you fell 3 to 2. |
 
 ## remote-access

@@ -388,24 +388,26 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 ### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it
 
-**Free** · about 12 min
+**Paid 💰** · about 12 min · four short Agent Turns; the Helper makes no call
 
 *Proves Helpers in the Feed spec §5.3: one `helper-failing` item at the third failure in a row, in the `Helpers` Category, linking to the card, resolved when the Helper is turned off.*
 
 **Before you start**
 
-- Setup is done. On **Settings › Helpers** save the Needs Human **Adapter** as one that is not installed (as HELPERS-07 does). The Feed Tab shows no `Helpers` items.
+- Set the Needs Human Adapter to `nope` exactly as [HELPERS-07](helpers.md#helpers-07--a-failure-leaves-the-task-as-saved-and-says-why-u-8-u-10) does: the configuration, a relaunch, then **Reset to defaults** on the card. Only an Agent's save is judged, so the Tasks need a real Agent (the mock cast cannot call tools). Note the `Helpers` count on the Feed Tab; an older resolved item may already be counted.
+- Run HELPERS-07 first if you like: its Task is this test's first failure.
+- Afterwards relaunch without the setting and press **Reset to defaults**.
 
 **Steps**
 
-1. Ask an Agent to create three Tasks, one after another, each a minute apart. Wait 30 seconds after the third.
+1. Ask an Agent to create three Tasks, one after another, each a minute apart, then a fourth. Wait 30 seconds after each.
 2. Look at the bell, then open the Feed Tab on `Helpers`.
 3. Read the card, expand it, and press `Open Helper settings`.
 4. On the Needs Human card switch **On** off and press **Save**. Return to the Feed Tab.
 
 **Pass if — all of these**
 
-- After the first and second Task the `Helpers` count is 0. After the third it is 1, and a fourth Task adds no second item.
+- After the first and second Task there is no `failed` item under `Helpers`. After the third there is one, and the fourth Task adds no second item.
 - At step 3 the card's actor is `Huddle`; the summary reads `Needs Human failed 3 times in a row` with the Helper's name as a chip, then the last error; the status line reads `Since <hh:mm> · Tasks are not being judged`; the badge is an alert mark. The expanded preview shows `Status Off`/`On`, what the Helper runs on, today's calls, and the last error with its time. `Open Helper settings` opens **Settings › Helpers** and scrolls the Needs Human card into view.
 - At step 4 the card is dimmed with a `Done` pill and has left the `Needs you` count.
 

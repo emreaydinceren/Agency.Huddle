@@ -148,9 +148,13 @@
         }
     }
 
+    /// <summary>
+    /// The Adapter select's helper text. A stored Adapter that is not configured runs nothing: <c>HelperRunner</c> fails the call
+    /// rather than falling back to the default Adapter, so the text must not promise a fallback.
+    /// </summary>
     private string AdapterHelperText =>
         this.adapter is not null && this.Adapters.Find(this.adapter) is null
-            ? $"The adapter '{this.adapter}' is not configured. It will run on '{this.Adapters.Default.Id}'."
+            ? $"The adapter '{this.adapter}' is not configured, so nothing runs until you pick another."
             : "Which agent runs this. Changing it clears Model and Effort.";
 
     /// <summary>The probed Models, plus the stored one when the probe failed or no longer lists it.</summary>
