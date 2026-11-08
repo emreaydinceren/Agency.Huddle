@@ -157,13 +157,16 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 
 ### HELPERS-07 — A failure leaves the Task as saved and says why (U-8, U-10)
 
-**Free** · about 10 min
+**Paid 💰** · about 10 min · one short Agent Turn; the Helper makes no call
 
 *Proves U-8: an Adapter that cannot run is a card message, not a lost or changed Task.*
 
 **Before you start**
 
-- Set `Team:Helpers:NeedsHuman:Adapter` to `nope` in the configuration and relaunch, or save an Adapter on the card that is not installed.
+- Set `Team:Helpers:NeedsHuman:Adapter` to `nope` in the configuration (`$env:Team__Helpers__NeedsHuman__Adapter = 'nope'`) and relaunch.
+- On **Settings › Helpers** press **Reset to defaults** on the Needs Human card. A card saved even once overrides the configuration completely (Helpers spec §6.6), so without the reset the Helper keeps its saved Adapter and never fails. The card's **Adapter** now reads `nope` with `The adapter 'nope' is not configured, so nothing runs until you pick another.`
+- The card cannot pick an Adapter that is not configured, so the configuration is the only way to set one.
+- Afterwards relaunch without the setting and press **Reset to defaults** again.
 
 **Steps**
 
@@ -173,7 +176,7 @@ Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adap
 **Pass if — all of these**
 
 - At step 2 the Task is exactly as Leo saved it: the gate is off and the Change log has only Leo's entries.
-- The card shows a Warning `Last error <time> · The Adapter 'nope' is not configured. Pick another on this card.` (or the installed-Adapter wording of your setup), and the count of calls today did not move.
+- The card shows a Warning `Last error <time> · The Adapter 'nope' is not configured. Pick another on this card.`, and the count of calls today did not move.
 
 ### HELPERS-08 — The wake-up is Huddle's, and it leaves your Mentions alone (Helpers in the Feed §5.6)
 

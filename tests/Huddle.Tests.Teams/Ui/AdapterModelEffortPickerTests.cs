@@ -65,6 +65,24 @@ public sealed class AdapterModelEffortPickerTests
         Assert.Equal(1, CountControlsLabelled(cut, "Effort"));
     }
 
+    /// <summary>
+    /// A stored Adapter that is not configured says that nothing runs until another is picked. It used to promise it would run on
+    /// the default Adapter, but <c>HelperRunner</c> fails such a call ("The Adapter '…' is not configured"), and the promise led a
+    /// manual run to record FEED-16 as blocked.
+    /// </summary>
+    [Fact]
+    public async Task StoredAdapterNotConfigured_SaysNothingRunsUntilAnotherIsPicked()
+    {
+        await using MudBunitContext ctx = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku] };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], [], adapter: "nope");
+
+        string[] helperTexts = [.. cut.FindAll(".mud-input-helper-text").Select(element => element.TextContent.Trim())];
+        Assert.Contains("The adapter 'nope' is not configured, so nothing runs until you pick another.", helperTexts);
+        Assert.DoesNotContain(helperTexts, text => text.Contains("will run on", StringComparison.Ordinal)); // contains-ok: no helper text may promise a fallback
+    }
+
     /// <summary>Opening reads the Models and Efforts, and shows the stored Model by name.</summary>
     [Fact]
     public async Task Open_ReadsTheCatalogsAndPreselectsTheStoredModel()

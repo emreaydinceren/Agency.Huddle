@@ -4146,6 +4146,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-12--an-agent-tha
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `bfe93189` |  | By an agent on the paid lane; Keeper on Sonnet low as creator and assignee (no Rae), woken by the Needs Human Helper's gate-on, the case that made a hidden Growth chat at 03:13 that morning. In the root `Keeper` Room: GROW-0009, where the Keeper passed `originRoomId` itself, and GROW-0010, where it was asked to leave it out (its `create_task` input had no `originRoomId`). Both Tasks record `origin: 01a1b922…` (the root Room), both wake-ups landed there, and the lane still had four Rooms. About 0.09 USD. |
 
 ### TASKS-13 — The copy button works on `localhost` and from another machine, and the pasted id shows as a link
 
@@ -5762,6 +5763,7 @@ File: [`docs/engineering/manual-tests/helpers.md`](helpers.md#helpers-07--a-fail
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-07 | Pass | `bfe93189` |  | By an agent on the paid lane with `Team__Helpers__NeedsHuman__Adapter=nope` and **Reset to defaults** on the card (the saved row had overridden the setting in the first run). The Keeper (Sonnet low) made GROW-0011 `Reply to Acme about the renewal price`: the file has only the Keeper's `created` entry and no gate; the card shows `Last error 22:59 · The Adapter 'nope' is not configured. Pick another on this card.`; calls today stayed at 8. Found: the card's picker said `It will run on 'claude'`, which is false for a Helper; fixed in this change. |
 
 ### HELPERS-08 — The wake-up is Huddle's, and it leaves your Mentions alone (Helpers in the Feed §5.6)
 
@@ -6220,6 +6222,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-15--a-helpers-gate-
 | --- | --- | --- | --- | --- |
 | 2026-11-07 | Fail | `83da2ce2` |  | By an agent; Keeper on Sonnet low (owner rule), Helper on Haiku. Step 3: the summary reads `set the Action ... on`, not `turned on Requires your acceptance for`, and the preview line ends `customer..` (double stop). Step 5 cannot be judged as written: the Human's ask answers the Mention, and the wake-up goes to a separate Task Room. Step 6 blocked: the Helper also set an Action, which locks the gate switch (`This Task names an Action that leaves the team.`) while the card and the Task say you can turn it off. A Task with no assignee gets no wake-up at all. Issue to file. |
 | 2026-11-07 | Partial | `63fea285` | #452 | Paid rerun by an agent after #452; Keeper on Sonnet low, Helper on Haiku, about 0.07 USD. Asked for Globex, not Acme: GROW-0001 already had that title and the Keeper refused a duplicate. Step 2 passes. Step 3: summary `set the Action "Email the pricing sheet to Globex" on` with the reason, Helper mark, `Waiting for you`, status `Asked 20:52 · accept or decline it on the Task`, no doubled stop; but the expanded preview still said `If you turn it off`, because `FeedTaskPreview` was a second caller #452 missed. Fixed on `fix/452-feed-preview-line` and checked in the browser on GROW-0002. Steps 4 and 5 as in the first run: an unassigned Task gets no wake-up, and the step-1 message answers the Mention. Step 6: Decline only shows in Review or Needs You, so the Task was moved to Review (the card turned `Done` then, and left Needs you 3 to 2), then declined; script updated. |
+| 2026-11-07 | Pass | `b887218a` | #452 | Paid run of the rewritten script by an agent; Keeper on Sonnet low, Helper on Haiku, about 0.06 USD. In the Growth `Keeper` chat the Keeper made GROW-0008 "Email the price list to Initech", assigned to itself, and Mentioned `@Tester`; then came Huddle's wake-up. Step 2: bell `3 new`; card under `Gates` and `Needs you`. Step 3: Helper mark; `set the Action "Email the price list to Initech" on` GROW-0008 with the reason; `Waiting for you`; `Asked 21:41 · accept or decline it on the Task`; the preview says to decide the Task, with one stop. Step 4: after the Mention, a `.system-row` naming `Needs Human (Helper)`, not under the Human's Name. Step 5: `Keeper mentioned you in Keeper` (Growth) still Waiting. Step 6: Review, Save, Decline: card `Done · 21:42`, left Needs you, still under All and Gates. The Save's own wake-up is the Human's and answered the Mention, after step 5 was judged. |
 
 ### FEED-16 — A Helper that keeps failing reaches the Feed, and turning it off clears it
 
@@ -6228,6 +6231,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-16--a-helper-that-k
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-07 | Active | `83da2ce2` |  | Blocked: an unknown Needs Human Adapter now falls back to claude (`The adapter 'nope' is not configured. It will run on 'claude'.`), so the Helper never fails this way. HELPERS-07's expected text is stale for the same reason. |
+| 2026-11-07 | Pass | `bfe93189` |  | By an agent, set up as HELPERS-07 (whose Task was failure 1). The first run's "blocked" was wrong: `HelperRunner` fails an unknown Adapter; the paid lane's saved card row (from FEED-17) overrode the configuration, and the picker's `It will run on 'claude'` was misleading. Failures 1 and 2 (GROW-0011, GROW-0012): no failing item. Failure 3 (GROW-0013): one item, actor `Huddle`, `Needs Human failed 3 times in a row` + the last error, `Since 23:06 · Tasks are not being judged`, ErrorOutline badge, preview `Status On`, `Runs on nope · haiku · low`, calls today, `Last error 23:06 · …`; `Open Helper settings` opens `/settings/helpers#helper-NeedsHuman` with the card in view. Failure 4 (GROW-0014): still one item. Off and Save: `Done · 23:12`, Needs you 6 to 5. About 0.05 USD of Keeper Turns; the Helper made no call. Lane restored (relaunch, Reset to defaults). |
 
 ### FEED-17 — A Helper at its cap reaches the Feed once, and Continue clears it
 
