@@ -89,6 +89,29 @@ public sealed class TaskEditPageTests
         Assert.Equal($"/tasks/item/{created.Id}/edit", moved.Url);
     }
 
+    /// <summary>
+    /// Issue #453: saving a new Task moves the address to its edit page with no "Discard changes?" prompt. The exit prompt
+    /// still held its pre-save state when the page navigated, so it stopped the move and asked about edits already saved.
+    /// </summary>
+    [Fact]
+    public async Task New_Save_NavigatesToTheEditPage_WithNoDiscardPrompt()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/tasks/item/new/edit");
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "new", out _, team: "Platform");
+        IRenderedComponent<MudTextField<string>> title = cut.FindComponent<TaskDetail>().FindComponents<MudTextField<string>>()
+            .Single(static field => string.Equals(field.Instance.Class, "task-detail-title", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => title.Instance.ValueChanged.InvokeAsync("Brand new task"));
+
+        await cut.InvokeAsync(() => cut.Find(".task-edit-page-header .task-detail-save").ClickAsync());
+
+        TaskItem created = Assert.Single(harness.Store.All);
+        cut.WaitForAssertion(() => Assert.Equal($"/tasks/item/{created.Id}/edit", new Uri(navigation.Uri).AbsolutePath));
+        Assert.Empty(cut.FindAll(".mud-dialog"));
+    }
+
     /// <summary>Cancel on a new Task creates nothing and closes its Tab.</summary>
     [Fact]
     public async Task New_Cancel_CreatesNothing_AndClosesTheTab()
