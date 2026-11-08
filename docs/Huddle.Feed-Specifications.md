@@ -783,7 +783,7 @@ opens from the expanded card's Open button and from each chip.
 | Source type | Summary (chips in braces) | Status line (Notifications only) |
 | --- | --- | --- |
 | `task-created` | `created {Task}` · `in <Team>` | — |
-| `task-gate-on` | `turned on Requires your acceptance for {Task}`; with an Action, `set the Action "<action>" on {Task}`; by a Helper, followed by `· <reason>` | by a Helper: `Asked <hh:mm> · you can turn it off on the Task`; otherwise — |
+| `task-gate-on` | `turned on Requires your acceptance for {Task}`; with an Action, `set the Action "<action>" on {Task}`; by a Helper, followed by `· <reason>` | by a Helper: `Asked <hh:mm> · you can turn it off on the Task`, or with an Action (which locks the gate on, #452) `Asked <hh:mm> · accept or decline it on the Task`; otherwise — |
 | `task-needs-you` | `stopped to wait for your approval on {Task}` · `in <Team>` | `Asked <hh:mm> · proof <m>/<n> · waiting for you` |
 | `task-assigned-to-you` | `assigned you {Task}` | `Asked <hh:mm> · waiting for you` |
 | `request-awaits-you` | `finished the Request {Task} from <FromTeam>` · `only you can confirm it` | `Asked <hh:mm> · waiting for you` |

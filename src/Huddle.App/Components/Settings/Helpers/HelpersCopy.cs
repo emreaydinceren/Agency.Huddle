@@ -72,11 +72,21 @@ internal static class HelpersCopy
     /// <param name="grant">Calls the button adds for today.</param>
     public static string Continue(int grant) => string.Create(CultureInfo.InvariantCulture, $"Continue (+{grant} today)");
 
-    /// <summary>The Task panel line shown when a Helper turned the gate on.</summary>
+    /// <summary>
+    /// The Task panel line shown when a Helper turned the gate on. When the Task names an Action the gate is locked on, so the
+    /// line says to decide the Task instead of offering to turn it off (#452). A reason's own closing full stop is not doubled.
+    /// </summary>
     /// <param name="helperName">The Helper's display name, such as <c>Needs Human</c>.</param>
     /// <param name="reason">Its reason.</param>
-    public static string TaskPanel(string helperName, string reason) =>
-        $"{TaskPanelLead} {helperName} Helper{(string.IsNullOrWhiteSpace(reason) ? string.Empty : ": " + reason)}. If you turn it off, the Helper won't ask about this Task again.";
+    /// <param name="namedTheStep">Whether the Task names an Action, which locks the gate on.</param>
+    public static string TaskPanel(string helperName, string reason, bool namedTheStep = false)
+    {
+        string trimmed = reason.Trim().TrimEnd('.');
+        string lead = $"{TaskPanelLead} {helperName} Helper{(trimmed.Length == 0 ? string.Empty : ": " + trimmed)}.";
+        return namedTheStep
+            ? lead + " It also named the step, which keeps the gate on: accept or decline the Task to decide."
+            : lead + " If you turn it off, the Helper won't ask about this Task again.";
+    }
 
     /// <summary>The address of the Prompts tab with a prompt highlighted.</summary>
     /// <param name="promptKey">The prompt's key.</param>
