@@ -114,6 +114,39 @@ public sealed class RoomListTests
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal));
     }
 
+    /// <summary>The row menu draws one icon weight (#477): Copy link, Archive and Delete all wear their outlined glyphs, none a solid one beside a line one.</summary>
+    [Fact]
+    public async Task RowMenu_ItemsWearOutlinedIcons()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
+        _ = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        await OpenRowMenuAsync(cut);
+
+        Assert.Equal(GlyphPath(MudBlazor.Icons.Material.Outlined.Link), DrawnPath(MenuItemNamed(cut, "Copy link")));
+        Assert.Equal(GlyphPath(MudBlazor.Icons.Material.Outlined.Archive), DrawnPath(MenuItemNamed(cut, "Archive")));
+        Assert.Equal(GlyphPath(MudBlazor.Icons.Material.Outlined.Delete), DrawnPath(MenuItemNamed(cut, "Delete")));
+    }
+
+    /// <summary>The open menu's item whose text is <paramref name="text"/>.</summary>
+    private static IElement MenuItemNamed(IRenderedComponent<ContainerFragment> cut, string text) =>
+        MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal));
+
+    /// <summary>The <c>d</c> attribute of the glyph an element draws: its last SVG path, after the transparent box path.</summary>
+    private static string? DrawnPath(IElement element) => element.QuerySelectorAll("svg path")[^1].GetAttribute("d");
+
+    /// <summary>The <c>d</c> attribute of an icon's drawing path, which is what survives however the markup is serialised.</summary>
+    /// <param name="icon">A MudBlazor icon's SVG content.</param>
+    private static string GlyphPath(string icon) => icon.Split("d=\"")[^1].Split('"')[0];
+
     /// <summary>Delete is guarded by an inline confirm step - one click on the menu's Delete item must not remove the Room yet.</summary>
     [Fact]
     public async Task Delete_OneClick_DoesNotRemoveTheRoom()

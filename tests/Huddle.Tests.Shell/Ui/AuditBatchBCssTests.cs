@@ -109,7 +109,8 @@ public sealed partial class AuditBatchBCssTests
     {
         Assert.Matches(@"margin-inline-start:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".sidebar-views .mud-nav-link > .mud-nav-link-icon + .mud-nav-link-text"));
         Assert.Matches(@"margin-inline-start:\s*0", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar, > .needs-you-icons)"));
-        Assert.Matches(@"margin-inline-end:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
+        // The 32px avatar overhangs the 24px slot by 4px a side and ends on the gap, so its name starts where a group Room's does (#475).
+        Assert.Matches(@"margin-inline:\s*calc\(\(var\(--nav-slot\) - 32px\) / 2\) calc\(\(var\(--nav-slot\) - 32px\) / 2 \+ var\(--nav-gap\)\)", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
     }
 
     /// <summary>The destination rows (Agents, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>
@@ -172,7 +173,37 @@ public sealed partial class AuditBatchBCssTests
 
         Assert.DoesNotContain("padding-inline-start", declarations, StringComparison.Ordinal);
         Assert.DoesNotContain("--mud-drawer-width-left", declarations, StringComparison.Ordinal);
-        Assert.Matches(@"grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 32rem\) minmax\(0, 1fr\)", AuditBatchBCssTests.DeclarationsFor(".top-bar-grid"));
+        // The end cell never gets less than its own content (the pill and the buttons), so the search box cannot run under them (#466).
+        Assert.Matches(@"grid-template-columns:\s*minmax\(8rem, 1fr\) minmax\(8rem, 32rem\) minmax\(max-content, 1fr\)", AuditBatchBCssTests.DeclarationsFor(".top-bar-grid"));
+    }
+
+    /// <summary>Search group headings are sentence case, like the Sidebar's section headers, not upper case with tracking (#477).</summary>
+    [Fact]
+    public void AppCss_SearchGroupHeading_IsSentenceCase()
+    {
+        string declarations = AuditBatchBCssTests.DeclarationsFor(".search-group-heading");
+
+        Assert.DoesNotContain("uppercase", declarations, StringComparison.Ordinal);
+        Assert.DoesNotContain("letter-spacing", declarations, StringComparison.Ordinal);
+    }
+
+    /// <summary>Below 1100px the Right sidebar floats over the Workspace instead of pushing it, so the Workspace keeps its width (#466).</summary>
+    [Fact]
+    public void AppCss_NarrowWindow_RightSidebarOverlaysTheWorkspace()
+    {
+        Assert.Matches(
+            @"@media \(max-width: 1099px\) \{\s*\.mud-layout\.mud-drawer-open-persistent-right \.mud-main-content\.main-column \{\s*margin-right:\s*0;",
+            CssText.AppCss(CssNewlines.AsIs));
+    }
+
+    /// <summary>The New chat panel is fixed and anchored to its link, so the scrolling folder around the link cannot clip it or leave it below the window (#465).</summary>
+    [Fact]
+    public void AppCss_NewChatPanel_IsAnchoredAndFlipsAboveTheLink()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.Matches(@"\.new-chat\s*\{[^}]*anchor-name:\s*--new-chat", css);
+        Assert.Matches(@"@supports \(position-anchor: --new-chat\) \{\s*\.new-chat-panel \{[^}]*position:\s*fixed;[^}]*top:\s*anchor\(bottom\);[^}]*position-try-fallbacks:\s*flip-block", css);
     }
 
     /// <summary>
