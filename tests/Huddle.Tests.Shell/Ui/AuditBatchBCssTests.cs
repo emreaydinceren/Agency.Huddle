@@ -50,8 +50,48 @@ public sealed partial class AuditBatchBCssTests
         string declarations = AuditBatchBCssTests.DeclarationsFor(".room-notice-column");
 
         Assert.Matches(@"max-width:\s*760px", declarations);
-        Assert.Matches(@"margin-inline:\s*auto", declarations);
-        Assert.Matches(@"width:\s*calc\(100% - 48px\)", declarations);
+        Assert.Matches(@"margin-inline:\s*max\(24px, calc\(50% - 380px - var\(--room-scrollbar\) / 2\)\) auto", declarations);
+        Assert.Matches(@"width:\s*calc\(100% - 48px - var\(--room-scrollbar\)\)", declarations);
+    }
+
+    /// <summary>
+    /// The Transcript, the notices, the Composer and the Reference picker share one left edge: the list always reserves its
+    /// scrollbar gutter, and the Composer, the notices and the picker take that same width off their right.
+    /// </summary>
+    [Fact]
+    public void AppCss_TranscriptNoticesComposerAndPicker_ShareOneColumn()
+    {
+        Assert.Matches(@"scrollbar-gutter:\s*stable", AuditBatchBCssTests.DeclarationsFor(".room-column > .message-list"));
+        Assert.Matches(@"--room-scrollbar:\s*10px", AuditBatchBCssTests.DeclarationsFor(":root"));
+        Assert.Matches(@"padding:\s*16px calc\(24px \+ var\(--room-scrollbar\)\) 16px 24px", AuditBatchBCssTests.DeclarationsFor(".composer"));
+
+        string picker = AuditBatchBCssTests.DeclarationsFor(".composer-picker");
+        Assert.Matches(@"left:\s*max\(24px, calc\(50% - 380px - var\(--room-scrollbar\) / 2\)\)", picker);
+        Assert.Matches(@"width:\s*min\(760px, calc\(100% - 48px - var\(--room-scrollbar\)\)\)", picker);
+    }
+
+    /// <summary>The Budget note is a caption (12px) in the notice column, so it starts where the Transcript does.</summary>
+    [Fact]
+    public void BudgetNote_IsACaptionInTheNoticeColumn()
+    {
+        string declarations = AuditBatchBCssTests.DeclarationsFor(".budget-note");
+        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Chat.razor"));
+
+        Assert.Matches(@"font-size:\s*var\(--mud-typography-caption-size\)", declarations);
+        Assert.DoesNotContain("padding", declarations, StringComparison.Ordinal);
+        Assert.Equal(2, Regex.Count(markup, @"Class=""budget-note room-notice-column"""));
+    }
+
+    /// <summary>A picker row is one line of card with its note at the end of the line, and every kind's icon takes the same 24px slot.</summary>
+    [Fact]
+    public void AppCss_PickerRow_KeepsTheNoteOnTheRowAndOneTextColumn()
+    {
+        Assert.Matches(@"display:\s*flex", AuditBatchBCssTests.DeclarationsFor(".composer-picker-item"));
+        Assert.Matches(@"width:\s*24px", AuditBatchBCssTests.DeclarationsFor(".composer-picker .search-card-icon"));
+
+        string note = AuditBatchBCssTests.DeclarationsFor(".composer-picker-note");
+        Assert.DoesNotContain("display: block", note, StringComparison.Ordinal);
+        Assert.Matches(@"font-size:\s*var\(--mud-typography-caption-size\)", note);
     }
 
     /// <summary>The Room page puts the column class on the Offline notice, the budget prompt and the reply note.</summary>

@@ -164,7 +164,10 @@ public sealed partial class ContentTraitsTests
         Has("var(--hu-shadow-card-hover)", box);
         Has("padding-bottom: 40px;", box);
 
-        Has("var(--mud-palette-info)", Rule(".composer-box:focus-within"));
+        string focused = Rule("[data-hu-composer=\"card\"]) .composer-box:focus-within");
+        Has("border-color: var(--mud-palette-primary);", focused);
+        Has("inset 0 0 0 0.5px var(--mud-palette-primary)", focused);
+        Assert.DoesNotContain("--mud-palette-info", focused, StringComparison.Ordinal);
         Has("var(--hu-ground-page)", Rule("[data-hu-composer=\"card\"]) .composer"));
         Has("border: 0;", Rule(".composer-box-attach .composer-input"));
         Has("var(--mud-palette-text-secondary)", Rule(".composer-input::placeholder"));
