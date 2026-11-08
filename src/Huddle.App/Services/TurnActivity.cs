@@ -119,6 +119,23 @@ internal sealed class TurnActivity(ILogger<TurnActivity>? logger = null)
     }
 
     /// <summary>
+    /// The Room of <paramref name="agentId"/>'s running Turn when exactly one Room has one, else <see langword="null"/>. At the
+    /// default of one Turn at a time per Agent this is the Room a tool call made during that Turn came from; with Turns in two
+    /// Rooms at once a call cannot be tied to either, so there is no answer.
+    /// </summary>
+    /// <param name="agentId">The Agent to check.</param>
+    /// <returns>The single busy Room's id, or <see langword="null"/>.</returns>
+    public string? SoleRoom(string agentId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        lock (this.gate)
+        {
+            return this.countsByAgent.TryGetValue(agentId, out var rooms) && rooms.Count == 1 ? rooms.Keys.First() : null;
+        }
+    }
+
+    /// <summary>
     /// Drops every outstanding <see cref="Begin"/> mark for <paramref name="agentId"/>, across every
     /// Room. <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> calls this at Welcome, beside
     /// <c>OwnPosts.ClearAgent</c>, so a restart or reconnect self-heals rather than leaving a stale

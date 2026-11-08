@@ -18,6 +18,27 @@ public sealed class TurnActivityTests
         Assert.False(activity.IsBusyIn("agent-1", "room-b"));
     }
 
+    /// <summary>
+    /// <see cref="TurnActivity.SoleRoom"/> names the Room only while the Agent has exactly one Turn running: none, or Turns in
+    /// two Rooms at once, give no answer, because then a tool call cannot be tied to one Room.
+    /// </summary>
+    [Fact]
+    public void SoleRoom_NamesTheRoomOnlyForExactlyOneRunningRoom()
+    {
+        TurnActivity activity = new();
+        Assert.Null(activity.SoleRoom("agent-1"));
+
+        activity.Begin("agent-1", "room-a");
+        activity.Begin("agent-2", "room-b");
+        Assert.Equal("room-a", activity.SoleRoom("agent-1"));
+
+        activity.Begin("agent-1", "room-b");
+        Assert.Null(activity.SoleRoom("agent-1"));
+
+        activity.End("agent-1", "room-a");
+        Assert.Equal("room-b", activity.SoleRoom("agent-1"));
+    }
+
     /// <summary>Ending a Turn in one Room leaves a Turn in another Room for the same Agent untouched.</summary>
     [Fact]
     public void End_ClearsOnlyThatRoom()

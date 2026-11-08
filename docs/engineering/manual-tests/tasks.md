@@ -660,11 +660,9 @@ rule, ahead of {Human, creator, assignee}.*
 
 **Steps**
 
-1. In a chosen Room, ask an Agent to create a Task assigned to `Rae`, from that same Room (so the
-   Agent's tool call carries this Room's id as `originRoomId`, whether by explicit instruction or
-   by the tool defaulting to the calling Room — it does not default: the tool description tells the
-   Agent to pass `originRoomId` with the id of the Room it is acting in, and a missing one falls
-   through to D-7's next rule, so say the Room id in your Message if `Rae` does not pass it).
+1. In a chosen Room, ask an Agent to create a Task assigned to `Rae`, from that same Room. The
+   origin is this Room whether the Agent passes `originRoomId` or not: with none, the tool takes the
+   Room of the caller's one running Turn (Tasks spec §11.2 check 2).
 2. Note the Task's id once created.
 3. Watch for the wake-up Message.
 4. Read which Room it lands in.
@@ -675,14 +673,15 @@ rule, ahead of {Human, creator, assignee}.*
   origin), not in a freshly created Room and not in {Human, creator, assignee}'s Room unless that
   happens to be the same Room.
 - The Task's frontmatter/Change log records an origin consistent with that Room.
-- If `Rae` created the Task without passing `originRoomId`, the wake-up follows D-7's next rule
-  instead; that is a model-behaviour note, not a defect, once the tool description has said to
-  pass it.
+- The origin is this Room even if the Agent's `create_task` call (see `O-TOOLCALLS`) has no
+  `originRoomId`.
 
 **Fail if — any of these**
 
 - The wake-up lands in a different Room than the one the Task was created from -> D-7's origin
-  step is not being read from `originRoomId`, or the tool never set it.
+  step is not being read from `originRoomId`, or the tool never set it (with no argument, check
+  that the Agent had no Turn running in another Room at the same time; then the origin stays empty
+  by design).
 - No wake-up occurs at all -> the create-with-assignee path is not triggering `TaskTriggerService`.
 
 ### TASKS-13 — The copy button works on `localhost` and from another machine, and the pasted id shows as a link

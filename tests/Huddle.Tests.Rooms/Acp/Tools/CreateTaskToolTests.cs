@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
@@ -77,6 +78,85 @@ public sealed class CreateTaskToolTests
         Assert.Equal("Created PLAT-0001 \"Support SAML login\" in Platform, unassigned. No one is notified.", result);
         TaskItem written = Assert.Single(harness.Store.All);
         Assert.Equal(room.Id, written.OriginRoomId);
+    }
+
+    /// <summary>
+    /// With no <c>originRoomId</c>, the Task's origin is the Room of the caller's one running Turn. Models leave the argument out,
+    /// and a Task with no origin is woken in a {Human, assignee} Team chat the Human never opened, not where it was asked for.
+    /// </summary>
+    [Fact]
+    public async Task CreateTask_NoOriginRoom_OneTurnRunning_OriginIsThatRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        User? nova = await harness.Directory.GetUserAsync(RequireId(harness.NovaId), ct);
+        Assert.NotNull(nova);
+        Room room = await harness.Chat.EnsureRoomForAsync(nova, ct);
+        TurnActivity turns = new();
+        turns.Begin(nova.Id, room.Id);
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), nova.Id, turns);
+
+        _ = await tool.InvokeAsync(new JsonObject { ["title"] = "Support SAML login", ["team"] = "Platform" }, ct);
+
+        Assert.Equal(room.Id, Assert.Single(harness.Store.All).OriginRoomId);
+    }
+
+    /// <summary>With Turns running in two Rooms at once the call cannot be tied to one of them, so the origin stays empty.</summary>
+    [Fact]
+    public async Task CreateTask_NoOriginRoom_TurnsInTwoRooms_LeavesOriginEmpty()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        User? nova = await harness.Directory.GetUserAsync(RequireId(harness.NovaId), ct);
+        Assert.NotNull(nova);
+        Room direct = await harness.Chat.EnsureRoomForAsync(nova, ct);
+        Room shared = await harness.Chat.CreateRoomForAsync([nova.Id, RequireId(harness.KaiId)], ct);
+        TurnActivity turns = new();
+        turns.Begin(nova.Id, direct.Id);
+        turns.Begin(nova.Id, shared.Id);
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), nova.Id, turns);
+
+        _ = await tool.InvokeAsync(new JsonObject { ["title"] = "Support SAML login", ["team"] = "Platform" }, ct);
+
+        Assert.Null(Assert.Single(harness.Store.All).OriginRoomId);
+    }
+
+    /// <summary>A running Turn in a Room the caller is not a Member of is not taken as the origin, and the create still succeeds.</summary>
+    [Fact]
+    public async Task CreateTask_NoOriginRoom_TurnInARoomCallerIsNotIn_LeavesOriginEmpty()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        User? kai = await harness.Directory.GetUserAsync(RequireId(harness.KaiId), ct);
+        Assert.NotNull(kai);
+        Room kaisRoom = await harness.Chat.EnsureRoomForAsync(kai, ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), kaisRoom.Id);
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId), turns);
+
+        string result = await tool.InvokeAsync(new JsonObject { ["title"] = "Support SAML login", ["team"] = "Platform" }, ct);
+
+        Assert.Equal("Created PLAT-0001 \"Support SAML login\" in Platform, unassigned. No one is notified.", result);
+        Assert.Null(Assert.Single(harness.Store.All).OriginRoomId);
+    }
+
+    /// <summary>An <c>originRoomId</c> the model passes wins over the Room of the running Turn.</summary>
+    [Fact]
+    public async Task CreateTask_ExplicitOriginRoom_BeatsTheTurnsRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        User? nova = await harness.Directory.GetUserAsync(RequireId(harness.NovaId), ct);
+        Assert.NotNull(nova);
+        Room direct = await harness.Chat.EnsureRoomForAsync(nova, ct);
+        Room shared = await harness.Chat.CreateRoomForAsync([nova.Id, RequireId(harness.KaiId)], ct);
+        TurnActivity turns = new();
+        turns.Begin(nova.Id, direct.Id);
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), nova.Id, turns);
+
+        _ = await tool.InvokeAsync(new JsonObject { ["title"] = "Support SAML login", ["team"] = "Platform", ["originRoomId"] = shared.Id }, ct);
+
+        Assert.Equal(shared.Id, Assert.Single(harness.Store.All).OriginRoomId);
     }
 
     /// <summary>A Won't do status is refused: the caller is told to create the Task first, then call <c>update_task</c>.</summary>

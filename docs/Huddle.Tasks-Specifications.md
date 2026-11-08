@@ -1064,7 +1064,12 @@ kept as it is, because the line is for a model, not for parsing.
 
 1. `title` and `team` are present.
 2. If `originRoomId` is given: the Room exists and the caller is a Member. Refuse with
-   `FollowRoomTool`'s wording: `"You are not a member of room '…' (id …)…"`.
+   `FollowRoomTool`'s wording: `"You are not a member of room '…' (id …)…"`. If it is not given,
+   the origin is the Room of the caller's one running Turn (`TurnActivity.SoleRoom`) when the caller
+   is a Member of it; with no running Turn, or Turns in two Rooms at once, it stays empty. Models
+   leave the argument out, and a Task with no origin is woken in a {Human, creator, assignee} Room,
+   often a Team chat the Human never opened, rather than where it was asked for (found by FEED-15,
+   2026-11-07).
 3. `status` isn't a Won't do state. Model the refusal on this: *"Create the task first; to mark
    it Cancelled, Duplicate or Rejected, call update_task."*
 4. The dates parse as `yyyy-MM-dd`.
