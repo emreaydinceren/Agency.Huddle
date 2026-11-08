@@ -292,7 +292,7 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 | Button | `button` | | 14px | 1.4 | 500 | A button's label (a Small button's is 13px, see [Spacing, density and size](#spacing-density-and-size)) |
 
 **Minimum size.** No text renders below 11px. The one exception is an avatar monogram:
-40% of the avatar's diameter, with a 10px floor, so a 24px avatar shows 10px letters.
+40% of the avatar's diameter on the type scale: a 24px avatar shows 11px letters and a 32px one 13px.
 `TypeScaleTests` fails on a literal font size under 11px.
 
 **Weights.** Three: 400 for text, 500 for controls, 600 for emphasis and headings. Never
@@ -496,7 +496,7 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | Part | Rule |
 | --- | --- |
 | Letters | One word gives its first two letters ("Helen" gives HE). Several words give the first and last initials. A one-letter name stays one letter. An empty name gives "?" |
-| Letter size | 40% of the diameter, never under 10px: 10px, 12.8px, 16px and 28.8px on 24px, 32px, 40px and 72px |
+| Letter size | 40% of the diameter, on the type scale: 11px, 13px, 16px and 28.8px on 24px, 32px, 40px and 72px |
 | Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Edge rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
 | Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else |

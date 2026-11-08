@@ -2,9 +2,11 @@
     The read-only preview of a Room inside an expanded Feed card (Feed spec 6.13): its Members, why it waits for the Human and the time of
     its last Message. Never a Message's text. A Room that is gone says so. Read when the preview is drawn; nothing is written.
 *@
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.NeedsYou
 @inject ITeamDirectory Directory
 @inject IChatStore Transcript
+@inject AvatarStore Avatars
 @inject NeedsYouTracker Tracker
 @inject TimeProvider Clock
 
@@ -25,7 +27,7 @@
                 @foreach (User member in this.members)
                 {
                     <span class="feed-room-member" @key="member.Id">
-                        <AgentAvatar Name="@member.Name" Size="Size.Small" />
+                        <AgentAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" />
                         <span class="feed-room-member-name">@member.Name</span>
                     </span>
                 }

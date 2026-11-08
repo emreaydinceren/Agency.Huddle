@@ -3,10 +3,12 @@
     TaskProofList draws them but without the Ask buttons, and the Human gate's sentence. It reads the Task it is given and the Proof
     from IProofSource when it is drawn, and writes nothing.
 *@
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Helpers
 @using Agency.Huddle.App.Tasks.HumanGate
 @inject HelperRegistry Helpers
+@inject AvatarStore Avatars
 @inject TimeProvider Clock
 @inject IProofSource Proofs
 @inject ITeamDirectory Directory
@@ -23,7 +25,7 @@
         @if (this.Item.Assignee is { Length: > 0 } assignee)
         {
             <dt>Assignee</dt>
-            <dd class="feed-preview-person"><AgentAvatar Name="@assignee" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
+            <dd class="feed-preview-person"><AgentAvatar Name="@assignee" Avatar="this.Avatars.Get(assignee)" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
         }
         @if (this.AssignedBy is { } assignedBy)
         {
