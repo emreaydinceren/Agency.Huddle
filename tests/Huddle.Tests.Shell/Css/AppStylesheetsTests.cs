@@ -10,8 +10,11 @@ namespace Agency.Huddle.Tests.Css;
 /// </summary>
 public sealed class AppStylesheetsTests
 {
-    /// <summary>SHA-256 of <c>src/Huddle.App/wwwroot/app.css</c> at commit e932e034, CRLF line endings included.</summary>
-    private const string OldAppCssSha256 = "fa1ee05e0ab5eef5bd575628b1b90811a279772bf34a1f2f4f44a3193f8d2f7a";
+    /// <summary>
+    /// SHA-256 of <c>src/Huddle.App/wwwroot/app.css</c> at commit e932e034 as git stores it, with LF line endings. A
+    /// Windows checkout writes CRLF and a Linux one LF, so the test strips every CR before hashing.
+    /// </summary>
+    private const string OldAppCssSha256 = "9de2915e7ac31dc28b216fd5a4bb99f241c48f247d83f734fe0370e1f4a48690";
 
     /// <summary>The list equals the <c>.css</c> files in <c>wwwroot/css</c>, in the same order: none is orphaned and none is linked but missing.</summary>
     [Fact]
@@ -38,7 +41,7 @@ public sealed class AppStylesheetsTests
         List<byte> joined = [];
         foreach (string path in CssText.AppCssPaths())
         {
-            joined.AddRange(File.ReadAllBytes(path));
+            joined.AddRange(File.ReadAllBytes(path).Where(static value => value != (byte)'\r'));
         }
 
         string hash = Convert.ToHexStringLower(SHA256.HashData([.. joined]));
