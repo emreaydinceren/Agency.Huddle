@@ -68,7 +68,7 @@ a MudBlazor example won't warn you about:
   in the header comment of [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor).
 - **Scoped CSS can't reach inside a MudBlazor component.** `::deep` only
   matches under an HTML element written in your own markup, and a `MudDrawer` or
-  `MudLayout` is a component, not one. Such rules go in `app.css`; see the
+  `MudLayout` is a component, not one. Such rules go in `wwwroot/css/02-shell.css`; see the
   comment above `.mud-drawer-content` there.
 - **bUnit needs the real popover and dialog hosts.** `MudSelect` items appear
   only after a real click, and a `MudDialog` renders nothing on its own. Render

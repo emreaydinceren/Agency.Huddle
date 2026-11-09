@@ -279,14 +279,14 @@ id or a snapshot: an open dialog ignores new parameters.
 | `ThemeDefaults`, `ThemeCatalog`, `SkinLoader`, `AccentPalette` | `Themes/`, `Themes/Skins/` | The px type scale (`WithSharedTypography`), the Theme list built from the skin files, skin loading and customization, accent contrast clamping |
 | `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
 | `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
-| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `app.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 40% over Surface, letters 75% toward `TextPrimary`. Dark: 40% over Surface, letters 75% toward white |
+| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `wwwroot/css/02-shell.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 40% over Surface, letters 75% toward `TextPrimary`. Dark: 40% over Surface, letters 75% toward white |
 | `LibraryPathDisplay` | `Components/Library/LibraryPathDisplay.cs` | `Shorten(fullPath)`: a path middle-truncated to its root and first folder, an ellipsis and the file; the full path goes in a tooltip |
 | `TaskPresence` | `Tasks/TaskPresence.cs` | `For`: an assignee's `PresenceState`, for `PresenceCue` |
 
 ### Stylesheet classes
 
-`wwwroot/app.css` is ordered by feature, each with a comment heading; search it for the
-feature's name. Reuse these before writing a rule:
+`wwwroot/css/` holds the global stylesheet as 16 files in link order (`AppStylesheets.All`, `01-base.css` to `16-traits.css`), each ordered by feature with a comment heading; search the folder for the
+feature's name. A new rule goes in the file of the feature it styles, after the rules it overrides. Reuse these before writing a rule:
 
 | Class | Does |
 | --- | --- |
@@ -350,7 +350,7 @@ Browser-side code lives in `wwwroot/` and is loaded once from `Components/App.ra
 | `app.js` | Resize handles, clipboard, CodeMirror and the other shared browser code |
 | `task-list-resize.js` | Drag-to-resize columns on any `.task-list-grid`. A drag trades width between the two columns beside the border, so the table keeps its width; neither goes below 56px or its content. `TaskListView` registers through `window.taskListResize.register`, and a finished drag calls its `[JSInvokable] OnColumnsResized`, which saves the widths to `TaskView.ColumnWidths`. Each handle is focusable (`tabindex="0"`, an `aria-label` naming its column); Left and Right move the border 16px, Shift 64px, and each press is saved, like `T7a` |
 
-Many rules in `app.css` are pinned by tests (`ThemeSourceTests`, `AppStylesheetTests`, the
+Many rules in `wwwroot/css/` are pinned by tests (`ThemeSourceTests`, `AppStylesheetTests`, the
 `AppCss*Tests` in `tests/Huddle.Tests.Shell/Ui/`, and source tests per feature). If a CSS
 change fails a test, read the test's summary before changing it: it records why the rule
 exists.
@@ -371,7 +371,7 @@ the catalog above.
 | Shared components | `src/Huddle.App/Components/Shared/` |
 | A feature's components | `src/Huddle.App/Components/{Tasks, Teams, Library, Settings, Search, References, NeedsYou}/` |
 | Themes and typography defaults | `src/Huddle.App/Themes/` |
-| Global stylesheet | `src/Huddle.App/wwwroot/app.css` (and `app-vars.css` for `--font-mono`) |
+| Global stylesheet | `src/Huddle.App/wwwroot/css/*.css` (and `app-vars.css` for `--font-mono`) |
 | A component's own styles | `ComponentName.razor.css` beside it |
 | Browser-side code (resize handles, clipboard, CodeMirror) | `src/Huddle.App/wwwroot/app.js`; List column resizing in `task-list-resize.js` (see [Browser scripts](#browser-scripts)) |
 | Component tests (bUnit) | The feature test project for the component's feature, `tests/Huddle.Tests.<Feature>/` (see *Where a test goes* in `agents/Testing.md`) |

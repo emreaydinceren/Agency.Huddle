@@ -1,0 +1,326 @@
+/* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
+
+/* The Appearance tab's theme picker (audit B9b-d). The list grows to its content (no inner scrollbar, no sticky band),
+   so the page scrolls and the Human sees every Theme. The selected row wears the global Selected shape. A row carries
+   a swatch of the Theme's Ground, Ink and Accent. */
+.theme-picker {
+    padding: 0;
+}
+
+.theme-picker .mud-list-item {
+    min-height: 32px;
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.theme-picker .mud-list-item-text,
+.theme-picker .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+}
+
+.theme-swatch {
+    display: inline-flex;
+    flex: none;
+    margin-inline-end: 12px;
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    overflow: hidden;
+}
+
+.theme-swatch-chip {
+    display: block;
+    width: 14px;
+    height: 16px;
+}
+
+.theme-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.theme-credit {
+    margin: 0;
+    max-width: 75ch;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.theme-licences > summary {
+    cursor: pointer;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
+}
+
+.prompts-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ink-rule);
+}
+
+.prompts-field-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prompts-field-label {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.prompts-field-placeholders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* A {{token}} is a quiet tag chip in the mono face at 12px. */
+.prompts-field-placeholder {
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+.prompts-field-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Settings panel header: the intro and the "stored at" line (UX-012, UX-R17). */
+.settings-intro,
+.settings-stored-at {
+    margin: 0 0 8px 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The intro is body text (14px); the path line is meta (12px) with the path in the mono face. */
+.settings-intro {
+    max-width: 75ch;
+    font-size: var(--mud-typography-body1-size);
+}
+
+.settings-stored-at {
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* The open section's title over its intro: every Theme's mockup opens a Settings section with one (side-by-side audit,
+   2026-10-30, LL-S01). */
+.settings-section-title.mud-typography {
+    margin: 0 0 4px 0;
+    font-weight: 600;
+}
+
+/* A sub-section of a tab sits one level under the tab title (#473): 14px at 600, the Prompts groups too, whose shared
+   heading rule would otherwise draw them at the title's 16px. */
+.settings-section .prompts-group-heading {
+    font-size: var(--mud-typography-subtitle1-size);
+}
+
+.settings-stored-at code {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). The cap is the
+   200px section menu, its 24px gap and the 960px reading column the panels had before the menu moved left. */
+.mud-container.settings-page {
+    max-width: 1184px;
+}
+
+/* Two columns: the section menu (G2) and the active section (G3). minmax(0, 1fr) lets a wide table scroll inside
+   its panel instead of pushing the page sideways. */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+/* The menu stays in view while a long section (Prompts) scrolls. */
+.settings-nav {
+    position: sticky;
+    top: 0;
+}
+
+.settings-nav .mud-nav-link {
+    min-height: var(--nav-row-height);
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    padding-block: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.settings-nav .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The active section takes the sidebar's Selected treatment: Primary 14% over Surface, 20% when hovered, with the
+   accent-text mix on the label and icon. Keyed to the page's own class, not NavLink's "active", because the route
+   segment decides the section and /settings alone still means Profile. */
+.settings-nav .settings-nav-item-active .mud-nav-link {
+    color: var(--hu-current-foreground);
+    background-color: var(--hu-current-background);
+    font-weight: var(--hu-current-weight);
+    box-shadow: var(--hu-current-shadow);
+}
+
+.settings-nav .settings-nav-item-active .mud-nav-link:hover,
+.settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+.settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--hu-current-icon);
+}
+
+/* A Library Root's last cell keeps "Read only" beside its Hide switch, on one line, so every row is one height and the
+   switches share a column at the cell's right edge (#480). */
+.library-panel-roots-table td:last-child {
+    white-space: nowrap;
+    text-align: end;
+}
+
+.library-panel-switch-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.library-panel-roots-table .library-panel-hide-switch {
+    margin-inline-end: 0;
+}
+
+/* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
+.library-panel-add-row {
+    align-items: center;
+}
+
+.library-panel-add-row .mud-input-control {
+    height: 28px;
+    margin-top: 0;
+}
+
+.library-panel-add-row .mud-input.mud-input-outlined .mud-input-root.mud-input-root-outlined {
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.library-panel-add-row .mud-button-root {
+    height: 28px;
+}
+
+/* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
+.skills-grid .skills-name {
+    font-weight: 500;
+}
+
+/* The grid fits its panel (#474): fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
+   sideways at the standard desktop width; the description stops at two lines (its full text is the cell's tooltip). */
+.skills-grid table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.skills-grid th:nth-child(2),
+.skills-grid td:nth-child(2) {
+    width: 20%;
+}
+
+.skills-grid th:nth-child(3),
+.skills-grid td:nth-child(3) {
+    width: 22%;
+}
+
+.skills-grid th:nth-child(4),
+.skills-grid td:nth-child(4) {
+    width: 14%;
+}
+
+.skills-grid th:nth-child(5),
+.skills-grid td:nth-child(5) {
+    width: 48px;
+}
+
+.skills-grid .skills-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+/* A phone has no room for two columns: the menu sits above the section and stops sticking. */
+@media (max-width: 600px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-nav {
+        position: static;
+    }
+}
+
+/* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */
+.settings-prompts-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: 8px 0;
+    background: var(--hu-ground-page);
+}
+
+/* The Spending panel (issue 356): a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
+.spending-row,
+.spending-total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ink-rule);
+}
+
+.spending-row-name,
+.spending-total-label {
+    flex: 1 1 12rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.spending-total {
+    border-bottom: 0;
+    font-weight: 600;
+}
+
+.spending-row-amount,
+.spending-total-amount,
+.spending-helper-calls {
+    font-variant-numeric: tabular-nums;
+}
+
+.spending-helper-calls {
+    color: var(--mud-palette-text-secondary);
+}
+
+.spending-overlap-note {
+    margin: 8px 0;
+    max-width: 75ch;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+

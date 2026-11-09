@@ -317,7 +317,7 @@ through `CountAtLeast`).
 | Helper | File | Use it when |
 | --- | --- | --- |
 | `RepoPaths` | `RepoPaths.cs` | Reading a file in this checkout. `Root`, `Combine(...)`, `Src(...)` (under `src`), `App(...)` (under `src/Huddle.App`), and `Data(...)` (relative to the calling source file). A missing path names the start folder. |
-| `CssText.AppCss` | `Css/CssText.cs` | Reading `app.css`. The default `CssNewlines.Lf` removes the dependence on the checkout's line endings. Use `AsIs` only when the test asserts line endings. `CssText.Read(path, newlines)` reads any other stylesheet. |
+| `CssText.AppCss` | `Css/CssText.cs` | Reading the app stylesheets in `wwwroot/css/`, joined in `AppStylesheets.All` order (`CssText.AppCssPaths()` lists the files for a test that needs them one by one). The default `CssNewlines.Lf` removes the dependence on the checkout's line endings. Use `AsIs` only when the test asserts line endings. `CssText.Read(path, newlines)` reads any other stylesheet. |
 | `CssText.RuleBody` | `Css/CssText.cs` | Reading one rule body by selector. `RuleMatch.First` is the default, `Last` is the rule that wins the cascade, and `All` merges every definition. The match is anchored to a line start. |
 | `CssText.RuleBodyLoose`, `CssText.RuleBodyInList` | `Css/CssText.cs` | A selector that may have different whitespace, or a comma-list selector. These match mid-line on purpose. |
 | `CssText.StripComments`, `Section`, `CollapseWhitespace`, `CountOccurrences` | `Css/CssText.cs` | Removing comments, slicing between two headers, collapsing whitespace and counting a needle. `Section` callers that disagree on the end marker keep their own. |

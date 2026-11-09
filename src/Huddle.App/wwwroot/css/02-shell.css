@@ -1,0 +1,1527 @@
+/* ---- New chat and the agent status dots ------------------------------------------------------ */
+
+/* The picker floats under the link or the Team row like Invite's panel (audit B10 "New chat"): the .floating-panel Edge and
+   elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
+.new-chat {
+    position: relative;
+    anchor-name: --new-chat;
+}
+
+/* Fixed, not absolute (#465): the link sits at the end of a long Room list inside a scrolling folder, and an absolute panel was
+   clipped by that folder and pushed below the window. A fixed panel is clipped by neither. It hangs from the link by anchor
+   positioning (8px in from each side, the link's width) and flips above it when the window has no room below. A browser
+   without anchor positioning keeps the absolute panel under the link, as before. */
+.new-chat-panel {
+    position: absolute;
+    inset-inline: 8px;
+    top: 100%;
+    z-index: var(--mud-zindex-popover);
+    padding: 8px;
+    background: var(--mud-palette-surface);
+    font-size: var(--mud-typography-body2-size);
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+}
+
+@supports (position-anchor: --new-chat) {
+    .new-chat-panel {
+        position: fixed;
+        position-anchor: --new-chat;
+        inset-inline: auto;
+        left: calc(anchor(left) + 8px);
+        width: calc(anchor-size(width) - 16px);
+        top: anchor(bottom);
+        position-try-fallbacks: flip-block;
+    }
+}
+
+.new-chat-heading {
+    padding: 0 4px 4px;
+}
+
+.new-chat-agents {
+    max-height: 16rem;
+    margin: 0 0 8px 0;
+    overflow-y: auto;
+}
+
+.new-chat-agent .mud-checkbox {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.new-chat-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
+   A circle in the state's tone that carries a glyph, so the state is never colour alone: a green circle with a white
+   check (online), an amber circle with a pulse line that breathes (starting), a blue circle with the same pulse
+   (awake: amber means needs attention, a running Turn does not), a red circle with a white dash
+   (degraded) and a hollow grey ring (offline, asleep). The four filled tones are the palette colour mixed 20% toward
+   black, so the white glyph keeps 3:1 against the fill in Huddle Light and Huddle Dark (a test holds it). 10px on avatars
+   up to 32px and standalone, 12px on 40px and up. Standalone it is the inline dot beside a name; on an avatar
+   (.on-avatar, inside .presence-anchor) it sits on the bottom-right rim, ringed in 2px of Surface. */
+.agent-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--mud-palette-surface);
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary);
+}
+
+.agent-dot.online {
+    background: color-mix(in srgb, var(--mud-palette-success) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
+.agent-dot.awake {
+    background: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
+.agent-dot.starting {
+    background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
+.agent-dot.degraded {
+    background: color-mix(in srgb, var(--mud-palette-error) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
+/* The glyph is a mask painted white over the tone, drawn on ::after. The Task card's MudBadge
+   (.task-card-presence) takes the same shapes from the same presence-glyph-* classes. The ring has no mark. */
+.agent-dot.presence-glyph-check::after,
+.agent-dot.presence-glyph-pulse::after,
+.agent-dot.presence-glyph-dash::after,
+.task-card-presence.presence-glyph-check .mud-badge::after,
+.task-card-presence.presence-glyph-pulse .mud-badge::after,
+.task-card-presence.presence-glyph-dash .mud-badge::after {
+    content: "";
+    width: 100%;
+    height: 100%;
+    background: var(--mud-palette-white);
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
+.agent-dot.presence-glyph-check::after,
+.task-card-presence.presence-glyph-check .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.4 5.2 L4.2 7 L7.6 3.2' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.agent-dot.presence-glyph-pulse::after,
+.task-card-presence.presence-glyph-pulse .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.2 5 H3 L4.1 2.6 L5.9 7.4 L7 5 H8.8' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.agent-dot.presence-glyph-dash::after,
+.task-card-presence.presence-glyph-dash .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.6 5 H7.4' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* A gentle pulse for a state in flux: the badge breathes between full and about half opacity. Static when the
+   viewer asks for reduced motion. */
+@keyframes presence-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.agent-dot.presence-glyph-pulse,
+.task-card-presence.presence-glyph-pulse .mud-badge {
+    animation: presence-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agent-dot.presence-glyph-pulse,
+    .task-card-presence.presence-glyph-pulse .mud-badge {
+        animation: none;
+    }
+}
+
+.presence-anchor {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    vertical-align: middle;
+}
+
+.agent-dot.on-avatar {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    box-shadow: 0 0 0 2px var(--hu-ring);
+}
+
+/* The cut-out ring is the token --hu-ring (app-vars.css, Surface by default); a Theme or style pack sets the token
+   on a region to match the ground the avatar sits on, and never the box-shadow, so the hollow ring below survives. */
+.agent-dot.on-avatar.presence-glyph-ring {
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--hu-ring);
+}
+
+/* The ring is the ground the avatar sits on: the sidebar's in the left drawer, the page's in a Room. Both grounds
+   default to Surface, the ring's own default, so this changes nothing until a skin gives a region its own ground. */
+.shell-nav {
+    --hu-ring: var(--hu-ground-sidebar);
+}
+
+.message-list,
+.room-header {
+    --hu-ring: var(--hu-ground-page);
+}
+
+/* 12px on avatars 40px and up (Medium, Large); 10px on the 24px and 32px ones. */
+.presence-anchor:has(> .mud-avatar-medium, > .mud-avatar-large) > .agent-dot.on-avatar {
+    width: 12px;
+    height: 12px;
+}
+
+/* ---- Avatars (DS-6, C2) ---------------------------------------------------------------------------
+   Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px in the Transcript (.avatar-transcript),
+   40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter, held to the ADR-0056
+   scale: 11px at 24px and below (the 18px Team avatar on a Feed card is a Small avatar resized, so it gets 11px too),
+   13px at 32px (12.8px rounded up), 16px and 28.8px above. The declaration uses max() so it stays a computed size, not a literal one.
+   Monogram: the Agent's colour (AgentAvatar overrides --mud-palette-primary on the avatar itself; the Theme
+   accent when none is chosen) at 40% over Surface, with letters mixed 75% toward TextPrimary at weight 600. A Dark
+   Theme (MainLayout renders .theme-mode-dark) runs the colour at 40% over its Surface with letters mixed 75% toward
+   white: a deep fill, light letters. There is no per-colour black or white. AvatarColours mirrors both recipes in C#
+   so a test can prove the 4.5:1 contrast.
+   A text label may run to six characters. AgentAvatar adds .avatar-label-len-1, -4, -5 or -6 for a label of that many
+   text elements (2-3 keep the 40% size, no class). A single element (an emoji, one letter) grows to 55% of the
+   diameter so it fills the circle; the 24px avatar gets it too, since a one-element label stays one there. The rules
+   after the 72px diameter below shrink the letters
+   to 0.3, 0.24 and 0.2 of the diameter: an upper-case letter at weight 600 averages about 0.65em, so N of them fill
+   about 80% of the circle's width. Wide letters (W, M) can still reach the edge, where the circle clips them. These are the one place the 10px floor
+   does not hold (a 6-character label cannot fit a 32px circle at 10px), so they use a 7px floor instead. The 24px
+   avatar never gets a length class: AgentAvatar draws only the first three text elements of a label there. */
+.mud-avatar.mud-avatar-small {
+    font-size: max(11px, calc(24px * 0.4));
+}
+
+.mud-avatar.avatar-transcript {
+    width: 32px;
+    height: 32px;
+    font-size: max(13px, calc(32px * 0.4));
+}
+
+/* The Teams icon in the Feed's Team select. The dropdown renders in the popover provider, outside the page, so a rule scoped to the page never reaches it. */
+.feed-team-icon {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Huddle's own mark in the Transcript (ADR-0065): a Message Huddle wrote itself has no Agent, so it wears the outlined
+   tile the Feed draws for Huddle, at the Transcript's 32px. */
+.huddle-mark {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--ink-edge);
+    border-radius: 50%;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-avatar.mud-avatar-medium {
+    font-size: max(10px, calc(40px * 0.4));
+}
+
+.mud-avatar.mud-avatar-large {
+    width: 72px;
+    height: 72px;
+    font-size: max(10px, calc(72px * 0.4));
+}
+
+.mud-avatar.mud-avatar-small.avatar-label-len-1 {
+    font-size: max(10px, calc(24px * 0.55));
+}
+
+.mud-avatar.avatar-transcript.avatar-label-len-1 {
+    font-size: max(10px, calc(32px * 0.55));
+}
+
+.mud-avatar.mud-avatar-medium.avatar-label-len-1 {
+    font-size: max(10px, calc(40px * 0.55));
+}
+
+.mud-avatar.mud-avatar-large.avatar-label-len-1 {
+    font-size: max(10px, calc(72px * 0.55));
+}
+
+.mud-avatar.avatar-transcript.avatar-label-len-4 {
+    font-size: max(7px, calc(32px * 0.3));
+}
+
+.mud-avatar.avatar-transcript.avatar-label-len-5 {
+    font-size: max(7px, calc(32px * 0.24));
+    letter-spacing: -0.02em;
+}
+
+.mud-avatar.avatar-transcript.avatar-label-len-6 {
+    font-size: max(7px, calc(32px * 0.2));
+    letter-spacing: -0.02em;
+}
+
+.mud-avatar.mud-avatar-medium.avatar-label-len-4 {
+    font-size: max(7px, calc(40px * 0.3));
+}
+
+.mud-avatar.mud-avatar-medium.avatar-label-len-5 {
+    font-size: max(7px, calc(40px * 0.24));
+    letter-spacing: -0.02em;
+}
+
+.mud-avatar.mud-avatar-medium.avatar-label-len-6 {
+    font-size: max(7px, calc(40px * 0.2));
+    letter-spacing: -0.02em;
+}
+
+.mud-avatar.mud-avatar-large.avatar-label-len-4 {
+    font-size: max(7px, calc(72px * 0.3));
+}
+
+.mud-avatar.mud-avatar-large.avatar-label-len-5 {
+    font-size: max(7px, calc(72px * 0.24));
+    letter-spacing: -0.02em;
+}
+
+.mud-avatar.mud-avatar-large.avatar-label-len-6 {
+    font-size: max(7px, calc(72px * 0.2));
+    letter-spacing: -0.02em;
+}
+
+/* The ring is the fill a few shades on: mixed 20% toward TextPrimary in a Light Theme (darker), toward white in a Dark
+   one (lighter), so the edge reads as the avatar's own colour rather than a grey hairline. It is an inset shadow, so it
+   follows the circle and a Team's rounded square alike and never changes the diameter. */
+.mud-avatar.mud-avatar-filled.avatar-monogram {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
+    font-weight: 600;
+}
+
+:root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-surface)), var(--mud-palette-white) 20%);
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
+}
+
+/* A Team's face is a rounded square, so a Team never reads as a person (ADR-0069). TeamAvatar asks AgentAvatar for it.
+   Two classes, so it beats MudBlazor's single-class .mud-avatar { border-radius: 50% } whatever the sheet order. */
+.mud-avatar.avatar-square {
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The avatar editor's emoji picker (the vendored <emoji-picker> in lib/emoji-picker). Its colours are the Theme's: every
+   colour variable the element reads is mapped to a MudBlazor palette variable or a skin token built from one, which is
+   already swapped for a Dark Theme, so no per-mode rule is needed here. emoji-picker.js also gives the element a light or dark class so its form controls
+   and scrollbars follow the Theme. The popover is the picker's own frame, with no padding of its own. */
+.avatar-emoji-popover {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+emoji-picker {
+    /* The picker sizes itself from this height (its default is 400px). The cap keeps it inside a short window, with room for
+       the popover to sit above or below the field. */
+    height: min(400px, 45vh);
+    --background: var(--mud-palette-surface);
+    --border-color: var(--ink-edge);
+    --border-radius: var(--mud-default-borderradius);
+    --input-border-color: var(--hu-line-control);
+    --input-font-color: var(--mud-palette-text-primary);
+    --input-placeholder-color: var(--mud-palette-text-secondary);
+    --category-font-color: var(--mud-palette-text-secondary);
+    --indicator-color: var(--mud-palette-primary);
+    --outline-color: var(--mud-palette-text-primary);
+    --button-hover-background: var(--hu-hover);
+    --button-active-background: var(--hu-hover);
+}
+
+/* A Team's rounded square leads its row in the sidebar's Teams list, 8px before the name. */
+.teams-nav-host .mud-avatar.teams-nav-avatar {
+    margin-inline-end: 8px;
+    vertical-align: middle;
+}
+
+/* The Team Room's header avatar sits beside the title, which is 8px away already. */
+.room-header .mud-avatar.room-team-avatar {
+    flex: none;
+}
+
+/* A picture or illustration is the same circle with a 1px inner hairline in Divider, drawn over the image. */
+.mud-avatar.avatar-image {
+    position: relative;
+}
+
+.mud-avatar.avatar-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--ink-edge);
+    pointer-events: none;
+}
+
+/* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the CV11 radius rule does not allow. */
+.mud-avatar.avatar-square.avatar-image::after {
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* Empty state (change list C7): a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
+   Inline it sits centred in its block; full-pane (.empty-state-centered) fills the pane and rests a third of the
+   way down, the two flex spacers splitting the free height 1:2. */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-inline: auto;
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.empty-state .mud-icon-root.empty-state-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.empty-state .empty-state-title {
+    color: var(--mud-palette-text-primary);
+}
+
+.empty-state .empty-state-text {
+    max-width: 45ch;
+}
+
+/* Balance the lines, inline or full-pane, so a short sentence never leaves one orphaned word on the last (#476). */
+.empty-state-text {
+    text-wrap: balance;
+}
+
+.tab-empty.empty-state-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    height: 100%;
+    box-sizing: border-box;
+    justify-content: flex-start;
+}
+
+.empty-state-centered::before,
+.empty-state-centered::after {
+    content: "";
+    display: block;
+}
+
+.empty-state-centered::before {
+    flex: 1 1 0;
+}
+
+.empty-state-centered::after {
+    flex: 2 1 0;
+}
+
+/* ---- The main column and the page under the tab strip ----------------------------------------- */
+
+/* MudMainContent reserves padding-top for the TopBar's MudAppBar, and the fixed-height column below
+   sits inside that padding (border-box), so the panes fill exactly what is left of the window. */
+.main-column {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* The Room's own column fills .main-column (h-100) and holds the header, the .message-list, any cards
+   and the composer. A flex item's min-height defaults to auto, which refuses to shrink below its
+   content, so once the Transcript was taller than the window the column simply grew past it and
+   .main-column clipped the top: .message-list never got a bounded height, never scrolled, and the
+   header and every earlier Message were unreachable. min-height: 0 lets the column be the window's
+   height, so .message-list shrinks and scrolls and the composer stays on screen. */
+.room-column {
+    min-height: 0;
+}
+
+/* The Room header (audit B1): a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
+   strip, as on every other page. This wrapper supplies the 16px above the row; the Chrome line under the header comes
+   from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
+.room-header {
+    padding-top: 16px;
+}
+
+.room-header .page-header {
+    margin-bottom: 0;
+}
+
+/* The Room's title never gets less width than its longest word (#466): the page header lets the h1 break anywhere and shrink to
+   nothing, which drew "Launch crew" a letter a line when the Workspace was narrow. Here the h1 only breaks inside a word that is
+   itself wider than the row, and the members and Invite drop to a line of their own, at the right, before the title gives way. */
+.room-header .page-header-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.room-header .page-header-h1.mud-typography {
+    overflow-wrap: break-word;
+}
+
+.room-header .page-header-actions {
+    margin-inline-start: auto;
+}
+
+/* The Room's title is the h6 role at 600 in every Theme: each Theme's mockup sets it at 15-18px semibold, and the page
+   h5 it inherited (20px) was the outlier (side-by-side audit, 2026-10-30, LL-C01, FL-06, CL-03). */
+.room-header .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    font-weight: 600;
+}
+
+/* Rename and Copy link are revealed on hover or focus, like a card's ⋮: they stay in the DOM and the tab order, and
+   show at once on a device with no hover. */
+.room-header .page-header-title .mud-icon-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.room-header .page-header-title:hover .mud-icon-button,
+.room-header .page-header-title:focus-within .mud-icon-button {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .room-header .page-header-title .mud-icon-button {
+        opacity: 1;
+    }
+}
+
+/* The Room's kind ("Group", "1:1", "Team") beside its title is for a style pack that draws it as a chip (ADR-0057);
+   every Theme without one leaves the member count to say it. */
+.room-kind-chip {
+    display: none;
+}
+
+/* The Top bar's "N Tasks need you" pill: every Theme's mockup shows it, so it is drawn in the needs hue unless a surface
+   trait below draws it its own way (paper, hairline). It used to be hidden for the flat surface, which left Fluent and
+   Cobalt Soft without it (side-by-side audit, 2026-10-30, FL-05 and CL-02). */
+.tasks-need-you-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    margin-inline-end: 4px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.12s;
+}
+
+.tasks-need-you-pill:hover {
+    border-color: var(--hu-needs);
+}
+
+.tasks-need-you-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hu-needs);
+}
+
+/* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
+   shrink below its content so a wide page scrolls inside its own pane. The unfocused pane
+   dims its active Tabs accent so it is plain which pane keyboard shortcuts and links act on. */
+.tab-groups {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+}
+
+.tab-group {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-group + .tab-group {
+    border-left: 1px solid var(--hu-line-region);
+}
+
+.tab-group:not(.focused) .tab-item.active {
+    box-shadow: inset 0 2px 0 var(--mud-palette-lines-default);
+}
+
+/* The page under the tab strip. .main-column is a fixed-height column, so the strip takes its own
+   height and this fills the rest; min-height: 0 lets a page's own scrolling regions shrink, as
+   .room-column does above. */
+.tab-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+/* h-100 on the Room's column no longer resolves: its parent is now a flex item, not .main-column
+   itself, and a percentage height against an auto-sized flex item falls back to the content height
+   (the column stopped at 400 px of 840 with the composer floating mid-page). Flexing it explicitly
+   gives the same full-height column. */
+.tab-body > .room-column {
+    flex: 1 1 0;
+}
+
+.tab-empty,
+.library-empty-pane {
+    padding: 32px;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The TopBar: a fixed MudAppBar across the whole window, above the drawer (ClipMode Always) and every
+   pane. The doubled class outranks MudBlazor's own .mud-appbar rule regardless of stylesheet order.
+   It sits on the one surface, and its bottom border matches the splitter between two panes
+   (.tab-group + .tab-group), so the chrome reads as one frame. Three grid cells -
+   the trail, then room for a search box and for toolbar buttons - keep the trail in place whether or
+   not the other two have content. */
+.mud-appbar.top-bar {
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--hu-ground-page);
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+.top-bar-grid {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 32rem) minmax(max-content, 1fr);
+    align-items: center;
+    column-gap: 16px;
+    width: 100%;
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* The trail starts at the window's left edge, inside the toolbar's own 16px gutter, so the whole start cell is
+   room for crumbs and the strip above the sidebar is not left empty. The centre cell keeps its 32rem. */
+.top-bar-start {
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
+   the cell would otherwise reserve, so a crumb wraps only when the whole window is out of room. */
+.top-bar-grid:has(.top-bar-center:empty) {
+    grid-template-columns: minmax(0, 1fr) 0 auto;
+}
+
+.top-bar-start .page-breadcrumbs {
+    white-space: nowrap;
+}
+
+.top-bar-start .mud-breadcrumbs {
+    flex-wrap: nowrap;
+}
+
+.top-bar-end {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+}
+
+/* The top bar's icon buttons are 32px boxes with 18px icons (audit B3d), level with the search box and the Activity bar's tiles. */
+.top-bar-end .mud-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.top-bar-end .mud-icon-button .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
+    padding: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* MudBlazor draws the separator as body text at 38% opacity (2.4:1 on Huddle Light); it is supporting text,
+   so it takes the secondary colour at full strength. MudBlazor pads it 12px a side; the trail keeps 8px. */
+.page-breadcrumbs .mud-breadcrumb-separator {
+    padding-inline: 8px;
+}
+
+.page-breadcrumbs .mud-breadcrumb-separator > span {
+    color: var(--mud-palette-text-secondary);
+    opacity: 1;
+}
+
+.page-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-crumb .mud-icon-root {
+    font-size: var(--mud-typography-body1-size);
+}
+
+.page-crumb-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.page-crumb-link:hover {
+    color: var(--mud-palette-text-primary);
+    text-decoration: underline;
+}
+
+.page-crumb[aria-current="page"] {
+    color: var(--mud-palette-text-primary);
+}
+
+/* NavTabLink's wrapper takes no part in layout, so a link keeps the box it had as a direct child of
+   its row. Clicks still bubble through a display: contents element. */
+.nav-tab-link {
+    display: contents;
+}
+
+/* ---- The drawer, and pinning Settings to the bottom of it ------------------------------------
+   The drawer's children - NewChat, RoomList and the two MudNavMenus - are a plain vertical flow
+   with no flex container of their own, so pushing Settings to the bottom means making the drawer's
+   own scrolling content element a column flex box. MudBlazor already renders one at
+   .mud-drawer-content (confirmed against the installed 9.10.0 package's MudBlazor.min.css).
+
+   These two rules live HERE and not in MainLayout.razor.css, which is where MainLayout's other
+   styles are, and the reason is the one traps.md records for ReconnectModal.razor.css: a scoped
+   stylesheet that never matches fails silently. Blazor's CSS isolation stamps its [b-xxxxx]
+   attribute only onto HTML elements written in the component's own markup, and MainLayout.razor
+   contains exactly one - <div id="blazor-error-ui">, which is not an ancestor of the drawer.
+   Everything between them (MudLayout, MudDrawer) is a child COMPONENT, so "::deep
+   .mud-drawer-content" would compile to "[b-xxxxx] .mud-drawer-content" with no scoped ancestor to
+   match, and the pinning would simply never apply. Nothing in the test suite renders a browser, so
+   no test could have caught that. app.css is global and has no such trap. */
+.mud-drawer-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.nav-settings {
+    margin-top: auto;
+}
+
+/* ---- The Activity bar (S5) and the Sidebar's views (S2) --------------------------------------
+   The left drawer (.shell-nav) lays its two children side by side: the 48px Activity bar, then the Sidebar,
+   whose views stack as the whole drawer did before. Global for the reason given above: both sit inside
+   child components. The buttons take the secondary text colour; the selected one wears the Selected treatment
+   below. */
+.shell-nav .mud-drawer-content {
+    flex-direction: row;
+}
+
+.activity-bar {
+    display: flex;
+    flex: 0 0 48px;
+    flex-direction: column;
+    width: 48px;
+    background-color: var(--hu-ground-rail);
+}
+
+.activity-bar-top,
+.activity-bar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-bar-bottom {
+    margin-top: auto;
+}
+
+/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape (audit A5). */
+.activity-bar-item.mud-icon-button {
+    width: 40px;
+    height: 40px;
+    margin: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The pressed button wears the active sidebar row's Selected treatment and shape (see the .mud-drawer .mud-navmenu rules
+   above): accent text, Primary 14% over Surface, 20% when hovered or focused. */
+.activity-bar-item.activity-bar-item-selected {
+    color: var(--hu-current-foreground);
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+}
+
+.activity-bar-item.activity-bar-item-selected:hover,
+.activity-bar-item.activity-bar-item-selected:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+/* The Team shortcuts (TeamShortcutBar.razor) are the same 40px tiles, each holding the Team's 32px avatar, above a
+   hairline that sets them apart from the view buttons. The selected one wears the Selected treatment above. */
+.activity-bar-shortcuts {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-bar-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    background: transparent;
+    cursor: pointer;
+}
+
+.activity-bar-shortcut:hover {
+    background-color: var(--hu-hover);
+}
+
+.activity-bar-shortcut.activity-bar-item-selected {
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+}
+
+.activity-bar-shortcut.activity-bar-item-selected:hover,
+.activity-bar-shortcut.activity-bar-item-selected:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+.activity-bar-divider {
+    width: 24px;
+    margin: 4px auto;
+    border: 0;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+/* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
+.activity-bar .nav-settings .mud-nav-link {
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    min-height: 40px;
+    margin: 4px;
+    padding: 0;
+}
+
+.activity-bar .nav-settings .mud-nav-link .mud-nav-link-text {
+    display: none;
+}
+
+/* The hairline between the bar and the Sidebar belongs to the Sidebar, so it goes when the Sidebar collapses and
+   never narrows the bar's 48px buttons. */
+.sidebar-views {
+    border-inline-start: 1px solid var(--hu-line-region);
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.sidebar-views[hidden],
+.sidebar-view[hidden] {
+    display: none;
+}
+
+/* A strip along the Sidebar's right (workspace-facing) edge: the 8px width is
+   the pointer target and the 2px line (::before) is what reads as draggable once it is hovered or focused. It is hidden
+   while the Sidebar is collapsed. While a drag runs the cursor stays ew-resize over whatever the pointer crosses, and
+   text is not selected. It sits inside the edge, not across it: the drawer scrolls (overflow auto), so a strip reaching
+   4px past it gave the whole navigation panel a permanent horizontal scrollbar. */
+.sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.sidebar-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 6px;
+    width: 2px;
+    height: 100%;
+    background-color: transparent;
+}
+
+.sidebar-resize-handle:hover::before,
+.sidebar-resize-handle:active::before,
+.sidebar-resize-handle:focus-visible::before {
+    background-color: var(--mud-palette-primary);
+}
+
+.sidebar-resize-handle:focus-visible {
+    outline: none;
+}
+
+/* The Right sidebar's handle sits on its left (workspace-facing) edge instead. */
+.sidebar-resize-handle.sidebar-resize-handle-start {
+    right: auto;
+    left: -4px;
+}
+
+body.sidebar-resizing {
+    cursor: ew-resize;
+    user-select: none;
+}
+
+/* ---- The Right sidebar (S4) -------------------------------------------------------------------
+   A persistent MudDrawer anchored at the end, so its hairline is on the side facing the workspace:
+   the .mud-drawer rule above draws the left sidebar's edge on the end side. Global for the same reason
+   as the two rules above - RightSidebar's only markup is a child component. Its blocks stack with the
+   16px step and scroll inside the drawer's own content element. */
+.mud-drawer.right-sidebar {
+    border-inline-end: none;
+    border-inline-start: 1px solid var(--hu-line-region);
+}
+
+/* The Right sidebar sits on the page ground, not the Left sidebar's (the doubled .mud-drawer above gives it that); the
+   tripled class outranks it. Both are Surface until a Theme sets the two ground tokens apart. */
+.mud-drawer.mud-drawer.right-sidebar {
+    background-color: var(--hu-ground-page);
+}
+
+.right-sidebar .mud-drawer-content {
+    gap: 0;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+/* Panels are told apart by an Edge line, not by a gap (B11f). */
+.sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-edge);
+}
+
+/* A panel header is 32px: a 13px/600 title in Ink, a 12px count in Quiet ink and the chevron (B11e). */
+.sidebar-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    cursor: pointer;
+    text-align: start;
+}
+
+.sidebar-panel-title {
+    flex: 1;
+}
+
+.sidebar-panel-count {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+}
+
+.sidebar-panel-body {
+    padding: 0 0 8px 0;
+}
+
+/* The Tags panel's tree: 28px rows, and each tag's label starts on one line whether or not its row has a chevron.
+   MudBlazor's button centres its text in a 64px minimum, which pushed short labels right (side-by-side audit,
+   2026-10-30, LL-L03). */
+.tags-tree .mud-treeview-item-content {
+    padding-block: 0;
+}
+
+.tags-tree .tags-tree-row.mud-button-root {
+    min-width: 0;
+    height: 28px;
+    justify-content: flex-start;
+    padding-inline: 4px;
+}
+
+/* A row is one line: 32px (28px in the Outline), the text in Ink and ellipsised, its full text in the title (B11a-b).
+   Accent ink marks only the hovered or focused row; the current Outline heading wears .selected-shape. */
+.sidebar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+}
+
+.sidebar-row.outline-row {
+    min-height: 28px;
+}
+
+.sidebar-row-text {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
+}
+
+.sidebar-row-text.sidebar-row-quiet {
+    color: var(--mud-palette-text-secondary);
+}
+
+.sidebar-row .mud-link.sidebar-row-text:hover,
+.sidebar-row .mud-link.sidebar-row-text:focus-visible,
+.sidebar-row .mud-link.sidebar-row-text.is-current {
+    color: var(--hu-accent-ink);
+}
+
+/* A Task row: the ID in 12px Quiet ink, a one-line title, then the state's dot (B11c). */
+.room-task-id {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Nothing to show: the sentence alone, so the empty text line takes no room. */
+.right-sidebar .empty-state-text:empty {
+    display: none;
+}
+
+/* A narrow window (#466): the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
+   left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
+   floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
+   the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
+@media (max-width: 1099px) {
+    .mud-layout.mud-drawer-open-persistent-right .mud-main-content.main-column {
+        margin-right: 0;
+    }
+
+    .mud-drawer.mud-drawer--open.right-sidebar {
+        box-shadow: var(--hu-shadow-panel);
+        max-width: calc(100vw - 48px);
+    }
+}
+
+/* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
+   A top-level left-menu row (Agents, Settings) is a MudNavLink with no MudNavGroup
+   ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
+   MudNavGroups ("Rooms" and "Tasks") render their own titles the exact same way, because a MudNavGroup's header
+   is itself a MudNavLink - and every room or view link nested inside them is a
+   plain MudNavLink too. So "belongs to the group" is what sets the row size (body2), at (0,2,0) via the
+   ".mud-nav-group" ancestor - naturally beating the section size's (0,1,0) regardless of source
+   order - and only the group's own header additionally gets the 600 weight, via the more specific
+   *direct*-child selector that a nested view link's ".mud-nav-link" never matches. */
+.mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-nav-group .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-nav-group > .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row (audit B3b), and sits 16px below the
+   section above and 4px above its first row (S2). Agents and Library are destinations, not headers: see .nav-row-link below. */
+.mud-nav-group > .mud-nav-link {
+    margin-top: 16px;
+    margin-bottom: 4px;
+    align-items: center;
+    height: var(--nav-row-height);
+    padding-block: 0;
+}
+
+/* The sidebar's two lines, set here and nowhere else (UX-015). Every row of the left sidebar, in every view, is
+   laid out on one grid: the selected pill is inset --nav-inset from the panel's sides; inside it, --nav-pad leads to a
+   24px slot, and every leading mark (a section icon, a row icon, an avatar, a Team's chevron, the "+", the "Show all"
+   arrow) is centred in that slot, whatever its own size. The label starts --nav-gap after the slot, so every label (a
+   section title, a name, "Show all", "New chat") starts on one x, and a row with no leading mark keeps the slot empty.
+   Trailing details (a count, a time, a section's collapse arrow) end --nav-end inside the pill's right edge.
+
+   A section header and its rows share the two lines: the header heads its list, it is not a level above it. Nesting
+   (a Team's Rooms and Projects) moves a row in by --nav-step, one slot and one gap, so a child's mark sits under its
+   parent's label and its label starts one step further in; set --nav-level on the row, never a padding of its own.
+   Every sidebar row is one height (UX-014, UX-017).
+
+   The proportions are VS Code's Explorer scaled to the 32px row: its 22px row puts a 16px twistie a few px in and the
+   label a few px after it, so here the slot is that twistie at 32/22 and the pad and gap stay a tight 4px. */
+:root {
+    --nav-row-height: 32px;
+    --icon-size-row: 18px;
+    --nav-inset: 4px;
+    --nav-pad: 4px;
+    --nav-slot: 24px;
+    --nav-gap: 4px;
+    --nav-step: calc(var(--nav-slot) + var(--nav-gap));
+    --nav-end: 8px;
+}
+
+/* Every link, header and action row of the left sidebar. The doubled class outranks MudBlazor's (0,4,0)
+   ".mud-nav-group * .mud-navmenu .mud-nav-item .mud-nav-link", which pads a nested link by 36px. */
+.sidebar-views.sidebar-views .mud-navmenu .mud-nav-link {
+    align-items: center;
+    min-height: var(--nav-row-height);
+    padding-block: 0;
+    padding-inline: calc(var(--nav-pad) + var(--nav-level, 0) * var(--nav-step)) var(--nav-end);
+}
+
+/* Every view starts its first row the same distance from the top, whether that row is a section header (Rooms,
+   Teams, Tasks), a destination (Agents, Library) or the Needs you card, so switching views moves nothing up or
+   down. A section after another in the same view is 16px below it; a hidden Needs you card does not count. */
+.sidebar-view {
+    padding-top: 16px;
+}
+
+.sidebar-views .mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+}
+
+.sidebar-view > :not([hidden]) ~ * .mud-nav-group > .mud-nav-link {
+    margin-top: 16px;
+}
+
+/* A row with a hover "..." keeps its label one step clear of the trailing line, where the button and any count sit. */
+.sidebar-views.sidebar-views .hover-reveal-link .mud-nav-link {
+    padding-inline-end: calc(var(--nav-end) + var(--nav-step));
+}
+
+/* The mark is centred in the slot: content-box padding makes up the difference between its own size and the
+   slot's, so an 18px row icon and a larger section icon share one centre. */
+.sidebar-views .mud-nav-link > .mud-nav-link-icon {
+    box-sizing: content-box;
+    flex: 0 0 auto;
+    margin: 0;
+    padding-inline: calc((var(--nav-slot) - 1em) / 2);
+}
+
+/* A row with no leading mark (a Team, "Show all" without its arrow) keeps the slot empty; a row whose mark sits
+   inside its label (a 1:1 Room's avatar, the Needs you reasons) draws the slot and gap itself. */
+.sidebar-views .mud-nav-link > .mud-nav-link-text {
+    margin-inline: var(--nav-step) 0;
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-icon + .mud-nav-link-text {
+    margin-inline-start: var(--nav-gap);
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar, > .needs-you-icons) {
+    margin-inline-start: 0;
+}
+
+/* A section's collapse arrow ends on the trailing line: the chevron glyph stops a quarter of its box short of the
+   edge, so the box gives that back. */
+.sidebar-views .mud-nav-link > .mud-nav-link-expand-icon {
+    margin-inline-end: -0.25em;
+}
+
+/* Trailing meta (a Team's member count) ends on the trailing line too. It sits over the link, not beside it, so the
+   link and its selected pill keep the full width; the hover "..." takes its place while the row is hovered or
+   focused, as it would otherwise cover it. */
+.hover-reveal-row .sidebar-row-meta {
+    position: absolute;
+    inset-inline-end: calc(var(--nav-inset) + var(--nav-end));
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+.hover-reveal-row:hover .sidebar-row-meta,
+.hover-reveal-row:focus-within .sidebar-row-meta,
+.hover-reveal-row:hover .needs-you-detail,
+.hover-reveal-row:focus-within .needs-you-detail {
+    opacity: 0;
+}
+
+/* On touch there is no hover, so the row's button is always shown (see "hover: none" below); the meta then ends
+   just before it, clear of the button, instead of giving way to it. */
+@media (hover: none) {
+    .hover-reveal-row .sidebar-row-meta {
+        inset-inline-end: calc(var(--nav-inset) + var(--nav-end) + var(--nav-step));
+    }
+
+    .hover-reveal-row:hover .sidebar-row-meta,
+    .hover-reveal-row:focus-within .sidebar-row-meta,
+    .hover-reveal-row:hover .needs-you-detail,
+    .hover-reveal-row:focus-within .needs-you-detail {
+        opacity: 1;
+    }
+}
+
+/* A top-level entry that is a single link (Agents, Library) is a destination, not a header: an ordinary row, 32px
+   high, with the 13px body-colour label and the 18px icon in the 24px slot of every other row. */
+.nav-row-link .mud-nav-link {
+    min-height: var(--nav-row-height);
+}
+
+.nav-row-link .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+/* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
+.nav-settings .mud-nav-link {
+    min-height: var(--nav-row-height);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.nav-settings .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
+}
+
+/* A 1:1 Room's avatar (32px, .avatar-transcript) fills the leading slot, where an icon would sit, and keeps the gap to
+   the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
+.room-row-avatar {
+    flex: 0 0 auto;
+    /* The avatar is 32px in a 24px slot (#475): it overhangs the slot by 4px a side, so its centre stays on the icon line and
+       the name starts where a group Room's name does. */
+    margin-inline: calc((var(--nav-slot) - 32px) / 2) calc((var(--nav-slot) - 32px) / 2 + var(--nav-gap));
+    vertical-align: middle;
+}
+
+.sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar) {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+/* Two lines at every sidebar width: the name, then the Agent's title muted below it. Each truncates with an ellipsis
+   rather than wrapping inside itself. */
+.room-row-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.room-row-text > .sidebar-row-label,
+.room-row-title {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-row-title {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Text actions in the sidebar ("New chat", "Build a team", "New view") are neutral: the accent is kept for the
+   selected row, links, the active mode and primary actions. Their "+" sits in the leading slot and their label on
+   the text line, like any row. */
+.nav-action-link,
+.nav-action-link .mud-nav-link-text,
+.nav-action-link .mud-nav-link-icon {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Page toolbars: tighten the gap between the "+" icon and label on action buttons. */
+.btn-action-tight .mud-button-icon-start {
+    margin-right: 2px;
+    margin-inline-end: 2px;
+}
+
+/* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
+   .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
+   the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the
+   DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
+   visible - only its opacity is gated on :hover/:focus-within, matching .agent-tile's own
+   interactive-surface shape below. */
+
+.hover-reveal-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.hover-reveal-row .hover-reveal-link {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.hover-reveal-row .hover-reveal-link .mud-nav-link {
+    padding-right: 32px;
+}
+
+.hover-reveal-row .hover-reveal-menu {
+    position: absolute;
+    right: 0.25rem;
+}
+
+.hover-reveal-row .hover-reveal-menu-button {
+    opacity: 0;
+    border-radius: var(--mud-default-borderradius);
+    transition: opacity 120ms ease;
+}
+
+.hover-reveal-row:hover .hover-reveal-menu-button,
+.hover-reveal-row:focus-within .hover-reveal-menu-button {
+    opacity: 1;
+}
+
+/* The Team a Room still names after the Team is gone (RoomNavRow's TeamLabel): muted, after the Room's name. */
+.room-team-label {
+    margin-left: 4px;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The Chats view's "Group by: All | Team" line: the label, then the segmented control, on the rows' left line (the pill's inset plus its padding). */
+.room-list-grouping {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-gap);
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad)) var(--nav-end);
+    margin-bottom: 4px;
+}
+
+/* Below the Needs you card the line sits 16px clear of it, like a section after a section; a hidden card does not count (see .sidebar-view above). */
+.sidebar-view > :not([hidden]) ~ .room-list .room-list-grouping {
+    margin-top: 16px;
+}
+
+.room-list-grouping-label {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.room-list-grouping .room-list-grouping-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* The rows inside a folder (Needs you, All, a Team) step in a quarter level (8px, not the 32px of a Team's rows in the Teams view): their mark sits just right of the folder's icon, as a child's does under its header in VS Code's tree. */
+.sidebar-views .room-list .room-folder .mud-collapse-container {
+    --nav-level: 0.25;
+}
+
+/* The Needs you folder already says it, so its rows carry no pill and the names keep the room. */
+.room-folder-needs-you .needs-you-pill {
+    display: none;
+}
+
+/* A Team folder is a section header with no gap above it: the folders stack as one list. */
+.sidebar-views .room-list .room-folder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* The "Needs you" pill on a waiting chat's row: a small tinted capsule after the name, never shrinking so the name takes the ellipsis. */
+.needs-you-pill {
+    flex: 0 0 auto;
+    margin-inline-start: 8px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-warning) 28%, transparent);
+}
+
+/* On a row that wears the pill the link text is a flex line: the name takes the ellipsis, and the pill and any avatar keep their size. */
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > .sidebar-row-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > :not(.sidebar-row-label) {
+    flex: 0 0 auto;
+}
+
+/* A 1:1 Room's name-and-title block gives way like the bare name does, so the pill keeps its size. */
+.sidebar-views .mud-nav-link-text:has(> .needs-you-pill) > .room-row-text {
+    flex: 0 1 auto;
+}
+
+/* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete (audit B10 "Inline confirm"). */
+.room-list-confirm-host {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.room-list-confirm {
+    align-items: center;
+    height: var(--nav-row-height);
+    padding-block: 0;
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step) + var(--nav-level, 0) * var(--nav-step)) var(--nav-end);
+}
+
+.flex-1-truncate {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- Archived chats dialog: one row per archived Room ---------------------------------------- */
+
+.archived-chats-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 4px;
+    font-size: var(--mud-typography-body2-size);
+    border-bottom: 1px solid var(--ink-rule);
+}
+
+/* The icon fills the 24px leading slot of a picker row (audit B10h); the name truncates; the date trails in Quiet ink. */
+.archived-chats-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.archived-chats-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.archived-chats-date {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.archived-chats-row:last-child {
+    border-bottom: none;
+}
+
+/* ---- Inviting an agent into the open room ----------------------------- */
+
+.invite-agent {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.invite-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.375rem);
+    min-width: 280px;
+    padding: 16px;
+    background: var(--hu-ground-raised);
+}
+
+/* The panel's title (audit C3a): "Invite to {Room}" in subtitle2, above the search and the rows. */
+.invite-title {
+    font-weight: 600;
+}
+
+.invite-agents {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.invite-agents li {
+    padding: 4px 0;
+}
+
+/* One Agent in the invite list. Not named .invite-agent: that is the header wrapper, and this width: 100% on it
+   took the whole members stack and squeezed "N members + you" to one word per line. */
+.invite-agent-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 32px;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: var(--mud-default-borderradius);
+    cursor: pointer;
+}
+
+/* MudButton centres its label; the list reads better flush left. */
+.invite-agent-option .mud-button-label {
+    justify-content: flex-start;
+}
+
+.invite-agent-option:hover {
+    background: var(--hu-hover);
+}
+
+.message-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+/* The Transcript is one column of about 760px, centred in a wider pane: the Agent's card and the Human's bubble sit
+   inside it, so a line of a reply is never longer than the reader can follow. */
+.message-list > * {
+    max-width: 760px;
+    margin-inline: auto;
+}
+

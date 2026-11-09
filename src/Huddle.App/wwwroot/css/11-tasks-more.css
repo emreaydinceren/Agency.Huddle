@@ -1,0 +1,253 @@
+/* ---- The Task List at narrower widths ------------------------------------------------------
+   An id never wraps; the Title takes whatever width is left and truncates to one line (the full
+   title is the cell's tooltip); the lowest-value columns drop out first as the window narrows. */
+.task-id,
+.task-list-id-cell {
+    white-space: nowrap;
+}
+
+/* The List's columns are resizable by task-list-resize.js: dragging the border after a column trades width between that
+   column and the one beside it, so the table keeps its width. Until then the table fills its container (min-width),
+   every column but Title has a default width (8rem; ID and the last column are narrower) that is wider than its content,
+   so each border has room to move - a column cannot be dragged below its content, and tight columns would leave a border
+   nothing to trade - and Title, the one flexible column, takes whatever is left. */
+.task-list-grid table {
+    min-width: 100%;
+}
+
+.task-list-grid thead th {
+    position: relative;
+}
+
+.task-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.task-col-resizer::after {
+    content: "";
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    right: 3px;
+    width: 1px;
+    background: var(--hu-line-region);
+}
+
+.task-col-resizer:hover::after,
+.task-col-resizer.active::after {
+    right: 2px;
+    width: 3px;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-primary);
+}
+
+/* S5: header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
+   Priority about 120px, the row menu 40px, Title the one flexible column. */
+.task-list-grid thead th {
+    width: 8rem;
+    white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* MudBlazor's dense rule ".mud-table-dense * .mud-table-row .mud-table-cell" sets 6px padding and its header cells a 14px/white label,
+   so these selectors carry the same weight. */
+.mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    padding: 0 8px 0 16px;
+    height: 36px;
+}
+
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .column-header,
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .sortable-column-header {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
+    height: 36px;
+    padding: 0 8px 0 16px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
+    height: 32px;
+}
+
+/* A group row (audit B4f, design-system "Tasks"): Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
+   assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
+.mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
+    background-color: var(--hu-list-group-background);
+    border-top: 1px solid var(--hu-list-row-line);
+}
+
+.task-group-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-group-count {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-list-grid thead th.task-list-id-cell {
+    width: 110px;
+}
+
+.task-list-grid thead th.task-list-priority-cell {
+    width: 120px;
+}
+
+.task-list-grid thead th:last-child {
+    width: 40px;
+}
+
+.mud-table.task-list-grid .mud-table-row .mud-table-cell:last-child {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.task-list-grid thead th.task-list-title-header {
+    width: auto;
+}
+
+.task-list-title-cell {
+    width: auto;
+    min-width: 12rem;
+    max-width: 0;
+    overflow: hidden;
+}
+
+.task-list-title-cell .task-list-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+@media (max-width: 1500px) {
+    .task-col-low-1 { display: none; }
+}
+
+@media (max-width: 1350px) {
+    .task-col-low-2 { display: none; }
+}
+
+@media (max-width: 1200px) {
+    .task-col-low-3 { display: none; }
+}
+
+.task-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+/* ---- Human gate section of the Task panel (TaskHumanGate) ---- */
+.task-human-gate {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-human-gate-header,
+.task-human-gate-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-human-gate-subheading {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-human-gate-lock {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-proof-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 16px 0;
+}
+
+.task-proof-heading {
+    font-weight: 500;
+}
+
+.task-proof-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-proof-mark-met {
+    color: var(--mud-palette-success);
+}
+
+.task-proof-mark-open,
+.task-proof-owner,
+.task-proof-detail {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Decision card of a gated Task (TaskDecisionCard) ---- */
+.task-decision-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-decision-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-decision-locked,
+.task-decision-review,
+.task-decision-trail {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-decision-stale,
+.task-decision-message {
+    color: var(--hu-tone-warning-ink);
+}
+
+@media (max-width: 600px) {
+    .team-page-wide .team-roster,
+    .team-page-wide .team-details,
+    .team-page-wide .team-tasks-tab {
+        padding-inline: 8px;
+    }
+}
+

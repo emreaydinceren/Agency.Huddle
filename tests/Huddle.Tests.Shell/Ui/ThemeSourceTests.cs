@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes.Skins;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -32,7 +33,7 @@ public sealed partial class ThemeSourceTests
     [Fact]
     public void AppCss_DeclaresNoColourLiteral()
     {
-        var hits = CssSource.FindColourLiterals(AppCssPath);
+        List<string> hits = AppCssPaths.SelectMany(static path => CssSource.FindColourLiterals(path).Select(hit => Path.GetFileName(path) + " " + hit)).ToList();
 
         Assert.Empty(hits);
     }
@@ -46,7 +47,7 @@ public sealed partial class ThemeSourceTests
     [Fact]
     public void AppCss_DeclaresNoFontFamilyLiteral()
     {
-        var hits = CssSource.FindFontFamilyLiterals(AppCssPath);
+        List<string> hits = AppCssPaths.SelectMany(static path => CssSource.FindFontFamilyLiterals(path).Select(hit => Path.GetFileName(path) + " " + hit)).ToList();
 
         Assert.Empty(hits);
     }
@@ -60,7 +61,7 @@ public sealed partial class ThemeSourceTests
     [Fact]
     public void AppCss_BracesBalance()
     {
-        string css = File.ReadAllText(AppCssPath);
+        string css = CssText.AppCss(CssNewlines.AsIs);
         int depth = 0;
         int lowest = 0;
 
@@ -102,7 +103,7 @@ public sealed partial class ThemeSourceTests
     [Fact]
     public void AppCss_UsesOnlyMudBlazorOrSkinTokens()
     {
-        var referenced = CssSource.ReadReferencedTokens(AppCssPath).Distinct(StringComparer.Ordinal);
+        IEnumerable<string> referenced = AppCssPaths.SelectMany(static path => CssSource.ReadReferencedTokens(path)).Distinct(StringComparer.Ordinal);
 
         var allowed = AllowedVariables;
         var undeclared = referenced.Where(token => !allowed.Contains(token)).ToList();
@@ -118,7 +119,7 @@ public sealed partial class ThemeSourceTests
     public void AppCss_ReadsOnlyKnownTokens()
     {
         HashSet<string> known = SkinTokens.All.Select(token => token.CssName).ToHashSet(StringComparer.Ordinal);
-        List<string> paths = [AppCssPath];
+        List<string> paths = [.. AppCssPaths];
         paths.AddRange(Directory.EnumerateFiles(CssSource.RepoPath("src", "Huddle.App", "Components"), "*.razor.css", SearchOption.AllDirectories));
 
         var unknown = paths
@@ -324,6 +325,5 @@ public sealed partial class ThemeSourceTests
     // above - see that test's own summary for why none is needed.
     private const string ExemptScopedStylesheet = "MainLayout.razor.css";
 
-    private static string AppCssPath =>
-        RepoPaths.App("wwwroot", "app.css");
+    private static IReadOnlyList<string> AppCssPaths => CssText.AppCssPaths();
 }

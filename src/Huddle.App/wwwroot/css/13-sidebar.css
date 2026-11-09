@@ -1,0 +1,444 @@
+/* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
+   Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. The card's
+   sides sit on the selected pill's inset, and everything inside it is pulled back by that inset and the 1px border
+   (--needs-you-offset), so its reason icons, names, title and times stay on the sidebar's two lines and its
+   trailing line (Left menu). */
+
+.needs-you-card {
+    --needs-you-offset: calc(var(--nav-inset) + 1px);
+    margin: 0 var(--nav-inset);
+    padding: 4px 0;
+}
+
+/* Flat rows on the sidebar's ground, not a white bordered card (side-by-side audit, 2026-10-30, G03). The border stays,
+   transparent, because --needs-you-offset counts its 1px; the doubled class outranks .mud-paper-outlined. Nordic's
+   paper surface draws its own tinted card below. */
+.needs-you-card.mud-paper-outlined {
+    border-color: transparent;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.needs-you-card[hidden] {
+    display: none;
+}
+
+.needs-you-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: 4px;
+    padding-inline: calc(var(--nav-inset) + var(--nav-pad) + var(--nav-step) - var(--needs-you-offset)) calc(var(--nav-inset) + var(--nav-end) - var(--needs-you-offset));
+}
+
+/* The card's title is a sidebar header: caption size, 600, secondary, like the other sidebar section headers. */
+.needs-you-heading {
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). The doubled class
+   outranks the Left menu grid's padding, which this row shifts by the card's offset. */
+.sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
+    width: calc(100% - 2 * var(--nav-inset));
+    margin-inline: var(--nav-inset);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    align-items: center;
+    min-height: var(--nav-row-height);
+    padding-block: 4px;
+    padding-inline: calc(var(--nav-pad) - var(--needs-you-offset)) calc(var(--nav-end) - var(--needs-you-offset));
+}
+
+/* On touch the Dismiss button is always shown, so the time ends just before it rather than under it. */
+@media (hover: none) {
+    .sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
+        padding-inline-end: calc(var(--nav-end) + var(--nav-step) - var(--needs-you-offset));
+    }
+}
+
+/* The Room's name takes the width the reason icons and the time leave, and only the name ellipsises. The reason icons fill the
+   leading slot and the name starts on the text line; the 12px gap MudBlazor puts before the text is given back (Left menu). */
+.needs-you-row .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    display: flex;
+    align-items: center;
+    gap: var(--nav-gap);
+    min-width: 0;
+    margin-inline-start: 0;
+    flex: 1 1 auto;
+}
+
+.needs-you-icons {
+    display: inline-flex;
+    justify-content: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    min-width: var(--nav-slot);
+}
+
+.needs-you-icons .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.needs-you-text {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.needs-you-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.needs-you-name,
+.needs-you-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.needs-you-detail {
+    flex: 0 0 auto;
+    min-width: max-content;
+    margin-inline-start: auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The card's title is a link with no leading mark, so the sidebar's rule gives its text the slot's step as a margin; the title's own
+   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers (#475). */
+.sidebar-views .needs-you-title .mud-nav-link > .mud-nav-link-text {
+    margin-inline-start: 0;
+}
+
+/* The Dismiss button floats over the end of its row instead of taking a slot of its own, so the name and the time use the row's whole
+   width up to the trailing line (#475). Where there is a hover, the button replaces the time while it shows; on touch it is always
+   shown and the row's padding (above) keeps the time clear of it. */
+.sidebar-views .needs-you-row > .mud-tooltip-root {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: var(--nav-inset);
+    display: flex;
+    align-items: center;
+}
+
+@media (hover: hover) {
+    .needs-you-row:not(.needs-you-task-row):hover .needs-you-detail,
+    .needs-you-row:not(.needs-you-task-row):focus-within .needs-you-detail {
+        visibility: hidden;
+    }
+}
+
+/* ---- Segmented control: MudBlazor's toggle group inside HuddleSegmentedControl ------------------
+   The indicator that slides under the active item is scoped to the component; these rules reach the
+   toggle group's own markup, so they live here. Each selector starts at .huddle-segmented-control, which
+   out-ranks MudBlazor's own toggle-item rules, so none of them needs the important flag. */
+.huddle-segmented-control .huddle-segmented-group {
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
+    flex: 1 1 0;
+    text-align: center;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border: none;
+    background: transparent;
+    padding: 2px 12px;
+    min-height: unset;
+    position: relative;
+    z-index: 2;
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+    transition: color 120ms ease;
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
+    background-color: transparent;
+    color: var(--mud-palette-text-primary);
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item * {
+    color: inherit;
+    font-weight: inherit;
+}
+
+/* ---- Teams nav: the Team, folder, Project and Room rows in the sidebar -------------------------
+   A Team is a root row of the Teams view, under no section header: its chevron fills the leading slot and its name
+   starts on the text line, with "Build a team" in line with them. An open Team's Rooms and Library folders are one
+   level in (Left menu): their folder icon sits under the Team's name. A folder's rows step a quarter level further,
+   as the Chats view's folders do. The level is set on the folder, and its header and rows inherit it. */
+.teams-nav-host .teams-nav-folder {
+    --nav-level: 1;
+}
+
+.teams-nav-host .teams-nav-folder .mud-collapse-container {
+    --nav-level: 1.25;
+}
+
+/* A Team shortcut's view (TeamShortcutBar.razor) lists one Team's folders with no Team row above them, so they are
+   root rows, as the Chats view's folders are, and their rows step the same quarter level in. */
+.sidebar-view-team .teams-nav-host .teams-nav-folder {
+    --nav-level: 0;
+}
+
+.sidebar-view-team .teams-nav-host .teams-nav-folder .mud-collapse-container {
+    --nav-level: 0.25;
+}
+
+/* The shortcut's Rooms folder splits into Needs you and All while a Room waits on the Human: those two headers sit at the
+   Rooms folder's row step, and their own rows step a quarter level further. */
+.sidebar-view-team .teams-nav-host .teams-nav-folder .teams-nav-subfolder .mud-collapse-container {
+    --nav-level: 0.5;
+}
+
+.sidebar-views .teams-nav-host .teams-nav-subfolder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* A folder header is a row, not a section: no gap above or below it. Outranks the section rules in Left menu. */
+.sidebar-views .teams-nav-host .teams-nav-folder.mud-nav-group > .mud-nav-link {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* With no group around them, the Team rows take the row rules a group's rows get (Sidebar rows, below). */
+.teams-nav-host .mud-nav-link {
+    min-width: 0;
+    min-height: var(--nav-row-height);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: var(--mud-palette-text-primary);
+}
+
+.teams-nav-host .mud-nav-link .mud-nav-link-icon {
+    font-size: var(--icon-size-row);
+}
+
+.teams-nav-host .mud-nav-link .mud-nav-link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.teams-nav-host .nav-project-link .mud-nav-link-icon {
+    font-size: var(--mud-typography-subtitle1-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The chevron is a button over the Team link's empty slot, so it floats there rather than pushing the name. */
+.teams-nav-host .teams-nav-chevron {
+    position: absolute;
+    inset-inline-start: calc(var(--nav-inset) + var(--nav-pad));
+    z-index: 1;
+    width: var(--nav-slot);
+    height: var(--nav-slot);
+    padding: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Sidebar rows: one line each, meta trails, long lists fold --------------------------------
+   A row is one line. The label truncates with an ellipsis (its full text is the span's title), and meta such
+   as a Team's member count trails it on the trailing line (Left menu) instead of wrapping the row. Where a row
+   starts and where its mark sits is the grid in Left menu, not a rule here. */
+.mud-nav-group .mud-collapse-container .mud-nav-link {
+    min-width: 0;
+    min-height: var(--nav-row-height);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: var(--mud-palette-text-primary);
+}
+
+/* A row's icon is 18px; the section header's stays its own size. Both are centred in the leading slot (Left menu). */
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
+    font-size: var(--icon-size-row);
+}
+
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-row-label {
+    display: inline;
+}
+
+.sidebar-row-meta {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* A Members row's body: the name line, and under it an Agent's context bar (how full its context window is in this Room).
+   The name keeps its ellipsis beside the percentage because the line, not the row, is the flex container that shrinks. */
+.members-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+}
+
+.members-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.members-context-bar.mud-progress-linear {
+    height: 3px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action whose label starts on the
+   text line, with a muted arrow in the leading slot. */
+.sidebar-show-all .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Global search ---------------------------------------------------------------------------- */
+
+/* A result card is one row with three zones: what it is (icon or avatar), what it says, and the action
+   slot at the right. The slot is empty in V1 and holds its width so a V2 button lands where it will sit. */
+.search-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+}
+
+/* Search match (audit B6a): MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+   text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
+.search-card mark {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+/* A notice in the dropdown (audit B6b): Quiet ink words, with an icon in the Attention signal carrying the signal.
+   1em is 14px: the notice is body2 text, so the icon is sized by the type scale rather than by a literal. */
+.search-notice {
+    display: flex;
+    align-items: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.search-notice .search-notice-icon.mud-icon-root {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+}
+
+.search-card-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.search-card-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.search-card-title,
+.search-card-meta,
+.search-card-snippet {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-card-meta,
+.search-card-snippet {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* The Task card's status chip sits in the trailing slot. */
+.search-card-chip {
+    flex: none;
+}
+
+/* The assignee's job title is de-emphasised beside the name. */
+.search-card-subtitle {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The trailing slot: an empty one holds a fixed width so every card ends at the same edge; one with content (the Task chip) fits it. */
+.search-card-action {
+    flex: none;
+    min-width: 2rem;
+}
+
+/* An Archived Room or a Closed Task is dimmed, and its group heading says so in words, so the state
+   never rests on colour alone (spec §11). */
+.search-card-archived {
+    opacity: 0.6;
+}
+
+/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers (UX rule 9, #477). */
+.search-group-heading {
+    padding: 8px 8px 4px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+}
+
+/* The dropdown is the popover's direct child; it is at most 80% of the window high. */
+.search-dropdown {
+    width: min(720px, calc(100vw - 48px));
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* The box is filled with the same palette variable as .composer-input, so the two read as one surface in
+   the light and the dark theme. The fill goes on the input root and is repeated for hover and focus, where
+   MudBlazor would otherwise draw its own. The "Ctrl K" hint and the placeholder sit on top of it. */
+.search-bar .mud-input-control .mud-input.mud-input-outlined,
+.search-bar .mud-input-control .mud-input.mud-input-outlined:hover,
+.search-bar .mud-input-control .mud-input.mud-input-outlined.mud-focused,
+.search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
+    background: var(--hu-ground-sunk);
+}
+
+/* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */
+@keyframes search-hit-flash-fade {
+    from {
+        background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+    }
+
+    to {
+        background-color: transparent;
+    }
+}
+
+.search-hit-flash {
+    border-radius: var(--mud-default-borderradius);
+    animation: search-hit-flash-fade 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .search-hit-flash {
+        animation: none;
+        outline: 2px solid var(--mud-palette-primary);
+        outline-offset: 2px;
+    }
+}
+

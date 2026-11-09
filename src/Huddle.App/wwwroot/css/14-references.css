@@ -1,0 +1,479 @@
+/* ---- References ------------------------------------------------------------------------------- */
+.composer-picker {
+    position: absolute;
+    left: max(24px, calc(50% - 380px - var(--room-scrollbar) / 2));
+    width: min(760px, calc(100% - 48px - var(--room-scrollbar)));
+    box-sizing: border-box;
+    bottom: 100%;
+    max-height: min(320px, 40vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--hu-ground-raised);
+}
+
+.composer-picker-heading,
+.composer-picker-footer,
+.composer-picker-note {
+    color: var(--mud-palette-text-secondary);
+}
+
+.composer-picker-heading {
+    padding: 4px 12px 2px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.composer-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    cursor: pointer;
+}
+
+/* The card fills the row and the note, when there is one, sits on the same line at its end: a row is one card tall
+   whatever its kind, and the note cannot be read as a heading for the rows below it. */
+.composer-picker-item > .search-card {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* One text column for every kind: an Agent's 24px avatar and a Task's 18px icon take the same slot, so the titles
+   start at one x. */
+.composer-picker .search-card-icon {
+    flex: none;
+    width: 24px;
+    justify-content: center;
+}
+
+.composer-picker-item:hover {
+    background: var(--hu-hover);
+}
+
+.composer-picker-item[aria-selected="true"] {
+    background: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
+    font-weight: 500;
+}
+
+.composer-picker-item[aria-selected="true"]:hover {
+    background: var(--hu-selected-background-hover);
+}
+
+.composer-picker-item[aria-disabled="true"] {
+    cursor: default;
+    color: var(--mud-palette-text-secondary);
+}
+
+.composer-picker-dimmed {
+    color: var(--mud-palette-text-secondary);
+}
+
+.composer-picker-note {
+    flex: none;
+    font-size: var(--mud-typography-caption-size);
+    white-space: nowrap;
+}
+
+.composer-picker-footer {
+    padding: 4px 12px 4px;
+    font-size: var(--mud-typography-body2-size);
+    border-top: 1px solid var(--ink-rule);
+}
+
+.composer-picker .search-card-snippet,
+.composer-picker .search-card-action[aria-hidden="true"] {
+    display: none;
+}
+
+.message-references {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.message-reference-gone {
+    opacity: 0.6;
+}
+
+.role-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+.role-card > .team-type-card {
+    flex: 1 1 auto;
+}
+
+.role-card-custom > .team-type-card {
+    padding-inline-end: 64px;
+}
+
+.role-card-actions {
+    position: absolute;
+    top: 0.25rem;
+    inset-inline-end: 0.25rem;
+    display: inline-flex;
+}
+
+.role-add-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 5rem;
+    padding: 12px;
+    font: inherit;
+    color: var(--hu-accent-ink);
+    background: transparent;
+    border: 1px dashed var(--ink-field);
+    border-radius: var(--mud-default-borderradius);
+    cursor: pointer;
+}
+
+.role-add-card:hover {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.role-add-label {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.role-card-body {
+    flex: 1 1 auto;
+    cursor: default;
+}
+
+/* A role shows its whole description, up to three lines at 13px. */
+.role-card .team-type-tagline {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow-wrap: anywhere;
+}
+
+.role-card-body:hover {
+    background: var(--mud-palette-surface);
+}
+
+.role-suggested {
+    padding: 4px 8px;
+    border: 1px solid var(--mud-palette-success);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--mud-palette-success-darken);
+    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+}
+
+.role-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.role-card-add {
+    margin-inline-end: auto;
+}
+
+.roster-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 16px;
+    text-align: center;
+    border: 1px dashed var(--ink-field);
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.roster-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives an Agent's,
+   and the fields under it at a readable form width rather than the whole panel. */
+.profile-panel-card {
+    max-width: 24rem;
+    margin-bottom: 16px;
+}
+
+.profile-panel-form {
+    max-width: 40rem;
+}
+
+.roster-card-manager {
+    background: var(--hu-tone-primary-tint);
+    border-color: var(--mud-palette-primary);
+}
+
+.roster-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.roster-avatar-ring {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 2px;
+    border: 1px dashed var(--mud-palette-text-secondary);
+    border-radius: 50%;
+}
+
+.roster-card-who {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.roster-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.roster-title {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-manager-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--mud-palette-primary-text);
+    background: var(--mud-palette-primary);
+}
+
+.roster-description {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.roster-tier {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
+}
+
+.roster-tier-strongest {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.roster-tier-balanced {
+    background: color-mix(in srgb, var(--mud-palette-info) 16%, var(--mud-palette-surface));
+}
+
+.roster-tier-fast {
+    background: color-mix(in srgb, var(--mud-palette-success) 16%, var(--mud-palette-surface));
+}
+
+/* Wraps, because a draft's Copy prompt, Re-roll, Edit and Remove do not fit a narrow card: without it they overlap. */
+.roster-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-rule);
+}
+
+/* A confirm that swaps in for one action (Start afresh) carries a sentence, so it takes a line of its own. */
+.roster-actions > .inline-confirm {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.roster-actions > .inline-confirm > .inline-confirm-prompt {
+    flex: 1 0 100%;
+}
+
+/* The roster's more-actions menu pushes to the end of the row; its destructive item is last, after a divider, in Error ink
+   (design-system "Menus"). */
+.roster-more {
+    margin-inline-start: auto;
+}
+
+/* Duplicate Team's body is two short fields and a Browse button; its stack's last margin used to overflow the content box
+   by a pixel and drew a scrollbar (audit B10), so the box does not scroll. */
+.mud-dialog-content.duplicate-team-content {
+    overflow-y: visible;
+}
+
+.role-card-taken {
+    position: absolute;
+    bottom: 0.5rem;
+    inset-inline-end: 0.5rem;
+    display: inline-flex;
+    color: var(--mud-palette-success-darken);
+}
+
+.roster-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.roster-skills {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-runtime {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 8px;
+    margin: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.roster-runtime dt {
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-runtime dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.roster-setup {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-warning-darken);
+}
+
+.roster-name .agent-dot {
+    margin-inline-end: 4px;
+}
+
+.roster-card-existing .roster-avatar-ring {
+    border-style: solid;
+}
+
+.roster-card-removed {
+    border-color: var(--mud-palette-error);
+    border-style: dashed;
+}
+
+.roster-card-removed .roster-name {
+    text-decoration: line-through;
+}
+
+.roster-removing {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
+
+/* "Member" and "New" are meta text, not chips. */
+.roster-state {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-state-new {
+    font-weight: 600;
+}
+
+/* The Team page's save bar appears only with unsaved changes and pins to the bottom of the pane. */
+.build-team-savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: 12px 0;
+    background: var(--mud-palette-surface);
+    border-top: 1px solid var(--ink-edge);
+}
+
+.build-team-manager {
+    max-width: 24rem;
+}
+
+.skill-origin {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+/* ---- Profile avatar: an avatar that opens the Agent's profile popover ---------------------- */
+
+/* The button looks like the bare avatar: no chrome of its own. The ring is the global
+   button:focus-visible rule; the radius makes it follow the circle. */
+.profile-avatar {
+    display: inline-flex;
+}
+
+/* In a MudAvatarGroup (the Room's Members, C3) each avatar is the first child of its own
+   .profile-avatar, so MudBlazor's ":first-child { margin-inline-start: 0 !important }" cancels the
+   group's overlap on every one. The wrapper takes the overlap instead: the 8px the group's
+   Spacing="2" gives a bare avatar (MudBlazor's ms-n2), on the stylesheet's px scale (CV11). */
+.mud-avatar-group > .profile-avatar:not(:first-child) {
+    margin-inline-start: -8px;
+}
+
+/* The stacked member avatars in the Room header are the 24px row size, each ringed in 2px of Surface outside its
+   circle (content-box), so the overlap reads as a ring and not as a smaller avatar. */
+.mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small {
+    box-sizing: content-box;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--hu-ring);
+}
+
+/* MudBlazor colours that ring Surface with a selector one class stronger than the rule above; this one matches its
+   weight, and app.css loads after MudBlazor's sheet, so the ring takes the region's ground (--hu-ring). */
+.mud-avatar-group.mud-avatar-group-outlined.mud-avatar-group-outlined-surface .mud-avatar:not(.mud-avatar-outlined) {
+    border-color: var(--hu-ring);
+}
+
+.profile-avatar-button {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    border-radius: 50%;
+    cursor: pointer;
+    color: inherit;
+}
+
+.profile-avatar-button:focus-visible {
+    outline: 2px solid var(--hu-focus);
+    outline-offset: 2px;
+}
+
+/* The panel the popover holds: wide enough for the card, never wider than the window. */
+.profile-popover {
+    min-width: 16rem;
+    max-width: min(22rem, 90vw);
+    padding: 8px;
+    outline: none;
+}
+
+.profile-popover-empty {
+    color: var(--mud-palette-text-secondary);
+}
+
