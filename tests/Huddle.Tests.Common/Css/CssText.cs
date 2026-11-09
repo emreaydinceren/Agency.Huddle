@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Css;
 
@@ -25,17 +26,29 @@ internal enum RuleMatch
     All,
 }
 
-/// <summary>Reading and slicing stylesheet source text for tests that assert on <c>app.css</c>.</summary>
+/// <summary>Reading and slicing stylesheet source text for tests that assert on the application's stylesheets in <c>wwwroot/css</c>.</summary>
 internal static partial class CssText
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
 
-    private static readonly Lazy<string> AppCssLf = new(static () => Read(AppCssPath(), CssNewlines.Lf));
+    private static readonly Lazy<string> AppCssLf = new(static () => ReadAppCss(CssNewlines.Lf));
 
-    private static readonly Lazy<string> AppCssAsIs = new(static () => Read(AppCssPath(), CssNewlines.AsIs));
+    private static readonly Lazy<string> AppCssAsIs = new(static () => ReadAppCss(CssNewlines.AsIs));
 
-    /// <summary>The text of <c>src/Huddle.App/wwwroot/app.css</c>, read once per newline mode.</summary>
-    /// <param name="newlines">Whether to normalise line endings to LF (the default) or keep the file's own.</param>
+    /// <summary>
+    /// The full paths of the application's own stylesheets, in the order <see cref="AppStylesheets.All"/> links them
+    /// (<c>src/Huddle.App/wwwroot/css/*.css</c>).
+    /// </summary>
+    /// <returns>The paths, in link order.</returns>
+    internal static IReadOnlyList<string> AppCssPaths() =>
+        [.. AppStylesheets.All.Select(static relative => RepoPaths.App(["wwwroot", .. relative.Split('/')]))];
+
+    /// <summary>
+    /// The text of the application's own stylesheets (<c>src/Huddle.App/wwwroot/css/*.css</c>) joined in
+    /// <see cref="AppStylesheets.All"/> order, which is the order the page links them and so the order of the cascade.
+    /// Read once per newline mode.
+    /// </summary>
+    /// <param name="newlines">Whether to normalise line endings to LF (the default) or keep the files' own.</param>
     /// <returns>The stylesheet source.</returns>
     internal static string AppCss(CssNewlines newlines = CssNewlines.Lf) =>
         newlines == CssNewlines.Lf ? AppCssLf.Value : AppCssAsIs.Value;
@@ -182,9 +195,11 @@ internal static partial class CssText
         return count;
     }
 
-    /// <summary>The path of <c>app.css</c>.</summary>
-    /// <returns>The full path.</returns>
-    private static string AppCssPath() => RepoPaths.App("wwwroot", "app.css");
+    /// <summary>Reads every application stylesheet in link order and joins the text with nothing between files.</summary>
+    /// <param name="newlines">Whether to normalise line endings to LF or keep the files' own.</param>
+    /// <returns>The joined source.</returns>
+    private static string ReadAppCss(CssNewlines newlines) =>
+        string.Concat(AppCssPaths().Select(path => Read(path, newlines)));
 
     [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex CommentPattern();

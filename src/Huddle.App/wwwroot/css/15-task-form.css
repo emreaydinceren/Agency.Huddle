@@ -1,0 +1,1016 @@
+/* ---- DS-9: the Task detail form as four headed groups of label | value properties ----------------------
+   TaskDetail.razor groups its fields under subtitle2 headings (.group-heading). Each .task-detail-prop is a
+   label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
+   (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
+   drawer less its 16px padding on each side. A container query on .task-detail-groups, not a viewport media
+   query, because the drawer is resizable (huddleResize). The visible label is .task-detail-prop-label; the
+   control's own MudBlazor label stays in the DOM, visually hidden, as its accessible name. */
+.task-detail-groups {
+    container-type: inline-size;
+    container-name: task-detail;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.task-detail-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* A group's heading is the Group label (audit B4i): 12px/600 in Quiet ink, so the title is the drawer's only 16px text. */
+.task-detail-group > .group-label {
+    margin: 0;
+}
+
+/* The title row holds the edit, copy and menu icons on the right; in the Panel the name is in the drawer header, so a spacer pushes them right. */
+.task-detail-title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-detail-title-display,
+.task-detail-title-row .task-detail-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* A Task's title, shown or edited, is a heading in the Theme's h5 role (size, weight, line height and face), and the edit is a full-width field
+   with the Theme's field outline and radius (Huddle-DescriptionEditor-Theming.md follow-up: one look in every Theme). While a saved Task's title
+   is edited, the drawer's own copy is hidden. */
+.task-detail-title-display {
+    font-family: var(--mud-typography-h5-family);
+    font-size: var(--mud-typography-h5-size);
+    font-weight: var(--mud-typography-h5-weight);
+    line-height: var(--mud-typography-h5-lineheight);
+}
+
+.mud-input-control.task-detail-title {
+    margin: 0;
+}
+
+.task-detail-title .mud-input-slot,
+.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined {
+    font-size: var(--mud-typography-h5-size);
+    font-weight: var(--mud-typography-h5-weight);
+    line-height: var(--mud-typography-h5-lineheight);
+    font-family: var(--mud-typography-h5-family);
+    padding: 8px 12px;
+    height: auto;
+}
+
+.task-detail-title .mud-input-outlined-border {
+    border-color: var(--hu-field-line);
+    border-bottom-color: var(--hu-field-line-bottom);
+    border-radius: var(--hu-control-radius);
+}
+
+/* The strip under the page header: Assigned to, Status and Priority on one row, Team, Project and Sprint under them (Team under Assigned to, Project under
+   Status, Sprint under Priority), each a small label and a compact field, with one hairline under the block. It spans the whole width; the wake notice takes a row
+   of its own. One column until the container can hold three. */
+.task-detail-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 32px;
+    padding-block: 8px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+/* The grid's own item padding would leave an empty band above the strip, where the title row used to be. */
+.task-detail-grid > .task-detail-col-strip {
+    padding-top: 0;
+}
+
+.task-detail-strip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.task-detail-strip-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 96px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+    white-space: nowrap;
+}
+
+.task-detail-strip-item > .task-detail-prop-value {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.task-detail-strip-notice {
+    grid-column: 1 / -1;
+}
+
+@container task-edit-editor (min-width: 720px) {
+    .task-detail-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* The title field replaces the header's h1 while the title is edited; it takes the free width of the title's line. */
+.task-edit-page-header .page-header-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.task-edit-page-header .page-header-title .task-detail-title {
+    flex: 1 1 32rem;
+    max-width: 32rem;
+}
+
+/* The title column holds only the title field (a new Task, or a title being edited), the gates line and a request's chips: nothing else, nothing drawn. */
+.task-detail-col-title:not(:has(*)) {
+    display: none;
+}
+
+/* The Priority select wears its priority's icon (TaskColors.Icon, one set in every Theme) inside the field's start; the select keeps its own caret (issue 470). */
+.task-detail-priority-field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.task-detail-priority-field .task-detail-priority-icon.mud-icon-root {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The select's visible text is a div (its input is hidden), so the icon's room is padded on that. */
+.task-detail-priority-field .task-detail-priority .mud-select-input.mud-input-slot {
+    padding-inline-start: 32px;
+}
+
+/* The History is always open: a Group label over the list, no panel and no expand glyph. */
+.task-detail-history-heading {
+    margin-bottom: 8px;
+}
+
+/* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden (audit B4n). */
+.task-detail-description-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* The Description heads a field the width of the form, so it is a section heading (14px/600, TextPrimary; issue 491), not the 12px Group label of the
+   property groups above it, which it would otherwise inherit from .group-label. The size is body1's, not subtitle2's: a Theme's subtitle2 is
+   16px, and the form's title is its only 16px text. */
+.task-detail-description-header .group-label {
+    margin: 0;
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-body1-lineheight);
+    color: var(--mud-palette-text-primary);
+}
+
+.task-detail-description-field .mud-input-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.task-detail-description-field .mud-input-outlined-border legend {
+    display: none;
+}
+
+/* Created, Updated and Closed: 12px secondary at the bottom of the form, out of the Dates group. */
+.task-detail-footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 16px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-detail-props {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+}
+
+.task-detail-prop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    align-items: start;
+}
+
+.task-detail-prop-label {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.5;
+}
+
+.task-detail-prop-value {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The visible label above replaces the floating one: keep it in the DOM for assistive technology, and take
+   it, and the border notch cut for it, out of the picture. */
+.task-detail-prop-value .mud-input-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.task-detail-prop-value .mud-input-outlined-border legend {
+    display: none;
+}
+
+/* An empty optional field shows a Quiet-ink hint ("None", "Add tag…") instead of a blank box (audit B4o). */
+.task-detail-prop-value input::placeholder,
+.task-detail-prop-value textarea::placeholder,
+.task-detail-description-field textarea::placeholder {
+    color: var(--mud-palette-text-secondary);
+    opacity: 1;
+}
+
+@container task-detail (min-width: 368px) {
+    .task-detail-prop {
+        grid-template-columns: 120px minmax(0, 1fr);
+        column-gap: 24px;
+        align-items: start;
+    }
+
+    .task-detail-prop-label {
+        padding-top: 8px;
+    }
+}
+
+/* Chips (design-system.md "Chips"): four looks, one per job. A status colour is never a solid fill under text.
+   1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 70% toward
+      TextPrimary. StatusChipContrast mirrors the two mixes in C# and a test holds the pair to 4.5:1. */
+.mud-chip.status-chip .mud-chip-icon,
+.mud-chip.status-chip .mud-icon-root {
+    width: 14px;
+    height: 14px;
+    font-size: var(--mud-typography-subtitle1-size);
+    margin-inline: 0 4px;
+}
+
+/* The Status and Tag chips share one shape, 22px high with a 6px corner (three quarters of the Theme's 8px). */
+.mud-chip.status-chip {
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 1;
+    background-color: var(--hu-tone-neutral-soft);
+    color: var(--hu-tone-neutral-ink);
+}
+
+.mud-chip.status-chip .mud-chip-icon,
+.mud-chip.status-chip .mud-icon-root {
+    color: inherit;
+}
+
+.mud-chip.status-chip-info {
+    background-color: var(--hu-tone-info-soft);
+    color: var(--hu-tone-info-ink);
+}
+
+.mud-chip.status-chip-warning {
+    background-color: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+}
+
+.mud-chip.status-chip-error {
+    background-color: var(--hu-tone-error-soft);
+    color: var(--hu-tone-error-ink);
+}
+
+.mud-chip.status-chip-success {
+    background-color: var(--hu-tone-success-soft);
+    color: var(--hu-tone-success-ink);
+}
+
+.mud-chip.status-chip-secondary {
+    background-color: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-secondary) 50%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-tertiary {
+    background-color: var(--hu-tone-tertiary-soft);
+    color: var(--hu-tone-tertiary-ink);
+}
+
+.mud-chip.status-chip-primary {
+    background-color: var(--hu-tone-primary-soft);
+    color: var(--hu-tone-primary-ink);
+}
+
+/* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */
+.mud-chip.tag-chip {
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 1;
+    background-color: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
+    color: var(--mud-palette-text-primary);
+}
+
+/* 3. Filter: dashed while unset; a Primary border and tint once set. TaskFilterChip draws its own pill
+   (.task-filter-chip); a MudChip that filters wears .filter-chip, and .filter-chip-set when on. */
+.mud-chip.filter-chip {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px dashed var(--ink-field);
+    border-radius: 999px;
+    background-color: transparent;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. .is-set is the name the screens use;
+   .filter-chip-set and MudBlazor's own selected state still read the same until each screen moves over. */
+.mud-chip.filter-chip.is-set,
+.mud-chip.filter-chip.filter-chip-set,
+.mud-chip.filter-chip.mud-chip-selected {
+    border: 1px solid var(--mud-palette-primary);
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
+    font-weight: 500;
+}
+
+/* 4. Count or meta: no chip, plain caption text. */
+.chip-meta {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* ---- Reading pages start at the same left edge as every other page (DS-10) ---------------------
+   A reading page (Settings, Agents, Build a team) limits the width of its content, not its position:
+   MudContainer centres itself with auto margins, and this drops them so the title does not move when
+   the Human switches Tabs. */
+.mud-container.page-reading {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* ---- An inline edit of a title keeps the title's size and weight (DS-11) ------------------------------
+   Renaming a Room swaps the h5 heading for this field, so it takes the h5 role from the Theme and shows
+   only the outline: no floating label and a tight padding, so nothing makes the header jump. The control
+   is pulled left by its side padding so the typed text starts where the heading's text did. */
+.mud-input-control.title-inline-edit {
+    margin: 0 0 0 -8px;
+}
+
+.title-inline-edit .mud-input-slot,
+.title-inline-edit .mud-input > input.mud-input-root.mud-input-root-outlined {
+    font-size: var(--mud-typography-h5-size);
+    font-weight: var(--mud-typography-h5-weight);
+    line-height: var(--mud-typography-h5-lineheight);
+    font-family: var(--mud-typography-h5-family);
+    padding: 0 8px;
+    height: auto;
+}
+
+/* ---- Task pages: the detail panel, the edit page and the Tasks List and Board, themed by tokens ---------------------
+   Every value is a skin token whose default is the look these surfaces had before Themes differed, so a skin lists only
+   what it changes (Huddle-Tasks-Theming.md). The Theme-only structure sits under the traits it belongs to, further down. */
+
+/* A. The Task details in the Right sidebar (S4, T15): the header's ground, edge and glass, set once for every Theme. */
+.task-read-view-header {
+    position: relative;
+    padding: 12px;
+    background: var(--hu-detail-background);
+    border: 1px solid var(--hu-detail-edge);
+    border-bottom-color: var(--hu-detail-head-line);
+    border-radius: var(--mud-default-borderradius);
+    backdrop-filter: blur(var(--hu-detail-blur)) saturate(150%);
+}
+
+/* Cobalt Soft's 3px gradient across the top of the header; both ends are transparent in every other Theme. */
+.task-read-view-header::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
+}
+
+.task-read-view-eyebrow {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-title {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.task-read-view .task-read-view-description,
+.task-read-view .task-human-gate,
+.task-read-view .task-decision-card,
+.task-read-view .task-detail-history {
+    padding-top: 12px;
+    border-top: 1px solid var(--hu-detail-section-line);
+}
+
+/* The decision band bleeds to the sidebar's edges (its content has 16px of padding); the edit page frames the same card instead. */
+.task-read-view .task-decision-card {
+    position: relative;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    background: var(--hu-detail-decision-background);
+    border-top: 1px solid var(--hu-detail-decision-line);
+}
+
+.task-read-view .task-decision-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
+}
+
+.task-read-view .task-decision-buttons .mud-button {
+    flex: 1;
+}
+
+/* B. The Task edit page (K): header, fields, field groups, the gate frame. */
+.task-edit-page-header {
+    background-color: var(--hu-edit-header-background);
+    backdrop-filter: blur(var(--hu-edit-header-blur));
+}
+
+.task-edit-page .mud-input-outlined-border {
+    border-color: var(--hu-field-line);
+    border-bottom-color: var(--hu-field-line-bottom);
+    border-radius: var(--hu-control-radius);
+}
+
+.task-edit-page .mud-input.mud-input-outlined {
+    box-shadow: var(--hu-field-shadow);
+    border-radius: var(--hu-control-radius);
+}
+
+.task-edit-page .mud-button-root,
+.task-detail-save,
+.task-detail-cancel {
+    border-radius: var(--hu-control-radius);
+}
+
+.task-edit-page .task-detail-group {
+    padding: var(--hu-form-group-padding);
+    background: var(--hu-form-group-background);
+    border: 1px solid var(--hu-form-group-line);
+    border-radius: var(--hu-form-group-radius);
+    box-shadow: var(--hu-form-group-shadow);
+}
+
+.task-edit-page .task-detail-group > .group-label {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--hu-form-group-head-line);
+}
+
+/* One rhythm for every field row, in both columns: 12px above and below, a hairline between rows of a group (never between groups), and the label
+   column the Library's width so the labels and the values line up from the top of the page to the bottom. */
+.task-edit-page .task-detail-props {
+    gap: 0;
+}
+
+.task-edit-page .task-detail-prop {
+    padding-block: 8px;
+}
+
+.task-edit-page .task-detail-prop + .task-detail-prop {
+    border-top: 1px solid var(--hu-line-region);
+}
+
+.task-edit-page .task-detail-prop:first-child {
+    padding-top: 4px;
+}
+
+.task-edit-page .task-detail-prop:last-child {
+    padding-bottom: 0;
+}
+
+.task-edit-page .task-detail-library + .task-detail-library {
+    padding-top: 8px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+/* The History is the last rows of the left column: the same hairline above it as between the rows over it. */
+.task-edit-page .task-detail-history {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+/* The strip's fields are the form's fields (issue 491): the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
+   label (.task-detail-strip-label, 96px) is the groups' label column. The strip used to override that with a 28px caption-size field. */
+
+/* The strip carries the page's one rule under the header, so the header has none of its own. */
+.task-edit-page-header .page-header.has-chrome {
+    border-bottom: 0;
+}
+
+@container task-detail (min-width: 368px) {
+    .task-edit-page .task-detail-prop {
+        grid-template-columns: 96px minmax(0, 1fr);
+        column-gap: 8px;
+    }
+
+    /* The label is as tall as a one-line field and centred in it, so it sits on the field's centre line; a taller value (chips, a note) grows below. */
+    .task-edit-page .task-detail-prop-label {
+        display: flex;
+        align-items: center;
+        min-height: 34px;
+        padding-top: 0;
+    }
+}
+
+/* A field is 34px tall with body-size text, and the row's 12px is the only space around it (MudBlazor's own margin is dropped). */
+.task-edit-page .task-detail-prop-value .mud-input-control {
+    margin: 0;
+}
+
+.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined {
+    min-height: 34px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined .mud-input-slot,
+.task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined > input.mud-input-root {
+    padding-block: 4px;
+    font-size: var(--mud-typography-body2-size);
+    height: auto;
+}
+
+.task-edit-page .task-human-gate,
+.task-edit-page .task-decision-card {
+    position: relative;
+    padding: var(--hu-gate-padding);
+    background: var(--hu-gate-background);
+    border: 1px solid var(--hu-gate-line);
+    border-radius: var(--hu-gate-radius);
+    box-shadow: var(--hu-gate-halo);
+}
+
+/* The 3px bar on top of the gate: the same two tokens as the panel, transparent unless a Theme sets them. */
+.task-edit-page .task-human-gate {
+    overflow: hidden;
+}
+
+.task-edit-page .task-human-gate::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
+}
+
+/* Edit | Preview on the edit page and List | Kanban on the Tasks page share the Feed's segmented-control tokens. */
+.huddle-segmented-control.task-detail-description-toggle,
+.huddle-segmented-control.task-toolbar-kind {
+    background: var(--hu-control-track);
+}
+
+.task-detail-description-toggle .mud-toggle-item,
+.task-toolbar-kind .mud-toggle-item {
+    color: var(--hu-control-ink);
+}
+
+.task-detail-description-toggle .mud-toggle-item.huddle-segmented-active-item,
+.task-toolbar-kind .mud-toggle-item.huddle-segmented-active-item {
+    color: var(--hu-control-selected-ink);
+}
+
+.task-detail-description-toggle .huddle-segmented-indicator,
+.task-toolbar-kind .huddle-segmented-indicator {
+    border-color: var(--hu-control-selected-line);
+}
+
+/* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
+   icons, about 30px in all (side-by-side audit, 2026-10-30, LL-T02). The indicator moves to the same 2px inset; the
+   doubled class outranks the component's scoped 3px. */
+.huddle-segmented-control.task-toolbar-kind {
+    padding: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+}
+
+.huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item {
+    height: 24px;
+    padding-block: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.huddle-segmented-control.task-toolbar-kind .task-toolbar-kind-icon.mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+/* K3 and K3a: the Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
+   with a single border that turns to the focus colour while the field is being written in. */
+.task-detail-description-box {
+    overflow: hidden;
+    background: var(--hu-field-background);
+    border: 1px solid var(--hu-line-control);
+    border-radius: var(--hu-editor-radius);
+    box-shadow: var(--hu-editor-shadow);
+}
+
+.task-detail-description-box:focus-within {
+    border-color: var(--hu-field-focus-line);
+}
+
+.task-detail-description-box .mud-input.mud-input-outlined,
+.task-detail-description-box .mud-input.mud-input-outlined:focus-within {
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.task-detail-description-box .mud-input-outlined .mud-input-outlined-border,
+.task-detail-description-box .mud-input-outlined:focus-within .mud-input-outlined-border,
+.task-detail-description-box .mud-input-outlined:hover .mud-input-outlined-border {
+    border: 0;
+    box-shadow: none;
+}
+
+/* The toolbar and Edit | Preview share one row at the top of the card, with the Theme's rule under it. */
+.task-detail-description-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--hu-ink-strip);
+    border-bottom: 1px solid var(--hu-editor-toolbar-line);
+}
+
+/* The writing surface reads like source: the Theme's mono face at the Theme's body size, spaced for scanning. */
+.task-detail-description-box textarea,
+.task-detail-description-preview {
+    font-family: var(--font-mono);
+    font-size: var(--hu-editor-text-size);
+    line-height: var(--hu-editor-text-leading);
+    color: var(--hu-editor-text-ink);
+}
+
+.task-detail-description-box textarea {
+    padding: 16px 16px 24px;
+}
+
+.task-detail-description-preview {
+    padding: 16px 16px 24px;
+    font-family: var(--mud-typography-default-family);
+}
+
+/* Dividers between the toolbar's groups: bold and italic, the heading, then code and the lists. Drawn in the toolbar's rule colour,
+   so they show only in a Theme that sets editor.toolbar.line. */
+.task-detail-description-box .markdown-toolbar-heading,
+.task-detail-description-box .markdown-toolbar-code {
+    position: relative;
+    margin-inline-start: 8px;
+}
+
+.task-detail-description-box .markdown-toolbar-heading::before,
+.task-detail-description-box .markdown-toolbar-code::before {
+    content: "";
+    position: absolute;
+    inset-block: 4px;
+    inset-inline-start: -4px;
+    width: 1px;
+    background: var(--hu-editor-toolbar-line);
+}
+
+/* Edit | Preview is a compact 30px control here. The indicator is placed and sized by the component for a track with 3px of padding (it is 3px in
+   from each edge and (100% - 6px) / items wide), so the track keeps that padding and the items fill what is left: the tile is then exactly as
+   tall and as wide as the item it sits under, and the label is centred in it. The root prefix keeps this ahead of the component's own rule. */
+:root .huddle-segmented-control.task-detail-description-toggle {
+    box-sizing: border-box;
+    height: 30px;
+    padding: calc(4px * 0.75);
+}
+
+:root .task-detail-description-toggle .huddle-segmented-group {
+    align-items: stretch;
+    height: 100%;
+}
+
+:root .task-detail-description-toggle .mud-toggle-item {
+    height: 100%;
+    min-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: 0;
+    padding-inline: 8px;
+    line-height: 1;
+}
+
+/* Nordic Paper reads in serif: the Description's heading is a Literata title with a "#" mark before it; the form's other
+   group labels stay small caps. */
+:root:has([data-hu-reading="book"]) .task-detail-description-header .group-label {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-h6-size);
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    text-transform: none;
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-reading="book"]) .task-detail-description-header .group-label::before {
+    content: "#";
+    margin-inline-end: 8px;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-disabled);
+}
+
+/* The Library section under the Description: a quiet label, the linked files as [[wiki-style]] links with a dashed underline, and Link note. */
+.task-detail-library {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+.task-detail-library.task-detail-files,
+.task-detail-library.task-detail-room {
+    margin-top: 12px;
+}
+
+.task-detail-library-label {
+    padding-top: 4px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-detail-library-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.task-detail-library-link {
+    color: var(--hu-accent-ink);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    text-decoration: underline dashed;
+    text-underline-offset: 4px;
+}
+
+.task-detail-library-missing {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 400;
+}
+
+.task-detail-library-add.mud-button-root {
+    padding-inline: 0;
+    text-transform: none;
+    color: var(--hu-accent-ink);
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* C. The Tasks page (T1 to T6): toolbar, chips, List rows, Board columns and cards. */
+.task-toolbar {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--hu-toolbar-line);
+}
+
+.mud-button-root.mud-button-filled {
+    box-shadow: var(--hu-button-filled-shadow);
+}
+
+.task-toolbar-search .mud-input-outlined-border {
+    border-color: var(--hu-field-line);
+    border-bottom-color: var(--hu-field-line-bottom);
+    border-radius: var(--hu-control-radius);
+}
+
+/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it (issue 469). */
+.task-toolbar .task-toolbar-search {
+    margin-right: 8px;
+}
+
+/* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
+.task-filter-chip-set {
+    border-color: var(--hu-chip-set-line);
+    background-color: var(--hu-chip-set-background);
+}
+
+.task-filter-chip-set .task-filter-chip-button {
+    color: var(--hu-chip-set-ink);
+}
+
+:root:has([data-hu-surface="flat"]) .task-filter-chip-unset,
+:root:has([data-hu-surface="card"]) .task-filter-chip-unset {
+    border-style: solid;
+    border-color: var(--hu-line-control);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
+    border-block-end-color: var(--hu-list-row-line);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row:not(.task-row-selected):hover > .mud-table-cell {
+    background-color: var(--hu-list-row-hover);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-row-selected > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-selected-bar);
+}
+
+/* A Task in Needs You: the fill is laid over the cell's own colour, so the transparent default leaves the row as it is. */
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-needs:not(.task-row-selected) > .mud-table-cell {
+    background-image: linear-gradient(var(--hu-list-needs-background), var(--hu-list-needs-background));
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-needs:not(.task-row-selected) > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-needs-bar);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-blocked:not(.task-row-selected) > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-blocked-bar);
+}
+
+.task-list-grid .task-list-id-cell {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-list-title-cell .task-list-title {
+    font-weight: var(--hu-list-title-weight);
+}
+
+.task-board {
+    background: var(--hu-board-background);
+}
+
+.task-board-column {
+    background-color: var(--hu-board-column-background);
+    border-color: var(--hu-board-column-line);
+    border-radius: var(--hu-feed-card-radius);
+}
+
+.task-board-column-count {
+    flex: 0 0 auto;
+    margin-inline-end: auto;
+    padding: 0 8px;
+    background: var(--hu-board-count-background);
+    border: 1px solid var(--hu-board-count-line);
+    border-radius: 999px;
+}
+
+/* The Needs You column: a tint over the column colour, a line, a ring and a top bar, each transparent unless a Theme sets it. */
+.task-board-column.needs-you {
+    background-image: linear-gradient(var(--hu-board-needs-background), var(--hu-board-needs-background));
+    border-color: var(--hu-board-needs-line);
+    box-shadow: inset 0 3px 0 var(--hu-board-needs-bar), var(--hu-board-needs-halo);
+}
+
+.task-board-column.needs-you::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    border-radius: var(--hu-feed-card-radius) var(--hu-feed-card-radius) 0 0;
+    background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
+}
+
+/* ids: a Task id in the mono face and quiet ink (Lumen, Fluent, Nordic); Cobalt Soft keeps the interface face at 600. */
+:root:has([data-hu-ids="mono"]) .task-list-grid .task-list-id-cell,
+:root:has([data-hu-ids="mono"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-ids="plain"]) .task-list-grid .task-list-id-cell,
+:root:has([data-hu-ids="plain"]) .task-card-id {
+    font-weight: 600;
+}
+
+/* Cobalt Soft (nav: tint, the one Theme that declares it): header cells are sentence case, not the capitals labels: upper gives. */
+:root:has([data-hu-nav="tint"]) .mud-table.task-list-grid .mud-table-head .mud-table-cell {
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-weight: 650;
+}
+
+:root:has([data-hu-nav="tint"]) .task-card-blocked {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--mud-palette-error) 75%, transparent), var(--hu-shadow-card);
+}
+
+:root:has([data-hu-nav="tint"]) .task-edit-page .task-detail-group > .group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 650;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Nordic Paper (surface: paper): dashed rows in the gate, an inset review note, a framed decision, a dashed blocked card. */
+:root:has([data-hu-surface="paper"]) .task-edit-page .task-human-gate > * + * {
+    padding-top: 8px;
+    border-top: 1px dashed var(--hu-gate-line);
+}
+
+:root:has([data-hu-surface="paper"]) .task-read-view .task-decision-card {
+    margin-inline: 0;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="paper"]) .task-decision-review {
+    padding: 8px 12px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.45;
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="paper"]) .task-decision-header .mud-chip {
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+:root:has([data-hu-surface="paper"]) .task-board-column {
+    border-width: 1.5px;
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-blocked {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    background: color-mix(in srgb, var(--hu-tone-error-soft) 45%, var(--hu-ground-raised));
+}
+
+/* Fluent (composer: underlined, the one Theme that declares it): a 14px ink heading on each card, and the decision card keeps
+   the warning band of the panel. */
+:root:has([data-hu-composer="underlined"]) .task-edit-page .task-detail-group > .group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-composer="underlined"]) .task-edit-page .task-decision-card {
+    background: var(--hu-detail-decision-background);
+    border-color: var(--hu-detail-decision-line);
+}
+
+/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls (issue 469), as the design system sets for every toolbar row: the shared
+   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 1px;
+    align-items: center;
+}
+
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 1px;
+    bottom: 1px;
+    left: 1px;
+}
+

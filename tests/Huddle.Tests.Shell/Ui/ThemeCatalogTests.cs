@@ -4,6 +4,7 @@ using MudBlazor;
 using MudBlazor.Utilities;
 using Agency.Huddle.App.Themes;
 using Agency.Huddle.App.Themes.Skins;
+using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -187,7 +188,7 @@ public sealed class ThemeCatalogTests
     [Fact]
     public void BuiltIn_EveryThemeSetsEveryPalettePropertyAppCssReads()
     {
-        List<string> referencedTokens = [.. CssSource.ReadReferencedTokens(RepoPaths.App("wwwroot", "app.css"))];
+        List<string> referencedTokens = [.. CssText.AppCssPaths().SelectMany(static path => CssSource.ReadReferencedTokens(path))];
         var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
         foreach (var cssFile in Directory.EnumerateFiles(componentsDirectory, "*.razor.css", SearchOption.AllDirectories))
         {

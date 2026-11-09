@@ -126,7 +126,7 @@ hundred runs. Count the element — `class="agents-item-name">Amy<` — instead.
   membership.
 - Raw HTTP output encodes `'` as `&#x27;`. Parse HTML outside a render with
   `new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html)`.
-- `app.js` and `app.css` have no runner: pin their rules as source facts (`AppJsSourceTests`,
+- `app.js` and the `wwwroot/css/` stylesheets have no runner: pin their rules as source facts (`AppJsSourceTests`,
   `AppCssTasksTests`), using ordered `IndexOf` checks where order matters.
 
 ## Reading component state

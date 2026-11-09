@@ -118,13 +118,13 @@ its real `[Parameter]` properties and asserts every key names one. The `@`-bindi
 that shipped once (see [Rules](rules.md)) is still caught, in its new shape.
 
 **The stylesheet suites assert on source text, and it is the clearest case of it.**
-`ThemeSourceTests` and the shared `CssSource` parser read `app.css` and the
+`ThemeSourceTests` and the shared `CssSource` parser read the `wwwroot/css/` files and the
 `.razor.css` files as *text* and count what is declared, because **nothing in this
 suite renders a browser** and a CSS custom property resolves entirely inside the
 browser's cascade: *"did this element switch to the dark value?"* is unreachable
 here, while *"is there a colour literal left in this file?"* is exact and total. So
 the suite asserts what it can decide — no literals outside `MainLayout.razor.css`,
-and every `var()` naming a MudBlazor variable, a registered `--hu-*` skin token or `--font-mono`, in `app.css`
+and every `var()` naming a MudBlazor variable, a registered `--hu-*` skin token or `--font-mono`, in `wwwroot/css/`
 (`AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`) **and** in every scoped stylesheet
 (`ScopedCss_UsesOnlyMudBlazorVariables`).
 
@@ -132,7 +132,7 @@ That second test exists because its absence nearly shipped a defect:
 `ReconnectModal.razor.css` was left referencing nine deleted Tokens, and an
 unresolved custom property resolves to **nothing**, not to a fallback — so the
 reconnect modal would have rendered invisible at exactly the moment the circuit
-drops. The colour-literal test could not see it, and the `app.css` variable test did
+drops. The colour-literal test could not see it, and the `wwwroot/css/` variable test did
 not scan that file. Both tests enumerate directories rather than naming files, so a
 stylesheet added later is covered the day it appears.
 
