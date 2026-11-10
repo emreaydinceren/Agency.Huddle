@@ -9,14 +9,10 @@ namespace Agency.Huddle.Tests.Ui.Skins;
 /// </summary>
 public sealed class AppCssTokensCTests
 {
-    private const string RangeStart = "Tasks ---";
-    private const string RangeEnd = "The Task List at narrower widths";
-    private const string FormStart = "The Task detail form as four";
-
-    /// <summary>Reads the stylesheet with LF endings, restricted to this package's rules: the Tasks-to-narrower-widths range and the Task form file that now holds the Tasks toolbar.</summary>
-    /// <returns>The two sections' text.</returns>
+    /// <summary>Reads this package's stylesheets with LF endings: the Tasks, the Task form and the Library files, which hold the Tasks, Library and Task-drawer rules.</summary>
+    /// <returns>The three files' text, in link order.</returns>
     private static string Range() =>
-        CssText.Section(CssText.AppCss(), RangeStart, RangeEnd) + CssText.Section(CssText.AppCss(), FormStart);
+        CssText.Read(RepoPaths.App("wwwroot", "css", "library.css")) + CssText.Read(RepoPaths.App("wwwroot", "css", "tasks.css")) + CssText.Read(RepoPaths.App("wwwroot", "css", "task-form.css"));
 
     /// <summary>Each converted site now declares the token reference, not the recipe.</summary>
     /// <param name="selector">The rule's selector.</param>

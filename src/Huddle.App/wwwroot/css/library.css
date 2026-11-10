@@ -1,3 +1,5 @@
+/* ==== Library: the editor, the rendered document, the tree, search, document history and the Library's Theme variants ==== */
+
 /* ---- Library: CodeMirror editor theme and reference styles -----------------------------------
    The editor surface, text content, active-line highlight and selection background are scoped
    under .library-editor .cm-editor to override CodeMirror's generated theme, which is more

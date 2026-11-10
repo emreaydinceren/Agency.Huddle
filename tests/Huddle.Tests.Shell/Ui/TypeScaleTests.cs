@@ -77,7 +77,7 @@ public sealed partial class TypeScaleTests
     public void AppCss_ChipsHaveTheStatusShape(string selector)
     {
         string css = CssText.AppCss(CssNewlines.AsIs).Replace("\r\n", "\n", StringComparison.Ordinal);
-        int rule = css.IndexOf(selector, StringComparison.Ordinal);
+        int rule = css.IndexOf("\n" + selector, StringComparison.Ordinal);
         Assert.True(rule >= 0, "Expected the chip rule in app.css.");
 
         string body = css[rule..css.IndexOf('}', rule)];

@@ -279,13 +279,13 @@ id or a snapshot: an open dialog ignores new parameters.
 | `ThemeDefaults`, `ThemeCatalog`, `SkinLoader`, `AccentPalette` | `Themes/`, `Themes/Skins/` | The px type scale (`WithSharedTypography`), the Theme list built from the skin files, skin loading and customization, accent contrast clamping |
 | `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
 | `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
-| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `wwwroot/css/02-shell.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 40% over Surface, letters 75% toward `TextPrimary`. Dark: 40% over Surface, letters 75% toward white |
+| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `wwwroot/css/shell.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 40% over Surface, letters 75% toward `TextPrimary`. Dark: 40% over Surface, letters 75% toward white |
 | `LibraryPathDisplay` | `Components/Library/LibraryPathDisplay.cs` | `Shorten(fullPath)`: a path middle-truncated to its root and first folder, an ellipsis and the file; the full path goes in a tooltip |
 | `TaskPresence` | `Tasks/TaskPresence.cs` | `For`: an assignee's `PresenceState`, for `PresenceCue` |
 
 ### Stylesheet classes
 
-`wwwroot/css/` holds the global stylesheet as 14 files in link order (`AppStylesheets.All`, `01-base.css` to `15-task-form.css`), each ordered by feature with a comment heading; search the folder for the
+`wwwroot/css/` holds the global stylesheet as 11 feature files in link order (`AppStylesheets.All`: `base`, `shell`, `room`, `agents`, `settings`, `library`, `teams`, `sidebar`, `references`, `tasks`, `task-form`), each opening with a header comment and ordered by feature with a comment heading; a Theme's trait variants sit at the end of the file of the feature they style; search the folder for the
 feature's name. A new rule goes in the file of the feature it styles, after the rules it overrides. Reuse these before writing a rule:
 
 | Class | Does |

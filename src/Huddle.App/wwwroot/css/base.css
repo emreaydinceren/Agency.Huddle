@@ -1,3 +1,5 @@
+/* ==== Base: tokens, resets, global MudBlazor overrides, shared utilities and the Theme variants that restyle MudBlazor itself ==== */
+
 /* ---- Every colour and every font here is a token -------------------------------------------
    Every colour and every font-family in this file comes from MudBlazor's MudTheme - the single
    source of theming - through its generated --mud-palette-* and --mud-typography-* CSS custom

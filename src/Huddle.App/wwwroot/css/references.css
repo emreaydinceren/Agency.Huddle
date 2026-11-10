@@ -1,3 +1,5 @@
+/* ==== References: the @ picker, reference chips and the profile avatar ==== */
+
 /* ---- References ------------------------------------------------------------------------------- */
 .composer-picker {
     position: absolute;
@@ -476,4 +478,3 @@
 .profile-popover-empty {
     color: var(--mud-palette-text-secondary);
 }
-

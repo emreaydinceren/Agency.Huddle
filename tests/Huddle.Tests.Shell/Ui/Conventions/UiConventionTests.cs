@@ -88,7 +88,7 @@ public sealed class UiConventionTests
     public void Mutation_AddedViolation_IsCountedAndOverrunsTheBaseline(string rule, string snippet)
     {
         string path = string.Equals(rule, "CV11", StringComparison.Ordinal)
-            ? "src/Huddle.App/wwwroot/css/01-base.css"
+            ? "src/Huddle.App/wwwroot/css/base.css"
             : "src/Huddle.App/Components/Shared/Composer.razor";
         string original = File.ReadAllText(CssSource.RepoPath(path.Split('/')));
         string mutated = original + "\n" + snippet + "\n";

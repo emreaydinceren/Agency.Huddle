@@ -4,8 +4,11 @@ namespace Agency.Huddle.App.Themes;
 /// The application's own stylesheets, in the order <c>Components/App.razor</c> links them. The order is the
 /// cascade order: a later file wins a tie in specificity, so it is part of what the files mean. Each path is
 /// relative to <c>wwwroot</c> and is linked through <c>@Assets[...]</c> so the browser gets a fingerprinted
-/// URL. A test pins that this list equals the <c>.css</c> files in <c>wwwroot/css</c>, so a file cannot be
-/// added to the folder without being linked, or linked without existing.
+/// URL. A test pins that this list holds exactly the <c>.css</c> files in <c>wwwroot/css</c>, so a file cannot be
+/// added to the folder without being linked, or linked without existing. The files are named for the feature they
+/// style, so their alphabetical order is not the link order: this list is the only place the order is written.
+/// <c>base</c> comes first because every other file may override it. Reordering the rest can change which rule wins
+/// a tie, so check a change to this order with <c>agents/scripts/Css-Snapshot.ps1</c>.
 /// </summary>
 internal static class AppStylesheets
 {
@@ -15,19 +18,16 @@ internal static class AppStylesheets
     /// <summary>Every stylesheet path relative to <c>wwwroot</c>, in link order.</summary>
     internal static IReadOnlyList<string> All { get; } =
     [
-        "css/01-base.css",
-        "css/02-shell.css",
-        "css/03-room.css",
-        "css/04-task-read.css",
-        "css/06-agents.css",
-        "css/07-settings.css",
-        "css/08-tasks.css",
-        "css/09-library.css",
-        "css/10-room-cards.css",
-        "css/11-tasks-more.css",
-        "css/12-teams.css",
-        "css/13-sidebar.css",
-        "css/14-references.css",
-        "css/15-task-form.css",
+        "css/base.css",
+        "css/shell.css",
+        "css/room.css",
+        "css/agents.css",
+        "css/settings.css",
+        "css/library.css",
+        "css/teams.css",
+        "css/sidebar.css",
+        "css/references.css",
+        "css/tasks.css",
+        "css/task-form.css",
     ];
 }

@@ -1,3 +1,5 @@
+/* ==== Teams: the picker rows, the chip cloud, the process step and the build-a-Team page ==== */
+
 /* ---- Picker rows and the folder picker --------------------------------
    A list picker's row is 32px at 13px with an 18px icon in a 24px slot, not MudList's 46px at 14px. The doubled
    class outranks MudBlazor's own list-item padding and icon slot. */

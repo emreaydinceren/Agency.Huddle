@@ -9,7 +9,7 @@ public sealed class UiConventionScannerTests
 {
     private const string RazorPath = "src/Huddle.App/Components/Shared/Sample.razor";
 
-    private const string CssPath = "src/Huddle.App/wwwroot/css/01-base.css";
+    private const string CssPath = "src/Huddle.App/wwwroot/css/base.css";
 
     /// <summary>CV1: a button, icon button, chip, toggle group or fab with no Size is counted.</summary>
     [Fact]

@@ -1,3 +1,5 @@
+/* ==== Sidebar: Needs You, the segmented control, the Teams nav, sidebar rows and global search ==== */
+
 /* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
    Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. The card's
    sides sit on the selected pill's inset, and everything inside it is pulled back by that inset and the 1px border
