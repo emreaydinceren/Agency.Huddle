@@ -55,7 +55,7 @@ public sealed class NordicSkinTests
         Assert.StartsWith("alpha(", light["scrim"], StringComparison.Ordinal); // contains-ok: pins the scrim's shape, not a value
     }
 
-    /// <summary>Both Nordic skins name all nine traits, and every one differs from the default.</summary>
+    /// <summary>Both Nordic skins name eight of the nine traits, and every one differs from the default.</summary>
     [Fact]
     public void Nordic_TraitsAllNonDefault()
     {
@@ -69,8 +69,7 @@ public sealed class NordicSkinTests
             ["data-hu-composer"] = "card",
             ["data-hu-nav"] = "tile",
             ["data-hu-surface"] = "paper",
-            ["data-hu-marks"] = "chip",
-            ["data-hu-reading"] = "book",
+            ["data-hu-voice"] = "book",
         };
 
         foreach (string id in NordicIds)

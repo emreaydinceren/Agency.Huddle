@@ -207,14 +207,15 @@
    Theme (MainLayout renders .theme-mode-dark) runs the colour at 40% over its Surface with letters mixed 75% toward
    white: a deep fill, light letters. There is no per-colour black or white. AvatarColours mirrors both recipes in C#
    so a test can prove the 4.5:1 contrast.
-   A text label may run to six characters. AgentAvatar adds .avatar-label-len-1, -4, -5 or -6 for a label of that many
-   text elements (2-3 keep the 40% size, no class). A single element (an emoji, one letter) grows to 55% of the
+   A text label may run to six characters, but an avatar under 40px (the 24px row and the 32px Transcript) draws only
+   its first three and the 40px one its first five, so no label is under 11px. AgentAvatar adds .avatar-label-len-1, -4,
+   -5 or -6 for a label of that many text elements (2-3 keep the 40% size, no class); -4 and -5 reach the 40px and 72px
+   diameters, -6 only the 72px one. A single element (an emoji, one letter) grows to 55% of the
    diameter so it fills the circle; the 24px avatar gets it too, since a one-element label stays one there. The rules
    after the 72px diameter below shrink the letters
    to 0.3, 0.24 and 0.2 of the diameter: an upper-case letter at weight 600 averages about 0.65em, so N of them fill
-   about 80% of the circle's width. Wide letters (W, M) can still reach the edge, where the circle clips them. These are the one place the 10px floor
-   does not hold (a 6-character label cannot fit a 32px circle at 10px), so they use a 7px floor instead. The 24px
-   avatar never gets a length class: AgentAvatar draws only the first three text elements of a label there. */
+   about 80% of the circle's width. Wide letters (W, M) can still reach the edge, where the circle clips them. They keep the 11px
+   floor. The 24px and 32px avatars never get a length class above len-1: AgentAvatar draws only the first three text elements there. */
 .mud-avatar.mud-avatar-small {
     font-size: max(11px, calc(24px * 0.4));
 }
@@ -246,70 +247,51 @@
 }
 
 .mud-avatar.mud-avatar-medium {
-    font-size: max(10px, calc(40px * 0.4));
+    font-size: max(11px, calc(40px * 0.4));
 }
 
 .mud-avatar.mud-avatar-large {
     width: 72px;
     height: 72px;
-    font-size: max(10px, calc(72px * 0.4));
+    font-size: max(11px, calc(72px * 0.4));
 }
 
 .mud-avatar.mud-avatar-small.avatar-label-len-1 {
-    font-size: max(10px, calc(24px * 0.55));
+    font-size: max(11px, calc(24px * 0.55));
 }
 
 .mud-avatar.avatar-transcript.avatar-label-len-1 {
-    font-size: max(10px, calc(32px * 0.55));
+    font-size: max(11px, calc(32px * 0.55));
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-1 {
-    font-size: max(10px, calc(40px * 0.55));
+    font-size: max(11px, calc(40px * 0.55));
 }
 
 .mud-avatar.mud-avatar-large.avatar-label-len-1 {
-    font-size: max(10px, calc(72px * 0.55));
-}
-
-.mud-avatar.avatar-transcript.avatar-label-len-4 {
-    font-size: max(7px, calc(32px * 0.3));
-}
-
-.mud-avatar.avatar-transcript.avatar-label-len-5 {
-    font-size: max(7px, calc(32px * 0.24));
-    letter-spacing: -0.02em;
-}
-
-.mud-avatar.avatar-transcript.avatar-label-len-6 {
-    font-size: max(7px, calc(32px * 0.2));
-    letter-spacing: -0.02em;
+    font-size: max(11px, calc(72px * 0.55));
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-4 {
-    font-size: max(7px, calc(40px * 0.3));
+    font-size: max(11px, calc(40px * 0.3));
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-5 {
-    font-size: max(7px, calc(40px * 0.24));
-    letter-spacing: -0.02em;
-}
-
-.mud-avatar.mud-avatar-medium.avatar-label-len-6 {
-    font-size: max(7px, calc(40px * 0.2));
+    font-size: max(11px, calc(40px * 0.24));
     letter-spacing: -0.02em;
 }
 
 .mud-avatar.mud-avatar-large.avatar-label-len-4 {
-    font-size: max(7px, calc(72px * 0.3));
+    font-size: max(11px, calc(72px * 0.3));
 }
 
 .mud-avatar.mud-avatar-large.avatar-label-len-5 {
-    font-size: max(7px, calc(72px * 0.24));
+    font-size: max(11px, calc(72px * 0.24));
     letter-spacing: -0.02em;
 }
 
 .mud-avatar.mud-avatar-large.avatar-label-len-6 {
-    font-size: max(7px, calc(72px * 0.2));
+    font-size: max(11px, calc(72px * 0.2));
     letter-spacing: -0.02em;
 }
 
@@ -1528,10 +1510,12 @@ body.sidebar-resizing {
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- labels=upper: Cobalt Soft, Nordic ------------------------------------------------------- */
+
 /* -- labels=upper: sidebar group heads, right sidebar titles, list header, drawer labels --------------------- */
 :root:has([data-hu-labels="upper"]) .mud-nav-group > .mud-nav-link .mud-nav-link-text,
 :root:has([data-hu-labels="upper"]) .needs-you-heading {
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1543,7 +1527,7 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-labels="upper"]) .sidebar-panel-title {
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1559,6 +1543,7 @@ body.sidebar-resizing {
     font-weight: 500;
 }
 
+/* ---- nav=tile: Lumen, Nordic ----------------------------------------------------------------- */
 /* -- nav=tile: the activity bar, 36px tiles with a bar hugging the left edge on the current one ---------------- */
 :root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button,
 :root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link {
@@ -1667,6 +1652,7 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-primary);
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* -- surface=paper: top bar, breadcrumbs (7.4) ------------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .page-breadcrumbs-list {
     font-size: var(--mud-typography-body2-size);
@@ -1726,7 +1712,7 @@ body.sidebar-resizing {
     border-radius: 999px;
     background: var(--hu-ground-raised);
     color: var(--hu-text-subtle);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     letter-spacing: 0.03em;
 }
@@ -1777,29 +1763,31 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-primary);
 }
 
-/* -- reading=book: the outline is a left rail; the current heading carries a primary edge, not a tint (11) --------- */
-:root:has([data-hu-reading="book"]) .outline-row {
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
+/* -- voice=book: the outline is a left rail; the current heading carries a primary edge, not a tint (11) --------- */
+:root:has([data-hu-voice="book"]) .outline-row {
     border-left: 2px solid var(--hu-line-region);
     border-radius: 0;
     color: var(--hu-text-subtle);
     background: none;
 }
 
-:root:has([data-hu-reading="book"]) .outline-row.active,
-:root:has([data-hu-reading="book"]) .outline-row[aria-current] {
+:root:has([data-hu-voice="book"]) .outline-row.active,
+:root:has([data-hu-voice="book"]) .outline-row[aria-current] {
     border-left-color: var(--mud-palette-primary);
     color: var(--hu-accent-ink);
     font-weight: 500;
     background: none;
 }
 
-/* -- reading=book: empty states, a serif-italic sentence (15.8) --------------------------------------------------- */
-:root:has([data-hu-reading="book"]) .empty-state .empty-state-text {
+/* -- voice=book: empty states, a serif-italic sentence (15.8) --------------------------------------------------- */
+:root:has([data-hu-voice="book"]) .empty-state .empty-state-text {
     font-family: var(--font-read);
     font-style: italic;
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 /* -- surface=hairline: top bar, breadcrumbs and the search box (7.4) ------------------------------------------------ */
 :root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list {
     font-size: var(--mud-typography-body2-size);
@@ -1857,7 +1845,7 @@ body.sidebar-resizing {
     border: 1px solid var(--hu-line-control);
     border-radius: 999px;
     color: var(--hu-text-subtle);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     letter-spacing: 0.01em;
 }
@@ -1886,16 +1874,6 @@ body.sidebar-resizing {
     font-weight: 500;
 }
 
-/* The Tags panel's captions ("This note", "All tags in this folder") follow the labels trait: a sentence-case Theme
-   does not draw them in the overline's capitals. */
-:root:has([data-hu-labels="sentence"]) .tags-caption.mud-typography {
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 500;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--mud-palette-text-secondary);
-}
-
 /* Lumen's panel labels are quiet captions, not 13px/600 headings in Ink. */
 :root:has([data-hu-surface="hairline"]) .sidebar-panel-title {
     font-size: var(--mud-typography-caption-size);
@@ -1912,6 +1890,7 @@ body.sidebar-resizing {
     color: var(--hu-text-subtle);
 }
 
+/* ---- surface=card: Fluent -------------------------------------------------------------------- */
 /* Each Right sidebar panel is its own card, so the cards' gap replaces the Edge line between panels. */
 :root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel {
     padding: 4px 12px;
@@ -1923,6 +1902,7 @@ body.sidebar-resizing {
     border-top: 1px solid var(--hu-line-region);
 }
 
+/* ---- nav=bar: Fluent ------------------------------------------------------------------------- */
 /* -- nav=bar: the top bar reads the rail ground, so the chrome is one frame ------------------------------------------------- */
 :root:has([data-hu-nav="bar"]) .mud-appbar.top-bar {
     background-color: var(--hu-ground-rail);

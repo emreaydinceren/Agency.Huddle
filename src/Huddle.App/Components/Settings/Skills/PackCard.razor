@@ -25,7 +25,7 @@
 {
     <MudPaper Outlined="true" Class="@($"pack-card pa-3 mb-2{(this.Flash ? " search-hit-flash" : string.Empty)}")" id="@($"pack-card-{view.Pack.Id}")" data-pack="@view.Pack.Id">
         <div class="d-flex flex-wrap align-center gap-2">
-            <MudLink Typo="Typo.subtitle1" Class="pack-card-title" OnClick="this.OpenDetailsAsync">@view.Title</MudLink>
+            <MudLink Typo="Typo.subtitle1" Class="card-title pack-card-title" OnClick="this.OpenDetailsAsync">@view.Title</MudLink>
             @if (view.Pack.Version.Length > 0)
             {
                 <MudText Typo="Typo.caption" Class="pack-card-version mud-text-secondary">@view.Pack.Version</MudText>

@@ -48,7 +48,7 @@ else if (this.loaded is { } task)
     {
         <div class="task-read-view-header">
             <div class="task-read-view-eyebrow">@($"{task.Id} · {task.Location.Project ?? task.Location.Team}")</div>
-            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="task-read-view-title">@task.Title</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h2" Class="card-title task-read-view-title">@task.Title</MudText>
         </div>
     }
 

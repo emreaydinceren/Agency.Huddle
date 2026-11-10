@@ -70,7 +70,7 @@
                     @foreach (SearchGroupView group in this.groups)
                     {
                         <div role="group" aria-labelledby="@group.Heading.Id">
-                            <div id="@group.Heading.Id" class="@(group.Heading.IsArchived ? "search-group-heading search-card-archived" : "search-group-heading")">
+                            <div id="@group.Heading.Id" class="@(group.Heading.IsArchived ? "group-label search-group-heading search-card-archived" : "group-label search-group-heading")">
                                 @group.Heading.Text
                                 @if (group.Heading.IsSearching)
                                 {

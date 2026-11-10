@@ -228,10 +228,8 @@
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
+    margin: 0;
     border: 1px solid var(--ink-edge);
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
 }
 
 .build-step-current .build-step-badge,
@@ -465,6 +463,8 @@
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
+
 /* -- surface=paper: cards and panels, radius 1.5 (15.4) ----------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .process-step,
 :root:has([data-hu-surface="paper"]) .team-type-card,
@@ -472,6 +472,7 @@
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 :root:has([data-hu-surface="hairline"]) .team-type-card:hover,
 :root:has([data-hu-surface="hairline"]) .roster-card:hover {
     border-color: var(--hu-line-control);

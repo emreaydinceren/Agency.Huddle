@@ -5,9 +5,9 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Traits;
 
 /// <summary>
-/// Source assertions for the four content trait variants of the theming plan (phase 3, package P3-A): the
-/// transcript variants <c>message=row</c> and <c>marks=chip</c>, and the composer variants <c>composer=card</c> and
-/// <c>send=text</c>. Their CSS is lifted out of the Nordic pack into <c>app.css</c>, scoped to the trait marker
+/// Source assertions for the content trait variants of the theming plan (phase 3, package P3-A): the
+/// transcript variant <c>message=row</c>, and the composer variants <c>composer=card</c> and <c>send=text</c>; and for the marks
+/// (wiki links, references, mentions, quotes and tool summaries) that every Theme draws, so they are plain rules. Their CSS is lifted out of the Nordic pack into <c>app.css</c>, scoped to the trait marker
 /// the skin renders instead of to the pack, and reading registry tokens where the pack read <c>--n-*</c>. A source
 /// test, for the reason <see cref="ThemeSourceTests"/> gives: no browser renders here.
 /// </summary>
@@ -15,6 +15,7 @@ public sealed partial class ContentTraitsTests
 {
     private const string SectionHeader = "Traits: transcript and composer";
     private const string NextSectionHeader = "Room member health";
+    private const string MarksHeader = "Marks: names, references, mentions, quotes and tool summaries";
 
     /// <summary>The whole of <c>app.css</c>.</summary>
     private static string AppCss => CssText.AppCss(CssNewlines.AsIs);
@@ -53,7 +54,6 @@ public sealed partial class ContentTraitsTests
         Check<MessageLayout>("message");
         Check<SendStyle>("send");
         Check<ComposerStyle>("composer");
-        Check<MarkStyle>("marks");
 
         Assert.Empty(missing);
 
@@ -78,7 +78,6 @@ public sealed partial class ContentTraitsTests
         Assert.Equal(["Bubble", "Row"], Enum.GetNames<MessageLayout>());
         Assert.Equal(["Icon", "Text", "Square"], Enum.GetNames<SendStyle>());
         Assert.Equal(["Box", "Card", "Underlined"], Enum.GetNames<ComposerStyle>());
-        Assert.Equal(["Plain", "Chip"], Enum.GetNames<MarkStyle>());
     }
 
     /// <summary>No pack token survives the lift: <c>app.css</c> holds no <c>--n-</c> variable.</summary>
@@ -119,39 +118,75 @@ public sealed partial class ContentTraitsTests
         Has("max-width: 75ch;", bubble);
     }
 
-    /// <summary><c>marks=chip</c> draws wiki links, references, mentions, quotes and tool summaries as chips and wells in registry tokens.</summary>
-    [Fact]
-    public void MarksChip_PinsMarksAndReadsRegistryTokens()
+    /// <summary>The bodies of every rule in the Marks section with a selector ending in <paramref name="selectorPart"/>, joined.</summary>
+    /// <param name="selectorPart">The tail of a selector, whitespace-normalised.</param>
+    private static string Mark(string selectorPart)
     {
-        string link = Rule("[data-hu-marks=\"chip\"]) .library-ref");
+        string withoutComments = CssText.StripComments(CssText.Section(AppCss, MarksHeader, SectionHeader));
+        List<string> bodies = [];
+        foreach (Match rule in RulePattern().Matches(withoutComments))
+        {
+            string selectors = Whitespace().Replace(rule.Groups["sel"].Value, " ");
+            if (selectors.Split(',').Any(item => item.Trim().EndsWith(selectorPart, StringComparison.Ordinal))) // contains-ok: selector tail of one rule of the stylesheet source
+            {
+                bodies.Add(rule.Groups["body"].Value);
+            }
+        }
+
+        Assert.NotEmpty(bodies);
+        return string.Join("\n", bodies);
+    }
+
+    /// <summary>The marks draw wiki links, references, mentions, quotes and tool summaries as chips and wells in registry tokens, in every Theme.</summary>
+    [Fact]
+    public void Marks_PinMarksAndReadRegistryTokens()
+    {
+        string link = Mark(".library-ref");
         Has("var(--hu-accent-ink)", link);
         Has("var(--hu-tone-primary-soft)", link);
 
-        string chip = Rule("[data-hu-marks=\"chip\"]) .task-ref");
+        string chip = Mark(".task-ref");
         Has("var(--hu-tone-primary-tint)", chip);
         Has("var(--hu-accent-ink)", chip);
         Has("var(--mud-palette-primary)", chip);
         Has("var(--hu-line-region)", chip);
         Assert.DoesNotContain("tone-info", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
-        string mention = Rule("[data-hu-marks=\"chip\"]) .mention");
+        string mention = Mark(".mention");
         Has("var(--hu-accent-ink)", mention);
         Has("var(--hu-tone-primary-tint)", mention);
 
-        string me = Rule(".mention.mention--me");
+        string me = Mark(".mention.mention--me");
         Has("var(--hu-tone-warning-soft)", me);
         Has("var(--hu-tone-warning-ink)", me);
 
-        string quote = Rule(".message-body blockquote");
+        string quote = Mark(".message-body blockquote");
         Has("var(--hu-text-subtle)", quote);
         Has("var(--hu-tone-info-soft)", quote);
 
-        string detail = Rule("[data-hu-marks=\"chip\"]) .turn-detail");
+        string detail = Mark(".turn-detail");
         Has("var(--hu-ground-sunk)", detail);
         Has("var(--hu-text-subtle)", detail);
 
-        Has("var(--mud-palette-text-secondary)", Rule(".message-time"));
-        Has("var(--hu-tone-primary-soft)", Rule("::selection"));
+        Has("var(--mud-palette-text-secondary)", Mark(".message-time"));
+        Has("var(--hu-tone-primary-soft)", Mark("::selection"));
+    }
+
+    /// <summary>
+    /// No rule is scoped to <c>marks</c> any more. The five marks rules that a more specific rule would otherwise beat (a wiki link,
+    /// its hover and missing forms, a reference chip, and the second paragraph's margin) start <c>:root:root</c>, which repeats the specificity the old guard gave
+    /// them, so <c>.library-rendered .library-ref</c>, <c>p.message-heading</c> and <c>.task-ref-closed</c> keep losing to them.
+    /// </summary>
+    [Fact]
+    public void Marks_HaveNoTraitScopeAndKeepTheirSpecificity()
+    {
+        Assert.DoesNotContain("data-hu-marks", AppCss, StringComparison.Ordinal);
+
+        string section = CssText.StripComments(CssText.Section(AppCss, MarksHeader, SectionHeader));
+        foreach (string selector in new[] { ".library-ref {", ".library-ref:hover {", ".library-ref.library-ref-missing {", ".message-body p + p {", "a.team-ref {" })
+        {
+            Assert.Contains(":root:root " + selector, section, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
+        }
     }
 
     /// <summary><c>composer=card</c> makes the box the paper, the input borderless and the bottom 40px a tool row, in registry tokens.</summary>

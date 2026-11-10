@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Ui.Traits;
 
 /// <summary>
 /// Source tests for the chrome trait variants that the stylesheets ship beside the feature each one styles: <c>status=pill</c>,
-/// <c>labels=upper</c>, <c>nav=tile</c>, <c>surface=paper</c> and <c>reading=book</c>. They read the stylesheet as text:
+/// <c>labels=upper</c>, <c>nav=tile</c>, <c>surface=paper</c> and <c>voice=book</c>. They read the stylesheet as text:
 /// each variant is scoped to the marker attribute the layout renders, reads skin tokens (never a pack token) where the
 /// registry has one, and declares no colour literal.
 /// </summary>
@@ -19,7 +19,7 @@ public sealed partial class ChromeTraitsTests
 
     private static readonly string[] ChromeScopes =
     [
-        "[data-hu-status=", "[data-hu-labels=", "[data-hu-nav=", "[data-hu-surface=", "[data-hu-reading=",
+        "[data-hu-status=", "[data-hu-labels=", "[data-hu-nav=", "[data-hu-surface=", "[data-hu-voice=",
     ];
 
     /// <summary>Every non-default value of the five chrome trait enums, with the trait attribute it renders as.</summary>
@@ -30,7 +30,7 @@ public sealed partial class ChromeTraitsTests
         Add(data, "labels", typeof(LabelCase));
         Add(data, "nav", typeof(NavStyle));
         Add(data, "surface", typeof(SurfaceStyle));
-        Add(data, "reading", typeof(ReadingStyle));
+        Add(data, "voice", typeof(VoiceStyle));
         return data;
     }
 
@@ -79,7 +79,8 @@ public sealed partial class ChromeTraitsTests
 
         Assert.Contains("border-radius: 999px;", chip, StringComparison.Ordinal);
         Assert.Contains("font-weight: 600;", warning, StringComparison.Ordinal);
-        Assert.Contains("border-radius: 50%;", dot, StringComparison.Ordinal);
+        Assert.Contains("width: 7px;", dot, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
+        Assert.Contains("border: 1.5px solid currentColor;", dot, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
         Assert.Contains("background: var(--hu-ground-sunk);", tag, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", tag, StringComparison.Ordinal);
         Assert.DoesNotContain("[data-hu-status=\"pill\"]) .mud-chip.priority-high", Css, StringComparison.Ordinal);
@@ -163,17 +164,17 @@ public sealed partial class ChromeTraitsTests
     }
 
     /// <summary>
-    /// <c>reading=book</c> sets the Library's rendered document in the reading face at a 1.72 line, tints its block quote
+    /// <c>voice=book</c> sets the Library's rendered document in the reading face at a 1.72 line, tints its block quote
     /// from the info tone, rails the outline with the primary edge, and sets the empty-state sentence in italics.
     /// </summary>
     [Fact]
-    public void ReadingBook_PinsProseOutlineAndEmptyState()
+    public void VoiceBook_PinsProseOutlineAndEmptyState()
     {
-        string prose = Body("reading", "book", ".library-rendered");
-        string quote = Body("reading", "book", ".library-rendered blockquote");
-        string outline = Body("reading", "book", ".outline-row.active");
-        string empty = Body("reading", "book", ".empty-state .empty-state-text");
-        string hero = Body("reading", "book", ".mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6");
+        string prose = Body("voice", "book", ".library-rendered");
+        string quote = Body("voice", "book", ".library-rendered blockquote");
+        string outline = Body("voice", "book", ".outline-row.active");
+        string empty = Body("voice", "book", ".empty-state .empty-state-text");
+        string hero = Body("voice", "book", ".mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6");
 
         Assert.Contains("font-family: var(--font-read);", prose, StringComparison.Ordinal);
         Assert.Contains("line-height: 1.72;", prose, StringComparison.Ordinal);
@@ -181,6 +182,35 @@ public sealed partial class ChromeTraitsTests
         Assert.Contains("border-left-color: var(--mud-palette-primary);", outline, StringComparison.Ordinal);
         Assert.Contains("font-style: italic;", empty, StringComparison.Ordinal);
         Assert.Contains("font-family: var(--font-read);", hero, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <c>nav=tint</c> is the default and draws nothing of its own: the rules it once held are Cobalt Soft's. The Task edit page's group labels and the
+    /// blocked card's bar live on <c>surface=flat</c>, the value only Cobalt Soft sets; the Task List header-cell rule was dead (<c>labels=upper</c> overrode it) and is gone.
+    /// </summary>
+    [Fact]
+    public void NavTint_HasNoRulesAndSurfaceFlatCarriesThem()
+    {
+        Assert.DoesNotContain("data-hu-nav=\"tint\"", Css, StringComparison.Ordinal);
+
+        string label = Body("surface", "flat", ".task-edit-page .task-detail-group > .group-label");
+        string blocked = Body("surface", "flat", ".task-card-blocked");
+
+        Assert.Contains("text-transform: none;", label, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
+        Assert.Contains("inset 3px 0 0", blocked, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
+    }
+
+    /// <summary>The traits are nine, and neither <c>marks</c> nor <c>reading</c> remains as an axis, a scope or a marker attribute.</summary>
+    [Fact]
+    public void Traits_AreNineAndMarksAndReadingAreGone()
+    {
+        Assert.Equal(9, SkinLoader.TraitValues.Count);
+        Assert.DoesNotContain("marks", SkinLoader.TraitValues.Keys);
+        Assert.DoesNotContain("reading", SkinLoader.TraitValues.Keys);
+        Assert.Contains("voice", SkinLoader.TraitValues.Keys);
+        Assert.DoesNotContain("data-hu-marks", Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-hu-reading", Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-hu-marks", new SkinTraits().ToMarkerAttributes().Keys);
     }
 
     private static void Add(TheoryData<string, string> data, string trait, Type enumType)

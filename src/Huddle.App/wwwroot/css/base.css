@@ -142,15 +142,8 @@ button:focus-visible {
 }
 
 /* Editable long text (a prompt, a persona, instructions, a description) is body1: 14px, weight 400, the body line
-   height. MudBlazor draws an input's text in its subtitle1 role, which is 600 in this scale, with a 1.1876em line
-   height; this class sets the three properties back on the input and the textarea inside it. Not for monospace or code editors. */
-/* What a Human types is text, not emphasis. MudBlazor puts mud-typography-subtitle1 on every .mud-input, and subtitle1
-   is weight 600 in this scale, so every field, select and search box read bold. The inline title edit sets its own h5
-   weight on the input element and still wins. */
-.mud-input.mud-typography-subtitle1 {
-    font-weight: var(--mud-typography-body1-weight);
-}
-
+   height. MudBlazor draws an input's text in its subtitle1 role, with a 1.1876em line height; this class sets
+   the three properties on the input and the textarea inside it. Not for monospace or code editors. */
 .long-text-field .mud-input,
 .long-text-field .mud-input .mud-input-slot,
 .long-text-field .mud-input > textarea.mud-input-root {
@@ -280,13 +273,6 @@ button:focus-visible {
     background-color: var(--hu-scrim);
 }
 
-/* A field's label is Quiet ink at 400, at rest and floated, in every dialog. MudBlazor draws it at the
-   subtitle1 weight, which is 600 in this scale. An outlined field's label, which sits above the box, is set apart at
-   600 by the "label sits above its field" rules below. */
-.mud-input-control > .mud-input-control-input-container > .mud-input-label-inputcontrol {
-    font-weight: var(--mud-typography-body1-weight);
-}
-
 /* Table row lines are the Edge rung. MudBlazor's TableLines default (#e0e0e0) belongs to no Theme's palette. */
 .mud-table .mud-table-cell {
     border-bottom-color: var(--ink-edge);
@@ -353,22 +339,22 @@ button:focus-visible {
 
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
    The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
-   overline 11. Nothing renders under 11px, and there are three weights: 400 text, 500 controls, 600 emphasis and
-   headings. The rules below pull the MudBlazor components that ship their own rem or px size onto those roles. */
+   button 13, and the Label (the retired Overline's slot) 12. Nothing renders under 11px, and there are three
+   weights: 400 text, 500 controls, 600 emphasis and headings. The rules below pull the MudBlazor components that ship their own rem or px size onto those roles. */
 strong,
 b {
     font-weight: 600;
 }
 
-/* A Small button is a row-sized control (body2); a Large one is body1. Both keep the control weight. */
+/* A Small button is a row-sized control: 28px high, in the Button role (13px, 500). MudBlazor sizes Small in rem
+   and not from the role, so the rule points it at the role. A Large one is body1. */
 .mud-button-text-size-small,
 .mud-button-outlined-size-small,
 .mud-button-filled-size-small {
     box-sizing: border-box;
     height: 28px;
     padding-block: 0;
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 500;
+    font-size: var(--mud-typography-button-size);
 }
 
 .mud-button-text-size-large,
@@ -592,8 +578,17 @@ a.team-ref,
     border-bottom: 1px solid var(--ink-rule);
 }
 
-/* A group label: the heading of a group of fields inside a drawer or dialog. 12px at 600 in Quiet ink,
-   sentence case, 8px above its fields. The page-level heading over a group is .group-heading above, not this. */
+/* A card title: the 14px heading of a card, a panel section or a row (the subtitle1 size at 600). The role itself is
+   400 because MudBlazor draws every input in subtitle1; a title wears this class to be 600. */
+.card-title {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-subtitle1-lineheight);
+}
+
+/* The Label: the one small-label style. 12px at 600 in Quiet ink, sentence case, 8px above its fields. Every small
+   label wears it, alone or beside its own layout class; the labels=upper trait uppercases it, its only variant.
+   The page-level heading over a group is .group-heading above, not this. */
 .group-label {
     margin: 0 0 8px 0;
     font-size: var(--mud-typography-caption-size);
@@ -657,6 +652,8 @@ a.team-ref,
    Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
+
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 
 /* -- surface=paper: typography, font smoothing (6) -------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) body {
@@ -815,6 +812,7 @@ a.team-ref,
     color: var(--mud-palette-primary);
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 /* -- surface=hairline: notices keep the 3px bar as an inset shadow so it follows the corner (15.4) ------------------------ */
 :root:has([data-hu-surface="hairline"]) .budget-prompt,
 :root:has([data-hu-surface="hairline"]) .member-health-alert {

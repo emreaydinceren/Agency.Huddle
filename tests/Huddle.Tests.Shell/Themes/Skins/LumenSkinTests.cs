@@ -26,7 +26,7 @@ public sealed class LumenSkinTests
         return own;
     }
 
-    /// <summary>Both Lumen skins choose the ten traits the sheet lists, with the three phase 4 variants among them.</summary>
+    /// <summary>Both Lumen skins choose the nine traits the sheet lists, with the three phase 4 variants among them.</summary>
     [Fact]
     public void Lumen_TraitsMatchSheet()
     {
@@ -38,8 +38,7 @@ public sealed class LumenSkinTests
             Composer: ComposerStyle.Card,
             Nav: NavStyle.Tile,
             Surface: SurfaceStyle.Hairline,
-            Marks: MarkStyle.Chip,
-            Reading: ReadingStyle.Plain,
+            Voice: VoiceStyle.Plain,
             Ids: IdStyle.Mono);
 
         Assert.Equal(expected, Load("lumen-light").Traits);

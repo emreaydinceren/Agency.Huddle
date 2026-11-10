@@ -47,17 +47,22 @@ internal static class ThemeDefaults
 
         // The type scale, in rendered pixels. The page is not zoomed (ADR-0056), so each size below is the size on
         // screen, and none is under 11px. Three weights: 400 text, 500 controls, 600 emphasis and headings.
+        // Subtitle1 is 400 because MudBlazor draws every input in it; a card title is 600 through the .card-title class.
         SetRole(theme.Typography.H5, "20px", "600", "1.3");
         SetRole(theme.Typography.H6, "16px", "600", "1.35");
-        SetRole(theme.Typography.Subtitle1, "14px", "600", "1.4");
+        SetRole(theme.Typography.Subtitle1, "14px", "400", "1.4");
         SetRole(theme.Typography.Subtitle2, "16px", "600", "1.35");
         SetRole(theme.Typography.Body1, "14px", "400", "1.55");
         SetRole(theme.Typography.Body2, "13px", "400", "1.4");
         SetRole(theme.Typography.Caption, "12px", "400", "1.35");
-        SetRole(theme.Typography.Overline, "11px", "600", "1.3");
-        theme.Typography.Overline.LetterSpacing = "0.04em";
-        theme.Typography.Overline.TextTransform = "uppercase";
-        SetRole(theme.Typography.Button, "14px", "500", "1.4");
+
+        // The Overline is retired: the Label is the one small-label style and is drawn by the .group-label class. The role
+        // stays only because MudBlazor always emits it and a few Theme rules still read its size token; it carries the
+        // Label's size, weight and case, and nothing uses it as a style of its own.
+        SetRole(theme.Typography.Overline, "12px", "600", "1.35");
+        theme.Typography.Overline.LetterSpacing = "normal";
+        theme.Typography.Overline.TextTransform = "none";
+        SetRole(theme.Typography.Button, "13px", "500", "1.4");
         return theme;
     }
 

@@ -1,0 +1,26 @@
+# Declared changes for Css-Snapshot.ps1 -Mode Report -Declared <this file>.
+#
+# One declaration per line:  selector | property | before -> after | pages
+#   selector   a substring of the element path as Diff prints it, or a CSS-like chain (tag.class.class, .class, `*`).
+#              Descendants are written with a space or `>` and both mean "somewhere below". It matches the element
+#              and everything below it, so name the property to keep a declaration tight.
+#   property   optional (default `*`). A computed property, a prefix with a trailing `*` (margin*), or `*`.
+#              Also: (element added), (element removed), page documentHeight, page documentWidth, page finalPath.
+#   before -> after   optional. Computed values, white space collapsed; either side may be `*`.
+#   pages      optional regex tested against `route | Theme | width`.
+# Blank lines and lines starting with `#` are ignored. A .json file with the same fields is read as an array.
+#
+# The settings section title's bottom margin goes from 4px to 7px, in every Theme. The computed `margin` reads
+# "top right bottom left" shortened, so `0 0 4px 0` is "0px 0px 4px".
+.settings-section-title.mud-typography | margin | 0px 0px 4px -> 0px 0px 7px
+
+# The title pushes later content down, so containers that size to their content grow by 3px. Declare the knock-on you
+# expect, as narrowly as you can; anything else the report shows as undeclared.
+.settings-section | height | * -> *
+* | page documentHeight
+
+# Only in the two Lumen Themes, a colour change on any h6 (a regex on the page label):
+h6.mud-typography | color | * -> * | lumen-(light|dark)
+
+# Every Theme, any property of an element that appears or disappears under the Feed list:
+.feed-list | (element added)

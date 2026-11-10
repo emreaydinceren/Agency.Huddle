@@ -77,7 +77,7 @@
             <MudTextField T="string" Label="Time zone" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="job-editor-zone"
                           HelperText="An IANA name such as Europe/Berlin." @bind-Value="this.zone" />
             <div class="job-editor-preview" role="status">
-                <MudText Typo="Typo.subtitle1" Class="job-editor-preview-heading">Next runs</MudText>
+                <MudText Typo="Typo.subtitle1" Class="card-title job-editor-preview-heading">Next runs</MudText>
                 @if (this.Preview() is { Count: > 0 } runs)
                 {
                     @foreach (DateTimeOffset run in runs)

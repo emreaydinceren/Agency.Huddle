@@ -15,7 +15,7 @@
     <ChildContent>
         @if (this.ShowMoveTo)
         {
-            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1 mud-text-secondary">Move to</MudText>
+            <MudText Typo="Typo.caption" Class="group-label px-4 pt-2 pb-1">Move to</MudText>
             @foreach (TaskState state in TaskStates.All)
             {
                 <MudMenuItem Icon="@TaskColors.Icon(state)" OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>

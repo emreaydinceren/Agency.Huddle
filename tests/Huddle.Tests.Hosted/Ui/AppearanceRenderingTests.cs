@@ -255,8 +255,7 @@ public sealed class AppearanceRenderingTests
             ["data-hu-composer"] = "card",
             ["data-hu-nav"] = "tile",
             ["data-hu-surface"] = "paper",
-            ["data-hu-marks"] = "chip",
-            ["data-hu-reading"] = "book",
+            ["data-hu-voice"] = "book",
         };
         foreach (KeyValuePair<string, string> pair in expected)
         {
@@ -344,8 +343,7 @@ public sealed class AppearanceRenderingTests
             ["data-hu-composer"] = "card",
             ["data-hu-nav"] = "tile",
             ["data-hu-surface"] = "hairline",
-            ["data-hu-marks"] = "chip",
-            ["data-hu-reading"] = "plain",
+            ["data-hu-voice"] = "plain",
             ["data-hu-ids"] = "mono",
         };
         Assert.Equal(expected.Count, marker.Attributes.Count(static attribute => attribute.Name.StartsWith("data-hu-", StringComparison.Ordinal)));

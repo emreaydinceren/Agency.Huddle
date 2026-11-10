@@ -856,7 +856,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-properties-title {
     display: block;
     margin-bottom: 8px;
-    color: var(--mud-palette-text-secondary);
 }
 
 .library-properties-list {
@@ -973,6 +972,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- nav=tile: Lumen, Nordic ----------------------------------------------------------------- */
+
 /* -- nav=tile: the Library tree; its current file is the soft primary fill, not the tile ----------------------- */
 :root:has([data-hu-nav="tile"]) .library-tree.mud-treeview {
     font-size: var(--mud-typography-body2-size);
@@ -998,54 +999,55 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-color: var(--hu-line-region);
 }
 
-/* -- reading=book: the Library document's path, mono (11) ------------------------------------------------------- */
-:root:has([data-hu-reading="book"]) .library-document-path {
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
+/* -- voice=book: the Library document's path, mono (11) ------------------------------------------------------- */
+:root:has([data-hu-voice="book"]) .library-document-path {
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
-/* -- reading=book: the reading view, prose at a 1.72 line with serif headings (11) ----------------------------- */
-:root:has([data-hu-reading="book"]) .library-rendered {
+/* -- voice=book: the reading view, prose at a 1.72 line with serif headings (11) ----------------------------- */
+:root:has([data-hu-voice="book"]) .library-rendered {
     font-family: var(--font-read);
     line-height: 1.72;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered > * + * {
+:root:has([data-hu-voice="book"]) .library-rendered > * + * {
     margin-top: 12px;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered h1,
-:root:has([data-hu-reading="book"]) .library-rendered h2,
-:root:has([data-hu-reading="book"]) .library-rendered h3 {
+:root:has([data-hu-voice="book"]) .library-rendered h1,
+:root:has([data-hu-voice="book"]) .library-rendered h2,
+:root:has([data-hu-voice="book"]) .library-rendered h3 {
     font-family: var(--font-read);
     font-weight: 600;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered h1 {
+:root:has([data-hu-voice="book"]) .library-rendered h1 {
     font-size: calc(1em * 2);
     line-height: 1.2;
     letter-spacing: -0.01em;
     margin: 0 0 12px;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered h2 {
+:root:has([data-hu-voice="book"]) .library-rendered h2 {
     font-size: calc(1em * 1.375);
     line-height: 1.3;
     letter-spacing: -0.005em;
     margin: 32px 0 0;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered h3 {
+:root:has([data-hu-voice="book"]) .library-rendered h3 {
     font-size: calc(1em * 1.09);
     margin: 24px 0 0;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered ul li::marker {
+:root:has([data-hu-voice="book"]) .library-rendered ul li::marker {
     color: var(--mud-palette-primary);
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered blockquote {
+:root:has([data-hu-voice="book"]) .library-rendered blockquote {
     margin: 24px 0;
     padding: 12px 16px;
     border-left: 3px solid var(--mud-palette-info);
@@ -1055,7 +1057,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-style: italic;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered pre {
+:root:has([data-hu-voice="book"]) .library-rendered pre {
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
     border-radius: var(--mud-default-borderradius);
@@ -1064,7 +1066,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     line-height: 1.65;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered code {
+:root:has([data-hu-voice="book"]) .library-rendered code {
     font-family: var(--font-mono);
     font-size: calc(1em * 0.82);
     background: var(--hu-ground-sunk);
@@ -1073,37 +1075,37 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     border-radius: calc(var(--mud-default-borderradius) * 0.5);
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered pre code {
+:root:has([data-hu-voice="book"]) .library-rendered pre code {
     font-size: inherit;
     background: none;
     border: 0;
     padding: 0;
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered th,
-:root:has([data-hu-reading="book"]) .library-rendered td {
+:root:has([data-hu-voice="book"]) .library-rendered th,
+:root:has([data-hu-voice="book"]) .library-rendered td {
     border-color: var(--hu-line-region);
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered table {
+:root:has([data-hu-voice="book"]) .library-rendered table {
     font-family: var(--mud-typography-default-family);
     font-size: var(--mud-typography-body2-size);
 }
 
-:root:has([data-hu-reading="book"]) .library-rendered th {
+:root:has([data-hu-voice="book"]) .library-rendered th {
     background: var(--hu-ground-sunk);
     color: var(--mud-palette-text-primary);
     font-weight: 600;
 }
 
-/* -- reading=book: wiki links inside serif prose switch back to the UI face (11) ------------------------------- */
-:root:has([data-hu-reading="book"]) .library-rendered .library-ref {
+/* -- voice=book: wiki links inside serif prose switch back to the UI face (11) ------------------------------- */
+:root:has([data-hu-voice="book"]) .library-rendered .library-ref {
     font-family: var(--mud-typography-default-family);
     font-size: calc(1em * 0.9);
 }
 
-/* -- reading=book: the properties well, sunk, mono keys (11) ----------------------------------------------------- */
-:root:has([data-hu-reading="book"]) .library-properties {
+/* -- voice=book: the properties well, sunk, mono keys (11) ----------------------------------------------------- */
+:root:has([data-hu-voice="book"]) .library-properties {
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
     border-radius: var(--mud-default-borderradius);
@@ -1112,13 +1114,14 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     box-shadow: none;
 }
 
-:root:has([data-hu-reading="book"]) .library-properties dt,
-:root:has([data-hu-reading="book"]) .library-properties th {
+:root:has([data-hu-voice="book"]) .library-properties dt,
+:root:has([data-hu-voice="book"]) .library-properties th {
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- surface=card: Fluent -------------------------------------------------------------------- */
 /* -- surface=card: content on raised cards over the page ground (Fluent). The card is the field group's: its radius, the raised ground, the region line and the card
    shadow, as on the Task edit page. -------------------------------------------------------------------------------- */
 :root:has([data-hu-surface="card"]) .library-rendered,
@@ -1140,6 +1143,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 24px 32px;
 }
 
+/* ---- nav=bar: Fluent ------------------------------------------------------------------------- */
 /* -- nav=bar: the Library tree's current file uses the same 3px bar ------------------------------------------------------------ */
 :root:has([data-hu-nav="bar"]) .library-tree .mud-treeview-item-content.mud-treeview-item-selected {
     background: var(--hu-current-background);

@@ -6,7 +6,7 @@
 @inject FeedStore Store
 
 <div class="feed-related">
-    <div class="feed-related-caption">In the Feed</div>
+    <div class="group-label feed-related-caption">In the Feed</div>
     @foreach (FeedItem related in this.items)
     {
         <div class="@(related.Id == this.Item.Id ? "feed-related-row feed-related-own" : "feed-related-row")" @key="related.Id">

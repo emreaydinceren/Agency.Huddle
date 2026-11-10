@@ -24,8 +24,7 @@ public sealed class CobaltSoftSkinTests
         Assert.Equal(ComposerStyle.Box, traits.Composer);
         Assert.Equal(NavStyle.Tint, traits.Nav);
         Assert.Equal(SurfaceStyle.Flat, traits.Surface);
-        Assert.Equal(MarkStyle.Chip, traits.Marks);
-        Assert.Equal(ReadingStyle.Plain, traits.Reading);
+        Assert.Equal(VoiceStyle.Plain, traits.Voice);
     }
 
     /// <summary>The labelled Send is the mockup's filled primary button (<c>btn-primary</c>) in both modes, not a text-only one.</summary>
@@ -86,13 +85,16 @@ public sealed class CobaltSoftSkinTests
         Assert.Equal("0 1px 2px rgba(0,0,0,.4)", Load("cobalt-soft-dark").Shadows[1]);
     }
 
-    /// <summary>Cobalt Soft's note headings are its tight, heavy setting: 650 weight, a 30px h1 at -0.025em (side-by-side audit, CL-04).</summary>
+    /// <summary>
+    /// Cobalt Soft's note headings are its tight setting: a 30px h1 at -0.025em (side-by-side audit, CL-04). The weight is the
+    /// default 600, since the scale has no 650, so the skin no longer sets <c>note.heading.weight</c>.
+    /// </summary>
     [Fact]
-    public void CobaltSoft_NoteHeadingsAreTightAndHeavy()
+    public void CobaltSoft_NoteHeadingsAreTight()
     {
         Skin light = Load("cobalt-soft-light");
 
-        Assert.Equal("650", light.Tokens["note.heading.weight"]);
+        Assert.False(light.Tokens.ContainsKey("note.heading.weight"));
         Assert.Equal("1.875em", light.Tokens["note.h1.size"]);
         Assert.Equal("-0.025em", light.Tokens["note.h1.tracking"]);
     }
