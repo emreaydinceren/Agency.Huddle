@@ -120,7 +120,7 @@
     cursor: pointer;
 }
 
-/* A skin tone is the Filter chip (audit A6, B8j): 28px, a pill, a dashed Field line and no fill while unset; the Accent
+/* A skin tone is the Filter chip: 28px, a pill, a dashed Field line and no fill while unset; the Accent
    border, the Accent tint at 14% and the Accent ink at 500 once pressed, not weight 600. */
 .avatar-library-skin {
     box-sizing: border-box;
@@ -237,7 +237,7 @@
     }
 }
 
-/* The card's sections are a Group label over their content, not boxes (audit B8b): spacing alone separates them. */
+/* The card's sections are a Group label over their content, not boxes: spacing alone separates them. */
 .agent-profile-card-section {
     margin-bottom: 16px;
 }
@@ -247,7 +247,7 @@
 }
 
 /* While the Model, Effort or Work mode list is being read, the field refuses to open but must not look switched off: it keeps
-   its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it (audit E5). */
+   its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it. */
 .mud-input-control.agent-profile-card-probing .mud-input.mud-disabled {
     color: var(--mud-palette-text-primary);
 }
@@ -269,7 +269,7 @@
     margin-top: 0;
 }
 
-/* UX-E15: the New agent form's Title and Alias sit side by side, and Model, Effort and Work mode are one row of
+/* The New agent form's Title and Alias sit side by side, and Model, Effort and Work mode are one row of
    equal selects under the one Model label, so the dialog fits a 900px-high window without an inner scroll. */
 .agent-profile-card-row {
     display: flex;
@@ -332,7 +332,7 @@
 }
 
 /* ---- Hover reveals ---------------------------------------------------------------------------
-   Every control that is hidden until hover is shown at once on a device with no hover (UX-075). The
+   Every control that is hidden until hover is shown at once on a device with no hover. The
    Tab reveals take the same 120ms ease as the other reveals (their scoped sheet sets the opacity). */
 .tab-close,
 .tab-actions {
@@ -350,7 +350,7 @@
     }
 }
 
-/* The avatar editor (audit B8h, B8i, P8). The choices are a stack of cards, each a label around a visually hidden radio
+/* The avatar editor. The choices are a stack of cards, each a label around a visually hidden radio
    input, so the editor is the same height in every mode and needs no reserved height. The chosen card keeps its 1px
    border and adds an inset 1px ring, so choosing never shifts the layout; a card whose radio is disabled (the library
    card before a pick) stays clickable. */
@@ -413,7 +413,7 @@
 
 /* The label's counter is drawn by AvatarEditor (it counts text elements), so it is a sibling of the field in this
    wrapping row, not inside it as MudBlazor's own counter is. It takes a row of its own under the field, right-aligned,
-   and the negative margin cancels the row gap so it sits as close as the stock counter did. */
+   and margin-top: 0 keeps it as close to the field as the stock counter sits. */
 .avatar-choice-body > .mud-input-control-helper-container {
     flex: 0 0 auto;
     margin-top: 0;
@@ -427,13 +427,13 @@
     text-align: end;
 }
 
-/* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height (B8i). */
+/* Under an image card the Background keeps its space but is not shown, so the dialog keeps its height. */
 .avatar-editor-background-hidden {
     visibility: hidden;
 }
 
-/* In the dialog the hidden Background takes no space (#482): the dialog is anchored to the top of the window
-   (AvatarEditorDialog.Options), so it no longer re-centres when the Human moves between cards, and the band it held is gone. */
+/* In the dialog the hidden Background takes no space: the dialog is anchored to the top of the window
+   (AvatarEditorDialog.Options), so it does not re-centre when the Human moves between cards. */
 .avatar-editor-dialog .avatar-editor-background-hidden {
     display: none;
 }
@@ -498,7 +498,7 @@
     outline-offset: 3px;
 }
 
-/* The library in place of the editor, inside the avatar dialog (audit B8k): the Back button over the picker. */
+/* The library in place of the editor, inside the avatar dialog: the Back button over the picker. */
 .avatar-library-inline .avatar-library-body {
     max-height: calc(100vh - 16rem);
 }
@@ -512,7 +512,7 @@
     max-height: 14rem;
     overflow: auto;
 
-    /* YAML and Markdown source is code, so it is monospace at 13px (audit B8g, design-system "Typography"). */
+    /* YAML and Markdown source is code, so it is monospace at 13px (design-system "Typography"). */
     font-family: var(--font-mono);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.5;

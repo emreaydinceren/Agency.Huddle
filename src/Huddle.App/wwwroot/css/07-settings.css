@@ -1,6 +1,6 @@
 /* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
-/* The Appearance tab's theme picker (audit B9b-d). The list grows to its content (no inner scrollbar, no sticky band),
+/* The Appearance tab's theme picker. The list grows to its content (no inner scrollbar, no sticky band),
    so the page scrolls and the Human sees every Theme. The selected row wears the global Selected shape. A row carries
    a swatch of the Theme's Ground, Ink and Accent. */
 .theme-picker {
@@ -99,7 +99,7 @@
     justify-content: flex-end;
 }
 
-/* Settings panel header: the intro and the "stored at" line (UX-012, UX-R17). */
+/* Settings panel header: the intro and the "stored at" line. */
 .settings-intro,
 .settings-stored-at {
     margin: 0 0 8px 0;
@@ -116,14 +116,13 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* The open section's title over its intro: every Theme's mockup opens a Settings section with one (side-by-side audit,
-   2026-10-30, LL-S01). */
+/* The open section's title over its intro: every Theme's mockup opens a Settings section with one. */
 .settings-section-title.mud-typography {
     margin: 0 0 4px 0;
     font-weight: 600;
 }
 
-/* A sub-section of a tab sits one level under the tab title (#473): 14px at 600, the Prompts groups too, whose shared
+/* A sub-section of a tab sits one level under the tab title: 14px at 600, the Prompts groups too, whose shared
    heading rule would otherwise draw them at the title's 16px. */
 .settings-section .prompts-group-heading {
     font-size: var(--mud-typography-subtitle1-size);
@@ -134,13 +133,13 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). The cap is the
-   200px section menu, its 24px gap and the 960px reading column the panels had before the menu moved left. */
+/* Settings limits its content to a readable width but starts at the page's left edge. The cap is the
+   200px section menu, its 24px gap and a 960px reading column. */
 .mud-container.settings-page {
     max-width: 1184px;
 }
 
-/* Two columns: the section menu (G2) and the active section (G3). minmax(0, 1fr) lets a wide table scroll inside
+/* Two columns: the section menu and the active section. minmax(0, 1fr) lets a wide table scroll inside
    its panel instead of pushing the page sideways. */
 .settings-layout {
     display: grid;
@@ -189,7 +188,7 @@
 }
 
 /* A Library Root's last cell keeps "Read only" beside its Hide switch, on one line, so every row is one height and the
-   switches share a column at the cell's right edge (#480). */
+   switches share a column at the cell's right edge. */
 .library-panel-roots-table td:last-child {
     white-space: nowrap;
     text-align: end;
@@ -205,7 +204,7 @@
     margin-inline-end: 0;
 }
 
-/* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
+/* The Library panel's rows: the add row is one 28px height, fields and button aligned. */
 .library-panel-add-row {
     align-items: center;
 }
@@ -224,12 +223,12 @@
     height: 28px;
 }
 
-/* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
+/* The Skills grid: the name leads and the description under it is meta text, a caption in the name's cell. */
 .skills-grid .skills-name {
     font-weight: 500;
 }
 
-/* The grid fits its panel (#474): fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
+/* The grid fits its panel: fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
    sideways at the standard desktop width; the description stops at two lines (its full text is the cell's tooltip). */
 .skills-grid table {
     width: 100%;
@@ -275,7 +274,7 @@
     }
 }
 
-/* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */
+/* The Prompts panel's Save and Reset all, kept in reach of a long form. */
 .settings-prompts-actions {
     position: sticky;
     bottom: 0;
@@ -284,7 +283,7 @@
     background: var(--hu-ground-page);
 }
 
-/* The Spending panel (issue 356): a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
+/* The Spending panel: a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
 .spending-row,
 .spending-total {
     display: flex;
