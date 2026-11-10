@@ -600,7 +600,7 @@
 }
 
 /* ---- Traits: transcript and composer ------------------------------------------------------------------------
-   Variant rules for the message, marks, composer and send traits (ADR-0057, lifted from the Nordic pack). Each is
+   Variant rules for the message, marks, composer and send traits (ADR-0057). Each is
    scoped to the marker attribute the skin renders, so a Theme that does not choose the variant never sees it. The
    default value of each trait is today's Huddle and has no rule here. Colours come from the registry tokens; the
    Send colours are --hu-send-bg and --hu-send-fg, which a skin sets. */

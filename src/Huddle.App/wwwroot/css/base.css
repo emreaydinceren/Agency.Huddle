@@ -876,7 +876,7 @@ a.team-ref,
     color: var(--hu-text-subtle);
 }
 
-/* Lumen's field labels are 500, not the 600 the other surfaces keep (side-by-side audit, 2026-10-30, LL-S02). The
+/* Lumen's field labels are 500, not the 600 the other surfaces keep. The
    :not(.mud-disabled) is there for specificity: it matches the base label rule's (0,8,1), and this rule comes later. */
 :root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
     font-weight: 500;

@@ -392,7 +392,7 @@ emoji-picker {
     border-radius: var(--mud-default-borderradius);
 }
 
-/* Empty state (change list C7): a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
+/* Empty state: a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
    Inline it sits centred in its block; full-pane (.empty-state-centered) fills the pane and rests a third of the
    way down, the two flex spacers splitting the free height 1:2. */
 .empty-state {
@@ -1081,7 +1081,7 @@ body.sidebar-resizing {
     padding-block: 0;
 }
 
-/* The sidebar's two lines, set here and nowhere else (UX-015). Every row of the left sidebar, in every view, is
+/* The sidebar's two lines, set here and nowhere else. Every row of the left sidebar, in every view, is
    laid out on one grid: the selected pill is inset --nav-inset from the panel's sides; inside it, --nav-pad leads to a
    24px slot, and every leading mark (a section icon, a row icon, an avatar, a Team's chevron, the "+", the "Show all"
    arrow) is centred in that slot, whatever its own size. The label starts --nav-gap after the slot, so every label (a
@@ -1091,7 +1091,7 @@ body.sidebar-resizing {
    A section header and its rows share the two lines: the header heads its list, it is not a level above it. Nesting
    (a Team's Rooms and Projects) moves a row in by --nav-step, one slot and one gap, so a child's mark sits under its
    parent's label and its label starts one step further in; set --nav-level on the row, never a padding of its own.
-   Every sidebar row is one height (UX-014, UX-017).
+   Every sidebar row is one height.
 
    The proportions are VS Code's Explorer scaled to the 32px row: its 22px row puts a 16px twistie a few px in and the
    label a few px after it, so here the slot is that twistie at 32/22 and the pad and gap stay a tight 4px. */
@@ -1208,7 +1208,7 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-primary);
 }
 
-/* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
+/* The footer is icon-only: the same row height and text size as every other row. */
 .nav-settings .mud-nav-link {
     min-height: var(--nav-row-height);
     font-size: var(--mud-typography-body2-size);
@@ -1746,8 +1746,7 @@ body.sidebar-resizing {
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* 32px like every sidebar row: at 44px a one-line row spent the height without showing anything more (side-by-side
-   audit, 2026-10-30, NL-02). */
+/* 32px like every sidebar row: at 44px a one-line row spent the height without showing anything more. */
 :root:has([data-hu-surface="paper"]) .members-row.sidebar-row {
     min-height: 32px;
     padding: 4px;
@@ -1888,7 +1887,7 @@ body.sidebar-resizing {
 }
 
 /* The Tags panel's captions ("This note", "All tags in this folder") follow the labels trait: a sentence-case Theme
-   does not draw them in the overline's capitals (side-by-side audit, 2026-10-30, LL-L03). */
+   does not draw them in the overline's capitals. */
 :root:has([data-hu-labels="sentence"]) .tags-caption.mud-typography {
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
@@ -1897,7 +1896,7 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-/* Lumen's panel labels are quiet captions, not 13px/600 headings in Ink (side-by-side audit, 2026-10-30, LL-C04). */
+/* Lumen's panel labels are quiet captions, not 13px/600 headings in Ink. */
 :root:has([data-hu-surface="hairline"]) .sidebar-panel-title {
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;

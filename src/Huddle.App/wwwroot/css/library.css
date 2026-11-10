@@ -1119,8 +1119,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-secondary);
 }
 
-/* -- surface=card: content on raised cards over the page ground (Fluent; side-by-side audit, 2026-10-30, FL-01, FL-02,
-   FL-07, FD-01, FD-02). The card is the field group's: its radius, the raised ground, the region line and the card
+/* -- surface=card: content on raised cards over the page ground (Fluent). The card is the field group's: its radius, the raised ground, the region line and the card
    shadow, as on the Task edit page. -------------------------------------------------------------------------------- */
 :root:has([data-hu-surface="card"]) .library-rendered,
 :root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel,

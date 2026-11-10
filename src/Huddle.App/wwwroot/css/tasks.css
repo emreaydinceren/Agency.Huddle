@@ -1500,7 +1500,7 @@
     background: var(--mud-palette-error);
 }
 
-/* -- status=glyph: priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme (issue 470); only
+/* -- status=glyph: priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme; only
    the chip's fill and border are dropped above. Urgent wears the error hue. ---------------------------------- */
 :root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent {
     color: var(--mud-palette-error);

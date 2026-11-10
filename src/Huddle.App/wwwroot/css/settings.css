@@ -377,7 +377,7 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
 }
 
-/* Lumen's Settings intro is a quiet 13px line under the section title, and its menu icons are 16px (LL-S01, LL-S03). */
+/* Lumen's Settings intro is a quiet 13px line under the section title, and its menu icons are 16px. */
 :root:has([data-hu-surface="hairline"]) .settings-intro {
     max-width: 60ch;
     font-size: var(--mud-typography-body2-size);
