@@ -92,25 +92,26 @@
 
     /// <summary>
     /// The label as drawn: <see cref="TrimmedLabel"/>, cut again to its first
-    /// <see cref="Avatars.Avatar.SmallLabelTextElements"/> text elements when <see cref="DrawsMonogramOnly"/>, because a
-    /// 24px circle cannot hold more at its 11px font. <see langword="null"/> when there is no label.
+    /// <see cref="DrawnLabelTextElements"/> text elements, because a smaller circle cannot hold more at the 11px floor: a
+    /// longer label shows its first three (under 40px) or five (40px) text elements. <see langword="null"/> when there is
+    /// no label.
     /// </summary>
     private string? DisplayLabel
     {
         get
         {
             string? label = this.TrimmedLabel;
-            return label is not null && this.DrawsMonogramOnly
-                ? Agency.Huddle.App.Avatars.Avatar.FirstTextElements(label, Agency.Huddle.App.Avatars.Avatar.SmallLabelTextElements)
-                : label;
+            return label is null
+                ? null
+                : Agency.Huddle.App.Avatars.Avatar.FirstTextElements(label, this.DrawnLabelTextElements);
         }
     }
 
     /// <summary>
     /// <c>avatar-label-len-N</c> when a label of 1, 4, 5 or 6 text elements is drawn: <c>app.css</c> sizes a long label
     /// down so it fits the circle and a single element (an emoji, one letter) up so it fills it; <see langword="null"/>
-    /// for a picture, for no label and for 2-3 elements (today's size). The 24px avatar draws at most three elements, so
-    /// it only ever gets <c>len-1</c>.
+    /// for a picture, for no label and for 2-3 elements (today's size). An avatar under 40px (the 24px row and the 32px
+    /// Transcript) draws at most three elements, so it only ever gets <c>len-1</c>; the 40px avatar draws at most five.
     /// </summary>
     private string? LabelLengthClass
     {
@@ -149,6 +150,18 @@
     private bool DrawsMonogramOnly =>
         this.Size == Size.Small
         && !(this.Class ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("avatar-transcript", StringComparer.Ordinal);
+
+    /// <summary>
+    /// How many text elements of a label this avatar draws, so every label is at least 11px: three at
+    /// <see cref="MudBlazor.Size.Small"/> (24px in a row, 32px in the Transcript), five at <see cref="MudBlazor.Size.Medium"/>
+    /// (40px) and all six at Large (72px).
+    /// </summary>
+    private int DrawnLabelTextElements => this.Size switch
+    {
+        Size.Small => Agency.Huddle.App.Avatars.Avatar.SmallLabelTextElements,
+        Size.Medium => Agency.Huddle.App.Avatars.Avatar.MediumLabelTextElements,
+        _ => Agency.Huddle.App.Avatars.Avatar.MaxLabelTextElements,
+    };
 
     /// <summary>
     /// The image's <c>src</c>: the pending image as a data URL when one is set, else the stored image's route,

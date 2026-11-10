@@ -74,7 +74,7 @@ else if (this.archivedView && this.loaded is { } archivedTask)
        Description resolve through LibraryPathResolver.TryResolveForRead (LibraryReferenceResolver.ResolvePath), so they open from the Archive. *@
     <div class="task-detail-archived">
         <div class="task-detail-archived-title">
-            <MudText Typo="Typo.subtitle1" Class="task-detail-archived-name">@archivedTask.Title</MudText>
+            <MudText Typo="Typo.subtitle1" Class="card-title task-detail-archived-name">@archivedTask.Title</MudText>
             <StatusChip Icon="@Icons.Material.Filled.Inventory2" Class="task-detail-archived-chip">Archived</StatusChip>
         </div>
         <MudText Typo="Typo.caption" Class="task-detail-archived-id">@($"{archivedTask.Id} · {archivedTask.Status} · {archivedTask.Location.Team}")</MudText>

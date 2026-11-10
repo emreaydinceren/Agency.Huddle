@@ -18,13 +18,13 @@ public sealed partial class TypeScaleTests
     {
         { "h5", "20px", "600" },
         { "h6", "16px", "600" },
-        { "subtitle1", "14px", "600" },
+        { "subtitle1", "14px", "400" },
         { "subtitle2", "16px", "600" },
         { "body1", "14px", "400" },
         { "body2", "13px", "400" },
         { "caption", "12px", "400" },
-        { "overline", "11px", "600" },
-        { "button", "14px", "500" },
+        { "overline", "12px", "600" },
+        { "button", "13px", "500" },
     };
 
     /// <summary>Every built-in Theme carries the scale's size and weight for the role, in rendered pixels.</summary>
@@ -55,7 +55,7 @@ public sealed partial class TypeScaleTests
         { "body1", "1.55" },
         { "body2", "1.4" },
         { "caption", "1.35" },
-        { "overline", "1.3" },
+        { "overline", "1.35" },
         { "button", "1.4" },
     };
 
@@ -103,25 +103,62 @@ public sealed partial class TypeScaleTests
         Assert.Contains("font-weight: 600;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("color: var(--mud-palette-text-secondary);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
-    /// <summary>A Small button is 28px high at weight 500 and the Composer's focused border is 1.5px of accent.</summary>
+
+    /// <summary>
+    /// A Small button is 28px high and takes its size from the Button role (13px) and its weight from MudBlazor's button
+    /// class (the role's 500): its rule names the role and sets no weight, so the role and the rule cannot disagree. The
+    /// Composer's focused border is 1.5px of accent.
+    /// </summary>
     [Fact]
     public void AppCss_SmallButtonAndComposerFocusMatchTheSpec()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.Matches(@"\.mud-button-filled-size-small \{[^}]*height: 28px;[^}]*font-weight: 500;", css);
+        Assert.Matches(@"\.mud-button-filled-size-small \{[^}]*height: 28px;[^}]*font-size: var\(--mud-typography-button-size\);", css);
+        Assert.DoesNotMatch(@"\.mud-button-filled-size-small \{[^}]*font-weight:", css);
         Assert.Matches(@"\.composer-input:focus-visible \{[^}]*inset 0 0 0 0\.5px var\(--mud-palette-primary\)", css);
     }
 
-    /// <summary>The overline is upper case with 0.04em tracking, the group-label look.</summary>
+    /// <summary>The Overline is retired: its role carries the Label's look (12px, 600), sentence case with no tracking, so nothing that still reads it draws capitals.</summary>
     [Fact]
-    public void Overline_IsUpperCaseWithFourHundredthsEmTracking()
+    public void Overline_CarriesTheLabelNotCapitals()
     {
         Assert.All(ThemeCatalog.BuiltIn, descriptor =>
         {
-            Assert.Equal("uppercase", descriptor.Theme.Typography.Overline.TextTransform);
-            Assert.Equal("0.04em", descriptor.Theme.Typography.Overline.LetterSpacing);
+            Assert.Equal("none", descriptor.Theme.Typography.Overline.TextTransform);
+            Assert.Equal("normal", descriptor.Theme.Typography.Overline.LetterSpacing);
         });
+    }
+
+    /// <summary>The stylesheets declare only the three weights, 400, 500 and 600, as a literal number.</summary>
+    [Fact]
+    public void AppCss_DeclaresOnlyThreeWeights()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.DoesNotMatch(@"font-weight:\s*(?!400\b|500\b|600\b)\d", css);
+    }
+
+    /// <summary>
+    /// A card title is the 14px heading at 600 through <c>.card-title</c>, because the <c>subtitle1</c> role is 400 (MudBlazor
+    /// draws every input in it), so <c>app.css</c> no longer sets an input's weight back.
+    /// </summary>
+    [Fact]
+    public void AppCss_CardTitle_IsSubtitleSizeAtSemibold()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs).ReplaceLineEndings("\n");
+
+        Assert.Matches(@"\.card-title\s*\{[^}]*font-size:\s*var\(--mud-typography-subtitle1-size\);[^}]*font-weight:\s*600;", css);
+        Assert.DoesNotContain(".mud-input.mud-typography-subtitle1", css, StringComparison.Ordinal);
+    }
+
+    /// <summary>No avatar label is drawn under 11px: the length classes keep an 11px floor, so no <c>max(7px</c> remains.</summary>
+    [Fact]
+    public void AppCss_AvatarLabels_KeepTheElevenPixelFloor()
+    {
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.DoesNotMatch(@"max\(\s*([0-9]|10)px,", css);
     }
 
     /// <summary><c>app.css</c> declares no font weight of 700 or more: three weights, 400, 500 and 600.</summary>
@@ -131,18 +168,6 @@ public sealed partial class TypeScaleTests
         string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotMatch(@"font-weight:\s*(700|800|900|bold)", css);
-    }
-
-    /// <summary>
-    /// What a Human types in a field is text, not emphasis: MudBlazor puts <c>mud-typography-subtitle1</c> (weight 600 in this
-    /// scale) on every <c>.mud-input</c>, so <c>app.css</c> sets the input's weight back to body1's 400.
-    /// </summary>
-    [Fact]
-    public void AppCss_InputText_IsBodyWeight()
-    {
-        string css = CssText.AppCss(CssNewlines.AsIs).ReplaceLineEndings("\n");
-
-        Assert.Matches(@"\.mud-input\.mud-typography-subtitle1\s*\{[^}]*font-weight:\s*var\(--mud-typography-body1-weight\)", css);
     }
 
     /// <summary><c>app.css</c> sets no literal font size under 11px, so nothing renders below the floor.</summary>

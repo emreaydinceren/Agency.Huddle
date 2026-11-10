@@ -206,7 +206,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
 
         List<string> expected = [.. TaskStates.All.Select(state => state.ToWire()), "Copy id", "Copy link"];
         Assert.Equal(expected, cut.FindAll("div.mud-menu-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal(["Move to"], cut.FindAll(".mud-typography-overline").Select(heading => heading.TextContent.Trim()));
+        Assert.Equal(["Move to"], cut.FindAll(".group-label").Select(heading => heading.TextContent.Trim()));
         Assert.NotEmpty(cut.FindAll("hr.mud-divider"));
     }
 

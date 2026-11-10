@@ -11,7 +11,7 @@
         BuildStep step = this.Steps[i];
         int index = i;
         <li class="@this.StepClass(index)" aria-current="@(index == this.Current ? "step" : null)">
-            <span class="build-step-badge">
+            <span class="group-label build-step-badge">
                 @if (index < this.Current)
                 {
                     <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />

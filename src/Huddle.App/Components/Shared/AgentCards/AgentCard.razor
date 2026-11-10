@@ -5,7 +5,7 @@
     gets no row.
 *@
 <MudPaper Outlined="true" Class="@("agent-card pa-3 my-2 " + this.Class)" role="region" aria-label="@(this.AriaLabel ?? this.Title)">
-    <MudText Typo="Typo.subtitle1" Class="@("agent-card-title " + this.TitleClass)">@this.Title</MudText>
+    <MudText Typo="Typo.subtitle1" Class="@("card-title agent-card-title " + this.TitleClass)">@this.Title</MudText>
     @this.ChildContent
     @if (this.Actions is not null)
     {

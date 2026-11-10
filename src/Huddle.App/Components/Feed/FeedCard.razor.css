@@ -379,9 +379,6 @@
 
 .feed-card-caption {
     margin-bottom: 8px;
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
 }
 
 .feed-card-buttons {
