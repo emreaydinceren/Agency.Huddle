@@ -56,6 +56,35 @@ public sealed class SkinColourRulesTests
         Assert.True(field <= chrome + 1e-6, $"{skinId}: Field {field:F2}:1 must not be stronger than Chrome {chrome:F2}:1.");
     }
 
+    /// <summary>
+    /// The current row always carries a cue that hover lacks (plan D3): its ink is the Accent ink, which is at least ΔE 3
+    /// from the Primary text a hovered row keeps. Lumen, Fluent, Nordic and Cobalt Soft once set it to Primary text.
+    /// </summary>
+    /// <param name="skinId">The skin under test.</param>
+    [Theory]
+    [MemberData(nameof(SkinIds))]
+    public void CurrentRow_InkIsTheAccentInk_AHoveredRowLacks(string skinId)
+    {
+        SkinColours colours = Skin(skinId);
+        SrgbColour current = colours.Token("current.foreground") ?? throw new InvalidOperationException("current.foreground is not a colour.");
+
+        Assert.True(colours.Difference("current.foreground", "accent.ink") < 0.5, $"{skinId}: the current row's ink is not the Accent ink.");
+        Assert.True(DeltaE.Ciede2000(current, colours.Palette("textPrimary")) >= VisibleDifference, $"{skinId}: the current row's ink cannot be told from Primary text, the ink of a hovered row.");
+    }
+
+    /// <summary>Every Theme draws a Board lane border: the line is at least ΔE 3 from Surface (Lumen and Fluent once set it to transparent).</summary>
+    /// <param name="skinId">The skin under test.</param>
+    [Theory]
+    [MemberData(nameof(SkinIds))]
+    public void BoardLaneBorder_IsDrawnInEveryTheme(string skinId)
+    {
+        SkinColours colours = Skin(skinId);
+
+        double difference = DeltaE.Ciede2000(colours.Token("board.column.line") ?? throw new InvalidOperationException("board.column.line is not a colour."), colours.Surface);
+
+        Assert.True(difference >= VisibleDifference, $"{skinId}: the Board lane border is only ΔE {difference:F1} from Surface.");
+    }
+
     private static double ContrastAgainstSurface(SkinColours colours, SrgbColour? colour) =>
         ContrastColour.Ratio(
             new MudColor((colour ?? throw new InvalidOperationException("The rung is not a colour.")).Hex),

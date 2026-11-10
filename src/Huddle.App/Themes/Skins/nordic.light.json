@@ -92,7 +92,6 @@
     "text.subtle": "mix(palette.textSecondary 60%, palette.textPrimary)",
     "current.background": "ref(ground.raised)",
     "current.background.hover": "ref(ground.raised)",
-    "current.foreground": "palette.textPrimary",
     "current.icon": "palette.primary",
     "current.shadow": "mud(elevation-1)",
     "selected.task.background": "ref(tone.info.soft)",
