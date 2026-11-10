@@ -74,7 +74,7 @@ public sealed class FluentSkinTests
         Skin light = Load("fluent-light");
         Skin dark = Load("fluent-dark");
 
-        Assert.Equal("#e8ecf1", light.Tokens["ground.rail"]);
+        Assert.Equal("#e1e6ec", light.Tokens["ground.rail"]);
         Assert.Equal("#0f0f0f", dark.Tokens["ground.rail"]);
         Assert.Equal("ref(accent.ink)", dark.Tokens["tone.info.ink"]);
         Assert.Equal("#115ea3", dark.Tokens["send.bg"]);
@@ -84,7 +84,8 @@ public sealed class FluentSkinTests
     }
 
     /// <summary>
-    /// Fluent's Board lanes are grey with no border and a filled count badge (dark keeps its sunk ground), its note h1 is
+    /// Fluent's Board lanes are grey with the default lane border (it no longer sets <c>board.column.line</c>: every Theme
+    /// draws one, plan D15) and a filled count badge (dark keeps its sunk ground), its note h1 is
     /// the mockup's 28px, and its dark prose is the sheet's #d6d6d6 under white headings (side-by-side audit, FL-03, FD-01).
     /// </summary>
     [Fact]
@@ -94,9 +95,9 @@ public sealed class FluentSkinTests
         Skin dark = Load("fluent-dark");
 
         Assert.Equal("palette.backgroundGray", light.Tokens["board.column.background"]);
-        Assert.Equal("transparent", light.Tokens["board.column.line"]);
+        Assert.False(light.Tokens.ContainsKey("board.column.line"));
         Assert.Equal("ref(ink.wash)", light.Tokens["board.count.background"]);
-        Assert.Equal(light.Tokens["ground.sunk"], dark.Tokens["board.column.background"]);
+        Assert.Equal("ref(ink.wash)", dark.Tokens["board.column.background"]);
         Assert.Equal("1.75em", light.Tokens["note.h1.size"]);
         Assert.Equal("#d6d6d6", dark.Tokens["note.prose.ink"]);
     }

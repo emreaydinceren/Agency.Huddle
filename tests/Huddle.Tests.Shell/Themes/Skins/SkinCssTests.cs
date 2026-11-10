@@ -98,14 +98,14 @@ public sealed partial class SkinCssTests
         Assert.Equal(RenderDefaults(ThemeMode.Light), RenderDefaults(ThemeMode.Dark));
     }
 
-    /// <summary><c>app-vars.css</c> declares every token's rendered default, value for value, and no other <c>--hu-*</c> token.</summary>
+    /// <summary><c>app-vars.css</c> declares every token's rendered default, value for value, and no other <c>--hu-*</c> or <c>--ink-*</c> token.</summary>
     [Fact]
     public void AppVars_DeclaresRenderDefaults()
     {
         Dictionary<string, string> expected = Declarations(RenderDefaults(ThemeMode.Light));
         Dictionary<string, string> actual = Declarations(File.ReadAllText(AppVarsPath));
         Dictionary<string, string> huActual = actual
-            .Where(pair => pair.Key.StartsWith("--hu-", StringComparison.Ordinal))
+            .Where(pair => pair.Key.StartsWith("--hu-", StringComparison.Ordinal) || pair.Key.StartsWith("--ink-", StringComparison.Ordinal))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
         Assert.Equal(expected.Count, huActual.Count);
@@ -116,18 +116,17 @@ public sealed partial class SkinCssTests
         }
     }
 
-    /// <summary>The ink ladder keeps its old names as aliases of the registry tokens, so app.css reads are unchanged.</summary>
-    [Theory]
-    [InlineData("strip")]
-    [InlineData("wash")]
-    [InlineData("rule")]
-    [InlineData("edge")]
-    [InlineData("field")]
-    public void AppVars_AliasesInkLadder(string rung)
+    /// <summary>The ink ladder is declared once, as the registry's own <c>--ink-*</c> tokens, with no <c>--hu-ink-*</c> alias beside them.</summary>
+    [Fact]
+    public void AppVars_DeclaresInkLadderOnce_WithNoHuInkAlias()
     {
-        Dictionary<string, string> actual = Declarations(File.ReadAllText(AppVarsPath));
+        string vars = File.ReadAllText(AppVarsPath);
+        Dictionary<string, string> actual = Declarations(vars);
 
-        Assert.Equal($"var(--hu-ink-{rung})", actual[$"--ink-{rung}"]);
+        Assert.DoesNotContain("--hu-ink-", vars, StringComparison.Ordinal);
+        Assert.All(
+            SkinTokens.All.Where(static token => token.Key.StartsWith("ink.", StringComparison.Ordinal)),
+            token => Assert.StartsWith("color-mix(", actual[token.CssName], StringComparison.Ordinal));
     }
 
     /// <summary><c>app-vars.css</c> still declares the two font variables.</summary>

@@ -10,6 +10,19 @@ namespace Agency.Huddle.App.Themes.Skins;
 /// <param name="Description">What the token paints, for the schema and the Theme lab.</param>
 internal sealed record Token(string Key, string LightDefault, string DarkDefault, string Description)
 {
-    /// <summary>The CSS custom property: <c>--hu-</c> and the key with each dot turned into a hyphen.</summary>
-    public string CssName => "--hu-" + this.Key.Replace('.', '-');
+    /// <summary>
+    /// The CSS custom property: <c>--hu-</c> and the key with each dot turned into a hyphen. The ink ladder
+    /// (<c>ink.*</c>) drops the prefix and is <c>--ink-*</c>, the one name every stylesheet reads it by.
+    /// </summary>
+    public string CssName => CssNameOf(this.Key);
+
+    /// <summary>The CSS custom property a token key renders as.</summary>
+    /// <param name="key">The dotted token key, such as <c>ink.wash</c>.</param>
+    /// <returns>The property name with its leading <c>--</c>.</returns>
+    public static string CssNameOf(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        return (key.StartsWith("ink.", StringComparison.Ordinal) ? "--" : "--hu-") + key.Replace('.', '-');
+    }
 }

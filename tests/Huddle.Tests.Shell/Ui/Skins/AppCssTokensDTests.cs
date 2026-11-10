@@ -53,13 +53,13 @@ public sealed class AppCssTokensDTests
         Assert.Contains("background: var(--hu-ground-sunk);", Declarations(selector));
     }
 
-    /// <summary>A chosen item in a set reads <c>--hu-selected-background</c>, <c>-hover</c> and <c>--hu-selected-foreground</c>.</summary>
+    /// <summary>A chosen item in a set reads <c>--hu-selected-background</c>, <c>-hover</c> and <c>--hu-accent-ink</c>.</summary>
     [Fact]
     public void SelectedItems_ReadTheSelectedTokens()
     {
         string[] chip =Declarations(".chip-cloud-chip.is-set");
         Assert.Contains("background-color: var(--hu-selected-background);", chip);
-        Assert.Contains("color: var(--hu-selected-foreground);", chip);
+        Assert.Contains("color: var(--hu-accent-ink);", chip);
 
         string[] card =Declarations(".team-type-card-selected");
         Assert.Contains("background: var(--hu-selected-background);", card);
@@ -67,12 +67,36 @@ public sealed class AppCssTokensDTests
 
         string[] pick =Declarations(".composer-picker-item[aria-selected=\"true\"]");
         Assert.Contains("background: var(--hu-selected-background);", pick);
-        Assert.Contains("color: var(--hu-selected-foreground);", pick);
+        Assert.Contains("color: var(--hu-accent-ink);", pick);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".composer-picker-item[aria-selected=\"true\"]:hover"));
 
         string[] filter =Declarations(".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.filter-chip-set,\n.mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("background-color: var(--hu-selected-background);", filter);
-        Assert.Contains("color: var(--hu-selected-foreground);", filter);
+        Assert.Contains("color: var(--hu-accent-ink);", filter);
+    }
+
+    /// <summary>
+    /// "A filter or control is set" has one token family: the Task toolbar's set chip and the Feed's set Team select read
+    /// <c>selected.*</c> and the accent ink, as the filter chips do, and no stylesheet reads a <c>chip.set.*</c> or
+    /// <c>control.set.*</c> token (they are deleted).
+    /// </summary>
+    [Fact]
+    public void SetFilters_ReadTheSelectedTokens_NotTheirOwnFamily()
+    {
+        string css = CssText.AppCss();
+        string feedPage = CssText.Read(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "FeedPage.razor.css"));
+
+        string chip = CssText.RuleBody(css, ".task-filter-chip-set");
+        Assert.Contains("background-color: var(--hu-selected-background);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-color: var(--mud-palette-primary);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+
+        string fill = CssText.RuleBodyInList(feedPage, "::deep .feed-team-select-set .mud-input");
+        Assert.Contains("background: var(--hu-selected-background);", fill, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", fill, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-color: var(--mud-palette-primary);", CssText.RuleBody(feedPage, "::deep .feed-team-select-set .mud-input-outlined-border"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+
+        Assert.DoesNotMatch(@"--hu-(chip|control)-set-", css + feedPage);
     }
 
     /// <summary>The accent used as text reads <c>--hu-accent-ink</c>.</summary>
@@ -108,7 +132,7 @@ public sealed class AppCssTokensDTests
         Assert.Contains("outline: 2px solid var(--hu-focus);", Declarations(".profile-avatar-button:focus-visible"));
     }
 
-    /// <summary>Every status chip colour except secondary reads its tone token pair; secondary keeps its literal recipe.</summary>
+    /// <summary>Every status chip colour except secondary reads its tone token pair, the neutral one reading Quiet text for its ink (there is no <c>tone.neutral.ink</c>: it equalled <c>text.subtle</c> in every Theme); secondary keeps its literal recipe.</summary>
     [Theory]
     [InlineData(".mud-chip.status-chip", "neutral")]
     [InlineData(".mud-chip.status-chip-info", "info")]
@@ -122,7 +146,8 @@ public sealed class AppCssTokensDTests
         string[] rule = Declarations(selector);
 
         Assert.Contains($"background-color: var(--hu-tone-{tone}-soft);", rule);
-        Assert.Contains($"color: var(--hu-tone-{tone}-ink);", rule);
+        string ink = string.Equals(tone, "neutral", StringComparison.Ordinal) ? "text-subtle" : $"tone-{tone}-ink";
+        Assert.Contains($"color: var(--hu-{ink});", rule);
     }
 
     /// <summary>The secondary status chip is the one tone no Theme differs on, so it keeps its literal recipe.</summary>

@@ -28,14 +28,14 @@ public sealed class AppearanceRenderingTests
 
     // The counterpart for "Lumen Dark", present only when IsDarkMode resolved to true before the
     // response was written. Kept as the literal rendered rgba because that is what reaches the browser.
-    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(11,11,15,1);";
+    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(8,8,11,1);";
 
     // Lumen Light's own Primary (#7368d3).
     private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(115,104,211,1);";
 
-    // Nordic Dark's own page ground, #161a1d (fjord slate). Asserted rather than its Primary because a
+    // Nordic Dark's own page ground, #14181a (fjord slate). Asserted rather than its Primary because a
     // background is this theme's and no other's.
-    private const string NordicDarkBackgroundVariable = "--mud-palette-background: rgba(22,26,29,1);";
+    private const string NordicDarkBackgroundVariable = "--mud-palette-background: rgba(20,24,26,1);";
 
     /// <summary>
     /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism

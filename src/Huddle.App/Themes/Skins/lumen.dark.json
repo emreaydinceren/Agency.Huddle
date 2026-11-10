@@ -10,10 +10,10 @@
     "25": "0 0 0 1px rgba(255,255,255,.1), 0 22px 48px -10px rgba(0,0,0,.8)"
   },
   "palette": {
-    "background": "#0b0b0f",
+    "background": "#08080b",
     "surface": "#111117",
-    "drawerBackground": "#0e0e13",
-    "backgroundGray": "#15151c",
+    "drawerBackground": "#111117",
+    "backgroundGray": "#191922",
     "tableHover": "#16161d",
     "divider": "#333341",
     "dividerLight": "#1f1f28",
@@ -40,7 +40,7 @@
     "note.prose.ink": "#d4d4dc",
     "ground.rail": "palette.background",
     "accent.ink": "mix(palette.primary 46%, palette.textPrimary)",
-    "current.background": "mix(palette.dividerLight 90%, palette.background)",
+    "current.background": "palette.dividerLight",
     "selected.background.hover": "mix(palette.primary 20%, palette.background)",
     "text.subtle": "mix(palette.textSecondary 71%, palette.textPrimary)",
     "tone.primary.soft": "mix(palette.primary 12%, palette.background)",

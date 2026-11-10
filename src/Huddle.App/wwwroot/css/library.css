@@ -109,7 +109,7 @@
    it #17c on white through a longer selector, so the leading html element keeps this one ahead. */
 html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background-color: var(--hu-selected-background);
-    color: var(--hu-selected-foreground);
+    color: var(--hu-accent-ink);
 }
 
 .markdown-toolbar .mud-button-root {
@@ -420,7 +420,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected {
-    color: var(--hu-selected-foreground);
+    color: var(--hu-accent-ink);
     font-weight: 500;
     background-color: var(--hu-selected-background);
     box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);
@@ -435,7 +435,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-tree .mud-treeview-group {
     margin-inline-start: 16px;
     padding-inline-start: 0;
-    border-inline-start: 1px solid var(--ink-rule);
+    border-inline-start: 1px solid var(--ink-line);
 }
 
 @media (pointer: coarse) {
@@ -744,7 +744,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-rendered :is(h1, h2, h3, h4, h5, h6) {
     margin: 32px 0 12px;
     font-family: inherit;
-    font-weight: var(--hu-note-heading-weight);
+    font-weight: 600;
     line-height: 1.3;
     letter-spacing: normal;
     color: var(--mud-palette-text-primary);
@@ -833,7 +833,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 8px 12px;
     text-align: left;
     vertical-align: top;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
 }
 
 .library-rendered th {
@@ -847,7 +847,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-properties {
     margin: 0 0 24px;
     padding: 12px 16px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.5;
@@ -936,7 +936,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: inline-flex;
     align-items: center;
     padding: 0 8px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: 999px;
     background: var(--ink-wash);
     color: var(--mud-palette-text-primary);

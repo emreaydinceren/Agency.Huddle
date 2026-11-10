@@ -68,7 +68,7 @@ public sealed class CobaltSoftSkinTests
         Skin dark = Load("cobalt-soft-dark");
 
         Assert.Equal("#131a2b", dark.Palette["surface"]);
-        Assert.Equal("#0e1220", dark.Palette["background"]);
+        Assert.Equal("#0e121f", dark.Palette["background"]);
         Assert.Equal("palette.background", dark.Tokens["ground.page"]);
     }
 

@@ -18,7 +18,7 @@ if (scenario === "tokens-read-by") {
         {
             cssRules: [
                 { selectorText: ":root", style: { cssText: "--hu-ground-page: #fff;" } },
-                { selectorText: ".card", style: { cssText: "background: var(--hu-ground-raised); border: 1px solid var(--hu-ink-edge); color: red;" } },
+                { selectorText: ".card", style: { cssText: "background: var(--hu-ground-raised); border: 1px solid var(--ink-line); color: red;" } },
                 { selectorText: ".other", style: { cssText: "background: var(--hu-ground-sunk);" } },
                 { cssRules: [{ selectorText: "button", style: { cssText: "box-shadow: var(--hu-shadow-card), var(--hu-shadow-card);" } }] },
                 { selectorText: "::before", style: { cssText: "color: var(--hu-focus);" } },

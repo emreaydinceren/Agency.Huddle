@@ -19,13 +19,15 @@ public sealed class SkinTokensTests
         Assert.False(SkinTokens.Contains("ground.pgae"));
     }
 
-    /// <summary>A token's CSS name is <c>--hu-</c> and its key with every dot turned into a hyphen.</summary>
+    /// <summary>A token's CSS name is <c>--hu-</c> and its key with every dot turned into a hyphen; the ink ladder is <c>--ink-*</c>, with no prefix.</summary>
     [Fact]
     public void Registry_CssNameIsHuPlusHyphens()
     {
         Assert.Equal("--hu-send-fg", new Token("send.fg", "none", "none", "d").CssName);
         Assert.Equal("--hu-current-background-hover", new Token("current.background.hover", "none", "none", "d").CssName);
-        Assert.All(SkinTokens.All, token => Assert.Equal("--hu-" + token.Key.Replace('.', '-'), token.CssName));
+        Assert.Equal("--ink-wash", new Token("ink.wash", "none", "none", "d").CssName);
+        Assert.All(SkinTokens.All.Where(static token => !token.Key.StartsWith("ink.", StringComparison.Ordinal)), token => Assert.Equal("--hu-" + token.Key.Replace('.', '-'), token.CssName));
+        Assert.All(SkinTokens.All.Where(static token => token.Key.StartsWith("ink.", StringComparison.Ordinal)), token => Assert.Equal("--" + token.Key.Replace('.', '-'), token.CssName));
     }
 
     /// <summary>No two tokens share a key, or a CSS name.</summary>
@@ -101,8 +103,7 @@ public sealed class SkinTokensTests
 
         Add("ink.strip", InkMix(4));
         Add("ink.wash", InkMix(6));
-        Add("ink.rule", InkMix(10));
-        Add("ink.edge", InkMix(18));
+        Add("ink.line", InkMix(18));
         Add("ink.field", InkMix(30));
         Add("ground.page", Surface);
         Add("ground.sidebar", Surface);
@@ -121,7 +122,6 @@ public sealed class SkinTokensTests
         Add("current.shadow", "none");
         Add("selected.background", Mix("primary", 14, Surface));
         Add("selected.background.hover", Mix("primary", 20, Surface));
-        Add("selected.foreground", "var(--hu-accent-ink)");
         Add("selected.task.background", "var(--hu-selected-background)");
         Add("selected.task.bar", "var(--mud-palette-primary)");
         Add("tree.current.bar", "var(--mud-palette-primary)");
@@ -132,7 +132,6 @@ public sealed class SkinTokensTests
 
         (string Soft, string Ink) neutral = Tone("text-secondary");
         Add("tone.neutral.soft", neutral.Soft);
-        Add("tone.neutral.ink", neutral.Ink);
         Add("tone.primary.soft", Tone("primary").Soft);
         Add("tone.primary.ink", Tone("primary").Ink);
         Add("tone.primary.tint", Mix("primary", 8, Surface));
@@ -156,14 +155,13 @@ public sealed class SkinTokensTests
         Add("field.focus.line", "var(--mud-palette-primary)");
         Add("field.focus.shadow", "none");
         Add("scrim", "var(--mud-palette-overlay-dark)");
-        Add("tabs.strip.background", InkMix(4));
         Add("tabs.item.hover", InkMix(7));
         Add("message.line-height", "var(--mud-typography-body1-lineheight)");
         Add("send.fg", "var(--mud-palette-primary)");
         Add("send.bg", "transparent");
         Add("ring", Surface);
         Add("feed.summary.ink", "var(--mud-palette-text-primary)");
-        Add("feed.day.rule", "var(--hu-ink-rule)");
+        Add("feed.day.rule", "var(--ink-line)");
         Add("feed.live.background", Mix("success", 6, Surface));
         Add("feed.live.line", "transparent");
         Add("feed.live.ink", Mix("success", 70, "var(--mud-palette-text-primary)"));
@@ -182,13 +180,10 @@ public sealed class SkinTokensTests
         Add("feed.unseen.dot", "var(--mud-palette-primary)");
         Add("feed.unseen.weight", "400");
         Add("feed.unseen.bar", "var(--mud-palette-primary)");
-        Add("control.track", "var(--hu-ink-wash)");
+        Add("control.track", "var(--ink-wash)");
         Add("control.ink", "var(--hu-text-subtle)");
         Add("control.selected.ink", "var(--mud-palette-text-primary)");
         Add("control.selected.line", "var(--hu-line-region)");
-        Add("control.set.background", "var(--hu-tone-info-soft)");
-        Add("control.set.line", "var(--hu-tone-info-ink)");
-        Add("control.set.ink", "var(--hu-tone-info-ink)");
         Add("detail.background", "var(--hu-ground-sidebar)");
         Add("detail.blur", "0px");
         Add("detail.edge", "transparent");
@@ -197,11 +192,11 @@ public sealed class SkinTokensTests
         Add("detail.accent.from", "transparent");
         Add("detail.accent.to", "transparent");
         Add("detail.head.line", "transparent");
-        Add("detail.row.line", "var(--hu-ink-edge)");
+        Add("detail.row.line", "var(--ink-line)");
         Add("detail.section.line", "transparent");
         Add("edit.header.background", "var(--hu-ground-raised)");
         Add("edit.header.blur", "0px");
-        Add("field.line", "var(--hu-ink-field)");
+        Add("field.line", "var(--ink-field)");
         Add("field.line.bottom", "var(--hu-field-line)");
         Add("field.shadow", "none");
         Add("control.radius", "var(--mud-default-borderradius)");
@@ -216,9 +211,6 @@ public sealed class SkinTokensTests
         Add("gate.halo", "none");
         Add("gate.radius", "0px");
         Add("gate.padding", "0px");
-        Add("chip.set.background", "transparent");
-        Add("chip.set.line", "var(--mud-palette-primary)");
-        Add("chip.set.ink", "var(--mud-palette-text-primary)");
         Add("toolbar.line", "transparent");
         Add("button.filled.shadow", "none");
         Add("list.row.line", "var(--hu-line-region)");
@@ -233,7 +225,6 @@ public sealed class SkinTokensTests
         Add("board.column.background", "var(--hu-ground-sunk)");
         Add("board.column.line", "var(--hu-line-region)");
         Add("board.count.background", "transparent");
-        Add("board.count.line", "transparent");
         Add("board.needs.background", "transparent");
         Add("board.needs.line", "var(--hu-board-column-line)");
         Add("board.needs.halo", "0 0 0 0 transparent");
@@ -243,11 +234,8 @@ public sealed class SkinTokensTests
         Add("editor.radius", "var(--mud-default-borderradius)");
         Add("editor.shadow", "none");
         Add("editor.toolbar.line", "transparent");
-        Add("editor.text.size", "var(--mud-typography-body2-size)");
-        Add("editor.text.leading", "1.75");
         Add("editor.text.ink", "var(--mud-palette-text-primary)");
         Add("note.prose.ink", "var(--mud-palette-text-primary)");
-        Add("note.heading.weight", "600");
         Add("note.h1.size", "1.5em");
         Add("note.h1.tracking", "normal");
         return list;

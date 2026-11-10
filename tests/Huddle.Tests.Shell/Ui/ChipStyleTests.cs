@@ -73,7 +73,7 @@ public sealed class ChipStyleTests
     {
         string tag = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-chip.tag-chip");
         Assert.Contains("background-color: var(--ink-wash);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border: 1px solid var(--ink-edge);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border: 1px solid var(--ink-line);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("color: var(--mud-palette-text-primary);", tag, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
         Assert.Contains("1px dashed", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-chip.filter-chip"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source

@@ -42,7 +42,6 @@ internal static class SkinTokens
     private static void AddReadingTokens(List<Token> tokens)
     {
         Add(tokens, "note.prose.ink", "palette.textPrimary", "The text colour of a note's body prose; headings keep the primary text colour.");
-        Add(tokens, "note.heading.weight", "600", "The weight of a note's headings.");
         Add(tokens, "note.h1.size", "1.5em", "A note's h1, relative to its body size.");
         Add(tokens, "note.h1.tracking", "normal", "The letter-spacing of a note's h1.");
     }
@@ -52,7 +51,7 @@ internal static class SkinTokens
     private static void AddFeedTokens(List<Token> tokens)
     {
         Add(tokens, "feed.summary.ink", "palette.textPrimary", "A Feed card's summary sentence.");
-        Add(tokens, "feed.day.rule", "ref(ink.rule)", "The rule after a Feed day heading.");
+        Add(tokens, "feed.day.rule", "ref(ink.line)", "The rule after a Feed day heading.");
         Add(tokens, "feed.live.background", "mix(palette.success 6%, palette.surface)", "The Live chip's fill.");
         Add(tokens, "feed.live.line", "transparent", "The Live chip's outline.");
         Add(tokens, "feed.live.ink", "mix(palette.success 70%, palette.textPrimary)", "The Live chip's text.");
@@ -81,9 +80,6 @@ internal static class SkinTokens
         Add(tokens, "control.ink", "ref(text.subtle)", "An unselected segmented-control label.");
         Add(tokens, "control.selected.ink", "palette.textPrimary", "The selected segmented-control label.");
         Add(tokens, "control.selected.line", "ref(line.region)", "The outline of the selected segment's pill.");
-        Add(tokens, "control.set.background", "ref(tone.info.soft)", "A filter select's fill once a value is chosen.");
-        Add(tokens, "control.set.line", "ref(tone.info.ink)", "A filter select's border once a value is chosen.");
-        Add(tokens, "control.set.ink", "ref(tone.info.ink)", "A filter select's text once a value is chosen.");
     }
 
     /// <summary>Registers the Task detail panel tokens (the read-only right drawer). Each default is the panel's look before Themes differed.</summary>
@@ -98,7 +94,7 @@ internal static class SkinTokens
         Add(tokens, "detail.accent.from", "transparent", "The start colour of a 3px accent bar on a panel header or gate.");
         Add(tokens, "detail.accent.to", "transparent", "The end colour of that accent bar.");
         Add(tokens, "detail.head.line", "transparent", "The hairline under the Task detail header.");
-        Add(tokens, "detail.row.line", "ref(ink.edge)", "The hairline between property rows.");
+        Add(tokens, "detail.row.line", "ref(ink.line)", "The hairline between property rows.");
         Add(tokens, "detail.section.line", "transparent", "The hairline above a Task detail section.");
     }
 
@@ -129,9 +125,6 @@ internal static class SkinTokens
     /// <param name="tokens">The registry being built.</param>
     private static void AddTaskListTokens(List<Token> tokens)
     {
-        Add(tokens, "chip.set.background", "transparent", "A toolbar filter chip's fill once it is set.");
-        Add(tokens, "chip.set.line", "palette.primary", "A set filter chip's border.");
-        Add(tokens, "chip.set.ink", "palette.textPrimary", "A set filter chip's text.");
         Add(tokens, "toolbar.line", "transparent", "The rule under the Tasks toolbar row.");
         Add(tokens, "button.filled.shadow", "none", "The shadow of a filled button.");
         Add(tokens, "list.row.line", "ref(line.region)", "The line under a List row.");
@@ -146,7 +139,6 @@ internal static class SkinTokens
         Add(tokens, "board.column.background", "ref(ground.sunk)", "A Board column's surface.");
         Add(tokens, "board.column.line", "ref(line.region)", "A Board column's border.");
         Add(tokens, "board.count.background", "transparent", "The pill behind a column count.");
-        Add(tokens, "board.count.line", "transparent", "The border of that pill.");
         Add(tokens, "board.needs.background", "transparent", "The Needs You column's surface.");
         Add(tokens, "board.needs.line", "ref(board.column.line)", "The Needs You column's border.");
         Add(tokens, "board.needs.halo", "0 0 0 0 transparent", "The Needs You column's outer ring.");
@@ -162,8 +154,6 @@ internal static class SkinTokens
         Add(tokens, "editor.radius", "mud(default-borderradius)", "The corner of the Description editor's card.");
         Add(tokens, "editor.shadow", "none", "The resting shadow of the Description editor's card.");
         Add(tokens, "editor.toolbar.line", "transparent", "The rule under the Description editor's toolbar, and the dividers in it.");
-        Add(tokens, "editor.text.size", "mud(typography-body2-size)", "The font size of the Description's writing surface.");
-        Add(tokens, "editor.text.leading", "1.75", "The line height of the Description's writing surface.");
         Add(tokens, "editor.text.ink", "palette.textPrimary", "The text colour of the Description's writing surface.");
     }
 
@@ -207,8 +197,7 @@ internal static class SkinTokens
     {
         Add(tokens, "ink.strip", Ink(4), "Faintest tint: the tab strip's wash.");
         Add(tokens, "ink.wash", Ink(6), "A washed shape's fill.");
-        Add(tokens, "ink.rule", Ink(10), "An inner rule inside a card or list.");
-        Add(tokens, "ink.edge", Ink(18), "A card, tile or washed shape's outline.");
+        Add(tokens, "ink.line", Ink(18), "A card, tile or washed shape's outline, and an inner rule inside a card or list.");
         Add(tokens, "ink.field", Ink(30), "An input's line.");
         Add(tokens, "ground.page", "palette.surface", "The page ground.");
         Add(tokens, "ground.sidebar", "palette.surface", "The left drawer and the tree header.");
@@ -230,9 +219,8 @@ internal static class SkinTokens
         Add(tokens, "current.icon", "ref(accent.ink)", "The current row's icon.");
         Add(tokens, "current.weight", "500", "The current row's font weight.");
         Add(tokens, "current.shadow", "none", "The current row's lifted-tile shadow.");
-        Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set.");
+        Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set, and a filter or control once it is set.");
         Add(tokens, "selected.background.hover", "mix(palette.primary 20%, palette.surface)", "A chosen item while hovered.");
-        Add(tokens, "selected.foreground", "ref(accent.ink)", "A chosen item's text.");
         Add(tokens, "selected.task.background", "ref(selected.background)", "The selected Task row and card.");
         Add(tokens, "selected.task.bar", "palette.primary", "The selected Task's inset bar.");
         Add(tokens, "tree.current.bar", "palette.primary", "The Library tree's 2px current bar.");
@@ -247,7 +235,6 @@ internal static class SkinTokens
     private static void AddToneTokens(List<Token> tokens)
     {
         Add(tokens, "tone.neutral.soft", Soft("textSecondary"), "Neutral status fill.");
-        Add(tokens, "tone.neutral.ink", InkOf("textSecondary"), "Neutral status text.");
         Add(tokens, "tone.primary.soft", Soft("primary"), "Primary status fill.");
         Add(tokens, "tone.primary.ink", InkOf("primary"), "Primary status text.");
         Add(tokens, "tone.primary.tint", "mix(palette.primary 8%, palette.surface)", "A faint primary tint.");
@@ -276,7 +263,6 @@ internal static class SkinTokens
         Add(tokens, "field.focus.line", "palette.primary", "A focused input's border.");
         Add(tokens, "field.focus.shadow", "none", "A focused input's halo.");
         Add(tokens, "scrim", "palette.overlayDark", "The dialog scrim.");
-        Add(tokens, "tabs.strip.background", Ink(4), "The tab strip's background.");
         Add(tokens, "tabs.item.hover", Ink(7), "A hovered tab.");
         Add(tokens, "message.line-height", "mud(typography-body1-lineheight)", "The transcript body's line height.");
         Add(tokens, "send.fg", "palette.primary", "The Composer's Send icon.");

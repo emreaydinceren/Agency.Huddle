@@ -18,9 +18,6 @@ internal static class MudVariables
         "--font-mono",
         "--font-read",
 
-        // The ink ladder, declared in app-vars.css as aliases of the --hu-ink-* skin tokens (audit A1).
-        "--ink-strip", "--ink-wash", "--ink-rule", "--ink-edge", "--ink-field",
-
         // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017): the row height
         // and the grid every row sits on; --nav-level is set per row, and --needs-you-offset by the Needs you card.
         "--nav-row-height",
@@ -117,9 +114,6 @@ internal static class MudVariables
         "--mud-typography-h6-family", "--mud-typography-h6-letterspacing",
         "--mud-typography-h6-lineheight", "--mud-typography-h6-size",
         "--mud-typography-h6-text-transform", "--mud-typography-h6-weight",
-        "--mud-typography-overline-family", "--mud-typography-overline-letterspacing",
-        "--mud-typography-overline-lineheight", "--mud-typography-overline-size",
-        "--mud-typography-overline-text-transform", "--mud-typography-overline-weight",
         "--mud-typography-subtitle1-family", "--mud-typography-subtitle1-letterspacing",
         "--mud-typography-subtitle1-lineheight", "--mud-typography-subtitle1-size",
         "--mud-typography-subtitle1-text-transform", "--mud-typography-subtitle1-weight",
