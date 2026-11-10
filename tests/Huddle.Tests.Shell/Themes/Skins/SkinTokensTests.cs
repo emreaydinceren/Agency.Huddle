@@ -185,9 +185,6 @@ public sealed class SkinTokensTests
         Add("control.ink", "var(--hu-text-subtle)");
         Add("control.selected.ink", "var(--mud-palette-text-primary)");
         Add("control.selected.line", "var(--hu-line-region)");
-        Add("control.set.background", "var(--hu-tone-info-soft)");
-        Add("control.set.line", "var(--hu-tone-info-ink)");
-        Add("control.set.ink", "var(--hu-tone-info-ink)");
         Add("detail.background", "var(--hu-ground-sidebar)");
         Add("detail.blur", "0px");
         Add("detail.edge", "transparent");
@@ -215,9 +212,6 @@ public sealed class SkinTokensTests
         Add("gate.halo", "none");
         Add("gate.radius", "0px");
         Add("gate.padding", "0px");
-        Add("chip.set.background", "transparent");
-        Add("chip.set.line", "var(--mud-palette-primary)");
-        Add("chip.set.ink", "var(--mud-palette-text-primary)");
         Add("toolbar.line", "transparent");
         Add("button.filled.shadow", "none");
         Add("list.row.line", "var(--hu-line-region)");

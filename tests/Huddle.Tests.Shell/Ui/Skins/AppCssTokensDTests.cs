@@ -75,6 +75,30 @@ public sealed class AppCssTokensDTests
         Assert.Contains("color: var(--hu-accent-ink);", filter);
     }
 
+    /// <summary>
+    /// "A filter or control is set" has one token family: the Task toolbar's set chip and the Feed's set Team select read
+    /// <c>selected.*</c> and the accent ink, as the filter chips do, and no stylesheet reads a <c>chip.set.*</c> or
+    /// <c>control.set.*</c> token (they are deleted).
+    /// </summary>
+    [Fact]
+    public void SetFilters_ReadTheSelectedTokens_NotTheirOwnFamily()
+    {
+        string css = CssText.AppCss();
+        string feedPage = CssText.Read(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "FeedPage.razor.css"));
+
+        string chip = CssText.RuleBody(css, ".task-filter-chip-set");
+        Assert.Contains("background-color: var(--hu-selected-background);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-color: var(--mud-palette-primary);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+
+        string fill = CssText.RuleBodyInList(feedPage, "::deep .feed-team-select-set .mud-input");
+        Assert.Contains("background: var(--hu-selected-background);", fill, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", fill, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-color: var(--mud-palette-primary);", CssText.RuleBody(feedPage, "::deep .feed-team-select-set .mud-input-outlined-border"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+
+        Assert.DoesNotMatch(@"--hu-(chip|control)-set-", css + feedPage);
+    }
+
     /// <summary>The accent used as text reads <c>--hu-accent-ink</c>.</summary>
     [Theory]
     [InlineData(".build-team-section-number")]

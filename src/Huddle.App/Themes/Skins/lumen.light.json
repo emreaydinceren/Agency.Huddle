@@ -60,8 +60,6 @@
     "gate.halo": "0 0 0 3px ref(tone.primary.soft)",
     "gate.radius": "8px",
     "gate.padding": "12px 14px",
-    "chip.set.background": "ref(ground.sidebar)",
-    "chip.set.line": "ref(line.control)",
     "toolbar.line": "ref(line.region)",
     "list.row.hover": "ref(ground.sidebar)",
     "list.group.background": "ref(ink.wash)",

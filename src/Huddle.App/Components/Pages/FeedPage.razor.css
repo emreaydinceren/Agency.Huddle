@@ -152,14 +152,14 @@
 }
 
 ::deep .feed-team-select-set .mud-input-outlined-border {
-    border-color: var(--hu-control-set-line);
+    border-color: var(--mud-palette-primary);
 }
 
 ::deep .feed-team-select-set .mud-input,
 ::deep .feed-team-select-set .mud-input-slot,
 ::deep .feed-team-select-set .mud-select-input {
-    background: var(--hu-control-set-background);
-    color: var(--hu-control-set-ink);
+    background: var(--hu-selected-background);
+    color: var(--hu-accent-ink);
 }
 
 ::deep .feed-show-more {

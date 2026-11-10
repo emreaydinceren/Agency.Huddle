@@ -18,7 +18,6 @@
     "detail.background": "rgba(36,36,36,.78)",
     "board.column.background": "mix(palette.textPrimary 3%, palette.surface)",
     "board.card.hover.shadow": "0 0 2px rgba(0,0,0,.24), 0 4px 8px rgba(0,0,0,.28)",
-    "chip.set.line": "#1f5f99",
     "feed.card.hover.shadow": "0 0 2px rgba(0,0,0,.24), 0 2px 4px rgba(0,0,0,.28)",
     "feed.card.open.shadow": "0 0 2px rgba(0,0,0,.24), 0 4px 8px rgba(0,0,0,.28)",
     "control.track": "#2e2e2e",

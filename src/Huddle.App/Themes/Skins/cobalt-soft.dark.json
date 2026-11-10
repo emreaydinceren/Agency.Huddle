@@ -44,7 +44,6 @@
     "board.background": "#172036",
     "board.column.background": "#111829",
     "list.group.background": "#172036",
-    "chip.set.line": "mix(palette.primary 50%, palette.surface)",
     "feed.card.open.line": "#54608b",
     "feed.unseen.background": "ref(tone.primary.soft)",
     "feed.detail.background": "#172036",

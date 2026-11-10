@@ -80,9 +80,6 @@ internal static class SkinTokens
         Add(tokens, "control.ink", "ref(text.subtle)", "An unselected segmented-control label.");
         Add(tokens, "control.selected.ink", "palette.textPrimary", "The selected segmented-control label.");
         Add(tokens, "control.selected.line", "ref(line.region)", "The outline of the selected segment's pill.");
-        Add(tokens, "control.set.background", "ref(tone.info.soft)", "A filter select's fill once a value is chosen.");
-        Add(tokens, "control.set.line", "ref(tone.info.ink)", "A filter select's border once a value is chosen.");
-        Add(tokens, "control.set.ink", "ref(tone.info.ink)", "A filter select's text once a value is chosen.");
     }
 
     /// <summary>Registers the Task detail panel tokens (the read-only right drawer). Each default is the panel's look before Themes differed.</summary>
@@ -128,9 +125,6 @@ internal static class SkinTokens
     /// <param name="tokens">The registry being built.</param>
     private static void AddTaskListTokens(List<Token> tokens)
     {
-        Add(tokens, "chip.set.background", "transparent", "A toolbar filter chip's fill once it is set.");
-        Add(tokens, "chip.set.line", "palette.primary", "A set filter chip's border.");
-        Add(tokens, "chip.set.ink", "palette.textPrimary", "A set filter chip's text.");
         Add(tokens, "toolbar.line", "transparent", "The rule under the Tasks toolbar row.");
         Add(tokens, "button.filled.shadow", "none", "The shadow of a filled button.");
         Add(tokens, "list.row.line", "ref(line.region)", "The line under a List row.");
@@ -226,7 +220,7 @@ internal static class SkinTokens
         Add(tokens, "current.icon", "ref(accent.ink)", "The current row's icon.");
         Add(tokens, "current.weight", "500", "The current row's font weight.");
         Add(tokens, "current.shadow", "none", "The current row's lifted-tile shadow.");
-        Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set.");
+        Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set, and a filter or control once it is set.");
         Add(tokens, "selected.background.hover", "mix(palette.primary 20%, palette.surface)", "A chosen item while hovered.");
         Add(tokens, "selected.task.background", "ref(selected.background)", "The selected Task row and card.");
         Add(tokens, "selected.task.bar", "palette.primary", "The selected Task's inset bar.");

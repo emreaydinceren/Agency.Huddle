@@ -424,7 +424,7 @@
         },
         "selected.background": {
           "type": "string",
-          "description": "A chosen item in a set."
+          "description": "A chosen item in a set, and a filter or control once it is set."
         },
         "selected.background.hover": {
           "type": "string",
@@ -666,18 +666,6 @@
           "type": "string",
           "description": "The outline of the selected segment\u0027s pill."
         },
-        "control.set.background": {
-          "type": "string",
-          "description": "A filter select\u0027s fill once a value is chosen."
-        },
-        "control.set.line": {
-          "type": "string",
-          "description": "A filter select\u0027s border once a value is chosen."
-        },
-        "control.set.ink": {
-          "type": "string",
-          "description": "A filter select\u0027s text once a value is chosen."
-        },
         "detail.background": {
           "type": "string",
           "description": "The Task detail panel\u0027s ground."
@@ -785,18 +773,6 @@
         "gate.padding": {
           "type": "string",
           "description": "Their inner padding."
-        },
-        "chip.set.background": {
-          "type": "string",
-          "description": "A toolbar filter chip\u0027s fill once it is set."
-        },
-        "chip.set.line": {
-          "type": "string",
-          "description": "A set filter chip\u0027s border."
-        },
-        "chip.set.ink": {
-          "type": "string",
-          "description": "A set filter chip\u0027s text."
         },
         "toolbar.line": {
           "type": "string",

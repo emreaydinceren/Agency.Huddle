@@ -1327,13 +1327,13 @@
 
 /* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
 .task-filter-chip-set {
-    border-color: var(--hu-chip-set-line);
-    background-color: var(--hu-chip-set-background);
+    border-color: var(--mud-palette-primary);
+    background-color: var(--hu-selected-background);
 }
 
 .task-filter-chip-set .task-filter-chip-button {
     font-weight: 500;
-    color: var(--hu-chip-set-ink);
+    color: var(--hu-accent-ink);
 }
 
 /* ---- surface=flat: Cobalt Soft --------------------------------------------------------------- */

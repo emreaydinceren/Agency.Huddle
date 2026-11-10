@@ -99,9 +99,6 @@
     --hu-control-ink: var(--hu-text-subtle);
     --hu-control-selected-ink: var(--mud-palette-text-primary);
     --hu-control-selected-line: var(--hu-line-region);
-    --hu-control-set-background: var(--hu-tone-info-soft);
-    --hu-control-set-line: var(--hu-tone-info-ink);
-    --hu-control-set-ink: var(--hu-tone-info-ink);
 
     /* The Task pages (detail panel, edit page, Tasks List and Board): each default is the look they had before Themes differed. */
     --hu-detail-background: var(--hu-ground-sidebar);
@@ -131,9 +128,6 @@
     --hu-gate-halo: none;
     --hu-gate-radius: 0px;
     --hu-gate-padding: 0px;
-    --hu-chip-set-background: transparent;
-    --hu-chip-set-line: var(--mud-palette-primary);
-    --hu-chip-set-ink: var(--mud-palette-text-primary);
     --hu-toolbar-line: transparent;
     --hu-button-filled-shadow: none;
     --hu-list-row-line: var(--hu-line-region);
