@@ -47,6 +47,7 @@
     "overlayDark": "rgba(0,0,0,0.4)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#ebf2ea",
     "editor.shadow": "ref(shadow.card)",
     "editor.toolbar.line": "ref(line.region)",
     "editor.text.ink": "ref(text.subtle)",

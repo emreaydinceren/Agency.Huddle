@@ -36,6 +36,11 @@
     --feed-kind: var(--mud-palette-warning);
 }
 
+/* An item in the Needs you category (a Notification not yet resolved) takes its Theme's own fill; hover and the unseen overlay still sit on top of it. */
+.feed-card-needsyou {
+    background-color: var(--hu-feed-card-needs-fill);
+}
+
 .feed-kind-documents {
     --feed-kind: var(--mud-palette-info);
 }

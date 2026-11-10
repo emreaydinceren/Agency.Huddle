@@ -33,6 +33,7 @@
     "ids": "mono"
   },
   "tokens": {
+    "feed.card.needs.fill": "#ecf3fc",
     "note.h1.size": "1.75em",
     "detail.background": "alpha(palette.surface 78%)",
     "detail.blur": "30px",

@@ -598,6 +598,10 @@
           "type": "string",
           "description": "A Feed card\u0027s fill while hovered."
         },
+        "feed.card.needs.fill": {
+          "type": "string",
+          "description": "A Feed card\u0027s fill when it is in the Needs you category."
+        },
         "feed.card.open.line": {
           "type": "string",
           "description": "An open Feed card\u0027s border."

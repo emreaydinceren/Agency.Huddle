@@ -47,6 +47,7 @@
     "overlayDark": "rgba(0,0,0,0.4)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#f4f3fc",
     "note.prose.ink": "mix(palette.textPrimary 88%, palette.textSecondary)",
     "note.h1.size": "1.625em",
     "note.h1.tracking": "-0.01em",

@@ -224,6 +224,7 @@
         + (this.Unseen ? " feed-card-unseen" : string.Empty)
         + (this.Expanded ? " feed-card-expanded" : string.Empty)
         + (this.Lead.Notify && !this.Group.AnyUnresolved ? " feed-card-resolved" : string.Empty)
+        + (this.Lead.Notify && this.Group.AnyUnresolved ? " feed-card-needsyou" : string.Empty)
         + (this.Pill is { Kind: FeedPillKind.Waiting } ? " feed-card-waiting" : string.Empty);
 
     private string AgeClass => this.Unseen ? "feed-card-age feed-card-age-unseen" : "feed-card-age";

@@ -86,7 +86,8 @@
     --hu-feed-card-open-shadow: var(--hu-shadow-card-hover);
     --hu-feed-card-hover-line: var(--hu-line-control);
     --hu-feed-card-hover-fill: var(--hu-ground-raised);
-    --hu-feed-card-open-line: var(--hu-line-control);
+    --hu-feed-card-needs-fill: var(--mud-palette-surface);
+    --hu-feed-card-open-line:var(--hu-line-control);
     --hu-feed-card-kindbar: 0px;
     --hu-feed-card-kindbar-ink: var(--mud-palette-primary);
     --hu-feed-detail-background: transparent;
