@@ -15,10 +15,6 @@
     min-width: 100%;
 }
 
-.task-list-grid thead th {
-    position: relative;
-}
-
 .task-col-resizer {
     position: absolute;
     top: 0;
@@ -48,9 +44,10 @@
     background: var(--mud-palette-primary);
 }
 
-/* S5: header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
+/* Header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
    Priority about 120px, the row menu 40px, Title the one flexible column. */
 .task-list-grid thead th {
+    position: relative;
     width: 8rem;
     white-space: nowrap;
     font-size: var(--mud-typography-caption-size);
@@ -79,13 +76,14 @@
     height: 36px;
     padding: 0 8px 0 16px;
     font-size: var(--mud-typography-body2-size);
+    border-block-end-color: var(--hu-list-row-line);
 }
 
 .mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
     height: 32px;
 }
 
-/* A group row (audit B4f, design-system "Tasks"): Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
+/* A group row: Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
    assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
 .mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
     background-color: var(--hu-list-group-background);
@@ -146,6 +144,7 @@
     overflow: hidden;
     overflow-wrap: anywhere;
     white-space: normal;
+    font-weight: var(--hu-list-title-weight);
 }
 
 @media (max-width: 1500px) {

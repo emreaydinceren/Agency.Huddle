@@ -1,4 +1,4 @@
-/* ---- Task read view (T15) and Task edit page (K): docs/Huddle.TaskReadView-Specifications.md ---- */
+/* ---- Task read view and Task edit page: docs/Huddle.TaskReadView-Specifications.md ---- */
 
 /* The read view is a text body in the Right sidebar; its width, not the window's, decides one pair per row or two. */
 .task-read-view {
@@ -9,7 +9,7 @@
     gap: 16px;
 }
 
-/* T15a: the Closed chip at the left, Edit, Copy id and the menu at the right, 32px high. */
+/* The Closed chip at the left, Edit, Copy id and the menu at the right, 32px high. */
 .task-read-view-actions {
     display: flex;
     align-items: center;
@@ -21,7 +21,7 @@
     flex: 1 1 auto;
 }
 
-/* T15d: a label and a value per row, 28px high with an Edge hairline between rows. */
+/* A label and a value per row, 28px high with an Edge hairline between rows. */
 .task-read-view-props {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -97,21 +97,22 @@
     }
 }
 
-/* K2: the page header holds the page's name and actions; it sticks to the top of the page container so Cancel and Save stay in reach (D-5). */
+/* The page header holds the page's name and actions; it sticks to the top of the page container so Cancel and Save stay in reach. */
 .task-edit-page-header {
     position: sticky;
     top: 0;
     z-index: 2;
     margin: -16px -16px 16px;
     padding: 16px 16px 0;
-    background-color: var(--mud-palette-surface);
+    background-color: var(--hu-edit-header-background);
+    backdrop-filter: blur(var(--hu-edit-header-blur));
 }
 
 .task-edit-page-header .page-header {
     margin-bottom: 0;
 }
 
-/* #352: a title that wraps (narrow window, right drawer open) must not recentre the buttons.
+/* A title that wraps (narrow window, right drawer open) must not recentre the buttons.
    The row aligns to its top and both sides keep a 32px first line, so Save stays put. */
 .task-edit-page-header .page-header-row {
     align-items: flex-start;
@@ -127,7 +128,7 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* K2a: the two buttons stay together when the header's actions wrap below the title. */
+/* The two buttons stay together when the header's actions wrap below the title. */
 .task-edit-page-actions {
     display: flex;
     align-items: center;
@@ -145,7 +146,7 @@
         flex-wrap: wrap;
     }
 
-    /* #352: wrapped, the buttons sit on the first line, so a title of any length wraps below them and Save keeps its place. */
+    /* Wrapped, the buttons sit on the first line, so a title of any length wraps below them and Save keeps its place. */
     .task-edit-page-header .page-header-actions {
         order: -1;
         flex-basis: 100%;
@@ -153,7 +154,7 @@
     }
 }
 
-/* K3 and D-6: the editor is two columns only when the editor itself is 1024px wide, never by the window's width, which ignores the sidebars and a second
+/* The editor is two columns only when the editor itself is 1024px wide, never by the window's width, which ignores the sidebars and a second
    Tab group. TaskDetail's own grid breaks at MudBlazor's window breakpoint, so inside the page it is one column until this container is wide enough. */
 .task-edit-page-editor {
     container-type: inline-size;
@@ -267,7 +268,7 @@
     }
 }
 
-/* K3a: the Markdown toolbar sits between the Description's label line and its field (D-7). */
+/* The Markdown toolbar sits between the Description's label line and its field. */
 .task-detail-description-editor .markdown-toolbar {
     flex: 1 1 auto;
     gap: 2px;

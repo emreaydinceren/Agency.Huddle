@@ -1,4 +1,4 @@
-/* ---- DS-9: the Task detail form as four headed groups of label | value properties ----------------------
+/* ---- The Task detail form as four headed groups of label | value properties ----------------------
    TaskDetail.razor groups its fields under subtitle2 headings (.group-heading). Each .task-detail-prop is a
    label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
    (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
@@ -19,7 +19,7 @@
     gap: 12px;
 }
 
-/* A group's heading is the Group label (audit B4i): 12px/600 in Quiet ink, so the title is the drawer's only 16px text. */
+/* A group's heading is the Group label: 12px/600 in Quiet ink, so the title is the drawer's only 16px text. */
 .task-detail-group > .group-label {
     margin: 0;
 }
@@ -38,7 +38,7 @@
 }
 
 /* A Task's title, shown or edited, is a heading in the Theme's h5 role (size, weight, line height and face), and the edit is a full-width field
-   with the Theme's field outline and radius (Huddle-DescriptionEditor-Theming.md follow-up: one look in every Theme). While a saved Task's title
+   with the Theme's field outline and radius (one look in every Theme). While a saved Task's title
    is edited, the drawer's own copy is hidden. */
 .task-detail-title-display {
     font-family: var(--mud-typography-h5-family);
@@ -79,7 +79,7 @@
     border-bottom: 1px solid var(--hu-line-region);
 }
 
-/* The grid's own item padding would leave an empty band above the strip, where the title row used to be. */
+/* The grid's own item padding would leave an empty band above the strip. */
 .task-detail-grid > .task-detail-col-strip {
     padding-top: 0;
 }
@@ -132,7 +132,7 @@
     display: none;
 }
 
-/* The Priority select wears its priority's icon (TaskColors.Icon, one set in every Theme) inside the field's start; the select keeps its own caret (issue 470). */
+/* The Priority select wears its priority's icon (TaskColors.Icon, one set in every Theme) inside the field's start; the select keeps its own caret. */
 .task-detail-priority-field {
     position: relative;
     display: flex;
@@ -161,7 +161,7 @@
     margin-bottom: 8px;
 }
 
-/* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden (audit B4n). */
+/* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden. */
 .task-detail-description-header {
     display: flex;
     align-items: center;
@@ -170,7 +170,7 @@
     margin-bottom: 8px;
 }
 
-/* The Description heads a field the width of the form, so it is a section heading (14px/600, TextPrimary; issue 491), not the 12px Group label of the
+/* The Description heads a field the width of the form, so it is a section heading (14px/600, TextPrimary), not the 12px Group label of the
    property groups above it, which it would otherwise inherit from .group-label. The size is body1's, not subtitle2's: a Theme's subtitle2 is
    16px, and the form's title is its only 16px text. */
 .task-detail-description-header .group-label {
@@ -246,7 +246,7 @@
     display: none;
 }
 
-/* An empty optional field shows a Quiet-ink hint ("None", "Add tag…") instead of a blank box (audit B4o). */
+/* An empty optional field shows a Quiet-ink hint ("None", "Add tag…") instead of a blank box. */
 .task-detail-prop-value input::placeholder,
 .task-detail-prop-value textarea::placeholder,
 .task-detail-description-field textarea::placeholder {
@@ -275,6 +275,7 @@
     height: 14px;
     font-size: var(--mud-typography-subtitle1-size);
     margin-inline: 0 4px;
+    color: inherit;
 }
 
 /* The Status and Tag chips share one shape, 22px high with a 6px corner (three quarters of the Theme's 8px). */
@@ -288,11 +289,6 @@
     line-height: 1;
     background-color: var(--hu-tone-neutral-soft);
     color: var(--hu-tone-neutral-ink);
-}
-
-.mud-chip.status-chip .mud-chip-icon,
-.mud-chip.status-chip .mud-icon-root {
-    color: inherit;
 }
 
 .mud-chip.status-chip-info {
@@ -375,7 +371,7 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* ---- Reading pages start at the same left edge as every other page (DS-10) ---------------------
+/* ---- Reading pages start at the same left edge as every other page ---------------------
    A reading page (Settings, Agents, Build a team) limits the width of its content, not its position:
    MudContainer centres itself with auto margins, and this drops them so the title does not move when
    the Human switches Tabs. */
@@ -384,7 +380,7 @@
     margin-right: 0;
 }
 
-/* ---- An inline edit of a title keeps the title's size and weight (DS-11) ------------------------------
+/* ---- An inline edit of a title keeps the title's size and weight ------------------------------
    Renaming a Room swaps the h5 heading for this field, so it takes the h5 role from the Theme and shows
    only the outline: no floating label and a tight padding, so nothing makes the header jump. The control
    is pulled left by its side padding so the typed text starts where the heading's text did. */
@@ -406,7 +402,7 @@
    Every value is a skin token whose default is the look these surfaces had before Themes differed, so a skin lists only
    what it changes (Huddle-Tasks-Theming.md). The Theme-only structure sits under the traits it belongs to, further down. */
 
-/* A. The Task details in the Right sidebar (S4, T15): the header's ground, edge and glass, set once for every Theme. */
+/* A. The Task details in the Right sidebar: the header's ground, edge and glass, set once for every Theme. */
 .task-read-view-header {
     position: relative;
     padding: 12px;
@@ -465,12 +461,7 @@
     flex: 1;
 }
 
-/* B. The Task edit page (K): header, fields, field groups, the gate frame. */
-.task-edit-page-header {
-    background-color: var(--hu-edit-header-background);
-    backdrop-filter: blur(var(--hu-edit-header-blur));
-}
-
+/* B. The Task edit page: header, fields, field groups, the gate frame. */
 .task-edit-page .mud-input-outlined-border {
     border-color: var(--hu-field-line);
     border-bottom-color: var(--hu-field-line-bottom);
@@ -535,8 +526,8 @@
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The strip's fields are the form's fields (issue 491): the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
-   label (.task-detail-strip-label, 96px) is the groups' label column. The strip used to override that with a 28px caption-size field. */
+/* The strip's fields are the form's fields: the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
+   label (.task-detail-strip-label, 96px) is the groups' label column. */
 
 /* The strip carries the page's one rule under the header, so the header has none of its own. */
 .task-edit-page-header .page-header.has-chrome {
@@ -620,7 +611,7 @@
 }
 
 /* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
-   icons, about 30px in all (side-by-side audit, 2026-10-30, LL-T02). The indicator moves to the same 2px inset; the
+   icons, about 30px in all. The indicator moves to the same 2px inset; the
    doubled class outranks the component's scoped 3px. */
 .huddle-segmented-control.task-toolbar-kind {
     padding: 2px;
@@ -643,7 +634,7 @@
     height: 14px;
 }
 
-/* K3 and K3a: the Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
+/* The Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
    with a single border that turns to the focus colour while the field is being written in. */
 .task-detail-description-box {
     overflow: hidden;
@@ -810,7 +801,7 @@
     font-size: var(--mud-typography-body2-size);
 }
 
-/* C. The Tasks page (T1 to T6): toolbar, chips, List rows, Board columns and cards. */
+/* C. The Tasks page: toolbar, chips, List rows, Board columns and cards. */
 .task-toolbar {
     padding-bottom: 8px;
     border-bottom: 1px solid var(--hu-toolbar-line);
@@ -826,7 +817,7 @@
     border-radius: var(--hu-control-radius);
 }
 
-/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it (issue 469). */
+/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it. */
 .task-toolbar .task-toolbar-search {
     margin-right: 8px;
 }
@@ -845,10 +836,6 @@
 :root:has([data-hu-surface="card"]) .task-filter-chip-unset {
     border-style: solid;
     border-color: var(--hu-line-control);
-}
-
-.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
-    border-block-end-color: var(--hu-list-row-line);
 }
 
 .mud-table.task-list-grid .mud-table-body .mud-table-row:not(.task-row-selected):hover > .mud-table-cell {
@@ -876,27 +863,10 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.task-list-title-cell .task-list-title {
-    font-weight: var(--hu-list-title-weight);
-}
-
-.task-board {
-    background: var(--hu-board-background);
-}
-
 .task-board-column {
     background-color: var(--hu-board-column-background);
     border-color: var(--hu-board-column-line);
     border-radius: var(--hu-feed-card-radius);
-}
-
-.task-board-column-count {
-    flex: 0 0 auto;
-    margin-inline-end: auto;
-    padding: 0 8px;
-    background: var(--hu-board-count-background);
-    border: 1px solid var(--hu-board-count-line);
-    border-radius: 999px;
 }
 
 /* The Needs You column: a tint over the column colour, a line, a ring and a top bar, each transparent unless a Theme sets it. */
@@ -999,7 +969,7 @@
     border-color: var(--hu-detail-decision-line);
 }
 
-/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls (issue 469), as the design system sets for every toolbar row: the shared
+/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls, as the design system sets for every toolbar row: the shared
    control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
 .task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
     box-sizing: border-box;
