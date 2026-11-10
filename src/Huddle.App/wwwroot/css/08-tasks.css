@@ -162,9 +162,9 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background-color: var(--hu-ground-sunk);
-    border: 1px solid var(--ink-edge);
-    border-radius: var(--mud-default-borderradius);
+    background-color: var(--hu-board-column-background);
+    border: 1px solid var(--hu-board-column-line);
+    border-radius: var(--hu-feed-card-radius);
 }
 
 /* An empty terminal column: a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still

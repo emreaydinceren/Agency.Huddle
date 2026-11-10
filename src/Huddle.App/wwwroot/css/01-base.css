@@ -640,18 +640,6 @@ a.team-ref,
     display: none;
 }
 
-/* A preformatted block that scrolls: a Task's process step. */
-.process-step-preview {
-    max-height: 16rem;
-    overflow: auto;
-    font-family: var(--font-mono);
-    font-size: var(--mud-typography-body2-size);
-    white-space: pre-wrap;
-    background: var(--ink-wash);
-    border: 1px solid var(--ink-edge);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
-}
-
 /* The " · " between the Task footer's facts: the footer's 16px gap, pulled in to 8px each side so the dot reads as a separator. */
 .task-detail-footer-sep {
     margin-inline: -8px;

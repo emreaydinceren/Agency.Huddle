@@ -123,7 +123,16 @@
     border-radius: var(--mud-default-borderradius);
 }
 
+/* A preformatted block that scrolls: a Task's process step. */
 .process-step-preview {
+    max-height: 16rem;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    white-space: pre-wrap;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     margin: 8px 0 0;
     padding: 12px;
 }

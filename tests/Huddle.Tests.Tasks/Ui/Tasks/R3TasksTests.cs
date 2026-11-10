@@ -810,11 +810,11 @@ public sealed class R3TasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: transparent;", CssText.RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-chip-set-background);", CssText.RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", CssText.RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color: var(--hu-selected-foreground);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
+        Assert.Contains("color: var(--hu-chip-set-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
     }
 
     /// <summary>The Dense switch is an Accent switch, like the Fields switches.</summary>
