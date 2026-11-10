@@ -555,14 +555,50 @@ function loadSnapshot(folder, file) {
   return { data, paths, byPath };
 }
 
+/**
+ * Elements whose presence follows server state rather than CSS. Pages are captured six at a time against one instance,
+ * and opening some pages marks Feed items seen, so the notification count's badge wrapper is there or not depending on
+ * which page loaded first. It is absolutely positioned, so it moves nothing else.
+ */
+const VOLATILE_PATH = /notifications-badge:\d+ > span\.mud-badge-/;
+
+const PX = /(-?\d*\.?\d+(?:e[+-]?\d+)?)px/g;
+
+const MATRIX = /matrix\(([^,]+),([^,]+),([^,]+),([^,]+),\s*([^,]+),\s*([^)]+)\)/g;
+
+/** A computed `matrix(a, b, c, d, e, f)` with its translation (e, f) written as px, so only those two are loosened. */
+function translationAsPx(value) {
+  return value.replace(MATRIX, (_, a, b, c, d, e, f) => `matrix(${a},${b},${c},${d}, ${e.trim()}px, ${f.trim()}px)`);
+}
+
+/**
+ * True when two computed values differ only in px lengths (and a matrix's translation), each by at most `tolerance`
+ * px. Text that Chrome lays out with a web font (Nordic) measures up to about 0.15 px differently from one capture of
+ * the same build to the next; a CSS change moves whole pixels or changes a token. Only px numbers are compared loosely:
+ * opacity, colour channels, weights, scale factors and every keyword still have to match exactly.
+ */
+function samePx(rawA, rawB, tolerance) {
+  if (tolerance <= 0) { return false; }
+  const va = translationAsPx(rawA);
+  const vb = translationAsPx(rawB);
+  const restA = va.replace(PX, 'px');
+  const restB = vb.replace(PX, 'px');
+  if (restA !== restB) { return false; }
+  const numsA = [...va.matchAll(PX)].map(m => Number(m[1]));
+  const numsB = [...vb.matchAll(PX)].map(m => Number(m[1]));
+  if (numsA.length === 0 || numsA.length !== numsB.length) { return false; }
+  return numsA.every((n, i) => Math.abs(n - numsB[i]) <= tolerance);
+}
+
 /** The differences between two snapshots of one page, as { removed, added, changes: [{ path, prop, from, to }] }. */
-function comparePage(a, b) {
+function comparePage(a, b, tolerance) {
   const changes = [];
   const removed = [];
   const added = [];
   const value = (snap, row, i) => snap.data.strs[row[2][i]];
   const names = a.data.props;
   for (const [path, ia] of a.byPath) {
+    if (VOLATILE_PATH.test(path)) { continue; }
     const ib = b.byPath.get(path);
     if (ib === undefined) { removed.push(path); continue; }
     const ra = a.data.rows[ia];
@@ -570,7 +606,7 @@ function comparePage(a, b) {
     for (let p = 0; p < names.length; p++) {
       const va = value(a, ra, p);
       const vb = value(b, rb, p);
-      if (va !== vb) { changes.push({ path, prop: names[p], from: va, to: vb }); }
+      if (va !== vb && !samePx(va, vb, tolerance)) { changes.push({ path, prop: names[p], from: va, to: vb }); }
     }
     const groups = [[3, '::before', a.data.pseudoProps], [4, '::after', a.data.pseudoProps], [5, '::placeholder', a.data.placeholderProps]];
     for (const [slot, label, props] of groups) {
@@ -580,11 +616,11 @@ function comparePage(a, b) {
       props.forEach((prop, k) => {
         const va = pa === 0 ? '(none)' : a.data.strs[pa[k]];
         const vb = pb === 0 ? '(none)' : b.data.strs[pb[k]];
-        if (va !== vb) { changes.push({ path, prop: `${label} ${prop}`, from: va, to: vb }); }
+        if (va !== vb && !samePx(va, vb, tolerance)) { changes.push({ path, prop: `${label} ${prop}`, from: va, to: vb }); }
       });
     }
   }
-  for (const path of b.byPath.keys()) { if (!a.byPath.has(path)) { added.push(path); } }
+  for (const path of b.byPath.keys()) { if (!a.byPath.has(path) && !VOLATILE_PATH.test(path)) { added.push(path); } }
   return { removed, added, changes };
 }
 
@@ -622,10 +658,10 @@ function diff(opts) {
     if (!filesB.has(file)) { lines.push(`== ${label}: only in the baseline`); pagesWithDiff++; totalChanges++; continue; }
     const a = loadSnapshot(opts.baseline, file);
     const b = loadSnapshot(opts.candidate, file);
-    const result = comparePage(a, b);
+    const result = comparePage(a, b, opts.tolerance);
     const pageNotes = [];
     for (const key of ['finalPath', 'themeMarker', 'documentWidth', 'documentHeight']) {
-      if (a.data.meta[key] !== b.data.meta[key]) { pageNotes.push(`${key}: ${a.data.meta[key]} -> ${b.data.meta[key]}`); }
+      if (a.data.meta[key] !== b.data.meta[key] && !samePx(`${a.data.meta[key]}px`, `${b.data.meta[key]}px`, opts.tolerance)) { pageNotes.push(`${key}: ${a.data.meta[key]} -> ${b.data.meta[key]}`); }
     }
     const removed = topLevel(result.removed);
     const added = topLevel(result.added);
@@ -682,6 +718,7 @@ async function main() {
       concurrency: { type: 'string', default: '6' }, themes: { type: 'string' }, widths: { type: 'string' }, only: { type: 'string' },
       'settle-min-ms': { type: 'string', default: '1500' }, 'settle-quiet-ms': { type: 'string', default: '700' }, 'settle-max-ms': { type: 'string', default: '20000' },
       baseline: { type: 'string' }, candidate: { type: 'string' }, full: { type: 'boolean', default: false }, 'max-elements': { type: 'string', default: '25' },
+      tolerance: { type: 'string', default: '0.25' },
     },
   });
   const need = (...names) => { for (const n of names) { if (!values[n]) { throw new Error(`--${n} is required.`); } } };
@@ -700,7 +737,7 @@ async function main() {
   }
   if (command === 'diff') {
     need('baseline', 'candidate');
-    return diff({ baseline: values.baseline, candidate: values.candidate, full: values.full, maxElements: parseInt(values['max-elements'], 10) });
+    return diff({ baseline: values.baseline, candidate: values.candidate, full: values.full, maxElements: parseInt(values['max-elements'], 10), tolerance: Number(values.tolerance) });
   }
   if (command === 'routes') {
     need('manifest');
