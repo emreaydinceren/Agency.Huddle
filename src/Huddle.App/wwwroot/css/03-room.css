@@ -2,9 +2,8 @@
 
 /* Slack-style two-column layout: an avatar gutter in the first column, everything else - the
    sender/timestamp line, the body, and (for a Draft) its tool-activity line - stacked in the
-   second. This is the transcript's only indent: .message-body and .tool-activity used to each
-   declare their own "padding-left: 2ch", the same gutter written twice, and both are gone now
-   that the grid column is the one place it is declared. */
+   second. This is the transcript's only indent: the grid column is the one place the gutter is
+   declared, so .message-body and .tool-activity carry no padding of their own. */
 .message-row {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -230,8 +229,8 @@
     margin-bottom: 0;
 }
 
-/* A list's markers belong inside the text column: the 24px indent (the nearest step of the spacing scale to the audit's
-   20px) leaves room for "10." in the column instead of hanging it out into the avatar gutter. Nested lists indent from
+/* A list's markers belong inside the text column: the 24px indent (a step of the spacing scale)
+   leaves room for "10." in the column instead of hanging it out into the avatar gutter. Nested lists indent from
    their parent's text. */
 .message-body ul,
 .message-body ol {
@@ -411,9 +410,9 @@
 }
 
 /* Deliberately styled like an ordinary secondary action, never like .composer-error or
-   .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. Now a
+   .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. It is a
    MudIconButton, so sizing, padding and disabled opacity are MudBlazor's own - only the
-   muted colour and hover background are still ours to set. */
+   muted colour and hover background are ours to set. */
 .draft-stop {
     color: var(--mud-palette-text-secondary);
 }
@@ -425,10 +424,11 @@
 /* ---- Composer --------------------------------------------------------------------------------- */
 
 .composer {
+    position: relative;
     padding: 16px calc(24px + var(--room-scrollbar)) 16px 24px;
 }
 
-/* The Composer belongs to the Transcript column (F2): the same 760px, centred, so the box lines up with the
+/* The Composer belongs to the Transcript column: the same 760px, centred, so the box lines up with the
    messages above it rather than spanning a wide pane. */
 .composer-box {
     position: relative;
@@ -436,11 +436,7 @@
     margin-inline: auto;
 }
 
-.composer {
-    position: relative;
-}
-
-/* The hint is markup in the Composer (UX-V23); it shows only while files are dragged over the box: a dashed border laid over the input. */
+/* The hint is markup in the Composer; it shows only while files are dragged over the box: a dashed border laid over the input. */
 .composer-drop-hint {
     display: none;
     position: absolute;
@@ -588,7 +584,7 @@
     font-size: var(--mud-typography-body2-size);
 }
 
-/* One left edge for the Transcript, the notices and the Composer (C4, C9, C10). The message list scrolls and draws a
+/* One left edge for the Transcript, the notices and the Composer. The message list scrolls and draws a
    scrollbar on its right; the notices and the Composer do not, so each centred its 760px column in a pane the
    scrollbar's width wider than the Transcript's, and the columns sat half that width apart. The list now always
    reserves the gutter, and the Composer and the notices reserve the same width on their right. --room-scrollbar is

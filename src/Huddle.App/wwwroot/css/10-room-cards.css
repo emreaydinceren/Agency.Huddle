@@ -1,11 +1,10 @@
 /* ---- The Elicitation card: a form an Agent's tool put to the Human --------------------------------
-   These rules live HERE and not in ElicitationCard.razor.css, for the reason the drawer rules above
-   give: the card's root is a MudPaper and its controls are Mud components, and Blazor's CSS isolation
-   stamps its [b-xxxxx] attribute only onto HTML elements written in the component's own markup, so a
-   "::deep .elicitation-card" there compiled to a selector with no scoped ancestor and never matched.
-   For a first version the card had no height limit at all as a result: a form of eight fields was
-   taller than the window and pushed Send, Skip and the composer off the page, where nothing could
-   scroll to them. Nothing in the test suite renders a browser, so only looking at it showed that.
+   These rules live HERE and not in ElicitationCard.razor.css, because the card's root is a
+   MudPaper and its controls are Mud components, and Blazor's CSS isolation stamps its [b-xxxxx]
+   attribute only onto HTML elements written in the component's own markup, so a
+   "::deep .elicitation-card" there compiles to a selector with no scoped ancestor and never matches.
+   Without the height cap below, a form of eight fields is taller than the window and pushes Send,
+   Skip and the composer off the page, where nothing can scroll to them.
 
    No var() and no colour here: nothing on this card carries a colour or typography of its own, so
    ThemeSourceTests has nothing to object to. */
@@ -27,8 +26,8 @@
     overflow-y: auto;
 }
 
-/* Every Agent card sits in the Transcript's 760px column and is outlined in an Edge, like the notices and the Composer
-   (audit C8): the same 24px inset, centred, so the card, the Transcript and the Composer share one left edge. */
+/* Every Agent card sits in the Transcript's 760px column and is outlined in an Edge, like the notices and the Composer:
+   the same 24px inset, centred, so the card, the Transcript and the Composer share one left edge. */
 .mud-paper.agent-card {
     box-sizing: border-box;
     width: calc(100% - 48px);
@@ -37,7 +36,7 @@
     border-color: var(--ink-edge);
 }
 
-/* An agent card's actions row sits below its body (UX-R01). */
+/* An agent card's actions row sits below its body. */
 .agent-card-actions {
     margin-top: 12px;
 }
@@ -67,7 +66,7 @@
     white-space: pre-line;
 }
 
-/* Answer options are one-line 32px rows like the Question card's (audit C8, design-system C17): the label and its
+/* Answer options are one-line 32px rows like the Question card's: the label and its
    description share the line and truncate with an ellipsis rather than wrap. The radio or checkbox is Dense, and its
    focus ring is MudBlazor's own, so keyboard focus stays visible. */
 .elicitation-card-option {
@@ -129,15 +128,15 @@
     margin-top: 12px;
 }
 
-/* The options are a column of one-line 28px answer rows, flush left (audit C8), the same height as the Dismiss and
+/* The options are a column of one-line 28px answer rows, flush left, the same height as the Dismiss and
    Send buttons beside them (a Small button is 28px, so the card has one button height); an option keeps the case the
    Agent wrote instead of MudBlazor's button default. They sit 12px under the question, as the question sits 12px
    under the card's title. */
 .question-card-options {
     align-items: flex-start;
+    margin-top: 12px;
 }
 
-.question-card-options,
 .question-card-rank {
     margin-top: 12px;
 }
