@@ -131,7 +131,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 ### Adding a variant
 
 1. Add the value to the trait's enum (for example `NavStyle`). The kebab-case of the name is the value a skin writes.
-2. Write the variant once in `wwwroot/css/` (the trait files `05-room-traits.css` and `16-traits.css`, or the feature's own file), scoped on the attribute:
+2. Write the variant once in `wwwroot/css/` (the feature's own file, under its `Traits:` banner after the base rules), scoped on the attribute:
 
    ```css
    :root:has([data-hu-message="row"]) .message-row {

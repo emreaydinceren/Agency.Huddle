@@ -167,3 +167,26 @@
     flex: 1 1 auto;
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- surface=paper: Agent, proposal and question cards are paper with no shadow (8.3) ----------------------------- */
+:root:has([data-hu-surface="paper"]) .mud-paper.agent-card {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: none;
+}
+
+/* -- surface=hairline: Agent, proposal and question cards sit flat on the region line (8.3, 15.4) ------------------------ */
+:root:has([data-hu-surface="hairline"]) .mud-paper.agent-card,
+:root:has([data-hu-surface="hairline"]) .process-step,
+:root:has([data-hu-surface="hairline"]) .team-type-card,
+:root:has([data-hu-surface="hairline"]) .roster-card {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    box-shadow: none;
+}

@@ -19,7 +19,6 @@ internal static class AppStylesheets
         "css/02-shell.css",
         "css/03-room.css",
         "css/04-task-read.css",
-        "css/05-room-traits.css",
         "css/06-agents.css",
         "css/07-settings.css",
         "css/08-tasks.css",
@@ -30,6 +29,5 @@ internal static class AppStylesheets
         "css/13-sidebar.css",
         "css/14-references.css",
         "css/15-task-form.css",
-        "css/16-traits.css",
     ];
 }

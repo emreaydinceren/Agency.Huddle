@@ -580,3 +580,42 @@
     overflow-wrap: anywhere;
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- surface=paper: Agents, cards (13) ------------------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .agents-item {
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+:root:has([data-hu-surface="paper"]) .agents-item:hover {
+    border-color: var(--hu-line-control);
+}
+
+:root:has([data-hu-surface="paper"]) .agent-tile-role {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- reading=book: the Agent read face, serif group headings, hero name and a mono persona (13) --------------- */
+:root:has([data-hu-reading="book"]) .agents-group-heading {
+    font-family: var(--font-read);
+}
+
+:root:has([data-hu-reading="book"]) .mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6 {
+    font-family: var(--font-read);
+    font-size: calc(var(--mud-typography-h5-size) * 1.5);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+}
+
+:root:has([data-hu-reading="book"]) .agent-profile-card-persona {
+    font-family: var(--font-mono);
+    line-height: 1.7;
+    background: var(--hu-ground-page);
+    border: 1px solid var(--hu-line-control);
+    border-radius: var(--mud-default-borderradius);
+}

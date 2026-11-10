@@ -252,7 +252,7 @@ The picker has a Light theme list and a Dark theme list; the catalog holds the c
 current item, a region line, a card shadow) are `--hu-*` tokens registered once in `SkinTokens`,
 with defaults written over the palette. Structure that differs between Themes (message layout,
 send button, status look, labels, composer, nav, surface, marks, reading) is a trait, a
-`data-hu-*` attribute on `.theme-marker` whose variants are written once in `wwwroot/css/` (`05-room-traits.css`, `16-traits.css`).
+`data-hu-*` attribute on `.theme-marker` whose variants are written once in `wwwroot/css/`, in the file of the feature each styles, under that file's `Traits:` banner after its base rules.
 
 **One palette per Theme.** A Theme carries one palette and its own `ThemeMode`; the mode
 is derived from the Theme and from nothing else

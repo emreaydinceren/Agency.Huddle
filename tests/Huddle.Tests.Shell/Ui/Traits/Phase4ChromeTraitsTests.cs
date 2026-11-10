@@ -12,14 +12,12 @@ namespace Agency.Huddle.Tests.Ui.Traits;
 /// </summary>
 public sealed partial class Phase4ChromeTraitsTests
 {
-    private const string Header = "/* ==== Traits: phase 4 chrome";
-
     private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
 
     private static readonly string Css = CssText.StripComments(RawCss);
 
-    /// <summary>The comment-stripped text of the phase 4 chrome section, which closes the stylesheet.</summary>
-    private static string Phase4 => CssText.StripComments(RawCss[RawCss.IndexOf(Header, StringComparison.Ordinal)..]);
+    /// <summary>The comment-stripped rules scoped to <c>surface=hairline</c> or <c>nav=bar</c>, wherever they sit.</summary>
+    private static string Phase4 => CssText.ScopedRules(RawCss, "[data-hu-surface=\"hairline\"]", "[data-hu-nav=\"bar\"]");
 
     /// <summary>The two new values, with the trait attribute each renders as.</summary>
     public static TheoryData<string, string> NewValues() =>
@@ -45,14 +43,10 @@ public sealed partial class Phase4ChromeTraitsTests
     public void Traits_EveryValueHasCss(string trait, string value) =>
         Assert.Contains($":root:has([data-hu-{trait}=\"{value}\"])", Css, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
 
-    /// <summary>The phase 4 chrome section is present, comes after every earlier trait section and uses no <c>!important</c> or pack token.</summary>
+    /// <summary>The rules scoped to the two phase 4 chrome values use no <c>!important</c> and no pack token.</summary>
     [Fact]
-    public void Section_ClosesTheStylesheetWithoutImportantOrPackTokens()
+    public void ChromeRules_AddNoImportantOrPackTokens()
     {
-        int reading = RawCss.IndexOf("/* ---- Traits: reading", StringComparison.Ordinal);
-        int phase4 = RawCss.IndexOf(Header, StringComparison.Ordinal);
-
-        Assert.True(phase4 > reading && reading > 0, "The phase 4 chrome section must follow the reading section.");
         Assert.DoesNotContain("!important", Phase4, StringComparison.Ordinal);
         Assert.DoesNotContain("--n-", Phase4, StringComparison.Ordinal);
     }

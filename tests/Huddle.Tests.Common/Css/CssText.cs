@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes;
 
@@ -171,6 +172,77 @@ internal static partial class CssText
         return css[start..end];
     }
 
+    /// <summary>
+    /// Every rule whose selector list names one of the <paramref name="scopes"/> (such as <c>[data-hu-status="glyph"]</c>), wherever in the
+    /// stylesheet it sits, comments removed and the rules joined by a newline. It replaces slicing a trait's rules out by a section header,
+    /// now that a trait's rules sit beside the feature they style instead of together.
+    /// </summary>
+    /// <param name="css">The stylesheet source.</param>
+    /// <param name="scopes">Text that must occur in a rule's selector list for the rule to count.</param>
+    /// <returns>The matching rules, selector and body.</returns>
+    internal static string ScopedRules(string css, params string[] scopes)
+    {
+        StringBuilder found = new();
+        foreach (Match rule in RulePattern().Matches(StripComments(css)))
+        {
+            string selector = rule.Groups["sel"].Value;
+            if (scopes.Any(scope => selector.Contains(scope, StringComparison.Ordinal)))
+            {
+                found.Append(selector).Append('{').Append(rule.Groups["body"].Value).Append("}\n");
+            }
+        }
+
+        Assert.True(found.Length > 0, $"No rule is scoped to {string.Join(" or ", scopes)}.");
+        return found.ToString();
+    }
+
+    /// <summary>
+    /// Every <c>@media</c> block that holds a rule naming <paramref name="scope"/>, comments removed and the blocks joined by a newline.
+    /// Fails the test when no block does.
+    /// </summary>
+    /// <param name="css">The stylesheet source.</param>
+    /// <param name="scope">Text that must occur inside the block.</param>
+    /// <returns>The media blocks, at-rule prelude included.</returns>
+    internal static string ScopedMediaBlocks(string css, string scope)
+    {
+        string text = StripComments(css);
+        StringBuilder found = new();
+        int start = text.IndexOf("@media", StringComparison.Ordinal);
+        while (start >= 0)
+        {
+            int open = text.IndexOf('{', start);
+            int depth = 0;
+            int end = open;
+            for (; end < text.Length; end++)
+            {
+                if (text[end] == '{')
+                {
+                    depth++;
+                }
+                else if (text[end] == '}')
+                {
+                    depth--;
+                }
+
+                if (depth == 0)
+                {
+                    break;
+                }
+            }
+
+            string block = text[start..Math.Min(end + 1, text.Length)];
+            if (block.Contains(scope, StringComparison.Ordinal))
+            {
+                found.Append(block).Append('\n');
+            }
+
+            start = text.IndexOf("@media", end, StringComparison.Ordinal);
+        }
+
+        Assert.True(found.Length > 0, $"No @media block holds {scope}.");
+        return found.ToString();
+    }
+
     /// <summary>The text trimmed, with every run of whitespace (newlines included) replaced by one space.</summary>
     /// <param name="text">The text to collapse.</param>
     /// <returns>The collapsed text.</returns>
@@ -203,4 +275,7 @@ internal static partial class CssText
 
     [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex CommentPattern();
+
+    [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
+    private static partial Regex RulePattern();
 }

@@ -285,7 +285,7 @@ id or a snapshot: an open dialog ignores new parameters.
 
 ### Stylesheet classes
 
-`wwwroot/css/` holds the global stylesheet as 16 files in link order (`AppStylesheets.All`, `01-base.css` to `16-traits.css`), each ordered by feature with a comment heading; search the folder for the
+`wwwroot/css/` holds the global stylesheet as 14 files in link order (`AppStylesheets.All`, `01-base.css` to `15-task-form.css`), each ordered by feature with a comment heading; search the folder for the
 feature's name. A new rule goes in the file of the feature it styles, after the rules it overrides. Reuse these before writing a rule:
 
 | Class | Does |

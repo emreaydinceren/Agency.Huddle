@@ -449,3 +449,19 @@
     }
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- surface=paper: cards and panels, radius 1.5 (15.4) ----------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .process-step,
+:root:has([data-hu-surface="paper"]) .team-type-card,
+:root:has([data-hu-surface="paper"]) .roster-card {
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+:root:has([data-hu-surface="hairline"]) .team-type-card:hover,
+:root:has([data-hu-surface="hairline"]) .roster-card:hover {
+    border-color: var(--hu-line-control);
+}

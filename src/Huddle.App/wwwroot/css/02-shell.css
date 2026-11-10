@@ -1521,3 +1521,480 @@ body.sidebar-resizing {
     margin-inline: auto;
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- labels=upper: sidebar group heads, right sidebar titles, list header, drawer labels --------------------- */
+:root:has([data-hu-labels="upper"]) .mud-nav-group > .mud-nav-link .mud-nav-link-text,
+:root:has([data-hu-labels="upper"]) .needs-you-heading {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-labels="upper"]) .mud-nav-group > .mud-nav-link {
+    margin-bottom: 0;
+}
+
+:root:has([data-hu-labels="upper"]) .sidebar-panel-title {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-labels="upper"]) .sidebar-panel-header > .mud-icon-root:first-child {
+    display: none;
+}
+
+:root:has([data-hu-labels="upper"]) .sidebar-panel-count {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+}
+
+/* -- nav=tile: the activity bar, 36px tiles with a bar hugging the left edge on the current one ---------------- */
+:root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button,
+:root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin: 4px auto;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-secondary);
+    transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+:root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button .mud-icon-root {
+    width: 19px;
+    height: 19px;
+}
+
+:root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button:hover,
+:root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link:hover {
+    background-color: var(--hu-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-nav="tile"]) .activity-bar-item.activity-bar-item-selected,
+:root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link.active {
+    background-color: var(--hu-current-background);
+    color: var(--hu-current-icon);
+    box-shadow: var(--hu-current-shadow);
+}
+
+:root:has([data-hu-nav="tile"]) .activity-bar-item.activity-bar-item-selected:hover,
+:root:has([data-hu-nav="tile"]) .activity-bar-item.activity-bar-item-selected:focus-visible,
+:root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link.active:hover {
+    background-color: var(--hu-current-background-hover);
+    color: var(--hu-current-icon);
+    box-shadow: var(--hu-current-shadow);
+}
+
+:root:has([data-hu-nav="tile"]) .activity-bar-item.activity-bar-item-selected::before,
+:root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    border-radius: 0 calc(var(--mud-default-borderradius) * 0.375) calc(var(--mud-default-borderradius) * 0.375) 0;
+    background: var(--hu-current-icon);
+}
+
+/* -- nav=tile: the sidebar, quiet rows in the subtle ink and the current row a lifted tile ---------------------- */
+/* The sides are 4px, not 8px, so a row's label starts where the Left menu grid's VS Code proportions put it. */
+:root:has([data-hu-nav="tile"]) .sidebar-views {
+    border-inline-start: 0;
+    padding: 8px 4px 16px;
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link {
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    color: var(--hu-text-subtle);
+    transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-nav-link:not(.mud-nav-link-disabled) .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--mud-palette-text-disabled);
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link:hover:not(.active) {
+    background-color: var(--hu-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+    color: var(--hu-current-foreground);
+    font-weight: var(--hu-current-weight);
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover:not(.mud-nav-link-disabled),
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible:not(.mud-nav-link-disabled),
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):active:not(.mud-nav-link-disabled) {
+    background-color: var(--hu-current-background-hover);
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon,
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--hu-current-icon);
+}
+
+:root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link.active .sidebar-row-label {
+    color: inherit;
+}
+
+/* -- nav=tile: top-bar buttons are 30px rounded tiles ----------------------------------------------------------- */
+:root:has([data-hu-nav="tile"]) .top-bar-end .mud-icon-button {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-nav="tile"]) .top-bar-end .mud-icon-button:hover {
+    background: var(--hu-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+/* -- surface=paper: top bar, breadcrumbs (7.4) ------------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .page-breadcrumbs-list {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-surface="paper"]) .page-breadcrumbs-list .mud-breadcrumb-item:first-child {
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+/* -- surface=paper: top bar, the "N Tasks need you" pill: the needs hue with a dot in a soft halo (7.4) ----------- */
+:root:has([data-hu-surface="paper"]) .tasks-need-you-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px;
+    margin-inline-end: 8px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s;
+}
+
+:root:has([data-hu-surface="paper"]) .tasks-need-you-pill:hover {
+    background: var(--hu-tone-warning-tint);
+}
+
+:root:has([data-hu-surface="paper"]) .tasks-need-you-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--hu-needs);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--hu-needs) 25%, transparent);
+}
+
+/* -- surface=paper: page header, titles are the h6 role (7.6) ---------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    letter-spacing: -0.005em;
+}
+
+/* -- surface=paper: room header, the kind chip is shown (8.1) ----------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .room-kind-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border: 1px solid var(--hu-line-control);
+    border-radius: 999px;
+    background: var(--hu-ground-raised);
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+:root:has([data-hu-surface="paper"]) .room-members-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- surface=paper: right sidebar, sections divided by a hairline, rows (9) -------------------------------------- */
+:root:has([data-hu-surface="paper"]) .right-sidebar .mud-drawer-content {
+    padding: 12px 16px 24px;
+}
+
+:root:has([data-hu-surface="paper"]) .sidebar-panel + .sidebar-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+/* 32px like every sidebar row: at 44px a one-line row spent the height without showing anything more (side-by-side
+   audit, 2026-10-30, NL-02). */
+:root:has([data-hu-surface="paper"]) .members-row.sidebar-row {
+    min-height: 32px;
+    padding: 4px;
+    gap: 8px;
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="paper"]) .members-row .members-name {
+    font-weight: 600;
+    font-size: var(--mud-typography-body2-size);
+}
+
+:root:has([data-hu-surface="paper"]) .sidebar-row:hover {
+    background: var(--hu-hover);
+}
+
+:root:has([data-hu-surface="paper"]) .room-task-id {
+    font-family: var(--font-mono);
+    color: var(--hu-tone-info-ink);
+}
+
+/* -- surface=paper: avatars (10) ---------------------------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .avatar-monogram {
+    letter-spacing: 0.01em;
+}
+
+:root:has([data-hu-surface="paper"]) .tab-item.active {
+    color: var(--mud-palette-text-primary);
+}
+
+/* -- reading=book: the outline is a left rail; the current heading carries a primary edge, not a tint (11) --------- */
+:root:has([data-hu-reading="book"]) .outline-row {
+    border-left: 2px solid var(--hu-line-region);
+    border-radius: 0;
+    color: var(--hu-text-subtle);
+    background: none;
+}
+
+:root:has([data-hu-reading="book"]) .outline-row.active,
+:root:has([data-hu-reading="book"]) .outline-row[aria-current] {
+    border-left-color: var(--mud-palette-primary);
+    color: var(--hu-accent-ink);
+    font-weight: 500;
+    background: none;
+}
+
+/* -- reading=book: empty states, a serif-italic sentence (15.8) --------------------------------------------------- */
+:root:has([data-hu-reading="book"]) .empty-state .empty-state-text {
+    font-family: var(--font-read);
+    font-style: italic;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- surface=hairline: top bar, breadcrumbs and the search box (7.4) ------------------------------------------------ */
+:root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list .mud-breadcrumb-item:last-child {
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+/* -- surface=hairline: top bar, the "N Tasks need you" pill (7.4) ------------------------------------------------------ */
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    margin-inline-end: 4px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.12s;
+}
+
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-pill:hover {
+    border-color: var(--hu-needs);
+}
+
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hu-needs);
+}
+
+/* -- surface=hairline: page and room header (7.6, 8.1) ----------------------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    letter-spacing: -0.01em;
+}
+
+:root:has([data-hu-surface="hairline"]) .room-kind-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 8px;
+    margin-inline-start: 8px;
+    border: 1px solid var(--hu-line-control);
+    border-radius: 999px;
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+:root:has([data-hu-surface="hairline"]) .room-members-label {
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: right sidebar, sections divided by a hairline (9) ------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .right-sidebar .mud-drawer-content {
+    padding: 12px 16px 24px;
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel + .sidebar-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-header > .mud-icon-root:first-child {
+    display: none;
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-count {
+    color: var(--hu-text-subtle);
+    font-weight: 500;
+}
+
+/* The Tags panel's captions ("This note", "All tags in this folder") follow the labels trait: a sentence-case Theme
+   does not draw them in the overline's capitals (side-by-side audit, 2026-10-30, LL-L03). */
+:root:has([data-hu-labels="sentence"]) .tags-caption.mud-typography {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Lumen's panel labels are quiet captions, not 13px/600 headings in Ink (side-by-side audit, 2026-10-30, LL-C04). */
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-title {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-row:hover {
+    background: var(--hu-hover);
+}
+
+:root:has([data-hu-surface="hairline"]) .room-task-id {
+    font-family: var(--font-mono);
+    color: var(--hu-text-subtle);
+}
+
+/* Each Right sidebar panel is its own card, so the cards' gap replaces the Edge line between panels. */
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel {
+    padding: 4px 12px;
+}
+
+:root:has([data-hu-surface="card"]) .right-sidebar .sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+/* -- nav=bar: the top bar reads the rail ground, so the chrome is one frame ------------------------------------------------- */
+:root:has([data-hu-nav="bar"]) .mud-appbar.top-bar {
+    background-color: var(--hu-ground-rail);
+}
+
+/* -- nav=bar: the activity bar; the current item has no fill, an accent glyph and a 3px bar on the edge ------------------------ */
+:root:has([data-hu-nav="bar"]) .activity-bar-item.mud-icon-button,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link {
+    position: relative;
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.mud-icon-button:hover,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link:hover {
+    background-color: var(--hu-hover);
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected,
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected:hover,
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected:focus-visible,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active:hover {
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--hu-accent-ink);
+    font-weight: 600;
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected::before,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 calc(var(--mud-default-borderradius) * 0.375) calc(var(--mud-default-borderradius) * 0.375) 0;
+    background: var(--hu-accent-ink);
+}
+
+/* -- nav=bar: sidebar and Settings rows; the current row is a raised fill with a 3px bar inside its left edge ------------------- */
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled),
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link {
+    position: relative;
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+    color: var(--hu-current-foreground);
+    font-weight: var(--hu-current-weight);
+}
+
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link {
+    background: var(--hu-current-background);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover,
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link:hover,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled)::before,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.375);
+    background: var(--hu-accent-ink);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--hu-current-icon);
+}
