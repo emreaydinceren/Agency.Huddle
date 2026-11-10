@@ -21,7 +21,7 @@
         var time = MessageDisplay.ClockTime(message.Timestamp, this.Clock.GetLocalNow());
         @if (MessageDisplay.StartsNewDay(previousMessage?.Timestamp, message.Timestamp))
         {
-            <div class="day-separator" role="separator">
+            <div class="group-label day-separator" role="separator">
                 <span>@MessageDisplay.DayLabel(message.Timestamp, this.Clock.GetLocalNow())</span>
             </div>
         }

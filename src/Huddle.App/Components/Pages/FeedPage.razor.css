@@ -15,7 +15,7 @@
     border: 1px solid var(--hu-feed-live-line);
     color: var(--hu-feed-live-ink);
     font-size: var(--mud-typography-caption-size);
-    font-weight: 550;
+    font-weight: 500;
 }
 
 .feed-live-dot {

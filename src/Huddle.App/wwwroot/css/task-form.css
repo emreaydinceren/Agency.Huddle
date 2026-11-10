@@ -805,7 +805,7 @@
 
 :root:has([data-hu-nav="tint"]) .task-edit-page .task-detail-group > .group-label {
     font-size: var(--mud-typography-body2-size);
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
     color: var(--mud-palette-text-primary);

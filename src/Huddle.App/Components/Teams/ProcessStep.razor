@@ -13,7 +13,7 @@
 *@
 
 <div class="process-step">
-    <MudText Typo="Typo.overline">Process</MudText>
+    <MudText Typo="Typo.caption" Class="group-label">Process</MudText>
     @if (this.Processes.Count > 0)
     {
         <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Process" Value="this.selected" ValueChanged="this.OnSelected" Class="process-step-select">

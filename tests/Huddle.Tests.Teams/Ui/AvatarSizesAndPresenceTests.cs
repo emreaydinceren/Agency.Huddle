@@ -35,7 +35,7 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Contains("height: 32px;", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("max(13px, calc(32px * 0.4))", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("max(11px, calc(24px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-small", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("max(10px, calc(40px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-medium", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("max(11px, calc(40px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-medium", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>

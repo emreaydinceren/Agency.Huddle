@@ -27,7 +27,7 @@
     @* ---- G10a Gateway ---- *@
     <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="gateway">
         <div class="d-flex align-center gap-2 mb-2">
-            <MudText Typo="Typo.subtitle1" HtmlTag="h3">Gateway</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title">Gateway</MudText>
             <span data-testid="status">
                 <StatusChip Color="@(this.NeedsAttention ? Color.Warning : Color.Success)"
                             Icon="@(this.NeedsAttention ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.CheckCircleOutline)">@(this.NeedsAttention ? "Needs attention" : "Running")@(this.Downgraded ? " (downgraded)" : string.Empty)</StatusChip>
@@ -147,7 +147,7 @@
     @if (this.requests.Count > 0 && !this.StrictRunning)
     {
         <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="requests">
-            <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="mb-2">Waiting for approval (@this.requests.Count)</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title mb-2">Waiting for approval (@this.requests.Count)</MudText>
             @foreach (PairingRequest request in this.requests)
             {
                 <div class="d-flex align-center gap-3 flex-wrap mb-2" data-testid="request-row" data-request-id="@request.RequestId" @key="request.RequestId">
@@ -177,7 +177,7 @@
     @if (!this.StrictRunning)
     {
         <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="pair">
-            <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="mb-2">Pair a device</MudText>
+            <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title mb-2">Pair a device</MudText>
             @if (this.offer is { Allowed: true } link)
             {
                 <div data-testid="qr">
@@ -196,7 +196,7 @@
 
     @* ---- G10d Devices ---- *@
     <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="devices">
-        <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="mb-2">Devices (@this.devices.Count)</MudText>
+        <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title mb-2">Devices (@this.devices.Count)</MudText>
         @foreach (DeviceRecord device in this.devices)
         {
             <div class="d-flex align-center gap-3 flex-wrap mb-2" data-testid="device-row" data-device-id="@device.DeviceId" @key="device.DeviceId">
@@ -244,7 +244,7 @@
 
     @* ---- G10f Security check ---- *@
     <MudPaper Outlined="true" Class="pa-3 mb-4" data-testid="security">
-        <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="mb-2">Security check</MudText>
+        <MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title mb-2">Security check</MudText>
         @if (this.items.Count == 0)
         {
             <MudText Typo="Typo.body2">No problems found.</MudText>

@@ -35,14 +35,16 @@ public sealed record Avatar(string? Label, string? Image, string? Background)
     /// <see cref="string.Length"/> - see <see cref="TrimLabel(string?)"/> for why the distinction
     /// matters. Named rather than written as a literal because the editor's own character counter
     /// has to agree with the guard that enforces it, and two copies of <c>6</c> would eventually not.
-    /// Six is the most that stays legible inside the 32px circle at its smallest scaled font; the
-    /// 24px row avatar cannot hold that many and shows only <see cref="SmallLabelTextElements"/>
-    /// of them (see <c>AgentAvatar</c>).
+    /// Six is the most the 72px profile circle holds at the 11px floor; a smaller avatar shows only
+    /// <see cref="SmallLabelTextElements"/> or <see cref="MediumLabelTextElements"/> of them (see <c>AgentAvatar</c>).
     /// </summary>
     internal const int MaxLabelTextElements = 6;
 
-    /// <summary>How many text elements of a label the 24px row avatar draws, which has no room for more at the 10px font floor.</summary>
+    /// <summary>How many text elements of a label an avatar under 40px (the 24px row, the 32px Transcript) draws, which has no room for more at the 11px floor.</summary>
     internal const int SmallLabelTextElements = 3;
+
+    /// <summary>How many text elements of a label the 40px avatar draws: five at 11px fill about 37px of its 40px circle, six would be clipped.</summary>
+    internal const int MediumLabelTextElements = 5;
 
     /// <summary>The avatar of an Agent or the Human who has not customised one - today's rendering exactly, with all three fields unset.</summary>
     public static Avatar None { get; } = new(Label: null, Image: null, Background: null);

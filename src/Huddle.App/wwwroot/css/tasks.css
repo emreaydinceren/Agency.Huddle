@@ -930,13 +930,10 @@
     position: relative;
     width: 8rem;
     white-space: nowrap;
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
 }
 
-/* MudBlazor's dense rule ".mud-table-dense * .mud-table-row .mud-table-cell" sets 6px padding and its header cells a 14px/white label,
-   so these selectors carry the same weight. */
+/* The header cells wear the Label (12px/600, Quiet ink). MudBlazor's dense rule ".mud-table-dense * .mud-table-row .mud-table-cell" sets 6px
+   padding and its header cells a 14px/white label, so the Label is restated here at the same weight of selector, not through .group-label. */
 .mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
@@ -1403,7 +1400,7 @@
 :root:has([data-hu-nav="tint"]) .mud-table.task-list-grid .mud-table-head .mud-table-cell {
     text-transform: none;
     letter-spacing: 0.02em;
-    font-weight: 650;
+    font-weight: 600;
 }
 
 :root:has([data-hu-nav="tint"]) .task-card-blocked {

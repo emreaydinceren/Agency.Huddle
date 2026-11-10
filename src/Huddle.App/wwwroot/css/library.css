@@ -856,7 +856,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-properties-title {
     display: block;
     margin-bottom: 8px;
-    color: var(--mud-palette-text-secondary);
 }
 
 .library-properties-list {

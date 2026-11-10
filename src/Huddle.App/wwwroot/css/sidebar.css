@@ -395,12 +395,10 @@
     opacity: 0.6;
 }
 
-/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers. */
+/* A group heading wears the Label (.group-label); this is its place in the dropdown. */
 .search-group-heading {
+    margin: 0;
     padding: 8px 8px 4px;
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
 }
 
 /* The dropdown is the popover's direct child; it is at most 80% of the window high. */

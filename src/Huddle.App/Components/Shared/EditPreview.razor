@@ -8,14 +8,14 @@
     @if (this.Edit.OldText is not null)
     {
         <div class="edit-preview-side removed">
-            <span class="edit-preview-label"><span aria-hidden="true">−</span> Removed</span>
+            <span class="group-label edit-preview-label"><span aria-hidden="true">−</span> Removed</span>
             <pre>@this.Edit.OldText</pre>
         </div>
     }
     @if (this.Edit.NewText is not null)
     {
         <div class="edit-preview-side added">
-            <span class="edit-preview-label"><span aria-hidden="true">+</span> Added</span>
+            <span class="group-label edit-preview-label"><span aria-hidden="true">+</span> Added</span>
             <pre>@this.Edit.NewText</pre>
         </div>
     }
