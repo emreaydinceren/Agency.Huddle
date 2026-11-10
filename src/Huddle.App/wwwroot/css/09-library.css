@@ -2,8 +2,7 @@
    The editor surface, text content, active-line highlight and selection background are scoped
    under .library-editor .cm-editor to override CodeMirror's generated theme, which is more
    specific than bare .cm-* rules. Reference links in chat (.library-ref) and missing references
-   (.library-ref-missing) reuse the chat-message link style. The explorer's spacing rules arrive
-   with its components (D12). */
+   (.library-ref-missing) reuse the chat-message link style. */
 
 .library-editor .cm-editor {
     background-color: var(--hu-ground-page);
@@ -239,7 +238,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
    nothing. The important flag is the only way past an inline style (listed in Exceptions.txt). */
 
 /* The /library page: header on top, the explorer takes the rest of the pane. Percent heights, not vh,
-   so the page fills the pane it sits in rather than the window (UX-006). */
+   so the page fills the pane it sits in rather than the window. */
 .library-page {
     height: 100%;
     min-height: 0;
@@ -301,7 +300,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     min-height: 0;
 }
 
-/* ---- Library header band (audit B2) ---------------------------------------------------------
+/* ---- Library header band ---------------------------------------------------------
    The tree header and the document toolbar are one band: the same 61px height, so the Chrome line under each lands at the
    same y and reads as one line across the splitter. New note sits inside the band, beside the search field. */
 
@@ -326,8 +325,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the header
-   wraps (flex-wrap above) and the actions take a second line instead of squeezing it (#481). */
-
+   wraps (flex-wrap above) and the actions take a second line instead of squeezing it. */
 .library-explorer-tree-header > .library-explorer-search {
     flex: 1 1 10rem;
     min-width: 10rem;
@@ -347,7 +345,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 /* ---- Library tree density ----------------------------------------------------------------------
    30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
-   and each row is inset 4px (the Selected shape, audit A5) and pads 4px more, so a label column starts 16px from
+   and each row is inset 4px (the Selected shape) and pads 4px more, so a label column starts 16px from
    the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
    guide line under the centre of its parent's chevron (8px row padding + half the 16px column). */
@@ -450,7 +448,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     }
 }
 
-/* The tree's context menu (audit B10): a protected node's menu ends in one Quiet-ink note rather than three
+/* The tree's context menu: a protected node's menu ends in one Quiet-ink note rather than three
    disabled items, and Delete, the last item, is in Error ink. */
 .library-tree-menu-note {
     max-width: 260px;
@@ -536,7 +534,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-right: 4px;
 }
 
-/* The header row (T2): List | Kanban, then the counts, on the left; the page's actions on the right. */
+/* The header row: List | Kanban, then the counts, on the left; the page's actions on the right. */
 .task-toolbar-header {
     gap: 8px;
 }
@@ -559,7 +557,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
-   numbers only a step heavier, "need you" in the warning colour (side-by-side audit, 2026-10-30, LL-T02). */
+   numbers only a step heavier, "need you" in the warning colour. */
 .tasks-counts {
     display: flex;
     flex-wrap: wrap;
@@ -579,7 +577,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
-   A count wears its signal only above 0 (audit B4e), so a zero ("is-zero") reads as the other counts do. */
+   A count wears its signal only above 0, so a zero ("is-zero") reads as the other counts do. */
 .tasks-count-need-you:not(.is-zero) {
     color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
 }
@@ -603,7 +601,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     padding: 16px;
 }
 
-/* The toolbar's filter chip is the Filter chip (audit A6, design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
+/* The toolbar's filter chip is the Filter chip (design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
    Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
    gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
 .task-filter-chip {
@@ -650,7 +648,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--hu-selected-foreground);
 }
 
-/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. Not the switch's thumb
+/* Both toolbar rows are one height: the controls are 28px boxes, so the row reads level. Not the switch's thumb
    (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
    5px above the track's centre. */
 .task-toolbar .mud-icon-button:not(.mud-switch-base),
@@ -930,7 +928,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* A Theme sets how its headings read (the note.* tokens; the prose ink is on .library-rendered itself): Cobalt Soft's
-   tight, heavy h1, Lumen's and Fluent's larger one (side-by-side audit, 2026-10-30, LL-L01, LD-03, FD-01, CL-04). */
+   tight, heavy h1, Lumen's and Fluent's larger one. */
 .library-rendered :is(h1, h2, h3, h4, h5, h6) {
     margin: 32px 0 12px;
     font-family: inherit;
