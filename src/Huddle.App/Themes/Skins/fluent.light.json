@@ -29,8 +29,7 @@
     "composer": "underlined",
     "nav": "bar",
     "surface": "card",
-    "marks": "chip",
-    "reading": "plain",
+    "voice": "plain",
     "ids": "mono"
   },
   "tokens": {

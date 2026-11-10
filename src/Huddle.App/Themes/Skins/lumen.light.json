@@ -133,8 +133,7 @@
     "composer": "card",
     "nav": "tile",
     "surface": "hairline",
-    "marks": "chip",
-    "reading": "plain",
+    "voice": "plain",
     "ids": "mono"
   }
 }

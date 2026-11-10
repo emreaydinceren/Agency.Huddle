@@ -955,9 +955,8 @@
         },
         "status": {
           "enum": [
-            "chip",
-            "pill",
-            "glyph"
+            "glyph",
+            "pill"
           ]
         },
         "labels": {
@@ -988,13 +987,7 @@
             "card"
           ]
         },
-        "marks": {
-          "enum": [
-            "plain",
-            "chip"
-          ]
-        },
-        "reading": {
+        "voice": {
           "enum": [
             "plain",
             "book"

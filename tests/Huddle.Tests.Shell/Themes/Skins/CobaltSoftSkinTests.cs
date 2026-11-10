@@ -24,8 +24,7 @@ public sealed class CobaltSoftSkinTests
         Assert.Equal(ComposerStyle.Box, traits.Composer);
         Assert.Equal(NavStyle.Tint, traits.Nav);
         Assert.Equal(SurfaceStyle.Flat, traits.Surface);
-        Assert.Equal(MarkStyle.Chip, traits.Marks);
-        Assert.Equal(ReadingStyle.Plain, traits.Reading);
+        Assert.Equal(VoiceStyle.Plain, traits.Voice);
     }
 
     /// <summary>The labelled Send is the mockup's filled primary button (<c>btn-primary</c>) in both modes, not a text-only one.</summary>

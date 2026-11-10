@@ -599,11 +599,118 @@
     scrollbar-gutter: stable;
 }
 
+/* ---- Marks: names, references, mentions, quotes and tool summaries are drawn as shapes ------------------------------
+   Every Theme draws them, so these are plain rules. The five that start :root:root repeat the specificity the old
+   marks guard gave them: .library-rendered .library-ref, p.message-heading and .task-ref-closed must keep losing to them. */
+
+/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps its base 13px/600, so it is not taller
+   than the 12px time beside it. */
+.message-time {
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+:root:root .message-body p + p {
+    margin-top: 4px;
+}
+
+/* A wiki link is a highlighter band; it fills on hover. */
+:root:root .library-ref {
+    color: var(--hu-accent-ink);
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0 1px;
+    border-radius: calc(var(--mud-default-borderradius) * .25);
+    background: linear-gradient(var(--hu-tone-primary-soft), var(--hu-tone-primary-soft)) 0 100% / 100% .42em no-repeat;
+    transition: background-size .15s;
+}
+
+:root:root .library-ref:hover {
+    background-size: 100% 100%;
+}
+
+:root:root .library-ref.library-ref-missing {
+    color: var(--mud-palette-text-secondary);
+    background: none;
+    text-decoration: underline dotted;
+}
+
+/* A Task, Room or Team reference is a chip in the accent, a Task's with a mono id and its status dot. The Theme's accent,
+   not Info: every mockup draws these chips in its own accent, and Info read as a foreign teal in Cobalt Soft and a blue in
+   Lumen. */
+:root:root .task-ref,
+:root:root a.room-ref,
+:root:root a.team-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
+    background: var(--hu-tone-primary-tint);
+    color: var(--hu-accent-ink);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 20px;
+}
+
+/* A Mention is an accent pill, the same family as the reference chips; a Mention of the Human is the warning "needs you" pill. */
+.mention {
+    color: var(--hu-accent-ink);
+    background: var(--hu-tone-primary-tint);
+    padding: 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+    font-weight: 500;
+}
+
+.mention.mention--me {
+    color: var(--hu-tone-warning-ink);
+    background: var(--hu-tone-warning-soft);
+}
+
+.message-body code {
+    font-family: var(--font-mono);
+    background: none;
+}
+
+/* A quote is serif italic on an info wash with a 3px bar. */
+.message-body blockquote {
+    margin: 8px 0 0;
+    padding: 4px 12px;
+    border-left: 3px solid var(--mud-palette-info);
+    border-radius: 0 calc(var(--mud-default-borderradius) * .75) calc(var(--mud-default-borderradius) * .75) 0;
+    background: var(--hu-tone-info-soft);
+    color: var(--hu-text-subtle);
+    font-family: var(--font-read);
+    font-style: italic;
+}
+
+/* A tool-call summary is a sunk well; a live one tints with the accent. */
+.turn-detail {
+    padding: 8px 12px;
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--hu-ground-sunk);
+    color: var(--hu-text-subtle);
+}
+
+.message-row.streaming .turn-detail {
+    background: var(--hu-tone-primary-tint);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
+}
+
+::selection {
+    background: var(--hu-tone-primary-soft);
+}
+
 /* ---- Traits: transcript and composer ------------------------------------------------------------------------
-   Variant rules for the message, marks, composer and send traits (ADR-0057). Each is
+   Variant rules for the message, composer and send traits (ADR-0057). Each is
    scoped to the marker attribute the skin renders, so a Theme that does not choose the variant never sees it. The
    default value of each trait is today's Huddle and has no rule here. Colours come from the registry tokens; the
    Send colours are --hu-send-bg and --hu-send-fg, which a skin sets. */
+
+/* ---- message=row: Cobalt Soft, Lumen, Nordic ------------------------------------------------- */
 
 /* ---- Trait message=row: a flat row per message, the Human's own message included, no bubbles ---------------
    A row tints on hover; the 8px spread imitates a full-bleed tint without moving the pinned layout. */
@@ -660,109 +767,7 @@
     border-radius: 0;
 }
 
-/* ---- Trait marks=chip: names, references, mentions, quotes and tool summaries are drawn as shapes ----------- */
-
-/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps its base 13px/600, so it is not taller
-   than the 12px time beside it. */
-:root:has([data-hu-marks="chip"]) .message-time {
-    color: var(--mud-palette-text-secondary);
-    font-variant-numeric: tabular-nums;
-}
-
-:root:has([data-hu-marks="chip"]) .message-body p + p {
-    margin-top: 4px;
-}
-
-/* A wiki link is a highlighter band; it fills on hover. */
-:root:has([data-hu-marks="chip"]) .library-ref {
-    color: var(--hu-accent-ink);
-    font-weight: 500;
-    text-decoration: none;
-    padding: 0 1px;
-    border-radius: calc(var(--mud-default-borderradius) * .25);
-    background: linear-gradient(var(--hu-tone-primary-soft), var(--hu-tone-primary-soft)) 0 100% / 100% .42em no-repeat;
-    transition: background-size .15s;
-}
-
-:root:has([data-hu-marks="chip"]) .library-ref:hover {
-    background-size: 100% 100%;
-}
-
-:root:has([data-hu-marks="chip"]) .library-ref.library-ref-missing {
-    color: var(--mud-palette-text-secondary);
-    background: none;
-    text-decoration: underline dotted;
-}
-
-/* A Task, Room or Team reference is a chip in the accent, a Task's with a mono id and its status dot. The Theme's accent,
-   not Info: every mockup draws these chips in its own accent, and Info read as a foreign teal in Cobalt Soft and a blue in
-   Lumen. */
-:root:has([data-hu-marks="chip"]) .task-ref,
-:root:has([data-hu-marks="chip"]) a.room-ref,
-:root:has([data-hu-marks="chip"]) a.team-ref {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 0 8px 0 4px;
-    border-radius: calc(var(--mud-default-borderradius) * .75);
-    border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
-    background: var(--hu-tone-primary-tint);
-    color: var(--hu-accent-ink);
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 500;
-    text-decoration: none;
-    line-height: 20px;
-}
-
-/* A Mention is an accent pill, the same family as the reference chips; a Mention of the Human is the warning "needs you" pill. */
-:root:has([data-hu-marks="chip"]) .mention {
-    color: var(--hu-accent-ink);
-    background: var(--hu-tone-primary-tint);
-    padding: 0 4px;
-    border-radius: calc(var(--mud-default-borderradius) * .5);
-    font-weight: 500;
-}
-
-:root:has([data-hu-marks="chip"]) .mention.mention--me {
-    color: var(--hu-tone-warning-ink);
-    background: var(--hu-tone-warning-soft);
-}
-
-:root:has([data-hu-marks="chip"]) .message-body code {
-    font-family: var(--font-mono);
-    background: none;
-}
-
-/* A quote is serif italic on an info wash with a 3px bar. */
-:root:has([data-hu-marks="chip"]) .message-body blockquote {
-    margin: 8px 0 0;
-    padding: 4px 12px;
-    border-left: 3px solid var(--mud-palette-info);
-    border-radius: 0 calc(var(--mud-default-borderradius) * .75) calc(var(--mud-default-borderradius) * .75) 0;
-    background: var(--hu-tone-info-soft);
-    color: var(--hu-text-subtle);
-    font-family: var(--font-read);
-    font-style: italic;
-}
-
-/* A tool-call summary is a sunk well; a live one tints with the accent. */
-:root:has([data-hu-marks="chip"]) .turn-detail {
-    padding: 8px 12px;
-    border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
-    background: var(--hu-ground-sunk);
-    color: var(--hu-text-subtle);
-}
-
-:root:has([data-hu-marks="chip"]) .message-row.streaming .turn-detail {
-    background: var(--hu-tone-primary-tint);
-    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
-}
-
-:root:has([data-hu-marks="chip"]) ::selection {
-    background: var(--hu-tone-primary-soft);
-}
-
+/* ---- composer=card: Lumen, Nordic ------------------------------------------------------------ */
 /* ---- Trait composer=card: the box is the paper, the input inside it is borderless, and its bottom 40px is a
    tool row with attach on the left and Send on the right. The stream fades under it. */
 :root:has([data-hu-composer="card"]) .composer {
@@ -822,6 +827,7 @@
     box-shadow: var(--hu-shadow-card-hover);
 }
 
+/* ---- send=text: Cobalt Soft, Nordic ---------------------------------------------------------- */
 /* ---- Trait send=text: Send is a small button with its word. The label sits over the button and lets clicks
    through to it. The colours are the shared Send tokens, which a skin sets. */
 :root:has([data-hu-send="text"]) .composer-send .mud-icon-button {
@@ -930,6 +936,8 @@
 
 /* ---- Traits: composer and Send variants (status, send, composer) ---- */
 
+/* ---- send=square: Lumen ---------------------------------------------------------------------- */
+
 /* -- send=square: Send is a 28px square on the shared Send colours with no word; the hover darkens the accent --- */
 :root:has([data-hu-send="square"]) .composer-send .mud-icon-button {
     width: 28px;
@@ -966,6 +974,7 @@
     }
 }
 
+/* ---- composer=underlined: Fluent ------------------------------------------------------------- */
 /* -- composer=underlined: the box keeps its frame and gains a permanent accent edge along the bottom, over a
       tool row (attach left, Send right) that a hairline separates from the field ----------------------------- */
 :root:has([data-hu-composer="underlined"]) .composer-box {
@@ -1193,6 +1202,8 @@
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
+
 /* -- surface=paper: Agent, proposal and question cards are paper with no shadow (8.3) ----------------------------- */
 :root:has([data-hu-surface="paper"]) .mud-paper.agent-card {
     background: var(--hu-ground-raised);
@@ -1201,6 +1212,7 @@
     box-shadow: none;
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 /* -- surface=hairline: Agent, proposal and question cards sit flat on the region line (8.3, 15.4) ------------------------ */
 :root:has([data-hu-surface="hairline"]) .mud-paper.agent-card,
 :root:has([data-hu-surface="hairline"]) .process-step,

@@ -27,6 +27,7 @@
     background-color: var(--hu-feed-day-rule);
 }
 
+/* ---- labels=upper: Cobalt Soft, Nordic ------------------------------------------------------- */
 /* Cobalt Soft and Nordic both declare labels: upper, so the day word is a small caps label. */
 :root:has([data-hu-labels="upper"]) .feed-day-word {
     text-transform: uppercase;
@@ -35,8 +36,9 @@
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
 /* Nordic's day heading is a Literata title with a line beneath it, not an inline rule. */
-:root:has([data-hu-reading="book"]) .feed-day-word {
+:root:has([data-hu-voice="book"]) .feed-day-word {
     font-family: var(--font-read);
     font-size: var(--mud-typography-h5-size);
     line-height: 1.25;
@@ -46,6 +48,7 @@
     color: var(--mud-palette-text-primary);
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .feed-day-heading {
     flex-wrap: wrap;
     gap: 2px 12px;

@@ -735,9 +735,10 @@
     line-height: 1;
 }
 
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
 /* Nordic Paper reads in serif: the Description's heading is a Literata title with a "#" mark before it; the form's other
    group labels stay small caps. */
-:root:has([data-hu-reading="book"]) .task-detail-description-header .group-label {
+:root:has([data-hu-voice="book"]) .task-detail-description-header .group-label {
     font-family: var(--font-read);
     font-size: var(--mud-typography-h6-size);
     font-weight: 600;
@@ -747,7 +748,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-:root:has([data-hu-reading="book"]) .task-detail-description-header .group-label::before {
+:root:has([data-hu-voice="book"]) .task-detail-description-header .group-label::before {
     content: "#";
     margin-inline-end: 8px;
     font-family: var(--font-mono);
@@ -803,14 +804,16 @@
     font-size: var(--mud-typography-body2-size);
 }
 
-:root:has([data-hu-nav="tint"]) .task-edit-page .task-detail-group > .group-label {
+/* ---- surface=flat: Cobalt Soft --------------------------------------------------------------- */
+:root:has([data-hu-surface="flat"]) .task-edit-page .task-detail-group > .group-label {
     font-size: var(--mud-typography-body2-size);
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
     color: var(--mud-palette-text-primary);
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* Nordic Paper (surface: paper): dashed rows in the gate, an inset review note, a framed decision, a dashed blocked card. */
 :root:has([data-hu-surface="paper"]) .task-edit-page .task-human-gate > * + * {
     padding-top: 8px;
@@ -840,6 +843,7 @@
     letter-spacing: 0.02em;
 }
 
+/* ---- composer=underlined: Fluent ------------------------------------------------------------- */
 /* Fluent (composer: underlined, the one Theme that declares it): a 14px ink heading on each card, and the decision card keeps
    the warning band of the panel. */
 :root:has([data-hu-composer="underlined"]) .task-edit-page .task-detail-group > .group-label {
@@ -858,8 +862,10 @@
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- labels=upper: Cobalt Soft, Nordic ------------------------------------------------------- */
+
 :root:has([data-hu-labels="upper"]) .group-label {
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--mud-palette-text-secondary);

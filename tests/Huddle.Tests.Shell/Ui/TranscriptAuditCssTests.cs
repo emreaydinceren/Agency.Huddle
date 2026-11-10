@@ -25,13 +25,15 @@ public sealed partial class TranscriptAuditCssTests
         Assert.Matches(@"padding-left:\s*24px", TranscriptAuditCssTests.DeclarationsFor(".message-body ol"));
     }
 
-    /// <summary>The sender is 13px (body2) in every Trait: the chip Trait no longer raises it to body size.</summary>
+    /// <summary>The sender is 13px (body2) in every Trait: the marks no longer raise it to body size.</summary>
     [Fact]
     public void AppCss_MessageSender_IsNeverRaisedAboveBody2()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
-        Assert.DoesNotContain("[data-hu-marks=\"chip\"]) .message-sender", css, StringComparison.Ordinal);
+        string marks = CssText.Section(css, "Marks: names, references, mentions, quotes and tool summaries", "Traits: transcript and composer");
+
+        Assert.DoesNotContain(".message-sender", marks, StringComparison.Ordinal);
     }
 
     /// <summary>The Members row's context figure is weight 400 like the Transcript's, outweighing the sidebar Trait's 500.</summary>

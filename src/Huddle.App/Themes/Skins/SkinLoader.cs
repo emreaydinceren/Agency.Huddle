@@ -34,8 +34,7 @@ internal static partial class SkinLoader
         ("composer", typeof(ComposerStyle)),
         ("nav", typeof(NavStyle)),
         ("surface", typeof(SurfaceStyle)),
-        ("marks", typeof(MarkStyle)),
-        ("reading", typeof(ReadingStyle)),
+        ("voice", typeof(VoiceStyle)),
         ("ids", typeof(IdStyle)),
     ];
 
@@ -666,13 +665,12 @@ internal static partial class SkinLoader
         SkinTraits traits = new(
             Trait(draft, "message", MessageLayout.Bubble),
             Trait(draft, "send", SendStyle.Icon),
-            Trait(draft, "status", StatusStyle.Chip),
+            Trait(draft, "status", StatusStyle.Glyph),
             Trait(draft, "labels", LabelCase.Sentence),
             Trait(draft, "composer", ComposerStyle.Box),
             Trait(draft, "nav", NavStyle.Tint),
             Trait(draft, "surface", SurfaceStyle.Flat),
-            Trait(draft, "marks", MarkStyle.Plain),
-            Trait(draft, "reading", ReadingStyle.Plain),
+            Trait(draft, "voice", VoiceStyle.Plain),
             Trait(draft, "ids", IdStyle.Plain));
 
         return new Skin(
