@@ -18,9 +18,10 @@ internal static class UiConventionSource
 
     private const string ComponentsRoot = "src/Huddle.App/Components/";
 
+    private const string AppStylesheetRoot = "src/Huddle.App/wwwroot/css/";
+
     private static readonly string[] CssTrackFiles =
     [
-        "src/Huddle.App/wwwroot/app.css",
         "src/Huddle.App/Components/Layout/MainLayout.razor.css",
         "src/Huddle.App/Components/Layout/ReconnectModal.razor.css",
         "src/Huddle.App/Components/Teams/TeamsNav.razor.css",
@@ -71,17 +72,22 @@ internal static class UiConventionSource
         {
             "CV4" => razor || csharp,
             "CV7" or "CV8" => components && (razor || csharp),
-            "CV11" => string.Equals(path, "src/Huddle.App/wwwroot/app.css", StringComparison.Ordinal)
+            "CV11" => IsAppStylesheet(path)
                 || (components && path.EndsWith(".razor.css", StringComparison.Ordinal)),
             _ => components && razor,
         };
     }
 
+    /// <summary>Whether <paramref name="path"/> is one of the application's own stylesheets, <c>src/Huddle.App/wwwroot/css/*.css</c>.</summary>
+    /// <param name="path">Repository-relative path, forward slashes.</param>
+    public static bool IsAppStylesheet(string path) =>
+        path.StartsWith(AppStylesheetRoot, StringComparison.Ordinal) && path.EndsWith(".css", StringComparison.Ordinal);
+
     /// <summary>The ownership area (plan section 3.4) whose baseline file holds <paramref name="path"/>.</summary>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     public static string AreaOf(string path)
     {
-        if (CssTrackFiles.Contains(path, StringComparer.Ordinal))
+        if (IsAppStylesheet(path) || CssTrackFiles.Contains(path, StringComparer.Ordinal))
         {
             return "Css";
         }

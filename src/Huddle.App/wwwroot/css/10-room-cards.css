@@ -1,0 +1,170 @@
+/* ---- The Elicitation card: a form an Agent's tool put to the Human --------------------------------
+   These rules live HERE and not in ElicitationCard.razor.css, for the reason the drawer rules above
+   give: the card's root is a MudPaper and its controls are Mud components, and Blazor's CSS isolation
+   stamps its [b-xxxxx] attribute only onto HTML elements written in the component's own markup, so a
+   "::deep .elicitation-card" there compiled to a selector with no scoped ancestor and never matched.
+   For a first version the card had no height limit at all as a result: a form of eight fields was
+   taller than the window and pushed Send, Skip and the composer off the page, where nothing could
+   scroll to them. Nothing in the test suite renders a browser, so only looking at it showed that.
+
+   No var() and no colour here: nothing on this card carries a colour or typography of its own, so
+   ThemeSourceTests has nothing to object to. */
+
+/* The card is capped at half the window and its fields scroll inside it, while the title, the
+   message and Send / Skip stay in view; the other half is left for the Transcript above and the
+   composer below. min-height: 0 is what lets a flex child shrink below its content and scroll
+   instead of overflowing. */
+.elicitation-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 50vh;
+}
+
+.elicitation-card-fields {
+    margin-top: 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Every Agent card sits in the Transcript's 760px column and is outlined in an Edge, like the notices and the Composer
+   (audit C8): the same 24px inset, centred, so the card, the Transcript and the Composer share one left edge. */
+.mud-paper.agent-card {
+    box-sizing: border-box;
+    width: calc(100% - 48px);
+    max-width: 760px;
+    margin-inline: auto;
+    border-color: var(--ink-edge);
+}
+
+/* An agent card's actions row sits below its body (UX-R01). */
+.agent-card-actions {
+    margin-top: 12px;
+}
+
+.elicitation-card .agent-card-actions {
+    flex: 0 0 auto;
+}
+
+/* A connector call's arguments (Agent Connectors spec 8.4): the Agent's words, shown as plain text in a bounded, scrollable box. */
+.elicitation-card-untrusted-text {
+    margin: 4px 0 12px;
+    padding: 8px;
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--mud-typography-default-family);
+    font-size: 0.8125rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--ink-wash);
+}
+
+/* An agent's text is shown verbatim, so the line breaks in a message or a description are kept. */
+.elicitation-card-message,
+.elicitation-card-field-description {
+    white-space: pre-line;
+}
+
+/* Answer options are one-line 32px rows like the Question card's (audit C8, design-system C17): the label and its
+   description share the line and truncate with an ellipsis rather than wrap. The radio or checkbox is Dense, and its
+   focus ring is MudBlazor's own, so keyboard focus stays visible. */
+.elicitation-card-option {
+    height: 32px;
+    min-height: 32px;
+    max-width: 100%;
+    margin: 0;
+    align-items: center;
+}
+
+.elicitation-card-option-text {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.elicitation-card-option-label,
+.elicitation-card-option-description {
+    display: inline;
+    white-space: nowrap;
+}
+
+.elicitation-card-option-description {
+    margin-inline-start: 8px;
+}
+
+.elicitation-card-other {
+    margin-top: 8px;
+}
+
+/* A number field's helper text is its description and, on the next line, its allowed range. */
+.elicitation-card .mud-input-helper-text {
+    white-space: pre-line;
+}
+
+.elicitation-card-field-heading {
+    display: flex;
+    gap: 4px;
+    align-items: baseline;
+}
+
+/* ---- The Question card: the options an Agent's ask_human put to the Human -------------------------
+   These rules live HERE and not in QuestionCard.razor.css, for the same reason as the Elicitation card
+   above: the card's root is a MudPaper and its controls are Mud components, and Blazor's CSS isolation
+   stamps its [b-xxxxx] attribute only onto HTML elements written in the component's own markup. A
+   "::deep .question-card-actions" there compiled to "[b-xxxxx] .question-card-actions" with no scoped
+   ancestor - the Send row is a direct child of the MudPaper - and never matched. The ::deep rules for
+   the options and the ranking rows did match, but only because each Question happens to be wrapped in
+   a plain div the component writes itself; reshaping that div would have dropped them without a test
+   failing. A global rule depends on nothing but the class name.
+
+   No var() and no colour here: nothing on this card carries a colour or typography of its own, so
+   ThemeSourceTests has nothing to object to. */
+
+/* Each Question is set off from the one above (the first from the card's header). */
+.question-card-question {
+    margin-top: 12px;
+}
+
+/* The options are a column of one-line 28px answer rows, flush left (audit C8), the same height as the Dismiss and
+   Send buttons beside them (a Small button is 28px, so the card has one button height); an option keeps the case the
+   Agent wrote instead of MudBlazor's button default. They sit 12px under the question, as the question sits 12px
+   under the card's title. */
+.question-card-options {
+    align-items: flex-start;
+}
+
+.question-card-options,
+.question-card-rank {
+    margin-top: 12px;
+}
+
+.question-card-caption {
+    display: block;
+    margin-top: 4px;
+}
+
+.question-card-caption + .question-card-options,
+.question-card-caption + .question-card-rank {
+    margin-top: 8px;
+}
+
+.question-card-option {
+    min-height: 28px;
+    justify-content: flex-start;
+    text-align: left;
+    text-transform: none;
+}
+
+.question-card-rank-row {
+    min-height: 44px;
+}
+
+/* A ranking row's label takes the space the two arrow buttons leave. */
+.question-card-rank-label {
+    flex: 1 1 auto;
+}
+

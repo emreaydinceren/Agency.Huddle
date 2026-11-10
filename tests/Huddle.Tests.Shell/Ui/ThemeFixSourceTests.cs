@@ -109,7 +109,7 @@ public sealed partial class ThemeFixSourceTests
         HashSet<string> emitted = EmittedTokens();
         List<string> dead = [];
 
-        foreach (string path in new[] { RepoPaths.App("wwwroot", "app.css") })
+        foreach (string path in CssText.AppCssPaths())
         {
             foreach (string selector in Selectors(File.ReadAllText(path)))
             {

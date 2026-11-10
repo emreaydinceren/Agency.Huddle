@@ -82,7 +82,7 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 `SkinTokens` registers every token once, with a light and a dark default written as an expression over the
 palette: 138 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
 `--hu-*` custom property in one `<style id="hu-skin">` block that `MainLayout` writes as a `MarkupString` (a text
-child would be HTML-encoded on prerender). `app.css` reads these tokens and the MudBlazor palette variables and holds
+child would be HTML-encoded on prerender). the `wwwroot/css/` files read these tokens and the MudBlazor palette variables and holds
 no colour literal. The `--ink-*` ladder remains, as aliases of `--hu-ink-*`.
 
 A value is a literal (a colour, length or number) or one of these terms:
@@ -131,7 +131,7 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 ### Adding a variant
 
 1. Add the value to the trait's enum (for example `NavStyle`). The kebab-case of the name is the value a skin writes.
-2. Write the variant once in `app.css`, scoped on the attribute:
+2. Write the variant once in `wwwroot/css/` (the trait files `05-room-traits.css` and `16-traits.css`, or the feature's own file), scoped on the attribute:
 
    ```css
    :root:has([data-hu-message="row"]) .message-row {
@@ -177,7 +177,7 @@ MainLayout                      finds the descriptor, applies ThemeCatalog.Resol
         │  <style id="hu-skin">            (--hu-* tokens)
         │  data-hu-* on .theme-marker      (traits)
         ▼
-app.css and *.razor.css         read only --mud-*, --hu-* and the --ink-* aliases
+wwwroot/css/*.css and *.razor.css read only --mud-*, --hu-* and the --ink-* aliases
 ```
 
 - **The mode comes from the Theme.** `MainLayout` sets `IsDarkMode` from `ThemeDescriptor.Mode` and nothing else. A
@@ -217,8 +217,8 @@ the MudBlazor set. The colour roles, the line ladder (Rule < Edge < Field ≤ Ch
 | `SkinContrastTests` | Text under 4.5:1 on any ground, or the focus ring under 3:1 |
 | `SkinSchemaTests` | A `skin.schema.json` that no longer matches the loader |
 | `SkinTokens_EveryTokenIsRead` | A registered token no stylesheet reads |
-| `ThemeSourceTests.AppCss_ReadsOnlyKnownTokens` | A `--hu-*` variable in `app.css` that the registry does not define |
-| `ThemeSourceTests.AppCss_UsesOnlyMudBlazorOrSkinTokens` | Any `var()` in `app.css` that is neither a MudBlazor variable nor a skin token |
+| `ThemeSourceTests.AppCss_ReadsOnlyKnownTokens` | A `--hu-*` variable in `wwwroot/css/` that the registry does not define |
+| `ThemeSourceTests.AppCss_UsesOnlyMudBlazorOrSkinTokens` | Any `var()` in `wwwroot/css/` that is neither a MudBlazor variable nor a skin token |
 | `Traits_EveryValueHasCss` | A trait value with no CSS |
 | `Css_SelectorClasses_AreEmittedBySomeSource` | A dead selector |
 | `Skin*Tests`, `*TraitsTests` | Each shipped Theme's own values and each trait's rules |
@@ -235,7 +235,7 @@ is loosened.
 - **Pair itself with a counterpart.** The Human chooses the light and dark Themes independently.
 - **Be installed without a rebuild.** There is no Theme folder under `{DataDir}` and no importer; that is
   [roadmap](roadmap.md) item 7.
-- **Change structure outside the traits.** A new structure is a new trait value, written once in `app.css`.
+- **Change structure outside the traits.** A new structure is a new trait value, written once in `wwwroot/css/`.
 - **Colour syntax.** The app renders no syntax highlighting.
 
 Some colour is not the Theme's: an Agent's avatar colour is the Human's choice, tooltips use MudBlazor's fixed

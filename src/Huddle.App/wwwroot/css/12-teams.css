@@ -1,0 +1,459 @@
+/* ---- Picker rows and the folder picker (audit B10h, B10 "Choose a folder") --------------------------------
+   A list picker's row is 32px at 13px with an 18px icon in a 24px slot, not MudList's 46px at 14px. The doubled
+   class outranks MudBlazor's own list-item padding and icon slot. */
+.mud-list-item.picker-row {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.picker-row .mud-list-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    width: 24px;
+    margin-inline-end: 8px;
+}
+
+.picker-row .mud-list-item-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.picker-row .mud-list-item-text,
+.picker-row .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+    line-height: 1.4;
+}
+
+/* The folder picker: the up arrow is the action colour (Quiet ink), and the path trail names where the Human is. */
+.folder-picker-up.mud-icon-button:not(.mud-disabled) {
+    color: var(--mud-palette-action-default);
+}
+
+.folder-picker-trail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.folder-picker-crumb {
+    padding: 2px 4px;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    cursor: pointer;
+}
+
+.folder-picker-crumb:hover:not(:disabled) {
+    background-color: var(--ink-wash);
+}
+
+/* The current folder is the last crumb: Ink, not a link. */
+.folder-picker-crumb:disabled {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+    cursor: default;
+}
+
+.folder-picker-list {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+/* ---- Chip cloud and process step ------------------------------------------------------------- */
+
+.chip-cloud-title {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.chip-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 30vh;
+    overflow-y: auto;
+}
+
+/* A chip of the cloud is the Filter chip (audit A6, design-system "Chips"): 28px, a pill, a dashed Field line and no
+   fill while unset; the Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It repeats
+   .mud-chip.filter-chip (FND's global rule) for a native button, which that rule's .mud-chip cannot reach. */
+.chip-cloud-chip,
+.chip-cloud-all {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+    background-color: transparent;
+    border: 1px dashed var(--ink-field);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.chip-cloud-chip.is-set {
+    font-weight: 500;
+    border: 1px solid var(--mud-palette-primary);
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
+}
+
+.chip-cloud-close {
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+.chip-cloud-bracket {
+    color: var(--mud-palette-text-secondary);
+}
+
+.process-step {
+    padding: 16px;
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.process-step-preview {
+    margin: 8px 0 0;
+    padding: 12px;
+}
+
+/* ---- Build a team ----------------------------------------------------------------------------- */
+
+/* Build a team (/teams/build): the step strip over the team type grid. */
+.build-team {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* The page header (audit B1, design-system "A page"): one 32px row on every page, the h1 and its small controls on
+   the left, the aside, the create button and the actions on the right. The page container's 16px padding puts the
+   row 16px below the tab strip, and 16px of margin separates it from what follows. */
+.page-header {
+    margin-bottom: 16px;
+}
+
+.page-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 32px;
+}
+
+.page-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.page-header-h1 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+/* The Room closes its header with a Chrome line (design-system "A page"). */
+.page-header.has-chrome {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+/* The intro: body1 (14px) in Quiet ink, at most 75 characters wide (audit B1). */
+.page-header-subtitle,
+.page-lead {
+    margin: 4px 0 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body1-size);
+}
+
+.build-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.build-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink-edge);
+}
+
+.build-step-done,
+.build-step-current {
+    border-bottom-color: var(--mud-palette-primary);
+}
+
+.build-step-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--ink-edge);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-current .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-done .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.build-step-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+.build-step-todo .build-step-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.build-team-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.build-team-section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--hu-tone-primary-tint);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--hu-accent-ink);
+}
+
+.build-team-intro {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-details-card {
+    max-width: 32rem;
+}
+
+/* The team types wrap into rows and never scroll sideways (S9, S10); the roles and the roster below are the exception. */
+.team-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 12px;
+}
+
+/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width (#474); the first dozen show and
+   "Show all roles" reveals the rest (BuildTeam). */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.role-grid-toggle {
+    margin-top: 4px;
+}
+
+/* The roster is two rows of cards that fill down and then across; what does not fit is reached by scrolling
+   sideways, so a large roster stays two rows tall (B9c, B12). The padding keeps the scrollbar off the cards. */
+.roster-grid {
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+
+    /* The scrollbar is thin and invisible until the pointer is over the grid or focus is inside it (UX-E16); it still
+       scrolls with the wheel, touch and the arrow keys. */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.roster-grid:hover,
+.roster-grid:focus-within {
+    scrollbar-color: var(--ink-edge) transparent;
+}
+
+/* The roster's cards are 20rem wide. */
+.roster-grid {
+    grid-auto-columns: 20rem;
+}
+
+/* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
+.roster-grid:not(:has(> :nth-child(2))) {
+    grid-template-rows: auto;
+}
+
+/* A sub-heading with its count beside it ("Roster · 4 members"). */
+.build-team-subhead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.build-team-subhead .chip-meta::before {
+    content: "\00b7\00a0";
+}
+
+/* The Members tab's team type filter (B9f, B9g): the cloud of types, with the chosen one floated to its left, between
+   the "Roles" heading and the roles. */
+.build-team-role-type-filter {
+    margin: 4px 0 8px;
+}
+
+.team-type-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    font: inherit;
+    text-align: start;
+    color: var(--mud-palette-text-primary);
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    cursor: pointer;
+}
+
+.team-type-card:hover {
+    background: var(--hu-hover);
+}
+
+.team-type-card-selected,
+.team-type-card-selected:hover {
+    background: var(--hu-selected-background);
+    border-color: var(--mud-palette-primary);
+}
+
+.team-type-card-selected:hover {
+    background: var(--hu-selected-background-hover);
+}
+
+.team-type-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--mud-palette-text-secondary);
+    background: var(--ink-wash);
+}
+
+.team-type-card-selected .team-type-icon {
+    color: var(--hu-accent-ink);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.team-type-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.team-type-tagline {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 8px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-check {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+@media (max-width: 600px) {
+    .build-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+

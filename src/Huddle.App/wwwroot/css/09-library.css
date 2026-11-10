@@ -1,0 +1,1162 @@
+/* ---- Library: CodeMirror editor theme and reference styles -----------------------------------
+   The editor surface, text content, active-line highlight and selection background are scoped
+   under .library-editor .cm-editor to override CodeMirror's generated theme, which is more
+   specific than bare .cm-* rules. Reference links in chat (.library-ref) and missing references
+   (.library-ref-missing) reuse the chat-message link style. The explorer's spacing rules arrive
+   with its components (D12). */
+
+.library-editor .cm-editor {
+    background-color: var(--hu-ground-page);
+    color: var(--mud-palette-text-primary);
+}
+
+.library-editor .cm-content {
+    font-family: var(--font-mono);
+}
+
+/* Raw text is monospace at 13px (body1 x 0.9375) with a 1.6 line height. Set on the scroller, not the
+   content, so the line-number gutter inherits it and its numbers stay level with their lines. */
+.library-editor .cm-editor .cm-scroller {
+    font-size: calc(var(--mud-typography-body1-size) * 0.9375);
+    line-height: 1.6;
+}
+
+.library-editor .cm-activeLine {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* Selection must stay visible on the active line, so it uses the translucent primary, not the
+   active line's hover colour. The focused selector matches CodeMirror's own
+   (.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground) plus the
+   .library-editor prefix, so it wins on specificity. */
+.library-editor .cm-editor .cm-selectionLayer .cm-selectionBackground,
+.library-editor .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+    background-color: var(--mud-palette-primary-hover);
+}
+
+/* The document's folder path and file name, between the header and the first line of the document. */
+.library-document-path {
+    display: block;
+    padding: 0 16px 4px;
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* On the toolbar the path follows the Copy path button, so it needs no gutter of its own on that side.
+   It stays on one line and truncates from the start (the file name is the part worth keeping); the full path is in its title. */
+.library-document-path-inline {
+    padding: 0 16px 0 4px;
+    overflow: hidden;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+}
+
+/* ---- A toolbar ends in a hairline (design-system.md "Lines") ------------------------------------
+   A page toolbar is a band: 12px above and below its controls, closed by the chrome line, with the content 24px
+   below that line. The doubled class outranks MudBlazor's fixed dense height, which would otherwise centre the
+   controls in 48px and ignore the padding. The Library document toolbar is the same band at a pane's edge and
+   carries its own copy below, since it also runs the pane's full width. */
+.mud-toolbar.toolbar-hairline {
+    height: auto;
+    min-height: 0;
+    padding-block: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+/* ---- Library document pane: the same 16px sides and 12px top as the tree pane ------------------
+   The toolbar is a band: 12px above and below its controls, 16px in, its controls level with the tree header's,
+   and a lines-default hairline closing it, the full width of the pane like the divider beside it, marks where
+   the toolbar ends and the document begins. The content then starts 24px below that line, whichever mode draws
+   it. In Split the two columns carry that 24px themselves, so the raw side's tint runs right up to the line. */
+.library-document-toolbar.mud-toolbar {
+    box-sizing: border-box;
+    height: auto;
+    min-height: 61px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+.library-document > .library-rendered {
+    padding: 24px 16px 0;
+}
+
+/* The Markdown formatting row above the editor (Edit and Split): one 28px row of dense icon buttons,
+   16px in like the document toolbar, closed by the same hairline. */
+.markdown-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    min-height: 28px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+.cm-tooltip.cm-tooltip-autocomplete {
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+/* The picked row wears the app's Selected treatment, like a selected list row. CodeMirror's own theme paints
+   it #17c on white through a longer selector, so the leading html element keeps this one ahead. */
+html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
+}
+
+.markdown-toolbar .mud-button-root {
+    height: 28px;
+    min-width: 28px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-document > .library-editor .cm-content,
+.library-document-split > .library-editor .cm-content {
+    padding: 24px 16px;
+}
+
+.library-document-banner,
+.library-document-outside-scope {
+    margin: 16px 16px 0;
+}
+
+/* The Team/Project Files tab: the explorer fills the page's height and width, flush left. Every wrapper from
+   the main column down to the split panel becomes a flex column that may shrink, so the tree runs the whole
+   height and the document pane takes all the room to its right; the document's own text is a centred column. */
+.team-page-wide.mud-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.team-page-wide .team-page-tabs,
+.team-page-wide .mud-tabs-panels,
+.team-page-wide .team-files-tab,
+.team-page-wide .team-tasks-tab,
+.team-page-wide .library-explorer {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.team-page-wide .team-tasks-tab,
+.team-page-wide .team-roster,
+.team-page-wide .team-details {
+    padding: 0 16px 16px;
+}
+
+.team-page-wide .team-tasks-tab > .task-board {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.team-page-wide .library-explorer-split {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
+.team-page-wide .library-explorer-split > .child-panel {
+    overflow: auto;
+}
+
+/* Split mode on the Team page and the Library page: the editor and the live preview sit side by side, each scrolling on its own
+   inside the pane's full height, and the preview uses its half instead of the centred reading column. */
+:is(.team-page-wide, .library-page) .library-explorer-split > .child-panel:last-child > .library-document {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+:is(.team-page-wide, .library-page) .library-document > .library-editor {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+:is(.team-page-wide, .library-page) .library-document > .library-editor .cm-editor {
+    height: 100%;
+}
+
+:is(.team-page-wide, .library-page) .library-document-split {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+:is(.team-page-wide, .library-page) .library-document-split > .library-editor,
+:is(.team-page-wide, .library-page) .library-document-split .cm-editor {
+    height: 100%;
+    min-height: 0;
+}
+
+/* Two equal columns split by a hairline. The raw side is tinted and the preview keeps Read mode's reading
+   styles; both start their first line 24px below the toolbar. */
+.library-document-split > .library-editor {
+    border-inline-end: 1px solid var(--hu-line-region);
+}
+
+.library-document-split > .library-editor .cm-editor {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 3%, var(--mud-palette-surface));
+}
+
+.library-document-split > .library-editor .cm-gutters {
+    padding-inline-start: 8px;
+    background-color: transparent;
+    border-inline-end: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+:is(.team-page-wide, .library-page) .library-document .library-document-split > .library-rendered {
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    overflow: auto;
+
+    /* The scroller fills its half so the scrollbar sits at the pane's edge; the text is centred in it with padding, at the same 46.29em measure as Read mode. */
+    padding: 24px max(16px, calc((100% - calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29)) / 2)) 0;
+}
+
+.library-ref-missing {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Library: explorer split bounds -------------------------------------------------------------
+   MudSplitPanel writes a fixed pixel size inline on BOTH panels, measured once, and never
+   re-measures: resize the window after load, or restore a remembered divider position, and the
+   panels keep sizes that no longer fit (LibraryExplorer.razor's header has the live failure). So
+   the second panel ignores its inline size and flexes into whatever is left, and the first keeps
+   the size the divider gave it but is bounded on both sides, so neither can be squeezed to
+   nothing. The important flag is the only way past an inline style (listed in Exceptions.txt). */
+
+/* The /library page: header on top, the explorer takes the rest of the pane. Percent heights, not vh,
+   so the page fills the pane it sits in rather than the window (UX-006). */
+.library-page {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-page .library-explorer {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-explorer-split {
+    height: 100%;
+    min-height: 0;
+}
+
+.library-explorer-split-side-by-side > .child-panel {
+    height: 100%;
+    overflow: auto;
+}
+
+.library-explorer-split > .divider {
+    background-color: var(--hu-line-region);
+}
+
+/* The tree pane sits on the sunk ground and the document on the page ground. Both default to Surface. */
+.library-explorer-split > .child-panel {
+    background-color: var(--hu-ground-page);
+}
+
+.library-explorer-split > .child-panel:first-child {
+    background-color: var(--hu-ground-sunk);
+}
+
+.library-explorer-split-side-by-side > .child-panel:first-child {
+    flex: 0 0 auto;
+    min-width: 15rem;
+    max-width: calc(100% - 16rem);
+}
+
+.library-explorer-split-side-by-side > .child-panel:last-child {
+    flex: 1 1 0;
+    width: auto !important;
+    min-width: 0;
+}
+
+.library-explorer-split-stacked > .child-panel:first-child {
+    flex: 0 0 auto;
+    min-height: 6rem;
+    max-height: calc(100% - 8rem);
+}
+
+.library-explorer-split-stacked > .child-panel:last-child {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 0;
+}
+
+/* ---- Library header band (audit B2) ---------------------------------------------------------
+   The tree header and the document toolbar are one band: the same 61px height, so the Chrome line under each lands at the
+   same y and reads as one line across the splitter. New note sits inside the band, beside the search field. */
+
+/* ---- Library panes: one spacing scale ---------------------------------------------------------
+   The Library's panes are spaced on the 4/8/12/16/24px scale (design-system.md "Spacing"): each pane puts
+   16px between its edge and its content and 12px above its first control, level with the document toolbar's.
+   The tree header is sticky, so it carries the pane's 12px itself rather than leaving a gap above it for rows
+   to scroll through. */
+.library-explorer-tree-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 61px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hu-line-region);
+    background: var(--hu-ground-sidebar);
+}
+
+/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the header
+   wraps (flex-wrap above) and the actions take a second line instead of squeezing it (#481). */
+
+.library-explorer-tree-header > .library-explorer-search {
+    flex: 1 1 10rem;
+    min-width: 10rem;
+}
+
+.library-explorer-tree-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
+.library-tree.hidden {
+    display: none;
+}
+
+/* ---- Library tree density ----------------------------------------------------------------------
+   30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
+   and each row is inset 4px (the Selected shape, audit A5) and pads 4px more, so a label column starts 16px from
+   the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
+   files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
+   guide line under the centre of its parent's chevron (8px row padding + half the 16px column). */
+.library-tree.mud-treeview {
+    padding: 0 8px 16px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.library-tree .mud-treeview-item {
+    min-height: 0;
+}
+
+.library-tree .mud-treeview-item-content {
+    min-height: 30px;
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    padding-block: 0;
+    padding-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+.library-tree .mud-treeview-item-arrow {
+    width: 16px;
+    min-height: 0;
+    margin: 0;
+    margin-inline-end: 4px;
+    align-items: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-tree .mud-treeview-item .mud-treeview-item-arrow .mud-icon-button {
+    padding: 0;
+    color: inherit;
+}
+
+.library-tree .mud-treeview-item-arrow .mud-icon-root {
+    width: 12px;
+    height: 12px;
+}
+
+.library-tree .mud-treeview-item-icon {
+    width: 16px;
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-tree .mud-treeview-item-icon .mud-icon-root {
+    width: 16px;
+    height: 16px;
+}
+
+/* An orphan Team folder's warning glyph: the warning colour pulled toward the body text, so the icon clears
+   4.5:1 on either Theme (the plain warning is 3.3:1 on Huddle Light's surface). */
+.library-tree-orphan .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+.library-tree-orphan {
+    display: inline-flex;
+    margin-inline-start: 4px;
+    color: color-mix(in srgb, var(--mud-palette-warning) 75%, var(--mud-palette-text-primary));
+}
+
+/* Hover is the neutral hover shade; the selected row is Primary 14% (20% when hovered) with a 2px primary bar on its
+   left edge and accent-text (not raw Primary) at weight 500, the same tints as the selected Task row. The bar is an
+   inset shadow, so it takes no width and the selected row's chevron stays on its guide line. */
+.library-tree .mud-treeview-item-content:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected {
+    color: var(--hu-selected-foreground);
+    font-weight: 500;
+    background-color: var(--hu-selected-background);
+    box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);
+}
+
+.library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected:hover {
+    background-color: var(--hu-selected-background-hover);
+}
+
+/* Guide lines stay quieter than the pane dividers, but are drawn from the same line colour so they still
+   show on a dark Theme, where the divider token sits almost on the surface. */
+.library-tree .mud-treeview-group {
+    margin-inline-start: 16px;
+    padding-inline-start: 0;
+    border-inline-start: 1px solid var(--ink-rule);
+}
+
+@media (pointer: coarse) {
+    .library-tree .mud-treeview-item-content {
+        min-height: 44px;
+    }
+
+    /* The chevron keeps its 16px footprint; padding with an equal negative margin widens only what a finger can hit. */
+    .library-tree .mud-treeview-item .mud-treeview-item-arrow .mud-icon-button {
+        padding: 16px;
+        margin: -16px;
+    }
+}
+
+/* The tree's context menu (audit B10): a protected node's menu ends in one Quiet-ink note rather than three
+   disabled items, and Delete, the last item, is in Error ink. */
+.library-tree-menu-note {
+    max-width: 260px;
+    padding: 8px 16px;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.4;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
+.library-tree-drop-area {
+    min-height: 4rem;
+}
+
+/* While a drag is live the row's children stop taking pointer events, so dragenter targets the row itself and the highlight does not flicker. */
+.library-tree-dragging .library-tree-node > * {
+    pointer-events: none;
+}
+
+.library-tree-node.library-tree-drop-target {
+    background: var(--mud-palette-action-default-hover);
+    border: 1px dashed var(--mud-palette-primary);
+}
+
+.library-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px;
+}
+
+.library-search-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.library-search-hit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.library-search-hit:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.library-search-hit-path {
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.library-search-empty {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The scoped explorer header: the root's full path, which can be long, so it wraps anywhere rather than widening the page. */
+.library-explorer-root-path {
+    overflow-wrap: anywhere;
+}
+
+/* The toolbar's List | Kanban control is a segmented control; HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
+.task-toolbar-kind {
+    flex: none;
+}
+
+/* The List | Kanban control has two short, equal-width segments, so the same equal-segment floor is smaller. */
+.task-toolbar-kind .mud-toggle-item {
+    min-width: 5rem;
+}
+
+/* Each segment leads with its View kind's sidebar icon, at the row icon size, 4px before the word. */
+.task-toolbar-kind .task-toolbar-kind-icon {
+    font-size: var(--icon-size-row);
+    margin-right: 4px;
+}
+
+/* The header row (T2): List | Kanban, then the counts, on the left; the page's actions on the right. */
+.task-toolbar-header {
+    gap: 8px;
+}
+
+.task-toolbar-header .tasks-counts {
+    margin-left: 8px;
+}
+
+/* Group by ends the filter row, pushed to its right edge, with no trailing chip gap so it lines up with the row's end. */
+.task-toolbar .task-filter-chip.task-toolbar-group {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* A Task's assignee (TaskAssignee): the avatar, then the name, with room between so the monogram does not run into the name. */
+.task-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
+   numbers only a step heavier, "need you" in the warning colour (side-by-side audit, 2026-10-30, LL-T02). */
+.tasks-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.tasks-counts > * + *::before {
+    content: "·";
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tasks-counts strong {
+    font-weight: 500;
+}
+
+/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+   A count wears its signal only above 0 (audit B4e), so a zero ("is-zero") reads as the other counts do. */
+.tasks-count-need-you:not(.is-zero) {
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
+}
+
+/* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
+.task-toolbar-search .mud-input-outlined {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The second row's quick filters (wireframe): the Filter icon menu, then pill chips - dashed while a filter is unset, filled with a clear button once set. */
+.task-toolbar-filter {
+    flex: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The Filter menu's popover holds the filters' selects: wide enough to read a value, with a 16px gutter on every side. */
+.task-toolbar-filter-popover .mud-list {
+    box-sizing: border-box;
+    min-width: 20rem;
+    padding: 16px;
+}
+
+/* The toolbar's filter chip is the Filter chip (audit A6, design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
+   Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
+   gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
+.task-filter-chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    height: 28px;
+    margin-right: 8px;
+    border: 1px solid var(--ink-field);
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.task-filter-chip-unset {
+    border-style: dashed;
+}
+
+.task-filter-chip-set {
+    border-color: var(--mud-palette-primary);
+    background-color: transparent;
+}
+
+/* The filter row wraps when its chips overflow; the row gap keeps a wrapped line clear of the one above. */
+.task-toolbar {
+    row-gap: 8px;
+}
+
+.task-filter-chip .task-filter-chip-button {
+    height: 100%;
+    min-height: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background-color: transparent;
+    text-transform: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-filter-chip-set .task-filter-chip-button {
+    font-weight: 500;
+    color: var(--hu-selected-foreground);
+}
+
+/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. Not the switch's thumb
+   (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
+   5px above the track's centre. */
+.task-toolbar .mud-icon-button:not(.mud-switch-base),
+.task-toolbar-header .mud-icon-button:not(.mud-switch-base) {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.task-toolbar .btn-action-tight,
+.task-toolbar-header .btn-action-tight {
+    height: 28px;
+    min-height: 0;
+}
+
+/* The switch's own body is MudBlazor's 38px; a column flex centres it on the 28px box (it overflows evenly) rather than
+   letting it hang 10px below. */
+.task-toolbar .task-toolbar-dense {
+    height: 28px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
+.task-filter-chip .task-filter-chip-static {
+    pointer-events: none;
+    cursor: default;
+}
+
+.task-toolbar-filter-state-group .mud-list-item-text {
+    font-weight: 600;
+}
+
+.task-toolbar-filter-state-option {
+    padding-left: 32px;
+}
+
+/* The Status menu's two levels: a group (Open, Closed) in the heavier weight, its statuses indented beneath it. */
+.mud-menu-item.task-status-group .mud-menu-item-text {
+    font-weight: 600;
+}
+
+.mud-menu-item.task-status-sub {
+    padding-left: 32px;
+}
+
+.task-filter-chip .task-filter-chip-value {
+    margin-left: 4px;
+}
+
+.task-filter-chip .task-filter-chip-clear {
+    width: 22px;
+    height: 22px;
+    margin-right: 2px;
+    padding: 2px;
+}
+
+/* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of an Agent definition run together. */
+/* The reading styles, shared by Read mode and Split's preview. Long-form text is the one size derived from
+   the scale rather than taken from it (design-system.md "Typography"): body1 x 8/7 is 16px, at a 1.65
+   line height, and the headings step up from that so an h1 is a heading, not a banner. The 46.29em measure
+   (35em widened by 15% twice) is about 92 characters of Inter prose a line, centred in the pane. */
+.library-rendered {
+    overflow-wrap: anywhere;
+    color: var(--hu-note-prose-ink);
+    font-size: calc(var(--mud-typography-body1-size) * 8 / 7);
+    line-height: 1.65;
+
+    /* 46.29em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);
+    margin-inline: auto;
+}
+
+/* Document history (DocHistory spec §6.7, §6.8, §6.10): the byline under the toolbar, the History under the note. */
+.doc-byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 0;
+    padding: 4px 16px;
+    border: 0;
+    background: none;
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: start;
+    cursor: pointer;
+}
+
+/* Inside the rendered note the byline sits under the first heading, on the note's own left edge. */
+.library-rendered .doc-byline {
+    margin-bottom: 16px;
+    padding-inline: 0;
+}
+
+/* The "·" between the groups; the avatars carry no text, so only the Names are bold. */
+.doc-byline-sep {
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-byline .doc-history-actor-name {
+    font-weight: 600;
+}
+
+/* The note's tags, above its first heading. */
+.library-document-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.doc-byline-part,
+.doc-history-actor {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doc-byline-time {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.doc-byline-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history {
+    box-sizing: border-box;
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);
+    margin: 24px auto 0;
+    padding-inline: 16px;
+}
+
+.doc-history.doc-history-embedded {
+    max-width: none;
+    margin: 0;
+    padding-inline: 0;
+}
+
+.doc-history-title {
+    margin: 0 0 8px;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+.doc-history-when {
+    margin-top: 2px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* MudBlazor's vertical timeline reserves a 96px divider with its line 47px in. Here the dots sit on the panel's left
+   edge, level with the text above, in a 24px divider (line centred on it) with an 8px gap before the entry. */
+.doc-history-timeline.mud-timeline-vertical {
+    padding: 0;
+}
+
+.doc-history-timeline.mud-timeline-vertical.mud-timeline-position-start::before {
+    left: 11px;
+}
+
+.doc-history-timeline.mud-timeline-vertical .mud-timeline-item {
+    padding-bottom: 16px;
+}
+
+.doc-history-timeline.mud-timeline-vertical .mud-timeline-item .mud-timeline-item-divider {
+    min-width: 24px;
+}
+
+.doc-history-timeline.mud-timeline-vertical.mud-timeline-position-start .mud-timeline-item-content {
+    max-width: calc(100% - 24px);
+    padding-left: 8px;
+}
+
+.doc-history-time {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history-body {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.doc-history-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.doc-history-chip {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.doc-history-summary {
+    margin-top: 2px;
+    font-size: var(--mud-typography-body2-size);
+    overflow-wrap: anywhere;
+}
+
+.doc-history-summary p {
+    margin: 0;
+}
+
+/* The Backlinks panel in the Right sidebar: an icon, the note's name and the line that links, the [[wikilink]] in accent ink. */
+.backlink-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.backlink-item-icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.backlink-item-body {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.backlink-item-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mud-palette-primary);
+}
+
+.backlink-item-snippet {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin-top: 2px;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.backlink-item-ref {
+    padding: 0 2px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--hu-accent-ink);
+    background: var(--hu-tone-primary-tint);
+}
+
+/* The Read | Edit | Split labels are control text, 13px. */
+/* The path gives way in a narrow pane, never the controls: squeezed, the toggle's three labels run together. */
+.library-document-toolbar .library-document-mode-toggle,
+.library-document-toolbar .library-document-save {
+    flex-shrink: 0;
+}
+
+.library-document-toolbar .library-document-path-inline {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.library-document-mode-toggle .mud-toggle-item,
+.library-document-mode-toggle .mud-toggle-item .mud-typography {
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* A Theme sets how its headings read (the note.* tokens; the prose ink is on .library-rendered itself): Cobalt Soft's
+   tight, heavy h1, Lumen's and Fluent's larger one (side-by-side audit, 2026-10-30, LL-L01, LD-03, FD-01, CL-04). */
+.library-rendered :is(h1, h2, h3, h4, h5, h6) {
+    margin: 32px 0 12px;
+    font-family: inherit;
+    font-weight: var(--hu-note-heading-weight);
+    line-height: 1.3;
+    letter-spacing: normal;
+    color: var(--mud-palette-text-primary);
+}
+
+.library-rendered h1 {
+    margin-bottom: 16px;
+    font-size: var(--hu-note-h1-size);
+    letter-spacing: var(--hu-note-h1-tracking);
+}
+
+.library-rendered h2 {
+    font-size: 1.25em;
+}
+
+.library-rendered h3 {
+    font-size: 1.125em;
+}
+
+.library-rendered :is(h4, h5, h6) {
+    font-size: 1em;
+}
+
+.library-rendered > :first-child,
+.library-rendered > .library-document-tags + *,
+.library-rendered > .library-properties + * {
+    margin-top: 0;
+}
+
+/* The global reset strips list markers and indent, so a list read as loose lines; both come back here. */
+.library-rendered ul,
+.library-rendered ol {
+    padding-inline-start: 24px;
+}
+
+.library-rendered ul {
+    list-style: disc;
+}
+
+.library-rendered ol {
+    list-style: decimal;
+}
+
+.library-rendered li + li {
+    margin-top: 4px;
+}
+
+.library-rendered li > :is(ul, ol) {
+    margin: 4px 0 0;
+}
+
+.library-empty-pane {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 16rem;
+    padding: 32px;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-rendered p,
+.library-rendered ul,
+.library-rendered ol,
+.library-rendered pre,
+.library-rendered blockquote,
+.library-rendered table {
+    margin: 0 0 16px;
+}
+
+/* Markdown tables: cells get room to breathe (the browser default is 1px), a hairline grid between rows and
+   columns, and header labels that stay on one line. The table is as wide as its content, capped at the page; the cells draw the outer
+   edge too, so the border always hugs the grid. */
+.library-rendered table {
+    max-width: 100%;
+    border-collapse: collapse;
+    border: 0;
+}
+
+.library-rendered td {
+    overflow-wrap: anywhere;
+}
+
+.library-rendered th,
+.library-rendered td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    border: 1px solid var(--ink-edge);
+}
+
+.library-rendered th {
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+/* The leading YAML frontmatter as a Properties block (LibraryProperties.razor): a hairline card of key/value
+   rows, the keys muted in a column of their own, and a list field's items as chips. */
+.library-properties {
+    margin: 0 0 24px;
+    padding: 12px 16px;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.5;
+}
+
+.library-properties-title {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-properties-list {
+    display: grid;
+    grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
+    gap: 4px 24px;
+    margin: 0;
+}
+
+.library-properties-row {
+    display: contents;
+}
+
+.library-properties-key {
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-properties-value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.library-properties .library-properties-chip {
+    margin: 0;
+}
+
+/* A Text value keeps its line breaks. Text is never Markdown, so a value is only ever text and links. */
+.library-properties-text {
+    white-space: pre-line;
+}
+
+/* A nested or unreadable value is its YAML source in a small monospace block, tinted like a code block. */
+.library-properties-source {
+    margin: 0;
+    padding: 4px 8px;
+    max-width: 100%;
+    overflow-x: auto;
+    background: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    font-family: var(--font-mono);
+    font-size: calc(1em * 0.85);
+    line-height: 1.5;
+    white-space: pre;
+}
+
+/* A value that does not fit its assigned type: the value as written, and a warning mark whose title names the type. */
+.library-properties-mismatch {
+    color: var(--hu-tone-warning-ink);
+}
+
+/* References inside a rendered note. A wikilink is the accent colour over a soft dotted underline; one that
+   resolves to no note is muted, with a dashed underline. A Task is a chip led by its status dot, and a Room
+   is led by the speech-bubble glyph the sidebar uses for Chats, never a "#". The shared chat rule
+   (.task-ref, .library-ref, a.room-ref ...) stays as it is; these refine it only inside .library-rendered. */
+.library-rendered .library-ref {
+    color: var(--hu-accent-ink);
+    text-decoration: underline dotted;
+    text-decoration-color: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-surface));
+    text-underline-offset: 0.2em;
+}
+
+.library-rendered .library-ref:hover {
+    text-decoration-color: currentColor;
+}
+
+.library-rendered .library-ref.library-ref-missing {
+    color: var(--mud-palette-text-secondary);
+    text-decoration-style: dashed;
+    text-decoration-color: color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-surface));
+}
+
+.library-rendered .task-ref {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    border: 1px solid var(--ink-edge);
+    border-radius: 999px;
+    background: var(--ink-wash);
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.6;
+    text-decoration: none;
+    vertical-align: baseline;
+}
+
+.library-rendered .task-ref:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.library-rendered .task-ref.task-ref-closed {
+    color: var(--mud-palette-text-secondary);
+    text-decoration: line-through;
+}
+
+/* Material's filled "chat" glyph as a mask, so it takes the link's own colour in every Theme. */
+.library-rendered a.room-ref::before {
+    content: "";
+    display: inline-block;
+    width: 0.875em;
+    height: 0.875em;
+    margin-inline-end: 4px;
+    vertical-align: -0.1em;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
