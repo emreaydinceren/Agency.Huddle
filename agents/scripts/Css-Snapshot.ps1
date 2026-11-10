@@ -81,7 +81,7 @@
                        differently between two captures of one build; a CSS change moves whole pixels. Only px
                        numbers are loosened. 0 compares exactly. The Diff also ignores
                        the notification count's badge wrapper, which is there or not depending on which page marked
-                       Feed items seen first.
+                       Feed items seen first, and MudBlazor's tab slider, which script sizes from a load-time measure.
 
 .EXAMPLE
     pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Capture -Out C:\seeds\huddle\css-snap-out\baseline -Build

@@ -559,8 +559,10 @@ function loadSnapshot(folder, file) {
  * Elements whose presence follows server state rather than CSS. Pages are captured six at a time against one instance,
  * and opening some pages marks Feed items seen, so the notification count's badge wrapper is there or not depending on
  * which page loaded first. It is absolutely positioned, so it moves nothing else.
+ * MudBlazor's tab slider (the selected tab's underline) is sized and placed by script from a measurement taken while the
+ * page loads, so it is a couple of px off on an occasional page. The tabs it underlines are compared as usual.
  */
-const VOLATILE_PATH = /notifications-badge:\d+ > span\.mud-badge-/;
+const VOLATILE_PATH = /notifications-badge:\d+ > span\.mud-badge-|div\.mud-tab-slider[.:]/;
 
 const PX = /(-?\d*\.?\d+(?:e[+-]?\d+)?)px/g;
 
