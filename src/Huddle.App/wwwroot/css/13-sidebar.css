@@ -10,7 +10,7 @@
     padding: 4px 0;
 }
 
-/* Flat rows on the sidebar's ground, not a white bordered card (side-by-side audit, 2026-10-30, G03). The border stays,
+/* Flat rows on the sidebar's ground, not a white bordered card. The border stays,
    transparent, because --needs-you-offset counts its 1px; the doubled class outranks .mud-paper-outlined. Nordic's
    paper surface draws its own tinted card below. */
 .needs-you-card.mud-paper-outlined {
@@ -37,7 +37,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). The doubled class
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing. The doubled class
    outranks the Left menu grid's padding, which this row shifts by the card's offset. */
 .sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
     width: calc(100% - 2 * var(--nav-inset));
@@ -109,13 +109,13 @@
 }
 
 /* The card's title is a link with no leading mark, so the sidebar's rule gives its text the slot's step as a margin; the title's own
-   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers (#475). */
+   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers. */
 .sidebar-views .needs-you-title .mud-nav-link > .mud-nav-link-text {
     margin-inline-start: 0;
 }
 
 /* The Dismiss button floats over the end of its row instead of taking a slot of its own, so the name and the time use the row's whole
-   width up to the trailing line (#475). Where there is a hover, the button replaces the time while it shows; on touch it is always
+   width up to the trailing line. Where there is a hover, the button replaces the time while it shows; on touch it is always
    shown and the row's padding (above) keeps the time clear of it. */
 .sidebar-views .needs-you-row > .mud-tooltip-root {
     position: absolute;
@@ -302,7 +302,7 @@
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
-/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action whose label starts on the
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat"): a quiet text action whose label starts on the
    text line, with a muted arrow in the leading slot. */
 .sidebar-show-all .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
@@ -320,7 +320,7 @@
     padding: 4px 8px;
 }
 
-/* Search match (audit B6a): MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+/* Search match: MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
    text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
 .search-card mark {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));
@@ -328,7 +328,7 @@
     font-weight: 600;
 }
 
-/* A notice in the dropdown (audit B6b): Quiet ink words, with an icon in the Attention signal carrying the signal.
+/* A notice in the dropdown: Quiet ink words, with an icon in the Attention signal carrying the signal.
    1em is 14px: the notice is body2 text, so the icon is sized by the type scale rather than by a literal. */
 .search-notice {
     display: flex;
@@ -393,7 +393,7 @@
     opacity: 0.6;
 }
 
-/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers (UX rule 9, #477). */
+/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers. */
 .search-group-heading {
     padding: 8px 8px 4px;
     color: var(--mud-palette-text-secondary);
