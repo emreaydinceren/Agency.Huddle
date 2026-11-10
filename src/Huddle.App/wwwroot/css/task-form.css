@@ -338,7 +338,7 @@
     font-weight: 500;
     line-height: 1;
     background-color: var(--ink-wash);
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     color: var(--mud-palette-text-primary);
 }
 

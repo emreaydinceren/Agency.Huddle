@@ -241,7 +241,7 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: 50%;
     color: var(--mud-palette-text-secondary);
 }
@@ -332,7 +332,7 @@ emoji-picker {
        the popover to sit above or below the field. */
     height: min(400px, 45vh);
     --background: var(--mud-palette-surface);
-    --border-color: var(--ink-edge);
+    --border-color: var(--ink-line);
     --border-radius: var(--mud-default-borderradius);
     --input-border-color: var(--hu-line-control);
     --input-font-color: var(--mud-palette-text-primary);
@@ -365,7 +365,7 @@ emoji-picker {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1px var(--ink-edge);
+    box-shadow: inset 0 0 0 1px var(--ink-line);
     pointer-events: none;
 }
 
@@ -920,7 +920,7 @@ body.sidebar-resizing {
 .sidebar-panel + .sidebar-panel {
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid var(--ink-edge);
+    border-top: 1px solid var(--ink-line);
 }
 
 /* A panel header is 32px: a 13px/600 title in Ink, a 12px count in Quiet ink and the chevron (B11e). */
@@ -1407,7 +1407,7 @@ body.sidebar-resizing {
     min-height: 32px;
     padding: 0 4px;
     font-size: var(--mud-typography-body2-size);
-    border-bottom: 1px solid var(--ink-rule);
+    border-bottom: 1px solid var(--ink-line);
 }
 
 /* The icon fills the 24px leading slot of a picker row; the name truncates; the date trails in Quiet ink. */

@@ -60,7 +60,7 @@ public sealed class R3RightSidebarTests
     [Fact]
     public void AppCss_Panels_AreSeparatedByAnEdgeLine()
     {
-        Assert.Contains("border-top: 1px solid var(--ink-edge)", CssText.RuleBody(CssText.AppCss(), ".sidebar-panel + .sidebar-panel"), StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border-top: 1px solid var(--ink-line)", CssText.RuleBody(CssText.AppCss(), ".sidebar-panel + .sidebar-panel"), StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("gap: 0", CssText.RuleBody(CssText.AppCss(), ".right-sidebar .mud-drawer-content"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 

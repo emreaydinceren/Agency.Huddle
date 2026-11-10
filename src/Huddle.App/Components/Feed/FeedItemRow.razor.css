@@ -44,7 +44,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     color: var(--mud-palette-text-secondary);
 }
 

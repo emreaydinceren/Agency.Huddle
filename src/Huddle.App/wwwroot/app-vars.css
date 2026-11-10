@@ -15,8 +15,7 @@
        the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
     --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
     --ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-    --ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
-    --ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+    --ink-line: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
     --ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
     --hu-ground-page: var(--mud-palette-surface);
     --hu-ground-sidebar: var(--mud-palette-surface);
@@ -76,7 +75,7 @@
 
     /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
     --hu-feed-summary-ink: var(--mud-palette-text-primary);
-    --hu-feed-day-rule: var(--ink-rule);
+    --hu-feed-day-rule: var(--ink-line);
     --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
     --hu-feed-live-line: transparent;
     --hu-feed-live-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
@@ -109,7 +108,7 @@
     --hu-detail-accent-from: transparent;
     --hu-detail-accent-to: transparent;
     --hu-detail-head-line: transparent;
-    --hu-detail-row-line: var(--ink-edge);
+    --hu-detail-row-line: var(--ink-line);
     --hu-detail-section-line: transparent;
     --hu-edit-header-background: var(--hu-ground-raised);
     --hu-edit-header-blur: 0px;
@@ -162,9 +161,9 @@
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------
    A line or a wash is Ink (text-primary) mixed into Surface, so it keeps the same rank in every Theme,
    ported ones included, without nudging a faithful palette value. The rungs, faintest first:
-     Strip 4%  the tab strip's tint          Rule 10%  an inner rule inside a card or list
-     Wash  6%  a washed shape's fill         Edge 18%  a card, tile or washed shape's outline
-     Field 30% an input's line (Chrome, --mud-palette-lines-default, sits on the same rung for the
-               shell's own hairlines).
-   A wash never defines a shape on its own: it also carries an Edge.
+     Strip 4%  the tab strip's tint          Line 18%  a card, tile or washed shape's outline, and an inner
+     Wash  6%  a washed shape's fill                   rule inside a card or list (one rung, never two)
+     Field 30% an input's line (Chrome, --mud-palette-lines-default, is never fainter than Field: it
+               closes the shell's own panes).
+   A wash never defines a shape on its own: it also carries a Line.
    The rungs are skin tokens like any other (ink.strip is --ink-strip), declared once in the first block above. */

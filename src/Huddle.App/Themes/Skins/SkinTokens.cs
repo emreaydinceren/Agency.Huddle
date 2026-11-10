@@ -51,7 +51,7 @@ internal static class SkinTokens
     private static void AddFeedTokens(List<Token> tokens)
     {
         Add(tokens, "feed.summary.ink", "palette.textPrimary", "A Feed card's summary sentence.");
-        Add(tokens, "feed.day.rule", "ref(ink.rule)", "The rule after a Feed day heading.");
+        Add(tokens, "feed.day.rule", "ref(ink.line)", "The rule after a Feed day heading.");
         Add(tokens, "feed.live.background", "mix(palette.success 6%, palette.surface)", "The Live chip's fill.");
         Add(tokens, "feed.live.line", "transparent", "The Live chip's outline.");
         Add(tokens, "feed.live.ink", "mix(palette.success 70%, palette.textPrimary)", "The Live chip's text.");
@@ -94,7 +94,7 @@ internal static class SkinTokens
         Add(tokens, "detail.accent.from", "transparent", "The start colour of a 3px accent bar on a panel header or gate.");
         Add(tokens, "detail.accent.to", "transparent", "The end colour of that accent bar.");
         Add(tokens, "detail.head.line", "transparent", "The hairline under the Task detail header.");
-        Add(tokens, "detail.row.line", "ref(ink.edge)", "The hairline between property rows.");
+        Add(tokens, "detail.row.line", "ref(ink.line)", "The hairline between property rows.");
         Add(tokens, "detail.section.line", "transparent", "The hairline above a Task detail section.");
     }
 
@@ -197,8 +197,7 @@ internal static class SkinTokens
     {
         Add(tokens, "ink.strip", Ink(4), "Faintest tint: the tab strip's wash.");
         Add(tokens, "ink.wash", Ink(6), "A washed shape's fill.");
-        Add(tokens, "ink.rule", Ink(10), "An inner rule inside a card or list.");
-        Add(tokens, "ink.edge", Ink(18), "A card, tile or washed shape's outline.");
+        Add(tokens, "ink.line", Ink(18), "A card, tile or washed shape's outline, and an inner rule inside a card or list.");
         Add(tokens, "ink.field", Ink(30), "An input's line.");
         Add(tokens, "ground.page", "palette.surface", "The page ground.");
         Add(tokens, "ground.sidebar", "palette.surface", "The left drawer and the tree header.");

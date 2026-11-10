@@ -36,7 +36,7 @@ html {
 * {
     box-sizing: border-box;
     scrollbar-width: thin;
-    scrollbar-color: var(--ink-edge) transparent;
+    scrollbar-color: var(--ink-line) transparent;
 }
 
 /* Native controls and scrollbars follow the Theme's mode. A dark Theme left at the default scheme drew light scrollbars,
@@ -244,7 +244,7 @@ button:focus-visible {
 }
 
 .mud-button-root.mud-button.mud-button-outlined:disabled {
-    border-color: var(--ink-rule);
+    border-color: var(--ink-line);
 }
 
 /* Every outlined input draws the Field line, long-text fields included. Hover, focus, error and disabled
@@ -275,7 +275,7 @@ button:focus-visible {
 
 /* Table row lines are the Edge rung. MudBlazor's TableLines default (#e0e0e0) belongs to no Theme's palette. */
 .mud-table .mud-table-cell {
-    border-bottom-color: var(--ink-edge);
+    border-bottom-color: var(--ink-line);
 }
 
 /* The tab rail (Team page): it ends in a Chrome line, and its content starts 24px below that line. */
@@ -493,7 +493,7 @@ b {
 .composer-picker,
 .floating-panel {
     box-shadow: var(--hu-shadow-panel);
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     z-index: var(--mud-zindex-popover);
 }
@@ -562,7 +562,7 @@ a.team-ref,
 .budget-prompt,
 .composer,
 .room-strip {
-    border-top: 1px solid var(--ink-rule);
+    border-top: 1px solid var(--ink-line);
 }
 
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
@@ -575,7 +575,7 @@ a.team-ref,
     font-weight: 600;
     color: var(--mud-palette-text-primary);
     padding-bottom: 4px;
-    border-bottom: 1px solid var(--ink-rule);
+    border-bottom: 1px solid var(--ink-line);
 }
 
 /* A card title: the 14px heading of a card, a panel section or a row (the subtitle1 size at 600). The role itself is

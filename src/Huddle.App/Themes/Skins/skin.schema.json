@@ -354,13 +354,9 @@
           "type": "string",
           "description": "A washed shape\u0027s fill."
         },
-        "ink.rule": {
+        "ink.line": {
           "type": "string",
-          "description": "An inner rule inside a card or list."
-        },
-        "ink.edge": {
-          "type": "string",
-          "description": "A card, tile or washed shape\u0027s outline."
+          "description": "A card, tile or washed shape\u0027s outline, and an inner rule inside a card or list."
         },
         "ink.field": {
           "type": "string",

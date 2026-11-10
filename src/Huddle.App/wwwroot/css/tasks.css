@@ -559,7 +559,7 @@
     text-align: left;
     padding: 12px;
     background-color: var(--hu-ground-raised);
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     box-shadow: var(--hu-shadow-card);
 }
@@ -692,7 +692,7 @@
     align-self: stretch;
     margin-top: 4px;
     padding-top: 8px;
-    border-top: 1px solid var(--ink-rule);
+    border-top: 1px solid var(--ink-line);
 }
 
 /* The open button holds every field of the card; they stack top to bottom, left-aligned, rather

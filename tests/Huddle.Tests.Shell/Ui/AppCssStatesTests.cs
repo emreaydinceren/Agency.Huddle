@@ -58,7 +58,7 @@ public sealed partial class AppCssStatesTests
         string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.Matches(@"\.floating-panel\s*\{[^}]*box-shadow:\s*var\(--hu-shadow-panel\)", css);
-        Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--ink-edge\)", css);
+        Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--ink-line\)", css);
         Assert.Matches(@"\.floating-panel\s*\{[^}]*z-index:\s*var\(--mud-zindex-popover\)", css);
     }
 

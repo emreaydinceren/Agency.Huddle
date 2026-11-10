@@ -10,10 +10,10 @@ namespace Agency.Huddle.Tests.Themes.Skins;
 /// </summary>
 public sealed class SkinColoursTests
 {
-    /// <summary>The five rungs of the ink ladder.</summary>
-    private static readonly string[] Rungs = ["ink.strip", "ink.wash", "ink.rule", "ink.edge", "ink.field"];
+    /// <summary>The four rungs of the ink ladder.</summary>
+    private static readonly string[] Rungs = ["ink.strip", "ink.wash", "ink.line", "ink.field"];
 
-    /// <summary>Every shipped Theme in both modes is covered, and each resolves its five ink rungs and its grounds.</summary>
+    /// <summary>Every shipped Theme in both modes is covered, and each resolves its four ink rungs and its grounds.</summary>
     [Fact]
     public void All_CoversEightThemes_AndResolvesTheInkLadder()
     {
@@ -32,17 +32,17 @@ public sealed class SkinColoursTests
         }
     }
 
-    /// <summary>Lumen Light sets both <c>ink.rule</c> and <c>ink.edge</c> to <c>palette.dividerLight</c> (#e7e7eb), so they are one colour.</summary>
+    /// <summary>Lumen Light sets its one line rung, <c>ink.line</c>, to <c>palette.dividerLight</c> (#e7e7eb), and the region line is the same colour.</summary>
     [Fact]
-    public void LumenLight_InkRuleEqualsInkEdge()
+    public void LumenLight_InkLineIsTheDividerLight()
     {
         SkinColours lumen = SkinColours.All.Single(static colours => colours.Id == "lumen-light");
 
-        Assert.Equal("#e7e7eb", lumen.Token("ink.rule")?.Hex);
-        Assert.Equal(lumen.Token("ink.edge"), lumen.Token("ink.rule"));
+        Assert.Equal("#e7e7eb", lumen.Token("ink.line")?.Hex);
+        Assert.Equal(lumen.Token("line.region"), lumen.Token("ink.line"));
         Assert.Equal("#f4f4f5", lumen.Token("ink.wash")?.Hex);
-        Assert.Equal(0.0, lumen.Difference("ink.rule", "ink.edge"));
-        Assert.True(lumen.Difference("ink.rule", "ink.field") > 2);
+        Assert.Equal(0.0, lumen.Difference("ink.line", "line.region"));
+        Assert.True(lumen.Difference("ink.line", "ink.field") > 2);
     }
 
     /// <summary>A dark skin resolves against the dark palette: its surface is #111117, not white, and the registry's raised ground is that surface.</summary>
@@ -69,16 +69,16 @@ public sealed class SkinColoursTests
     {
         SkinColours colours = Probe(
             """
-            "ink.rule": "mix(palette.textPrimary 10%, palette.surface)",
-            "ink.edge": "ref(ink.rule)",
+            "ink.line": "mix(palette.textPrimary 10%, palette.surface)",
+            "line.region": "ref(ink.line)",
             "ink.field": "rgba(0, 0, 0, .5)",
             "ink.wash": "alpha(palette.textPrimary 25%)",
             "ink.strip": "transparent",
             "scrim": "mix(#ff0000 50%, transparent)"
             """);
 
-        Assert.Equal("#e6e6e6", colours.Token("ink.rule")?.Hex);
-        Assert.Equal(colours.Token("ink.rule"), colours.Token("ink.edge"));
+        Assert.Equal("#e6e6e6", colours.Token("ink.line")?.Hex);
+        Assert.Equal(colours.Token("ink.line"), colours.Token("line.region"));
         Assert.Equal("#808080", colours.Token("ink.field")?.Hex);
         Assert.Equal("#bfbfbf", colours.Token("ink.wash")?.Hex);
         Assert.Equal("#ffffff", colours.Token("ink.strip")?.Hex);

@@ -103,8 +103,7 @@ public sealed class SkinTokensTests
 
         Add("ink.strip", InkMix(4));
         Add("ink.wash", InkMix(6));
-        Add("ink.rule", InkMix(10));
-        Add("ink.edge", InkMix(18));
+        Add("ink.line", InkMix(18));
         Add("ink.field", InkMix(30));
         Add("ground.page", Surface);
         Add("ground.sidebar", Surface);
@@ -162,7 +161,7 @@ public sealed class SkinTokensTests
         Add("send.bg", "transparent");
         Add("ring", Surface);
         Add("feed.summary.ink", "var(--mud-palette-text-primary)");
-        Add("feed.day.rule", "var(--ink-rule)");
+        Add("feed.day.rule", "var(--ink-line)");
         Add("feed.live.background", Mix("success", 6, Surface));
         Add("feed.live.line", "transparent");
         Add("feed.live.ink", Mix("success", 70, "var(--mud-palette-text-primary)"));
@@ -193,7 +192,7 @@ public sealed class SkinTokensTests
         Add("detail.accent.from", "transparent");
         Add("detail.accent.to", "transparent");
         Add("detail.head.line", "transparent");
-        Add("detail.row.line", "var(--ink-edge)");
+        Add("detail.row.line", "var(--ink-line)");
         Add("detail.section.line", "transparent");
         Add("edit.header.background", "var(--hu-ground-raised)");
         Add("edit.header.blur", "0px");

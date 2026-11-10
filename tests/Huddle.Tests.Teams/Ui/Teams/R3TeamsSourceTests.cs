@@ -32,7 +32,7 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("font-family: var(--font-mono);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("font-size: var(--mud-typography-body2-size);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("background: var(--ink-wash);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("border: 1px solid var(--ink-edge);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("border: 1px solid var(--ink-line);", persona, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>An avatar choice card has a one-pixel edge border and the chosen one is ringed in the primary colour without growing, so choosing never shifts the layout (P8).</summary>
@@ -43,7 +43,7 @@ public sealed class R3TeamsSourceTests
         string card = CssText.RuleBodyLoose(css, ".avatar-choice-card");
         string selected = CssText.RuleBodyLoose(css, ".avatar-choice-card-selected,\n.avatar-choice-card-selected:hover");
 
-        Assert.Contains("border: 1px solid var(--ink-edge);", card, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("border: 1px solid var(--ink-line);", card, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("box-shadow: inset 0 0 0 1px var(--mud-palette-primary);", selected, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.DoesNotContain("min-height", card, StringComparison.Ordinal);
         Assert.Contains("visibility: hidden;", CssText.RuleBodyLoose(css, ".avatar-editor-background-hidden"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source

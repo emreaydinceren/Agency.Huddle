@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class R3FoundationCssTests
 {
     /// <summary>
-    /// The five ladder rungs are declared in <c>app-vars.css</c> as the <c>--ink-*</c> skin tokens, each as Ink mixed
+    /// The four ladder rungs are declared in <c>app-vars.css</c> as the <c>--ink-*</c> skin tokens, each as Ink mixed
     /// into Surface at its percentage (see <c>SkinCssTests</c>).
     /// </summary>
     /// <param name="name">The custom property.</param>
@@ -19,8 +19,7 @@ public sealed class R3FoundationCssTests
     [Theory]
     [InlineData("--ink-strip", 4)]
     [InlineData("--ink-wash", 6)]
-    [InlineData("--ink-rule", 10)]
-    [InlineData("--ink-edge", 18)]
+    [InlineData("--ink-line", 18)]
     [InlineData("--ink-field", 30)]
     public void AppVars_DeclaresEachInkRung(string name, int percent)
     {
@@ -138,7 +137,7 @@ public sealed class R3FoundationCssTests
         string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--hu-line-control\);", css);
-        Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-edge\);", css);
+        Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-line\);", css);
         Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--hu-line-region\);", css);
         Assert.Matches(@"\.mud-tabs-panels \{\s*padding-top: 24px;", css);
         Assert.Matches(@"\.mud-input\.mud-input-outlined \.mud-input-outlined-border \{\s*border-color: var\(--ink-field\);", css);
