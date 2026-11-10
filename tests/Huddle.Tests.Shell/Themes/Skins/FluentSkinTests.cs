@@ -28,8 +28,7 @@ public sealed class FluentSkinTests
         Assert.Equal(ComposerStyle.Underlined, traits.Composer);
         Assert.Equal(NavStyle.Bar, traits.Nav);
         Assert.Equal(SurfaceStyle.Card, traits.Surface);
-        Assert.Equal(MarkStyle.Chip, traits.Marks);
-        Assert.Equal(ReadingStyle.Plain, traits.Reading);
+        Assert.Equal(VoiceStyle.Plain, traits.Voice);
     }
 
     /// <summary>Every token a Fluent skin sets differs from the registry default for that mode, so no line is dead weight.</summary>

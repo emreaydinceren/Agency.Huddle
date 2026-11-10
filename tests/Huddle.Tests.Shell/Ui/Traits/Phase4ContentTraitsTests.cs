@@ -6,9 +6,9 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Traits;
 
 /// <summary>
-/// Source tests for the phase 4 content trait variants: <c>status=glyph</c>, <c>send=square</c> and
-/// <c>composer=underlined</c>. They read <c>app.css</c> as text: each variant is scoped to the marker attribute the layout
-/// renders, reads skin tokens or palette variables, and declares no colour literal.
+/// Source tests for the phase 4 content trait variants <c>send=square</c> and <c>composer=underlined</c>, and for the Task state and
+/// priority look that <c>status=glyph</c> made the default. They read <c>app.css</c> as text: each variant is scoped to the marker
+/// attribute the layout renders, reads skin tokens or palette variables, and declares no colour literal.
 /// </summary>
 public sealed partial class Phase4ContentTraitsTests
 {
@@ -16,10 +16,9 @@ public sealed partial class Phase4ContentTraitsTests
 
     private static readonly string Css = CssText.StripComments(RawCss);
 
-    /// <summary>The three enums with their trait attribute names and the value each adds.</summary>
+    /// <summary>The two enums with their trait attribute names and the value each adds.</summary>
     public static TheoryData<string, string> NewValues() => new()
     {
-        { "status", "glyph" },
         { "send", "square" },
         { "composer", "underlined" },
     };
@@ -33,7 +32,6 @@ public sealed partial class Phase4ContentTraitsTests
     {
         Type enumType = trait switch
         {
-            "status" => typeof(StatusStyle),
             "send" => typeof(SendStyle),
             _ => typeof(ComposerStyle),
         };
@@ -44,36 +42,41 @@ public sealed partial class Phase4ContentTraitsTests
     }
 
     /// <summary>
-    /// <c>status=glyph</c> turns the Task state and priority chips into a transparent row: a 10px ring glyph before a
-    /// 12px label in the subtle ink, with no state icon and no chip fill.
+    /// The default Task state and priority look (the old <c>status=glyph</c>, now every Theme's except Nordic's <c>status=pill</c>) is a
+    /// transparent row: a 10px ring glyph before a label in the subtle ink, with no state icon and no chip fill. The fill and the ink are
+    /// guarded to everything but pill, so Nordic keeps the tinted chip; the geometry is plain.
     /// </summary>
     [Fact]
-    public void StatusGlyph_PinsTransparentRowAndRing()
+    public void StatusDefault_PinsTransparentRowAndRing()
     {
-        string row = Body("status", "glyph", ".mud-chip.task-status-chip");
-        string priorityRow = Body("status", "glyph", ".mud-chip.task-priority-chip");
-        string ring = Body("status", "glyph", ".mud-chip.task-status-chip::before");
-        string icon = Body("status", "glyph", ".mud-chip.task-status-chip .mud-chip-icon");
+        string row = Plain(".mud-chip.status-chip.task-status-chip");
+        string priorityRow = Plain(".mud-chip.status-chip.task-priority-chip");
+        string ink = Guarded(".mud-chip.task-status-chip");
+        string priorityInk = Guarded(".mud-chip.task-priority-chip");
+        string ring = Plain(".mud-chip.task-status-chip::before");
+        string icon = Plain(".mud-chip.status-chip.task-status-chip .mud-chip-icon");
 
-        Declares(row, "background: transparent;", "color: var(--hu-text-subtle);");
-        Declares(priorityRow, "background: transparent;");
+        Declares(row, "height: auto;", "padding: 0;", "border-radius: 0;");
+        Declares(priorityRow, "height: auto;", "padding: 0;");
+        Declares(ink, "background: transparent;", "color: var(--hu-text-subtle);");
+        Declares(priorityInk, "background: transparent;");
         Declares(ring, "width: 10px;", "height: 10px;", "border-radius: 50%;");
         Declares(icon, "display: none;");
     }
 
     /// <summary>
-    /// <c>status=glyph</c> fills the ring by state: backlog dashed in the disabled ink, to do an empty ring in the subtle
+    /// The default look fills the ring by state: backlog dashed in the disabled ink, to do an empty ring in the subtle
     /// ink, in progress half, review three quarters, done solid, and the closing states solid in the error hue.
     /// </summary>
     [Fact]
-    public void StatusGlyph_PinsFillsAndHuesPerState()
+    public void StatusDefault_PinsFillsAndHuesPerState()
     {
-        string backlog = Body("status", "glyph", ".mud-chip.status-chip-state-backlog::before");
-        string todo = Body("status", "glyph", ".mud-chip.status-chip-state-todo::before");
-        string progress = Body("status", "glyph", ".mud-chip.status-chip-state-inprogress::before");
-        string review = Body("status", "glyph", ".mud-chip.status-chip-state-review::before");
-        string done = Body("status", "glyph", ".mud-chip.status-chip-state-done::before");
-        string cancelled = Body("status", "glyph", ".mud-chip.status-chip-state-cancelled::before");
+        string backlog = Plain(".mud-chip.status-chip-state-backlog::before");
+        string todo = Plain(".mud-chip.status-chip-state-todo::before");
+        string progress = Plain(".mud-chip.status-chip-state-inprogress::before");
+        string review = Plain(".mud-chip.status-chip-state-review::before");
+        string done = Plain(".mud-chip.status-chip-state-done::before");
+        string cancelled = Plain(".mud-chip.status-chip-state-cancelled::before");
 
         Declares(backlog, "border-style: dashed;", "var(--mud-palette-text-disabled)");
         Declares(todo, "var(--hu-text-subtle)");
@@ -84,14 +87,14 @@ public sealed partial class Phase4ContentTraitsTests
     }
 
     /// <summary>
-    /// <c>status=glyph</c> keeps the app's one priority icon set (#470): the priority chip's icon is not hidden and no rule draws bars or
+    /// The default look keeps the app's one priority icon set (#470): the priority chip's icon is not hidden and no rule draws bars or
     /// a square in its place, so every Theme shows the same marks. Urgent alone takes the error hue.
     /// </summary>
     [Fact]
-    public void StatusGlyph_KeepsThePriorityIconSet()
+    public void StatusDefault_KeepsThePriorityIconSet()
     {
-        string section = ContentTraitRules();
-        string urgent = Body("status", "glyph", ".mud-chip.priority-urgent");
+        string section = DefaultStatusRules();
+        string urgent = Guarded(".mud-chip.priority-urgent");
 
         Assert.DoesNotContain("task-priority-chip .mud-chip-icon", section, StringComparison.Ordinal);
         Assert.DoesNotContain("task-priority-chip::before", section, StringComparison.Ordinal);
@@ -99,14 +102,46 @@ public sealed partial class Phase4ContentTraitsTests
         Declares(urgent, "var(--mud-palette-error)");
     }
 
-    /// <summary>Tags keep today's chip under <c>status=glyph</c>: no glyph rule names a tag selector.</summary>
+    /// <summary>Tags keep today's chip under the default look: no rule in it names a tag selector.</summary>
     [Fact]
-    public void StatusGlyph_LeavesTagsAlone()
+    public void StatusDefault_LeavesTagsAlone()
     {
-        string section = ContentTraitRules();
+        string section = DefaultStatusRules();
 
         Assert.DoesNotContain("tag-chip", section, StringComparison.Ordinal);
         Assert.DoesNotContain("task-tag", section, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <c>status=glyph</c> is gone as a value and as a scope: <see cref="StatusStyle"/> holds the glyph default and the pill override
+    /// only, and no rule is scoped to <c>[data-hu-status="glyph"]</c> or <c>chip</c>.
+    /// </summary>
+    [Fact]
+    public void StatusDefault_IsTheGlyphAndHasNoGlyphOrChipScope()
+    {
+        Assert.Equal(["Glyph", "Pill"], Enum.GetNames<StatusStyle>());
+        Assert.Equal(StatusStyle.Glyph, new SkinTraits().Status);
+        Assert.DoesNotContain("data-hu-status=\"glyph\"", Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-hu-status=\"chip\"", Css, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Nordic's <c>status=pill</c> keeps the tinted chip's fill and ink: every rule of the default look that clears the fill is guarded
+    /// with <c>:not(:has([data-hu-status="pill"]))</c>, so pill never inherits it.
+    /// </summary>
+    [Fact]
+    public void StatusDefault_ClearsTheFillOnlyOutsidePill()
+    {
+        foreach (Match rule in Rule().Matches(DefaultStatusRules()))
+        {
+            if (rule.Groups["body"].Value.Contains("background: transparent;", StringComparison.Ordinal)) // contains-ok: CSS declaration text
+            {
+                foreach (string selector in rule.Groups["sel"].Value.Split(','))
+                {
+                    Assert.StartsWith(":root:not(:has([data-hu-status=\"pill\"]))", Whitespace().Replace(selector, " ").Trim(), StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -200,9 +235,40 @@ public sealed partial class Phase4ContentTraitsTests
     /// <summary>The media blocks that hold a <c>send=square</c> rule.</summary>
     private static string MediaText() => CssText.ScopedMediaBlocks(RawCss, "[data-hu-send=\"square\"]");
 
-    /// <summary>The comment-stripped rules scoped to <c>status=glyph</c>, <c>send=square</c> or <c>composer=underlined</c>, wherever they sit.</summary>
+    /// <summary>The comment-stripped rules scoped to <c>send=square</c> or <c>composer=underlined</c>, wherever they sit, then the default status look.</summary>
     private static string ContentTraitRules() =>
-        CssText.StripComments(CssText.ScopedRules(RawCss, "[data-hu-status=\"glyph\"]", "[data-hu-send=\"square\"]", "[data-hu-composer=\"underlined\"]"));
+        CssText.StripComments(CssText.ScopedRules(RawCss, "[data-hu-send=\"square\"]", "[data-hu-composer=\"underlined\"]")) + DefaultStatusRules();
+
+    /// <summary>The comment-stripped default Task state and priority look: from its header up to the Traits banner after it.</summary>
+    private static string DefaultStatusRules() =>
+        CssText.StripComments(CssText.Section(RawCss, "Task state and priority: a glyph then a small label", "Traits: the variants a Theme chooses for this area"));
+
+    /// <summary>The merged declaration text of every plain rule whose selector list holds exactly <paramref name="selector"/>.</summary>
+    /// <param name="selector">The whole selector, with no trait scope.</param>
+    private static string Plain(string selector) => Merged(selector);
+
+    /// <summary>The merged declarations of the default look's rules for <paramref name="selector"/>, scoped to everything but pill.</summary>
+    /// <param name="selector">The selector after the scope.</param>
+    private static string Guarded(string selector) =>
+        Merged($":root:not(:has([data-hu-status=\"pill\"])) {selector}");
+
+    private static string Merged(string wanted)
+    {
+        StringBuilder merged = new();
+        foreach (Match rule in Rule().Matches(DefaultStatusRules()))
+        {
+            IEnumerable<string> selectors = rule.Groups["sel"].Value
+                .Split(',')
+                .Select(static part => Whitespace().Replace(part, " ").Trim());
+            if (selectors.Contains(wanted, StringComparer.Ordinal))
+            {
+                merged.Append(Whitespace().Replace(rule.Groups["body"].Value, " ")).Append(' ');
+            }
+        }
+
+        Assert.True(merged.Length > 0, $"No default-look rule for '{wanted}'.");
+        return merged.ToString();
+    }
 
     [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex Rule();

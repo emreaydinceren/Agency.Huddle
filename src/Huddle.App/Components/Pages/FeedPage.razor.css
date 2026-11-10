@@ -51,10 +51,38 @@
     font-size: inherit;
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* Nordic's paper frame is dashed. */
 :root:has([data-hu-surface="paper"]) .feed-readonly {
     border-style: dashed;
     border-radius: var(--mud-default-borderradius);
+}
+
+/* Nordic draws a count as a small rounded pill, tinted for the selected segment and for Needs you. */
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control {
+    border-radius: calc(var(--mud-default-borderradius) * 1.25);
+    border: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 999px;
+    background: var(--hu-ground-rail);
+    font-weight: 600;
+    line-height: 18px;
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
+    background: var(--hu-tone-primary-soft);
+    color: var(--hu-tone-primary-ink);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count-needsyou {
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
 }
 
 /* Nine segments are wider than a narrow column. MudToggleGroup writes minmax(0, 1fr) columns inline, so a control capped at the
@@ -93,33 +121,6 @@
 
 .feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
     color: var(--hu-control-selected-ink);
-}
-
-/* Nordic draws a count as a small rounded pill, tinted for the selected segment and for Needs you. */
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control {
-    border-radius: calc(var(--mud-default-borderradius) * 1.25);
-    border: 1px solid var(--hu-line-region);
-}
-
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count {
-    display: inline-block;
-    min-width: 18px;
-    padding: 0 4px;
-    margin-left: 4px;
-    border-radius: 999px;
-    background: var(--hu-ground-rail);
-    font-weight: 600;
-    line-height: 18px;
-}
-
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
-    background: var(--hu-tone-primary-soft);
-    color: var(--hu-tone-primary-ink);
-}
-
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count-needsyou {
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
 }
 
 .feed-filter-bar {
@@ -170,7 +171,8 @@
     display: none;
 }
 
-:root:has([data-hu-reading="book"]) .feed-end {
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
+:root:has([data-hu-voice="book"]) .feed-end {
     display: block;
     margin: 32px auto 0;
     max-width: 52ch;

@@ -449,12 +449,15 @@
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- nav=tile: Lumen, Nordic ----------------------------------------------------------------- */
+
 :root:has([data-hu-nav="tile"]) .sidebar-row-meta {
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* -- surface=paper: sidebar, the "needs you" count and card (7.3) ------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .needs-you-count {
     min-width: 18px;
@@ -494,7 +497,7 @@
 
 :root:has([data-hu-surface="paper"]) .search-shortcut-hint {
     font-family: var(--font-mono);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     padding: 0 4px;
     border: 1px solid var(--hu-line-control);
     border-bottom-width: 2px;
@@ -520,6 +523,7 @@
     color: var(--mud-palette-text-primary);
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 :root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined {
     height: 30px;
     background: var(--hu-ground-sunk);
@@ -532,7 +536,7 @@
 
 :root:has([data-hu-surface="hairline"]) .search-shortcut-hint {
     font-family: var(--font-mono);
-    font-size: var(--mud-typography-overline-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     padding: 0 4px;
     border: 1px solid var(--hu-line-region);

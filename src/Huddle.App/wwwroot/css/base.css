@@ -658,6 +658,8 @@ a.team-ref,
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
+
 /* -- surface=paper: typography, font smoothing (6) -------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) body {
     -webkit-font-smoothing: antialiased;
@@ -815,6 +817,7 @@ a.team-ref,
     color: var(--mud-palette-primary);
 }
 
+/* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 /* -- surface=hairline: notices keep the 3px bar as an inset shadow so it follows the corner (15.4) ------------------------ */
 :root:has([data-hu-surface="hairline"]) .budget-prompt,
 :root:has([data-hu-surface="hairline"]) .member-health-alert {

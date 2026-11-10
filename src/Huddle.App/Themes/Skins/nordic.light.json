@@ -139,8 +139,7 @@
     "composer": "card",
     "nav": "tile",
     "surface": "paper",
-    "marks": "chip",
-    "reading": "book",
+    "voice": "book",
     "ids": "mono"
   }
 }

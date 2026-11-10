@@ -65,6 +65,7 @@
     font-weight: var(--hu-feed-unseen-weight);
 }
 
+/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* Nordic: an item that waits on you has a cloudberry edge; a handled one is dimmed and flat. */
 :root:has([data-hu-surface="paper"]) .feed-card-waiting {
     box-shadow: var(--hu-shadow-card), inset 3px 0 0 var(--hu-needs);
@@ -82,6 +83,11 @@
 
 :root:has([data-hu-surface="paper"]) .feed-card-resolved .feed-card-summary {
     color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="paper"]) .feed-card-edge {
+    border-top-style: dashed;
+    border-color: var(--hu-line-control);
 }
 
 .feed-card-bar {
@@ -203,15 +209,23 @@
     color: var(--mud-palette-text-primary);
 }
 
+/* ---- voice=book: Nordic ---------------------------------------------------------------------- */
 /* Nordic Paper reads in serif: the summary in Literata, the reference chips in the UI face. */
-:root:has([data-hu-reading="book"]) .feed-card-summary {
+:root:has([data-hu-voice="book"]) .feed-card-summary {
     font-family: var(--font-read);
     font-size: var(--mud-typography-body1-size);
     line-height: 1.55;
 }
 
-:root:has([data-hu-reading="book"]) .feed-card-summary ::deep .feed-chip {
+:root:has([data-hu-voice="book"]) .feed-card-summary ::deep .feed-chip {
     font-family: var(--mud-typography-default-family);
+}
+
+:root:has([data-hu-voice="book"]) .feed-card ::deep .feed-preview-title {
+    font-family: var(--font-read);
+    font-size: var(--mud-typography-h6-size);
+    font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 .feed-card-more {
@@ -361,18 +375,6 @@
     margin: 0 -12px 12px -16px;
     border: 0;
     border-top: 1px solid var(--ink-edge);
-}
-
-:root:has([data-hu-surface="paper"]) .feed-card-edge {
-    border-top-style: dashed;
-    border-color: var(--hu-line-control);
-}
-
-:root:has([data-hu-reading="book"]) .feed-card ::deep .feed-preview-title {
-    font-family: var(--font-read);
-    font-size: var(--mud-typography-h6-size);
-    font-weight: 600;
-    letter-spacing: -0.01em;
 }
 
 .feed-card-caption {

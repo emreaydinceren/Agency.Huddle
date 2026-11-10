@@ -152,8 +152,7 @@
     "composer": "box",
     "nav": "tint",
     "surface": "flat",
-    "marks": "chip",
-    "reading": "plain",
+    "voice": "plain",
     "ids": "plain"
   }
 }
