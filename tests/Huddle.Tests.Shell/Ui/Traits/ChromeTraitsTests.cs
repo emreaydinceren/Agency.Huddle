@@ -6,7 +6,7 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Traits;
 
 /// <summary>
-/// Source tests for the chrome trait variants that <c>app.css</c> ships at its end: <c>status=pill</c>,
+/// Source tests for the chrome trait variants that the stylesheets ship beside the feature each one styles: <c>status=pill</c>,
 /// <c>labels=upper</c>, <c>nav=tile</c>, <c>surface=paper</c> and <c>reading=book</c>. They read the stylesheet as text:
 /// each variant is scoped to the marker attribute the layout renders, reads skin tokens (never a pack token) where the
 /// registry has one, and declares no colour literal.
@@ -16,6 +16,11 @@ public sealed partial class ChromeTraitsTests
     private static readonly string Css = CssText.StripComments(CssText.AppCss(CssNewlines.AsIs));
 
     private static readonly string RawCss = CssText.AppCss(CssNewlines.AsIs);
+
+    private static readonly string[] ChromeScopes =
+    [
+        "[data-hu-status=", "[data-hu-labels=", "[data-hu-nav=", "[data-hu-surface=", "[data-hu-reading=",
+    ];
 
     /// <summary>Every non-default value of the five chrome trait enums, with the trait attribute it renders as.</summary>
     public static TheoryData<string, string> NonDefaultValues()
@@ -46,31 +51,16 @@ public sealed partial class ChromeTraitsTests
     public void Traits_NoPackTokens() =>
         Assert.DoesNotContain("--n-", Css, StringComparison.Ordinal);
 
-    /// <summary>The four chrome sections close the stylesheet in the order the plan names, after every other rule.</summary>
-    [Fact]
-    public void Sections_AreLastAndInOrder()
-    {
-        int chrome = RawCss.IndexOf("/* ---- Traits: chrome", StringComparison.Ordinal);
-        int status = RawCss.IndexOf("/* ---- Traits: status", StringComparison.Ordinal);
-        int surface = RawCss.IndexOf("/* ---- Traits: surface", StringComparison.Ordinal);
-        int reading = RawCss.IndexOf("/* ---- Traits: reading", StringComparison.Ordinal);
-
-        Assert.True(chrome > 0, "Traits: chrome section is missing.");
-        Assert.True(chrome < status && status < surface && surface < reading, "Sections are out of order.");
-        Assert.DoesNotContain("/* ---- ", RawCss[(reading + 5)..], StringComparison.Ordinal);
-    }
-
     /// <summary>A chrome trait rule adds no <c>!important</c>: the scope's specificity is what wins over the base rule.</summary>
     [Fact]
     public void Traits_AddNoImportant() =>
-        Assert.DoesNotContain("!important", CssText.StripComments(CssText.Section(RawCss, "Traits: chrome")), StringComparison.Ordinal);
+        Assert.DoesNotContain("!important", CssText.ScopedRules(RawCss, ChromeScopes), StringComparison.Ordinal);
 
     /// <summary>The surface section carries a sub-header per Nordic section it lifts, so a later Theme can peel parts off.</summary>
     [Fact]
     public void SurfacePaper_HasSubHeaders()
     {
-        string surface = RawCss[RawCss.IndexOf("/* ---- Traits: surface", StringComparison.Ordinal)..];
-        int subHeaders = SubHeader().Count(surface);
+        int subHeaders = SubHeader().Count(RawCss);
 
         Assert.True(subHeaders >= 20, $"Expected a sub-header per source section, found {subHeaders}.");
     }
@@ -230,6 +220,6 @@ public sealed partial class ChromeTraitsTests
     [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
     private static partial Regex Whitespace();
 
-    [GeneratedRegex(@"^/\* -- ", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^/\* -- surface=", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex SubHeader();
 }

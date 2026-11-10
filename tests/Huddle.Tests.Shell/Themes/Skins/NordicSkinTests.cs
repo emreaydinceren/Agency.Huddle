@@ -140,7 +140,7 @@ public sealed class NordicSkinTests
         string count = CssText.RuleBody(css, paper + ".tasks-count-need-you:not(.is-zero)");
         Assert.True(count.Contains("color: var(--hu-tone-warning-ink);", StringComparison.Ordinal) && count.Contains("font-weight: 600;", StringComparison.Ordinal));
         // 6: the clay priority recipe never applied under the pack and is not carried over.
-        Assert.DoesNotContain("priority-high,", css[css.IndexOf("Traits: status", StringComparison.Ordinal)..css.IndexOf("Traits: surface", StringComparison.Ordinal)], StringComparison.Ordinal);
+        Assert.DoesNotContain("priority-high,", CssText.ScopedRules(css, "[data-hu-status=\"pill\"]"), StringComparison.Ordinal);
         // 8: the Library split's panes read the page and sunk grounds.
         Assert.True(CssText.RuleBody(css, ".library-explorer-split > .child-panel").Contains("var(--hu-ground-page)", StringComparison.Ordinal));
         Assert.True(CssText.RuleBody(css, ".library-explorer-split > .child-panel:first-child").Contains("var(--hu-ground-sunk)", StringComparison.Ordinal));

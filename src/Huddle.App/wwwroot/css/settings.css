@@ -1,6 +1,8 @@
+/* ==== Settings: the page shell, the Appearance, Prompts and Spending panels and their Theme variants ==== */
+
 /* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
-/* The Appearance tab's theme picker (audit B9b-d). The list grows to its content (no inner scrollbar, no sticky band),
+/* The Appearance tab's theme picker. The list grows to its content (no inner scrollbar, no sticky band),
    so the page scrolls and the Human sees every Theme. The selected row wears the global Selected shape. A row carries
    a swatch of the Theme's Ground, Ink and Accent. */
 .theme-picker {
@@ -99,7 +101,7 @@
     justify-content: flex-end;
 }
 
-/* Settings panel header: the intro and the "stored at" line (UX-012, UX-R17). */
+/* Settings panel header: the intro and the "stored at" line. */
 .settings-intro,
 .settings-stored-at {
     margin: 0 0 8px 0;
@@ -116,14 +118,13 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* The open section's title over its intro: every Theme's mockup opens a Settings section with one (side-by-side audit,
-   2026-10-30, LL-S01). */
+/* The open section's title over its intro: every Theme's mockup opens a Settings section with one. */
 .settings-section-title.mud-typography {
     margin: 0 0 4px 0;
     font-weight: 600;
 }
 
-/* A sub-section of a tab sits one level under the tab title (#473): 14px at 600, the Prompts groups too, whose shared
+/* A sub-section of a tab sits one level under the tab title: 14px at 600, the Prompts groups too, whose shared
    heading rule would otherwise draw them at the title's 16px. */
 .settings-section .prompts-group-heading {
     font-size: var(--mud-typography-subtitle1-size);
@@ -134,13 +135,13 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). The cap is the
-   200px section menu, its 24px gap and the 960px reading column the panels had before the menu moved left. */
+/* Settings limits its content to a readable width but starts at the page's left edge. The cap is the
+   200px section menu, its 24px gap and a 960px reading column. */
 .mud-container.settings-page {
     max-width: 1184px;
 }
 
-/* Two columns: the section menu (G2) and the active section (G3). minmax(0, 1fr) lets a wide table scroll inside
+/* Two columns: the section menu and the active section. minmax(0, 1fr) lets a wide table scroll inside
    its panel instead of pushing the page sideways. */
 .settings-layout {
     display: grid;
@@ -189,7 +190,7 @@
 }
 
 /* A Library Root's last cell keeps "Read only" beside its Hide switch, on one line, so every row is one height and the
-   switches share a column at the cell's right edge (#480). */
+   switches share a column at the cell's right edge. */
 .library-panel-roots-table td:last-child {
     white-space: nowrap;
     text-align: end;
@@ -205,7 +206,7 @@
     margin-inline-end: 0;
 }
 
-/* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
+/* The Library panel's rows: the add row is one 28px height, fields and button aligned. */
 .library-panel-add-row {
     align-items: center;
 }
@@ -224,12 +225,12 @@
     height: 28px;
 }
 
-/* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
+/* The Skills grid: the name leads and the description under it is meta text, a caption in the name's cell. */
 .skills-grid .skills-name {
     font-weight: 500;
 }
 
-/* The grid fits its panel (#474): fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
+/* The grid fits its panel: fixed columns, so Name takes what State, Source and Used by leave and nothing scrolls
    sideways at the standard desktop width; the description stops at two lines (its full text is the cell's tooltip). */
 .skills-grid table {
     width: 100%;
@@ -275,7 +276,7 @@
     }
 }
 
-/* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */
+/* The Prompts panel's Save and Reset all, kept in reach of a long form. */
 .settings-prompts-actions {
     position: sticky;
     bottom: 0;
@@ -284,7 +285,7 @@
     background: var(--hu-ground-page);
 }
 
-/* The Spending panel (issue 356): a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
+/* The Spending panel: a name on the left, its amounts (one per currency) on the right; wraps on a phone. */
 .spending-row,
 .spending-total {
     display: flex;
@@ -324,3 +325,74 @@
     font-size: var(--mud-typography-caption-size);
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- nav=tile: the Settings menu, the same quiet rows and lifted current tile ---------------------------------- */
+:root:has([data-hu-nav="tile"]) .settings-nav .mud-nav-link {
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-nav="tile"]) .settings-nav .mud-nav-link:hover {
+    background: var(--hu-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-nav="tile"]) .settings-nav .settings-nav-item-active .mud-nav-link {
+    background: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+    color: var(--hu-current-foreground);
+    font-weight: var(--hu-current-weight);
+}
+
+:root:has([data-hu-nav="tile"]) .settings-nav .settings-nav-item-active .mud-nav-link:hover,
+:root:has([data-hu-nav="tile"]) .settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background: var(--hu-current-background-hover);
+}
+
+:root:has([data-hu-nav="tile"]) .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--hu-current-icon);
+}
+
+/* -- surface=paper: Settings, sections, prompts and the theme picker (14) -------------------------------------- */
+:root:has([data-hu-surface="paper"]) .settings-section + .settings-section {
+    border-top: 1px solid var(--hu-line-region);
+    padding-top: 24px;
+    margin-top: 24px;
+}
+
+:root:has([data-hu-surface="paper"]) .settings-stored-at code {
+    font-family: var(--font-mono);
+}
+
+:root:has([data-hu-surface="paper"]) .prompts-field + .prompts-field {
+    border-top: 1px dashed var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="paper"]) .theme-picker .mud-list-item.mud-selected-item {
+    background: var(--hu-tone-primary-tint);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+}
+
+/* Lumen's Settings intro is a quiet 13px line under the section title, and its menu icons are 16px. */
+:root:has([data-hu-surface="hairline"]) .settings-intro {
+    max-width: 60ch;
+    font-size: var(--mud-typography-body2-size);
+}
+
+:root:has([data-hu-surface="hairline"]) .settings-nav .mud-nav-link .mud-nav-link-icon {
+    width: 16px;
+    height: 16px;
+}
+
+:root:has([data-hu-surface="card"]) .settings-section {
+    padding: 16px 24px 24px;
+}
+
+/* Settings › Skills: a Pack card's title is the card's name, at weight 600 (Skill Packs spec 6.9.5, G4c). */
+.pack-card-title {
+    font-weight: 600;
+}

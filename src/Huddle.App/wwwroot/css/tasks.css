@@ -1,0 +1,1714 @@
+/* ==== Tasks: the read view, the Board, the List, the toolbar and chips, with the Tasks Theme variants ==== */
+
+/* ---- Task read view and Task edit page: docs/Huddle.TaskReadView-Specifications.md ---- */
+
+/* The read view is a text body in the Right sidebar; its width, not the window's, decides one pair per row or two. */
+.task-read-view {
+    container-type: inline-size;
+    container-name: task-read-view;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* The Closed chip at the left, Edit, Copy id and the menu at the right, 32px high. */
+.task-read-view-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.task-read-view-actions-spacer {
+    flex: 1 1 auto;
+}
+
+/* A label and a value per row, 28px high with an Edge hairline between rows. */
+.task-read-view-props {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 24px;
+    margin: 0;
+}
+
+.task-read-view-prop {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    min-height: 28px;
+    border-bottom: 1px solid var(--hu-detail-row-line);
+    overflow-wrap: anywhere;
+}
+
+.task-read-view-prop dt {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-prop dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+    margin: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-read-view-empty {
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.8;
+}
+
+.task-read-view-blocker {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.task-read-view-blocker-status {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-read-view-prop.task-overdue dd {
+    color: var(--mud-palette-error);
+}
+
+.task-read-view-description-empty {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-human-gate-readonly {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+@container task-read-view (min-width: 440px) {
+    .task-read-view-props {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .task-read-view-prop.is-wide {
+        grid-column: 1 / -1;
+    }
+}
+
+/* The page header holds the page's name and actions; it sticks to the top of the page container so Cancel and Save stay in reach. */
+.task-edit-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -16px -16px 16px;
+    padding: 16px 16px 0;
+    background-color: var(--hu-edit-header-background);
+    backdrop-filter: blur(var(--hu-edit-header-blur));
+}
+
+.task-edit-page-header .page-header {
+    margin-bottom: 0;
+}
+
+/* A title that wraps (narrow window, right drawer open) must not recentre the buttons.
+   The row aligns to its top and both sides keep a 32px first line, so Save stays put. */
+.task-edit-page-header .page-header-row {
+    align-items: flex-start;
+}
+
+.task-edit-page-header .page-header-title,
+.task-edit-page-header .page-header-actions {
+    min-height: 32px;
+}
+
+.task-edit-page-eyebrow {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* The two buttons stay together when the header's actions wrap below the title. */
+.task-edit-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.task-edit-page {
+    container-type: inline-size;
+    container-name: task-edit-page;
+}
+
+@container task-edit-page (max-width: 600px) {
+    .task-edit-page-header .page-header-row {
+        flex-wrap: wrap;
+    }
+
+    /* Wrapped, the buttons sit on the first line, so a title of any length wraps below them and Save keeps its place. */
+    .task-edit-page-header .page-header-actions {
+        order: -1;
+        flex-basis: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* The editor is two columns only when the editor itself is 1024px wide, never by the window's width, which ignores the sidebars and a second
+   Tab group. TaskDetail's own grid breaks at MudBlazor's window breakpoint, so inside the page it is one column until this container is wide enough. */
+.task-edit-page-editor {
+    container-type: inline-size;
+    container-name: task-edit-editor;
+}
+
+.task-edit-page-editor .task-detail-grid > .task-detail-col-title,
+.task-edit-page-editor .task-detail-grid > .task-detail-col-fields,
+.task-edit-page-editor .task-detail-grid > .task-detail-col-side,
+.task-edit-page-editor .task-detail-grid > .task-detail-col-strip,
+.task-edit-page-editor .task-detail-grid > .task-detail-col-log {
+    flex-basis: 100%;
+    max-width: 100%;
+}
+
+/* One column: the strip, the Description right under it, then the fields, and the History closes the column. */
+.task-edit-page-editor .task-detail-grid > .task-detail-col-strip {
+    order: 1;
+}
+
+.task-edit-page-editor .task-detail-grid > .task-detail-col-side {
+    order: 2;
+}
+
+.task-edit-page-editor .task-detail-grid > .task-detail-col-fields {
+    order: 3;
+}
+
+.task-edit-page-editor .task-detail-grid > .task-detail-col-log {
+    order: 4;
+}
+
+/* Two columns: the title and the Description stack on the left, the grouped fields run down the right. The DOM order stays title, fields,
+   Description, which is the one-column order, so a single column is unchanged. */
+@container task-edit-editor (min-width: 1024px) {
+    .task-edit-page-editor .task-detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        align-items: start;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-title {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        max-width: none;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-strip {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        max-width: none;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-side {
+        grid-column: 1;
+        grid-row: 3;
+        max-width: none;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-log {
+        grid-column: 1;
+        grid-row: 4;
+        max-width: none;
+    }
+
+    .task-edit-page-editor .task-detail-grid > .task-detail-col-fields {
+        grid-column: 2;
+        grid-row: 3 / span 3;
+        max-width: none;
+    }
+}
+
+/* Wherever else the form meets MudBlazor's md breakpoint (960px) it lays out the same way. */
+@media (min-width: 960px) {
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        align-items: start;
+    }
+
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) > .task-detail-col-title {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        max-width: none;
+    }
+
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) > .task-detail-col-strip {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        max-width: none;
+    }
+
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) > .task-detail-col-side {
+        grid-column: 1;
+        grid-row: 3;
+        max-width: none;
+    }
+
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) > .task-detail-col-log {
+        grid-column: 1;
+        grid-row: 4;
+        max-width: none;
+    }
+
+    .task-detail-grid:not(.task-edit-page-editor .task-detail-grid) > .task-detail-col-fields {
+        grid-column: 2;
+        grid-row: 3 / span 3;
+        max-width: none;
+    }
+}
+
+/* The Markdown toolbar sits between the Description's label line and its field. */
+.task-detail-description-editor .markdown-toolbar {
+    flex: 1 1 auto;
+    gap: 2px;
+    padding: 0;
+    border-bottom: 0;
+}
+
+/* The Right sidebar toggle's one faint aura pulse, when a panel becomes available while the sidebar is closed (RightSidebarToggle.razor).
+   A ring in the Primary colour grows from the button and fades, once, on a pseudo-element that takes no clicks. The span is re-created for each
+   pulse, which is what restarts it. The ring fades by opacity, not by a tint over transparent (the selected-tint rule). */
+.right-sidebar-toggle-aura {
+    position: relative;
+    display: inline-flex;
+    border-radius: 50%;
+}
+
+.right-sidebar-toggle-aura.is-pulsing::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: right-sidebar-aura 1600ms ease-out 1;
+}
+
+@keyframes right-sidebar-aura {
+    0% {
+        opacity: 0.38;
+        box-shadow: 0 0 0 0 var(--mud-palette-primary);
+    }
+
+    100% {
+        opacity: 0;
+        box-shadow: 0 0 0 12px var(--mud-palette-primary);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .right-sidebar-toggle-aura.is-pulsing::after {
+        animation: none;
+    }
+}
+
+/* ---- Tasks ------------------------------------------------------------------------------------ */
+
+/* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
+   The Board is a header row (.task-board-columns) followed by one horizontal band per lane
+   (.task-board-lane). A lane is flex-column, not grid: its label (rendered only when the View
+   groups) must span the full width above its cards, not be squeezed into a column's grid track the
+   way a card would be. The actual row of columns - both the header's and every
+   lane's - is CSS grid (a column is 260-300px, and an empty terminal column is a 40px rail, so the
+   page leaves free space on the right instead of stretching them): .task-board-columns and
+   .task-board-lane-columns share the exact same grid-template-columns (set inline by TaskBoard), so their tracks land
+   at identical x offsets and a header cell sits directly above the cards it describes. The board
+   itself scrolls inside the pane in both directions, and the column header row sticks to the top while
+   the lanes scroll. On the Tasks page the board takes exactly what the toolbar leaves of the pane, so .tab-body never
+   scrolls as well and the board's horizontal scrollbar sits at the pane's bottom edge. A viewport-unit cap guessed the
+   toolbar's height; when the toolbar was taller, the pane scrolled too and hid that scrollbar below its fold. Elsewhere
+   (the Team page's Tasks tab) the cap still bounds the board. */
+.task-board {
+    overflow: auto;
+    max-height: calc(100vh - 12rem);
+    background: var(--hu-board-background);
+}
+
+.tab-body > .tasks-page:has(> .task-board) {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tasks-page:has(> .task-board) > * {
+    flex: none;
+}
+
+.tasks-page > .task-board {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+}
+
+.task-board-columns {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--hu-ground-page);
+}
+
+.task-board-columns,
+.task-board-lane-columns {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 300px);
+    justify-content: start;
+    column-gap: 8px;
+}
+
+.task-board-column-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 8px 8px 0;
+}
+
+/* An empty terminal column's header: the 40px rail's top, the dot, the count and the menu stacked and centred. The name is drawn
+   vertically in the lane below (.task-board-rail-label); the header's own copy is visually hidden. */
+.task-board-column-header.task-board-column-header-rail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+/* The state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
+   Same colour per state as .task-ref-status-* and TaskColors.For; Backlog (Default) takes the secondary text colour so the dot reads. */
+.task-state-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-text-secondary);
+}
+
+/* Backlog and To Do are both Default, so Backlog's dot is a hollow dashed ring and To Do's stays solid. */
+.task-state-dot-backlog {
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px dashed var(--mud-palette-text-secondary);
+}
+
+.task-state-dot-info { background: var(--mud-palette-info); }
+.task-state-dot-warning { background: var(--mud-palette-warning); }
+.task-state-dot-secondary { background: var(--mud-palette-secondary); }
+.task-state-dot-tertiary { background: var(--mud-palette-tertiary); }
+.task-state-dot-success { background: var(--mud-palette-success); }
+.task-state-dot-error { background: var(--mud-palette-error); }
+
+/* The column name is 13px/600 and the count after it 12px secondary; the dot, name and count sit on one line. */
+.task-board-column-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.task-board-column-count {
+    flex: 0 0 auto;
+    margin-inline-end: auto;
+    padding: 0 8px;
+    background: var(--hu-board-count-background);
+    border: 1px solid var(--hu-board-count-line);
+    border-radius: 999px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-board-column-menu {
+    flex: 0 0 auto;
+}
+
+/* Claims its own row under the label/count/menu, the same way .budget-prompt-warning claims a
+   full-width row inside a wrapping flex header - so the caption reads under the header rather
+   than crowding the menu button. */
+.task-board-drag-caption {
+    flex: 1 1 100%;
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-board-hidden-count {
+    margin-bottom: 8px;
+}
+
+.task-board-lane {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+/* A swimlane label: the page section heading (.group-heading, 16px/600) with its count, over a Chrome line
+   instead of the Rule rung the heading draws elsewhere. The count is 12px in Quiet ink. */
+.task-board-lane-heading.group-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+.task-board-lane-count {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+}
+
+/* A column is a Surface lane with a Divider hairline and the card radius: it reads in Light without the heavy gray
+   tint and stays visible in Dark, where a Background-gray lane vanished. Theme tokens only. */
+.task-board-column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--hu-board-column-background);
+    border: 1px solid var(--hu-board-column-line);
+    border-radius: var(--hu-feed-card-radius);
+}
+
+/* An empty terminal column: a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
+   takes a drop; the count is in the header above. */
+.task-board-column.task-board-column-rail {
+    min-width: 0;
+}
+
+.task-board-column-rail .mud-drop-zone {
+    min-height: 7rem;
+    padding: 0;
+}
+
+.task-board-rail-label {
+    position: absolute;
+    inset: 8px 0 auto 0;
+    display: flex;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    pointer-events: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+/* Every zone - a single-state column, a multi-state display zone, or a ghost bucket's own
+   OnlyZone - stacks its children vertically with a gap, and keeps a min-height so an empty
+   column is still a visible, reachable drop target. */
+.task-zone {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 8px;
+    min-height: 4rem;
+    padding: 8px;
+}
+
+/* An empty column's line: centred over the zone, 12px secondary, and transparent to the pointer so the zone still takes a drop. */
+.task-board-column-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    text-align: center;
+    pointer-events: none;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-ghost-bucket-label {
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* A ghost bucket: a drop zone with nothing in it, its icon and state name laid out in a row.
+   Dashed until a drag can land there. */
+.task-ghost-bucket {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px dashed var(--ink-field);
+}
+
+/* While a drag is over a bucket that will accept it: a primary border on a
+   hover-tinted background, so "this can take the drop" reads at a glance. */
+.task-ghost-bucket.task-zone-can {
+    border: 1px dashed var(--mud-palette-primary);
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.task-card {
+    position: relative;
+    text-align: left;
+    padding: 12px;
+    background-color: var(--hu-ground-raised);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--hu-shadow-card);
+}
+
+.task-card:hover {
+    border-color: var(--hu-board-card-hover-line);
+    box-shadow: var(--hu-board-card-hover-shadow);
+}
+
+/* Row 1: the id (12px secondary, top-left) and the priority chip beside it. The card's menu is absolutely placed over the right end. */
+.task-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-right: 32px;
+}
+
+.task-card-field-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* A Task's tag: an outlined pill led by a 6px dot whose hue TaskFieldView.TagHue picks from the tag's text, so a tag
+   reads the same on every card. A status=pill Theme keeps its own shape below and gains only the dot. The extra
+   .tag-chip outranks the quiet tag rule further down, which has the same two classes. */
+.mud-chip.tag-chip.task-tag {
+    gap: 4px;
+    border-radius: 999px;
+    background-color: transparent;
+    border: 1px solid var(--hu-line-region);
+    color: var(--hu-text-subtle);
+}
+
+.mud-chip.task-tag::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mud-palette-text-secondary);
+}
+
+.mud-chip.task-tag-hue-0::before { background: var(--mud-palette-primary); }
+.mud-chip.task-tag-hue-1::before { background: var(--mud-palette-secondary); }
+.mud-chip.task-tag-hue-2::before { background: var(--mud-palette-tertiary); }
+.mud-chip.task-tag-hue-3::before { background: var(--mud-palette-info); }
+.mud-chip.task-tag-hue-4::before { background: var(--mud-palette-success); }
+.mud-chip.task-tag-hue-5::before { background: var(--mud-palette-warning); }
+
+/* "Blocked by PLAT-0001" on a blocked card: an error chip with a lock, the one blocked cue every Theme shares. A Theme's
+   tint or edge on .task-card-blocked only adds to it. */
+.task-card-blocked-by {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    background: var(--hu-tone-error-soft);
+    color: var(--hu-tone-error-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 20px;
+}
+
+.task-card-blocked-by .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+/* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */
+.task-card > .task-actions-menu {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+}
+
+/* The ⋮ of a card or a List row is revealed on hover or focus, like the Room list's. It stays in
+   the DOM and the tab order, shows while its menu is open, and shows at once on a device with no hover. */
+.task-actions-reveal .task-actions-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.task-card:hover .task-actions-reveal .task-actions-button,
+.task-card:focus-within .task-actions-reveal .task-actions-button,
+.mud-table-row:hover .task-actions-reveal .task-actions-button,
+.mud-table-row:focus-within .task-actions-reveal .task-actions-button,
+.task-actions-reveal.is-open .task-actions-button,
+.task-actions-reveal .task-actions-button:focus-visible {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .task-actions-reveal .task-actions-button {
+        opacity: 1;
+    }
+}
+
+.task-card-title {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+/* The id is 12px secondary; the assignee's name on a card is 12px too (elsewhere it stays row text). */
+.task-card-id {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-assignee-name {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.task-card .task-assignee-name {
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* Row 4: the assignee, under a horizontal rule across the card's width. */
+.task-card-assignee-row {
+    align-self: stretch;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-rule);
+}
+
+/* The open button holds every field of the card; they stack top to bottom, left-aligned, rather
+   than flowing in a row that squeezes the title into a narrow column. */
+.task-card-open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+}
+
+/* The presence dot sits on the avatar's bottom-right rim, ringed in the card's surface colour so it
+   reads as separate from the initials rather than painted over them. MudBlazor's own Bordered
+   option is not used: it adds padding that swells the dot to about 21px, over the initials. The
+   inset overrides the overlap position so the dot's centre lands on the avatar's corner. */
+.task-card-presence .mud-badge.mud-badge-overlap {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    padding: 0;
+    border: 0;
+    box-shadow: 0 0 0 2px var(--mud-palette-surface);
+}
+
+/* MudBlazor places a bottom-right overlap badge with .mud-badge-bottom.right.mud-badge-overlap, which
+   outranks the rule above, so the position needs the same classes to land on the rim. */
+.task-card-presence .mud-badge.mud-badge-overlap.mud-badge-bottom.right {
+    inset: calc(100% - 8px) auto auto calc(100% - 8px);
+}
+
+/* A hollow ring (asleep, offline) is a Surface-filled circle outlined in grey. */
+.task-card-presence.presence-glyph-ring .mud-badge.mud-badge-overlap {
+    background-color: var(--mud-palette-surface);
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
+}
+
+/* An awake assignee is mid-Turn: the same darkened info blue as the pulse badge, so the white pulse line is readable. */
+.task-card-presence.awake .mud-badge.mud-badge-overlap {
+    background-color: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
+}
+
+/* The card currently being dragged. */
+.task-card-dragging {
+    border: 1px solid var(--mud-palette-primary);
+}
+
+/* The card's focus ring, on its focusable open button (the card itself is a div): text-primary,
+   not primary - the same WCAG 1.4.11 contrast reasoning as the page-wide :focus-visible rule
+   above. Do not "improve" this back to an accent colour. */
+.task-card-open:focus-visible {
+    outline: 2px solid var(--hu-focus);
+}
+
+/* An overdue due date, and nothing else on the card or row: the warning icon beside it is the
+   one cue, and the date is set heavier so it is not told by colour alone. The row and card class
+   task-overdue is a marker only. */
+.task-due-overdue {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+}
+
+/* A card's due date is 12px like the id; the warning icon before an overdue date is 1em of that and takes the date's colour. */
+.task-card-field-due-date {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.task-due-overdue .task-due-icon {
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* The Task open in the detail panel: its List row and its Board card. A tint of the primary palette
+   colour reads in both themes (a fixed grey would vanish in one of them), and the row's hover
+   state is a slightly deeper tint, so hovering the selected row still looks hovered. The card
+   also gets a primary left edge, since its surface is a flat fill the tint alone barely lifts. */
+.mud-table .mud-table-body tr.task-row-selected > td {
+    background-color: var(--hu-selected-task-background);
+}
+
+.mud-table.mud-table-hover .mud-table-body tr.task-row-selected:hover > td {
+    background-color: var(--hu-selected-background-hover);
+}
+
+.task-card.task-card-selected {
+    background-color: var(--hu-selected-task-background);
+    box-shadow: inset 3px 0 0 var(--hu-selected-task-bar);
+}
+
+/* A Task id rendered as a link inside a chat Message: a dotted underline keeps it visibly
+   different from an ordinary web link. */
+/* The status dot beside a Task link in chat uses the same colour per state as the List pill and the
+   Board card's edge (TaskColors.For). */
+.task-ref::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-inline-end: 4px;
+    border-radius: 50%;
+    background: var(--mud-palette-lines-default);
+}
+
+.task-ref-status-info::before { background: var(--mud-palette-info); }
+.task-ref-status-warning::before { background: var(--mud-palette-warning); }
+.task-ref-status-secondary::before { background: var(--mud-palette-secondary); }
+.task-ref-status-tertiary::before { background: var(--mud-palette-tertiary); }
+.task-ref-status-success::before { background: var(--mud-palette-success); }
+.task-ref-status-error::before { background: var(--mud-palette-error); }
+.task-ref-status-default::before { background: var(--mud-palette-lines-default); }
+
+/* A link to a Closed Task, drawn struck through in addition to .task-ref's styling. */
+.task-ref-closed {
+    text-decoration: line-through;
+}
+
+/* The detail header's id text (Spec §13.13.1): a single click selects it, so Ctrl+C still works if
+   the copy button's clipboard call itself fails. */
+.task-id {
+    user-select: all;
+}
+
+/* ---- The Task detail panel: comfortable margins around and between its fields -----------------
+   Every field TaskDetail.razor renders in Panel mode (fieldsContent/sideContent) is a flat sibling
+   directly under .task-detail - there is no per-field wrapper to carry spacing of its own - so this
+   one rule is what gives the whole form a left/right inset from the drawer's edge and a consistent
+   vertical rhythm between rows, in place of the edge-to-edge, touching layout MudBlazor's own
+   unstyled fields render as. Expanded mode's two-column MudGrid is just one more sibling here, so
+   the same gap still separates it from the alerts and buttons around it, even though its own two
+   columns space themselves independently. */
+.task-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+}
+
+/* A rounder corner than MudBlazor's own outlined-field default (--mud-default-borderradius, 8px in
+   this theme) - closer to a native form field's look - scoped to the detail panel's own inputs so
+   the rest of the app's buttons, cards and dialogs keep their existing radius. Repeats the ".mud-
+   input.mud-input-outlined" prefix MudBlazor.min.css's own rule carries on this same selector, not
+   just ".mud-input-outlined-border" alone: that prefix makes the library's own rule three classes
+   specific, and a two-class override here would lose the cascade to it regardless of load order. */
+.task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* ---- The View editor: single-line Fields rows -------------------------------------------------- */
+
+/* A Fields row is one line - switch, name, then the move and remove buttons - never wrapped. The
+   name takes the slack and truncates before the buttons are pushed onto a second line. */
+.view-editor-field-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.view-editor-field-row > .mud-switch {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+}
+
+.view-editor-field-row > .mud-switch .mud-typography {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.view-editor-field-row > .mud-icon-button {
+    flex: 0 0 auto;
+}
+
+/* ---- The Task List at narrower widths ------------------------------------------------------
+   An id never wraps; the Title takes whatever width is left and truncates to one line (the full
+   title is the cell's tooltip); the lowest-value columns drop out first as the window narrows. */
+.task-id,
+.task-list-id-cell {
+    white-space: nowrap;
+}
+
+/* The List's columns are resizable by task-list-resize.js: dragging the border after a column trades width between that
+   column and the one beside it, so the table keeps its width. Until then the table fills its container (min-width),
+   every column but Title has a default width (8rem; ID and the last column are narrower) that is wider than its content,
+   so each border has room to move - a column cannot be dragged below its content, and tight columns would leave a border
+   nothing to trade - and Title, the one flexible column, takes whatever is left. */
+.task-list-grid table {
+    min-width: 100%;
+}
+
+.task-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.task-col-resizer::after {
+    content: "";
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    right: 3px;
+    width: 1px;
+    background: var(--hu-line-region);
+}
+
+.task-col-resizer:hover::after,
+.task-col-resizer.active::after {
+    right: 2px;
+    width: 3px;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-primary);
+}
+
+/* Header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
+   Priority about 120px, the row menu 40px, Title the one flexible column. */
+.task-list-grid thead th {
+    position: relative;
+    width: 8rem;
+    white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* MudBlazor's dense rule ".mud-table-dense * .mud-table-row .mud-table-cell" sets 6px padding and its header cells a 14px/white label,
+   so these selectors carry the same weight. */
+.mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    padding: 0 8px 0 16px;
+    height: 36px;
+}
+
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .column-header,
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .sortable-column-header {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
+    height: 36px;
+    padding: 0 8px 0 16px;
+    font-size: var(--mud-typography-body2-size);
+    border-block-end-color: var(--hu-list-row-line);
+}
+
+.mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
+    height: 32px;
+}
+
+/* A group row: Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
+   assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
+.mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
+    background-color: var(--hu-list-group-background);
+    border-top: 1px solid var(--hu-list-row-line);
+}
+
+.task-group-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-group-count {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-list-grid thead th.task-list-id-cell {
+    width: 110px;
+}
+
+.task-list-grid thead th.task-list-priority-cell {
+    width: 120px;
+}
+
+.task-list-grid thead th:last-child {
+    width: 40px;
+}
+
+.mud-table.task-list-grid .mud-table-row .mud-table-cell:last-child {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.task-list-grid thead th.task-list-title-header {
+    width: auto;
+}
+
+.task-list-title-cell {
+    width: auto;
+    min-width: 12rem;
+    max-width: 0;
+    overflow: hidden;
+}
+
+.task-list-title-cell .task-list-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    font-weight: var(--hu-list-title-weight);
+}
+
+@media (max-width: 1500px) {
+    .task-col-low-1 { display: none; }
+}
+
+@media (max-width: 1350px) {
+    .task-col-low-2 { display: none; }
+}
+
+@media (max-width: 1200px) {
+    .task-col-low-3 { display: none; }
+}
+
+.task-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+/* ---- Human gate section of the Task panel (TaskHumanGate) ---- */
+.task-human-gate {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-human-gate-header,
+.task-human-gate-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-human-gate-subheading {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-human-gate-lock {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-proof-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 16px 0;
+}
+
+.task-proof-heading {
+    font-weight: 500;
+}
+
+.task-proof-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-proof-mark-met {
+    color: var(--mud-palette-success);
+}
+
+.task-proof-mark-open,
+.task-proof-owner,
+.task-proof-detail {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ---- Decision card of a gated Task (TaskDecisionCard) ---- */
+.task-decision-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.task-decision-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-decision-locked,
+.task-decision-review,
+.task-decision-trail {
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-decision-stale,
+.task-decision-message {
+    color: var(--hu-tone-warning-ink);
+}
+
+@media (max-width: 600px) {
+    .team-page-wide .team-roster,
+    .team-page-wide .team-details,
+    .team-page-wide .team-tasks-tab {
+        padding-inline: 8px;
+    }
+}
+
+/* C. The Tasks page: toolbar, chips, List rows, Board columns and cards. */
+/* The toolbar's List | Kanban control is a segmented control; HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
+.task-toolbar-kind {
+    flex: none;
+}
+
+/* The List | Kanban control has two short, equal-width segments, so the same equal-segment floor is smaller. */
+.task-toolbar-kind .mud-toggle-item {
+    min-width: 5rem;
+}
+
+/* Each segment leads with its View kind's sidebar icon, at the row icon size, 4px before the word. */
+.task-toolbar-kind .task-toolbar-kind-icon {
+    font-size: var(--icon-size-row);
+    margin-right: 4px;
+}
+
+/* The header row: List | Kanban, then the counts, on the left; the page's actions on the right. */
+.task-toolbar-header {
+    gap: 8px;
+}
+
+.task-toolbar-header .tasks-counts {
+    margin-left: 8px;
+}
+
+/* Group by ends the filter row, pushed to its right edge, with no trailing chip gap so it lines up with the row's end. */
+.task-toolbar .task-filter-chip.task-toolbar-group {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* A Task's assignee (TaskAssignee): the avatar, then the name, with room between so the monogram does not run into the name. */
+.task-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
+   numbers only a step heavier, "need you" in the warning colour. */
+.tasks-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.tasks-counts > * + *::before {
+    content: "·";
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tasks-counts strong {
+    font-weight: 500;
+}
+
+/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+   A count wears its signal only above 0, so a zero ("is-zero") reads as the other counts do. */
+.tasks-count-need-you:not(.is-zero) {
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
+}
+
+/* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
+.task-toolbar-search .mud-input-outlined {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The second row's quick filters (wireframe): the Filter icon menu, then pill chips - dashed while a filter is unset, filled with a clear button once set. */
+.task-toolbar-filter {
+    flex: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The Filter menu's popover holds the filters' selects: wide enough to read a value, with a 16px gutter on every side. */
+.task-toolbar-filter-popover .mud-list {
+    box-sizing: border-box;
+    min-width: 20rem;
+    padding: 16px;
+}
+
+/* The toolbar's filter chip is the Filter chip (design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
+   Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
+   gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
+.task-filter-chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    height: 28px;
+    margin-right: 8px;
+    border: 1px solid var(--ink-field);
+    border-radius: 999px;
+    background-color: transparent;
+}
+
+.task-filter-chip-unset {
+    border-style: dashed;
+}
+
+.task-filter-chip .task-filter-chip-button {
+    height: 100%;
+    min-height: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background-color: transparent;
+    text-transform: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Both toolbar rows are one height: the controls are 28px boxes, so the row reads level. Not the switch's thumb
+   (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
+   5px above the track's centre. */
+.task-toolbar .mud-icon-button:not(.mud-switch-base),
+.task-toolbar-header .mud-icon-button:not(.mud-switch-base) {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.task-toolbar .btn-action-tight,
+.task-toolbar-header .btn-action-tight {
+    height: 28px;
+    min-height: 0;
+}
+
+/* The switch's own body is MudBlazor's 38px; a column flex centres it on the 28px box (it overflows evenly) rather than
+   letting it hang 10px below. */
+.task-toolbar .task-toolbar-dense {
+    height: 28px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
+.task-filter-chip .task-filter-chip-static {
+    pointer-events: none;
+    cursor: default;
+}
+
+.task-toolbar-filter-state-group .mud-list-item-text {
+    font-weight: 600;
+}
+
+.task-toolbar-filter-state-option {
+    padding-left: 32px;
+}
+
+/* The Status menu's two levels: a group (Open, Closed) in the heavier weight, its statuses indented beneath it. */
+.mud-menu-item.task-status-group .mud-menu-item-text {
+    font-weight: 600;
+}
+
+.mud-menu-item.task-status-sub {
+    padding-left: 32px;
+}
+
+.task-filter-chip .task-filter-chip-value {
+    margin-left: 4px;
+}
+
+.task-filter-chip .task-filter-chip-clear {
+    width: 22px;
+    height: 22px;
+    margin-right: 2px;
+    padding: 2px;
+}
+
+/* The filter row wraps when its chips overflow; the row gap keeps a wrapped line clear of the one above. */
+.task-toolbar {
+    row-gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--hu-toolbar-line);
+}
+
+.mud-button-root.mud-button-filled {
+    box-shadow: var(--hu-button-filled-shadow);
+}
+
+.task-toolbar-search .mud-input-outlined-border {
+    border-color: var(--hu-field-line);
+    border-bottom-color: var(--hu-field-line-bottom);
+    border-radius: var(--hu-control-radius);
+}
+
+/* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it. */
+.task-toolbar .task-toolbar-search {
+    margin-right: 8px;
+}
+
+/* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
+.task-filter-chip-set {
+    border-color: var(--hu-chip-set-line);
+    background-color: var(--hu-chip-set-background);
+}
+
+.task-filter-chip-set .task-filter-chip-button {
+    font-weight: 500;
+    color: var(--hu-chip-set-ink);
+}
+
+:root:has([data-hu-surface="flat"]) .task-filter-chip-unset,
+:root:has([data-hu-surface="card"]) .task-filter-chip-unset {
+    border-style: solid;
+    border-color: var(--hu-line-control);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row:not(.task-row-selected):hover > .mud-table-cell {
+    background-color: var(--hu-list-row-hover);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-row-selected > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-selected-bar);
+}
+
+/* A Task in Needs You: the fill is laid over the cell's own colour, so the transparent default leaves the row as it is. */
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-needs:not(.task-row-selected) > .mud-table-cell {
+    background-image: linear-gradient(var(--hu-list-needs-background), var(--hu-list-needs-background));
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-needs:not(.task-row-selected) > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-needs-bar);
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row.task-blocked:not(.task-row-selected) > .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--hu-list-blocked-bar);
+}
+
+.task-list-grid .task-list-id-cell {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The Needs You column: a tint over the column colour, a line, a ring and a top bar, each transparent unless a Theme sets it. */
+.task-board-column.needs-you {
+    background-image: linear-gradient(var(--hu-board-needs-background), var(--hu-board-needs-background));
+    border-color: var(--hu-board-needs-line);
+    box-shadow: inset 0 3px 0 var(--hu-board-needs-bar), var(--hu-board-needs-halo);
+}
+
+.task-board-column.needs-you::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    border-radius: var(--hu-feed-card-radius) var(--hu-feed-card-radius) 0 0;
+    background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
+}
+
+/* ids: a Task id in the mono face and quiet ink (Lumen, Fluent, Nordic); Cobalt Soft keeps the interface face at 600. */
+:root:has([data-hu-ids="mono"]) .task-list-grid .task-list-id-cell,
+:root:has([data-hu-ids="mono"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-ids="plain"]) .task-list-grid .task-list-id-cell,
+:root:has([data-hu-ids="plain"]) .task-card-id {
+    font-weight: 600;
+}
+
+/* Cobalt Soft (nav: tint, the one Theme that declares it): header cells are sentence case, not the capitals labels: upper gives. */
+:root:has([data-hu-nav="tint"]) .mud-table.task-list-grid .mud-table-head .mud-table-cell {
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-weight: 650;
+}
+
+:root:has([data-hu-nav="tint"]) .task-card-blocked {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--mud-palette-error) 75%, transparent), var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="paper"]) .task-board-column {
+    border-width: 1.5px;
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-blocked {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
+    background: color-mix(in srgb, var(--hu-tone-error-soft) 45%, var(--hu-ground-raised));
+}
+
+/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls, as the design system sets for every toolbar row: the shared
+   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 1px;
+    align-items: center;
+}
+
+.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
+    top: 1px;
+    bottom: 1px;
+    left: 1px;
+}
+
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- status=glyph: a Task's state and priority are a plain row, a glyph then a small label, with no chip ----- */
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip,
+:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip {
+    box-sizing: border-box;
+    height: auto;
+    padding: 0;
+    gap: 4px;
+    border-radius: 0;
+    background: transparent;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon {
+    display: none;
+}
+
+/* -- status=glyph: the state ring is 10px; the fill says how far along the Task is ----------------------------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-backlog::before {
+    border-style: dashed;
+    border-color: var(--mud-palette-text-disabled);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-todo::before {
+    border-color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-inprogress::before {
+    border-color: var(--mud-palette-info);
+    background: linear-gradient(90deg, var(--mud-palette-info) 50%, transparent 50%);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-review::before {
+    border-color: var(--mud-palette-tertiary);
+    background: conic-gradient(var(--mud-palette-tertiary) 75%, transparent 0);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-done::before {
+    border-color: var(--mud-palette-success);
+    background: var(--mud-palette-success);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-cancelled::before,
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-duplicate::before,
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-rejected::before {
+    border-color: var(--mud-palette-error);
+    background: var(--mud-palette-error);
+}
+
+/* -- status=glyph: priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme; only
+   the chip's fill and border are dropped above. Urgent wears the error hue. ---------------------------------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent {
+    color: var(--mud-palette-error);
+}
+
+:root:has([data-hu-labels="upper"]) .mud-table.task-list-grid .mud-table-head .mud-table-cell {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+    background: var(--hu-ground-page);
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    gap: 4px;
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip.status-chip-warning {
+    font-weight: 600;
+}
+
+/* -- status=pill: a Task's state draws a shape dot instead of an icon; the word stays ------------------------- */
+:root:has([data-hu-status="pill"]) .mud-chip.task-status-chip .mud-chip-icon {
+    display: none;
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.task-status-chip::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-backlog::before {
+    border-style: dashed;
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-inprogress::before {
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-review::before {
+    background: conic-gradient(currentColor 75%, transparent 0);
+}
+
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-done::before,
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-cancelled::before,
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-duplicate::before,
+:root:has([data-hu-status="pill"]) .mud-chip.status-chip-state-rejected::before {
+    background: currentColor;
+}
+
+/* -- status=pill: High and Urgent priority wear their status chip's tone (Warning, Error). The pack's clay recipe never
+   applied: the chip's own status-chip-warning rule outranked it, so it is not carried over. ------------------------ */
+
+/* -- status=pill: tags are small rectangles on the sunk ground ------------------------------------------------- */
+:root:has([data-hu-status="pill"]) .mud-chip.tag-chip,
+:root:has([data-hu-status="pill"]) .task-tag {
+    height: 20px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    background: var(--hu-ground-sunk);
+    border: 0;
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=paper: Tasks toolbar, counts and the set filter chip (12.1) ------------------------------------------ */
+:root:has([data-hu-surface="paper"]) .tasks-counts {
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-surface="paper"]) .mud-chip.filter-chip.filter-chip-set {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
+    background: var(--hu-tone-primary-tint);
+    color: var(--hu-accent-ink);
+}
+
+/* -- surface=paper: Board, lanes and cards: radius, sizes, paddings (12.2) ----------------------------------------- */
+:root:has([data-hu-surface="paper"]) .task-board-column-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="paper"]) .task-board-column-count {
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-hu-surface="paper"]) .task-card {
+    border-radius: var(--mud-default-borderradius);
+    padding: 8px 12px;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-title {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-assignee-row {
+    border-top: 1px solid var(--hu-line-region);
+    padding-top: 8px;
+    margin-top: 8px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+:root:has([data-hu-surface="paper"]) .task-board-lane-heading.group-heading {
+    border-bottom-color: var(--hu-line-region);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="paper"]) .task-card-dragging {
+    transform: rotate(-2.2deg);
+    box-shadow: var(--hu-shadow-panel);
+    border-color: var(--mud-palette-info);
+}
+
+/* -- surface=paper: List, an open table (12.3) ---------------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .task-list-grid .task-list-id-cell {
+    font-family: var(--font-mono);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- surface=paper: the selected Task card keeps its paper shadow under the inset bar (12.2) -------------------- */
+:root:has([data-hu-surface="paper"]) .task-card.task-card-selected {
+    box-shadow: inset 3px 0 0 var(--hu-selected-task-bar), var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+}
+
+/* -- surface=hairline: Board, the lane and its card (12.2) --------------------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .task-board-column-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-board-column-count {
+    color: var(--hu-text-subtle);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: none;
+    padding: 8px 12px;
+    transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-title {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-assignee-row {
+    border-top: 0;
+    padding-top: 0;
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-caption-size);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-board-lane-heading.group-heading {
+    border-bottom-color: var(--hu-line-region);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-dragging {
+    transform: rotate(2.2deg);
+    box-shadow: var(--hu-shadow-panel);
+    border-color: var(--mud-palette-primary);
+}
+
+/* A toolbar filter chip draws its own pill (transparent, so the page shows through), so the skins' raised ground for an outlined button
+   must not fill the button inside it. Last in the sheet so it wins the tie with those rules. */
+:root:has([data-hu-surface]) .task-filter-chip .task-filter-chip-button.mud-button-outlined:not(:hover) {
+    background: transparent;
+}

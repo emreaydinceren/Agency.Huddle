@@ -252,7 +252,7 @@ The picker has a Light theme list and a Dark theme list; the catalog holds the c
 current item, a region line, a card shadow) are `--hu-*` tokens registered once in `SkinTokens`,
 with defaults written over the palette. Structure that differs between Themes (message layout,
 send button, status look, labels, composer, nav, surface, marks, reading) is a trait, a
-`data-hu-*` attribute on `.theme-marker` whose variants are written once in `wwwroot/css/` (`05-room-traits.css`, `16-traits.css`).
+`data-hu-*` attribute on `.theme-marker` whose variants are written once in `wwwroot/css/`, in the file of the feature each styles, under that file's `Traits:` banner after its base rules.
 
 **One palette per Theme.** A Theme carries one palette and its own `ThemeMode`; the mode
 is derived from the Theme and from nothing else
@@ -298,7 +298,7 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 **Weights.** Three: 400 for text, 500 for controls, 600 for emphasis and headings. Never
 700; `strong` and `b` are 600. Never italic. What a Human types in a field is text, so it
 is 400: MudBlazor draws every `.mud-input` in its `subtitle1` role (600 here), and
-`01-base.css` "Global MudBlazor overrides" sets it back to `body1`'s weight.
+`base.css` "Global MudBlazor overrides" sets it back to `body1`'s weight.
 
 **Measure.** Prose never runs wider than 75 characters: `max-width: 75ch` on the text
 block. That covers intro paragraphs (`.settings-intro`, `.build-team-intro`,
@@ -478,7 +478,7 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 - **An avatar-colour swatch is a 32px circle** drawn with the avatar recipe for the current
   mode, and the swatches are a radio group with colour names.
 
-**The look.** One recipe per Theme mode, drawn by one `02-shell.css` rule, so every monogram clears
+**The look.** One recipe per Theme mode, drawn by one `shell.css` rule, so every monogram clears
 4.5:1 without choosing black or white per colour.
 
 | Mode | Fill | Ring (1px, inset) | Letters |
@@ -488,7 +488,7 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 
 CSS can't read a Theme's mode, so `MainLayout.razor` renders a hidden
 `<span class="theme-mode-dark">` when the Theme is a Dark one, and
-`:root:has(.theme-mode-dark)` in `02-shell.css` switches the recipe.
+`:root:has(.theme-mode-dark)` in `shell.css` switches the recipe.
 `AvatarColours.MonogramStyle` emits only `--mud-palette-primary: #hex;` on the avatar, and the
 rule turns that into the fill and the letters. An Agent with no colour uses the Theme's
 accent through the same recipe. The contrast tests sweep and sample both modes.
@@ -548,7 +548,7 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
   rule restores it. It uses text colour and not the accent because a dark Theme's accent
   can fall below 3:1; text colour clears 3:1 in every Theme. Don't override it with the
   accent, a different width or a hover ring (UX-V07)
-  ([01-base.css](../../src/Huddle.App/wwwroot/css/01-base.css) "Keyboard focus ring").
+  ([base.css](../../src/Huddle.App/wwwroot/css/base.css) "Keyboard focus ring").
 - **The Composer's focused border is the accent.** `.composer-input:focus-visible` draws a
   `Primary` border plus a 0.5px inset accent ring, which reads as 1.5px and moves no text.
   `Primary` clears 3:1 against Surface in every Theme (`SkinContrastTests`), where the Chrome line would
@@ -603,7 +603,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   all", "New chat". These are VS Code's Explorer proportions scaled to the 32px row (its 16px
   twistie becomes the 24px slot, its few-px margins stay tight), so a label starts 32px inside
   its row's pill. A row with no mark keeps the slot empty. The grid is one set of tokens in
-  `02-shell.css` "Left menu" (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`,
+  `shell.css` "Left menu" (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`,
   `--nav-end`), and every view of the Sidebar uses it, so switching views moves nothing sideways.
 - **A section header and its rows share the lines.** The header heads its list; it is not a
   level above it.
@@ -645,7 +645,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **The Library has one home.** The sidebar has one Library link to `/library` and no
   tree, root rows or "Add folder"; the tree lives on the Library page.
 - **The first section is "Rooms"**, the defined term in [language.md](language.md).
-- **Rows at the same level share one indent**, set by the grid in `02-shell.css` "Left menu".
+- **Rows at the same level share one indent**, set by the grid in `shell.css` "Left menu".
   Within a level, either every row has an icon or none does (UX-015).
 - **A 1:1 Room shows the Agent's small avatar; a group Room shows the Room icon**
   (UX-016). That avatar is 32px (`.room-row-avatar.avatar-transcript`), so it draws the Agent's
@@ -882,7 +882,7 @@ above the rail or the nav (UX-010).
 | Padding | Title `16px 24px 8px`; content `8px 24px`; actions `12px 24px 16px` |
 | Width | 600px for forms, confirms and pickers under about 12 items (`HuddleDialogOptions.SmallForm` for a form, `ShortPicker` for a picker); 960px (`HuddleDialogOptions.Picker`) only for two-pane or tabular pickers |
 | Disabled primary | Faint ink on Wash; never MudBlazor's fixed black alpha |
-| Field labels | Above the field, never floated into its border: caption size at 600 in body text, the same at rest, focused and filled, with the border drawn whole (alignment D6, `01-base.css` "A field's label sits above its field"). A context that labels the field elsewhere keeps the control's label visually hidden |
+| Field labels | Above the field, never floated into its border: caption size at 600 in body text, the same at rest, focused and filled, with the border drawn whole (alignment D6, `base.css` "A field's label sits above its field"). A context that labels the field elsewhere keeps the control's label visually hidden |
 | Required fields | "(optional)" on optional fields; never an asterisk |
 | From a menu | The menu closes before the dialog opens: wrap the call in `MenuDialogs.AfterClosingAsync(menu, () => dialog call)` |
 | Primary verb | Repeats the title's verb ("Add a role" gives **Add**) |
@@ -971,7 +971,7 @@ A menu is a `MudMenu` of `Dense` 32px, 13px items.
   page's notice zone (`C9`, `T9`, `L3d`). Not a styled `<div>` (UX-056, UX-V13).
 - **A notice's sentence is `TextPrimary`.** Only its icon and its 3px leading bar carry the
   status colour. MudBlazor derives a coloured text from the severity; the override lives in
-  `01-base.css` "Global MudBlazor overrides", so every notice gets it.
+  `base.css` "Global MudBlazor overrides", so every notice gets it.
 - **A notice in a Room sits in the 760px column**, between the Transcript and the Composer,
   so all three share one left edge. It never spans the pane.
 - **A snackbar passes a `key`** so repeats collapse (UX-V25), and carries an action when
@@ -1164,13 +1164,13 @@ prefers `DateFormat="MMM d, yyyy"`.
    rem spacing, no literal font size, and nothing under 11px.
 6. **Reuse before you write.** Search `wwwroot/css/` for an existing class before writing a
    declaration block. Truncation is `.truncate`; screen-reader-only text is
-   `.visually-hidden`, one global class in `01-base.css`. Add a utility there the first time a
+   `.visually-hidden`, one global class in `base.css`. Add a utility there the first time a
    second site needs it (UX-R21, UX-R22). The shared look-and-feel classes are global:
    `.group-label`, `.filter-chip`, `.toolbar-compact` and `.selected-shape`.
 7. **No `!important`**, except where it is the only way past an inline style MudBlazor
    writes, with a comment saying so (UX-V16, UX-V22).
 8. **Global MudBlazor overrides** (`.mud-button-root`, `.mud-drawer`, `.mud-avatar img`)
-   live in one "Global MudBlazor overrides" section near the top of `01-base.css`, never in a
+   live in one "Global MudBlazor overrides" section near the top of `base.css`, never in a
    feature's section (UX-V17). The overrides set `.mud-link` and selected list items to Accent
    ink and the Selected treatment, because MudBlazor paints them in raw Accent; they also draw
    table row lines on Edge, the Disabled state and the dialog close button.

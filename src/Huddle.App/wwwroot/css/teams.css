@@ -1,4 +1,6 @@
-/* ---- Picker rows and the folder picker (audit B10h, B10 "Choose a folder") --------------------------------
+/* ==== Teams: the picker rows, the chip cloud, the process step and the build-a-Team page ==== */
+
+/* ---- Picker rows and the folder picker --------------------------------
    A list picker's row is 32px at 13px with an 18px icon in a 24px slot, not MudList's 46px at 14px. The doubled
    class outranks MudBlazor's own list-item padding and icon slot. */
 .mud-list-item.picker-row {
@@ -82,9 +84,9 @@
     overflow-y: auto;
 }
 
-/* A chip of the cloud is the Filter chip (audit A6, design-system "Chips"): 28px, a pill, a dashed Field line and no
+/* A chip of the cloud is the Filter chip (design-system "Chips"): 28px, a pill, a dashed Field line and no
    fill while unset; the Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It repeats
-   .mud-chip.filter-chip (FND's global rule) for a native button, which that rule's .mud-chip cannot reach. */
+   .mud-chip.filter-chip (the global rule) for a native button, which that rule's .mud-chip cannot reach. */
 .chip-cloud-chip,
 .chip-cloud-all {
     box-sizing: border-box;
@@ -123,7 +125,16 @@
     border-radius: var(--mud-default-borderradius);
 }
 
+/* A preformatted block that scrolls: a Task's process step. */
 .process-step-preview {
+    max-height: 16rem;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    white-space: pre-wrap;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     margin: 8px 0 0;
     padding: 12px;
 }
@@ -137,7 +148,7 @@
     gap: 24px;
 }
 
-/* The page header (audit B1, design-system "A page"): one 32px row on every page, the h1 and its small controls on
+/* The page header (design-system "A page"): one 32px row on every page, the h1 and its small controls on
    the left, the aside, the create button and the actions on the right. The page container's 16px padding puts the
    row 16px below the tab strip, and 16px of margin separates it from what follows. */
 .page-header {
@@ -178,7 +189,7 @@
     border-bottom: 1px solid var(--hu-line-region);
 }
 
-/* The intro: body1 (14px) in Quiet ink, at most 75 characters wide (audit B1). */
+/* The intro: body1 (14px) in Quiet ink, at most 75 characters wide. */
 .page-header-subtitle,
 .page-lead {
     margin: 4px 0 0;
@@ -223,12 +234,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.build-step-current .build-step-badge {
-    border-color: var(--mud-palette-primary);
-    background: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-text);
-}
-
+.build-step-current .build-step-badge,
 .build-step-done .build-step-badge {
     border-color: var(--mud-palette-primary);
     background: var(--mud-palette-primary);
@@ -291,14 +297,14 @@
     max-width: 32rem;
 }
 
-/* The team types wrap into rows and never scroll sideways (S9, S10); the roles and the roster below are the exception. */
+/* The team types wrap into rows and never scroll sideways; the roles and the roster below are the exception. */
 .team-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 12px;
 }
 
-/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width (#474); the first dozen show and
+/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width; the first dozen show and
    "Show all roles" reveals the rest (BuildTeam). */
 .role-grid {
     display: grid;
@@ -311,7 +317,7 @@
 }
 
 /* The roster is two rows of cards that fill down and then across; what does not fit is reached by scrolling
-   sideways, so a large roster stays two rows tall (B9c, B12). The padding keeps the scrollbar off the cards. */
+   sideways, so a large roster stays two rows tall. The padding keeps the scrollbar off the cards. */
 .roster-grid {
     display: grid;
     grid-template-rows: repeat(2, auto);
@@ -320,7 +326,10 @@
     overflow-x: auto;
     padding-bottom: 8px;
 
-    /* The scrollbar is thin and invisible until the pointer is over the grid or focus is inside it (UX-E16); it still
+    /* The roster's cards are 20rem wide. */
+    grid-auto-columns: 20rem;
+
+    /* The scrollbar is thin and invisible until the pointer is over the grid or focus is inside it; it still
        scrolls with the wheel, touch and the arrow keys. */
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
@@ -329,11 +338,6 @@
 .roster-grid:hover,
 .roster-grid:focus-within {
     scrollbar-color: var(--ink-edge) transparent;
-}
-
-/* The roster's cards are 20rem wide. */
-.roster-grid {
-    grid-auto-columns: 20rem;
 }
 
 /* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
@@ -353,7 +357,7 @@
     content: "\00b7\00a0";
 }
 
-/* The Members tab's team type filter (B9f, B9g): the cloud of types, with the chosen one floated to its left, between
+/* The Members tab's team type filter: the cloud of types, with the chosen one floated to its left, between
    the "Roles" heading and the roles. */
 .build-team-role-type-filter {
     margin: 4px 0 8px;
@@ -379,8 +383,7 @@
     background: var(--hu-hover);
 }
 
-.team-type-card-selected,
-.team-type-card-selected:hover {
+.team-type-card-selected {
     background: var(--hu-selected-background);
     border-color: var(--mud-palette-primary);
 }
@@ -457,3 +460,19 @@
     }
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+/* -- surface=paper: cards and panels, radius 1.5 (15.4) ----------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .process-step,
+:root:has([data-hu-surface="paper"]) .team-type-card,
+:root:has([data-hu-surface="paper"]) .roster-card {
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+:root:has([data-hu-surface="hairline"]) .team-type-card:hover,
+:root:has([data-hu-surface="hairline"]) .roster-card:hover {
+    border-color: var(--hu-line-control);
+}

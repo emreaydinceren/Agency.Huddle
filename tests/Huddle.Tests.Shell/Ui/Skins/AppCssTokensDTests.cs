@@ -3,7 +3,7 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
-/// Phase 2, package D: the second half of <c>app.css</c> (from "The Task List at narrower widths" to the end) and
+/// Phase 2, package D: the Teams, Sidebar, References and Task form stylesheets and the second half of the Tasks stylesheet (from "The Task List at narrower widths") and
 /// <c>HuddleSegmentedControl.razor.css</c> read the skin tokens where a token's registered default is the value the
 /// site wrote before. A site whose value no token default equals, or that the architecture leaves as a literal recipe,
 /// is not pinned here beyond the count of recipes that must remain.
@@ -61,7 +61,7 @@ public sealed class AppCssTokensDTests
         Assert.Contains("background-color: var(--hu-selected-background);", chip);
         Assert.Contains("color: var(--hu-selected-foreground);", chip);
 
-        string[] card =Declarations(".team-type-card-selected,\n.team-type-card-selected:hover");
+        string[] card =Declarations(".team-type-card-selected");
         Assert.Contains("background: var(--hu-selected-background);", card);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".team-type-card-selected:hover"));
 
@@ -216,10 +216,14 @@ public sealed class AppCssTokensDTests
         Assert.Equal(1, CssText.CountOccurrences(range, "color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface))"));
     }
 
-    /// <summary>The text of <c>app.css</c> from this package's first section header to the end, with LF line endings.</summary>
+    /// <summary>The text this package owns, with LF line endings: the Teams, Sidebar, References and Task form files and the Tasks file from its first section header of this package.</summary>
     /// <returns>The range this package owns.</returns>
     private static string Range() =>
-        CssText.Section(CssText.AppCss(), RangeStart);
+        CssText.Read(RepoPaths.App("wwwroot", "css", "teams.css"))
+        + CssText.Read(RepoPaths.App("wwwroot", "css", "sidebar.css"))
+        + CssText.Read(RepoPaths.App("wwwroot", "css", "references.css"))
+        + CssText.Section(CssText.Read(RepoPaths.App("wwwroot", "css", "tasks.css")), RangeStart)
+        + CssText.Read(RepoPaths.App("wwwroot", "css", "task-form.css"));
 
     /// <summary>The trimmed declarations of the first rule in this package's range whose selector text is exactly <paramref name="selector"/>.</summary>
     /// <param name="selector">The selector list as written, with <c>\n</c> between selectors.</param>

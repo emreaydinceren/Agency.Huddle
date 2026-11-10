@@ -1,3 +1,5 @@
+/* ==== Sidebar: Needs You, the segmented control, the Teams nav, sidebar rows and global search ==== */
+
 /* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
    Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. The card's
    sides sit on the selected pill's inset, and everything inside it is pulled back by that inset and the 1px border
@@ -10,7 +12,7 @@
     padding: 4px 0;
 }
 
-/* Flat rows on the sidebar's ground, not a white bordered card (side-by-side audit, 2026-10-30, G03). The border stays,
+/* Flat rows on the sidebar's ground, not a white bordered card. The border stays,
    transparent, because --needs-you-offset counts its 1px; the doubled class outranks .mud-paper-outlined. Nordic's
    paper surface draws its own tinted card below. */
 .needs-you-card.mud-paper-outlined {
@@ -37,7 +39,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). The doubled class
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing. The doubled class
    outranks the Left menu grid's padding, which this row shifts by the card's offset. */
 .sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
     width: calc(100% - 2 * var(--nav-inset));
@@ -109,13 +111,13 @@
 }
 
 /* The card's title is a link with no leading mark, so the sidebar's rule gives its text the slot's step as a margin; the title's own
-   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers (#475). */
+   padding already counts that step, so the margin is given back and "Needs you" starts on the text line of the section headers. */
 .sidebar-views .needs-you-title .mud-nav-link > .mud-nav-link-text {
     margin-inline-start: 0;
 }
 
 /* The Dismiss button floats over the end of its row instead of taking a slot of its own, so the name and the time use the row's whole
-   width up to the trailing line (#475). Where there is a hover, the button replaces the time while it shows; on touch it is always
+   width up to the trailing line. Where there is a hover, the button replaces the time while it shows; on touch it is always
    shown and the row's padding (above) keeps the time clear of it. */
 .sidebar-views .needs-you-row > .mud-tooltip-root {
     position: absolute;
@@ -302,7 +304,7 @@
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
-/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action whose label starts on the
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat"): a quiet text action whose label starts on the
    text line, with a muted arrow in the leading slot. */
 .sidebar-show-all .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
@@ -320,7 +322,7 @@
     padding: 4px 8px;
 }
 
-/* Search match (audit B6a): MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+/* Search match: MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
    text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
 .search-card mark {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));
@@ -328,7 +330,7 @@
     font-weight: 600;
 }
 
-/* A notice in the dropdown (audit B6b): Quiet ink words, with an icon in the Attention signal carrying the signal.
+/* A notice in the dropdown: Quiet ink words, with an icon in the Attention signal carrying the signal.
    1em is 14px: the notice is body2 text, so the icon is sized by the type scale rather than by a literal. */
 .search-notice {
     display: flex;
@@ -393,7 +395,7 @@
     opacity: 0.6;
 }
 
-/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers (UX rule 9, #477). */
+/* Group headings are sentence case, 12px/600 in Quiet ink, like the Sidebar's section headers. */
 .search-group-heading {
     padding: 8px 8px 4px;
     color: var(--mud-palette-text-secondary);
@@ -442,3 +444,141 @@
     }
 }
 
+/* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
+   Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
+   sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
+   palette variables or skin tokens decide every colour. */
+
+:root:has([data-hu-nav="tile"]) .sidebar-row-meta {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- surface=paper: sidebar, the "needs you" count and card (7.3) ------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .needs-you-count {
+    min-width: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    text-align: center;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+}
+
+:root:has([data-hu-surface="paper"]) .needs-you-card.mud-paper {
+    background: var(--hu-tone-warning-tint);
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: none;
+}
+
+/* -- surface=paper: top bar, the search box (7.4) ---------------------------------------------------------------- */
+:root:has([data-hu-surface="paper"]) .search-bar .mud-input.mud-input-outlined {
+    height: 32px;
+    background: var(--hu-ground-sunk);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="paper"]) .search-bar .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="paper"]) .search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
+    background: var(--hu-ground-raised);
+}
+
+:root:has([data-hu-surface="paper"]) .search-bar .mud-input.mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--mud-palette-info);
+}
+
+:root:has([data-hu-surface="paper"]) .search-shortcut-hint {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    padding: 0 4px;
+    border: 1px solid var(--hu-line-control);
+    border-bottom-width: 2px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.5);
+    background: var(--hu-ground-raised);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* -- surface=paper: segmented controls, a sunk track and the selected option a raised tile (15.6) ------------------- */
+:root:has([data-hu-surface="paper"]) .huddle-segmented-control {
+    background-color: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="paper"]) .huddle-segmented-indicator {
+    background-color: var(--hu-ground-raised);
+    border-color: var(--hu-line-region);
+    box-shadow: var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="paper"]) .huddle-segmented-control .huddle-segmented-active-item {
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined {
+    height: 30px;
+    background: var(--hu-ground-sunk);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined:focus-within {
+    background: var(--hu-ground-raised);
+}
+
+:root:has([data-hu-surface="hairline"]) .search-shortcut-hint {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    padding: 0 4px;
+    border: 1px solid var(--hu-line-region);
+    border-bottom-width: 2px;
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    background: var(--hu-ground-page);
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: segmented controls, a track on a hairline with a raised tile (15.6); the track is the Theme's control.track -------- */
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control {
+    background-color: var(--hu-control-track);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-indicator {
+    background-color: var(--hu-ground-raised);
+    border-color: var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    box-shadow: var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
+    color: var(--hu-text-subtle);
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
+    color: var(--mud-palette-text-primary);
+}
+
+/* Needs You on screen (Human gate P12). The card heading is a link to the page and keeps the plain caption look; a Task row stacks
+   its id and title over the waiting line; the page leaves the cards a gap. */
+.needs-you-title .mud-nav-link {
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+}
+
+.needs-you-task-row .mud-nav-link-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.needs-you-page-task {
+    margin-bottom: 16px;
+}

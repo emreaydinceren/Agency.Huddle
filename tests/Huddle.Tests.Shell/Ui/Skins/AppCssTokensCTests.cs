@@ -3,19 +3,16 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
-/// Phase 2, package C: the Tasks, Library and Task-drawer sections of <c>app.css</c> (from the "Tasks" header to the
-/// "Task List at narrower widths" header) read the skin tokens instead of the literal recipes the tokens default to.
+/// Phase 2, package C: the Tasks, Library and Task-drawer rules of the application stylesheets read the skin tokens
+/// instead of the literal recipes the tokens default to.
 /// The values are pinned once, in the registry's default test; here only the wiring is pinned.
 /// </summary>
 public sealed class AppCssTokensCTests
 {
-    private const string RangeStart = "Tasks ---";
-    private const string RangeEnd = "The Task List at narrower widths";
-
-    /// <summary>Reads the stylesheet with LF endings, restricted to this package's range.</summary>
-    /// <returns>The text between the two section headers.</returns>
+    /// <summary>Reads this package's stylesheets with LF endings: the Tasks, the Task form and the Library files, which hold the Tasks, Library and Task-drawer rules.</summary>
+    /// <returns>The three files' text, in link order.</returns>
     private static string Range() =>
-        CssText.Section(CssText.AppCss(), RangeStart, RangeEnd);
+        CssText.Read(RepoPaths.App("wwwroot", "css", "library.css")) + CssText.Read(RepoPaths.App("wwwroot", "css", "tasks.css")) + CssText.Read(RepoPaths.App("wwwroot", "css", "task-form.css"));
 
     /// <summary>Each converted site now declares the token reference, not the recipe.</summary>
     /// <param name="selector">The rule's selector.</param>
@@ -23,7 +20,7 @@ public sealed class AppCssTokensCTests
     [Theory]
     [InlineData(".task-board-columns", "background: var(--hu-ground-page);")]
     [InlineData(".task-board-lane-heading.group-heading", "border-bottom: 1px solid var(--hu-line-region);")]
-    [InlineData(".task-board-column", "background-color: var(--hu-ground-sunk);")]
+    [InlineData(".task-board-column", "background-color: var(--hu-board-column-background);")]
     [InlineData(".task-card", "background-color: var(--hu-ground-raised);")]
     [InlineData(".task-card", "box-shadow: var(--hu-shadow-card);")]
     [InlineData(".task-card:hover", "box-shadow: var(--hu-board-card-hover-shadow);")]
@@ -44,7 +41,7 @@ public sealed class AppCssTokensCTests
     [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", "box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);")]
     [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected:hover", "background-color: var(--hu-selected-background-hover);")]
     [InlineData(".tasks-count-need-you:not(.is-zero)", "color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));")]
-    [InlineData(".task-filter-chip-set .task-filter-chip-button", "color: var(--hu-selected-foreground);")]
+    [InlineData(".task-filter-chip-set .task-filter-chip-button", "color: var(--hu-chip-set-ink);")]
     [InlineData(".library-rendered .library-ref", "color: var(--hu-accent-ink);")]
     public void Rule_ReadsTheToken(string selector, string declaration)
     {

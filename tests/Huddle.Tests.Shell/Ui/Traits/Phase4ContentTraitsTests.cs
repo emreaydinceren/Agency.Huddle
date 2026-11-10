@@ -43,18 +43,6 @@ public sealed partial class Phase4ContentTraitsTests
         Declares(Css, $":root:has([data-hu-{trait}=\"{value}\"])");
     }
 
-    /// <summary>The phase 4 section sits immediately before the chrome section and names itself as the plan says.</summary>
-    [Fact]
-    public void Phase4Section_SitsBeforeChrome()
-    {
-        int phase4 = RawCss.IndexOf("/* ---- Traits: phase 4 (status, send, composer)", StringComparison.Ordinal);
-        int chrome = RawCss.IndexOf("/* ---- Traits: chrome", StringComparison.Ordinal);
-
-        Assert.True(phase4 > 0, "The phase 4 section is missing.");
-        Assert.True(phase4 < chrome, "The phase 4 section must come before Traits: chrome.");
-        Assert.DoesNotContain("/* ---- ", RawCss[(phase4 + 5)..chrome], StringComparison.Ordinal);
-    }
-
     /// <summary>
     /// <c>status=glyph</c> turns the Task state and priority chips into a transparent row: a 10px ring glyph before a
     /// 12px label in the subtle ink, with no state icon and no chip fill.
@@ -102,7 +90,7 @@ public sealed partial class Phase4ContentTraitsTests
     [Fact]
     public void StatusGlyph_KeepsThePriorityIconSet()
     {
-        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
+        string section = ContentTraitRules();
         string urgent = Body("status", "glyph", ".mud-chip.priority-urgent");
 
         Assert.DoesNotContain("task-priority-chip .mud-chip-icon", section, StringComparison.Ordinal);
@@ -115,7 +103,7 @@ public sealed partial class Phase4ContentTraitsTests
     [Fact]
     public void StatusGlyph_LeavesTagsAlone()
     {
-        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
+        string section = ContentTraitRules();
 
         Assert.DoesNotContain("tag-chip", section, StringComparison.Ordinal);
         Assert.DoesNotContain("task-tag", section, StringComparison.Ordinal);
@@ -161,11 +149,11 @@ public sealed partial class Phase4ContentTraitsTests
         Declares(attach, "left: 8px;");
     }
 
-    /// <summary>The phase 4 section adds no <c>!important</c> and no pack token.</summary>
+    /// <summary>The rules scoped to the three phase 4 trait values add no <c>!important</c> and no pack token.</summary>
     [Fact]
-    public void Phase4Section_AddsNoImportantOrPackToken()
+    public void ContentTraitRules_AddNoImportantOrPackToken()
     {
-        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
+        string section = ContentTraitRules();
 
         Assert.DoesNotContain("!important", section, StringComparison.Ordinal);
         Assert.DoesNotContain("--n-", section, StringComparison.Ordinal);
@@ -209,14 +197,12 @@ public sealed partial class Phase4ContentTraitsTests
         return merged.ToString();
     }
 
-    /// <summary>The phase 4 section's media blocks only.</summary>
-    private static string MediaText()
-    {
-        string section = CssText.StripComments(CssText.Section(RawCss, "Traits: phase 4", "Traits: chrome"));
-        int media = section.IndexOf("@media", StringComparison.Ordinal);
-        Assert.True(media >= 0, "The phase 4 section has no @media block.");
-        return section[media..];
-    }
+    /// <summary>The media blocks that hold a <c>send=square</c> rule.</summary>
+    private static string MediaText() => CssText.ScopedMediaBlocks(RawCss, "[data-hu-send=\"square\"]");
+
+    /// <summary>The comment-stripped rules scoped to <c>status=glyph</c>, <c>send=square</c> or <c>composer=underlined</c>, wherever they sit.</summary>
+    private static string ContentTraitRules() =>
+        CssText.StripComments(CssText.ScopedRules(RawCss, "[data-hu-status=\"glyph\"]", "[data-hu-send=\"square\"]", "[data-hu-composer=\"underlined\"]"));
 
     [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
     private static partial Regex Rule();

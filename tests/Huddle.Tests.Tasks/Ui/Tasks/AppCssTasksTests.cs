@@ -222,9 +222,9 @@ public sealed class AppCssTasksTests
     {
         string lane = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-board-column");
 
-        Assert.Contains("background-color: var(--hu-ground-sunk);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border: 1px solid var(--ink-edge);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-radius: var(--mud-default-borderradius);", lane, StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-board-column-background);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border: 1px solid var(--hu-board-column-line);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-radius: var(--hu-feed-card-radius);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);
     }
 

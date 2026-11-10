@@ -76,6 +76,12 @@
 .PARAMETER Candidate   Diff: the candidate snapshot folder.
 .PARAMETER Full        Diff: list every element and every distinct change instead of the first 25 elements per page.
 .PARAMETER MaxElements Diff: elements listed per page without -Full. Default 25.
+.PARAMETER Tolerance   Diff: px lengths (and a transform's translation) that differ by at most this much count as
+                       equal. Default 0.25. Text in the Nordic Theme's web font measures up to about 0.15 px
+                       differently between two captures of one build; a CSS change moves whole pixels. Only px
+                       numbers are loosened. 0 compares exactly. The Diff also ignores
+                       the notification count's badge wrapper, which is there or not depending on which page marked
+                       Feed items seen first, and MudBlazor's tab slider, which script sizes from a load-time measure.
 
 .EXAMPLE
     pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Capture -Out C:\seeds\huddle\css-snap-out\baseline -Build
@@ -107,7 +113,8 @@ param(
     [string]$Baseline,
     [string]$Candidate,
     [switch]$Full,
-    [int]$MaxElements = 25
+    [int]$MaxElements = 25,
+    [double]$Tolerance = 0.25
 )
 
 Set-StrictMode -Version Latest
@@ -119,7 +126,7 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'node is not 
 
 if ($Mode -eq 'Diff') {
     if (-not $Baseline -or -not $Candidate) { throw '-Mode Diff needs -Baseline and -Candidate.' }
-    $diffArgs = @($node, 'diff', '--baseline', $Baseline, '--candidate', $Candidate, '--max-elements', $MaxElements)
+    $diffArgs = @($node, 'diff', '--baseline', $Baseline, '--candidate', $Candidate, '--max-elements', $MaxElements, '--tolerance', $Tolerance.ToString([System.Globalization.CultureInfo]::InvariantCulture))
     if ($Full) { $diffArgs += '--full' }
     & node @diffArgs
     exit $LASTEXITCODE
