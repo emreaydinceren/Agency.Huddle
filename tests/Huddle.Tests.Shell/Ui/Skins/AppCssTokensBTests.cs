@@ -97,7 +97,7 @@ public sealed class AppCssTokensBTests
         string body = AppCssTokensBTests.Rule(".avatar-library-skin[aria-pressed=\"true\"]");
 
         Assert.Contains("background-color: var(--hu-selected-background);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("color: var(--hu-selected-foreground);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain("color-mix", body, StringComparison.Ordinal);
     }
 

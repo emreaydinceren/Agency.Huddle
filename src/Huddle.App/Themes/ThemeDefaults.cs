@@ -56,12 +56,8 @@ internal static class ThemeDefaults
         SetRole(theme.Typography.Body2, "13px", "400", "1.4");
         SetRole(theme.Typography.Caption, "12px", "400", "1.35");
 
-        // The Overline is retired: the Label is the one small-label style and is drawn by the .group-label class. The role
-        // stays only because MudBlazor always emits it and a few Theme rules still read its size token; it carries the
-        // Label's size, weight and case, and nothing uses it as a style of its own.
-        SetRole(theme.Typography.Overline, "12px", "600", "1.35");
-        theme.Typography.Overline.LetterSpacing = "normal";
-        theme.Typography.Overline.TextTransform = "none";
+        // There is no Overline role: the Label is the one small-label style and is drawn by the .group-label class, and no
+        // rule reads an overline variable. MudBlazor still emits its own default overline variables; nothing uses them.
         SetRole(theme.Typography.Button, "13px", "500", "1.4");
         return theme;
     }

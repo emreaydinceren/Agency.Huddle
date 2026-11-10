@@ -29,7 +29,7 @@
 
 .feed-preview-deleted {
     padding: 12px;
-    border: 1px dashed var(--ink-edge);
+    border: 1px dashed var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);

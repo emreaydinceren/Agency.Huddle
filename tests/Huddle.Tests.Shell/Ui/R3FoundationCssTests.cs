@@ -11,24 +11,21 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class R3FoundationCssTests
 {
     /// <summary>
-    /// The five ladder rungs are declared in <c>app-vars.css</c> as the <c>--hu-ink-*</c> skin tokens, each as Ink mixed
-    /// into Surface at its percentage; the <c>--ink-*</c> names stay as aliases of them (see <c>SkinCssTests</c>).
+    /// The four ladder rungs are declared in <c>app-vars.css</c> as the <c>--ink-*</c> skin tokens, each as Ink mixed
+    /// into Surface at its percentage (see <c>SkinCssTests</c>).
     /// </summary>
     /// <param name="name">The custom property.</param>
     /// <param name="percent">The share of Ink.</param>
     [Theory]
     [InlineData("--ink-strip", 4)]
     [InlineData("--ink-wash", 6)]
-    [InlineData("--ink-rule", 10)]
-    [InlineData("--ink-edge", 18)]
+    [InlineData("--ink-line", 18)]
     [InlineData("--ink-field", 30)]
     public void AppVars_DeclaresEachInkRung(string name, int percent)
     {
         string vars = CssText.Read(RepoPaths.App("wwwroot", "app-vars.css"));
 
-        string token = "--hu-" + name["--".Length..];
-
-        Assert.Contains($"{token}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains($"{name}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>Lines and washes come from the ladder: no rule reads the palette's own Divider, DividerLight, LinesInputs or BackgroundGray, which sit on different rungs in different Themes.</summary>
@@ -140,7 +137,7 @@ public sealed class R3FoundationCssTests
         string css = CssText.AppCss();
 
         Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--hu-line-control\);", css);
-        Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-edge\);", css);
+        Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-line\);", css);
         Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--hu-line-region\);", css);
         Assert.Matches(@"\.mud-tabs-panels \{\s*padding-top: 24px;", css);
         Assert.Matches(@"\.mud-input\.mud-input-outlined \.mud-input-outlined-border \{\s*border-color: var\(--ink-field\);", css);

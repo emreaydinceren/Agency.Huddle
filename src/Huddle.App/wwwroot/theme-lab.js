@@ -49,8 +49,8 @@ export async function copy(text) {
 }
 
 /**
- * Which --hu-* tokens an element's computed style reads: every stylesheet rule whose selector matches the element and
- * whose declarations use var(--hu-*). Returns [{ property, tokens, selector }].
+ * Which --hu-* and --ink-* tokens an element's computed style reads: every stylesheet rule whose selector matches the element and
+ * whose declarations use var(--hu-*) or var(--ink-*). Returns [{ property, tokens, selector }].
  */
 export function tokensReadBy(element, sheets) {
     const found = [];
@@ -75,12 +75,12 @@ export function tokensReadBy(element, sheets) {
                 continue;
             }
 
-            for (const declaration of rule.style.cssText.matchAll(/([a-z-]+)\s*:\s*([^;]*var\(\s*--hu-[^;]*)/g)) {
+            for (const declaration of rule.style.cssText.matchAll(/([a-z-]+)\s*:\s*([^;]*var\(\s*--(?:hu|ink)-[^;]*)/g)) {
                 if (declaration[1].startsWith("--")) {
                     continue;
                 }
 
-                const tokens = [...new Set([...declaration[2].matchAll(/--hu-[a-z0-9-]+/g)].map((token) => token[0]))];
+                const tokens = [...new Set([...declaration[2].matchAll(/--(?:hu|ink)-[a-z0-9-]+/g)].map((token) => token[0]))];
                 found.push({ property: declaration[1], tokens, selector: rule.selectorText });
             }
         }

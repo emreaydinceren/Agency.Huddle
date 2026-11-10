@@ -87,7 +87,7 @@ public sealed partial class ChromeTraitsTests
     }
 
     /// <summary>
-    /// <c>labels=upper</c> sets the micro-label recipe (overline size, 600, tracking, uppercase, secondary ink) on the
+    /// <c>labels=upper</c> sets the micro-label recipe (the Label size, 600, tracking, uppercase, secondary ink) on the
     /// sidebar group heads, the right sidebar titles, the list header cells and the drawer group labels.
     /// </summary>
     [Fact]

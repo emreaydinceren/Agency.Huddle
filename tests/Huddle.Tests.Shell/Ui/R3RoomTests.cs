@@ -75,7 +75,7 @@ public sealed class R3RoomTests
 
         Assert.Contains("tag-chip", chip, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.True(rule >= 0, "app.css has no .mud-chip.tag-chip rule.");
-        Assert.Contains("border: 1px solid var(--ink-edge);", css[rule..css.IndexOf('}', rule)], StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border: 1px solid var(--ink-line);", css[rule..css.IndexOf('}', rule)], StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>Every Agent card sits in the Transcript's 760px column with an Edge border.</summary>
@@ -88,6 +88,6 @@ public sealed class R3RoomTests
         Assert.True(rule >= 0, "app.css has no .mud-paper.agent-card rule.");
         string body = css[rule..css.IndexOf('}', rule)];
         Assert.Contains("max-width: 760px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("border-color: var(--ink-edge);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-color: var(--ink-line);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 }

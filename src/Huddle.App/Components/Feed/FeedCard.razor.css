@@ -1,10 +1,10 @@
-/* One card of the Feed Tab (Feed spec 6.13). Colours come from the theme: Edge is --ink-edge, Quiet ink the secondary text, Accent the primary. */
+/* One card of the Feed Tab (Feed spec 6.13). Colours come from the theme: Edge is --ink-line, Quiet ink the secondary text, Accent the primary. */
 .feed-card {
     position: relative;
     margin: 0 0 8px;
     padding: 12px 12px 12px 16px;
     overflow: hidden;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--hu-feed-card-radius);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.4;
@@ -77,7 +77,7 @@
 }
 
 :root:has([data-hu-surface="paper"]) .feed-card-resolved {
-    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--hu-ink-strip));
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--ink-strip));
     box-shadow: none;
 }
 
@@ -137,7 +137,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -374,7 +374,7 @@
 .feed-card-edge {
     margin: 0 -12px 12px -16px;
     border: 0;
-    border-top: 1px solid var(--ink-edge);
+    border-top: 1px solid var(--ink-line);
 }
 
 .feed-card-caption {
@@ -390,7 +390,7 @@
 
 .feed-card ::deep .feed-preview-deleted {
     padding: 12px;
-    border: 1px dashed var(--ink-edge);
+    border: 1px dashed var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
 using MudBlazor;
 using Agency.Huddle.Tests.Css;
 
@@ -23,7 +24,6 @@ public sealed partial class TypeScaleTests
         { "body1", "14px", "400" },
         { "body2", "13px", "400" },
         { "caption", "12px", "400" },
-        { "overline", "12px", "600" },
         { "button", "13px", "500" },
     };
 
@@ -55,7 +55,6 @@ public sealed partial class TypeScaleTests
         { "body1", "1.55" },
         { "body2", "1.4" },
         { "caption", "1.35" },
-        { "overline", "1.35" },
         { "button", "1.4" },
     };
 
@@ -119,15 +118,23 @@ public sealed partial class TypeScaleTests
         Assert.Matches(@"\.composer-input:focus-visible \{[^}]*inset 0 0 0 0\.5px var\(--mud-palette-primary\)", css);
     }
 
-    /// <summary>The Overline is retired: its role carries the Label's look (12px, 600), sentence case with no tracking, so nothing that still reads it draws capitals.</summary>
+    /// <summary>
+    /// The Overline is gone: no Theme sets the role (it keeps MudBlazor's own default), and no stylesheet reads an
+    /// overline variable, so the Label (the <c>.group-label</c> class) is the one small-label style.
+    /// </summary>
     [Fact]
-    public void Overline_CarriesTheLabelNotCapitals()
+    public void Overline_IsNeitherSetByTheThemesNorReadByAStylesheet()
     {
+        BaseTypography untouched = new MudTheme().Typography.Overline;
+
         Assert.All(ThemeCatalog.BuiltIn, descriptor =>
         {
-            Assert.Equal("none", descriptor.Theme.Typography.Overline.TextTransform);
-            Assert.Equal("normal", descriptor.Theme.Typography.Overline.LetterSpacing);
+            Assert.Equal(untouched.FontSize, descriptor.Theme.Typography.Overline.FontSize);
+            Assert.Equal(untouched.FontWeight, descriptor.Theme.Typography.Overline.FontWeight);
+            Assert.Equal(untouched.TextTransform, descriptor.Theme.Typography.Overline.TextTransform);
         });
+        Assert.DoesNotContain("typography-overline", CssText.AppCss(), StringComparison.Ordinal);
+        Assert.DoesNotContain("--mud-typography-overline-size", MudVariables.All);
     }
 
     /// <summary>The stylesheets declare only the three weights, 400, 500 and 600, as a literal number.</summary>
@@ -243,7 +250,6 @@ public sealed partial class TypeScaleTests
         "body1" => typography.Body1,
         "body2" => typography.Body2,
         "caption" => typography.Caption,
-        "overline" => typography.Overline,
         "button" => typography.Button,
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Not a role the scale sets."),
     };

@@ -746,7 +746,6 @@ internal static partial class SkinLoader
 
         if (draft.LetterSpacing is not null)
         {
-            // Never Overline: its 0.04em tracking is pinned by TypeScaleTests.
             BaseTypography[] roles =
             [
                 theme.Typography.Default, theme.Typography.Body1, theme.Typography.Body2, theme.Typography.Caption,

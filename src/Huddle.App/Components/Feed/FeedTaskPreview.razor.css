@@ -1,7 +1,7 @@
 /* The read-only Task preview in an expanded Feed card (Feed spec 6.13): an inset outlined box. */
 .feed-preview {
     padding: 12px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
 }
@@ -80,7 +80,7 @@
 .feed-proof-chip {
     display: inline-block;
     padding: 0 8px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: 999px;
     font-size: var(--mud-typography-caption-size);
 }
@@ -96,7 +96,7 @@
     width: 18px;
     height: 4px;
     border-radius: var(--mud-default-borderradius);
-    background-color: var(--ink-edge);
+    background-color: var(--ink-line);
 }
 
 .feed-proof-segment-on {
@@ -132,7 +132,7 @@
     gap: 8px;
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid var(--ink-edge);
+    border-top: 1px solid var(--ink-line);
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }

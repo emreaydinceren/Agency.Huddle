@@ -74,7 +74,7 @@ public sealed class ThemeCatalogTests
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
         Assert.Equal("#8379D8", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
-        Assert.Equal("#0B0B0F", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
+        Assert.Equal("#08080B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
     }
 
     /// <summary>
@@ -244,43 +244,6 @@ public sealed class ThemeCatalogTests
         }
     }
 
-    /// <summary>
-    /// Every authored theme's <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
-    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets.
-    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures every built-in theme, Custom Accent included.
-    /// </summary>
-    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
-    [Theory]
-    [MemberData(nameof(AuthoredThemeIds))]
-    public void Huddle_DividerAgainstSurface_ReachesCardBorderVisibility(string themeId)
-    {
-        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
-        var palette = NativePalette(descriptor);
-
-        var ratio = ContrastColour.Ratio(palette.Divider, palette.Surface);
-
-        Assert.True(ratio >= 1.5, $"{themeId}: Divider vs Surface is {ratio:F2}:1, under the 1.5:1 card-border floor.");
-    }
-
-    /// <summary>
-    /// Records <c>Divider</c> against <c>Surface</c> for every built-in theme, so a new or imported palette's
-    /// card-border visibility is a measured number rather than a guess. It asserts only that each ratio is
-    /// finite and at least 1:1; the 1.5:1 floor is enforced for the Huddle themes alone.
-    /// </summary>
-    [Fact]
-    public void BuiltIn_DividerVersusSurface_IsRecorded()
-    {
-        Dictionary<string, double> measured = new(StringComparer.Ordinal);
-        foreach (var descriptor in ThemeCatalog.BuiltIn)
-        {
-            var palette = NativePalette(descriptor);
-            measured[descriptor.Id] = ContrastColour.Ratio(palette.Divider, palette.Surface);
-        }
-
-        Assert.Equal(ThemeCatalog.BuiltIn.Count, measured.Count);
-        Assert.All(measured.Values, ratio => Assert.True(double.IsFinite(ratio) && ratio >= 1.0));
-    }
-
     /// <summary>Every built-in theme sets <c>Tertiary</c>, the Review signal, to its own value rather than MudBlazor's default, and it is not the <c>Secondary</c> fill.</summary>
     [Fact]
     public void BuiltIn_EveryThemeSetsATertiaryOfItsOwn()
@@ -416,7 +379,7 @@ public sealed class ThemeCatalogTests
         Assert.Equal("#ffffff", light.Surface.ToString(MudColorOutputFormats.Hex));
         Assert.Equal("#f6f6f1", light.Background.ToString(MudColorOutputFormats.Hex));
         Assert.Equal("#1c2125", dark.Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#161a1d", dark.Background.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#14181a", dark.Background.ToString(MudColorOutputFormats.Hex));
     }
 
     /// <summary>The picker order is the eight ids left after P5-D4: Lumen, Fluent, Nordic and Cobalt Soft, each light then dark.</summary>

@@ -197,7 +197,7 @@ public sealed class AppCssTasksTests
         string card = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-card");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("padding: 12px;", card, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--ink-edge);", card, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--ink-line);", card, StringComparison.Ordinal);
         Assert.Contains("gap: 8px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-zone"), StringComparison.Ordinal);
         Assert.Contains("line-clamp: 3;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-card-title"), StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-card-id"), StringComparison.Ordinal);

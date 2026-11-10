@@ -51,7 +51,7 @@ public sealed class ThemeLabJsTests
         JsonElement result = Run("tokens-read-by");
 
         Assert.Equal(
-            "div#x\nbackground <- --hu-ground-raised\nborder <- --hu-ink-edge\nbox-shadow <- --hu-shadow-card",
+            "div#x\nbackground <- --hu-ground-raised\nborder <- --ink-line\nbox-shadow <- --hu-shadow-card",
             result.GetProperty("described").GetString());
         Assert.Equal("p: reads no skin token", result.GetProperty("none").GetString());
     }

@@ -36,12 +36,12 @@ public sealed class AppCssTokensCTests
     [InlineData(".library-explorer-split > .divider", "background-color: var(--hu-line-region);")]
     [InlineData(".library-explorer-tree-header", "border-bottom: 1px solid var(--hu-line-region);")]
     [InlineData(".library-explorer-tree-header", "background: var(--hu-ground-sidebar);")]
-    [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", "color: var(--hu-selected-foreground);")]
+    [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", "color: var(--hu-accent-ink);")]
     [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", "background-color: var(--hu-selected-background);")]
     [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", "box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);")]
     [InlineData(".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected:hover", "background-color: var(--hu-selected-background-hover);")]
     [InlineData(".tasks-count-need-you:not(.is-zero)", "color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));")]
-    [InlineData(".task-filter-chip-set .task-filter-chip-button", "color: var(--hu-chip-set-ink);")]
+    [InlineData(".task-filter-chip-set .task-filter-chip-button", "color: var(--hu-accent-ink);")]
     [InlineData(".library-rendered .library-ref", "color: var(--hu-accent-ink);")]
     public void Rule_ReadsTheToken(string selector, string declaration)
     {

@@ -62,7 +62,7 @@ public sealed class LumenSkinTests
         Assert.Equal("palette.backgroundGray", light.Tokens["ground.rail"]);
         Assert.Equal("palette.primary", light.Tokens["needs"]);
         Assert.Equal("palette.primaryContrastText", light.Tokens["send.fg"]);
-        Assert.Equal("mix(palette.dividerLight 90%, palette.background)", dark.Tokens["current.background"]);
+        Assert.Equal("palette.dividerLight", dark.Tokens["current.background"]);
     }
 
     /// <summary>
@@ -87,7 +87,8 @@ public sealed class LumenSkinTests
     }
 
     /// <summary>
-    /// Lumen's Board lanes are tinted columns with no border, its note h1 is the mockup's 26px over the 16px body, and its
+    /// Lumen's Board lanes are tinted columns with the default lane border (it no longer sets <c>board.column.line</c>:
+    /// every Theme draws one, plan D15), its note h1 is the mockup's 26px over the 16px body, and its
     /// dark prose sits a step below the heading white (side-by-side audit, 2026-10-30, LL-K02, LL-L01, LD-03).
     /// </summary>
     [Fact]
@@ -96,7 +97,7 @@ public sealed class LumenSkinTests
         Skin light = Load("lumen-light");
         Skin dark = Load("lumen-dark");
 
-        Assert.Equal("transparent", light.Tokens["board.column.line"]);
+        Assert.False(light.Tokens.ContainsKey("board.column.line"));
         Assert.Equal("1.625em", light.Tokens["note.h1.size"]);
         Assert.Equal("-0.01em", light.Tokens["note.h1.tracking"]);
         Assert.Equal("#d4d4dc", dark.Tokens["note.prose.ink"]);

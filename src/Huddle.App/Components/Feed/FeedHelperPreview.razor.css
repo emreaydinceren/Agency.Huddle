@@ -1,7 +1,7 @@
 /* The read-only Helper preview in an expanded Feed card (Helpers in the Feed spec 5.5): the same inset outlined box as the Task preview. */
 .feed-helper-preview {
     padding: 12px;
-    border: 1px solid var(--ink-edge);
+    border: 1px solid var(--ink-line);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
 }
