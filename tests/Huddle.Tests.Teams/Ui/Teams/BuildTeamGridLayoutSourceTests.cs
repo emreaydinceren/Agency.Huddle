@@ -42,9 +42,9 @@ public sealed class BuildTeamGridLayoutSourceTests
     [Fact]
     public void AppCss_RosterGrid_KeepsItsCardWidth()
     {
-        string css = Normalised(CssText.AppCss(CssNewlines.AsIs));
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".roster-grid");
 
-        Assert.Contains("\n.roster-grid {\n    grid-auto-columns: 20rem;\n}", css, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("grid-auto-columns: 20rem;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>A lone roster card gets one row, so an empty second row does not leave its row gap below the card.</summary>

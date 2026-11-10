@@ -61,7 +61,7 @@ public sealed class AppCssTokensDTests
         Assert.Contains("background-color: var(--hu-selected-background);", chip);
         Assert.Contains("color: var(--hu-selected-foreground);", chip);
 
-        string[] card =Declarations(".team-type-card-selected,\n.team-type-card-selected:hover");
+        string[] card =Declarations(".team-type-card-selected");
         Assert.Contains("background: var(--hu-selected-background);", card);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".team-type-card-selected:hover"));
 

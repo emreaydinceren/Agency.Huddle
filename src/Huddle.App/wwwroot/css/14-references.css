@@ -12,8 +12,7 @@
 }
 
 .composer-picker-heading,
-.composer-picker-footer,
-.composer-picker-note {
+.composer-picker-footer {
     color: var(--mud-palette-text-secondary);
 }
 
@@ -70,6 +69,7 @@
 
 .composer-picker-note {
     flex: none;
+    color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
     white-space: nowrap;
 }
@@ -320,8 +320,8 @@
     margin-inline-start: auto;
 }
 
-/* Duplicate Team's body is two short fields and a Browse button; its stack's last margin used to overflow the content box
-   by a pixel and drew a scrollbar (audit B10), so the box does not scroll. */
+/* Duplicate Team's body is two short fields and a Browse button; its stack's last margin overflows the content box
+   by a pixel and would draw a scrollbar, so the box does not scroll. */
 .mud-dialog-content.duplicate-team-content {
     overflow-y: visible;
 }
@@ -427,10 +427,10 @@
     display: inline-flex;
 }
 
-/* In a MudAvatarGroup (the Room's Members, C3) each avatar is the first child of its own
+/* In a MudAvatarGroup (the Room's Members) each avatar is the first child of its own
    .profile-avatar, so MudBlazor's ":first-child { margin-inline-start: 0 !important }" cancels the
    group's overlap on every one. The wrapper takes the overlap instead: the 8px the group's
-   Spacing="2" gives a bare avatar (MudBlazor's ms-n2), on the stylesheet's px scale (CV11). */
+   Spacing="2" gives a bare avatar (MudBlazor's ms-n2), on the stylesheet's px scale. */
 .mud-avatar-group > .profile-avatar:not(:first-child) {
     margin-inline-start: -8px;
 }
