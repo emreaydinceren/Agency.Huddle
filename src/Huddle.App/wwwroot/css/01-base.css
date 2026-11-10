@@ -29,8 +29,12 @@ html {
     font-size: var(--mud-typography-default-size);
 }
 
+/* Every scroller shows a thin thumb in the edge colour on no track, as the mockups do, not the platform bar with arrow
+   buttons. A rule further down may still hide a thumb until hover (the hiring pool grid). */
 * {
     box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-edge) transparent;
 }
 
 /* Native controls and scrollbars follow the Theme's mode. A dark Theme left at the default scheme drew light scrollbars,
@@ -43,21 +47,13 @@ html {
     color-scheme: dark;
 }
 
-/* Every scroller shows a thin thumb in the edge colour on no track, as the mockups do, not the platform bar with arrow
-   buttons. A rule further down may still hide a thumb until hover (the hiring pool grid). */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--ink-edge) transparent;
-}
-
 code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
 
 /* ---- Keyboard focus ring --------------------------------------------------------------------
    MudBlazor.min.css resets outline to none for real keyboard focus on anchors and buttons
-   (a:focus-visible, button:focus, .mud-button-root all reset it - see the .nuget MudBlazor.min.css
-   payload), leaving no visible focus indicator anywhere: not outline, not box-shadow, not
+   (a:focus-visible, button:focus, .mud-button-root all reset it), leaving no visible focus indicator anywhere: not outline, not box-shadow, not
    background. a:focus-visible and button:focus are both specificity (0,1,1), exactly what the two
    selectors below carry, so this relies on the same tie-break App.razor's link-order comment
    already documents - MudBlazor.min.css loads first, app.css loads after, and a specificity tie
@@ -102,11 +98,9 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
-/* Accent as text: the accent pulled 30% toward the body text, so it reads 4.5:1 or better on every Huddle surface
-   (raw Primary stays a fill, a bar or a border). The active sidebar row takes the Selected treatment - Primary 14%
-   over Surface, 20% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
-   row no longer look alike. */
-/* The Selected shape on sidebar rows (audit A5): every row in the drawer is inset 4px, selected or not, so labels never
+/* The active sidebar row takes the Selected treatment - Primary 14% over Surface, 20% when hovered - not the generic
+   hover shade MudBlazor paints, so the selected and the hovered row do not look alike. */
+/* The Selected shape on sidebar rows: every row in the drawer is inset 4px, selected or not, so labels never
    shift when a row is selected, and rounds to 0.75x the base radius. The fill below is what marks the selected one. */
 .mud-drawer .mud-navmenu .mud-nav-link {
     width: calc(100% - 2 * var(--nav-inset));
@@ -131,8 +125,9 @@ button:focus-visible {
     color: var(--hu-current-icon);
 }
 
-/* The active tab-rail label and the words on text and outlined accent buttons: MudBlazor colours them with raw
-   Primary, so they take the accent-text mix. An outlined button's border is the Chrome line (rule below), never the accent. */
+/* Accent as text: the accent pulled 30% toward the body text, so it reads 4.5:1 or better on every Huddle surface
+   (raw Primary stays a fill, a bar or a border). The active tab-rail label and the words on text and outlined accent
+   buttons: MudBlazor colours them with raw Primary, so they take the accent-text mix. An outlined button's border is the Chrome line (rule below), never the accent. */
 .mud-tab.mud-tab-active,
 .mud-button-text.mud-button-text-primary,
 .mud-button-outlined.mud-button-outlined-primary {
@@ -232,7 +227,7 @@ button:focus-visible {
     border-inline-start: 3px solid var(--mud-palette-success);
 }
 
-/* An outlined button's border is the Chrome line, not Ink (the heaviest line in the app) and not the accent (audit B8c).
+/* An outlined button's border is the Chrome line, not Ink (the heaviest line in the app) and not the accent.
    Its words are Ink, or the accent ink above for Color.Primary. Three classes outrank MudBlazor's per-colour border. */
 .mud-button-root.mud-button.mud-button-outlined {
     border-color: var(--hu-line-control);
@@ -243,7 +238,7 @@ button:focus-visible {
 }
 
 /* A disabled button uses the Theme's own colours, Faint ink on Wash, never MudBlazor's rgba(0,0,0,.26) on .12, which
-   ignores the Theme and all but vanishes on a dark one (audit B10c). MudBlazor's own disabled rules are !important,
+   ignores the Theme and all but vanishes on a dark one. MudBlazor's own disabled rules are !important,
    so these are too; they carry three classes so only a disabled button is touched. */
 .mud-button-root.mud-button:disabled {
     color: var(--mud-palette-text-disabled) !important;
@@ -257,7 +252,7 @@ button:focus-visible {
     border-color: var(--ink-rule);
 }
 
-/* Every outlined input draws the Field line, long-text fields included (audit A1). Hover, focus, error and disabled
+/* Every outlined input draws the Field line, long-text fields included. Hover, focus, error and disabled
    keep MudBlazor's own colours: those selectors are more specific than this one. */
 .mud-input.mud-input-outlined .mud-input-outlined-border {
     border-color: var(--ink-field);
@@ -283,7 +278,7 @@ button:focus-visible {
     background-color: var(--hu-scrim);
 }
 
-/* A field's label is Quiet ink at 400, at rest and floated, in every dialog (audit B10d). MudBlazor draws it at the
+/* A field's label is Quiet ink at 400, at rest and floated, in every dialog. MudBlazor draws it at the
    subtitle1 weight, which is 600 in this scale. An outlined field's label, which sits above the box, is set apart at
    600 by the "label sits above its field" rules below. */
 .mud-input-control > .mud-input-control-input-container > .mud-input-label-inputcontrol {
@@ -295,7 +290,7 @@ button:focus-visible {
     border-bottom-color: var(--ink-edge);
 }
 
-/* The tab rail (Team page): it ends in a Chrome line, and its content starts 24px below that line (audit B2). */
+/* The tab rail (Team page): it ends in a Chrome line, and its content starts 24px below that line. */
 .mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-tabbar {
     border-bottom: 1px solid var(--hu-line-region);
 }
@@ -304,7 +299,7 @@ button:focus-visible {
     padding-top: 24px;
 }
 
-/* Dialog chrome, once (audit B10a-b). The close (x) is a 28px box with an 18px icon in the action colour, level with
+/* Dialog chrome, once. The close (x) is a 28px box with an 18px icon in the action colour, level with
    the title's first line, not MudBlazor's 45px Medium icon button. The title, content and actions insets are 16/24,
    8/24 and 12/24/16, so the content and the actions share one left edge. */
 .mud-dialog .mud-dialog-title {
@@ -333,7 +328,7 @@ button:focus-visible {
 }
 
 /* Links and the selected list row are the accent ink (the accent pulled 30% toward the body text), never raw
-   Primary, which MudBlazor paints both in and which reads under 4.5:1 on a Theme's surface (audit A5). The list row
+   Primary, which MudBlazor paints both in and which reads under 4.5:1 on a Theme's surface. The list row
    also takes the Selected shape below. MudBlazor's .mud-primary-text is !important, so this is too. */
 .mud-link.mud-primary-text {
     color: var(--hu-accent-ink) !important;
@@ -353,6 +348,7 @@ button:focus-visible {
 .mud-list-item.mud-selected-item:focus-visible {
     background-color: var(--hu-selected-background-hover);
 }
+
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
    The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
    overline 11. Nothing renders under 11px, and there are three weights: 400 text, 500 controls, 600 emphasis and
@@ -398,7 +394,7 @@ b {
     font-size: var(--mud-typography-body2-size);
 }
 
-/* ---- A field's label sits above its field (alignment D6, markup M4) --------------------------------------------
+/* ---- A field's label sits above its field --------------------------------------------
    An outlined field's label is caption size at 600 in body text, on its own line above the box, at rest, focused and
    filled alike, so it never floats into the border or over the value. MudBlazor positions it absolutely and moves it
    with transforms in four states; the chain below matches its most specific rule (0,5,1) and wins on order, so no
@@ -426,7 +422,7 @@ b {
     display: none;
 }
 
-/* ---- Field furniture (side-by-side audit, 2026-10-30, G07) ---------------------------------------------------------
+/* ---- Field furniture ---------------------------------------------------------
    Every Theme's mockup draws a field 30-32px tall, where MudBlazor's dense outlined field is 38px. border-box keeps a
    surface's own padding (paper's 8px) inside the 32px. Fields with their own height (the compact toolbar, the Task
    edit strip, inline titles) set it with more specific rules further down. */
@@ -467,8 +463,8 @@ b {
 }
 
 /* A select's visible text is a div (its input is hidden) that MudBlazor gives an inline display:inline and a height of its own
-   (a dense one 32px, the compact toolbar's 28px): the text sat on the first line of that block, on the top border, while the caret
-   was centred (issue 463). The block keeps whatever height the field gives it and centres its one line in it, which holds at any
+   (a dense one 32px, the compact toolbar's 28px): the text would sit on the first line of that block, on the top border, while the caret
+   is centred. The block keeps whatever height the field gives it and centres its one line in it, which holds at any
    field height, labelled or not; the inline style rules out display:flex without !important, so align-content does it. */
 .mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-select-input {
     align-content: center;
@@ -479,7 +475,7 @@ b {
 }
 
 /* A select's options are menu items (ADR-0056: menus and rows are body2). MudBlazor's MudSelectItem is a list row with 8px gutters and a
-   body1 label, 46px tall, so a six-word list covered most of its dialog (issue 492). The same dense row a MudMenu item is - 2px
+   body1 label, 46px tall, so a six-word list would cover most of its dialog. The same dense row a MudMenu item is - 2px
    padding, the label's own 4px margin, body2 text, about 30px - read by role, so the autocomplete's options match too. */
 .mud-popover .mud-list-item[role="option"] {
     padding-block: 2px;
@@ -502,7 +498,7 @@ b {
     max-width: 75ch;
 }
 
-/* ---- Shared utilities: one class per job, reused by every feature (UX-063, UX-066, UX-R21) ---- */
+/* ---- Shared utilities: one class per job, reused by every feature ---- */
 
 /* A panel anchored to a control (Invite, the @ picker): a card border and the popover elevation. */
 .invite-panel,
@@ -540,7 +536,7 @@ b {
     border: 0;
 }
 
-/* A reference to another object inside a Message (UX-R22): a Task, a Library file, a Room or a Team. Link
+/* A reference to another object inside a Message: a Task, a Library file, a Room or a Team. Link
    text is the accent pulled 30% toward the body text: darker on a light Theme and lighter on a dark one, so
    it clears 4.5:1 where the plain accent (about 3.9:1 on either Huddle surface) does not. */
 .task-ref,
@@ -594,7 +590,7 @@ a.team-ref,
     border-bottom: 1px solid var(--ink-rule);
 }
 
-/* A group label (audit A4): the heading of a group of fields inside a drawer or dialog. 12px at 600 in Quiet ink,
+/* A group label: the heading of a group of fields inside a drawer or dialog. 12px at 600 in Quiet ink,
    sentence case, 8px above its fields. The page-level heading over a group is .group-heading above, not this. */
 .group-label {
     margin: 0 0 8px 0;
@@ -605,7 +601,7 @@ a.team-ref,
     text-transform: none;
 }
 
-/* The Selected shape (audit A5): one look for the chosen row of a list, tree or menu, whatever component draws it.
+/* The Selected shape: one look for the chosen row of a list, tree or menu, whatever component draws it.
    The Accent tint at 14% (20% hovered) with the accent ink at 500, inset 4px from its container and rounded to
    three quarters of the base radius. A selected MudListItem and the active sidebar row already wear it. */
 .selected-shape {
@@ -621,7 +617,7 @@ a.team-ref,
     background-color: var(--hu-selected-background-hover);
 }
 
-/* A field in a toolbar (audit A7): a 28px box with 13px text, on a MudTextField or MudSelect. SearchField wears it.
+/* A field in a toolbar: a 28px box with 13px text, on a MudTextField or MudSelect. SearchField wears it.
    The doubled MudBlazor classes outrank its Medium and Dense outlined padding. */
 .mud-input-control.toolbar-compact {
     height: 28px;
@@ -643,6 +639,7 @@ a.team-ref,
 .mud-input-control.toolbar-compact .mud-input-label {
     display: none;
 }
+
 /* A preformatted block that scrolls: a Task's process step. */
 .process-step-preview {
     max-height: 16rem;
@@ -655,12 +652,12 @@ a.team-ref,
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
-/* The " · " between the Task footer's facts: the footer's 16px gap, pulled in to 8px each side so the dot reads as a separator (#479). */
+/* The " · " between the Task footer's facts: the footer's 16px gap, pulled in to 8px each side so the dot reads as a separator. */
 .task-detail-footer-sep {
     margin-inline: -8px;
 }
 
-/* The " · " between two facts on a Roster card's chips line: quiet, like the facts it separates (#479). */
+/* The " · " between two facts on a Roster card's chips line: quiet, like the facts it separates. */
 .roster-sep {
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
