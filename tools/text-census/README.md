@@ -52,10 +52,9 @@ For every visible element with a non-transparent border side or background fill,
 | --- | --- | --- |
 | Field | 30% | `.mud-input-outlined-border`, `.filter-chip` |
 | Chrome | 30% | `.toolbar-hairline`, `.mud-toolbar`, tab strip (`.mud-tabs-toolbar`, `.mud-tabs-tabbar`, `.tab-rail`) |
-| Rule | 10% | `.mud-divider`, `hr` |
-| Edge | 18% | `.tag-chip`, `.floating-panel`, `.mud-card`, `.mud-paper-outlined`, `*-card`, `*-tile` |
+| Line | 18% | `.mud-divider`, `hr`, `.tag-chip`, `.floating-panel`, `.mud-card`, `.mud-paper-outlined`, `*-card`, `*-tile` |
 
-The required order is Rule < Edge < Field <= Chrome (`ORDER_RULES`). Each tier is summarised by the median rung of its on-ladder lines, and `order.violations` names every pair out of order, for example `Edge < Field required, but Edge is Ink 21% and Field is Ink 14%`. An empty list means the order holds. To classify a new class name, add one row to `CLASSIFIER`; to change a tier's order, edit `ORDER_RULES`.
+The required order is Line < Field <= Chrome (`ORDER_RULES`). Each tier is summarised by the median rung of its on-ladder lines, and `order.violations` names every pair out of order, for example `Line < Field required, but Line is Ink 21% and Field is Ink 14%`. An empty list means the order holds. To classify a new class name, add one row to `CLASSIFIER`; to change a tier's order, edit `ORDER_RULES`.
 
 ## Thresholds
 
