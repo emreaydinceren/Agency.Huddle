@@ -61,8 +61,8 @@
 
 /* ---- Trait marks=chip: names, references, mentions, quotes and tool summaries are drawn as shapes ----------- */
 
-/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps the 13px/600 of C5b (it used to be
-   raised to body size here, which made it 14px beside the 12px time). */
+/* The time is tabular and quiet, and paragraphs sit 4px apart. The sender keeps its base 13px/600, so it is not taller
+   than the 12px time beside it. */
 :root:has([data-hu-marks="chip"]) .message-time {
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
@@ -95,7 +95,7 @@
 
 /* A Task, Room or Team reference is a chip in the accent, a Task's with a mono id and its status dot. The Theme's accent,
    not Info: every mockup draws these chips in its own accent, and Info read as a foreign teal in Cobalt Soft and a blue in
-   Lumen (side-by-side audit, 2026-10-30, LL-C02 and CL-01). */
+   Lumen. */
 :root:has([data-hu-marks="chip"]) .task-ref,
 :root:has([data-hu-marks="chip"]) a.room-ref,
 :root:has([data-hu-marks="chip"]) a.team-ref {
