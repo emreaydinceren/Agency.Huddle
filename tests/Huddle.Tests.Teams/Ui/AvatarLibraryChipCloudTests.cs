@@ -93,7 +93,7 @@ public sealed class AvatarLibraryChipCloudTests
         Assert.DoesNotContain(".avatar-library-cloud", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".avatar-library-tags-all", css, StringComparison.Ordinal);
         Assert.DoesNotContain("is-quiet", css, StringComparison.Ordinal);
-        Assert.Matches(@"\.chip-cloud-chip\.is-set", css);
+        Assert.DoesNotContain(".chip-cloud-chip", css, StringComparison.Ordinal);
     }
 
     private sealed class Harness : IAsyncDisposable

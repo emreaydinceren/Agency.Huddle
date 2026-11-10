@@ -12,7 +12,8 @@
         @this.Leading
         @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.Pool, this.Selected, this.Expanded ? null : this.Cap))
         {
-            <button type="button" class="@this.ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">
+            <Chip T="string" Look="ChipLook.Filter" IsSet="@chip.Selected" Class="chip-cloud-chip" aria-pressed="@(chip.Selected ? "true" : "false")"
+                  OnClick="@(() => this.OnToggle.InvokeAsync(chip.Text))">
                 @if (chip.Selected)
                 {
                     <span class="chip-cloud-bracket" aria-hidden="true">[</span>
@@ -23,11 +24,11 @@
                     <span class="chip-cloud-close" aria-hidden="true">X</span>
                     <span class="chip-cloud-bracket" aria-hidden="true">]</span>
                 }
-            </button>
+            </Chip>
         }
         @if (this.Cap is int cap && this.Pool.Count > cap)
         {
-            <button type="button" class="chip-cloud-all" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.ToggleExpanded">@(this.Expanded ? "Show fewer" : $"Show all ({this.Pool.Count})")</button>
+            <Chip T="string" Look="ChipLook.Filter" Class="chip-cloud-all" aria-expanded="@(this.Expanded ? "true" : "false")" OnClick="this.ToggleExpanded">@(this.Expanded ? "Show fewer" : $"Show all ({this.Pool.Count})")</Chip>
         }
     </div>
 }
@@ -64,11 +65,6 @@
     public EventCallback<string> OnToggle { get; set; }
 
     private bool Expanded => this.expanded;
-
-    private string ChipClass(ChipItem chip)
-    {
-        return chip.Selected ? "chip-cloud-chip chip-cloud-chip-selected is-set" : "chip-cloud-chip";
-    }
 
     private void ToggleExpanded() => this.expanded = !this.expanded;
 }

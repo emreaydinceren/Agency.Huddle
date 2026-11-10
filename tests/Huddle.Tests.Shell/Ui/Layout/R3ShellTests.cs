@@ -82,12 +82,12 @@ public sealed partial class R3ShellTests
         string row = R3ShellTests.DeclarationsFor(".mud-drawer .mud-navmenu .mud-nav-link");
         Assert.Matches(@"margin-inline:\s*var\(--nav-inset\)", row);
         Assert.Matches(@"--nav-inset:\s*4px", CssText.AppCss(CssNewlines.AsIs));
-        Assert.Matches(@"border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 0\.75\)", row);
+        Assert.Matches(@"border-radius:\s*var\(--hu-radius-control\)", row);
 
         string tile = R3ShellTests.DeclarationsFor(".activity-bar-item.mud-icon-button");
         Assert.Matches(@"width:\s*40px", tile);
         Assert.Matches(@"height:\s*40px", tile);
-        Assert.Matches(@"border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 0\.75\)", tile);
+        Assert.Matches(@"border-radius:\s*var\(--hu-radius-control\)", tile);
     }
 
     /// <summary>

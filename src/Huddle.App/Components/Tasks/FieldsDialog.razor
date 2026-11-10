@@ -31,7 +31,7 @@
                     <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
                 </ChildContent>
                 <ItemRenderer>
-                    @* The switch is Accent when on, like the toolbar's Dense switch, and its label is the field's display name, so it has an accessible name.
+                    @* The switch is Accent when on, and its label is the field's display name, so it has an accessible name.
                        The first row cannot move up and the last cannot move down. *@
                     <div class="view-editor-field-row">
                         <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary"

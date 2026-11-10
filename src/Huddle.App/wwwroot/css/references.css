@@ -132,7 +132,7 @@
     color: var(--hu-accent-ink);
     background: transparent;
     border: 1px dashed var(--ink-field);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     cursor: pointer;
 }
 
@@ -164,7 +164,7 @@
 .role-suggested {
     padding: 4px 8px;
     border: 1px solid var(--mud-palette-success);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     font-weight: 600;
     color: var(--mud-palette-success-darken);
     background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
@@ -190,7 +190,7 @@
     padding: 16px;
     text-align: center;
     border: 1px dashed var(--ink-field);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -208,7 +208,7 @@
     padding: 12px;
     background: var(--hu-ground-raised);
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives an Agent's,
@@ -260,7 +260,7 @@
 
 .roster-manager-badge {
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -276,7 +276,7 @@
 .roster-tier {
     align-self: flex-start;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-primary);
     background: var(--ink-wash);

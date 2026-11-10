@@ -128,7 +128,7 @@ public sealed class NordicSkinTests
 
         // 1 and 7: an outlined input is filled from the field token and carries the radius, beating the toolbar search fill.
         string input = CssText.RuleBody(css, paper + ".mud-input.mud-input-outlined");
-        Assert.True(input.Contains("background-color: var(--hu-field-background);", StringComparison.Ordinal) && input.Contains("border-radius: var(--mud-default-borderradius);", StringComparison.Ordinal));
+        Assert.True(input.Contains("background-color: var(--hu-field-background);", StringComparison.Ordinal) && input.Contains("border-radius: var(--hu-radius-card);", StringComparison.Ordinal));
         // 2: the active tab reads TextPrimary.
         Assert.True(CssText.RuleBody(css, paper + ".tab-item.active").Contains("color: var(--mud-palette-text-primary);", StringComparison.Ordinal));
         // 3: the segmented track has the region hairline.

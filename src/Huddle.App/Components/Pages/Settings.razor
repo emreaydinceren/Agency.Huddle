@@ -63,8 +63,8 @@ else if (this.isAdmin == true)
                         {
                             @* G2a: the only meaning of the section badge is the count of Broken rows plus SkillStore issues
                                (Skill Packs spec §6.9.2). The words say what the number is, so it is not colour alone. *@
-                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="settings-nav-badge ml-2"
-                                     aria-label="@Plural.Of(this.skillProblems, "Skills problem", "Skills problems")">@this.skillProblems</MudChip>
+                            <span class="chip-meta settings-nav-badge ml-2"
+                                  aria-label="@Plural.Of(this.skillProblems, "Skills problem", "Skills problems")" role="img">@this.skillProblems</span>
                         }
                     </MudNavLink>
                 }

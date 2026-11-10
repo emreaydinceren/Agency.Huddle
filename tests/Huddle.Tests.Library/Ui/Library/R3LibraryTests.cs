@@ -45,7 +45,7 @@ public sealed class R3LibraryTests
         string selected = CssText.RuleBody(css, ".library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected", RuleMatch.Last);
 
         Assert.Contains("margin-inline: 4px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-control);", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("background-color: var(--hu-selected-background);", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("font-weight: 500;", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup

@@ -26,7 +26,7 @@
     flex: none;
     margin-inline-end: 12px;
     border: 1px solid var(--ink-line);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     overflow: hidden;
 }
 
@@ -93,7 +93,7 @@
     color: var(--mud-palette-text-primary);
     background: var(--ink-wash);
     border: 1px solid var(--ink-line);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 .prompts-field-actions {
@@ -161,7 +161,7 @@
     width: calc(100% - 8px);
     margin-inline: 4px;
     padding-block: 0;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -334,7 +334,7 @@
 
 /* -- nav=tile: the Settings menu, the same quiet rows and lifted current tile ---------------------------------- */
 :root:has([data-hu-nav="tile"]) .settings-nav .mud-nav-link {
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     color: var(--hu-text-subtle);
 }
 

@@ -66,7 +66,7 @@
 .task-detail-title .mud-input-outlined-border {
     border-color: var(--hu-field-line);
     border-bottom-color: var(--hu-field-line-bottom);
-    border-radius: var(--hu-control-radius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* The strip under the page header: Assigned to, Status and Priority on one row, Team, Project and Sprint under them (Team under Assigned to, Project under
@@ -280,12 +280,12 @@
     color: inherit;
 }
 
-/* The Status and Tag chips share one shape, 22px high with a 6px corner (three quarters of the Theme's 8px). */
+/* The Status and Tag chips share one shape, 24px high with a 6px corner (three quarters of the Theme's 8px). */
 .mud-chip.status-chip {
     box-sizing: border-box;
-    height: 22px;
+    height: 24px;
     padding: 0 8px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     line-height: 1;
@@ -331,9 +331,9 @@
 /* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */
 .mud-chip.tag-chip {
     box-sizing: border-box;
-    height: 22px;
+    height: 24px;
     padding: 0 8px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     line-height: 1;
@@ -342,29 +342,53 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 3. Filter: dashed while unset; a Primary border and tint once set. TaskFilterChip draws its own pill
-   (.task-filter-chip); a MudChip that filters wears .filter-chip, and .filter-chip-set when on. */
+/* 3. Filter: dashed while unset; a Primary border and tint once set. Every filter is the one Chip with Look=Filter and wears
+   .filter-chip, and .is-set when on: the toolbar's menu filters, the search scopes, the Feed categories, a pack toggle and a picker cloud. */
 .mud-chip.filter-chip {
     box-sizing: border-box;
     height: 28px;
     padding: 0 12px;
     border: 1px dashed var(--ink-field);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background-color: transparent;
     font-size: var(--mud-typography-body2-size);
     font-weight: 400;
     color: var(--mud-palette-text-primary);
 }
 
-/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. .is-set is the name the screens use;
-   .filter-chip-set and MudBlazor's own selected state still read the same until each screen moves over. */
+/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. MudBlazor's own selected state reads the same. */
 .mud-chip.filter-chip.is-set,
-.mud-chip.filter-chip.filter-chip-set,
 .mud-chip.filter-chip.mud-chip-selected {
     border: 1px solid var(--mud-palette-primary);
     background-color: var(--hu-selected-background);
     color: var(--hu-accent-ink);
     font-weight: 500;
+}
+
+/* A Filter chip's parts: the menu trigger is the chip's own text with a caret, the value sits a step off the label, and the
+   clear button is a small round control inside the chip's end. */
+.mud-chip.filter-chip .chip-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.mud-chip.filter-chip .chip-value {
+    margin-left: 4px;
+}
+
+.mud-chip.filter-chip .chip-clear {
+    width: 22px;
+    height: 22px;
+    margin: 0 -4px 0 4px;
+    padding: 2px;
 }
 
 /* 4. Count or meta: no chip, plain caption text. */
@@ -411,7 +435,7 @@
     background: var(--hu-detail-background);
     border: 1px solid var(--hu-detail-edge);
     border-bottom-color: var(--hu-detail-head-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     backdrop-filter: blur(var(--hu-detail-blur)) saturate(150%);
 }
 
@@ -467,25 +491,25 @@
 .task-edit-page .mud-input-outlined-border {
     border-color: var(--hu-field-line);
     border-bottom-color: var(--hu-field-line-bottom);
-    border-radius: var(--hu-control-radius);
+    border-radius: var(--hu-radius-card);
 }
 
 .task-edit-page .mud-input.mud-input-outlined {
     box-shadow: var(--hu-field-shadow);
-    border-radius: var(--hu-control-radius);
+    border-radius: var(--hu-radius-card);
 }
 
 .task-edit-page .mud-button-root,
 .task-detail-save,
 .task-detail-cancel {
-    border-radius: var(--hu-control-radius);
+    border-radius: var(--hu-radius-card);
 }
 
 .task-edit-page .task-detail-group {
     padding: var(--hu-form-group-padding);
     background: var(--hu-form-group-background);
     border: 1px solid var(--hu-form-group-line);
-    border-radius: var(--hu-form-group-radius);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-form-group-shadow);
 }
 
@@ -546,18 +570,18 @@
     .task-edit-page .task-detail-prop-label {
         display: flex;
         align-items: center;
-        min-height: 34px;
+        min-height: 32px;
         padding-top: 0;
     }
 }
 
-/* A field is 34px tall with body-size text, and the row's 12px is the only space around it (MudBlazor's own margin is dropped). */
+/* A field is 32px tall with body-size text, and the row's 12px is the only space around it (MudBlazor's own margin is dropped). */
 .task-edit-page .task-detail-prop-value .mud-input-control {
     margin: 0;
 }
 
 .task-edit-page .task-detail-prop-value .mud-input.mud-input-outlined {
-    min-height: 34px;
+    min-height: 32px;
     font-size: var(--mud-typography-body2-size);
 }
 
@@ -574,7 +598,7 @@
     padding: var(--hu-gate-padding);
     background: var(--hu-gate-background);
     border: 1px solid var(--hu-gate-line);
-    border-radius: var(--hu-gate-radius);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-gate-halo);
 }
 
@@ -642,7 +666,7 @@
     overflow: hidden;
     background: var(--hu-field-background);
     border: 1px solid var(--hu-line-control);
-    border-radius: var(--hu-editor-radius);
+    border-radius: var(--hu-radius-card);
     box-shadow: var(--hu-editor-shadow);
 }
 
@@ -710,12 +734,12 @@
     background: var(--hu-editor-toolbar-line);
 }
 
-/* Edit | Preview is a compact 30px control here. The indicator is placed and sized by the component for a track with 3px of padding (it is 3px in
+/* Edit | Preview is a compact 28px control here (the toolbar rule's height). The indicator is placed and sized by the component for a track with 3px of padding (it is 3px in
    from each edge and (100% - 6px) / items wide), so the track keeps that padding and the items fill what is left: the tile is then exactly as
    tall and as wide as the item it sits under, and the label is centred in it. The root prefix keeps this ahead of the component's own rule. */
 :root .huddle-segmented-control.task-detail-description-toggle {
     box-sizing: border-box;
-    height: 30px;
+    height: 28px;
     padding: calc(4px * 0.75);
 }
 
@@ -823,24 +847,17 @@
 :root:has([data-hu-surface="paper"]) .task-read-view .task-decision-card {
     margin-inline: 0;
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="paper"]) .task-decision-review {
     padding: 8px 12px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-size: var(--mud-typography-caption-size);
     line-height: 1.45;
     color: var(--hu-text-subtle);
-}
-
-:root:has([data-hu-surface="paper"]) .task-decision-header .mud-chip {
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
-    font-weight: 600;
-    letter-spacing: 0.02em;
 }
 
 /* ---- composer=underlined: Fluent ------------------------------------------------------------- */

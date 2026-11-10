@@ -314,7 +314,7 @@
 /* A Team's face is a rounded square, so a Team never reads as a person (ADR-0069). TeamAvatar asks AgentAvatar for it.
    Two classes, so it beats MudBlazor's single-class .mud-avatar { border-radius: 50% } whatever the sheet order. */
 .mud-avatar.avatar-square {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* The avatar editor's emoji picker (the vendored <emoji-picker> in lib/emoji-picker). Its colours are the Theme's: every
@@ -333,7 +333,7 @@ emoji-picker {
     height: min(400px, 45vh);
     --background: var(--mud-palette-surface);
     --border-color: var(--ink-line);
-    --border-radius: var(--mud-default-borderradius);
+    --border-radius: var(--hu-radius-card);
     --input-border-color: var(--hu-line-control);
     --input-font-color: var(--mud-palette-text-primary);
     --input-placeholder-color: var(--mud-palette-text-secondary);
@@ -371,7 +371,7 @@ emoji-picker {
 
 /* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the radius convention test does not allow. */
 .mud-avatar.avatar-square.avatar-image::after {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* Empty state: a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
@@ -519,7 +519,7 @@ emoji-picker {
     padding: 0 12px;
     margin-inline-end: 4px;
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--hu-tone-warning-soft);
     color: var(--hu-tone-warning-ink);
     font-size: var(--mud-typography-caption-size);
@@ -757,7 +757,7 @@ emoji-picker {
     width: 40px;
     height: 40px;
     margin: 4px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -791,7 +791,7 @@ emoji-picker {
     margin: 4px;
     padding: 0;
     border: 0;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     background: transparent;
     cursor: pointer;
 }
@@ -1286,7 +1286,7 @@ body.sidebar-resizing {
 
 .hover-reveal-row .hover-reveal-menu-button {
     opacity: 0;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     transition: opacity 120ms ease;
 }
 
@@ -1347,7 +1347,7 @@ body.sidebar-resizing {
     flex: 0 0 auto;
     margin-inline-start: 8px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     line-height: 16px;
@@ -1479,7 +1479,7 @@ body.sidebar-resizing {
     text-align: left;
     background: none;
     border: none;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     cursor: pointer;
 }
 
@@ -1548,18 +1548,18 @@ body.sidebar-resizing {
 :root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button,
 :root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link {
     position: relative;
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
     margin: 4px auto;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-secondary);
     transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 :root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button .mud-icon-root {
-    width: 19px;
-    height: 19px;
+    width: 18px;
+    height: 18px;
 }
 
 :root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button:hover,
@@ -1591,7 +1591,7 @@ body.sidebar-resizing {
     top: 9px;
     bottom: 9px;
     width: 3px;
-    border-radius: 0 calc(var(--mud-default-borderradius) * 0.375) calc(var(--mud-default-borderradius) * 0.375) 0;
+    border-radius: 0 var(--hu-radius-inner) var(--hu-radius-inner) 0;
     background: var(--hu-current-icon);
 }
 
@@ -1603,7 +1603,7 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-nav="tile"]) .mud-drawer .mud-navmenu .mud-nav-link {
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     color: var(--hu-text-subtle);
     transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
@@ -1639,11 +1639,11 @@ body.sidebar-resizing {
     color: inherit;
 }
 
-/* -- nav=tile: top-bar buttons are 30px rounded tiles ----------------------------------------------------------- */
+/* -- nav=tile: top-bar buttons are rounded tiles (the same 32px box as every Theme's) ----------------------------------------------------------- */
 :root:has([data-hu-nav="tile"]) .top-bar-end .mud-icon-button {
-    width: 30px;
-    height: 30px;
-    border-radius: var(--mud-default-borderradius);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -1669,11 +1669,11 @@ body.sidebar-resizing {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    height: 30px;
+    height: 32px;
     padding: 0 12px;
     margin-inline-end: 8px;
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--hu-tone-warning-soft);
     color: var(--hu-tone-warning-ink);
     font-size: var(--mud-typography-caption-size);
@@ -1709,7 +1709,7 @@ body.sidebar-resizing {
     height: 20px;
     padding: 0 8px;
     border: 1px solid var(--hu-line-control);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--hu-ground-raised);
     color: var(--hu-text-subtle);
     font-size: var(--mud-typography-caption-size);
@@ -1737,7 +1737,7 @@ body.sidebar-resizing {
     min-height: 32px;
     padding: 4px;
     gap: 8px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="paper"]) .members-row .members-name {
@@ -1808,7 +1808,7 @@ body.sidebar-resizing {
     padding: 0 12px;
     margin-inline-end: 4px;
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--hu-tone-warning-soft);
     color: var(--hu-tone-warning-ink);
     font-size: var(--mud-typography-caption-size);
@@ -1843,7 +1843,7 @@ body.sidebar-resizing {
     padding: 0 8px;
     margin-inline-start: 8px;
     border: 1px solid var(--hu-line-control);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     color: var(--hu-text-subtle);
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
@@ -1938,7 +1938,7 @@ body.sidebar-resizing {
     top: 12px;
     bottom: 12px;
     width: 3px;
-    border-radius: 0 calc(var(--mud-default-borderradius) * 0.375) calc(var(--mud-default-borderradius) * 0.375) 0;
+    border-radius: 0 var(--hu-radius-inner) var(--hu-radius-inner) 0;
     background: var(--hu-accent-ink);
 }
 
@@ -1971,7 +1971,7 @@ body.sidebar-resizing {
     top: 8px;
     bottom: 8px;
     width: 3px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.375);
+    border-radius: var(--hu-radius-inner);
     background: var(--hu-accent-ink);
 }
 

@@ -7,7 +7,7 @@
     position: relative;
     display: inline-flex;
     background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     padding: 4px;
 }
 
@@ -18,7 +18,7 @@
     left: 0.1875rem;
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     box-shadow: var(--mud-elevation-1);
     transition: transform 120ms ease;
     z-index: 1;

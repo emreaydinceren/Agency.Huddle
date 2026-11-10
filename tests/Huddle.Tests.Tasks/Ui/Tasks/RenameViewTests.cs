@@ -43,7 +43,7 @@ public sealed class RenameViewTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List, Dense = false, Fields = ["status"] });
+        _ = harness.Views.Save(new TaskView { Id = "v1", Name = "Platform board", Kind = ViewKind.List, Fields = ["status"] });
 
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenAsync(ctx, "v1");
@@ -54,7 +54,6 @@ public sealed class RenameViewTests
         TaskView? renamed = harness.Views.Get("v1");
         Assert.NotNull(renamed);
         Assert.Equal("Sprint review", renamed.Name);
-        Assert.False(renamed.Dense);
         Assert.Equal(["status"], renamed.Fields);
     }
 

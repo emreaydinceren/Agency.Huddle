@@ -46,7 +46,7 @@
     padding: 8px 16px;
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface));
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
     overflow-wrap: anywhere;
 }
 
@@ -339,7 +339,7 @@
     min-height: 44px;
     padding: 0;
     border: none;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: none;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
@@ -358,7 +358,7 @@
     margin: 4px 0 8px;
     padding: 8px;
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-primary);
     font-size: var(--mud-typography-body2-size);
 }
@@ -442,7 +442,7 @@
     color: var(--mud-palette-text-primary);
     background: var(--hu-ground-raised);
     border: 1px dashed var(--mud-palette-primary);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
 }
 
 .composer-dropping .composer-drop-hint {
@@ -496,7 +496,7 @@
 
     /* One and a half times the theme's corner: the message box is the largest control on the
        page, so it reads as a raised card on the ground rather than a form field. */
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--mud-elevation-1);
 }
 
@@ -538,6 +538,10 @@
 .upload-chip {
     max-width: 100%;
     color: var(--mud-palette-text-primary);
+}
+
+.upload-chip-failed {
+    border-color: var(--mud-palette-error);
 }
 
 .upload-chip-name {
@@ -611,7 +615,7 @@
     font-weight: 500;
     text-decoration: none;
     padding: 0 1px;
-    border-radius: calc(var(--mud-default-borderradius) * .25);
+    border-radius: var(--hu-radius-inner);
     background: linear-gradient(var(--hu-tone-primary-soft), var(--hu-tone-primary-soft)) 0 100% / 100% .42em no-repeat;
     transition: background-size .15s;
 }
@@ -636,7 +640,7 @@
     align-items: center;
     gap: 4px;
     padding: 0 8px 0 4px;
-    border-radius: calc(var(--mud-default-borderradius) * .75);
+    border-radius: var(--hu-radius-control);
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--hu-line-region));
     background: var(--hu-tone-primary-tint);
     color: var(--hu-accent-ink);
@@ -651,7 +655,7 @@
     color: var(--hu-accent-ink);
     background: var(--hu-tone-primary-tint);
     padding: 0 4px;
-    border-radius: calc(var(--mud-default-borderradius) * .5);
+    border-radius: var(--hu-radius-inner);
     font-weight: 500;
 }
 
@@ -670,7 +674,7 @@
     margin: 8px 0 0;
     padding: 4px 12px;
     border-left: 3px solid var(--mud-palette-info);
-    border-radius: 0 calc(var(--mud-default-borderradius) * .75) calc(var(--mud-default-borderradius) * .75) 0;
+    border-radius: 0 var(--hu-radius-control) var(--hu-radius-control) 0;
     background: var(--hu-tone-info-soft);
     color: var(--hu-text-subtle);
     font-family: var(--font-read);
@@ -681,7 +685,7 @@
 .turn-detail {
     padding: 8px 12px;
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: var(--hu-ground-sunk);
     color: var(--hu-text-subtle);
 }
@@ -706,7 +710,7 @@
 /* ---- Trait message=row: a flat row per message, the Human's own message included, no bubbles ---------------
    A row tints on hover; the 8px spread imitates a full-bleed tint without moving the pinned layout. */
 :root:has([data-hu-message="row"]) .message-row {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     transition: background-color .15s, box-shadow .15s;
 }
 
@@ -770,7 +774,7 @@
 :root:has([data-hu-composer="card"]) .composer-box {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-shadow-card-hover);
     padding-bottom: 40px;
     transition: border-color .15s;
@@ -814,7 +818,7 @@
 :root:has([data-hu-composer="card"]) .composer-picker {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     box-shadow: var(--hu-shadow-card-hover);
 }
 
@@ -822,10 +826,10 @@
 /* ---- Trait send=text: Send is a small button with its word. The label sits over the button and lets clicks
    through to it. The colours are the shared Send tokens, which a skin sets. */
 :root:has([data-hu-send="text"]) .composer-send .mud-icon-button {
-    height: 26px;
+    height: 28px;
     width: auto;
     padding: 0 48px 0 8px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-send="text"]) .composer-send .mud-icon-button:hover {
@@ -934,7 +938,7 @@
     width: 28px;
     height: 28px;
     padding: 0;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: var(--hu-send-bg);
     color: var(--hu-send-fg);
     box-shadow: none;
@@ -972,7 +976,7 @@
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
     border-bottom: 2px solid var(--mud-palette-primary);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     box-shadow: var(--hu-shadow-card-hover);
     padding-bottom: 40px;
 }
@@ -1077,7 +1081,7 @@
     font-family: var(--mud-typography-default-family);
     font-size: 0.8125rem;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: var(--ink-wash);
 }
 
@@ -1199,7 +1203,7 @@
 :root:has([data-hu-surface="paper"]) .mud-paper.agent-card {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-region);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
     box-shadow: none;
 }
 
@@ -1211,6 +1215,6 @@
 :root:has([data-hu-surface="hairline"]) .roster-card {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-region);
-    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    border-radius: var(--hu-radius-panel);
     box-shadow: none;
 }

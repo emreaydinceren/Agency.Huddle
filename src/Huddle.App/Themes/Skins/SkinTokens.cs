@@ -31,7 +31,23 @@ internal static class SkinTokens
         AddTaskListTokens(tokens);
         AddEditorTokens(tokens);
         AddReadingTokens(tokens);
+        AddShapeTokens(tokens);
         return tokens;
+    }
+
+    /// <summary>
+    /// Registers the five named radius steps, derived from the Theme's one base radius (<c>--mud-default-borderradius</c>).
+    /// A stylesheet names a step, never a multiplier or a length, so every corner follows the base; a Theme that wants
+    /// rounder or squarer corners changes its base, not a step.
+    /// </summary>
+    /// <param name="tokens">The registry being built.</param>
+    private static void AddShapeTokens(List<Token> tokens)
+    {
+        Add(tokens, "radius.inner", "calc(mud(default-borderradius) * 0.5)", "The corner of a small mark inside a card: a keycap, a mention, a code span.");
+        Add(tokens, "radius.control", "calc(mud(default-borderradius) * 0.75)", "The corner of a row, a button, a segment or a field-sized control.");
+        Add(tokens, "radius.card", "mud(default-borderradius)", "The corner of a card, a field, a tile or an editor: the Theme's base radius.");
+        Add(tokens, "radius.panel", "calc(mud(default-borderradius) * 1.5)", "The corner of a panel, a dialog, a popover or the Human gate.");
+        Add(tokens, "radius.full", "999px", "The corner of a pill. A circle uses 50%.");
     }
 
     /// <summary>
@@ -52,12 +68,8 @@ internal static class SkinTokens
     {
         Add(tokens, "feed.summary.ink", "palette.textPrimary", "A Feed card's summary sentence.");
         Add(tokens, "feed.day.rule", "ref(ink.line)", "The rule after a Feed day heading.");
-        Add(tokens, "feed.live.background", "mix(palette.success 6%, palette.surface)", "The Live chip's fill.");
-        Add(tokens, "feed.live.line", "transparent", "The Live chip's outline.");
-        Add(tokens, "feed.live.ink", "mix(palette.success 70%, palette.textPrimary)", "The Live chip's text.");
         Add(tokens, "feed.note.background", "transparent", "The Feed's read-only note fill.");
         Add(tokens, "feed.note.line", "transparent", "The Feed's read-only note outline.");
-        Add(tokens, "feed.card.radius", "8px", "A Feed card's corner radius.");
         Add(tokens, "feed.card.hover.shadow", "ref(shadow.card)", "A Feed card's shadow while hovered.");
         Add(tokens, "feed.card.open.shadow", "ref(shadow.card.hover)", "An open Feed card's shadow.");
         Add(tokens, "feed.card.hover.line", "ref(line.control)", "A Feed card's border while hovered.");
@@ -107,17 +119,14 @@ internal static class SkinTokens
         Add(tokens, "field.line", "ref(ink.field)", "The border of a text or select field.");
         Add(tokens, "field.line.bottom", "ref(field.line)", "The bottom border of a field.");
         Add(tokens, "field.shadow", "none", "The resting shadow under a field.");
-        Add(tokens, "control.radius", "mud(default-borderradius)", "The corner of a field or button.");
         Add(tokens, "form.group.background", "transparent", "The surface of a field group.");
         Add(tokens, "form.group.line", "transparent", "The border of a field group.");
         Add(tokens, "form.group.shadow", "none", "The shadow of a field group.");
-        Add(tokens, "form.group.radius", "0px", "The corner of a field group.");
         Add(tokens, "form.group.padding", "0px", "The padding inside a field group.");
         Add(tokens, "form.group.head.line", "transparent", "The rule under a field group's label.");
         Add(tokens, "gate.background", "transparent", "The surface of the Human gate and the Decision card on the edit page.");
         Add(tokens, "gate.line", "transparent", "Their border.");
         Add(tokens, "gate.halo", "none", "Their outer ring.");
-        Add(tokens, "gate.radius", "0px", "Their corner.");
         Add(tokens, "gate.padding", "0px", "Their inner padding.");
     }
 
@@ -151,7 +160,6 @@ internal static class SkinTokens
     /// <param name="tokens">The registry being built.</param>
     private static void AddEditorTokens(List<Token> tokens)
     {
-        Add(tokens, "editor.radius", "mud(default-borderradius)", "The corner of the Description editor's card.");
         Add(tokens, "editor.shadow", "none", "The resting shadow of the Description editor's card.");
         Add(tokens, "editor.toolbar.line", "transparent", "The rule under the Description editor's toolbar, and the dividers in it.");
         Add(tokens, "editor.text.ink", "palette.textPrimary", "The text colour of the Description's writing surface.");

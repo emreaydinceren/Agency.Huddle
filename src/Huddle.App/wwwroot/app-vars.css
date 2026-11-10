@@ -76,12 +76,8 @@
     /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
     --hu-feed-summary-ink: var(--mud-palette-text-primary);
     --hu-feed-day-rule: var(--ink-line);
-    --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
-    --hu-feed-live-line: transparent;
-    --hu-feed-live-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
     --hu-feed-note-background: transparent;
     --hu-feed-note-line: transparent;
-    --hu-feed-card-radius: 8px;
     --hu-feed-card-hover-shadow: var(--hu-shadow-card);
     --hu-feed-card-open-shadow: var(--hu-shadow-card-hover);
     --hu-feed-card-hover-line: var(--hu-line-control);
@@ -115,17 +111,14 @@
     --hu-field-line: var(--ink-field);
     --hu-field-line-bottom: var(--hu-field-line);
     --hu-field-shadow: none;
-    --hu-control-radius: var(--mud-default-borderradius);
     --hu-form-group-background: transparent;
     --hu-form-group-line: transparent;
     --hu-form-group-shadow: none;
-    --hu-form-group-radius: 0px;
     --hu-form-group-padding: 0px;
     --hu-form-group-head-line: transparent;
     --hu-gate-background: transparent;
     --hu-gate-line: transparent;
     --hu-gate-halo: none;
-    --hu-gate-radius: 0px;
     --hu-gate-padding: 0px;
     --hu-toolbar-line: transparent;
     --hu-button-filled-shadow: none;
@@ -149,13 +142,19 @@
     --hu-board-card-hover-shadow: var(--hu-shadow-card-hover);
 
     /* The Description editor of the Task edit page. */
-    --hu-editor-radius: var(--mud-default-borderradius);
     --hu-editor-shadow: none;
     --hu-editor-toolbar-line: transparent;
     --hu-editor-text-ink: var(--mud-palette-text-primary);
     --hu-note-prose-ink: var(--mud-palette-text-primary);
     --hu-note-h1-size: 1.5em;
     --hu-note-h1-tracking: normal;
+
+    /* The five radius steps, derived from the Theme's one base radius. A stylesheet names a step, never a multiplier. */
+    --hu-radius-inner: calc(var(--mud-default-borderradius) * 0.5);
+    --hu-radius-control: calc(var(--mud-default-borderradius) * 0.75);
+    --hu-radius-card: var(--mud-default-borderradius);
+    --hu-radius-panel: calc(var(--mud-default-borderradius) * 1.5);
+    --hu-radius-full: 999px;
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------

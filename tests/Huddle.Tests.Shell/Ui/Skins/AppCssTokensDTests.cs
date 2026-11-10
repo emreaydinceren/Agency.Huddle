@@ -57,10 +57,6 @@ public sealed class AppCssTokensDTests
     [Fact]
     public void SelectedItems_ReadTheSelectedTokens()
     {
-        string[] chip =Declarations(".chip-cloud-chip.is-set");
-        Assert.Contains("background-color: var(--hu-selected-background);", chip);
-        Assert.Contains("color: var(--hu-accent-ink);", chip);
-
         string[] card =Declarations(".team-type-card-selected");
         Assert.Contains("background: var(--hu-selected-background);", card);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".team-type-card-selected:hover"));
@@ -70,7 +66,7 @@ public sealed class AppCssTokensDTests
         Assert.Contains("color: var(--hu-accent-ink);", pick);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".composer-picker-item[aria-selected=\"true\"]:hover"));
 
-        string[] filter =Declarations(".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.filter-chip-set,\n.mud-chip.filter-chip.mud-chip-selected");
+        string[] filter =Declarations(".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("background-color: var(--hu-selected-background);", filter);
         Assert.Contains("color: var(--hu-accent-ink);", filter);
     }
@@ -86,10 +82,10 @@ public sealed class AppCssTokensDTests
         string css = CssText.AppCss();
         string feedPage = CssText.Read(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "FeedPage.razor.css"));
 
-        string chip = CssText.RuleBody(css, ".task-filter-chip-set");
+        string chip = CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("background-color: var(--hu-selected-background);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-color: var(--mud-palette-primary);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border: 1px solid var(--mud-palette-primary);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("color: var(--hu-accent-ink);", chip, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
         string fill = CssText.RuleBodyInList(feedPage, "::deep .feed-team-select-set .mud-input");
         Assert.Contains("background: var(--hu-selected-background);", fill, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source

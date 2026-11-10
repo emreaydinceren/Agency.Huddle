@@ -45,14 +45,13 @@
                             SelectedValueChanged="this.OnChipChangedAsync">
                     @foreach (SearchFilter filter in ChipOrder)
                     {
-                        <MudChip T="SearchFilter"
-                                 Value="@filter"
-                                 Text="@filter.ToString()"
-                                 Size="Size.Small"
-                                 Variant="Variant.Outlined"
-                                 Class="@(filter == this.chip ? "filter-chip is-set" : "filter-chip")"
-                                 role="radio"
-                                 aria-checked="@(filter == this.chip ? "true" : "false")" />
+                        <Chip T="SearchFilter"
+                              Look="ChipLook.Filter"
+                              Value="@filter"
+                              Text="@filter.ToString()"
+                              IsSet="@(filter == this.chip)"
+                              role="radio"
+                              aria-checked="@(filter == this.chip ? "true" : "false")" />
                     }
                 </MudChipSet>
             </div>

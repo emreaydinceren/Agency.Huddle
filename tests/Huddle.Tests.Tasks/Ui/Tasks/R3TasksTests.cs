@@ -806,27 +806,28 @@ public sealed class R3TasksTests
         Assert.Contains("filter-chip", cut.Find(".task-toolbar-requests").ClassList);
 
         string css = CssText.AppCss();
-        string chip = CssText.RuleBody(css, ".task-filter-chip");
+        string chip = CssText.RuleBody(css, ".mud-chip.filter-chip");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", chip, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("background-color: var(--hu-selected-background);", CssText.RuleBody(css, ".task-filter-chip-set"), StringComparison.Ordinal);
+        Assert.Contains("background-color: var(--hu-selected-background);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("height: 28px;", CssText.RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
+        Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
     }
 
-    /// <summary>The Dense switch is an Accent switch, like the Fields switches.</summary>
+    /// <summary>The toolbar has no Dense switch: the List has one row height, so there is no mode to toggle.</summary>
     [Fact]
-    public async Task DenseSwitch_IsAccent()
+    public async Task Toolbar_HasNoDenseSwitch()
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        Assert.Equal(Color.Primary, cut.FindComponents<MudSwitch<bool>>().Single(s => HasClass(s.Instance.Class, "task-toolbar-dense")).Instance.Color);
+        Assert.DoesNotContain(cut.FindComponents<MudSwitch<bool>>(), s => HasClass(s.Instance.Class, "task-toolbar-dense"));
+        Assert.Empty(cut.FindAll(".task-toolbar-dense"));
     }
 
     // ---- helpers ----

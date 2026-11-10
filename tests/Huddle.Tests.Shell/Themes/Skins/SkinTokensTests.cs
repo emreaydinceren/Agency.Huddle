@@ -162,12 +162,8 @@ public sealed class SkinTokensTests
         Add("ring", Surface);
         Add("feed.summary.ink", "var(--mud-palette-text-primary)");
         Add("feed.day.rule", "var(--ink-line)");
-        Add("feed.live.background", Mix("success", 6, Surface));
-        Add("feed.live.line", "transparent");
-        Add("feed.live.ink", Mix("success", 70, "var(--mud-palette-text-primary)"));
         Add("feed.note.background", "transparent");
         Add("feed.note.line", "transparent");
-        Add("feed.card.radius", "8px");
         Add("feed.card.hover.shadow", "var(--hu-shadow-card)");
         Add("feed.card.open.shadow", "var(--hu-shadow-card-hover)");
         Add("feed.card.hover.line", "var(--hu-line-control)");
@@ -199,17 +195,14 @@ public sealed class SkinTokensTests
         Add("field.line", "var(--ink-field)");
         Add("field.line.bottom", "var(--hu-field-line)");
         Add("field.shadow", "none");
-        Add("control.radius", "var(--mud-default-borderradius)");
         Add("form.group.background", "transparent");
         Add("form.group.line", "transparent");
         Add("form.group.shadow", "none");
-        Add("form.group.radius", "0px");
         Add("form.group.padding", "0px");
         Add("form.group.head.line", "transparent");
         Add("gate.background", "transparent");
         Add("gate.line", "transparent");
         Add("gate.halo", "none");
-        Add("gate.radius", "0px");
         Add("gate.padding", "0px");
         Add("toolbar.line", "transparent");
         Add("button.filled.shadow", "none");
@@ -231,13 +224,17 @@ public sealed class SkinTokensTests
         Add("board.needs.bar", "transparent");
         Add("board.card.hover.line", "var(--hu-line-control)");
         Add("board.card.hover.shadow", "var(--hu-shadow-card-hover)");
-        Add("editor.radius", "var(--mud-default-borderradius)");
         Add("editor.shadow", "none");
         Add("editor.toolbar.line", "transparent");
         Add("editor.text.ink", "var(--mud-palette-text-primary)");
         Add("note.prose.ink", "var(--mud-palette-text-primary)");
         Add("note.h1.size", "1.5em");
         Add("note.h1.tracking", "normal");
+        Add("radius.inner", "calc(var(--mud-default-borderradius) * 0.5)");
+        Add("radius.control", "calc(var(--mud-default-borderradius) * 0.75)");
+        Add("radius.card", "var(--mud-default-borderradius)");
+        Add("radius.panel", "calc(var(--mud-default-borderradius) * 1.5)");
+        Add("radius.full", "999px");
         return list;
     }
 }

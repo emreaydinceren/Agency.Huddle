@@ -68,10 +68,10 @@ public sealed class TaskToolbarTests
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Blocked", toolbar.Find(".task-toolbar-blocked .task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Blocked", toolbar.Find(".task-toolbar-blocked .chip-value").TextContent.Trim());
         Assert.Equal(BlockedFilter.All, store.Get("v1")?.Filter.Blocked);
 
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-blocked .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-blocked .chip-clear").ClickAsync());
         Assert.Equal(BlockedFilter.All, raised?.Filter.Blocked);
     }
     /// <summary>The Search field is the shared <c>SearchField</c> (debounced at its shared 250ms) and is never part of a saved View.</summary>
@@ -115,7 +115,7 @@ public sealed class TaskToolbarTests
         Assert.Contains("mud-button-filled-size-small", header[^1].ClassList);
         var children = toolbar.Find(".task-toolbar").Children;
         Assert.Contains("task-toolbar-filter", children[0].ClassList);
-        Assert.Contains("task-toolbar-group", children[^1].ClassList);
+        Assert.NotNull(children[^1].QuerySelector(".task-toolbar-group")); // the chip sits in MudBlazor's display: contents container
         Assert.Empty(toolbar.FindAll(".task-toolbar-group-sort, .task-toolbar-grouping"));
         Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
         Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
@@ -225,13 +225,13 @@ public sealed class TaskToolbarTests
         var (_, split) = RenderToolbar(splitCtx, saved);
         Assert.Contains("task-toolbar-filter", split.Find(".task-toolbar").Children[0].ClassList);
         // Group by is a chip in this row too (its last control), but it is not a filter.
-        Assert.Empty(split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)"));
+        Assert.Empty(split.FindAll(".task-toolbar .filter-chip:not(.task-toolbar-group):not(.task-toolbar-requests)"));
 
         split.Render(builder => builder.Add(t => t.EffectiveView, filtered));
         Assert.Equal(
             ["Team: Platform", "Project: Platform/Backend", "Assignee: Me", "Sprint: Current sprint", "Priority: High", "Status: To Do"],
-            split.FindAll(".task-toolbar .task-filter-chip:not(.task-toolbar-group)").Select(chip => string.Join(' ', chip.QuerySelector(".task-filter-chip-button")!.TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
-        Assert.Equal(6, split.FindAll(".task-toolbar .task-filter-chip-clear").Count);
+            split.FindAll(".task-toolbar .filter-chip:not(.task-toolbar-group):not(.task-toolbar-requests)").Select(chip => string.Join(' ', chip.QuerySelectorAll(".chip-trigger").Single().TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
+        Assert.Equal(6, split.FindAll(".task-toolbar .chip-clear").Count);
     }
 
     /// <summary>The clear button on each filter chip empties just that filter, so its chip disappears.</summary>
@@ -247,13 +247,13 @@ public sealed class TaskToolbarTests
         await using var ctx = NewContext(store);
         var (_, toolbar) = RenderToolbar(ctx, filtered, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-team .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-team .chip-clear").ClickAsync());
         Assert.Empty(raised?.Filter.Teams ?? [Guid.NewGuid().ToString()]);
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-project .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-project .chip-clear").ClickAsync());
         Assert.Empty(raised?.Filter.Projects ?? [new ProjectRef("x", null)]);
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-sprint .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-sprint .chip-clear").ClickAsync());
         Assert.Empty(raised?.Filter.Sprints ?? ["x"]);
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-priority .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-priority .chip-clear").ClickAsync());
         Assert.Empty(raised?.Filter.Priorities ?? [TaskPriority.High]);
     }
     /// <summary>The Status chip reads "Open" for the non-terminal set, shows a clear button then, and clearing restores All; the Assignee chip names a single choice ("@me" reads "Me").</summary>
@@ -272,11 +272,11 @@ public sealed class TaskToolbarTests
         await using var ctx = NewContext(store);
         var (_, toolbar) = RenderToolbar(ctx, notDoneMine, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
-        Assert.Equal("Open", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
-        Assert.Equal("Me", toolbar.Find(".task-toolbar-assignee .task-filter-chip-value").TextContent.Trim());
-        Assert.Contains("task-filter-chip-set", toolbar.Find(".task-toolbar-status").ClassList);
+        Assert.Equal("Open", toolbar.Find(".task-toolbar-status .chip-value").TextContent.Trim());
+        Assert.Equal("Me", toolbar.Find(".task-toolbar-assignee .chip-value").TextContent.Trim());
+        Assert.Contains("is-set", toolbar.Find(".task-toolbar-status").ClassList);
 
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-status .task-filter-chip-clear").ClickAsync());
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-status .chip-clear").ClickAsync());
 
         TaskView cleared = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Empty(cleared.Filter.States);
@@ -295,13 +295,13 @@ public sealed class TaskToolbarTests
         TaskView? raised = null;
         await using var ctx = NewContext(store);
         var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
-        Assert.Equal("None", toolbar.Find(".task-toolbar-group .task-filter-chip-value").TextContent.Trim());
-        Assert.Empty(toolbar.FindAll(".task-toolbar-group .task-filter-chip-clear"));
+        Assert.Equal("None", toolbar.Find(".task-toolbar-group .chip-value").TextContent.Trim());
+        Assert.Empty(toolbar.FindAll(".task-toolbar-group .chip-clear"));
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, grouped));
-        Assert.Equal("Assignee", toolbar.Find(".task-toolbar-group .task-filter-chip-value").TextContent.Trim());
-        Assert.Equal("Clear Group by filter", toolbar.Find(".task-toolbar-group .task-filter-chip-clear").GetAttribute("aria-label"));
-        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-group .task-filter-chip-clear").ClickAsync());
+        Assert.Equal("Assignee", toolbar.Find(".task-toolbar-group .chip-value").TextContent.Trim());
+        Assert.Equal("Clear Group by filter", toolbar.Find(".task-toolbar-group .chip-clear").GetAttribute("aria-label"));
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-group .chip-clear").ClickAsync());
 
         TaskView ungrouped = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Empty(ungrouped.Grouping);
@@ -319,11 +319,11 @@ public sealed class TaskToolbarTests
 
         await using var ctx = NewContext(store);
         var (root, toolbar) = RenderToolbar(ctx, closed);
-        Assert.Equal("Closed", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Closed", toolbar.Find(".task-toolbar-status .chip-value").TextContent.Trim());
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, review));
-        Assert.Equal("Review", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Review", toolbar.Find(".task-toolbar-status .chip-value").TextContent.Trim());
 
-        await root.InvokeAsync(() => root.Find(".task-toolbar-status .task-filter-chip-button").ClickAsync());
+        await root.InvokeAsync(() => root.Find(".task-toolbar-status .chip-trigger").ClickAsync());
 
         Assert.Equal(
             ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Needs You", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],

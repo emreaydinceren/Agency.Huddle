@@ -361,12 +361,12 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .library-tree .mud-treeview-item-content {
-    min-height: 30px;
+    min-height: 32px;
     width: calc(100% - 8px);
     margin-inline: 4px;
     padding-block: 0;
     padding-inline: 4px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 .library-tree .mud-treeview-item-arrow {
@@ -384,8 +384,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .library-tree .mud-treeview-item-arrow .mud-icon-root {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
 }
 
 .library-tree .mud-treeview-item-icon {
@@ -662,11 +662,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     font-size: var(--mud-typography-body2-size);
 }
 
-.doc-history-chip {
-    font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-secondary);
-}
-
 .doc-history-summary {
     margin-top: 2px;
     font-size: var(--mud-typography-body2-size);
@@ -717,7 +712,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 
 .backlink-item-ref {
     padding: 0 2px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     color: var(--hu-accent-ink);
     background: var(--hu-tone-primary-tint);
 }
@@ -848,7 +843,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 0 0 24px;
     padding: 12px 16px;
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.5;
 }
@@ -899,7 +894,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     overflow-x: auto;
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-family: var(--font-mono);
     font-size: calc(1em * 0.85);
     line-height: 1.5;
@@ -937,7 +932,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     align-items: center;
     padding: 0 8px;
     border: 1px solid var(--ink-line);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--ink-wash);
     color: var(--mud-palette-text-primary);
     font-size: var(--mud-typography-body2-size);
@@ -981,7 +976,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 :root:has([data-hu-nav="tile"]) .library-tree .mud-treeview-item-content {
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 :root:has([data-hu-nav="tile"]) .library-tree .mud-treeview-item-icon {
@@ -1051,7 +1046,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin: 24px 0;
     padding: 12px 16px;
     border-left: 3px solid var(--mud-palette-info);
-    border-radius: 0 var(--mud-default-borderradius) var(--mud-default-borderradius) 0;
+    border-radius: 0 var(--hu-radius-card) var(--hu-radius-card) 0;
     background: var(--hu-tone-info-soft);
     color: var(--hu-text-subtle);
     font-style: italic;
@@ -1060,7 +1055,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-voice="book"]) .library-rendered pre {
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-family: var(--font-mono);
     font-size: calc(1em * 0.78);
     line-height: 1.65;
@@ -1072,7 +1067,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
     padding: 1px 4px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.5);
+    border-radius: var(--hu-radius-inner);
 }
 
 :root:has([data-hu-voice="book"]) .library-rendered pre code {
@@ -1108,7 +1103,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-voice="book"]) .library-properties {
     background: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     padding: 12px 16px;
     font-size: var(--mud-typography-body2-size);
     box-shadow: none;
@@ -1129,7 +1124,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 :root:has([data-hu-surface="card"]) .settings-section {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--hu-form-group-radius);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-shadow-card);
 }
 

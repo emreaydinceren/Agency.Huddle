@@ -8,7 +8,7 @@
 
 <div class="task-human-gate">
     <div class="task-human-gate-header">
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="task-human-gate-chip" Text="@HumanGateCopy.Heading" />
+        <Chip T="string" Look="ChipLook.Status" Color="Color.Warning" Text="@HumanGateCopy.Heading" />
         <span class="task-human-gate-subheading">@HumanGateCopy.Subheading</span>
     </div>
     @if (this.ReadOnly)

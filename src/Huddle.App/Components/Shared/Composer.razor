@@ -26,9 +26,8 @@
         <div class="upload-chips">
             @foreach (PendingUpload chip in this.Chips)
             {
-                <MudChip T="string" Class="upload-chip" Size="Size.Small" Variant="Variant.Outlined"
-                         Color="@(chip.State == UploadState.Failed ? Color.Error : Color.Default)"
-                         Icon="@ChipIcon(chip)">
+                <Chip T="string" Look="ChipLook.Tag" Class="@(chip.State == UploadState.Failed ? "upload-chip upload-chip-failed" : "upload-chip")"
+                      Icon="@ChipIcon(chip)">
                     <span class="upload-chip-name">@chip.DisplayName</span>
                     @if (chip.State == UploadState.Done)
                     {
@@ -45,7 +44,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="upload-chip-remove"
                                    aria-label="@($"Remove {chip.DisplayName}")"
                                    OnClick="@(() => this.RemoveChipAsync(chip.Id))" />
-                </MudChip>
+                </Chip>
             }
         </div>
     }

@@ -33,7 +33,7 @@ public sealed class ChipCloudTests
 
         Assert.Equal(["care", "tax", "legal"], cut.FindAll(".chip-cloud-chip-text").Select(item => item.TextContent.Trim()));
         Assert.Equal(["true", "true", "false"], cut.FindAll(".chip-cloud-chip").Select(item => item.GetAttribute("aria-pressed")));
-        Assert.Equal(2, cut.FindAll(".chip-cloud-chip-selected").Count);
+        Assert.Equal(2, cut.FindAll(".chip-cloud-chip.is-set").Count);
         Assert.Equal(4, cut.FindAll(".chip-cloud-bracket").Count);
         Assert.Equal("Tags", cut.Find(".chip-cloud-title").TextContent.Trim());
     }

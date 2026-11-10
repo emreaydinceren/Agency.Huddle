@@ -72,7 +72,7 @@ public sealed class TasksPageTests
         // Group by left the header row and ends the filter row (T3c).
         Assert.Null(header.QuerySelector(".task-toolbar-group"));
         IElement toolbar = document.QuerySelector(".tasks-header .task-toolbar") ?? throw new InvalidOperationException("No toolbar row in the response.");
-        Assert.Contains("task-toolbar-group", toolbar.Children[^1].ClassList);
+        Assert.NotNull(toolbar.Children[^1].QuerySelector(".task-toolbar-group")); // the chip sits in MudBlazor's display: contents container
         Assert.StartsWith("Group by:", NormalizeWhitespace(toolbar.Children[^1].TextContent), StringComparison.Ordinal);
         Assert.Equal("New task", NormalizeWhitespace(header.QuerySelector(".tasks-new-task")?.TextContent ?? string.Empty));
         Assert.Null(document.QuerySelector(".page-header")); // T2: no visible page header
