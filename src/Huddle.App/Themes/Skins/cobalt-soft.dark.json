@@ -45,6 +45,7 @@
     "board.column.background": "#111829",
     "ground.sunk": "palette.tableHover",
     "ink.strip": "palette.tableHover",
+    "ink.wash": "palette.backgroundGray",
     "list.group.background": "#172037",
     "feed.card.open.line": "#54608b",
     "feed.unseen.background": "ref(tone.primary.soft)",
