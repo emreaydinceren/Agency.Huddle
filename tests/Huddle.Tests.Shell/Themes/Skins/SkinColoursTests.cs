@@ -91,7 +91,7 @@ public sealed class SkinColoursTests
     {
         SkinColours colours = SkinColours.All[0];
 
-        Assert.Null(colours.Token("note.heading.weight"));
+        Assert.Null(colours.Token("list.title.weight"));
         Assert.Null(colours.Token("shadow.card"));
         Assert.Null(colours.Token("control.radius"));
         Assert.Null(colours.Token("board.needs.halo"));

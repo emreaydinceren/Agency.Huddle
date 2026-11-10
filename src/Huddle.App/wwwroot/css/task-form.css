@@ -290,7 +290,7 @@
     font-weight: 500;
     line-height: 1;
     background-color: var(--hu-tone-neutral-soft);
-    color: var(--hu-tone-neutral-ink);
+    color: var(--hu-text-subtle);
 }
 
 .mud-chip.status-chip-info {
@@ -363,7 +363,7 @@
 .mud-chip.filter-chip.mud-chip-selected {
     border: 1px solid var(--mud-palette-primary);
     background-color: var(--hu-selected-background);
-    color: var(--hu-selected-foreground);
+    color: var(--hu-accent-ink);
     font-weight: 500;
 }
 
@@ -670,7 +670,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--hu-ink-strip);
+    background: var(--ink-strip);
     border-bottom: 1px solid var(--hu-editor-toolbar-line);
 }
 
@@ -678,8 +678,8 @@
 .task-detail-description-box textarea,
 .task-detail-description-preview {
     font-family: var(--font-mono);
-    font-size: var(--hu-editor-text-size);
-    line-height: var(--hu-editor-text-leading);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.75;
     color: var(--hu-editor-text-ink);
 }
 

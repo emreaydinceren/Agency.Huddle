@@ -430,10 +430,6 @@
           "type": "string",
           "description": "A chosen item while hovered."
         },
-        "selected.foreground": {
-          "type": "string",
-          "description": "A chosen item\u0027s text."
-        },
         "selected.task.background": {
           "type": "string",
           "description": "The selected Task row and card."
@@ -465,10 +461,6 @@
         "tone.neutral.soft": {
           "type": "string",
           "description": "Neutral status fill."
-        },
-        "tone.neutral.ink": {
-          "type": "string",
-          "description": "Neutral status text."
         },
         "tone.primary.soft": {
           "type": "string",
@@ -557,10 +549,6 @@
         "scrim": {
           "type": "string",
           "description": "The dialog scrim."
-        },
-        "tabs.strip.background": {
-          "type": "string",
-          "description": "The tab strip\u0027s background."
         },
         "tabs.item.hover": {
           "type": "string",
@@ -866,10 +854,6 @@
           "type": "string",
           "description": "The pill behind a column count."
         },
-        "board.count.line": {
-          "type": "string",
-          "description": "The border of that pill."
-        },
         "board.needs.background": {
           "type": "string",
           "description": "The Needs You column\u0027s surface."
@@ -906,14 +890,6 @@
           "type": "string",
           "description": "The rule under the Description editor\u0027s toolbar, and the dividers in it."
         },
-        "editor.text.size": {
-          "type": "string",
-          "description": "The font size of the Description\u0027s writing surface."
-        },
-        "editor.text.leading": {
-          "type": "string",
-          "description": "The line height of the Description\u0027s writing surface."
-        },
         "editor.text.ink": {
           "type": "string",
           "description": "The text colour of the Description\u0027s writing surface."
@@ -921,10 +897,6 @@
         "note.prose.ink": {
           "type": "string",
           "description": "The text colour of a note\u0027s body prose; headings keep the primary text colour."
-        },
-        "note.heading.weight": {
-          "type": "string",
-          "description": "The weight of a note\u0027s headings."
         },
         "note.h1.size": {
           "type": "string",

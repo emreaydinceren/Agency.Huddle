@@ -425,7 +425,7 @@
     margin-inline-end: auto;
     padding: 0 8px;
     background: var(--hu-board-count-background);
-    border: 1px solid var(--hu-board-count-line);
+    border: 1px solid transparent;
     border-radius: 999px;
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);

@@ -52,7 +52,7 @@
 
 .composer-picker-item[aria-selected="true"] {
     background: var(--hu-selected-background);
-    color: var(--hu-selected-foreground);
+    color: var(--hu-accent-ink);
     font-weight: 500;
 }
 

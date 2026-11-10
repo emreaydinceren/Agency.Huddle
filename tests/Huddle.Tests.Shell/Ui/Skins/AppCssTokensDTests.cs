@@ -53,13 +53,13 @@ public sealed class AppCssTokensDTests
         Assert.Contains("background: var(--hu-ground-sunk);", Declarations(selector));
     }
 
-    /// <summary>A chosen item in a set reads <c>--hu-selected-background</c>, <c>-hover</c> and <c>--hu-selected-foreground</c>.</summary>
+    /// <summary>A chosen item in a set reads <c>--hu-selected-background</c>, <c>-hover</c> and <c>--hu-accent-ink</c>.</summary>
     [Fact]
     public void SelectedItems_ReadTheSelectedTokens()
     {
         string[] chip =Declarations(".chip-cloud-chip.is-set");
         Assert.Contains("background-color: var(--hu-selected-background);", chip);
-        Assert.Contains("color: var(--hu-selected-foreground);", chip);
+        Assert.Contains("color: var(--hu-accent-ink);", chip);
 
         string[] card =Declarations(".team-type-card-selected");
         Assert.Contains("background: var(--hu-selected-background);", card);
@@ -67,12 +67,12 @@ public sealed class AppCssTokensDTests
 
         string[] pick =Declarations(".composer-picker-item[aria-selected=\"true\"]");
         Assert.Contains("background: var(--hu-selected-background);", pick);
-        Assert.Contains("color: var(--hu-selected-foreground);", pick);
+        Assert.Contains("color: var(--hu-accent-ink);", pick);
         Assert.Contains("background: var(--hu-selected-background-hover);", Declarations(".composer-picker-item[aria-selected=\"true\"]:hover"));
 
         string[] filter =Declarations(".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.filter-chip-set,\n.mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("background-color: var(--hu-selected-background);", filter);
-        Assert.Contains("color: var(--hu-selected-foreground);", filter);
+        Assert.Contains("color: var(--hu-accent-ink);", filter);
     }
 
     /// <summary>The accent used as text reads <c>--hu-accent-ink</c>.</summary>
@@ -108,7 +108,7 @@ public sealed class AppCssTokensDTests
         Assert.Contains("outline: 2px solid var(--hu-focus);", Declarations(".profile-avatar-button:focus-visible"));
     }
 
-    /// <summary>Every status chip colour except secondary reads its tone token pair; secondary keeps its literal recipe.</summary>
+    /// <summary>Every status chip colour except secondary reads its tone token pair, the neutral one reading Quiet text for its ink (there is no <c>tone.neutral.ink</c>: it equalled <c>text.subtle</c> in every Theme); secondary keeps its literal recipe.</summary>
     [Theory]
     [InlineData(".mud-chip.status-chip", "neutral")]
     [InlineData(".mud-chip.status-chip-info", "info")]
@@ -122,7 +122,8 @@ public sealed class AppCssTokensDTests
         string[] rule = Declarations(selector);
 
         Assert.Contains($"background-color: var(--hu-tone-{tone}-soft);", rule);
-        Assert.Contains($"color: var(--hu-tone-{tone}-ink);", rule);
+        string ink = string.Equals(tone, "neutral", StringComparison.Ordinal) ? "text-subtle" : $"tone-{tone}-ink";
+        Assert.Contains($"color: var(--hu-{ink});", rule);
     }
 
     /// <summary>The secondary status chip is the one tone no Theme differs on, so it keeps its literal recipe.</summary>

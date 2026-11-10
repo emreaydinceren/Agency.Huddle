@@ -396,7 +396,7 @@ internal static partial class SkinExpression
             }
 
             this.refs?.Add(key);
-            _ = this.output.Append("var(--hu-").Append(key.Replace('.', '-')).Append(')');
+            _ = this.output.Append("var(").Append(Token.CssNameOf(key)).Append(')');
         }
 
         private void Mix()

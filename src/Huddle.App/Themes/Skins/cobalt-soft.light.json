@@ -137,7 +137,6 @@
     "shadow.panel": "mud(elevation-24)",
     "field.background": "palette.surface",
     "field.focus.shadow": "0 0 0 3px ref(tone.primary.soft)",
-    "tabs.strip.background": "ref(ground.sunk)",
     "tabs.item.hover": "ref(hover)",
     "message.line-height": "1.55",
     "send.bg": "palette.primary",

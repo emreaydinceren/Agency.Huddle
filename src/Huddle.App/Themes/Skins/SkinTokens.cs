@@ -42,7 +42,6 @@ internal static class SkinTokens
     private static void AddReadingTokens(List<Token> tokens)
     {
         Add(tokens, "note.prose.ink", "palette.textPrimary", "The text colour of a note's body prose; headings keep the primary text colour.");
-        Add(tokens, "note.heading.weight", "600", "The weight of a note's headings.");
         Add(tokens, "note.h1.size", "1.5em", "A note's h1, relative to its body size.");
         Add(tokens, "note.h1.tracking", "normal", "The letter-spacing of a note's h1.");
     }
@@ -146,7 +145,6 @@ internal static class SkinTokens
         Add(tokens, "board.column.background", "ref(ground.sunk)", "A Board column's surface.");
         Add(tokens, "board.column.line", "ref(line.region)", "A Board column's border.");
         Add(tokens, "board.count.background", "transparent", "The pill behind a column count.");
-        Add(tokens, "board.count.line", "transparent", "The border of that pill.");
         Add(tokens, "board.needs.background", "transparent", "The Needs You column's surface.");
         Add(tokens, "board.needs.line", "ref(board.column.line)", "The Needs You column's border.");
         Add(tokens, "board.needs.halo", "0 0 0 0 transparent", "The Needs You column's outer ring.");
@@ -162,8 +160,6 @@ internal static class SkinTokens
         Add(tokens, "editor.radius", "mud(default-borderradius)", "The corner of the Description editor's card.");
         Add(tokens, "editor.shadow", "none", "The resting shadow of the Description editor's card.");
         Add(tokens, "editor.toolbar.line", "transparent", "The rule under the Description editor's toolbar, and the dividers in it.");
-        Add(tokens, "editor.text.size", "mud(typography-body2-size)", "The font size of the Description's writing surface.");
-        Add(tokens, "editor.text.leading", "1.75", "The line height of the Description's writing surface.");
         Add(tokens, "editor.text.ink", "palette.textPrimary", "The text colour of the Description's writing surface.");
     }
 
@@ -232,7 +228,6 @@ internal static class SkinTokens
         Add(tokens, "current.shadow", "none", "The current row's lifted-tile shadow.");
         Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set.");
         Add(tokens, "selected.background.hover", "mix(palette.primary 20%, palette.surface)", "A chosen item while hovered.");
-        Add(tokens, "selected.foreground", "ref(accent.ink)", "A chosen item's text.");
         Add(tokens, "selected.task.background", "ref(selected.background)", "The selected Task row and card.");
         Add(tokens, "selected.task.bar", "palette.primary", "The selected Task's inset bar.");
         Add(tokens, "tree.current.bar", "palette.primary", "The Library tree's 2px current bar.");
@@ -247,7 +242,6 @@ internal static class SkinTokens
     private static void AddToneTokens(List<Token> tokens)
     {
         Add(tokens, "tone.neutral.soft", Soft("textSecondary"), "Neutral status fill.");
-        Add(tokens, "tone.neutral.ink", InkOf("textSecondary"), "Neutral status text.");
         Add(tokens, "tone.primary.soft", Soft("primary"), "Primary status fill.");
         Add(tokens, "tone.primary.ink", InkOf("primary"), "Primary status text.");
         Add(tokens, "tone.primary.tint", "mix(palette.primary 8%, palette.surface)", "A faint primary tint.");
@@ -276,7 +270,6 @@ internal static class SkinTokens
         Add(tokens, "field.focus.line", "palette.primary", "A focused input's border.");
         Add(tokens, "field.focus.shadow", "none", "A focused input's halo.");
         Add(tokens, "scrim", "palette.overlayDark", "The dialog scrim.");
-        Add(tokens, "tabs.strip.background", Ink(4), "The tab strip's background.");
         Add(tokens, "tabs.item.hover", Ink(7), "A hovered tab.");
         Add(tokens, "message.line-height", "mud(typography-body1-lineheight)", "The transcript body's line height.");
         Add(tokens, "send.fg", "palette.primary", "The Composer's Send icon.");

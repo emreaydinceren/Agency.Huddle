@@ -16,7 +16,7 @@
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
     white-space: pre-wrap;
-    border: 1px solid var(--hu-ink-edge);
+    border: 1px solid var(--ink-edge);
 }
 
 .theme-lab-badges {

@@ -142,7 +142,7 @@
     font-weight: 500;
     border: 1px solid var(--mud-palette-primary);
     background-color: var(--hu-selected-background);
-    color: var(--hu-selected-foreground);
+    color: var(--hu-accent-ink);
 }
 
 .avatar-library-status {

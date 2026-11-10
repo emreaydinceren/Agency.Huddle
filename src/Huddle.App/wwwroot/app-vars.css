@@ -13,11 +13,11 @@
 
     /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.Render writes with no overrides (a test pins it). This is
        the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
-    --hu-ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
-    --hu-ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-    --hu-ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
-    --hu-ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
-    --hu-ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
+    --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+    --ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+    --ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
+    --ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+    --ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
     --hu-ground-page: var(--mud-palette-surface);
     --hu-ground-sidebar: var(--mud-palette-surface);
     --hu-ground-rail: var(--mud-palette-surface);
@@ -34,7 +34,6 @@
     --hu-current-shadow: none;
     --hu-selected-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     --hu-selected-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
-    --hu-selected-foreground: var(--hu-accent-ink);
     --hu-selected-task-background: var(--hu-selected-background);
     --hu-selected-task-bar: var(--mud-palette-primary);
     --hu-tree-current-bar: var(--mud-palette-primary);
@@ -43,7 +42,6 @@
     --hu-needs: var(--mud-palette-warning);
     --hu-text-subtle: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
     --hu-tone-neutral-soft: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
-    --hu-tone-neutral-ink: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
     --hu-tone-primary-soft: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     --hu-tone-primary-ink: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
     --hu-tone-primary-tint: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
@@ -66,7 +64,6 @@
     --hu-field-focus-line: var(--mud-palette-primary);
     --hu-field-focus-shadow: none;
     --hu-scrim: var(--mud-palette-overlay-dark);
-    --hu-tabs-strip-background: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
     --hu-tabs-item-hover: color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-surface));
     --hu-message-line-height: var(--mud-typography-body1-lineheight);
 
@@ -79,7 +76,7 @@
 
     /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
     --hu-feed-summary-ink: var(--mud-palette-text-primary);
-    --hu-feed-day-rule: var(--hu-ink-rule);
+    --hu-feed-day-rule: var(--ink-rule);
     --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
     --hu-feed-live-line: transparent;
     --hu-feed-live-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
@@ -98,7 +95,7 @@
     --hu-feed-unseen-dot: var(--mud-palette-primary);
     --hu-feed-unseen-weight: 400;
     --hu-feed-unseen-bar: var(--mud-palette-primary);
-    --hu-control-track: var(--hu-ink-wash);
+    --hu-control-track: var(--ink-wash);
     --hu-control-ink: var(--hu-text-subtle);
     --hu-control-selected-ink: var(--mud-palette-text-primary);
     --hu-control-selected-line: var(--hu-line-region);
@@ -115,11 +112,11 @@
     --hu-detail-accent-from: transparent;
     --hu-detail-accent-to: transparent;
     --hu-detail-head-line: transparent;
-    --hu-detail-row-line: var(--hu-ink-edge);
+    --hu-detail-row-line: var(--ink-edge);
     --hu-detail-section-line: transparent;
     --hu-edit-header-background: var(--hu-ground-raised);
     --hu-edit-header-blur: 0px;
-    --hu-field-line: var(--hu-ink-field);
+    --hu-field-line: var(--ink-field);
     --hu-field-line-bottom: var(--hu-field-line);
     --hu-field-shadow: none;
     --hu-control-radius: var(--mud-default-borderradius);
@@ -151,7 +148,6 @@
     --hu-board-column-background: var(--hu-ground-sunk);
     --hu-board-column-line: var(--hu-line-region);
     --hu-board-count-background: transparent;
-    --hu-board-count-line: transparent;
     --hu-board-needs-background: transparent;
     --hu-board-needs-line: var(--hu-board-column-line);
     --hu-board-needs-halo: 0 0 0 0 transparent;
@@ -163,11 +159,8 @@
     --hu-editor-radius: var(--mud-default-borderradius);
     --hu-editor-shadow: none;
     --hu-editor-toolbar-line: transparent;
-    --hu-editor-text-size: var(--mud-typography-body2-size);
-    --hu-editor-text-leading: 1.75;
     --hu-editor-text-ink: var(--mud-palette-text-primary);
     --hu-note-prose-ink: var(--mud-palette-text-primary);
-    --hu-note-heading-weight: 600;
     --hu-note-h1-size: 1.5em;
     --hu-note-h1-tracking: normal;
 }
@@ -179,11 +172,5 @@
      Wash  6%  a washed shape's fill         Edge 18%  a card, tile or washed shape's outline
      Field 30% an input's line (Chrome, --mud-palette-lines-default, sits on the same rung for the
                shell's own hairlines).
-   A wash never defines a shape on its own: it also carries an Edge. */
-:root {
-    --ink-strip: var(--hu-ink-strip);
-    --ink-wash: var(--hu-ink-wash);
-    --ink-rule: var(--hu-ink-rule);
-    --ink-edge: var(--hu-ink-edge);
-    --ink-field: var(--hu-ink-field);
-}
+   A wash never defines a shape on its own: it also carries an Edge.
+   The rungs are skin tokens like any other (ink.strip is --ink-strip), declared once in the first block above. */

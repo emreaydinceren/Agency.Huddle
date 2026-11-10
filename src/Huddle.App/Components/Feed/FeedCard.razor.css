@@ -77,7 +77,7 @@
 }
 
 :root:has([data-hu-surface="paper"]) .feed-card-resolved {
-    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--hu-ink-strip));
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 60%, var(--ink-strip));
     box-shadow: none;
 }
 
