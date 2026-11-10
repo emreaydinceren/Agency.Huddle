@@ -11,6 +11,10 @@
        it a serif, as Nordic gives it Literata. */
     --font-read: var(--mud-typography-body1-family);
 
+    /* The fine rung: 11px, the floor of the type scale and one step under caption. MudBlazor has no role this small, so
+       the size lives here. It is for a second line that only qualifies the first, such as a 1:1 Room's Agent title. */
+    --font-size-fine: 11px;
+
     /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.Render writes with no overrides (a test pins it). This is
        the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
     --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));

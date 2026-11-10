@@ -440,25 +440,6 @@ window.huddleFeed = {
             checkedChip.focus();
         }
     },
-    // Scrolls a sideways scroller just far enough to show its selected segment. Only the scroller moves, never the page, so a
-    // Feed Tab opened on Gates in a narrow column shows Gates rather than All. Blazor calls this right after a render, before the
-    // browser has laid the segments out, so it measures two frames later; measured at once it fell short by a segment.
-    revealSelected(scroller) {
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            const item = scroller && scroller.isConnected && scroller.querySelector(".huddle-segmented-active-item");
-            if (!item) {
-                return;
-            }
-
-            const box = scroller.getBoundingClientRect();
-            const itemBox = item.getBoundingClientRect();
-            if (itemBox.left < box.left) {
-                scroller.scrollLeft -= box.left - itemBox.left;
-            } else if (itemBox.right > box.right) {
-                scroller.scrollLeft += itemBox.right - box.right;
-            }
-        }));
-    },
 };
 
 // Remembers which Right sidebar panels a viewer collapsed (Right sidebar spec D-8). A per-viewer

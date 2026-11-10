@@ -31,7 +31,7 @@ public sealed partial class NotificationsPanelTests
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();
 
-    /// <summary>The panel has the seven Categories with their counts, and opens on Needs you.</summary>
+    /// <summary>The panel offers All and Needs you, only Needs you carries its count, and it opens on Needs you.</summary>
     [Fact]
     public async Task Categories_ShowTheirCounts_AndOpenOnNeedsYou()
     {
@@ -44,13 +44,13 @@ public sealed partial class NotificationsPanelTests
 
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 2", "Tasks 1", "Documents 0", "Rooms 0", "Gates 2", "Helpers 0", "Devices 0", "Second Brain 0"], ChipLabels(cut));
+        Assert.Equal(["All", "Needs you 2"], ChipLabels(cut));
         IElement selected = Assert.Single(cut.FindAll(".mud-chip[aria-checked='true']"));
         Assert.StartsWith("Needs you", Whitespace().Replace(selected.TextContent, " ").Trim(), StringComparison.Ordinal);
         Assert.Equal(2, cut.FindAll(".feed-row").Count);
     }
 
-    /// <summary>Choosing another Category loads that Category's items.</summary>
+    /// <summary>Choosing All loads every item, and choosing Needs you again narrows back to the waiting ones.</summary>
     [Fact]
     public async Task SwitchingCategory_LoadsThatCategory()
     {
@@ -66,13 +66,9 @@ public sealed partial class NotificationsPanelTests
 
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".feed-row").Count));
 
-        await Choose(cut, "Documents");
+        await Choose(cut, "Needs you");
 
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Empty(cut.FindAll(".feed-row"));
-            Assert.Equal("Nothing yet", cut.Find("[role='status']").TextContent.Trim());
-        });
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".feed-row")));
     }
 
     /// <summary>Opening the panel queues a MarkSeen for the highest id shown, and once applied the unseen count is zero.</summary>
@@ -219,9 +215,9 @@ public sealed partial class NotificationsPanelTests
         Assert.Equal("See all activity", link.TextContent.Trim());
         Assert.Equal("/feed?category=needs-you", link.GetAttribute("href"));
 
-        await Choose(cut, "Tasks");
+        await Choose(cut, "All");
 
-        cut.WaitForAssertion(() => Assert.Equal("/feed?category=tasks", cut.Find(".feed-see-all a").GetAttribute("href")));
+        cut.WaitForAssertion(() => Assert.Equal("/feed?category=all", cut.Find(".feed-see-all a").GetAttribute("href")));
     }
 
     /// <summary>"Show more" appears when a page was full and loads the next page by BeforeId.</summary>

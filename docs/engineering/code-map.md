@@ -566,7 +566,7 @@ Feed — one stored history of what Agents and Huddle did, `docs/Huddle.Feed-Spe
 | --- | --- |
 | `Feed/IFeedPublisher.cs`, `FeedMessage.cs`, `FeedActor.cs` | What a producer calls (`Post`, `Resolve`) and the item it describes. Both only enqueue and never throw. |
 | `Feed/FeedSourceType.cs`, `FeedSourceTypes.cs`, `FeedPayload.cs` and the `*Payload.cs` records, `FeedPayloads.cs`, `FeedEnvelope.cs` | The source types with their wire names, the one payload record per type, and the JSON envelope in the `payload` column. A row this build cannot read comes back with a null payload. |
-| `Feed/FeedCategory.cs`, `FeedCategories.cs` | The Category control's seven values (Helpers is the seventh) and the one Category each source type belongs to. |
+| `Feed/FeedCategory.cs`, `FeedCategories.cs` | The Categories: the two the controls offer (`Choices`: All, Needs you), every one the counts read (`Order`), and the one kind Category each source type belongs to. |
 | `Feed/FeedQueue.cs`, `NullFeedPublisher.cs`, `FeedCommand.cs` and its records | The bounded channel behind `IFeedPublisher`, and the commands the writer applies (post, resolve, mark seen, dismiss, mark Tab seen). |
 | `Feed/FeedWriter.cs` | The only code that writes `feed_events`: batches in one transaction, fills a Room's name and Team in, raises `FeedEvents` after commit, runs the clean-up on a timer. |
 | `Feed/FeedStore.cs`, `FeedItem.cs`, `FeedQuery.cs`, `FeedCounts.cs`, `FeedEvents.cs`, `FeedOptions.cs` | The table in `team.db`, its keyset-paged reads, the hub the UI listens to, and the `Feed:*` options. |

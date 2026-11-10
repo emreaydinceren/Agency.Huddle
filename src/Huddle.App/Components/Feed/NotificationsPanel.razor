@@ -1,6 +1,6 @@
 @*
     The Right sidebar's Notifications panel (Feed spec 6.8, D-21). It shows the Feed, not only Notifications: a compact Category control with
-    the seven Categories and their counts, opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
+    All and Needs you (only Needs you carries a count), opening on Needs you, then the rows of the chosen Category (FeedList, the Feed Tab's own rows),
     "Show more", and a last row that opens the Feed Tab on the same Category. Opening the panel is what marks the Notifications it draws as
     seen: only the ones drawn, never one parked behind the "new items" pill, and only in Needs you and All, because a seen mark covers
     every Notification up to an id. The x on a row dismisses its Notification: in Needs you the row goes at once, in All it stays because
@@ -24,7 +24,7 @@
                     SelectionMode="SelectionMode.SingleSelection"
                     SelectedValue="@this.category"
                     SelectedValueChanged="this.OnCategoryChanged">
-            @foreach (FeedCategory entry in FeedCategories.Order)
+            @foreach (FeedCategory entry in FeedCategories.Choices)
             {
                 <Chip T="FeedCategory"
                       Look="ChipLook.Filter"
@@ -32,7 +32,11 @@
                       IsSet="@(entry == this.category)"
                       role="radio"
                       aria-checked="@(entry == this.category ? "true" : "false")">
-                    <span>@FeedCategories.Label(entry)</span> <span class="feed-category-count">@FeedCategories.CountOf(this.counts, entry)</span>
+                    <span>@FeedCategories.Label(entry)</span>
+                    @if (entry == FeedCategory.NeedsYou)
+                    {
+                        @(" ")<span class="feed-category-count">@FeedCategories.CountOf(this.counts, entry)</span>
+                    }
                 </Chip>
             }
         </MudChipSet>
@@ -129,16 +133,11 @@
     }
 
     /// <summary>
-    /// Marks seen up to the highest Notification actually drawn. A seen mark covers every Notification up to its id, so it is only safe in
-    /// Needs you and All, where every Notification below the highest drawn is drawn too; a single Task or Room Category must not mark the rest.
+    /// Marks seen up to the highest Notification actually drawn. A seen mark covers every Notification up to its id, which is safe because
+    /// the panel offers only Needs you and All, where every Notification below the highest drawn is drawn too.
     /// </summary>
     private void MarkShownSeen()
     {
-        if (this.category is not (FeedCategory.NeedsYou or FeedCategory.All))
-        {
-            return;
-        }
-
         long highest = this.Pager.Items.Where(static item => item.Notify).Select(static item => item.Id).DefaultIfEmpty(0).Max();
         highest = Math.Max(highest, this.drawnArrivedNotificationId);
         if (highest > this.markedUpTo)
@@ -173,7 +172,7 @@
             return;
         }
 
-        IReadOnlyList<FeedCategory> order = FeedCategories.Order;
+        IReadOnlyList<FeedCategory> order = FeedCategories.Choices;
         int next = (((order.ToList().IndexOf(this.category) + step) % order.Count) + order.Count) % order.Count;
         this.focusChosen = true;
         this.OnCategoryChanged(order[next]);

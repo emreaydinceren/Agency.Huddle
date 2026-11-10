@@ -510,7 +510,7 @@ public sealed partial class ChatService
         var room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], ct).ConfigureAwait(false);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
-        await this.PostRoomCreatedAsync(room, [agent.Name], actor, ct).ConfigureAwait(false);
+        await this.PostOneToOneCreatedAsync(room, agent, actor, ct).ConfigureAwait(false);
         return room;
     }
 
@@ -623,7 +623,7 @@ public sealed partial class ChatService
         Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, ct).ConfigureAwait(false);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
-        await this.PostRoomCreatedAsync(room, [agent.Name], actor, ct).ConfigureAwait(false);
+        await this.PostOneToOneCreatedAsync(room, agent, actor, ct).ConfigureAwait(false);
         return room;
     }
 
@@ -826,6 +826,18 @@ public sealed partial class ChatService
         return await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
     }
+
+    /// <summary>
+    /// Tells the Feed a one-to-one Room was created, unless Huddle created it on its own (an Agent connecting for the first time,
+    /// or onboarding): that is housekeeping, the Room simply appears in the sidebar, and a fresh install would otherwise open
+    /// with one item per Agent.
+    /// </summary>
+    /// <param name="room">The Room that was just created.</param>
+    /// <param name="agent">The Agent in it.</param>
+    /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
+    /// <param name="ct">Cancels the Human lookup.</param>
+    private Task PostOneToOneCreatedAsync(Room room, User agent, FeedActor? actor, CancellationToken ct) =>
+        actor?.Kind == FeedActorKind.Huddle ? Task.CompletedTask : this.PostRoomCreatedAsync(room, [agent.Name], actor, ct);
 
     /// <summary>Tells the Feed a Room was created, with the Human and <paramref name="agentNames"/> as its Members.</summary>
     /// <param name="room">The Room that was just created.</param>

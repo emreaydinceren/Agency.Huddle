@@ -106,9 +106,9 @@ public sealed partial class FeedPageTests
         Assert.Equal("Read-only — the Feed never changes the work and never shows message text.", Text(cut.Find(".feed-readonly-text")));
     }
 
-    /// <summary>The Category control has nine segments, each with its count under the current filters.</summary>
+    /// <summary>The Category control has two segments, All and Needs you, and only Needs you carries its count.</summary>
     [Fact]
-    public async Task Categories_ShowNineSegmentsWithTheirCounts()
+    public async Task Categories_ShowAllAndNeedsYou_OnlyNeedsYouCounted()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         _ = host.Feed.PostNeedsYou();
@@ -118,22 +118,22 @@ public sealed partial class FeedPageTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.Equal(["All 3", "Needs you 1", "Tasks 2", "Documents 0", "Rooms 0", "Gates 1", "Helpers 0", "Devices 0", "Second Brain 0"], Segments(cut));
+        Assert.Equal(["All", "Needs you 1"], Segments(cut));
     }
 
-    /// <summary>Choosing a Category navigates the Tab to it and keeps the Agent and Team in the address.</summary>
+    /// <summary>Choosing Needs you navigates the Tab to it and keeps the Agent and Team in the address.</summary>
     [Fact]
-    public async Task ChoosingACategory_NavigatesTheTab_KeepingAgentAndTeam()
+    public async Task ChoosingNeedsYou_NavigatesTheTab_KeepingAgentAndTeam()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
         TabPageContext page = OpenFeedTab(ctx, "/feed?agent=Nova&team=Growth");
         IRenderedComponent<ContainerFragment> cut = Render(ctx, agent: "Nova", team: "Growth", page: page);
 
-        await Choose(cut, "Tasks");
+        await Choose(cut, "Needs you");
 
-        Assert.Equal("/feed?category=tasks&agent=Nova&team=Growth", ctx.Services.GetRequiredService<TabService>().Active!.Url);
-        Assert.EndsWith("/feed?category=tasks&agent=Nova&team=Growth", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.Equal("/feed?category=needs-you&agent=Nova&team=Growth", ctx.Services.GetRequiredService<TabService>().Active?.Url);
+        Assert.EndsWith("/feed?category=needs-you&agent=Nova&team=Growth", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal); // contains-ok: an absolute address, whose host the test does not pin
     }
 
     /// <summary>Choosing All removes the category parameter and leaves the others.</summary>
@@ -142,8 +142,8 @@ public sealed partial class FeedPageTests
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
-        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&agent=Nova");
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", agent: "Nova", page: page);
+        TabPageContext page = OpenFeedTab(ctx, "/feed?category=needs-you&agent=Nova");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", agent: "Nova", page: page);
 
         await Choose(cut, "All");
 
@@ -156,7 +156,7 @@ public sealed partial class FeedPageTests
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = NewContext(host);
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "rooms");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you");
         Assert.NotNull(cut.Find("[aria-label='Team']"));
 
         await cut.InvokeAsync(() => cut.Find("div.mud-input-control").MouseDownAsync());
@@ -164,7 +164,7 @@ public sealed partial class FeedPageTests
         string[] options = [.. cut.FindAll(".mud-list-item").Select(OptionName)];
         Assert.Equal(["All teams", "Growth", "Platform"], options);
         await cut.FindAll(".mud-list-item").Single(item => OptionName(item) == "Platform").ClickAsync(new());
-        Assert.EndsWith("/feed?category=rooms&team=Platform", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.EndsWith("/feed?category=needs-you&team=Platform", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal); // contains-ok: an absolute address, whose host the test does not pin
     }
 
     /// <summary>The Agent chip is drawn only while an Agent is set, and its x removes only that parameter.</summary>
@@ -175,30 +175,34 @@ public sealed partial class FeedPageTests
         await using MudBunitContext plain = NewContext(host);
         Assert.Empty(Render(plain).FindAll(".feed-agent-chip"));
         await using MudBunitContext ctx = NewContext(host);
-        TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&agent=Nova");
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", agent: "Nova", page: page);
+        TabPageContext page = OpenFeedTab(ctx, "/feed?category=needs-you&agent=Nova");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", agent: "Nova", page: page);
 
         Assert.Equal("Agent: Nova", Text(cut.Find(".feed-agent-chip .mud-chip-content > span")));
         await cut.Find(".feed-agent-chip .chip-clear").ClickAsync(new());
 
-        Assert.Equal("/feed?category=tasks", ctx.Services.GetRequiredService<TabService>().Active!.Url);
+        Assert.Equal("/feed?category=needs-you", ctx.Services.GetRequiredService<TabService>().Active?.Url);
     }
 
-    /// <summary>Clicking an Agent's avatar in a card sets the Agent in the address.</summary>
+    /// <summary>An Agent's avatar in a card is the profile button, as it is in a Room, not a filter on the Feed.</summary>
     [Fact]
-    public async Task AvatarClick_NavigatesToTheAgent()
+    public async Task AgentAvatar_IsTheProfileButton()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         _ = Post(host, "Nova", "Growth", 1, "GRO-1");
         await using MudBunitContext ctx = NewContext(host);
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.Find("button.feed-card-avatar-button").ClickAsync(new());
+        IElement button = cut.Find(".feed-card-avatar button.profile-avatar-button");
 
-        Assert.EndsWith("/feed?agent=Nova", ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.Equal("Show Nova's profile", button.GetAttribute("aria-label"));
+        Assert.Equal("dialog", button.GetAttribute("aria-haspopup"));
     }
 
-    /// <summary>The Agent and Team parameters narrow the cards to that actor and Team, and an unknown category reads as All.</summary>
+    /// <summary>
+    /// The Agent and Team parameters narrow the cards to that actor and Team. An unknown category, and a kind Category no control offers
+    /// any more (an old <c>?category=rooms</c> link), both read as All.
+    /// </summary>
     [Fact]
     public async Task Filters_NarrowTheCards_AndAnUnknownCategoryReadsAsAll()
     {
@@ -214,11 +218,12 @@ public sealed partial class FeedPageTests
         }
 
         Assert.Equal([third.Id, second.Id, first.Id], await IdsAsync(category: "nonsense"));
+        Assert.Equal([third.Id, second.Id, first.Id], await IdsAsync(category: "rooms"));
         Assert.Equal([third.Id, first.Id], await IdsAsync(agent: "Nova"));
         Assert.Equal([third.Id, second.Id], await IdsAsync(team: "Platform"));
         Assert.Equal([third.Id], await IdsAsync(agent: "Nova", team: "Platform"));
         await using MudBunitContext last = NewContext(host);
-        Assert.Equal("All 3", Segments(Render(last, category: "nonsense"))[0]);
+        Assert.Equal("All", Text(Render(last, category: "rooms").Find(".huddle-segmented-active-item")));
     }
 
     /// <summary>"Show more" loads the next page below the lowest id shown; an item inserted meanwhile repeats nothing and loses nothing.</summary>
@@ -267,10 +272,9 @@ public sealed partial class FeedPageTests
         cut.WaitForAssertion(() => Assert.Contains(mine.Id, CardIds(cut)));
         Assert.DoesNotContain(other.Id, CardIds(cut));
         Assert.Empty(cut.FindAll(".feed-new-pill"));
-        Assert.Equal("All 2", Segments(cut)[0]);
     }
 
-    /// <summary>A live item that arrives while the list is scrolled waits behind the "New items" pill, and the counts are re-read.</summary>
+    /// <summary>A live item that arrives while the list is scrolled waits behind the "New items" pill, and the Needs you count is re-read.</summary>
     [Fact]
     public async Task LiveItem_WhileScrolled_WaitsBehindThePill()
     {
@@ -279,13 +283,14 @@ public sealed partial class FeedPageTests
         await using MudBunitContext ctx = NewContext(host);
         ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
-        FeedItem fresh = Post(host, "Kai", "Platform", 0, "PLA-1");
+        Assert.Equal("Needs you 0", Segments(cut)[1]);
+        FeedItem fresh = host.Feed.PostNeedsYou();
 
         await cut.InvokeAsync(() => host.Feed.Events.RaiseItemsAdded([fresh]));
 
         cut.WaitForAssertion(() => Assert.Equal("↑ 1 new item", Text(cut.Find(".feed-new-pill"))));
         Assert.DoesNotContain(fresh.Id, CardIds(cut));
-        Assert.Equal("All 2", Segments(cut)[0]);
+        Assert.Equal("Needs you 1", Segments(cut)[1]);
     }
 
     /// <summary>A resolve re-reads the counts: Needs you falls by one and the shown card is reloaded.</summary>
@@ -354,8 +359,8 @@ public sealed partial class FeedPageTests
     [Theory]
     [InlineData(null, null, null, "Nothing yet", "What your Agents do appears here.")]
     [InlineData(null, "Nova", null, "Nothing from Nova yet.", "")]
-    [InlineData("tasks", null, null, "Nothing here yet.", "Try All, or another Team.")]
-    [InlineData(null, null, "Growth", "Nothing here yet.", "Try All, or another Team.")]
+    [InlineData("tasks", null, null, "Nothing yet", "What your Agents do appears here.")]
+    [InlineData(null, null, "Growth", "Nothing here yet.", "Try another Team.")]
     [InlineData("needs-you", null, null, "Nothing needs you", "Asks from your Agents appear here.")]
     public async Task EmptyStates_NameWhatIsMissing_AndKeepTheHeader(string? category, string? agent, string? team, string title, string text)
     {
@@ -367,7 +372,7 @@ public sealed partial class FeedPageTests
         Assert.Equal(title, Text(cut.Find(".empty-state-title")));
         Assert.Equal(text, Text(cut.Find(".empty-state-text")));
         Assert.Equal("Feed", Text(cut.Find("h1")));
-        Assert.Equal(9, cut.FindAll(".mud-toggle-item").Count);
+        Assert.Equal(2, cut.FindAll(".mud-toggle-item").Count);
     }
 
     /// <summary>With the Feed turned off the page draws only a plain empty state.</summary>
@@ -417,13 +422,12 @@ public sealed partial class FeedPageTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", agent: "Nova", team: "Growth", page: page);
 
-        Assert.Equal("All 0", Text(cut.Find(".huddle-segmented-active-item")));
+        Assert.Equal("All", Text(cut.Find(".huddle-segmented-active-item")));
         Assert.Empty(cut.FindAll(".feed-agent-chip"));
     }
 
     /// <summary>
-    /// The Category control sits alone in its scroller, so a narrow column scrolls the nine segments sideways rather than squeezing
-    /// them until their labels overlap; the Agent chip and the Team select stay outside it.
+    /// The Category control sits alone in its scroller with its two segments; the Agent chip and the Team select stay outside it.
     /// </summary>
     [Fact]
     public async Task CategoryControl_SitsInItsOwnScroller()
@@ -435,37 +439,7 @@ public sealed partial class FeedPageTests
 
         IElement scroller = cut.Find(".feed-filter-bar > .feed-category-scroller");
         Assert.Single(scroller.Children);
-        Assert.Equal(9, scroller.QuerySelectorAll(".feed-category-control .mud-toggle-item").Length);
+        Assert.Equal(2, scroller.QuerySelectorAll(".feed-category-control .mud-toggle-item").Length);
         Assert.Empty(scroller.QuerySelectorAll(".feed-agent-chip, .feed-team-select"));
-    }
-
-    /// <summary>
-    /// A Tab opened on a later Category, such as Gates, scrolls its segment into view: in a narrow column the scroller starts at All,
-    /// so without this the chosen Category is off screen.
-    /// </summary>
-    [Fact]
-    public async Task LoadedCategory_IsScrolledIntoView()
-    {
-        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        await using MudBunitContext ctx = NewContext(host);
-
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "gates");
-
-        JSRuntimeInvocation reveal = Assert.Single(ctx.JSInterop.Invocations["huddleFeed.revealSelected"]);
-        Assert.Equal("Gates 0", Text(cut.Find(".huddle-segmented-active-item")));
-        Assert.IsType<ElementReference>(Assert.Single(reveal.Arguments));
-    }
-
-    /// <summary>A render that keeps the same filter does not scroll the Category control again, so it never fights the Human's own scroll.</summary>
-    [Fact]
-    public async Task Rerender_WithTheSameFilter_DoesNotScrollAgain()
-    {
-        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        await using MudBunitContext ctx = NewContext(host);
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "gates");
-
-        cut.Render();
-
-        Assert.Single(ctx.JSInterop.Invocations["huddleFeed.revealSelected"]);
     }
 }

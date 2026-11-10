@@ -30,6 +30,27 @@ public sealed class RoomLifecycleFeedTests
         Assert.Equal(["You", "Nova"], payload.Members);
     }
 
+    /// <summary>
+    /// A one-to-one Huddle creates on its own (an Agent connecting for the first time, onboarding) posts nothing: it is housekeeping,
+    /// and a fresh install would otherwise open with one item per Agent. The same Room created by the Human is still posted.
+    /// </summary>
+    [Fact]
+    public async Task EnsureRoomFor_ByHuddle_PostsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingFeedPublisher feed = new();
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct);
+        fixture.Service.FeedPublisher = feed;
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        User kai = await fixture.AddAgentAsync("Kai", ct);
+
+        _ = await fixture.Service.EnsureRoomForAsync(nova, FeedActor.Huddle, ct);
+        _ = await fixture.Service.EnsureRoomForAsync(kai, ct);
+
+        FeedMessage post = Assert.Single(feed.Posts);
+        Assert.Equal(["You", "Kai"], Assert.IsType<RoomCreatedPayload>(post.Payload).Members);
+    }
+
     /// <summary>A Room an Agent opens is attributed to that Agent.</summary>
     [Fact]
     public async Task CreateRoomFor_ByAgent_NamesTheAgentAsActor()

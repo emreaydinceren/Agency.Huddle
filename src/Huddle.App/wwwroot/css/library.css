@@ -724,6 +724,11 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     flex-shrink: 0;
 }
 
+/* The toolbar sets no gap, so Save would touch the mode toggle's track; it keeps 8px before the next control. */
+.library-document-toolbar .library-document-save {
+    margin-inline-end: 8px;
+}
+
 .library-document-toolbar .library-document-path-inline {
     flex: 1 1 12rem;
     min-width: 0;

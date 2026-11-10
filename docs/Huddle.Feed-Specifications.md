@@ -74,7 +74,7 @@ each fact:
 | U-5 | Zoe Mentions the Human in Pricing; later the Human posts there | A Notification "Zoe mentioned you in Pricing"; the Human's post resolves it |
 | U-6 | Ruth's move of QA-9 to Done is refused by `qa-evidence-before-done` | A Notification "A gate stopped Ruth moving QA-9 to Done: <refusal>"; resolved when QA-9's status next changes or it closes |
 | U-7 | The Human dismisses a Notification | It leaves the panel and the count. It is still in the Feed Tab. 30 days later the row is deleted |
-| U-8 | The Human clicks Nova's avatar on an item | The Feed Tab narrows to Nova's items; its address becomes `/feed?agent=Nova`, so the Tab remembers it |
+| U-8 | The Human clicks Nova's avatar on an item | Nova's profile popover opens, as it does from an avatar in a Room. The Feed Tab narrows to one Agent only through `/feed?agent=Nova` in its address, which the Tab remembers |
 | U-9 | A new item arrives while the Feed Tab is open | It is inserted at the top. Older pages already loaded do not shift or repeat |
 | U-10 | The SQLite file is locked when the writer runs | A warning is logged and the batch is dropped. The Task update the Agent made succeeded and its tool result says so |
 | U-11 | Huddle restarts while a Question card was waiting | The card is gone after the restart (Questions live in memory), so its Notification is resolved at startup |
@@ -250,7 +250,7 @@ pins the pairing and is unit-tested for every value.
 | `RoomForm` | `room-form` | `NeedsYouTracker` | Yes | Room id | `RoomWaitPayload` |
 | `RoomBudget` | `room-budget` | `NeedsYouTracker` | Yes | Room id | `RoomWaitPayload` |
 | `RoomMentionHeld` | `room-mention-held` | `HeldMentions` (#428) | Yes | `{roomId}\|{agentId}` | `RoomMentionHeldPayload` |
-| `RoomCreated` | `room-created` | `ChatService`, `TeamRoomReconciler` | No | Room id | `RoomCreatedPayload(RoomId, RoomName, Team?, Members)` |
+| `RoomCreated` | `room-created` | `ChatService` (not for a one-to-one Huddle creates on its own: an Agent's first connection, onboarding), `TeamRoomReconciler` | No | Room id | `RoomCreatedPayload(RoomId, RoomName, Team?, Members)` |
 | `RoomJoined` | `room-joined` | `ChatService` | No | Room id | `RoomJoinedPayload(RoomId, RoomName, Team?, Member)` |
 | `RoomArchived` | `room-archived` | `ChatService` | No | Room id | `RoomArchivedPayload(RoomId, RoomName, Team?)` |
 | `DocumentChanged` | `document-changed` | `DocHistoryStore` | No | Library absolute path | `DocumentChangedPayload(Path, RootName, RelativePath, Kind, Summary)` |
@@ -518,8 +518,8 @@ in `SidebarPanelCatalog`, because it applies to no Subject.
 - On first render it sends `MarkSeen(upToId)` with the highest id it shows, so opening the panel
   is what marks them seen (Right sidebar D-7: a panel lives only while it is seen).
 - **It shows the Feed, not only Notifications** (D-21). At its top, a compact Category control
-  with the six Categories of §6.9 and their counts, as a single-select `MudChipSet` that wraps (the
-  panel is too narrow for the segmented control). It **opens on Needs you**, so the bell still
+  with the two Categories of §6.9, All and Needs you (only Needs you carries its count), as a
+  single-select `MudChipSet`. It **opens on Needs you**, so the bell still
   shows what needs the Human first; All shows everything. The choice lives only while the panel
   does. The panel has no Team select and no Agent filter: those are the Feed Tab's.
 - Rows are `FeedItemRow` (§6.12), the same component as the Feed Tab's, with day groups, grouping
@@ -565,11 +565,15 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
 - **The filter bar**, one row: the **Category** control at the left and the **Team select** at the
   right; the Agent chip, when set, sits just left of the Team select.
 
-**Category** is a `HuddleSegmentedControl<FeedCategory>` with nine segments (`ItemCount="9"`; the original seven plus Devices and Second Brain), each a
-label and its count from `FeedStore.Counts`. Selecting one navigates the Tab to
-`?category=<value>`, keeping `agent` and `team`. Every Feed item is in All, in exactly one of
-Tasks, Gates, Rooms, Documents or Helpers, and in Needs you only while it is an unresolved Notification, so
-Needs you overlaps the other five and the counts are not meant to add up:
+**Category** is a `HuddleSegmentedControl<FeedCategory>` with two segments, **All** and **Needs you**
+(`FeedCategories.Choices`); only Needs you shows its count from `FeedStore.Counts`, because it is the one
+number that asks something of the Human. Selecting one navigates the Tab to `?category=<value>`, keeping
+`agent` and `team`. Until 2026-11-10 the control also offered the kind Categories below as segments;
+the owner cut it to two because the row was busy and every item already shows its kind (badge, meta
+line, chips). The kind Categories still exist: each source type belongs to exactly one, and
+`FeedStore.Counts` still reads them, but no control offers them, and an address naming one (an old
+`?category=rooms` Tab) reads as All (`FeedCategories.Offered`). Every Feed item is in All, in exactly one kind
+Category, and in Needs you only while it is an unresolved Notification:
 
 | Segment | `FeedCategory` | `category=` | Source types |
 | --- | --- | --- | --- |
@@ -592,11 +596,13 @@ filters, and are re-read on `FeedEvents.ItemsAdded` and on a resolve.
 tile becomes the Teams icon). Choosing one navigates to `?team=<Team>`; "All teams" removes it.
 Documents carry no Team (§10 OD-4), so with a Team chosen the Documents count is 0.
 
-**Agent chip.** Clicking an avatar sets `?agent=<Name>`, shown as a `TaskFilterChip`
+**Agent chip.** An `?agent=<Name>` in the address is shown as a `TaskFilterChip`
 "Agent: Nova ×" in the filter bar; × removes only that parameter.
 
 Then the items, newest first, as `FeedCard`s (§6.13) under the day headings of §6.12. The panel
-keeps the compact `FeedItemRow`. In the Tab, clicking an avatar navigates to `?agent=<actor>` (not for the Huddle actor or the Human).
+keeps the compact `FeedItemRow`. In both, an Agent's avatar is a `ProfileAvatar`: a click opens the Agent's profile popover. The card
+draws the Human's avatar the same way; Huddle, a Helper and an edit made outside Huddle wear a mark that is not a button. Hovering a
+card's kind badge shows what it means ("Created", "Needs you", "Document"...).
 No Dismiss, no Accept, no Reply (§3).
 
 **Paging and live insertion.** The page loads `Page(new(null, PageSize, …))`, and loads the next
@@ -672,8 +678,7 @@ days, from the injected `TimeProvider`.
   (D-24). The chips:
   - **Task chip:** the `TaskStateDot` icon, `#<id>` in the Accent ink and monospace, then the title,
     truncated with "…" inside the chip at about 32 characters. Opens the Task.
-  - **Room chip:** a chat-bubble icon and the Room's Name; a Room of two Members reads
-    "<Name> ↔ <Name>". Opens the Room.
+  - **Room chip:** a chat-bubble icon and the Room's Name, the same name the sidebar shows. Opens the Room.
   - **Document chip:** a document icon and the Library-relative path in monospace. Opens it.
   - A Team Name is plain 600 text, and a status change reads "<from> → <to>", each with its
     `TaskStateDot` icon.
@@ -768,8 +773,8 @@ opens from the expanded card's Open button and from each chip.
    and keeps only the Feed part below.
 3. **"In the Feed"**, a caption, then up to 5 compact `FeedItemRow`s, newest first, from
    `FeedStore.Related`: items about the same target, and for a Task also items about its origin
-   Room and the Library files it links (attachments, ADR-0053). The card's own item is tagged
-   "This item".
+   Room and the Library files it links (attachments, ADR-0053). The card's own item is left out,
+   since the card already shows it; with nothing else to list, the section is not drawn.
 4. **Buttons**, left-aligned, navigation only (v1 stays read-only, §3): **Open Task** (filled, the
    one primary), or **Open Room** or **Open document** for those targets; **Review in Needs you**
    (outlined, with a warning icon) when the item is an unresolved Notification about a gated Task
@@ -792,7 +797,7 @@ opens from the expanded card's Open button and from each chip.
 | `room-question` | `asked you a Question in {Room}` | `Asked <hh:mm> · waiting for you` |
 | `room-form` | `is waiting for you to fill in a Form in {Room}` | `Asked <hh:mm> · waiting for you` |
 | `room-budget` | `{Room} reached its Budget` (actor: Huddle) | `Paused <hh:mm> · waiting for you to continue or wrap up` |
-| `room-created` | `opened {Room}` · `<n> Agents` | — |
+| `room-created` | `created {Room}` · `<n> Agents` (a group Room only; a one-to-one's name already says who is in it) | — |
 | `room-joined` | `<member> joined {Room}` | — |
 | `room-archived` | `archived {Room}` | — |
 | `document-changed` | `created`, `edited`, `reviewed` or `objected to` `{Document}` · `<summary>` when there is one | — |
@@ -855,7 +860,7 @@ Functional tests with the real `FeedStore` on a `TempDataDir` and a `ManualTimeP
 | `DocHistoryStore` | An Agent entry posts with its kind and summary; a Human entry does not |
 | Startup | Room and Task reconcilers resolve exactly the items whose condition no longer holds |
 | No Message text | A Mention whose Message holds a sentinel string leaves no row containing it |
-| Components | Button count and its `aria-label`; opening the panel marks seen; ✕ dismisses; resolved rows dimmed; the panel opens on Needs you and its Categories switch; new items wait behind the pill unless the list is at its top; the Feed Tab filters by avatar and Team chip, "Show more" pages; links open the right address |
+| Components | Button count and its `aria-label`; opening the panel marks seen; ✕ dismisses; resolved rows dimmed; the panel opens on Needs you and its Categories switch; new items wait behind the pill unless the list is at its top; an avatar opens the profile popover, the Feed Tab filters by `?agent=` and Team chip, "Show more" pages; links open the right address |
 
 Manual tests go in a new page, `engineering/manual-tests/feed.md`, written with the build.
 

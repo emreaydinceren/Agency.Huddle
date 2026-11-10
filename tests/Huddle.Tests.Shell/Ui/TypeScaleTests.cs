@@ -187,6 +187,24 @@ public sealed partial class TypeScaleTests
         }
     }
 
+    /// <summary>
+    /// The fine rung is 11px, the floor, declared once in <c>app-vars.css</c>; a 1:1 Room's Agent title in the sidebar is set in it,
+    /// one step under the caption-size name above it.
+    /// </summary>
+    [Fact]
+    public void FineRung_Is11px_AndSetsTheRoomRowTitle()
+    {
+        string vars = File.ReadAllText(RepoPaths.App("wwwroot", "app-vars.css"));
+        string css = CssText.AppCss(CssNewlines.AsIs).ReplaceLineEndings("\n");
+        int rule = css.LastIndexOf("\n.room-row-title {", StringComparison.Ordinal);
+        Assert.True(rule >= 0, "Expected the .room-row-title rule in shell.css.");
+
+        string body = css[rule..css.IndexOf('}', rule)];
+
+        Assert.Matches(@"--font-size-fine:\s*11px;", vars);
+        Assert.Contains("font-size: var(--font-size-fine);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+    }
+
     /// <summary>The blocks of prose in the shell (intro, lead, helper text, empty state) are capped at 75 characters a line.</summary>
     [Fact]
     public void AppCss_CapsProseAt75ch()

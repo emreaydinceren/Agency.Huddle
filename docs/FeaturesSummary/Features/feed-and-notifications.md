@@ -11,7 +11,7 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 ## Check the bell
 
 The **Notifications** bell in the Top Bar counts items that need you and opens the **Notifications** panel.
-Its categories are **Needs you**, **All**, **Tasks**, **Documents**, **Rooms**, **Gates** and **Helpers**.
+It opens on **Needs you**; **All** shows the rest of the Feed.
 
 ## Catch up with the Feed
 
@@ -25,7 +25,7 @@ resolved.
 ## See what Helpers did
 
 A Helper's gate change appears as a Notification with its reason. If a Helper pauses at its cap or keeps
-failing, Huddle reports it in the **Helpers** category.
+failing, Huddle reports it in the Feed.
 
 ## Good to know
 
@@ -69,7 +69,7 @@ Task that's waiting. These buttons only open things, so deciding and replying st
 
 ### Filtering
 
-- **Categories:** **All**, **Needs you**, **Tasks**, **Documents**, **Rooms**, **Gates** and **Helpers**, each with a count.
+- **All | Needs you:** everything, or only what waits for you, with its count.
 - **Team:** the **All teams** select narrows the list to one Team.
 - **Agent:** click an Agent's avatar to see only its items. The tab remembers this in its address.
 

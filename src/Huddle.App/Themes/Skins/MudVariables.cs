@@ -18,6 +18,9 @@ internal static class MudVariables
         "--font-mono",
         "--font-read",
 
+        // The fine rung of the type scale, 11px, declared in app-vars.css: MudBlazor has no role under caption.
+        "--font-size-fine",
+
         // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017): the row height
         // and the grid every row sits on; --nav-level is set per row, and --needs-you-offset by the Needs you card.
         "--nav-row-height",

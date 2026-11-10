@@ -156,7 +156,10 @@
     top: 0;
 }
 
+/* MudNavLink lays its icon and label out from the row's top (align-items: flex-start), which on a 32px row with no
+   block padding left both sitting high; the row centres them instead. */
 .settings-nav .mud-nav-link {
+    align-items: center;
     min-height: var(--nav-row-height);
     width: calc(100% - 8px);
     margin-inline: 4px;
