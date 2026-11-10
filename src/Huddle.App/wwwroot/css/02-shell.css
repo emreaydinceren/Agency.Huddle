@@ -1,16 +1,16 @@
 /* ---- New chat and the agent status dots ------------------------------------------------------ */
 
-/* The picker floats under the link or the Team row like Invite's panel (audit B10 "New chat"): the .floating-panel Edge and
+/* The picker floats under the link or the Team row like Invite's panel: the .floating-panel Edge and
    elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
 .new-chat {
     position: relative;
     anchor-name: --new-chat;
 }
 
-/* Fixed, not absolute (#465): the link sits at the end of a long Room list inside a scrolling folder, and an absolute panel was
+/* Fixed, not absolute: the link sits at the end of a long Room list inside a scrolling folder, and an absolute panel was
    clipped by that folder and pushed below the window. A fixed panel is clipped by neither. It hangs from the link by anchor
    positioning (8px in from each side, the link's width) and flips above it when the window has no room below. A browser
-   without anchor positioning keeps the absolute panel under the link, as before. */
+   without anchor positioning keeps the absolute panel under the link. */
 .new-chat-panel {
     position: absolute;
     inset-inline: 8px;
@@ -59,7 +59,7 @@
     gap: 8px;
 }
 
-/* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
+/* ---- Presence badge and status dot ----------------------------------------------------
    A circle in the state's tone that carries a glyph, so the state is never colour alone: a green circle with a white
    check (online), an amber circle with a pulse line that breathes (starting), a blue circle with the same pulse
    (awake: amber means needs attention, a running Turn does not), a red circle with a white dash
@@ -195,7 +195,7 @@
     height: 12px;
 }
 
-/* ---- Avatars (DS-6, C2) ---------------------------------------------------------------------------
+/* ---- Avatars ---------------------------------------------------------------------------
    Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px in the Transcript (.avatar-transcript),
    40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter, held to the ADR-0056
    scale: 11px at 24px and below (the 18px Team avatar on a Feed card is a Small avatar resized, so it gets 11px too),
@@ -385,7 +385,7 @@ emoji-picker {
     pointer-events: none;
 }
 
-/* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the CV11 radius rule does not allow. */
+/* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the radius convention test does not allow. */
 .mud-avatar.avatar-square.avatar-image::after {
     border-radius: var(--mud-default-borderradius);
 }
@@ -417,7 +417,7 @@ emoji-picker {
     max-width: 45ch;
 }
 
-/* Balance the lines, inline or full-pane, so a short sentence never leaves one orphaned word on the last (#476). */
+/* Balance the lines, inline or full-pane, so a short sentence never leaves one orphaned word on the last. */
 .empty-state-text {
     text-wrap: balance;
 }
@@ -468,7 +468,7 @@ emoji-picker {
     min-height: 0;
 }
 
-/* The Room header (audit B1): a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
+/* The Room header: a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
    strip, as on every other page. This wrapper supplies the 16px above the row; the Chrome line under the header comes
    from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
 .room-header {
@@ -479,7 +479,7 @@ emoji-picker {
     margin-bottom: 0;
 }
 
-/* The Room's title never gets less width than its longest word (#466): the page header lets the h1 break anywhere and shrink to
+/* The Room's title never gets less width than its longest word: the page header lets the h1 break anywhere and shrink to
    nothing, which drew "Launch crew" a letter a line when the Workspace was narrow. Here the h1 only breaks inside a word that is
    itself wider than the row, and the members and Invite drop to a line of their own, at the right, before the title gives way. */
 .room-header .page-header-row {
@@ -487,17 +487,14 @@ emoji-picker {
     row-gap: 8px;
 }
 
-.room-header .page-header-h1.mud-typography {
-    overflow-wrap: break-word;
-}
-
 .room-header .page-header-actions {
     margin-inline-start: auto;
 }
 
 /* The Room's title is the h6 role at 600 in every Theme: each Theme's mockup sets it at 15-18px semibold, and the page
-   h5 it inherited (20px) was the outlier (side-by-side audit, 2026-10-30, LL-C01, FL-06, CL-03). */
+   h5 (20px) would be the outlier. */
 .room-header .page-header-h1.mud-typography {
+    overflow-wrap: break-word;
     font-size: var(--mud-typography-h6-size);
     line-height: var(--mud-typography-h6-lineheight);
     font-weight: 600;
@@ -528,8 +525,8 @@ emoji-picker {
 }
 
 /* The Top bar's "N Tasks need you" pill: every Theme's mockup shows it, so it is drawn in the needs hue unless a surface
-   trait below draws it its own way (paper, hairline). It used to be hidden for the flat surface, which left Fluent and
-   Cobalt Soft without it (side-by-side audit, 2026-10-30, FL-05 and CL-02). */
+   trait below draws it its own way (paper, hairline). It is not hidden for the flat surface, so Fluent and Cobalt Soft
+   show it too. */
 .tasks-need-you-pill {
     display: inline-flex;
     align-items: center;
@@ -658,7 +655,7 @@ emoji-picker {
     gap: 4px;
 }
 
-/* The top bar's icon buttons are 32px boxes with 18px icons (audit B3d), level with the search box and the Activity bar's tiles. */
+/* The top bar's icon buttons are 32px boxes with 18px icons, level with the search box and the Activity bar's tiles. */
 .top-bar-end .mud-icon-button {
     display: inline-flex;
     align-items: center;
@@ -771,7 +768,7 @@ emoji-picker {
     margin-top: auto;
 }
 
-/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape (audit A5). */
+/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape. */
 .activity-bar-item.mud-icon-button {
     width: 40px;
     height: 40px;
@@ -975,8 +972,7 @@ body.sidebar-resizing {
 }
 
 /* The Tags panel's tree: 28px rows, and each tag's label starts on one line whether or not its row has a chevron.
-   MudBlazor's button centres its text in a 64px minimum, which pushed short labels right (side-by-side audit,
-   2026-10-30, LL-L03). */
+   MudBlazor's button centres its text in a 64px minimum, which pushed short labels right. */
 .tags-tree .mud-treeview-item-content {
     padding-block: 0;
 }
@@ -1035,7 +1031,7 @@ body.sidebar-resizing {
     display: none;
 }
 
-/* A narrow window (#466): the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
+/* A narrow window: the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
    left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
    floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
    the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
@@ -1073,8 +1069,8 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-/* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row (audit B3b), and sits 16px below the
-   section above and 4px above its first row (S2). Agents and Library are destinations, not headers: see .nav-row-link below. */
+/* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row, and sits 16px below the
+   section above and 4px above its first row. Agents and Library are destinations, not headers: see .nav-row-link below. */
 .mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
@@ -1225,7 +1221,7 @@ body.sidebar-resizing {
    the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
 .room-row-avatar {
     flex: 0 0 auto;
-    /* The avatar is 32px in a 24px slot (#475): it overhangs the slot by 4px a side, so its centre stays on the icon line and
+    /* The avatar is 32px in a 24px slot: it overhangs the slot by 4px a side, so its centre stays on the icon line and
        the name starts where a group Room's name does. */
     margin-inline: calc((var(--nav-slot) - 32px) / 2) calc((var(--nav-slot) - 32px) / 2 + var(--nav-gap));
     vertical-align: middle;
@@ -1397,7 +1393,7 @@ body.sidebar-resizing {
     flex: 0 1 auto;
 }
 
-/* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete (audit B10 "Inline confirm"). */
+/* The sidebar's inline Delete? confirm: one 32px line whose prompt starts on the rows' text line, Cancel then Delete. */
 .room-list-confirm-host {
     flex: 1 1 auto;
     min-width: 0;
@@ -1430,7 +1426,7 @@ body.sidebar-resizing {
     border-bottom: 1px solid var(--ink-rule);
 }
 
-/* The icon fills the 24px leading slot of a picker row (audit B10h); the name truncates; the date trails in Quiet ink. */
+/* The icon fills the 24px leading slot of a picker row; the name truncates; the date trails in Quiet ink. */
 .archived-chats-icon {
     display: flex;
     align-items: center;
@@ -1470,7 +1466,7 @@ body.sidebar-resizing {
     background: var(--hu-ground-raised);
 }
 
-/* The panel's title (audit C3a): "Invite to {Room}" in subtitle2, above the search and the rows. */
+/* The panel's title : "Invite to {Room}" in subtitle2, above the search and the rows. */
 .invite-title {
     font-weight: 600;
 }
