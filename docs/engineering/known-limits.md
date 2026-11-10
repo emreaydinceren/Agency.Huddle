@@ -867,7 +867,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - times, counts and row meta in ink-3 rather than the mockup's ink-4, which is TextDisabled at 3.74:1 on the dark ground;
   - the avatar colour recipe;
   - a 2px Primary edge on the active Tab;
-  - a visible Divider on rules that carry meaning.
+  - a visible Line on rules that carry meaning.
 
   Nordic's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.
 - **Only the first Huddle to start moves its old Skills into a shared Skill Sources folder.** The move from the old `SkillPacks/` runs only while `SKILLS.md` does not exist. A second Huddle pointed at a folder another one already filled skips it: its Agents keep their copies in `Skills/`, but those Skills' catalog entries show **Not downloaded** on that computer and never **Update available**, until an AI tool adds a path for it (the row's **Copy fix prompt**). Accepted because the copy in `Skills/` is what an Agent uses ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §6.13).

@@ -269,7 +269,7 @@
 }
 
 /* Chips (design-system.md "Chips"): four looks, one per job. A status colour is never a solid fill under text.
-   1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 70% toward
+   1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 50% toward
       TextPrimary. StatusChipContrast mirrors the two mixes in C# and a test holds the pair to 4.5:1. */
 .mud-chip.status-chip .mud-chip-icon,
 .mud-chip.status-chip .mud-icon-root {

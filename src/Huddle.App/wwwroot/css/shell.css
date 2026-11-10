@@ -1544,7 +1544,7 @@ body.sidebar-resizing {
 }
 
 /* ---- nav=tile: Lumen, Nordic ----------------------------------------------------------------- */
-/* -- nav=tile: the activity bar, 36px tiles with a bar hugging the left edge on the current one ---------------- */
+/* -- nav=tile: the activity bar, 40px tiles with a bar hugging the left edge on the current one ---------------- */
 :root:has([data-hu-nav="tile"]) .activity-bar-item.mud-icon-button,
 :root:has([data-hu-nav="tile"]) .activity-bar .nav-settings .mud-nav-link {
     position: relative;

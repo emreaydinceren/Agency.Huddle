@@ -42,7 +42,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Write a spec or plan with UI | [../agents/MudBlazorDesign.md](../agents/MudBlazorDesign.md) |
 | Name a UI container, or point at part of a screen: the shell, a pane, a Room's parts, a dialog | [engineering/wireframes.md](engineering/wireframes.md) |
 | Build, change or review anything a Human sees: where every UI resource is, by task | [engineering/UXDesignGuidelines.md](engineering/UXDesignGuidelines.md) |
-| Design a screen or style a component: colour, type, spacing, layout containers, overlays, copy | [engineering/design-system.md](engineering/design-system.md) (binding), then [../agents/MudBlazorDesign.md](../agents/MudBlazorDesign.md) |
+| Design a screen or style a component: colour, type, spacing, layout containers, overlays, copy | [engineering/design-system.md](engineering/design-system.md) (describes the shipped UI), then [../agents/MudBlazorDesign.md](../agents/MudBlazorDesign.md) |
 | Code or test a MudBlazor component | [../agents/MudBlazorImplementation.md](../agents/MudBlazorImplementation.md), [engineering/mudblazor.md](engineering/mudblazor.md) |
 | Run a project plan with parallel subagents | [../agents/DeliveryPlaybook.md](../agents/DeliveryPlaybook.md) |
 | Build a test data folder | [../agents/DataSeeding.md](../agents/DataSeeding.md) |
@@ -148,7 +148,7 @@ that exercise it. All are **chat** unless stated.
 | [duplication-log.md](engineering/duplication-log.md) | Before acting on a row of `Report-Duplication.ps1`: which duplicates were extracted, which are kept as copies on purpose, and why, one section per iteration | chat | small |
 | [wireframes.md](engineering/wireframes.md) | The code and name of every UI container, drawn as SVG wireframes from the shell down to each page and overlay | chat | ~4k |
 | [UXDesignGuidelines.md](engineering/UXDesignGuidelines.md) | The hub for UI work: which document owns which answer, the reading order by task, the order of authority, and how to check a change in the running app; a catalog of every reusable component, helper and stylesheet class | chat | ~7.5k |
-| [design-system.md](engineering/design-system.md) | **Binding** for UI. The tokens, type roles, spacing, shape, elevation, icons, layout, overlay anatomy, component defaults, interface copy and stylesheet rules, with a checklist | chat | ~10k |
+| [design-system.md](engineering/design-system.md) | Describes the shipped UI; tests and the convention scan enforce the rules that matter. The tokens, type roles, spacing, size ladder, shape, elevation, icons, layout, overlay anatomy, component defaults, interface copy and stylesheet rules, with a checklist | chat | ~10k |
 | [theme-authoring.md](engineering/theme-authoring.md) | For designers: an annotated palette map and screen-by-screen tables from what you see to the palette property that paints it. For engineers: how a Theme reaches the screen, and the steps and tests for adding one | chat | ~11k |
 | [mudblazor.md](engineering/mudblazor.md) | Which MudBlazor facts were checked against the package | chat | small |
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |

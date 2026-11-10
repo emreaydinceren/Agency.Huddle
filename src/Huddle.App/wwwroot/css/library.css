@@ -346,7 +346,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Library tree density ----------------------------------------------------------------------
-   30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
+   32px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
    and each row is inset 4px (the Selected shape) and pads 4px more, so a label column starts 16px from
    the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's

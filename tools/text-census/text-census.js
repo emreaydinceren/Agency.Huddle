@@ -24,19 +24,15 @@
   // Each row says which audit tier a border belongs to. The first row whose `test` matches the
   // element wins, so list the more specific rows first. `test` receives the element and returns a
   // boolean. Only border sides are classified; fills are reported by rung but not ordered.
-  //   Rule  = dividers inside a card or dialog        (ladder: 10%)
-  //   Edge  = card and tile borders                   (ladder: 18%)
+  //   Line  = dividers, card and tile borders         (ladder: 18%)
   //   Field = input outlines                          (ladder: 30%)
   //   Chrome = toolbars, tab strip, hairlines         (ladder: 30%)
-  const TIER_RANK = { Rule: 0, Edge: 1, Field: 2, Chrome: 2 };
+  const TIER_RANK = { Line: 0, Field: 1, Chrome: 1 };
   // The required order. '<' means the first tier's median rung must be lower; '<=' allows equal.
   const ORDER_RULES = [
-    ['Rule', 'Edge', '<'],
-    ['Edge', 'Field', '<'],
+    ['Line', 'Field', '<'],
     ['Field', 'Chrome', '<='],
-    ['Rule', 'Field', '<'],
-    ['Rule', 'Chrome', '<'],
-    ['Edge', 'Chrome', '<']
+    ['Line', 'Chrome', '<']
   ];
   function hasClass(el, pattern) {
     const cls = typeof el.className === 'string' ? el.className : '';
@@ -48,9 +44,9 @@
     { tier: 'Chrome', label: '.toolbar-hairline', test: function (el) { return hasClass(el, /(^|\s)toolbar-hairline(\s|$)/); } },
     { tier: 'Chrome', label: '.mud-toolbar', test: function (el) { return hasClass(el, /(^|\s)mud-toolbar(\s|$)/); } },
     { tier: 'Chrome', label: 'tab strip (.mud-tabs-toolbar, .mud-tabs-tabbar, .tab-rail)', test: function (el) { return hasClass(el, /(^|\s)(mud-tabs-toolbar|mud-tabs-tabbar|tab-rail)(\s|$)/); } },
-    { tier: 'Rule', label: 'dividers (.mud-divider, hr)', test: function (el) { return el.tagName === 'HR' || hasClass(el, /(^|\s)mud-divider(\s|$)/); } },
-    { tier: 'Edge', label: '.tag-chip, .floating-panel (FND)', test: function (el) { return hasClass(el, /(^|\s)(tag-chip|floating-panel)(\s|$)/); } },
-    { tier: 'Edge', label: 'cards and tiles (.mud-card, .mud-paper-outlined, *-card, *-tile)', test: function (el) { return hasClass(el, /(^|\s)(mud-card|mud-paper-outlined|[\w-]+-card|[\w-]+-tile)(\s|$)/); } }
+    { tier: 'Line', label: 'dividers (.mud-divider, hr)', test: function (el) { return el.tagName === 'HR' || hasClass(el, /(^|\s)mud-divider(\s|$)/); } },
+    { tier: 'Line', label: '.tag-chip, .floating-panel (FND)', test: function (el) { return hasClass(el, /(^|\s)(tag-chip|floating-panel)(\s|$)/); } },
+    { tier: 'Line', label: 'cards and tiles (.mud-card, .mud-paper-outlined, *-card, *-tile)', test: function (el) { return hasClass(el, /(^|\s)(mud-card|mud-paper-outlined|[\w-]+-card|[\w-]+-tile)(\s|$)/); } }
   ];
 
   /**

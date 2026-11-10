@@ -1493,7 +1493,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
   filtering belong to the Fields dialog and the toolbar, and two ways to change them would drift apart.
 - **Row styling.** `RowClassFunc` returns `task-overdue` for overdue rows that aren't terminal. The
   row also shows a warning `MudIcon`, because colour is never the only signal.
-- **Density and columns.** Rows are 36px high (32px when Dense) with 13px body text; header cells are 12px, weight 600, `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`) and the row menu 40px; Title takes the rest. The open Task's row is `task-row-selected` (accent 14% over the surface, 20% when hovered).
+- **Density and columns.** Rows are 32px high with 13px body text; header cells are 12px, weight 600, `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`) and the row menu 40px; Title takes the rest. The open Task's row is `task-row-selected` (accent 14% over the surface, 20% when hovered).
 - **Row click.** `RowClick` opens the detail panel (§13.6).
 
 > [!NOTE]
@@ -1621,7 +1621,7 @@ Clicking a card opens the detail panel.
 There is no View editor panel and a View has no Description. Every change to a View is saved to it
 through `ViewStore` as it is made, so the page follows `ViewsChanged`:
 
-- **Filter, grouping, layout (List or Kanban), header sort, Dense, column widths and fields** are
+- **Filter, grouping, layout (List or Kanban), header sort, column widths and fields** are
   each written the moment the Human changes them. Resizing a List column saves its width, in CSS
   pixels, to `TaskView.ColumnWidths` (by field key; `task-list-resize.js`). Search text is never saved.
 - **Rename** (the View's ⋮ menu, and the sidebar row's) opens the shared `NameDialog` as "Rename
