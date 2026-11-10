@@ -1998,7 +1998,6 @@ the name **New view** (or **New view 2** and so on), and you rename it from its 
 | Grouping | The **Group by** chip: None, Team, Project, Assignee, Sprint, or Status in a List |
 | Fields shown | **Fields…** in the View's More (⋮) menu: drag to reorder, switch a field off, remove it or add it back |
 | Column widths | Drag the right edge of a List column header |
-| Dense | Compact or roomier rows in a List. On by default. |
 
 In a List, Tags show as tag chips and the Assignee as their avatar and name.
 
@@ -2018,7 +2017,7 @@ warning icon and is shown in bold.
 8. The due date, overdue: a warning icon, in bold.
 
 The toolbar above a View has a **Filter** menu, a filter chip for each filter that is set
-(press its **Close (×)** to clear it), a search box, and **Dense**. There is no Save button:
+(press its **Close (×)** to clear it) and a search box. There is no Save button:
 **every change is saved to the View as you make it**, apart from the search text.
 **Reset filters** clears the filter and the search; it is the button on an empty result.
 

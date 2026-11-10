@@ -2823,7 +2823,7 @@ already 2100 lines):
 
 | Pack state | Chip |
 | --- | --- |
-| `Available`, `InUse` | As today: `filter-chip`, `filter-chip-set` when active, `aria-pressed` |
+| `Available`, `InUse` | As today: a Filter `Chip` (`filter-chip`), `is-set` when active, `aria-pressed` |
 | `UpdateAvailable` | As today, with a leading `Filled.SystemUpdateAlt` and a link-styled **Update available** beside it that opens `UpdateDialog` |
 | `NotDownloaded` | Not offered as a chip. A line under the row instead: *Pack "MSBuild Authoring" is not downloaded.* with **Copy prompt** (`skillPrompt.fetchSkill`). The line is text, so a touch user can read it |
 | `Deprecated` | As today, with a **Deprecated** icon and its reason in the tooltip |

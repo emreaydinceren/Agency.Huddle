@@ -11,7 +11,7 @@ that ADR, [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) and
 
 A **Theme** is one JSON **skin** file per Theme and mode, embedded in `Huddle.App` and loaded by
 `SkinLoader`. A skin holds a MudBlazor **palette**, **tokens** (named design decisions that become `--hu-*`
-custom properties), ten **traits** (structural variants that become `data-hu-*` attributes), the
+custom properties), nine **traits** (structural variants that become `data-hu-*` attributes), the
 **faces**, **radius**, **typography** and **shadows**. The shipped Themes are Lumen (the default),
 Fluent, Nordic and Cobalt Soft, each light and dark: eight files. There is no per-Theme stylesheet, no
 C# Theme class and no run-time importer.
@@ -69,9 +69,9 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 | `include` | A light partner whose non-palette content a dark file inherits. |
 | `palette` | MudBlazor `Palette` colours by camelCase property name (`textPrimary`, `linesDefault`, `primary` …). `SkinLoader.PaletteKeys` lists them. |
 | `tokens` | Dotted token key to a [skin expression](#the-token-registry-and-expression-grammar). |
-| `traits` | The ten trait choices, by name. |
+| `traits` | The nine trait choices, by name. |
 | `faces` | `ui`, `read` and `mono` font stacks. |
-| `radius` | The corner radius (`8px`). |
+| `radius` | The one base corner radius (`8px`). The five radius steps of a stylesheet (`--hu-radius-inner`, `-control`, `-card`, `-panel`, `-full`) derive from it; a skin sets the base and no step. |
 | `typography` | `letterSpacing` and `lineHeight`. |
 | `shadows` | MudBlazor elevations, keyed by number or range (`"2-4"`). |
 
@@ -80,10 +80,11 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 ## The token registry and expression grammar
 
 `SkinTokens` registers every token once, with a light and a dark default written as an expression over the
-palette: 138 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
+palette: 130 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
 `--hu-*` custom property in one `<style id="hu-skin">` block that `MainLayout` writes as a `MarkupString` (a text
-child would be HTML-encoded on prerender). the `wwwroot/css/` files read these tokens and the MudBlazor palette variables and holds
-no colour literal. The `--ink-*` ladder remains, as aliases of `--hu-ink-*`.
+child would be HTML-encoded on prerender). The `wwwroot/css/` files read these tokens and the MudBlazor palette variables and hold
+no colour literal. The exception to the `--hu-` prefix is the four ink rungs, `ink.strip`, `ink.wash`, `ink.line` and `ink.field`,
+which render as `--ink-strip`, `--ink-wash`, `--ink-line` and `--ink-field`.
 
 A value is a literal (a colour, length or number) or one of these terms:
 
@@ -99,11 +100,15 @@ A value is a literal (a colour, length or number) or one of these terms:
 characters and hand-written `var()` included, so a skin cannot put a stray declaration into the stylesheet. A
 `ref()` chain that loops back on itself is also refused.
 
-The Task pages (the detail panel, the edit page, the Tasks List and Board) read 52 more (`detail.*`, `edit.*`, `field.*`, `form.group.*`, `gate.*`, `chip.set.*`, `list.*`, `board.*`, `toolbar.line`, `button.filled.shadow`, `control.radius`), and the `ids` trait sets a Task id in the mono face.
+The Task pages (the detail panel, the edit page, the Tasks List and Board) read 47 of them (`detail.*`, `edit.*`, `field.*`, `form.group.*`, `gate.*`, `list.*`, `board.*`, `toolbar.line`, `button.filled.shadow`), and the `ids` trait sets a Task id in the mono face. A filter or control that is set reads the shared `selected.*` tokens, not tokens of its own, and the muted text of a status chip is `text.subtle`.
 
-The Feed Tab and its filter bar read 27 of them (`feed.*` and `control.*`: card radius, hover and open lines and shadows, the unseen fill, dot, weight and bar, the Cobalt kind bar and detail panel, the Live chip, the read-only note, and the segmented control and select states). Each defaults to the Feed's plain look, so a skin lists only what it changes; `SkinTokens` has the full list and descriptions.
+The Feed Tab and its filter bar read 20 of them (`feed.*` and `control.*`: hover and open lines and shadows, the unseen fill, dot, weight and bar, the Cobalt kind bar and detail panel, the read-only note, and the segmented control states). Each defaults to the Feed's plain look, so a skin lists only what it changes; `SkinTokens` has the full list and descriptions.
 
-The Library note reads 4 (`note.prose.ink`, `note.heading.weight`, `note.h1.size`, `note.h1.tracking`): how a Theme's headings and prose read. The body size stays the one derived from the scale; Lumen and Fluent set a larger h1, Cobalt Soft a tight heavy one, and the dark Lumen and Fluent skins set their prose a step below the heading white. `SkinContrastPairs` holds the prose ink to 4.5:1 on the page ground.
+The Library note reads 3 (`note.prose.ink`, `note.h1.size`, `note.h1.tracking`): how a Theme's headings and prose read. The body size stays the one derived from the scale; Lumen, Fluent and Cobalt Soft set a larger h1 (Cobalt Soft's with tight tracking), and the dark Lumen and Fluent skins set their prose a step below the heading white. `SkinContrastPairs` holds the prose ink to 4.5:1 on the page ground.
+
+The colour tokens obey the colour rules in [The colour rules a skin keeps](#the-colour-rules-a-skin-keeps), and a token
+whose last key segment is `padding`, `margin` or `gap` is written on the 4px scale: 0, 4, 8, 12, 16, 24 or 32px
+(`SkinSpacingTests`).
 
 A token is added to the registry only when two Themes genuinely differ there. A difference that only one Theme wants,
 at some sites, is a [trait](#traits), not a split token.
@@ -117,21 +122,25 @@ layout renders it as a `data-hu-<trait>` attribute on `.theme-marker`.
 | --- | --- |
 | `message` | `bubble`, `row` |
 | `send` | `icon`, `text`, `square` |
-| `status` | `chip`, `pill`, `glyph` |
+| `status` | `glyph` (the default), `pill` |
 | `labels` | `sentence`, `upper` |
 | `composer` | `box`, `card`, `underlined` |
 | `nav` | `tint`, `tile`, `bar` |
 | `surface` | `flat`, `paper`, `hairline`, `card` |
-| `marks` | `plain`, `chip` |
-| `reading` | `plain`, `book` |
+| `voice` | `plain`, `book` |
 | `ids` | `plain`, `mono` |
 
-`SkinLoader.TraitValues` is the live list. The enums are in `src/Huddle.App/Themes/Skins/Traits/`.
+`SkinLoader.TraitValues` is the live list. The enums are in `src/Huddle.App/Themes/Skins/Traits/`. `voice=book` gives
+headings, the outline and prose a reading face (`--font-read`); `status=pill` draws the status chip as a pill. A trait's
+default value usually has no rules of its own: `nav=tint` and `labels=sentence` have none, and `surface=flat`, the default
+surface, holds only Cobalt Soft's form-group label and blocked-card rules.
 
 ### Adding a variant
 
 1. Add the value to the trait's enum (for example `NavStyle`). The kebab-case of the name is the value a skin writes.
-2. Write the variant once in `wwwroot/css/` (the feature's own file, under its `Traits:` banner after the base rules), scoped on the attribute:
+2. Write the variant once in `wwwroot/css/` (the feature's own file, under its `Traits:` banner after the base rules), scoped on the attribute.
+   Within the stylesheet, a trait value's rules sit in one block under a marker that names the Themes that use it, such as
+   `/* ---- surface=paper: Nordic ---- */`, so the Themes of a value are found in one place:
 
    ```css
    :root:has([data-hu-message="row"]) .message-row {
@@ -177,7 +186,7 @@ MainLayout                      finds the descriptor, applies ThemeCatalog.Resol
         │  <style id="hu-skin">            (--hu-* tokens)
         │  data-hu-* on .theme-marker      (traits)
         ▼
-wwwroot/css/*.css and *.razor.css read only --mud-*, --hu-* and the --ink-* aliases
+wwwroot/css/*.css and *.razor.css read only --mud-*, --hu-* and the four --ink-* rungs
 ```
 
 - **The mode comes from the Theme.** `MainLayout` sets `IsDarkMode` from `ThemeDescriptor.Mode` and nothing else. A
@@ -192,7 +201,7 @@ wwwroot/css/*.css and *.razor.css read only --mud-*, --hu-* and the --ink-* alia
 ## Choosing palette values
 
 The palette properties and the CSS variables they become (`TextSecondary` is `--mud-palette-text-secondary`) are
-the MudBlazor set. The colour roles, the line ladder (Rule < Edge < Field ≤ Chrome) and the blends are in
+the MudBlazor set. The colour roles, the line ladder (Line < Field ≤ Chrome) and the blends are in
 [design-system.md](design-system.md#colour); this table is only the reminder for a new skin.
 
 | Palette key | Rule of thumb |
@@ -201,7 +210,8 @@ the MudBlazor set. The colour roles, the line ladder (Rule < Edge < Field ≤ Ch
 | `textPrimary` | Body text and the keyboard focus ring |
 | `textSecondary` | Supporting text; at least 4.5:1 on every ground |
 | `drawerText`, `drawerIcon` | Set equal to `textPrimary` and `textSecondary` |
-| `divider`, `dividerLight`, `linesInputs`, `linesDefault` | The ranked lines; keep the order |
+| `linesDefault` | Chrome, the line that closes the shell's panes; no fainter than the Field rung (`ink.field`) |
+| `divider`, `dividerLight`, `linesInputs` | No Huddle stylesheet reads them: the Line and Field rungs are the `ink.line` and `ink.field` tokens. They stay in the palette for MudBlazor's own components |
 | `primary` | The accent; it also paints accent text, so it must read as text on the ground |
 | `primaryContrastText` | Black or white, whichever reads better on `primary` (`ContrastColour.ReadableForeground`) |
 | `success`, `warning`, `error`, `info`, `tertiary` | Status and the Review signal; never a solid fill under text; keep signals 30° of hue apart |
@@ -215,6 +225,8 @@ the MudBlazor set. The colour roles, the line ladder (Rule < Edge < Field ≤ Ch
 | `SkinExpressionTests` | An expression outside the grammar, or a `ref()` cycle |
 | `SkinTokensTests` | A registry entry with a malformed key or default |
 | `SkinContrastTests` | Text under 4.5:1 on any ground, or the focus ring under 3:1 |
+| `SkinColourRulesTests` | A line out of order, a set fill, two grounds or two states too close, a current row without its cue, or a missing lane border (see below) |
+| `SkinSpacingTests` | A spacing token off the 4px scale |
 | `SkinSchemaTests` | A `skin.schema.json` that no longer matches the loader |
 | `SkinTokens_EveryTokenIsRead` | A registered token no stylesheet reads |
 | `ThemeSourceTests.AppCss_ReadsOnlyKnownTokens` | A `--hu-*` variable in `wwwroot/css/` that the registry does not define |
@@ -222,6 +234,21 @@ the MudBlazor set. The colour roles, the line ladder (Rule < Edge < Field ≤ Ch
 | `Traits_EveryValueHasCss` | A trait value with no CSS |
 | `Css_SelectorClasses_AreEmittedBySomeSource` | A dead selector |
 | `Skin*Tests`, `*TraitsTests` | Each shipped Theme's own values and each trait's rules |
+
+### The colour rules a skin keeps
+
+`SkinColourRulesTests` resolves every shipped skin's tokens to concrete colours (the `SkinColours`, `DeltaE` and
+`SrgbColour` helpers in `Huddle.Tests.Common`) and holds each of the eight Themes to these, with no exception list:
+
+- **The line rungs are ordered:** Line (`ink.line`, 18%) is fainter than Field (`ink.field`, 30%), which is no
+  stronger than Chrome (`palette.linesDefault`), measured as contrast against Surface; Line is at least 1.1:1, so it
+  still outlines a card.
+- **Two grounds, and two states, are equal or a visible step apart:** Surface, the `ground.*` tokens, `ink.strip`
+  and `ink.wash` are pairwise equal or at least ΔE 3 apart (CIEDE2000); so are `hover`, the current row, the selected
+  and set fills and their hovered forms, `list.row.hover` and `tabs.item.hover`.
+- **A set fill can be seen:** `selected.background` is at least ΔE 3 from Surface.
+- **The current row has a cue a hovered row lacks:** `current.foreground` is the Accent ink, at least ΔE 3 from Ink.
+- **Every Theme draws a Board lane border:** `board.column.line` is at least ΔE 3 from Surface.
 
 Fix the colour first when a contrast test fails: lighten a dark Theme's `primary`, darken a light one's. There is no
 exception list; a Theme whose value cannot pass needs a different value, or a decision recorded in an ADR before a test

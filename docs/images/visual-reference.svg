@@ -67,7 +67,7 @@
     <text x="520" y="156" font-size="14">Prose and editable long text · 14px / 400</text>
     <text x="520" y="180" font-size="13">Rows, cells, controls · 13px</text>
     <text x="520" y="202" font-size="12" fill="#45443f">Meta, dates, counts · 12px</text>
-    <text x="520" y="226" font-size="11" font-weight="600" fill="#45443f" letter-spacing="0.44">GROUP LABEL · 11PX / 600</text>
+    <text x="520" y="226" font-size="12" font-weight="600" fill="#45443f">Label · 12px / 600</text>
     <text x="520" y="258" font-size="12" fill="#45443f">Dates: Today · Tomorrow · Fri · Oct 27 · Oct 27, 2025</text>
   </g>
 

@@ -66,10 +66,6 @@
 <text x="564.0" y="256" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Search tasks</text>
 <rect x="510" y="230" width="32" height="17" rx="8.5" fill="#b45309"/>
 <text x="526.0" y="242.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3e</text>
-<rect x="624" y="238" width="70" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="659.0" y="256" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Dense  ●</text>
-<rect x="620" y="230" width="32" height="17" rx="8.5" fill="#b45309"/>
-<text x="636.0" y="242.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3f</text>
 <rect x="704" y="238" width="90" height="28" rx="14" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
 <text x="749" y="256" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">Requests</text>
 <rect x="700" y="230" width="32" height="17" rx="8.5" fill="#b45309"/>

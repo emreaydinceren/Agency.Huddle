@@ -13,8 +13,8 @@ This page exists to do three things:
 3. **Make consistency the easy path.** The [lookup](#i-need-use-this) answers "what do I
    use for X?" in one line, and each answer is the consistent one.
 
-It doesn't restate the rules. Those are in [design-system.md](design-system.md), which is
-binding.
+It doesn't restate the rules. Those are in [design-system.md](design-system.md), which
+describes the system as it ships; tests and the convention scan enforce the rules that matter.
 
 ## Two obligations for anyone changing the UI
 
@@ -56,8 +56,8 @@ describing a screen that no longer exists is incomplete.
    [catalog](#reusable-parts-catalog) for the file and its parameters.
 3. **Read the rule** in [design-system.md](design-system.md) for anything the lookup
    points to.
-4. **Check the code** you are about to copy against that rule: the code still holds drift,
-   so don't copy a pattern you haven't checked.
+4. **Check the pattern** you are about to copy against that page and the tests: the page
+   describes what ships, so where it and the code disagree, fix whichever is wrong.
 5. **Build, then check** it in the running app with the
    [checklist](design-system.md#checklist-for-a-new-or-changed-screen), and update
    wireframes.md.
@@ -109,11 +109,12 @@ component here, move it onto the component rather than writing another copy.
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
 | A border | The Lines table | [Colour](design-system.md#colour) |
-| A border, divider or quiet fill | The ink ladder rung for its job (Rule, Edge, Field, Chrome, Wash) | [Colour](design-system.md#colour) |
+| A border, divider or quiet fill | The ink ladder rung for its job (Line, Field, Chrome, Wash, Strip) | [Colour](design-system.md#colour) |
 | A colour that means something | A signal **and** a second cue | [Colour](design-system.md#colour) |
-| A heading inside a drawer or dialog | The Group label | [Typography](design-system.md#typography) |
+| A small label over a group of fields, in a drawer, dialog or card | The Label (`.group-label`) | [Typography](design-system.md#typography) |
 | A selected row in any list | The Selected treatment and shape | [Colour](design-system.md#colour) |
-| A filter chip | `TaskFilterChip` or `ChipCloud`, in the Filter geometry | [Chips](design-system.md#chips) |
+| A filter chip | `Chip` with `Look=Filter`, or its wrappers `TaskFilterChip` and `ChipCloud` | [Chips](design-system.md#chips) |
+| Any other chip | `Chip` with `Look=Status` or `Look=Tag`; never a raw `MudChip` (CV13). A count or meta is plain `.chip-meta` text | [Chips](design-system.md#chips) |
 | A search box or select in a toolbar | `SearchField` with `toolbar-compact` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
 | A highlighted search match | Search match in the States table | [Colour](design-system.md#colour) |
 | A file a message mentions | Its name as a `.ref-link`, path in the tooltip | [The Room](design-system.md#the-room) |
@@ -146,7 +147,7 @@ before you create a component, a helper or a CSS class.
 | `TabStrip`, `TabGroupPane`, `TabHost`, `TabPageHost` | `Components/Layout/` | `W1` to `W8` | | Don't use directly; a page plugs in through `TabKeys` |
 | `PageSubjectSource` | `Components/Sidebar/PageSubjectSource.razor` | Nothing in place; feeds `S4` | `Value` (the page's Subject) | Telling the Right sidebar what the page shows. It draws nothing, and does nothing outside a Tab |
 | `PageCommandHandler` | `Components/Sidebar/PageCommandHandler.razor` | Nothing in place | `OnCommand` (a callback for each command) | Letting a Right sidebar panel run an action on the page, such as scrolling a document to a heading. It draws nothing |
-| `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer. The header is 32px: the title 13px at 600, the count 12px in Quiet ink; an Edge line separates one panel from the next |
+| `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer. The header is 32px: the title 13px at 600, the count 12px in Quiet ink; a Line separates one panel from the next |
 | Add a Right sidebar panel | `Sidebar/SidebarPanelServiceCollectionExtensions.cs` | A panel in `S4` | one `AddSidebarPanel` line in `ServiceCollectionExtensions.cs` | Adding a panel: a `SidebarPanel` with its id, title, icon, Order, the Subject test and its component |
 | `RightSidebar`, `RightSidebarToggle` | `Components/Layout/` | `S4`, its button in `S1c` | | Drawn by the shell. State is the scoped `RightSidebarService` (open or closed, and each Tab's blocks) |
 | `SidebarRows`, `ShowAllRow` | `Components/Shared/SidebarRows.cs`, `Components/Shared/ShowAllRow.razor` | The "Show all (N)" row under a sidebar list | `Total`, `Expanded`, `OnToggle`; `SidebarRows.Limit` is 8 | A sidebar list that can pass 8 rows. `SidebarRows` also holds the open-group rules: a group opens when the current page is inside it |
@@ -162,13 +163,14 @@ before you create a component, a helper or a CSS class.
 | `PresenceAnchor` | `Components/Shared/PresenceAnchor.razor` | The frame around an avatar | `ChildContent`, `Cue`, `Detail` | Puts a `PresenceBadge` on an avatar's bottom-right rim. It wraps from outside because a `MudAvatar` clips |
 | `PresenceCue` | `Presence/PresenceCue.cs` | none | `From(PersonaState)`, `From(PresenceState)` | Maps Health and Presence into the four glyphs; each keeps its own word |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`), `OnAvatar`, `Detail` | An Agent's Health as a 10px badge drawn through `PresenceBadge`, with its own text label |
-| `StatusChip` | `Components/Shared/StatusChip.razor` | The tinted chip in `T3`, `T4`, `T6` | `Color`, `Icon`, `ChildContent`, `Class` | A Small text-variant chip with classes `status-chip status-chip-{colour}` and a leading icon |
+| `Chip` | `Components/Shared/Chip.razor` | Every chip in the app | `Look` (`ChipLook.Status`, `Tag` or `Filter`), `Color`, `Icon`, `IsSet`, `Value`, `Text`, `Disabled`, `OnClick`, `OnClose`, `OnClear`, `ClearLabel`, `MenuContent`, `TriggerLabel`, `AvatarContent`, `ChildContent`, `Class` | The one chip, built on `MudChip` so a `MudChipSet` can hold it. Status and Tag are 24px, Filter is 28px, and `.is-set` is the only set class. `StatusChip`, `TaskFilterChip` and `ChipCloud` wrap it. A raw `<MudChip` anywhere else fails CV13 |
+| `StatusChip` | `Components/Shared/StatusChip.razor` | The tinted chip in `T3`, `T4`, `T6` | `Color`, `Icon`, `ChildContent`, `Class` | The Status look of `Chip`: classes `status-chip status-chip-{colour}` and a leading icon |
 | `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9`, `G3b` | `Profile` (`AgentProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `OnAvatarClick`, `Class` | An Agent's card, and the Human's on Settings > Profile (no `State`, so no presence badge). With `OnAvatarClick` the avatar is a `Change avatar` button styled like the Agent card's. The card is: [ringed avatar](design-system.md#avatars-and-status) (dashed when proposed, solid with `Existing`) with the presence badge on it, Name, title, Manager badge, description, membership, tier and skills chips, an Adapter, Model and Effort list when `AgentProfile.Runtime` is set (saved Agents only), "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` A quiet text button **Edit avatar…** (`MudButton`, `Variant.Text`, `Size.Small`, no icon) under the avatar says plainly that it can be changed and raises the same handler; the avatar keeps its pencil. |
 | `ProfileAvatar` | `Components/Shared/ProfileAvatar.razor` | `C5a`, `C3`, a Task List row's assignee | `Name`, `Avatar`, `Size`, `Class`, `Team` | A `AgentAvatar` in a button that opens the profile popover (`O9`, `ProfilePopover`) with Edit and Message. `Team` picks the Team's one-to-one for Message. Never inside another button or link; `TaskAssignee` takes `ShowProfile` to opt in |
 | `AgentLabel` | `Components/Shared/AgentLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | An Agent's dot, avatar and name on one line |
 | `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `Aside`, `TitleEditor`, `TitleTrailing`, `CreateText`, `CreateIcon`, `CreatePrimary`, `CreateDisabled`, `OnCreate`, `Chrome`, `SetPageTitle` | Every page's one `h1` (32px row), with its action buttons at the right. A `Subtitle` stacks under the title on its own secondary line (`.page-header-titles`). The create-action slot (`CreateText` with `OnCreate`) draws the page's one create button at the right: filled by default, outlined with `CreatePrimary="false"`. `Chrome` draws a Chrome line under the header (the Room). It sets the bare-name document title. Tasks wears it too: its `h1` is the View's name and **New task** is the create button |
 | `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Title` (required), `Text` (required), `Icon`, `Action`, `FullPane` | Any "nothing here" state, centred: an icon, the `Title` (`role="status"`), the `Text` sentence that says what to do next, then the `Action`; sizes in [Component rules](design-system.md#component-rules). `FullPane` adds `empty-state-centered` so it sits a third of the way down |
-| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool, the Members tab's team type filter (`B9f`) | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Leading` (content drawn first, at the left), `OnToggle` | A wrapping cloud of toggle chips, selected first. Each chip is the Filter chip (`.chip-cloud-chip`: 28px pill, dashed Field line unset, Accent tint at 14% when set); `Quiet` is gone. Past `Cap` a "Show all" button (28px, same pill) expands it |
+| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool, the Members tab's team type filter (`B9f`) | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Leading` (content drawn first, at the left), `OnToggle` | A wrapping cloud of toggle chips, selected first. Each chip is a Filter `Chip` (28px pill, dashed Field line unset, Accent tint at 14% when set, `.is-set`); `Quiet` is gone. Past `Cap` a "Show all" button (28px, same pill) expands it |
 | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. The two chips draw through `StatusChip`, with the icon from `TaskColors.Icon`. A Board card omits the State chip; its overdue date is a warning icon and the date at weight 600 |
 | `TaskActionsMenu` | `Components/Tasks/TaskActionsMenu.razor` | The "Actions for {id}" menu | `Id`, `ShowMoveTo`, `OnMoveTo`, `OnCopyId`, `OnCopyLink`, `ExtraItems` | The one menu on a Task card, List row and the detail |
 | `TaskPicker` | `Components/Tasks/TaskPicker.razor` | Task pickers in the detail and `DuplicatePickerDialog` | `Value`, `Excluding`, `Label` | Choosing another Task |
@@ -304,9 +306,9 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.room-notice-column` | A notice in a Room (`member-health-alert`, `budget-prompt`, `reply-note`): the Transcript's 760px column, centred |
 | `.nav-row-link` | A top-level sidebar destination (Agents, Library): an ordinary 32px, 13px row with the section header's icon geometry, not a header |
 | `.needs-you-heading` | The Needs You card's title, in the sidebar section-header style |
-| `.chip-cloud-chip` | The Filter-chip pill behind `ChipCloud`; `.is-set` once chosen |
-| `.group-label` | The heading of a group of fields in a drawer, dialog or card: 12px at 600 in Quiet ink, 8px above its fields |
-| `.selected-shape` | The chosen row of a list, tree or menu: Accent tint at 14% (20% hovered), Accent ink at 500, inset 4px, rounded to 0.75 of the base radius |
+| `.card-title` | The 14px heading of a card, a panel section or a row, at 600 (the `subtitle1` role itself is 400) |
+| `.group-label` | The Label, the one small-label style: 12px at 600 in Quiet ink, 8px above its fields; `labels=upper` uppercases it |
+| `.selected-shape` | The chosen row of a list, tree or menu: Accent tint at 14% (20% hovered), Accent ink at 500, inset 4px, rounded to the control radius step |
 | `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. `SearchField Compact` wears it |
 | `.picker-row` | A list row in a picker dialog: 32px, 13px, an 18px icon in a 24px slot |
 | `.menu-item-destructive` | A destructive `MudMenuItem`: Error ink on the text and icon. It goes last, after a divider |
@@ -315,7 +317,7 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.btn-action-tight` | A button whose start icon sits close to its label |
 | `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
 | `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
-| `.status-chip-*`, `.tag-chip`, `.filter-chip` with `.is-set`, `.chip-meta` | The four chip looks: tinted, quiet (with an Edge), filter (28px, dashed until set) and plain caption text |
+| `.status-chip-*`, `.tag-chip`, `.filter-chip` with `.is-set`, `.chip-meta` | The three chip looks of `Chip`: tinted (24px), quiet (24px, with a Line) and filter (28px, dashed until set), and the plain caption text of a count or meta |
 | `.avatar-monogram`, `.avatar-image`, `.avatar-transcript` | The two avatar looks on `AgentAvatar`'s one `MudAvatar`, and the 32px Transcript size. `:root:has(.theme-mode-dark)` switches the monogram to the Dark recipe |
 | `.avatar-square` | A Team's rounded square (the skin's base radius) on `AgentAvatar`'s `MudAvatar`; the picture's hairline inherits it |
 | `.message-gutter`, `.message-content`, `.message-row.grouped` | The Transcript's 32px avatar column, its text column (body at most 75ch) and the 4px gap between one sender's consecutive messages |
@@ -325,8 +327,8 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.title-inline-edit` | An inline edit of a title at h5 size and weight, outline only |
 | `.task-detail-groups`, `.task-detail-group`, `.task-detail-props`, `.task-detail-prop` | The drawer form: a size container, then groups of label-and-value rows that go two columns at 368px |
 | `.task-detail-footer-meta` | The Task form's Created, Updated and Closed line at the bottom (12px secondary) |
-| `.task-card`, `.task-card-header`, `.task-card-title`, `.task-card-id` | A Board card (12px padding, 1px `Divider` border), its ID-and-priority row, its three-line 14px/600 title and its 12px ID |
-| `.task-board-column`, `.task-board-column-header`, `.task-state-dot`, `.task-state-dot-backlog`, `.task-board-column-empty` | A Board lane (`Surface` with a `Divider` border), its header (an 8px state dot, dashed for Backlog, the name, the count) and its centred empty line, which ignores the pointer |
+| `.task-card`, `.task-card-header`, `.task-card-title`, `.task-card-id` | A Board card (12px padding, 1px Line border), its ID-and-priority row, its three-line 14px/600 title and its 12px ID |
+| `.task-board-column`, `.task-board-column-header`, `.task-state-dot`, `.task-state-dot-backlog`, `.task-board-column-empty` | A Board lane (`Surface` with a Line border), its header (an 8px state dot, dashed for Backlog, the name, the count) and its centred empty line, which ignores the pointer |
 | `.task-due-overdue`, `.task-row-selected` | An overdue date (a warning icon at the date's size, and weight 600) and the selected List row (the 14% and 20% tints) |
 | `.task-list-id-cell`, `.task-list-priority-cell` | The List's fixed-width columns: ID 110px, Priority 120px |
 | `.library-backlinks` | The "Linked from N notes" panel, the width of the reader's text column |
@@ -337,7 +339,6 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count (on the trailing line, giving way to the hover "...") and the "Show all (N)" row (an arrow in the leading slot). Every sidebar row's geometry is the grid in "Left menu": set `--nav-level` to nest a row, never a padding |
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
-| `.task-filter-chip` with `-set`, `-unset` | The pill behind `TaskFilterChip`: dashed border while unset, primary border and hover tint once set; use the component |
 | `.task-col-resizer` | The column drag handle `task-list-resize.js` adds to each List header cell: a hairline that turns into a 3px primary bar on hover or drag |
 | `.tasks-counts` | The header row's "N open, N need you, N all": secondary text, the numbers in primary text at 600, "need you" in the warning colour mixed toward body text |
 
@@ -382,8 +383,8 @@ the catalog above.
 
 | Document | Owns | Binding? | Read it when |
 | --- | --- | --- | --- |
-| [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
-| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The skin model that carries them is in [theme-authoring.md](theme-authoring.md) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
+| [design-system.md](design-system.md) | How the shipped UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | Describes what ships; the tests and the convention scan enforce what matters | Before you design a screen, write markup or touch a stylesheet |
+| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The skin model that carries them is in [theme-authoring.md](theme-authoring.md) | Describes what ships, with design-system.md | Before you pick a line, a fill or a signal colour |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
 | [rules.md](rules.md) | Behaviour rules the compiler can't check | **Yes** | Before you edit anything in `src/Huddle.App` |
@@ -416,12 +417,16 @@ When documents disagree, the higher one wins, and the lower one is corrected in 
 change.
 
 1. [rules.md](rules.md) and [language.md](language.md): behaviour and words.
-2. [design-system.md](design-system.md): look, layout and interaction.
+2. The tests and the convention scan (see
+   [How the rules are enforced](design-system.md#how-the-rules-are-enforced)): they fail the
+   build for the look rules that matter, so a page that contradicts one is wrong.
 3. The feature's spec and ADRs: what the feature does.
-4. [wireframes.md](wireframes.md): container names and where containers sit. A figure that
-   contradicts design-system.md is out of date.
-5. The code. It is evidence of what ships, not of what is right: the audit found well over
-   a hundred places where it disagrees with the rules. Check a pattern before you copy it.
+4. [design-system.md](design-system.md): a description of the shipped look, layout and
+   interaction. Where it disagrees with the code on something no test pins, check the code
+   and fix whichever is wrong.
+5. [wireframes.md](wireframes.md): container names and where containers sit. A figure that
+   contradicts the shipped screen is out of date.
+6. The code. It is what ships; check a pattern against the tests before you copy it.
 
 ## By task
 
@@ -442,8 +447,8 @@ change.
 
 Check these first. Each links to the rule that owns it.
 
-1. **Density on every control:** `Size.Small` on buttons, icon buttons and chips;
-   `Variant.Outlined` and `Margin.Dense` on inputs
+1. **Density on every control:** `Size.Small` on buttons and icon buttons (a chip is the one
+   `Chip`); `Variant.Outlined` and `Margin.Dense` on inputs
    ([Spacing, density and size](design-system.md#spacing-density-and-size)).
 2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`, and the breadcrumb
    holds only ancestors. Tasks is the one exception
@@ -510,9 +515,9 @@ browser's `preview_start` instead of starting the server itself. Then check:
   and no size appears that the type table doesn't list.
 - **Contrast:** the census's `failures` list is empty in Lumen Light and in Lumen Dark.
   Every accent-coloured word and every chip label reaches 4.5:1.
-- **Lines and fills:** lines are in ladder order against Ground (Rule < Edge < Field
-  ≤ Chrome), and a washed shape has an Edge. The text census's `lines` report gives each
-  line's ratio and its rung, so one run shows the order in any Theme.
+- **Lines and fills:** lines are in ladder order against Ground (Line < Field
+  ≤ Chrome), and a washed shape has a Line. The text census's `lines` report gives each
+  line's ratio, so one run shows the order in any Theme.
 - **Second cues:** switch to greyscale (DevTools › Rendering › Emulate vision
   deficiencies › Achromatopsia). Every state, priority and presence still reads.
 - **Position across Tabs:** switch to a sibling page; the title doesn't move.
@@ -529,10 +534,11 @@ browser's `preview_start` instead of starting the server itself. Then check:
 - [Index.md](../Index.md) if you added, renamed or deleted a page under `docs/`.
 
 **The convention test.** `tests/Huddle.Tests.Shell/Ui/Conventions` (`UiConventionTests`) scans
-`src/Huddle.App` for eleven rules, CV1 to CV11: `Size.Small`, outlined and dense inputs, a
+`src/Huddle.App` for twelve rules, CV1 to CV11 and CV13: `Size.Small`, outlined and dense inputs, a
 `role` on every `MudAlert`, a snackbar `key`, no `ReadOnly`, no `h1` to `h4` outside
 `PageHeader`, no `!` initialisers, the action-icon rules, no literal `style`, no local
-`DispatchAsync`, and the stylesheet scales. It fails the build on a violation. Fix the
+`DispatchAsync`, the stylesheet scales (radius steps, spacing, the size ladder, icon sizes and window
+breakpoints) and no raw `<MudChip` outside `Chip.razor`. It fails the build on a violation. Fix the
 code. Never add a line to `Baseline/*.txt`, which are empty on purpose; a permanent
 exception goes in `Baseline/Exceptions.txt` with a reason, and only the manager edits it.
 The rules and their sources are in design-system.md's
@@ -542,8 +548,8 @@ Build with `dotnet build Huddle.slnx` and test with `dotnet test Huddle.slnx --`
 
 ## Keeping these documents current
 
-- **A rule changes in design-system.md first**, then in the code. A pattern that reaches
-  the code without a rule is drift.
+- **The page follows the code.** A rule a test enforces changes in the test, the code and
+  design-system.md in one commit; design-system.md never gets ahead of what ships.
 - **A new shared component, helper or utility class** gets a catalog row here, and nowhere
   else. If it sets a pattern, design-system.md gets a one-line rule under
   [Component rules](design-system.md#component-rules) that links to the row. If it wraps a

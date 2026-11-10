@@ -6,14 +6,14 @@ a component or write a stylesheet for `src/Huddle.App`.
 [UXDesignGuidelines.md](UXDesignGuidelines.md) is the hub that routes you here and to
 every other UI resource.
 
-**These rules are binding for new and changed code.** Where today's code does not follow
-a rule yet, the gap is an open defect,
-not a licence. Don't copy a pattern from the code without checking it against this
-page: the code still holds drift, and this page wins. If a rule is wrong for your case,
-change the rule in the same change and say why. Don't quietly make an exception.
+**This page describes the system as it ships.** It was written down from the Themes, so the
+code is the fact and this page is its description. What matters is enforced by tests and by the
+convention scan (see [How the rules are enforced](#how-the-rules-are-enforced)); the rest is house
+style that review keeps. Where the page and the code disagree on something no test pins, check the
+code, then fix whichever is wrong in the same change. If a rule is wrong for your case, change it and
+say why. Don't quietly make an exception.
 
-[rules.md](rules.md) stays the binding list for behaviour the compiler can't check. This
-page is the binding list for how things look, read and behave on screen.
+[rules.md](rules.md) stays the binding list for behaviour the compiler can't check.
 
 **What this page doesn't cover.** Component APIs, parameters and paths are in the
 [catalog](UXDesignGuidelines.md#reusable-parts-catalog). Theme values and the contrast
@@ -33,7 +33,8 @@ those. Everything below follows from that.
 | Palette, typography, corner radius, elevation | `MudTheme` built in C# | `src/Huddle.App/Themes/` |
 | Components | MudBlazor 9.12.0, used with the house defaults below | `src/Huddle.App/Components/` |
 | Compositions and Huddle-only widgets | Plain CSS over `--mud-*` variables | `wwwroot/css/*.css`, `*.razor.css` |
-| The non-MudBlazor tokens | `--font-mono` and the five `--ink-*` rungs, each mixed from MudBlazor variables | `wwwroot/app-vars.css` |
+| Skin tokens | 130 `--hu-*` tokens registered once in `SkinTokens`, among them the four `--ink-*` rungs and the five `--hu-radius-*` steps; a skin sets only the ones it changes | `src/Huddle.App/Themes/Skins/` |
+| Fallbacks | `--font-mono`, `--font-read` and each token's default, for first paint | `wwwroot/app-vars.css` |
 
 [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) describes the
 earlier design, a `theme.css` of 39 tokens. It is superseded; do not rebuild it.
@@ -45,7 +46,7 @@ write the same markup or declaration block a second time, extract it instead.
 
 ## Foundations
 
-**Visual reference.** One figure shows the presence badges, the four chip looks, the type
+**Visual reference.** One figure shows the presence badges, the chip looks, the type
 scale and a Board card in the former Huddle Light's values. The User Guide and theme-authoring.md link
 the same drawing, so all three readers see one picture. Redraw it when one of those rules
 changes.
@@ -79,21 +80,20 @@ lines, but the order holds, and order is what makes a screen read.
 | --- | --- | --- | --- | --- |
 | Ink 4% | Strip | `--ink-strip` | The tab strip | None: it was already a mix |
 | Ink 6% | Wash | `--ink-wash` | Quiet fills: tag chip, segmented track, preview block, a disabled control | `BackgroundGray` |
-| Ink 10% | Rule | `--ink-rule` | A divider inside a card or dialog | `DividerLight` |
-| Ink 18% | Edge | `--ink-edge` | The border of a card, tile, lane, row, panel or table row | `Divider`, `TableLines` |
+| Ink 18% | Line | `--ink-line` | The border of a card, tile, lane, row, panel or table row, and an inner divider in a card or dialog | `Divider`, `DividerLight`, `TableLines` |
 | Ink 30% | Field | `--ink-field` | The boundary of an input | `LinesInputs` |
 | Ink 30% | Chrome | `--mud-palette-lines-default` | Top bar, tab strip, tab rail, toolbar and pane hairlines | `LinesDefault`, unchanged |
 | Ink 50-80% | Quiet ink | `--mud-palette-text-secondary` | Supporting text, at least 4.5:1 | `TextSecondary`, unchanged |
 
-The five `--ink-*` properties are defined once in `wwwroot/app-vars.css`, from MudBlazor
-variables only, and a stylesheet reads them with `var()`:
+The four `--ink-*` properties are the skin tokens `ink.strip`, `ink.wash`, `ink.line` and `ink.field`,
+each mixed from MudBlazor variables only. The layout writes them with the other skin tokens, and
+`wwwroot/app-vars.css` repeats their defaults for first paint. A stylesheet reads them with `var()`:
 
 ```css
 :root {
   --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
   --ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-  --ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
-  --ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+  --ink-line: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
   --ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
 }
 ```
@@ -104,7 +104,7 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 | Other term | Means |
 | --- | --- |
-| Base radius | `var(--mud-default-borderradius)`: each skin's `radius` (Lumen and Fluent 6px, Nordic and Cobalt Soft 8px). Every radius is a multiple of it |
+| Base radius | `var(--mud-default-borderradius)`: each skin's `radius` (Lumen and Fluent 6px, Nordic and Cobalt Soft 8px). Every corner is one of five named steps derived from it; see [Shape](#shape) |
 | Hue distance | The difference in hue angle between two colours. Two signals, or a signal and the Accent, are told apart only if they are far enough apart |
 | Second cue | A glyph, shape, position or word that carries a meaning as well as its hue, so the meaning survives a Theme whose hues collide, and greyscale |
 | Theme families | Four, each a light and dark pair: Lumen (the default), Fluent, Nordic and Cobalt Soft, each a JSON skin ([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)). The Human's own accent is a per-Theme customization, not a Theme. The Huddle pair, Custom Accent, the VS Code ports and the High Contrast group are gone |
@@ -123,21 +123,21 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 | Line | Rung | Rule | Examples |
 | --- | --- | --- | --- |
-| Rule (inside a card) | Ink 10% | `1px solid var(--ink-rule)`, or use spacing instead | A sub-section inside a card or dialog |
-| Edge | Ink 18% | `1px solid var(--ink-edge)`. Replaces `Divider` and MudBlazor's `TableLines`; the Global MudBlazor overrides draw table row lines on Edge | Cards, tiles, board lanes, rows, table rows, panels, floating panels |
-| Field | Ink 30% | `1px solid var(--ink-field)`. Always at least as strong as Edge | Every input, long-text included |
+| Line | Ink 18% | `1px solid var(--ink-line)`. Replaces `Divider`, `DividerLight` and MudBlazor's `TableLines`; the Global MudBlazor overrides draw table row lines on Line. Inside a card, spacing often does the job better than a rule | Cards, tiles, board lanes, rows, table rows, panels, floating panels, and a sub-section divider inside a card or dialog |
+| Field | Ink 30% | `1px solid var(--ink-field)`. Always stronger than Line | Every input, long-text included |
 | Chrome | Ink 30% | `1px solid var(--mud-palette-lines-default)` | Top bar, tabs, tab rail, toolbars, panes, splitter, drawer edge |
 
-> **Lines are ranked:** Rule < Edge < Field <= Chrome. Each sits on its ink rung (10%, 18%, 30%,
-> 30%). Every input, long-text fields included, draws the Field line. No line is drawn in Ink,
-> Quiet ink or Accent, except a focused field (Accent) and a drop target (dashed Accent).
+> **Lines are ranked:** Line < Field <= Chrome. Each sits on its ink rung (18%, 30%, 30%). Every
+> input, long-text fields included, draws the Field line. No line is drawn in Ink, Quiet ink or
+> Accent, except a focused field (Accent) and a drop target (dashed Accent).
+> `SkinColourRulesTests` holds every Theme to the order, on resolved colours.
 
 > **A wash never defines a shape on its own.** A washed shape (tag chip, reference chip, preview
-> block) also carries an Edge line, so it keeps its outline where the wash can't (dark grounds,
-> any Theme). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
-> or are replaced by spacing.
+> block) also carries a Line, so it keeps its outline where the wash can't (dark grounds,
+> any Theme). Washes sit on the Wash rung (Ink 6%); an inner rule is a Line, or is replaced by
+> spacing.
 
-Edge is the only border of a card, tile or row. Chrome is for chrome only, never a card, an
+Line is the only border of a card, tile or row. Chrome is for chrome only, never a card, an
 outlined card or a hover border. On the one surface, Chrome is what separates panes, so it must
 be clearly visible.
 
@@ -161,6 +161,7 @@ outlined button's border is the Chrome line; its text is Ink, or Accent ink for 
 | Hover | `background: var(--mud-palette-action-default-hover)`. Not `table-hover`, except inside a table | None of its own |
 | Selected | Accent tint 14% (`color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface))`), with Accent ink and weight 500, so a selected row never looks like a hovered one | The selected-row shape, below |
 | Selected and hovered | The same mix at 20%, on hover and (in the sidebar) on focus | The same |
+| Set (a chosen filter, toggle or control) | Reads the `selected.*` tokens: the Selected tint with Accent ink, and an Accent border on a Filter chip. The fill is visibly different from the Surface it sits on in every Theme | None of its own |
 | Search match | Attention tint 24%, Ink text, weight 600 | None |
 | Accent-tinted surface (the Human's bubble) | 14% fill with a 28% border, over Ground. Never a solid accent fill | The bubble's own |
 | Drop target | `1px dashed var(--mud-palette-primary)` plus the hover background | None |
@@ -168,14 +169,20 @@ outlined button's border is the Chrome line; its text is Ink, or Accent ink for 
 | Disabled | Faint ink on Wash, set once in the Global MudBlazor overrides so it follows every Theme. Never MudBlazor's fixed black alpha | The control's own |
 | Archived or gone | `opacity: 0.6` on the whole item, the one use of opacity for muting | None |
 
-> **Selected shape:** the row is inset 4px from its container and rounded at 0.75x the base
-> radius (6px in Huddle, 3px elsewhere). It ships as the global `.selected-shape` class and
+> **Selected shape:** the row is inset 4px from its container and rounded at the control radius
+> step (`--hu-radius-control`). It ships as the global `.selected-shape` class and
 > applies to sidebar rows, tree rows, section-nav rows, list pickers and the Activity bar (a 40px
 > tile). A selected Library tree row keeps its 2px bar inside the shape. A selected Task List row
 > (`task-row-selected`) and the `@` picker's active item wear the same treatment.
 
 Always mix a tint over `surface`, never over `transparent`, so it reads the same on every
 ground.
+
+**Two grounds, or two states, are one colour or a visible step apart.** Surface, the `ground.*`
+tokens, the Strip rung and the Wash rung are pairwise equal or at least a CIEDE2000 difference of 3
+apart (ΔE 3); so are hover, the current row, a selected or set item and their hovered forms. The
+current row's ink is the Accent ink, which a hovered row's Ink never is, and every Theme draws a
+Board lane border. `SkinColourRulesTests` pins all of it on the resolved colours of the eight Themes.
 
 **How to use colour in a component:**
 
@@ -249,10 +256,16 @@ Custom Accent pair and the 17 palettes once converted from VS Code were removed
 The picker has a Light theme list and a Dark theme list; the catalog holds the counts.
 
 **Tokens and traits.** Colour decisions the palette cannot name (the ground of the rail, the
-current item, a region line, a card shadow) are `--hu-*` tokens registered once in `SkinTokens`,
-with defaults written over the palette. Structure that differs between Themes (message layout,
-send button, status look, labels, composer, nav, surface, marks, reading) is a trait, a
-`data-hu-*` attribute on `.theme-marker` whose variants are written once in `wwwroot/css/`, in the file of the feature each styles, under that file's `Traits:` banner after its base rules.
+current item, a region line, a card shadow) are `--hu-*` tokens, 130 of them, registered once in
+`SkinTokens` with defaults written over the palette. Structure that differs between Themes is one of
+nine traits: message layout, send button, status look (`glyph` or `pill`), labels, composer, nav,
+surface, voice (`plain`, or `book` for a reading face) and ids. A trait is a `data-hu-*` attribute on
+`.theme-marker`. Its variants are written once in `wwwroot/css/`, in the file of the feature each
+styles, under that file's `Traits:` banner after its base rules. **Within a stylesheet, a trait
+value's rules sit in one marked block that names its Themes**, for example
+`/* ---- surface=paper: Nordic ---- */`, so the Themes that use a value are found in one place. A default
+value usually carries no rules: `nav=tint` and `labels=sentence` have none, and `surface=flat`, the
+default surface, holds only Cobalt Soft's form-group label and blocked-card rules.
 
 **One palette per Theme.** A Theme carries one palette and its own `ThemeMode`; the mode
 is derived from the Theme and from nothing else
@@ -282,23 +295,25 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 | Page title | `h5` | `h1` | 20px | 1.3 | 600 | a Room's name (`C2`, UX-038), "Settings", a Team's name. Every page shows one; see [A page](#a-page), step 3 |
 | Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | The item's name, never its type: "Alan", not "Agent"; "SUPP-0005 · Build the public status page"; "Duplicate Platform" |
 | Section heading inside a page | `subtitle2` | `h2` | 16px | 1.35 | 600 | Agents groups, Prompts groups, "Roles", "Roster" (UX-001) |
-| Group label inside a drawer or dialog | | | 12px | 1.35 | 600 | The Task drawer's groups. Quiet ink, sentence case, 8px below it: the global `.group-label` class |
-| Card title | `subtitle1` | | 14px | 1.4 | 600 | An Agent tile's name, an agent card's "Nova is asking" (UX-031) |
-| Overline label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Background", "Problems", the search group headings |
+| Label: every small label (a group of fields, a search group heading) | | | 12px | 1.35 | 600 | The Task form's groups, the search group headings. Quiet ink, sentence case, 8px below it: the global `.group-label` class. `labels=upper` uppercases it, its only variant |
+| Card title | `subtitle1` | | 14px | 1.4 | 600, from the `.card-title` class | An Agent tile's name, an agent card's "Nova is asking" (UX-031). The `subtitle1` role itself is weight 400, so a title wears `.card-title` |
 | Prose, Transcript | `body1` | | 14px (the Library reader 16px at 1.65) | 1.55 | 400 | Intro paragraphs, "No tasks yet.", a message's body |
 | Editable long text | `body1` | | 14px | 1.55 | 400 | Prompt fields, Agent instructions, a Skill's body. Monospace only when the content is code. Never the input's default weight or line height |
-| Dense UI text, rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows, Small buttons |
+| Row text: rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows |
 | Metadata, timestamps, helper lines, counts | `caption` | | 12px | 1.35 | 400 | "11:48", "3 Members + you" (UX-037) |
-| Button | `button` | | 14px | 1.4 | 500 | A button's label (a Small button's is 13px, see [Spacing, density and size](#spacing-density-and-size)) |
+| Button | `button` | | 13px | 1.4 | 500 | A button's label, Small buttons included (see [Spacing, density and size](#spacing-density-and-size)) |
 
-**Minimum size.** No text renders below 11px. The one exception is an avatar monogram:
-40% of the avatar's diameter on the type scale: a 24px avatar shows 11px letters and a 32px one 13px.
-`TypeScaleTests` fails on a literal font size under 11px.
+**Minimum size.** No text renders below 11px, with no exceptions. An avatar's letters are 40% of its
+diameter, held to that floor: a 24px avatar shows 11px letters and a 32px one 13px. A text label of up
+to six characters shows its first three characters below 40px, five at 40px and all six at 72px, and
+shrinks to fit its circle but never below 11px; a single character fills more of the circle (55% of
+the diameter). `TypeScaleTests` fails on a literal font size under 11px and holds the avatar labels to
+the floor.
 
 **Weights.** Three: 400 for text, 500 for controls, 600 for emphasis and headings. Never
 700; `strong` and `b` are 600. Never italic. What a Human types in a field is text, so it
-is 400: MudBlazor draws every `.mud-input` in its `subtitle1` role (600 here), and
-`base.css` "Global MudBlazor overrides" sets it back to `body1`'s weight.
+is 400, which is the weight of the `subtitle1` role MudBlazor draws every `.mud-input` in; a card title
+reaches 600 through `.card-title`, so no field needs an override.
 
 **Measure.** Prose never runs wider than 75 characters: `max-width: 75ch` on the text
 block. That covers intro paragraphs (`.settings-intro`, `.build-team-intro`,
@@ -315,15 +330,15 @@ title, section heading, card title and body, rows, meta.
   as its body at weight 600.
 - A drawer or dialog title is the item's name, not its type: "SUPP-0005 · Build the public
   status page", never "Task". See [Task form anatomy](#task-form-anatomy).
-- **In a drawer or dialog, the title is the only 16px text.** Its groups wear the Group label
+- **In a drawer or dialog, the title is the only 16px text.** Its groups wear the Label
   (12px/600 in Quiet ink, `.group-label`), which is a label and so the one heading allowed to
   be smaller than what it heads.
 - A section heading inside a page is `subtitle2`, weight 600, in `TextPrimary`
   (`.group-heading`). Secondary-grey section headings belong to the sidebar.
 
 **In stylesheets, font sizes come from the typography variables**:
-`var(--mud-typography-body1-size)`, `-body2-size`, `-caption-size`, `-subtitle2-size` and
-`-overline-size`. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). The
+`var(--mud-typography-body1-size)`, `-body2-size`, `-caption-size`, `-subtitle1-size`,
+`-subtitle2-size` and `-button-size`. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). The
 Library is the one place a size is derived rather than picked (see [The Library](#the-library)),
 because long-form reading
 needs a size the UI scale doesn't have: rendered Markdown (`.library-rendered`, Read mode
@@ -340,7 +355,7 @@ hand-written `mud-typography-*` class on a `<span>` is a `MudText` with `HtmlTag
 
 **Density is the default, and it is set on every control, not left to MudBlazor's
 default.** MudBlazor's default `Size` is `Medium`, so a `MudButton` with no `Size`
-renders at 30px against 25px for Small (UX-V01).
+renders taller than the 28px row size a Small one has (UX-V01).
 
 | Control | Required |
 | --- | --- |
@@ -350,8 +365,8 @@ renders at 30px against 25px for Small (UX-V01).
 | `MudAlert` with one line | `Dense="true"` (UX-040) |
 | `Size.Large` | Avatars on a profile card and an empty pane's icon only. No large buttons |
 
-**A Small button is a row-sized control**: 28px high, 13px (`body2`) text, weight 500, for text,
-outlined and filled alike. The Status and Tag chips set their own shape; see [Chips](#chips).
+**A Small button is a row-sized control**: 28px high, in the Button role (13px, weight 500), for text,
+outlined and filled alike. The Status and Tag chips are 24px and the Filter chip 28px; see [Chips](#chips).
 
 > **One height per toolbar row: 28px.** Small buttons, the segmented control, filter chips, and a
 > `SearchField` or select with `Class="toolbar-compact"` (28px box, 13px text) all match. A
@@ -382,7 +397,26 @@ size it to that control at 40, 48, 64 or 80px. It is not rhythm, so don't use th
 for ordinary gaps.
 
 CV11 flags spacing in rem and any px spacing off these values. Heights, widths and offsets
-such as `top` or `right` are not spacing and keep their own units (UX-073, UX-V18).
+such as `top` or `right` are not spacing and keep their own units (UX-073, UX-V18). A skin's own
+spacing tokens (a key ending in `padding`, `margin` or `gap`) use the same 4, 8, 12, 16, 24 and 32px,
+and 0 (`SkinSpacingTests`).
+
+**The size ladder.** A control, row or mark is one of 20, 24, 28, 32, 40 or 44px (18px is the one
+small mark below them). A row is 32px; there is no density switch and no other row height.
+
+| Size | Used for |
+| --- | --- |
+| 24px | A Status or Tag chip; an avatar in a row or the sidebar; a Feed row's avatar |
+| 28px | A Small button, an icon button, a toolbar row, a Filter chip; the dialog close button |
+| 32px | Every row: the sidebar, a menu item, a picker row, the Library tree, the Task List, the Task edit page's properties; the page title's row |
+| 40px | The Activity bar's tile; an avatar on a card or tile, a Feed card's avatar included |
+| 44px | The least a touch target gets: a Library tree row on a touch screen |
+
+An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at three widths only:
+MudBlazor's 600px and 960px and the shell's 1099px, which its stylesheet derives from the two sidebars.
+Anything inside a pane uses a container query instead (the Task List does). CV11 checks the sizes and
+the window widths in every stylesheet: a width or height from 17px to 47px must be on the ladder, a
+glyph on the icon sizes, and a window `@media` width one of the three.
 
 The page is not zoomed, so a size in a stylesheet is the size on screen and a full-height
 area is plain `100vh`. See
@@ -390,17 +424,22 @@ area is plain `100vh`. See
 
 ### Shape
 
-| Token | Value | Use it for |
-| --- | --- | --- |
-| `var(--mud-default-borderradius)` | The skin's `radius`: 6px (Lumen, Fluent) or 8px (Nordic, Cobalt Soft) | Every bordered card, tile and input, whatever its size; chips, preview blocks, drawers' inner panels |
-| `calc(var(--mud-default-borderradius) * 1.5)` | 12px or 6px | The message bubble and the Composer, and nothing else |
-| `calc(var(--mud-default-borderradius) * 0.75)` | 6px or 3px | An element nested inside a rounded one, such as the segmented indicator, the Status and Tag chips, and the selected-row shape |
-| `50%` | Circle | Avatars and status dots, always |
-| `999px` | Pill | Count badges, pill buttons |
+Corners are five named steps, all derived from the skin's one base radius,
+`var(--mud-default-borderradius)` (6px in Lumen and Fluent, 8px in Nordic and Cobalt Soft). A skin sets
+the base and nothing else, and a stylesheet names a step, never a multiplier.
 
-**No literal radius.** `4px`, `6px`, `8px`, `10px`, `12px` and `14px` don't follow a VS
-Code Theme's 4px radius, so a literal card stays at 8px while everything around it
-drops to 4px (UX-060).
+| Step | Value | Use it for |
+| --- | --- | --- |
+| `var(--hu-radius-inner)` | 0.5 x base: 3px or 4px | A small mark inside a card: a keycap, a mention, a code span |
+| `var(--hu-radius-control)` | 0.75 x base: 4.5px or 6px | A row, a button, a segment, the Status and Tag chips, the selected-row shape and the segmented indicator |
+| `var(--hu-radius-card)` | The base: 6px or 8px | Every bordered card, tile, field, lane, editor and preview block, whatever its size |
+| `var(--hu-radius-panel)` | 1.5 x base: 9px or 12px | A panel, dialog or popover; the Feed card and the message bubble |
+| `var(--hu-radius-full)` | 999px | Pills: count badges, pill buttons, the Filter chip |
+| `50%` | Circle | Avatars and status dots, always |
+
+**No literal radius.** CV11 refuses a `border-radius` that is not 0, 50% or one of the five steps, so a
+card cannot stay at a literal 8px while a Theme with a different base rounds everything around it
+(UX-060).
 
 ### Elevation and layering
 
@@ -496,8 +535,9 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | Part | Rule |
 | --- | --- |
 | Letters | One word gives its first two letters ("Helen" gives HE). Several words give the first and last initials. A one-letter name stays one letter. An empty name gives "?" |
-| Letter size | 40% of the diameter, on the type scale: 11px, 13px, 16px and 28.8px on 24px, 32px, 40px and 72px |
-| Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Edge rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
+| Letter size | 40% of the diameter, on the type scale: 11px, 13px, 16px and 28.8px on 24px, 32px, 40px and 72px. Never under 11px |
+| Text label | Up to six characters, in place of the monogram. Under 40px the first three are drawn, at 40px five and at 72px all six; a long label shrinks to fit, a single character grows to 55% of the diameter |
+| Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Line rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
 | Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else |
 
@@ -624,7 +664,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   keep both lines.
 - **A destination is a row, not a header.** "Agents" and "Library" are rows (13px body,
   18px icon in the leading slot); only a group with children wears the section-header style.
-- **The Needs you card is outlined in Edge.** Its row is 32px: the reason icon, the Room's
+- **The Needs you card is outlined in Line.** Its row is 32px: the reason icon, the Room's
   name, and a trailing time, like every other sidebar row.
 - **A group header is 32px like a row.** Sidebar action rows ("Show all", "New chat") are 13px
   in Quiet ink.
@@ -667,7 +707,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 280px, with 16px padding and a Chrome line on its edge. Its panels follow the focused page.
 
 - **Panel header:** 13px/600 in Ink, a 12px Quiet-ink count and a chevron; 32px high, with an
-  Edge line between panels.
+  Line line between panels.
 - **Rows:** 32px (28px in the Outline), one line, ellipsised, with the full text in `title`.
   A Task row is the ID in 12px Quiet ink, the title in Ink, and the state's dot. A member row
   is a 24px avatar with its presence badge, then the name.
@@ -723,13 +763,13 @@ The Room is the Transcript over the Composer in one column.
 
 ### Tasks
 
-- **A Board card** has 12px padding, an Edge border, the card radius and 8px between
+- **A Board card** has 12px padding, a Line border, the card radius and 8px between
   cards. Its first row (`.task-card-header`) holds the ID (12px `TextSecondary`) and the
   priority [status chip](#chips). The title is 14px at 600 and runs to three lines. Tags are
   tag chips. The assignee is a 24px avatar with the name at 12px. The due date is `caption`
   (12px), like the ID, written as [Dates and times](#dates-and-times) says. A card shows no
   State chip and has no coloured edge.
-- **A lane** is Ground with an Edge border and the card radius, in every Theme. Its
+- **A lane** is Ground with a Line border and the card radius, in every Theme. Its
   column header names the state; the lane itself carries no fill, so an empty lane is not a
   grey block in Light and a lane is not invisible in Dark. A column is 260-300px. Empty
   terminal columns collapse to a 40px rail with the name and count. A column is **empty
@@ -751,7 +791,7 @@ The Room is the Transcript over the Composer in one column.
   warning colour mixed 70% toward body text. A count wears its signal only above 0.
 - **Hover and focus reveal** (see [Patterns worth copying](#patterns-worth-copying)) applies
   to Board cards and List rows.
-- **The List** has 36px rows (32px Dense), 13px body and header cells at 12px/600
+- **The List** has 32px rows, 13px body and header cells at 12px/600
   `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`), the row
   menu 40px, and Title takes the rest. A group row is Ground, with a 13px/600 label, a 24px
   avatar for an assignee group, and a 12px Quiet-ink count. No wash.
@@ -759,7 +799,7 @@ The Room is the Transcript over the Composer in one column.
 
 ### The Library
 
-- **Tree rows** are 30px, 13px text, 16px icons and a 16px indent.
+- **Tree rows** are 32px, 13px text, 16px icons and a 16px indent (44px high on a touch screen).
 - **The reader** is `body1` x 8/7 (16px) at 1.65 with a 46.29em measure (35em widened 15% twice),
   centred in the pane rather than set flush left. A note's Markdown h1 is
   24px at 600, the one size above 20px in the app, and only in the reader.
@@ -908,7 +948,7 @@ detail (`T7`) moved to the Right sidebar on 2026-10-28, and `ResizableEndDrawer`
   keeps its in-body "ID: title" row after create.
 - **A close `MudIconButton`** sits at the right of the header. Edit, copy and the menu are
   a right-aligned icon row just under the header, not in it.
-- **The form is grouped.** Put the fields under Group labels (`.group-label`,
+- **The form is grouped.** Put the fields under a Label each (`.group-label`,
   12px/600 in Quiet ink): the Task detail uses Status and priority, People, Planning and Dates,
   with a 120px label column at 13px `TextSecondary`. The title stays the only 16px text.
 - **A property is a label and a value.** `.task-detail-groups` is a size container. At 368px
@@ -927,7 +967,7 @@ out **left-aligned, primary first**: the Filled primary, then Outlined secondari
 Text quiet actions. This differs from dialogs on purpose: a left-aligned row reads from
 its first button, and a dialog's footer reads from the right (UX-032).
 
-An Agent's card (`C8`) sits in the 760px Transcript column with an Edge line. Its answer options
+An Agent's card (`C8`) sits in the 760px Transcript column with a Line line. Its answer options
 are one-line 32px rows.
 
 ### Menus
@@ -998,23 +1038,27 @@ Start from the pattern in the file the table names; the full list is in
 
 ### Chips
 
-**Four looks, one per job. Don't invent a fifth.** A status colour is never a solid fill
-under text. Parameters are in the [catalog](UXDesignGuidelines.md#display).
+**One component, three looks.** Every chip is `Chip` (`Components/Shared/Chip.razor`) with a `Look`:
+Status, Tag or Filter. It is built on `MudChip` because several callers live in a `MudChipSet`, and a
+raw `<MudChip` anywhere else fails CV13. `StatusChip`, `TaskFilterChip` and `ChipCloud` wrap it, so a
+caller names the look it needs and never a class. A fourth job, a count or a piece of meta, is plain
+caption text (`.chip-meta`) and no chip. A status colour is never a solid fill under text. Parameters
+are in the [catalog](UXDesignGuidelines.md#display).
 
-| Look | Draws | Used for |
-| --- | --- | --- |
-| Status or priority, tinted: `.status-chip-*` | The colour at 14% over Surface; text and icon the colour mixed 50% toward `TextPrimary` (a heavier mix than other Signal ink, because the chip text sits on its own tint); a leading icon | High, Urgent, In Progress |
-| Tag, quiet: `.tag-chip` | Wash fill with an Edge line, Ink text | `api`, `pricing` |
-| Filter: `.filter-chip`, `TaskFilterChip` | A dashed Field line while unset; an Accent border and Accent tint 14% once set (`.filter-chip.is-set`) | Assignee: Me |
-| Count or meta: `.chip-meta` | No chip: plain caption text | "@jane", the Needs You count, "Next session" |
+| Look | Draws | Height | Used for |
+| --- | --- | --- | --- |
+| Status or priority, tinted: `Look=Status`, `.status-chip-*` | The colour at 14% over Surface; text and icon the colour mixed 50% toward `TextPrimary` (a heavier mix than other Signal ink, because the chip text sits on its own tint); a leading icon | 24px | High, Urgent, In Progress; the Feed's Live chip; the Human gate and decision chips; the AI-reacting chip |
+| Tag, quiet: `Look=Tag`, `.tag-chip` | Wash fill with a Line border, Ink text | 24px | `api`, `pricing`; a note's tags and Archived chip; the Composer's upload chip; a Task's blockers and tags |
+| Filter: `Look=Filter`, `.filter-chip` | A dashed Field line and no fill while unset; once set, an Accent border, the Selected tint (`selected.background`, Accent tint 14%) and Accent ink at 500 (`.is-set`) | 28px | Assignee: Me; the search scopes; the Feed's categories; a pack toggle; every `ChipCloud` chip |
+| Count or meta: `.chip-meta` | No chip: plain caption text | | "@jane", the Needs You count, "Next session", the Settings nav badge, the history pills |
 
-**The Status and Tag chips share one shape**: 22px high, `0 8px` padding, a 6px radius
-(`calc(var(--mud-default-borderradius) * 0.75)`), 12px text at weight 500 and a 14px leading
-icon. The Tag chip also carries an Edge line.
+**The Status and Tag chips share one shape**: 24px high, `0 8px` padding, the control radius
+(`--hu-radius-control`), 12px text at weight 500 and a 14px leading icon.
 
-> **Filter chip:** 28px high, `0 12px` padding, a pill, 13px at 400. Unset: a dashed Field line,
-> no fill. Set: an Accent border, Accent tint 14%, Accent ink at 500. `TaskFilterChip`,
-> `ChipCloud` and the search scopes all draw it, through the global `.filter-chip` class.
+> **Filter chip:** 28px high, `0 12px` padding, a pill (`--hu-radius-full`), 13px at 400. Unset: a
+> dashed Field line, no fill. Set: an Accent border, the Selected tint, Accent ink at 500. `.is-set` is
+> the only set class Huddle writes. `TaskFilterChip`, `ChipCloud` and the search scopes all draw it,
+> through the `Chip` component.
 
 **Text on a status fill reaches 4.5:1.** `StatusChipContrast` mirrors the tint in C#, and a
 test holds every pair to the floor. The measured ratio for each status colour in each Huddle
@@ -1031,8 +1075,9 @@ The catalog of components, with paths and parameters, lives only in
 rules that catalog's rows carry out.
 
 - **Use `AgentAvatar` and `StatusDot`**; see [Avatars and status](#avatars-and-status).
-- **A chip is one of the four looks.** `StatusChip` draws the tinted one; a Task's state and
-  priority go through `TaskStatusChip` and `TaskPriorityChip`.
+- **A chip is the one `Chip`, with a Look.** `StatusChip` is its Status look; a Task's state and
+  priority go through `TaskStatusChip` and `TaskPriorityChip`; `TaskFilterChip` and `ChipCloud` are its
+  Filter look. A raw `<MudChip` anywhere else fails CV13.
   [Catalog row](UXDesignGuidelines.md#display).
 - **A page starts with `PageHeader`**; a page never writes its own `h1` or a loose action
   row. See [A page](#a-page), step 3. [Catalog row](UXDesignGuidelines.md#display).
@@ -1152,28 +1197,27 @@ prefers `DateFormat="MMM d, yyyy"`.
    literal fails `AppCss_DeclaresNoColourLiteral` or `AppCss_DeclaresNoFontFamilyLiteral`.
    The one allowed exception is `#blazor-error-ui` in `MainLayout.razor.css`.
 4. **Every `var()` names a MudBlazor variable, a registered skin token (`--hu-*`), one of the
-   five ink rungs (`--ink-strip`, `--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field`, aliases
-   of `--hu-ink-*`) or `--font-mono`.** An unresolved
+   four ink rungs (`--ink-strip`, `--ink-wash`, `--ink-line`, `--ink-field`) or `--font-mono`.** An unresolved
    property resolves to nothing, not to a fallback, and a surface goes invisible
    (`AppCss_UsesOnlyMudBlazorOrSkinTokens` allows exactly those, `AppCss_ReadsOnlyKnownTokens`
    refuses an unregistered `--hu-*`, and
    `ScopedCss_UsesOnlyMudBlazorVariables` holds scoped files to the same list). That includes a
    feature-local custom property such as `--task-ref-dot` (UX-V15).
 5. **Sizes, radii and layers use the tokens above**: spacing in px on the 4/8/12/16/24
-   scale, typography variables, radius tokens, `--mud-zindex-*`. No literal radius, no
-   rem spacing, no literal font size, and nothing under 11px.
+   scale, widths and heights from the size ladder, typography variables, the five radius steps,
+   `--mud-zindex-*`. No literal radius, no rem spacing, no literal font size, and nothing under 11px.
 6. **Reuse before you write.** Search `wwwroot/css/` for an existing class before writing a
    declaration block. Truncation is `.truncate`; screen-reader-only text is
    `.visually-hidden`, one global class in `base.css`. Add a utility there the first time a
    second site needs it (UX-R21, UX-R22). The shared look-and-feel classes are global:
-   `.group-label`, `.filter-chip`, `.toolbar-compact` and `.selected-shape`.
+   `.card-title`, `.group-label`, `.filter-chip`, `.toolbar-compact` and `.selected-shape`.
 7. **No `!important`**, except where it is the only way past an inline style MudBlazor
    writes, with a comment saying so (UX-V16, UX-V22).
 8. **Global MudBlazor overrides** (`.mud-button-root`, `.mud-drawer`, `.mud-avatar img`)
    live in one "Global MudBlazor overrides" section near the top of `base.css`, never in a
    feature's section (UX-V17). The overrides set `.mud-link` and selected list items to Accent
    ink and the Selected treatment, because MudBlazor paints them in raw Accent; they also draw
-   table row lines on Edge, the Disabled state and the dialog close button.
+   table row lines on Line, the Disabled state and the dialog close button.
 9. **Every feature has a section header** in the form
    `/* ---- Room list: the hover/focus-revealed row actions menu ---- */`. The headers are
    the index. Comment the reason, not the property (UX-V21).
@@ -1188,7 +1232,7 @@ palette table.
 1. Copy the closest skin file under `src/Huddle.App/Themes/Skins/`, give it an id, a label, a
    `mode` and an `order`, and change its palette, tokens and traits. `ThemeCatalog.BuiltIn` is
    built from the files; its first entry (Lumen Light) is the default.
-2. Run `SkinLoaderTests`, `SkinContrastTests` and `ThemeCatalogTests`. Fix the colour (a darker
+2. Run `SkinLoaderTests`, `SkinContrastTests`, `SkinColourRulesTests` and `ThemeCatalogTests`. Fix the colour (a darker
    or lighter `primary`); a shipped Theme carries no exception. Set `drawerText` and
    `drawerIcon` from the palette's own text colours.
 3. Tune it in the Theme lab (`/settings/theme-lab`, Development) and export the JSON.
@@ -1200,13 +1244,15 @@ palette table.
 | Rule | Enforced by |
 | --- | --- |
 | No colour or font-family literal in a stylesheet | `AppCss_DeclaresNoColourLiteral`, `AppCss_DeclaresNoFontFamilyLiteral` |
-| Only MudBlazor variables, registered `--hu-*` skin tokens, the five `--ink-*` rungs and `--font-mono` in `var()`; every token read, every trait value styled | `AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`, `SkinTokens_EveryTokenIsRead`, `Traits_EveryValueHasCss`, `ScopedCss_UsesOnlyMudBlazorVariables` |
+| Only MudBlazor variables, registered `--hu-*` skin tokens, the four `--ink-*` rungs and `--font-mono` in `var()`; every token read, every trait value styled | `AppCss_UsesOnlyMudBlazorOrSkinTokens`, `AppCss_ReadsOnlyKnownTokens`, `SkinTokens_EveryTokenIsRead`, `Traits_EveryValueHasCss`, `ScopedCss_UsesOnlyMudBlazorVariables` |
 | Palette contrast and `DrawerText` | `ThemeCatalogTests`; text 4.5:1 on every ground and focus 3:1 in `SkinContrastTests` |
-| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. There are no exceptions | `ThemeCatalogTests` |
-| Type roles, 11px minimum, weights up to 600, input text at 400, 75ch and 760px | `TypeScaleTests` |
+| For every Theme: Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. There are no exceptions | `ThemeCatalogTests` |
+| For every Theme, on resolved colours: Line < Field <= Chrome against Surface; two grounds, and two states, equal or at least ΔE 3 apart; a set fill visible against Surface; the current row's ink is the Accent ink; a lane border is drawn | `SkinColourRulesTests`, with the `SkinColours`, `DeltaE` and `SrgbColour` helpers in `Huddle.Tests.Common` |
+| A skin's `padding`, `margin` and `gap` tokens on the 4px scale | `SkinSpacingTests` |
+| Type roles, 11px minimum, only the weights 400, 500 and 600, input text at 400, avatar labels, 75ch and 760px | `TypeScaleTests` |
 | How a date reads on screen | `HumanDateTests` |
 | One hue per meaning: the state, priority and presence mappings | `TaskColorsTests` |
-| Status chip contrast | `ChipStyleTests`, which holds the chip pairs to 4.5:1 |
+| Status chip contrast, and the one `Chip`'s looks | `ChipStyleTests`, which holds the chip pairs to 4.5:1; `ChipTests` |
 | No colour literal in an inline `style` attribute | `RazorComponents_NoInlineColourLiteralInStyleAttribute` |
 | `Size.Small` on buttons, icon buttons, chips, toggles and FABs (CV1) | `UiConventionTests` |
 | `Variant.Outlined` and `Margin.Dense` on inputs (CV2) | `UiConventionTests` |
@@ -1218,11 +1264,12 @@ palette table.
 | No `Outlined.Add`, `ContentPaste` or `+ ` label (CV8) | `UiConventionTests` |
 | No `style=` with a literal value (CV9) | `UiConventionTests` |
 | No component-local `DispatchAsync` (CV10) | `UiConventionTests` |
-| In a stylesheet: radius, font size, spacing over 2px, `z-index` over 2 and `!important` come from the scales (CV11) | `UiConventionTests` |
+| In a stylesheet: radius, font size, spacing over 2px, `z-index` over 2, `!important`, widths and heights from 17px to 47px, icon sizes and window breakpoints come from the scales (CV11) | `UiConventionTests` |
+| No raw `<MudChip` outside `Chip.razor` (CV13) | `UiConventionTests` |
 | Everything else on this page | Review, and the checklist below |
 
-`UiConventionTests` (`tests/Huddle.Tests.Shell/Ui/Conventions`) scans `src/Huddle.App` and fails
-on any violation not listed in `Baseline/Exceptions.txt`. Every area baseline file is empty;
+`UiConventionTests` (`tests/Huddle.Tests.Shell/Ui/Conventions`) scans `src/Huddle.App` for CV1 to
+CV11 and CV13 and fails on any violation not listed in `Baseline/Exceptions.txt`. Every area baseline file is empty;
 an exception names the rule, the file, a count and the reason, and only the manager adds
 one. What the test can't see stays with review: copy, icon choice, layout and the checklist
 below.
@@ -1241,15 +1288,15 @@ below.
 - [ ] Every line, hover, selected and drop state uses the treatments under Colour.
 - [ ] Every text size comes from the type roles and none renders under 11px; the page has
       one `h1` ([A page](#a-page)).
-- [ ] Every spacing, radius and `z-index` value comes from the scales above.
+- [ ] Every spacing, size, radius and `z-index` value comes from the scales above.
 - [ ] Every icon comes from the entity or action table.
 
 **Components**
 
-- [ ] Every `MudButton`, `MudIconButton` and `MudChip` is `Size.Small`; every input is
-      `Variant.Outlined` and `Margin.Dense`.
+- [ ] Every `MudButton` and `MudIconButton` is `Size.Small`; every chip is the one `Chip`; every
+      input is `Variant.Outlined` and `Margin.Dense`.
 - [ ] Dialogs, drawers, confirms and action rows follow their anatomy and button order.
-- [ ] Every avatar is a `AgentAvatar`; every chip is one of the four looks; every empty
+- [ ] Every avatar is a `AgentAvatar`; every chip is a Status, Tag or Filter `Chip`; every empty
       state says what to do next.
 - [ ] No markup or CSS block was copied from another component; a shared one was used or
       built.
@@ -1290,7 +1337,8 @@ These are open questions, not decisions. Raise them before relying on them.
 
 ## Keeping this document current
 
-- **A rule changes here first**, then in the code.
+- **The page follows the code.** A rule a test enforces changes in the test, the code and this
+  page in one commit; the page never gets ahead of what ships.
 - **A component's parameters, path and anatomy go in the
   [catalog](UXDesignGuidelines.md#reusable-parts-catalog)**, not here. A component that sets
   a pattern gets a one-line rule here that links to its catalog row.
