@@ -9,7 +9,7 @@
    page leaves free space on the right instead of stretching them): .task-board-columns and
    .task-board-lane-columns share the exact same grid-template-columns (set inline by TaskBoard), so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
-   itself scrolls inside the pane in both directions (OP-3, UX-007), and the column header row sticks to the top while
+   itself scrolls inside the pane in both directions, and the column header row sticks to the top while
    the lanes scroll. On the Tasks page the board takes exactly what the toolbar leaves of the pane, so .tab-body never
    scrolls as well and the board's horizontal scrollbar sits at the pane's bottom edge. A viewport-unit cap guessed the
    toolbar's height; when the toolbar was taller, the pane scrolled too and hid that scrollbar below its fold. Elsewhere
@@ -17,6 +17,7 @@
 .task-board {
     overflow: auto;
     max-height: calc(100vh - 12rem);
+    background: var(--hu-board-background);
 }
 
 .tab-body > .tasks-page:has(> .task-board) {
@@ -60,7 +61,7 @@
     padding: 8px 8px 8px 0;
 }
 
-/* An empty terminal column's header (audit B4a): the 40px rail's top, the dot, the count and the menu stacked and centred. The name is drawn
+/* An empty terminal column's header: the 40px rail's top, the dot, the count and the menu stacked and centred. The name is drawn
    vertically in the lane below (.task-board-rail-label); the header's own copy is visually hidden. */
 .task-board-column-header.task-board-column-header-rail {
     flex-direction: column;
@@ -70,7 +71,7 @@
     padding: 8px 0;
 }
 
-/* S4: the state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
+/* The state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
    Same colour per state as .task-ref-status-* and TaskColors.For; Backlog (Default) takes the secondary text colour so the dot reads. */
 .task-state-dot {
     flex: 0 0 auto;
@@ -104,7 +105,12 @@
 }
 
 .task-board-column-count {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    margin-inline-end: auto;
+    padding: 0 8px;
+    background: var(--hu-board-count-background);
+    border: 1px solid var(--hu-board-count-line);
+    border-radius: 999px;
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
 }
@@ -132,7 +138,7 @@
     margin-bottom: 12px;
 }
 
-/* A swimlane label (audit B4b): the page section heading (.group-heading, 16px/600) with its count, over a Chrome line
+/* A swimlane label: the page section heading (.group-heading, 16px/600) with its count, over a Chrome line
    instead of the Rule rung the heading draws elsewhere. The count is 12px in Quiet ink. */
 .task-board-lane-heading.group-heading {
     display: flex;
@@ -161,7 +167,7 @@
     border-radius: var(--mud-default-borderradius);
 }
 
-/* An empty terminal column (audit B4a): a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
+/* An empty terminal column: a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
    takes a drop; the count is in the header above. */
 .task-board-column.task-board-column-rail {
     min-width: 0;
@@ -225,7 +231,7 @@
     border: 1px dashed var(--ink-field);
 }
 
-/* While a drag is over a bucket that will accept it: a solid primary border on a
+/* While a drag is over a bucket that will accept it: a primary border on a
    hover-tinted background, so "this can take the drop" reads at a glance. */
 .task-ghost-bucket.task-zone-can {
     border: 1px dashed var(--mud-palette-primary);
@@ -233,6 +239,7 @@
 }
 
 .task-card {
+    position: relative;
     text-align: left;
     padding: 12px;
     background-color: var(--hu-ground-raised);
@@ -311,17 +318,13 @@
 }
 
 /* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */
-.task-card {
-    position: relative;
-}
-
 .task-card > .task-actions-menu {
     position: absolute;
     top: 0.25rem;
     right: 0.25rem;
 }
 
-/* The ⋮ of a card or a List row is revealed on hover or focus (audit B4d, design-system "Patterns worth copying"), like the Room list's. It stays in
+/* The ⋮ of a card or a List row is revealed on hover or focus, like the Room list's. It stays in
    the DOM and the tab order, shows while its menu is open, and shows at once on a device with no hover. */
 .task-actions-reveal .task-actions-button {
     opacity: 0;
@@ -433,7 +436,7 @@
     outline: 2px solid var(--hu-focus);
 }
 
-/* An overdue due date, and nothing else on the card or row (UX-043): the warning icon beside it is the
+/* An overdue due date, and nothing else on the card or row: the warning icon beside it is the
    one cue, and the date is set heavier so it is not told by colour alone. The row and card class
    task-overdue is a marker only. */
 .task-due-overdue {
