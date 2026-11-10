@@ -93,7 +93,7 @@ public sealed class SkinColoursTests
 
         Assert.Null(colours.Token("list.title.weight"));
         Assert.Null(colours.Token("shadow.card"));
-        Assert.Null(colours.Token("control.radius"));
+        Assert.Null(colours.Token("radius.card"));
         Assert.Null(colours.Token("board.needs.halo"));
         Assert.DoesNotContain("shadow.card", colours.ColourKeys);
         Assert.Throws<InvalidOperationException>(() => colours.Token("no.such.token"));

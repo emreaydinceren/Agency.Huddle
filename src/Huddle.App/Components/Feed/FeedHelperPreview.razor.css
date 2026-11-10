@@ -2,7 +2,7 @@
 .feed-helper-preview {
     padding: 12px;
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-size: var(--mud-typography-body2-size);
 }
 
@@ -18,7 +18,7 @@
     align-items: center;
     align-self: center;
     padding: 4px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     color: var(--mud-palette-primary);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
 }

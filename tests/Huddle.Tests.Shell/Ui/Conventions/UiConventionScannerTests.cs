@@ -228,13 +228,92 @@ public sealed class UiConventionScannerTests
             .m { padding-right: 48px; margin: 0rem; }
             .n { gap: 0.5rem; }
             .o { margin-inline: -1rem; }
-            .p { border-radius: var(--hu-feed-card-radius); }
+            .p { border-radius: var(--hu-radius-card); }
+            .q { border-radius: 0 var(--hu-radius-inner) var(--hu-radius-inner) 0; }
+            .r { border-radius: var(--hu-radius-full); }
+            .s { border-radius: var(--hu-feed-card-radius); }
             """;
 
         RuleCount result = UiConventionScanner.Cv11(CssPath, source);
 
         Assert.Equal("CV11", result.Rule);
-        Assert.Equal(8, result.Count);
+        Assert.Equal(10, result.Count);
+    }
+
+    /// <summary>
+    /// CV11: a radius is a step (<c>var(--hu-radius-*)</c>), 0 or 50%; a multiplier of the base, a base plus a length, the raw
+    /// <c>--mud-default-borderradius</c>, a literal <c>999px</c> and a skin radius token are each counted once.
+    /// </summary>
+    [Fact]
+    public void Cv11_RadiusMustBeAStep()
+    {
+        const string source = """
+            .a { border-radius: var(--hu-radius-control); }
+            .b { border-radius: var(--hu-radius-panel) var(--hu-radius-panel) 0 0; }
+            .c { border-radius: var(--mud-default-borderradius); }
+            .d { border-radius: calc(var(--mud-default-borderradius) * 0.75); }
+            .e { border-radius: calc(var(--mud-default-borderradius) + 2px); }
+            .f { border-radius: 999px; }
+            .g { border-radius: var(--hu-gate-radius); }
+            .h { border-radius: var(--hu-radius-huge); }
+            """;
+
+        Assert.Equal(6, UiConventionScanner.Cv11(CssPath, source).Count);
+    }
+
+    /// <summary>
+    /// CV11: a width or height from 17px to 47px must be on the size ladder (18, 20, 24, 28, 32, 40, 44); a smaller mark, a larger
+    /// layout size, a size in rem and a Fluent switch track are not checked.
+    /// </summary>
+    [Fact]
+    public void Cv11_ControlSizeMustBeOnTheLadder()
+    {
+        const string source = """
+            .a { height: 32px; }
+            .b { min-height: 30px; }
+            .c { width: 36px; height: 36px; }
+            .d { height: 19px; }
+            .e { width: 10px; height: 3px; }
+            .f { width: 72px; min-height: 61px; }
+            .g { height: 2rem; max-width: 33px; }
+            .h { width: 26px; }
+            .i .mud-switch-track { width: 36px; height: 22px; }
+            .j { min-width: 24px; }
+            """;
+
+        Assert.Equal(5, UiConventionScanner.Cv11(CssPath, source).Count);
+    }
+
+    /// <summary>CV11: a glyph (a <c>.mud-icon-root</c> or the Feed check) is 14, 16, 18 or 32px; 12px and 20px are counted, a button box is not a glyph.</summary>
+    [Fact]
+    public void Cv11_GlyphSizeMustBeAnIconSize()
+    {
+        const string source = """
+            .a .mud-icon-root { width: 14px; height: 14px; }
+            .b .mud-icon-root { width: 12px; height: 12px; }
+            .c .mud-icon-root { width: 20px; }
+            .d .feed-check { width: 12px; }
+            .e .mud-icon-button { width: 28px; height: 28px; }
+            .f .mud-icon-root { width: 32px; }
+            """;
+
+        Assert.Equal(4, UiConventionScanner.Cv11(CssPath, source).Count);
+    }
+
+    /// <summary>CV11: a window <c>@media</c> width is MudBlazor's 600 or 960, or the shell's 1099; any other width is counted, and a container query is not a window query.</summary>
+    [Fact]
+    public void Cv11_WindowBreakpointMustBeOnTheGrid()
+    {
+        const string source = """
+            @media (max-width: 600px) { .a { display: none; } }
+            @media (min-width: 960px) { .b { display: none; } }
+            @media (max-width: 1099px) { .c { display: none; } }
+            @media (max-width: 1500px) { .d { display: none; } }
+            @media (hover: none) { .e { display: none; } }
+            @container task-list (max-width: 1170px) { .f { display: none; } }
+            """;
+
+        Assert.Equal(1, UiConventionScanner.Cv11(CssPath, source).Count);
     }
 
     /// <summary>CV11: a violation inside a CSS comment is not counted.</summary>

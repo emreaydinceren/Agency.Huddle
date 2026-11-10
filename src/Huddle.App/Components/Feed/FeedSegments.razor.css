@@ -11,7 +11,7 @@
     font-size: var(--mud-typography-caption-size);
     line-height: 1.5;
     border: 1px solid var(--ink-line);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     color: var(--mud-palette-text-primary);
     text-decoration: none;
 }
@@ -27,8 +27,8 @@
 }
 
 .feed-segments ::deep .feed-chip .mud-icon-root {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
 }
 
 .feed-segments ::deep .feed-chip-id {

@@ -227,19 +227,14 @@ public sealed class TaskListViewTests : IDisposable
         Assert.Equal(2, cut.FindAll(".task-assignee .mud-avatar").Count);
     }
 
-    /// <summary>The grid is dense by default and when <see cref="TaskView.Dense"/> is true, and drops the dense class when the View says false.</summary>
-    [Theory]
-    [InlineData(null, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    public async Task Dense_FollowsTheView(bool? dense, bool expectDense)
+    /// <summary>The grid is always MudBlazor-dense: the List has one 32px row height, set by the stylesheet, and no per-View mode.</summary>
+    [Fact]
+    public async Task Grid_IsAlwaysDense()
     {
-        TaskView view = MakeView() with { Dense = dense };
-
         await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [TestTasks.Make(id: "PLAT-0001", title: "T")]);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, MakeView(), [TestTasks.Make(id: "PLAT-0001", title: "T")]);
 
-        Assert.Equal(expectDense, cut.FindAll(".mud-table-dense").Count > 0);
+        Assert.NotEmpty(cut.FindAll(".mud-table-dense"));
     }
 
     /// <summary>Builds a minimal List <see cref="TaskView"/> for these tests, with a fixed id and name.</summary>

@@ -37,7 +37,7 @@ public sealed class R3FoundationCssTests
         Assert.DoesNotMatch(@"var\(--mud-palette-(divider|divider-light|lines-inputs|background-gray)\)", css);
     }
 
-    /// <summary>1.5x the base radius stays on the message bubble, the Composer and its drop hint; every other surface is 1x. A trait variant (a rule scoped to a <c>data-hu-*</c> marker) is a Theme's choice and is not counted.</summary>
+    /// <summary>The panel radius step (1.5x the base) stays on the message bubble, the Composer and its drop hint, the Board lane, and the edit page's field group and gate frame (D5: the gate and the Feed card took the panel step); every other surface is the card step or smaller. A trait variant (a rule scoped to a <c>data-hu-*</c> marker) is a Theme's choice and is not counted.</summary>
     [Fact]
     public void AppCss_OneAndAHalfRadiusSurvivesOnlyOnBubbleAndComposer()
     {
@@ -46,13 +46,23 @@ public sealed class R3FoundationCssTests
         foreach (Match rule in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5)))
         {
             bool traitVariant = CssText.StripComments(rule.Groups["sel"].Value).Trim().StartsWith(":root:has([data-hu-", StringComparison.Ordinal); // contains-ok: a trait variant rule is scoped to its marker attribute
-            if (!traitVariant && rule.Groups["body"].Value.Contains("var(--mud-default-borderradius) * 1.5", StringComparison.Ordinal))
+            if (!traitVariant && rule.Groups["body"].Value.Contains("var(--hu-radius-panel)", StringComparison.Ordinal))
             {
                 selectors.Add(rule.Groups["sel"].Value.Trim());
             }
         }
 
-        Assert.Equal([".composer-drop-hint", ".composer-input", ".message-bubble"], selectors.Select(static selector => CssText.StripComments(selector).Trim()).Order(StringComparer.Ordinal));
+        Assert.Equal(
+            [
+                ".composer-drop-hint",
+                ".composer-input",
+                ".message-bubble",
+                ".task-board-column",
+                ".task-board-column.needs-you::before",
+                ".task-edit-page .task-detail-group",
+                ".task-edit-page .task-human-gate, .task-edit-page .task-decision-card",
+            ],
+            selectors.Select(static selector => Regex.Replace(CssText.StripComments(selector).Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(5))).Order(StringComparer.Ordinal));
     }
 
     /// <summary>The Group label is 12px at 600 in Quiet ink, sentence case, 8px above its fields.</summary>
@@ -75,7 +85,7 @@ public sealed class R3FoundationCssTests
         string body = CssText.RuleBody(CssText.AppCss(), ".selected-shape");
 
         Assert.Contains("margin-inline: 4px;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-radius: var(--hu-radius-control);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("var(--hu-selected-background)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("var(--hu-selected-background-hover)", CssText.RuleBody(CssText.AppCss(), ".selected-shape:hover,\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
@@ -90,7 +100,7 @@ public sealed class R3FoundationCssTests
 
         Assert.Contains("height: 28px;", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("padding: 0 12px;", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-radius: 999px;", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-radius: var(--hu-radius-full);", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-size: var(--mud-typography-body2-size);", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px dashed var(--ink-field);", unset, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source

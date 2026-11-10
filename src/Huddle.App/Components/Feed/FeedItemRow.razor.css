@@ -7,14 +7,14 @@
 .feed-row {
     position: relative;
     display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) auto;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
     align-items: start;
     column-gap: 8px;
     padding: 8px;
     cursor: pointer;
     font-size: var(--mud-typography-body2-size);
     line-height: 1.35;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 .feed-row:hover {
@@ -28,14 +28,13 @@
 }
 
 .feed-row-avatar {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
 }
 
-.feed-row-avatar ::deep .mud-avatar,
 .feed-row-mark {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     font-size: var(--mud-typography-caption-size);
 }
 
@@ -144,8 +143,8 @@
 
 .feed-row-status ::deep .feed-check {
     flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     color: var(--mud-palette-success);
 }
 

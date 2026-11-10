@@ -85,6 +85,10 @@ public sealed class UiConventionTests
     [InlineData("CV9", """<div style="width: 1px"></div>""")]
     [InlineData("CV10", "private Task DispatchAsync(Func<Task> work) => work();")]
     [InlineData("CV11", ".zz { font-size: 13px; }")]
+    [InlineData("CV11", ".zz { height: 30px; }")]
+    [InlineData("CV11", ".zz .mud-icon-root { width: 12px; }")]
+    [InlineData("CV11", ".zz { border-radius: calc(var(--mud-default-borderradius) * 0.75); }")]
+    [InlineData("CV11", "@media (max-width: 1500px) { .zz { display: none; } }")]
     public void Mutation_AddedViolation_IsCountedAndOverrunsTheBaseline(string rule, string snippet)
     {
         string path = string.Equals(rule, "CV11", StringComparison.Ordinal)

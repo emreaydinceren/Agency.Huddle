@@ -426,7 +426,7 @@
     padding: 0 8px;
     background: var(--hu-board-count-background);
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
 }
@@ -480,7 +480,7 @@
     min-width: 0;
     background-color: var(--hu-board-column-background);
     border: 1px solid var(--hu-board-column-line);
-    border-radius: var(--hu-feed-card-radius);
+    border-radius: var(--hu-radius-panel);
 }
 
 /* An empty terminal column: a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
@@ -560,7 +560,7 @@
     padding: 12px;
     background-color: var(--hu-ground-raised);
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     box-shadow: var(--hu-shadow-card);
 }
 
@@ -589,7 +589,7 @@
    .tag-chip outranks the quiet tag rule further down, which has the same two classes. */
 .mud-chip.tag-chip.task-tag {
     gap: 4px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background-color: transparent;
     border: 1px solid var(--hu-line-region);
     color: var(--hu-text-subtle);
@@ -620,7 +620,7 @@
     gap: 4px;
     padding: 0 8px 0 4px;
     border: 1px solid color-mix(in srgb, var(--mud-palette-error) 35%, transparent);
-    border-radius: calc(var(--mud-default-borderradius) * .75);
+    border-radius: var(--hu-radius-control);
     background: var(--hu-tone-error-soft);
     color: var(--hu-tone-error-ink);
     font-size: var(--mud-typography-caption-size);
@@ -847,7 +847,7 @@
    just ".mud-input-outlined-border" alone: that prefix makes the library's own rule three classes
    specific, and a two-class override here would lose the cascade to it regardless of load order. */
 .task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* ---- The View editor: single-line Fields rows -------------------------------------------------- */
@@ -920,11 +920,11 @@
 .task-col-resizer.active::after {
     right: 2px;
     width: 3px;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: var(--mud-palette-primary);
 }
 
-/* Header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
+/* Header cells 12px/600 secondary; body rows 13px and 32px tall (the one row height; the grid is always MudBlazor-dense); ID about 110px,
    Priority about 120px, the row menu 40px, Title the one flexible column. */
 .task-list-grid thead th {
     position: relative;
@@ -939,7 +939,7 @@
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
     padding: 0 8px 0 16px;
-    height: 36px;
+    height: 32px;
 }
 
 .mud-table.task-list-grid .mud-table-head .mud-table-cell .column-header,
@@ -950,14 +950,10 @@
 }
 
 .mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
-    height: 36px;
+    height: 32px;
     padding: 0 8px 0 16px;
     font-size: var(--mud-typography-body2-size);
     border-block-end-color: var(--hu-list-row-line);
-}
-
-.mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
-    height: 32px;
 }
 
 /* A group row: Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
@@ -1024,15 +1020,23 @@
     font-weight: var(--hu-list-title-weight);
 }
 
-@media (max-width: 1500px) {
+/* The three lowest-priority columns drop out as the List's own width narrows. The List sits in a pane whose width depends on the sidebars and the
+   split, so it measures itself, not the window. The widths are the List's width at the window widths the old media queries used (1500, 1350 and
+   1200px) with the default sidebars, so the same columns go at the same pane widths. */
+.task-list-grid {
+    container-type: inline-size;
+    container-name: task-list;
+}
+
+@container task-list (max-width: 1170px) {
     .task-col-low-1 { display: none; }
 }
 
-@media (max-width: 1350px) {
+@container task-list (max-width: 1020px) {
     .task-col-low-2 { display: none; }
 }
 
-@media (max-width: 1200px) {
+@container task-list (max-width: 870px) {
     .task-col-low-3 { display: none; }
 }
 
@@ -1195,7 +1199,7 @@
 /* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
 .task-toolbar-search .mud-input-outlined {
     background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* The second row's quick filters (wireframe): the Filter icon menu, then pill chips - dashed while a filter is unset, filled with a clear button once set. */
@@ -1222,7 +1226,7 @@
     height: 28px;
     margin-right: 8px;
     border: 1px solid var(--ink-field);
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background-color: transparent;
 }
 
@@ -1235,7 +1239,7 @@
     min-height: 0;
     padding: 0 12px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background-color: transparent;
     text-transform: none;
     font-size: var(--mud-typography-body2-size);
@@ -1257,16 +1261,6 @@
 .task-toolbar-header .btn-action-tight {
     height: 28px;
     min-height: 0;
-}
-
-/* The switch's own body is MudBlazor's 38px; a column flex centres it on the 28px box (it overflows evenly) rather than
-   letting it hang 10px below. */
-.task-toolbar .task-toolbar-dense {
-    height: 28px;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 /* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
@@ -1317,7 +1311,7 @@
 .task-toolbar-search .mud-input-outlined-border {
     border-color: var(--hu-field-line);
     border-bottom-color: var(--hu-field-line-bottom);
-    border-radius: var(--hu-control-radius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* The Search field leaves the same 8px after it as every chip in the row, so Group by never touches it. */
@@ -1384,7 +1378,7 @@
     position: absolute;
     inset: 0 0 auto 0;
     height: 3px;
-    border-radius: var(--hu-feed-card-radius) var(--hu-feed-card-radius) 0 0;
+    border-radius: var(--hu-radius-panel) var(--hu-radius-panel) 0 0;
     background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
 }
 
@@ -1439,7 +1433,7 @@
 }
 
 :root:has([data-hu-surface="paper"]) .task-card {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     padding: 8px 12px;
     transition: box-shadow 0.15s, border-color 0.15s;
 }
@@ -1597,7 +1591,7 @@
 :root:has([data-hu-status="pill"]) .mud-chip.status-chip {
     height: 22px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     gap: 4px;
 }
 
@@ -1639,7 +1633,7 @@
 :root:has([data-hu-status="pill"]) .task-tag {
     height: 20px;
     padding: 0 8px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     background: var(--hu-ground-sunk);
@@ -1664,7 +1658,7 @@
 :root:has([data-hu-surface="hairline"]) .task-card {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     box-shadow: none;
     padding: 8px 12px;
     transition: border-color 0.12s, box-shadow 0.12s;

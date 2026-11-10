@@ -44,7 +44,7 @@
 .sidebar-views .needs-you-row.needs-you-row .mud-nav-link {
     width: calc(100% - 2 * var(--nav-inset));
     margin-inline: var(--nav-inset);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     align-items: center;
     min-height: var(--nav-row-height);
     padding-block: 4px;
@@ -148,7 +148,7 @@
 .huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
     flex: 1 1 0;
     text-align: center;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     border: none;
     background: transparent;
     padding: 2px 12px;
@@ -301,7 +301,7 @@
 
 .members-context-bar.mud-progress-linear {
     height: 3px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 /* "Show all (N)" under a list longer than 8 rows (13px like "New chat"): a quiet text action whose label starts on the
@@ -430,7 +430,7 @@
 }
 
 .search-hit-flash {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     animation: search-hit-flash-fade 2s ease-out;
 }
 
@@ -460,7 +460,7 @@
 :root:has([data-hu-surface="paper"]) .needs-you-count {
     min-width: 18px;
     padding: 0 4px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     text-align: center;
     background: var(--hu-tone-warning-soft);
     color: var(--hu-tone-warning-ink);
@@ -470,7 +470,7 @@
 :root:has([data-hu-surface="paper"]) .needs-you-card.mud-paper {
     background: var(--hu-tone-warning-tint);
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     box-shadow: none;
 }
 
@@ -478,7 +478,7 @@
 :root:has([data-hu-surface="paper"]) .search-bar .mud-input.mud-input-outlined {
     height: 32px;
     background: var(--hu-ground-sunk);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="paper"]) .search-bar .mud-input.mud-input-outlined .mud-input-outlined-border {
@@ -499,7 +499,7 @@
     padding: 0 4px;
     border: 1px solid var(--hu-line-control);
     border-bottom-width: 2px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.5);
+    border-radius: var(--hu-radius-inner);
     background: var(--hu-ground-raised);
     color: var(--mud-palette-text-secondary);
 }
@@ -508,7 +508,7 @@
 :root:has([data-hu-surface="paper"]) .huddle-segmented-control {
     background-color: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="paper"]) .huddle-segmented-indicator {
@@ -523,9 +523,9 @@
 
 /* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 :root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined {
-    height: 30px;
+    height: 32px;
     background: var(--hu-ground-sunk);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined:focus-within {
@@ -539,7 +539,7 @@
     padding: 0 4px;
     border: 1px solid var(--hu-line-region);
     border-bottom-width: 2px;
-    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    border-radius: var(--hu-radius-control);
     background: var(--hu-ground-page);
     color: var(--hu-text-subtle);
 }
@@ -548,19 +548,19 @@
 :root:has([data-hu-surface="hairline"]) .huddle-segmented-control {
     background-color: var(--hu-control-track);
     border: 1px solid var(--hu-line-region);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="hairline"]) .huddle-segmented-indicator {
     background-color: var(--hu-ground-raised);
     border-color: var(--hu-line-region);
-    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    border-radius: var(--hu-radius-control);
     box-shadow: var(--hu-shadow-card);
 }
 
 :root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
     color: var(--hu-text-subtle);
-    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    border-radius: var(--hu-radius-control);
 }
 
 :root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {

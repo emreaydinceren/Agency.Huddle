@@ -35,7 +35,7 @@
     margin: 4px 0 16px;
     padding: 8px 12px;
     border: 1px solid var(--hu-feed-note-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: var(--hu-feed-note-background);
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
@@ -55,12 +55,12 @@
 /* Nordic's paper frame is dashed. */
 :root:has([data-hu-surface="paper"]) .feed-readonly {
     border-style: dashed;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 /* Nordic draws a count as a small rounded pill, tinted for the selected segment and for Needs you. */
 :root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control {
-    border-radius: calc(var(--mud-default-borderradius) * 1.25);
+    border-radius: var(--hu-radius-panel);
     border: 1px solid var(--hu-line-region);
 }
 
@@ -69,7 +69,7 @@
     min-width: 18px;
     padding: 0 4px;
     margin-left: 4px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
     background: var(--hu-ground-rail);
     font-weight: 600;
     line-height: 18px;

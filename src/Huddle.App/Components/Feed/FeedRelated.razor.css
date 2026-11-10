@@ -11,7 +11,7 @@
 }
 
 .feed-related-own {
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
 }
 

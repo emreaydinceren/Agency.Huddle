@@ -11,12 +11,6 @@
     gap: 8px;
 }
 
-.feed-room-member ::deep .mud-avatar {
-    width: 20px;
-    height: 20px;
-    font-size: var(--mud-typography-caption-size);
-}
-
 .feed-room-reason,
 .feed-room-last {
     font-size: var(--mud-typography-caption-size);
@@ -30,7 +24,7 @@
 .feed-preview-deleted {
     padding: 12px;
     border: 1px dashed var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }

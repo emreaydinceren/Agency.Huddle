@@ -156,7 +156,7 @@ public sealed partial class Phase4ContentTraitsTests
         string label = Body("send", "square", ".composer-send-label");
         string narrow = Body("send", "square", ".composer-send .mud-icon-button", afterMedia: true);
 
-        Declares(button, "width: 28px;", "height: 28px;", "border-radius: var(--mud-default-borderradius);");
+        Declares(button, "width: 28px;", "height: 28px;", "border-radius: var(--hu-radius-card);");
         Declares(button, "background: var(--hu-send-bg);", "color: var(--hu-send-fg);", "box-shadow: none;");
         Declares(hover, "background: var(--mud-palette-primary-darken);");
         Declares(label, "display: none;");
@@ -176,7 +176,7 @@ public sealed partial class Phase4ContentTraitsTests
         string focus = Body("composer", "underlined", ".composer-box:focus-within");
         string attach = Body("composer", "underlined", ".composer-attach");
 
-        Declares(box, "border-bottom: 2px solid var(--mud-palette-primary);", "border-radius: var(--mud-default-borderradius);");
+        Declares(box, "border-bottom: 2px solid var(--mud-palette-primary);", "border-radius: var(--hu-radius-card);");
         Declares(box, "box-shadow: var(--hu-shadow-card-hover);", "padding-bottom: 40px;");
         Declares(rule, "height: 1px;", "var(--hu-line-region)");
         Declares(input, "border: 0;");

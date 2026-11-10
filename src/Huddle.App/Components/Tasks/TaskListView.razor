@@ -36,7 +36,7 @@
 @inject Agency.Huddle.App.Avatars.AvatarStore AvatarStore
 @implements IDisposable
 
-<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
+<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="true" Hover="true"
              Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false" Class="task-list-grid"
              SortMode="SortMode.Single" SortChanged="@this.OnSortChangedAsync" @ref="this.grid"
              RowClick="@this.OnRowClickAsync" RowClassFunc="@this.RowClass">

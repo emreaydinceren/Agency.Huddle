@@ -594,10 +594,6 @@
           "type": "string",
           "description": "The Feed\u0027s read-only note outline."
         },
-        "feed.card.radius": {
-          "type": "string",
-          "description": "A Feed card\u0027s corner radius."
-        },
         "feed.card.hover.shadow": {
           "type": "string",
           "description": "A Feed card\u0027s shadow while hovered."
@@ -722,10 +718,6 @@
           "type": "string",
           "description": "The resting shadow under a field."
         },
-        "control.radius": {
-          "type": "string",
-          "description": "The corner of a field or button."
-        },
         "form.group.background": {
           "type": "string",
           "description": "The surface of a field group."
@@ -737,10 +729,6 @@
         "form.group.shadow": {
           "type": "string",
           "description": "The shadow of a field group."
-        },
-        "form.group.radius": {
-          "type": "string",
-          "description": "The corner of a field group."
         },
         "form.group.padding": {
           "type": "string",
@@ -761,10 +749,6 @@
         "gate.halo": {
           "type": "string",
           "description": "Their outer ring."
-        },
-        "gate.radius": {
-          "type": "string",
-          "description": "Their corner."
         },
         "gate.padding": {
           "type": "string",
@@ -850,10 +834,6 @@
           "type": "string",
           "description": "A Board card\u0027s shadow while hovered."
         },
-        "editor.radius": {
-          "type": "string",
-          "description": "The corner of the Description editor\u0027s card."
-        },
         "editor.shadow": {
           "type": "string",
           "description": "The resting shadow of the Description editor\u0027s card."
@@ -877,6 +857,26 @@
         "note.h1.tracking": {
           "type": "string",
           "description": "The letter-spacing of a note\u0027s h1."
+        },
+        "radius.inner": {
+          "type": "string",
+          "description": "The corner of a small mark inside a card: a keycap, a mention, a code span."
+        },
+        "radius.control": {
+          "type": "string",
+          "description": "The corner of a row, a button, a segment or a field-sized control."
+        },
+        "radius.card": {
+          "type": "string",
+          "description": "The corner of a card, a field, a tile or an editor: the Theme\u0027s base radius."
+        },
+        "radius.panel": {
+          "type": "string",
+          "description": "The corner of a panel, a dialog, a popover or the Human gate."
+        },
+        "radius.full": {
+          "type": "string",
+          "description": "The corner of a pill. A circle uses 50%."
         }
       }
     },

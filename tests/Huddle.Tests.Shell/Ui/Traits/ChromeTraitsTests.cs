@@ -77,7 +77,7 @@ public sealed partial class ChromeTraitsTests
         string dot = Body("status", "pill", ".mud-chip.task-status-chip::before");
         string tag = Body("status", "pill", ".mud-chip.tag-chip");
 
-        Assert.Contains("border-radius: 999px;", chip, StringComparison.Ordinal);
+        Assert.Contains("border-radius: var(--hu-radius-full);", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("font-weight: 600;", warning, StringComparison.Ordinal);
         Assert.Contains("width: 7px;", dot, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
         Assert.Contains("border: 1.5px solid currentColor;", dot, StringComparison.Ordinal); // contains-ok: CSS declaration text of the stylesheet source
@@ -123,12 +123,12 @@ public sealed partial class ChromeTraitsTests
         string topBar = Body("nav", "tile", ".top-bar-end .mud-icon-button");
         string tree = Body("nav", "tile", ".library-tree .mud-treeview-item-content.mud-treeview-item-selected");
 
-        Assert.Contains("width: 36px;", rail, StringComparison.Ordinal);
+        Assert.Contains("width: 40px;", rail, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("background: var(--hu-current-icon);", bar, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", row, StringComparison.Ordinal);
         Assert.Contains("background-color: var(--hu-hover);", rowHover, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", settings, StringComparison.Ordinal);
-        Assert.Contains("width: 30px;", topBar, StringComparison.Ordinal);
+        Assert.Contains("width: 32px;", topBar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("background: var(--hu-tone-primary-soft);", tree, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-accent-ink);", tree, StringComparison.Ordinal);
     }

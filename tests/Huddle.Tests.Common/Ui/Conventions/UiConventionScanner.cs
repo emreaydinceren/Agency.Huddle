@@ -133,18 +133,19 @@ internal static partial class UiConventionScanner
         new("CV10", path, DispatchAsyncDeclaration().Count(StripRazorComments(text)));
 
     /// <summary>
-    /// CV11: in a stylesheet, a <c>border-radius</c> that is not <c>0</c>, <c>50%</c>, <c>999px</c> or built from
-    /// <c>var(--mud-default-borderradius)</c> or a skin radius token such as <c>var(--hu-feed-card-radius)</c>; a literal <c>font-size</c>; a <c>padding</c>, <c>margin</c> or
+    /// CV11: in a stylesheet, a <c>border-radius</c> whose every part is not <c>0</c>, <c>50%</c> or one of the five
+    /// radius steps (<c>var(--hu-radius-inner|control|card|panel|full)</c>); a literal <c>font-size</c>; a <c>padding</c>, <c>margin</c> or
     /// <c>gap</c> (including side variants) with any non-zero rem value, or a px value whose magnitude is over 2 and
     /// off the spacing scale (<see cref="SpacingScale"/>); a <c>z-index</c> above 2;
-    /// each <c>!important</c>.
+    /// each <c>!important</c>; a <c>width</c>, <c>height</c>, <c>min-width</c> or <c>min-height</c> in px that is off the size ladder
+    /// (<see cref="SizeLadder"/>, <see cref="GlyphSizes"/>); and a window <c>@media</c> width that is not 600, 960 or 1099 (<see cref="WindowBreakpoints"/>).
     /// </summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Cv11(string path, string text)
     {
         string source = CssComments().Replace(text, string.Empty);
-        int count = Important().Count(source);
+        int count = Important().Count(source) + SizeViolations(source);
         foreach (Match declaration in CssDeclaration().Matches(source))
         {
             string property = declaration.Groups["prop"].Value;
@@ -162,9 +163,8 @@ internal static partial class UiConventionScanner
     {
         if (string.Equals(property, "border-radius", StringComparison.Ordinal))
         {
-            return !value.Contains("var(--mud-default-borderradius)", StringComparison.Ordinal)
-                && !HuRadiusToken().IsMatch(value)
-                && value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(static token => token is not ("0" or "0px" or "50%" or "999px"));
+            return value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Any(static token => token is not ("0" or "0px" or "50%") && !RadiusStep().IsMatch(token));
         }
 
         if (string.Equals(property, "font-size", StringComparison.Ordinal))
@@ -200,6 +200,72 @@ internal static partial class UiConventionScanner
     /// and 80 for a clearance that keeps text out from under an overlaid control. A hairline's 1px or 2px is always allowed.
     /// </summary>
     private static readonly HashSet<double> SpacingScale = [4, 8, 12, 16, 24, 32, 40, 48, 64, 80];
+
+    /// <summary>
+    /// The px sizes a control, row or mark may be between 17px and 47px (design ladder, D4): 18 for an icon or a small mark,
+    /// then 20, 24, 28, 32, 40 and 44. A size below 17px (a dot, a hairline, a bar) or from 48px up (a tile, a column, a layout)
+    /// is not a control size and is not checked.
+    /// </summary>
+    private static readonly HashSet<double> SizeLadder = [18, 20, 24, 28, 32, 40, 44];
+
+    /// <summary>The px size of a glyph, the <c>.mud-icon-root</c> inside a button or a row: 14, 16 or 18, and 32 for an empty state.</summary>
+    private static readonly HashSet<double> GlyphSizes = [14, 16, 18, 32];
+
+    /// <summary>
+    /// The window widths a stylesheet may switch layout at: MudBlazor's own 600 (sm) and 960 (md), and the shell's 1099, which
+    /// its comment derives from the two sidebars' widths. Anything inside a pane uses a container query instead.
+    /// </summary>
+    private static readonly HashSet<double> WindowBreakpoints = [600, 960, 1099];
+
+    /// <summary>
+    /// A switch track and thumb keep a Fluent switch's own proportions, which follow the thumb and not the row ladder.
+    /// </summary>
+    private static readonly string[] SizeExemptSelectors = ["mud-switch-track", "mud-switch-thumb"];
+
+    private static readonly char[] SelectorSeparators = [' ', '>', '+', '~', '\n', '\r', '\t'];
+
+    private static int SizeViolations(string source)
+    {
+        int count = 0;
+        foreach (Match rule in CssRule().Matches(source))
+        {
+            string selector = rule.Groups["sel"].Value;
+            if (SizeExemptSelectors.Any(exempt => selector.Contains(exempt, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            HashSet<double> allowed = IsGlyphRule(selector) ? GlyphSizes : SizeLadder;
+            foreach (Match declaration in SizeDeclaration().Matches(rule.Groups["body"].Value))
+            {
+                double size = double.Parse(declaration.Groups["n"].Value, CultureInfo.InvariantCulture);
+                bool inBand = IsGlyphRule(selector) || (size >= 17 && size < 48);
+                if (inBand && !allowed.Contains(size))
+                {
+                    count++;
+                }
+            }
+        }
+
+        foreach (Match query in WindowQuery().Matches(source))
+        {
+            if (!WindowBreakpoints.Contains(double.Parse(query.Groups["n"].Value, CultureInfo.InvariantCulture)))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>Whether the last compound of a selector in the list is a glyph: a <c>.mud-icon-root</c> or the Feed's check mark, not a button box.</summary>
+    /// <param name="selector">The selector list of one rule.</param>
+    private static bool IsGlyphRule(string selector) =>
+        selector.Split(',').Any(static part =>
+        {
+            string last = part.Split(SelectorSeparators, StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? string.Empty;
+            return last.Contains("icon-root", StringComparison.Ordinal) || last.Contains("feed-check", StringComparison.Ordinal);
+        });
 
     private static int CountTags(string text, IEnumerable<string> names, Func<string, bool> isViolation)
     {
@@ -322,8 +388,17 @@ internal static partial class UiConventionScanner
     [GeneratedRegex(@"\b(?:Task|ValueTask|void)(?:<[^>\s]*>)?\s+DispatchAsync\s*\(", RegexOptions.CultureInvariant)]
     private static partial Regex DispatchAsyncDeclaration();
 
-    [GeneratedRegex(@"var\(--hu-[a-z-]*radius\)", RegexOptions.CultureInvariant)]
-    private static partial Regex HuRadiusToken();
+    [GeneratedRegex(@"^var\(--hu-radius-(?:inner|control|card|panel|full)\)$", RegexOptions.CultureInvariant)]
+    private static partial Regex RadiusStep();
+
+    [GeneratedRegex(@"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]
+    private static partial Regex CssRule();
+
+    [GeneratedRegex(@"(?<![\w-])(?:min-)?(?:width|height)\s*:\s*(?<n>\d*\.?\d+)px\s*(?:!\s*important\s*)?(?:;|$)", RegexOptions.CultureInvariant)]
+    private static partial Regex SizeDeclaration();
+
+    [GeneratedRegex(@"@media[^{]*\((?:min|max)-width\s*:\s*(?<n>\d*\.?\d+)px\)", RegexOptions.CultureInvariant)]
+    private static partial Regex WindowQuery();
 
     [GeneratedRegex(@"(?<![\w-])(?<prop>border-radius|font-size|z-index|(?:padding|margin)(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|gap|row-gap|column-gap)\s*:\s*(?<value>[^;{}]*)", RegexOptions.CultureInvariant)]
     private static partial Regex CssDeclaration();
