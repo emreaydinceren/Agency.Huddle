@@ -73,7 +73,7 @@ public sealed class R3RoomTests
         string css = CssText.AppCss(CssNewlines.AsIs);
         int rule = css.IndexOf("\n.mud-chip.tag-chip {", StringComparison.Ordinal);
 
-        Assert.Contains("tag-chip", chip, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+        Assert.Contains("ChipLook.Tag", chip, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.True(rule >= 0, "app.css has no .mud-chip.tag-chip rule.");
         Assert.Contains("border: 1px solid var(--ink-line);", css[rule..css.IndexOf('}', rule)], StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }

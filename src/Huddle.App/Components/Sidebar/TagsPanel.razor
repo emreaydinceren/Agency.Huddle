@@ -63,7 +63,7 @@ else if (this.loaded)
             @foreach (string tag in this.ownTags)
             {
                 string chosen = tag;
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" OnClick="@(() => this.Open(chosen))">@tag</MudChip>
+                <Chip T="string" Look="ChipLook.Tag" OnClick="@(() => this.Open(chosen))">@tag</Chip>
             }
         </div>
     }

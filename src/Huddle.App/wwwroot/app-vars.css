@@ -76,9 +76,6 @@
     /* The Feed Tab and its filter bar: each default is the look the Feed had before Themes differed. */
     --hu-feed-summary-ink: var(--mud-palette-text-primary);
     --hu-feed-day-rule: var(--ink-line);
-    --hu-feed-live-background: color-mix(in srgb, var(--mud-palette-success) 6%, var(--mud-palette-surface));
-    --hu-feed-live-line: transparent;
-    --hu-feed-live-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
     --hu-feed-note-background: transparent;
     --hu-feed-note-line: transparent;
     --hu-feed-card-hover-shadow: var(--hu-shadow-card);

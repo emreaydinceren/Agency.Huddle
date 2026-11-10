@@ -45,26 +45,17 @@ public sealed class AccentInkCssTests
     }
 
     /// <summary>
-    /// The Live chip's text and fill are set by a rule that can reach the chip: the wrapper carries the page's scope attribute, which
-    /// MudChip's own root does not, so a bare <c>::deep</c> rule on the chip never matched and MudBlazor's success text won.
+    /// The Live chip is a Status chip (Success), so its look comes from the one Status block and the Feed's own rule sets only its place: the
+    /// wrapper carries the page's scope attribute, which MudChip's own root does not, so a bare <c>::deep</c> rule on the chip never matched.
     /// </summary>
     [Fact]
-    public void FeedPageCss_LiveChip_IsReachedThroughAScopedWrapper()
+    public void FeedPageCss_LiveChip_OnlySetsItsPlace_ThroughAScopedWrapper()
     {
         string css = CssText.Read(RepoPaths.App("Components", "Pages", "FeedPage.razor.css"));
 
-        string body = CssText.RuleBodyLoose(css, ".feed-live-wrap ::deep .mud-chip.mud-chip-text.feed-live-chip");
+        string body = CssText.RuleBodyLoose(css, ".feed-live-wrap ::deep .feed-live-chip");
 
-        Assert.Matches(@"(?<![\w-])color:\s*var\(--hu-feed-live-ink\)", body);
-        Assert.Matches(@"(?<![\w-])background:\s*var\(--hu-feed-live-background\)", body);
-    }
-
-    /// <summary>The Live chip's default text is the 70% success mix, in the registry and in the stylesheet fallback.</summary>
-    [Fact]
-    public void LiveChipInk_DefaultsToTheSuccessInkMix()
-    {
-        string vars = CssText.Read(RepoPaths.App("wwwroot", "app-vars.css"));
-
-        Assert.Matches(@"--hu-feed-live-ink:\s*color-mix\(in srgb, var\(--mud-palette-success\) 70%, var\(--mud-palette-text-primary\)\);", vars);
+        Assert.Matches(@"(?<![\w-])margin:\s*0 0 0 8px", body);
+        Assert.DoesNotMatch(@"(?<![\w-])(color|background|border|height):", body);
     }
 }

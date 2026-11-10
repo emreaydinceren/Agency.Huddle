@@ -280,10 +280,10 @@
     color: inherit;
 }
 
-/* The Status and Tag chips share one shape, 22px high with a 6px corner (three quarters of the Theme's 8px). */
+/* The Status and Tag chips share one shape, 24px high with a 6px corner (three quarters of the Theme's 8px). */
 .mud-chip.status-chip {
     box-sizing: border-box;
-    height: 22px;
+    height: 24px;
     padding: 0 8px;
     border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-caption-size);
@@ -331,7 +331,7 @@
 /* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */
 .mud-chip.tag-chip {
     box-sizing: border-box;
-    height: 22px;
+    height: 24px;
     padding: 0 8px;
     border-radius: var(--hu-radius-control);
     font-size: var(--mud-typography-caption-size);
@@ -342,8 +342,8 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 3. Filter: dashed while unset; a Primary border and tint once set. TaskFilterChip draws its own pill
-   (.task-filter-chip); a MudChip that filters wears .filter-chip, and .filter-chip-set when on. */
+/* 3. Filter: dashed while unset; a Primary border and tint once set. Every filter is the one Chip with Look=Filter and wears
+   .filter-chip, and .is-set when on: the toolbar's menu filters, the search scopes, the Feed categories, a pack toggle and a picker cloud. */
 .mud-chip.filter-chip {
     box-sizing: border-box;
     height: 28px;
@@ -356,15 +356,39 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. .is-set is the name the screens use;
-   .filter-chip-set and MudBlazor's own selected state still read the same until each screen moves over. */
+/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. MudBlazor's own selected state reads the same. */
 .mud-chip.filter-chip.is-set,
-.mud-chip.filter-chip.filter-chip-set,
 .mud-chip.filter-chip.mud-chip-selected {
     border: 1px solid var(--mud-palette-primary);
     background-color: var(--hu-selected-background);
     color: var(--hu-accent-ink);
     font-weight: 500;
+}
+
+/* A Filter chip's parts: the menu trigger is the chip's own text with a caret, the value sits a step off the label, and the
+   clear button is a small round control inside the chip's end. */
+.mud-chip.filter-chip .chip-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.mud-chip.filter-chip .chip-value {
+    margin-left: 4px;
+}
+
+.mud-chip.filter-chip .chip-clear {
+    width: 22px;
+    height: 22px;
+    margin: 0 -4px 0 4px;
+    padding: 2px;
 }
 
 /* 4. Count or meta: no chip, plain caption text. */
@@ -834,13 +858,6 @@
     font-size: var(--mud-typography-caption-size);
     line-height: 1.45;
     color: var(--hu-text-subtle);
-}
-
-:root:has([data-hu-surface="paper"]) .task-decision-header .mud-chip {
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
-    font-weight: 600;
-    letter-spacing: 0.02em;
 }
 
 /* ---- composer=underlined: Fluent ------------------------------------------------------------- */

@@ -35,23 +35,23 @@ public sealed class R3SharedComponentsTests
         Assert.Contains("font-size: var(--icon-size-row);", CssText.RuleBody(css, ".picker-row .mud-list-item-icon .mud-icon-root"), StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>A chip of the cloud is the Filter chip: 28px, a dashed Field line and no fill unset, and the Accent border and tint set.</summary>
+    /// <summary>A chip of the cloud is the Filter chip and has no rule of its own: the cloud's selector list and its set rule are gone, so the one Filter block reaches it.</summary>
     [Fact]
-    public void AppCss_ChipCloudChipIsTheFilterChip()
+    public void AppCss_ChipCloudChipHasNoRuleOfItsOwn()
     {
         string css = CssText.AppCss();
 
-        string chip = CssText.RuleBody(css, ".chip-cloud-chip,\n.chip-cloud-all");
-        Assert.Contains("height: 28px;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("border: 1px dashed var(--ink-field);", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("background-color: transparent;", chip, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        string set = CssText.RuleBody(css, ".chip-cloud-chip.is-set");
-        Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.DoesNotContain(".chip-cloud-chip,", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.DoesNotContain(".chip-cloud-chip.is-set", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.DoesNotContain(".chip-cloud-all", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        string filter = CssText.RuleBody(css, ".mud-chip.filter-chip");
+        Assert.Contains("height: 28px;", filter, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border: 1px dashed var(--ink-field);", filter, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("background-color: transparent;", filter, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.DoesNotContain("is-quiet", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>A set chip of the cloud carries exactly the classes the stylesheet's Filter-chip set state keys on; an unset chip carries only the base class.</summary>
+    /// <summary>A set chip of the cloud is the Filter chip in its set state (<c>is-set</c>); an unset chip is the same chip without it.</summary>
     [Fact]
     public async Task ChipCloud_SetChip_WearsTheSetClasses()
     {
@@ -62,7 +62,7 @@ public sealed class R3SharedComponentsTests
             .Add(p => p.Pool, ["a", "b"])
             .Add(p => p.Selected, ["a"]));
 
-        Assert.Equal(["chip-cloud-chip chip-cloud-chip-selected is-set", "chip-cloud-chip"], cut.FindAll("button.chip-cloud-chip").Select(static b => b.ClassName));
+        Assert.Equal([true, false], cut.FindAll(".mud-chip.filter-chip.chip-cloud-chip").Select(static chip => chip.ClassList.Contains("is-set")));
     }
 
     /// <summary>A Compact SearchField wears the global <c>toolbar-compact</c> class, with the caller's own class beside it; otherwise it does not.</summary>

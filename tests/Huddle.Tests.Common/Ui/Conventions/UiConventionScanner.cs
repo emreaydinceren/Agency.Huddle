@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -48,6 +48,7 @@ internal static partial class UiConventionScanner
         "CV9" => Cv9(path, text),
         "CV10" => Cv10(path, text),
         "CV11" => Cv11(path, text),
+        "CV13" => Cv13(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -56,6 +57,15 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv1(string path, string text) =>
         new("CV1", path, CountTags(text, SizedControls, static attrs => !SizeAttribute().IsMatch(attrs)));
+
+    /// <summary>
+    /// CV13: a raw <c>&lt;MudChip&gt;</c> in a component other than <c>Chip.razor</c>. Every chip is the one <c>Chip</c> component, so one
+    /// stylesheet block per look reaches all of them (rule-reduction D12); a <c>MudChipSet</c> is not a chip and is not counted.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv13(string path, string text) =>
+        new("CV13", path, path.EndsWith("/Chip.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudChip"], static _ => true));
 
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>

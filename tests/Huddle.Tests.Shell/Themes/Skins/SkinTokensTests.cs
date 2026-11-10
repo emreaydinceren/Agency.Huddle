@@ -162,9 +162,6 @@ public sealed class SkinTokensTests
         Add("ring", Surface);
         Add("feed.summary.ink", "var(--mud-palette-text-primary)");
         Add("feed.day.rule", "var(--ink-line)");
-        Add("feed.live.background", Mix("success", 6, Surface));
-        Add("feed.live.line", "transparent");
-        Add("feed.live.ink", Mix("success", 70, "var(--mud-palette-text-primary)"));
         Add("feed.note.background", "transparent");
         Add("feed.note.line", "transparent");
         Add("feed.card.hover.shadow", "var(--hu-shadow-card)");

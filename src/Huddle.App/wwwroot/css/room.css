@@ -540,6 +540,10 @@
     color: var(--mud-palette-text-primary);
 }
 
+.upload-chip-failed {
+    border-color: var(--mud-palette-error);
+}
+
 .upload-chip-name {
     overflow: hidden;
     text-overflow: ellipsis;

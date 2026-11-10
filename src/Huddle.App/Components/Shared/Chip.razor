@@ -1,0 +1,119 @@
+@*
+    The one chip (design-system "Chips"; rule-reduction D12). Every chip in the app is this component, so every chip is one MudChip with
+    one DOM shape and one CSS block per look reaches all of them: Status (a tinted state), Tag (a quiet label) and Filter (a choice).
+    It is built on MudChip because several callers live in a MudChipSet (the Feed's categories, the search scopes, the blocker and tag
+    lists) and the set only selects and closes MudChips; a Filter chip's menu and clear button sit inside it as content. A raw MudChip
+    anywhere else fails the convention scan.
+*@
+@typeparam T
+
+<MudChip T="T" Size="Size.Small" Variant="@(this.Look == ChipLook.Filter ? Variant.Outlined : Variant.Text)" Icon="@this.Icon" Value="@this.Value"
+         Text="@this.Text" Disabled="@this.Disabled" OnClick="@this.OnClick" OnClose="@this.OnClose" AvatarContent="@this.AvatarContent"
+         Class="@this.CssClass" @attributes="this.AdditionalAttributes">
+    @if (this.MenuContent is not null)
+    {
+        <MudMenu Dense="true" Class="chip-menu">
+            <ActivatorContent Context="menuContext">
+                <button type="button" class="chip-trigger" aria-haspopup="menu" aria-label="@this.TriggerLabel" @onclick="menuContext.ToggleAsync">
+                    @this.ChildContent
+                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+                </button>
+            </ActivatorContent>
+            <ChildContent>
+                @this.MenuContent
+            </ChildContent>
+        </MudMenu>
+    }
+    else if (this.ChildContent is not null)
+    {
+        @this.ChildContent
+    }
+    else
+    {
+        @this.Text
+    }
+    @if (this.IsSet && this.OnClear.HasDelegate)
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="@(() => this.OnClear.InvokeAsync())" Class="chip-clear" aria-label="@this.ClearLabel" />
+    }
+</MudChip>
+
+@code {
+    /// <summary>Which of the three looks to draw.</summary>
+    [Parameter]
+    public ChipLook Look { get; set; } = ChipLook.Tag;
+
+    /// <summary>The MudBlazor colour family a Status chip tints with (<c>TaskColors</c> maps a state or priority to one); ignored by the other looks.</summary>
+    [Parameter]
+    public Color Color { get; set; } = Color.Default;
+
+    /// <summary>The leading icon; a Status chip should always have one so colour is never the only signal.</summary>
+    [Parameter]
+    public string? Icon { get; set; }
+
+    /// <summary>For a Filter chip: whether a choice is made, which fills it with the Accent tint.</summary>
+    [Parameter]
+    public bool IsSet { get; set; }
+
+    /// <summary>The chip's value, for a chip inside a <c>MudChipSet</c> or one that raises <see cref="OnClose"/>.</summary>
+    [Parameter]
+    public T? Value { get; set; }
+
+    /// <summary>The chip's words when it has no <see cref="ChildContent"/>.</summary>
+    [Parameter]
+    public string? Text { get; set; }
+
+    /// <summary>Whether the chip answers the pointer and the keyboard.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Raised when the chip is pressed; its presence makes the chip a button.</summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>Raised by the chip's own close button, which MudBlazor draws when this has a handler (or the enclosing set is <c>AllClosable</c>).</summary>
+    [Parameter]
+    public EventCallback<global::MudBlazor.MudChip<T>> OnClose { get; set; }
+
+    /// <summary>For a Filter chip: raised by its clear button, which is drawn only once the chip <see cref="IsSet"/> and this has a handler.</summary>
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+
+    /// <summary>The clear button's accessible name.</summary>
+    [Parameter]
+    public string? ClearLabel { get; set; }
+
+    /// <summary>For a Filter chip: the menu's items. When set, the <see cref="ChildContent"/> becomes the menu's trigger, with a caret.</summary>
+    [Parameter]
+    public RenderFragment? MenuContent { get; set; }
+
+    /// <summary>The menu trigger's accessible name.</summary>
+    [Parameter]
+    public string? TriggerLabel { get; set; }
+
+    /// <summary>Content drawn before the words in place of an icon, such as a spinner.</summary>
+    [Parameter]
+    public RenderFragment? AvatarContent { get; set; }
+
+    /// <summary>The chip's words.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Extra classes, so a caller can name its chip.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Everything else (<c>aria-label</c>, <c>role</c>, <c>aria-pressed</c>, <c>title</c>) goes to the chip's root.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The chip's classes: the look's, then the caller's.</summary>
+    private string CssClass => $"{this.LookClass} {this.Class}".TrimEnd();
+
+    private string LookClass => this.Look switch
+    {
+        ChipLook.Status => $"status-chip status-chip-{this.Color.ToString().ToLowerInvariant()}",
+        ChipLook.Filter => this.IsSet ? "filter-chip is-set" : "filter-chip",
+        _ => "tag-chip",
+    };
+}

@@ -1035,10 +1035,10 @@ public sealed class BuildTeamTests
 
         IElement chip = cut.Find(".build-team-role-type-chip");
         Assert.Equal("Team type filter: Books", chip.GetAttribute("aria-label"));
-        Assert.Equal("Team type filter: Books", cut.Find(".build-team-role-type-filter .chip-cloud").FirstElementChild?.GetAttribute("aria-label"));
+        Assert.Equal("Team type filter: Books", cut.Find(".build-team-role-type-filter .chip-cloud .filter-chip").GetAttribute("aria-label"));
         Assert.Equal(["Type 01", "Type 02", "Solo"], CloudTypeNames(cut));
-        Assert.Empty(chip.QuerySelectorAll(".task-filter-chip-menu, .mud-button-icon-end"));
-        Assert.Equal("Books", chip.QuerySelector(".task-filter-chip-value")?.TextContent.Trim());
+        Assert.Empty(chip.QuerySelectorAll(".chip-menu, .chip-trigger"));
+        Assert.Equal("Books", chip.QuerySelector(".chip-value")?.TextContent.Trim());
         Assert.Equal(["Bookkeeper"], RoleNames(cut));
         Assert.Single(cut.FindAll("[aria-label='Add a custom role']"));
         Assert.Empty(cut.FindAll(".build-team-role-type-empty"));

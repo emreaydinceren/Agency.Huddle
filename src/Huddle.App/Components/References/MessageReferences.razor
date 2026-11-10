@@ -11,12 +11,12 @@
             @if (chip.Gone)
             {
                 <span class="message-reference-gone-wrap" title="@chip.Tooltip">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Disabled="true" Class="tag-chip message-reference-gone">@chip.Text</MudChip>
+                    <Chip T="string" Look="ChipLook.Tag" Disabled="true" Class="message-reference-gone">@chip.Text</Chip>
                 </span>
             }
             else
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip message-reference-changed"><a href="@chip.Href" title="@chip.Tooltip">@chip.Text</a></MudChip>
+                <Chip T="string" Look="ChipLook.Tag" Class="message-reference-changed"><a href="@chip.Href" title="@chip.Tooltip">@chip.Text</a></Chip>
             }
         }
     </div>

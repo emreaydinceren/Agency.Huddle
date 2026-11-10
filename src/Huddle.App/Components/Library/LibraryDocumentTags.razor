@@ -7,7 +7,7 @@
     <div class="library-document-tags" aria-label="Tags">
         @foreach (string tag in this.Tags)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip library-document-tag">@tag</MudChip>
+            <Chip T="string" Look="ChipLook.Tag" Class="library-document-tag">@tag</Chip>
         }
     </div>
 }

@@ -428,7 +428,7 @@
                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-3">
                     @foreach (var missing in this.MissingSkillNames)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="status-chip status-chip-warning" Icon="@Icons.Material.Filled.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                        <Chip T="string" Look="ChipLook.Status" Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</Chip>
                     }
                 </MudStack>
             }
@@ -457,9 +457,8 @@
                         else if (state != Agency.Huddle.SkillPacks.Resolving.ItemState.NotDownloaded || active)
                         {
                             <MudTooltip Text="@(state == Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated ? $"Deprecated: {this.ReasonOf(entry)}" : null)" ShowOnFocus="true">
-                                <MudChip T="string" Size="Size.Small" Class="@(active ? "agent-profile-card-pack filter-chip filter-chip-set" : "agent-profile-card-pack filter-chip")"
-                                         Variant="Variant.Outlined" aria-pressed="@(active ? "true" : "false")"
-                                         Icon="@PackIcon(state)" OnClick="@(() => this.TogglePack(entry))">@entry.Title</MudChip>
+                                <Chip T="string" Look="ChipLook.Filter" IsSet="@active" Class="agent-profile-card-pack" aria-pressed="@(active ? "true" : "false")"
+                                      Icon="@PackIcon(state)" OnClick="@(() => this.TogglePack(entry))">@entry.Title</Chip>
                             </MudTooltip>
                             @if (state == Agency.Huddle.SkillPacks.Resolving.ItemState.UpdateAvailable)
                             {

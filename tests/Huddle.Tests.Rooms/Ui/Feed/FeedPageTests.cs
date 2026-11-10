@@ -102,6 +102,7 @@ public sealed partial class FeedPageTests
         Assert.Equal("Feed", Text(cut.Find("h1")));
         Assert.Equal("What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.", Text(cut.Find(".page-header-subtitle")));
         Assert.Equal("Live", Text(cut.Find(".feed-live-chip")));
+        Assert.Contains("status-chip-success", cut.Find(".feed-live-chip").ClassList);
         Assert.Equal("Read-only — the Feed never changes the work and never shows message text.", Text(cut.Find(".feed-readonly-text")));
     }
 
@@ -177,8 +178,8 @@ public sealed partial class FeedPageTests
         TabPageContext page = OpenFeedTab(ctx, "/feed?category=tasks&agent=Nova");
         IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "tasks", agent: "Nova", page: page);
 
-        Assert.Equal("Agent: Nova", Text(cut.Find(".feed-agent-chip .task-filter-chip-button")));
-        await cut.Find(".feed-agent-chip .task-filter-chip-clear").ClickAsync(new());
+        Assert.Equal("Agent: Nova", Text(cut.Find(".feed-agent-chip .mud-chip-content > span")));
+        await cut.Find(".feed-agent-chip .chip-clear").ClickAsync(new());
 
         Assert.Equal("/feed?category=tasks", ctx.Services.GetRequiredService<TabService>().Active!.Url);
     }

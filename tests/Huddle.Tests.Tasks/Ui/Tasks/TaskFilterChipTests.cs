@@ -18,15 +18,15 @@ public sealed class TaskFilterChipTests
 
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder => Chip(builder, noMenu: false));
 
-        Assert.NotEmpty(cut.FindAll(".task-filter-chip-menu"));
-        Assert.NotEmpty(cut.FindAll(".task-filter-chip .mud-button-icon-end"));
-        Assert.Equal("Team type filter: Books", cut.Find(".task-filter-chip-button").GetAttribute("aria-label"));
-        Assert.Null(cut.Find(".task-filter-chip").GetAttribute("role"));
+        Assert.NotEmpty(cut.FindAll(".chip-menu"));
+        Assert.NotEmpty(cut.FindAll(".filter-chip .chip-trigger .mud-icon-root"));
+        Assert.Equal("Team type filter: Books", cut.Find(".chip-trigger").GetAttribute("aria-label"));
+        Assert.Null(cut.Find(".filter-chip").GetAttribute("role"));
     }
 
     /// <summary>
-    /// With <c>NoMenu</c> the same pill is drawn with no caret and no menu, its choices are not drawn, its text button is out of the tab
-    /// order and hidden from assistive technology (the group around it names the filter), and its look is the set chip's.
+    /// With <c>NoMenu</c> the same pill is drawn with no caret and no menu, its choices are not drawn, its text is hidden from assistive
+    /// technology (the group around it names the filter), and its look is the set Filter chip's.
     /// </summary>
     [Fact]
     public async Task Render_NoMenu_DrawsThePillWithoutACaretOrAMenu()
@@ -35,18 +35,17 @@ public sealed class TaskFilterChipTests
 
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder => Chip(builder, noMenu: true));
 
-        IElement chip = cut.Find(".task-filter-chip");
-        Assert.Contains("task-filter-chip-set", chip.ClassList);
+        IElement chip = cut.Find(".filter-chip");
+        Assert.Contains("is-set", chip.ClassList);
         Assert.Equal("group", chip.GetAttribute("role"));
         Assert.Equal("Team type filter: Books", chip.GetAttribute("aria-label"));
-        Assert.Empty(cut.FindAll(".task-filter-chip-menu"));
-        Assert.Empty(cut.FindAll(".mud-button-icon-end"));
+        Assert.Empty(cut.FindAll(".chip-menu"));
+        Assert.Empty(cut.FindAll(".chip-trigger"));
         Assert.Empty(cut.FindAll(".choice"));
-        IElement label = cut.Find(".task-filter-chip-button");
-        Assert.Equal("-1", label.GetAttribute("tabindex"));
+        IElement label = cut.Find(".mud-chip-content > span[aria-hidden]");
         Assert.Equal("true", label.GetAttribute("aria-hidden"));
         Assert.Equal("Team type:", label.TextContent.Replace("Books", string.Empty, StringComparison.Ordinal).Trim());
-        Assert.Equal("Books", cut.Find(".task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Books", cut.Find(".chip-value").TextContent.Trim());
     }
 
     /// <summary>The menu-less pill keeps its clear button, which raises <c>OnClear</c>.</summary>

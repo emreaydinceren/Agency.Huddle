@@ -4,18 +4,9 @@
     margin-inline: auto;
 }
 
-/*
- * The wrapper carries this component's scope attribute: MudChip's own root does not, so a bare ::deep rule on the chip
- * never matched and MudBlazor's success text and fill won. Three classes also outrank .mud-chip-text.mud-chip-color-success.
- */
-.feed-live-wrap ::deep .mud-chip.mud-chip-text.feed-live-chip {
-    height: 20px;
+/* The Live chip is a Status chip (Success). The wrapper carries this component's scope attribute, which MudChip's own root does not, and sets only the chip's place. */
+.feed-live-wrap ::deep .feed-live-chip {
     margin: 0 0 0 8px;
-    background: var(--hu-feed-live-background);
-    border: 1px solid var(--hu-feed-live-line);
-    color: var(--hu-feed-live-ink);
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 500;
 }
 
 .feed-live-dot {
