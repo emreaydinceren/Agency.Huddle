@@ -208,7 +208,7 @@ public sealed class TeamTasksTabTests
         Assert.Contains("mud-button-filled-size-small", header.Children[^1].ClassList);
         AngleSharp.Dom.IElement filters = rig.Tab.Find(".task-toolbar");
         Assert.Contains("task-toolbar-filter", filters.Children[0].ClassList);
-        Assert.Contains("task-toolbar-group", filters.Children[^1].ClassList);
+        Assert.NotNull(filters.Children[^1].QuerySelector(".task-toolbar-group")); // the chip sits in MudBlazor's display: contents container
         Assert.Empty(rig.Tab.FindAll(".task-toolbar button[class*='-size-medium'], .task-toolbar-header button[class*='-size-medium']"));
     }
 

@@ -84,31 +84,6 @@
     overflow-y: auto;
 }
 
-/* A chip of the cloud is the Filter chip (design-system "Chips"): 28px, a pill, a dashed Field line and no
-   fill while unset; the Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It repeats
-   .mud-chip.filter-chip (the global rule) for a native button, which that rule's .mud-chip cannot reach. */
-.chip-cloud-chip,
-.chip-cloud-all {
-    box-sizing: border-box;
-    height: 28px;
-    padding: 0 12px;
-    font: inherit;
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 400;
-    color: var(--mud-palette-text-primary);
-    background-color: transparent;
-    border: 1px dashed var(--ink-field);
-    border-radius: 999px;
-    cursor: pointer;
-}
-
-.chip-cloud-chip.is-set {
-    font-weight: 500;
-    border: 1px solid var(--mud-palette-primary);
-    background-color: var(--hu-selected-background);
-    color: var(--hu-accent-ink);
-}
-
 .chip-cloud-close {
     margin-left: 4px;
     font-weight: 600;

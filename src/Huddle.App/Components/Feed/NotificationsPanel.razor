@@ -26,14 +26,14 @@
                     SelectedValueChanged="this.OnCategoryChanged">
             @foreach (FeedCategory entry in FeedCategories.Order)
             {
-                <MudChip T="FeedCategory"
-                         Value="@entry"
-                         Size="Size.Small"
-                         Variant="Variant.Outlined"
-                         role="radio"
-                         aria-checked="@(entry == this.category ? "true" : "false")">
+                <Chip T="FeedCategory"
+                      Look="ChipLook.Filter"
+                      Value="@entry"
+                      IsSet="@(entry == this.category)"
+                      role="radio"
+                      aria-checked="@(entry == this.category ? "true" : "false")">
                     <span>@FeedCategories.Label(entry)</span> <span class="feed-category-count">@FeedCategories.CountOf(this.counts, entry)</span>
-                </MudChip>
+                </Chip>
             }
         </MudChipSet>
     </div>

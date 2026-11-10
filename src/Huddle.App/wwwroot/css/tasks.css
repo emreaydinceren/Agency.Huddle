@@ -1154,7 +1154,7 @@
 }
 
 /* Group by ends the filter row, pushed to its right edge, with no trailing chip gap so it lines up with the row's end. */
-.task-toolbar .task-filter-chip.task-toolbar-group {
+.task-toolbar .mud-chip.filter-chip.task-toolbar-group {
     margin-left: auto;
     margin-right: 0;
 }
@@ -1211,38 +1211,6 @@
     padding: 16px;
 }
 
-/* The toolbar's filter chip is the Filter chip (design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
-   Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
-   gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
-.task-filter-chip {
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    flex: none;
-    height: 28px;
-    margin-right: 8px;
-    border: 1px solid var(--ink-field);
-    border-radius: 999px;
-    background-color: transparent;
-}
-
-.task-filter-chip-unset {
-    border-style: dashed;
-}
-
-.task-filter-chip .task-filter-chip-button {
-    height: 100%;
-    min-height: 0;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 999px;
-    background-color: transparent;
-    text-transform: none;
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 400;
-    color: var(--mud-palette-text-primary);
-}
-
 /* Both toolbar rows are one height: the controls are 28px boxes, so the row reads level. Not the switch's thumb
    (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
    5px above the track's centre. */
@@ -1269,12 +1237,6 @@
     justify-content: center;
 }
 
-/* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
-.task-filter-chip .task-filter-chip-static {
-    pointer-events: none;
-    cursor: default;
-}
-
 .task-toolbar-filter-state-group .mud-list-item-text {
     font-weight: 600;
 }
@@ -1290,17 +1252,6 @@
 
 .mud-menu-item.task-status-sub {
     padding-left: 32px;
-}
-
-.task-filter-chip .task-filter-chip-value {
-    margin-left: 4px;
-}
-
-.task-filter-chip .task-filter-chip-clear {
-    width: 22px;
-    height: 22px;
-    margin-right: 2px;
-    padding: 2px;
 }
 
 /* The filter row wraps when its chips overflow; the row gap keeps a wrapped line clear of the one above. */
@@ -1325,20 +1276,9 @@
     margin-right: 8px;
 }
 
-/* A set chip. Unset chips are dashed on a hairline or paper surface and solid on a flat one (the mockups). */
-.task-filter-chip-set {
-    border-color: var(--mud-palette-primary);
-    background-color: var(--hu-selected-background);
-}
-
-.task-filter-chip-set .task-filter-chip-button {
-    font-weight: 500;
-    color: var(--hu-accent-ink);
-}
-
 /* ---- surface=flat: Cobalt Soft --------------------------------------------------------------- */
-:root:has([data-hu-surface="flat"]) .task-filter-chip-unset,
-:root:has([data-hu-surface="card"]) .task-filter-chip-unset {
+:root:has([data-hu-surface="flat"]) .mud-chip.filter-chip:not(.is-set),
+:root:has([data-hu-surface="card"]) .mud-chip.filter-chip:not(.is-set) {
     border-style: solid;
     border-color: var(--hu-line-control);
 }
@@ -1419,7 +1359,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-:root:has([data-hu-surface="paper"]) .mud-chip.filter-chip.filter-chip-set {
+:root:has([data-hu-surface="paper"]) .mud-chip.filter-chip.is-set {
     border-style: solid;
     border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
     background: var(--hu-tone-primary-tint);
@@ -1595,7 +1535,6 @@
 
 /* ---- status=pill: Nordic --------------------------------------------------------------------- */
 :root:has([data-hu-status="pill"]) .mud-chip.status-chip {
-    height: 22px;
     padding: 0 8px;
     border-radius: 999px;
     gap: 4px;
@@ -1637,7 +1576,6 @@
 /* -- status=pill: tags are small rectangles on the sunk ground ------------------------------------------------- */
 :root:has([data-hu-status="pill"]) .mud-chip.tag-chip,
 :root:has([data-hu-status="pill"]) .task-tag {
-    height: 20px;
     padding: 0 8px;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
     font-size: var(--mud-typography-caption-size);
@@ -1699,10 +1637,4 @@
     transform: rotate(2.2deg);
     box-shadow: var(--hu-shadow-panel);
     border-color: var(--mud-palette-primary);
-}
-
-/* A toolbar filter chip draws its own pill (transparent, so the page shows through), so the skins' raised ground for an outlined button
-   must not fill the button inside it. Last in the sheet so it wins the tie with those rules. */
-:root:has([data-hu-surface]) .task-filter-chip .task-filter-chip-button.mud-button-outlined:not(:hover) {
-    background: transparent;
 }

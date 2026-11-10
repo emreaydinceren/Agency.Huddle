@@ -90,7 +90,7 @@ else if (this.loaded is { } task)
             <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.MoveToInbox" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</StatusChip>
             @if (TaskDetail.RequestTriageText(request.Triage, task.Status) is { } triageText)
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip task-detail-request-triage">@triageText</MudChip>
+                <Chip T="string" Look="ChipLook.Tag" Class="task-detail-request-triage">@triageText</Chip>
             }
             @if (!string.IsNullOrEmpty(request.Requester))
             {

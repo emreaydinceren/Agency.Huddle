@@ -234,7 +234,7 @@ else if (this.loaded is { } task)
                     <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.MoveToInbox" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</StatusChip>
                     @if (RequestTriageText(request.Triage, task.Status) is { } triageText)
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip task-detail-request-triage">@triageText</MudChip>
+                        <Chip T="string" Look="ChipLook.Tag" Class="task-detail-request-triage">@triageText</Chip>
                     }
                     @if (!string.IsNullOrEmpty(request.Requester))
                     {
@@ -399,9 +399,9 @@ else if (this.loaded is { } task)
                                     @foreach (TaskId blockerId in effective.BlockedBy)
                                     {
                                         TaskItem? blockerTask = this.Store.Get(blockerId);
-                                        <MudChip T="TaskId" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                                        <Chip T="TaskId" Look="ChipLook.Tag" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
                                             @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
-                                        </MudChip>
+                                        </Chip>
                                     }
                                 </MudChipSet>
                                 <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Placeholder="Add blocker…" Class="task-detail-blocked-by-add" />
@@ -418,7 +418,7 @@ else if (this.loaded is { } task)
                                 <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
                                     @foreach (string tag in effective.Tags)
                                     {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+                                        <Chip T="string" Look="ChipLook.Tag" Value="@tag" OnClose="this.OnRemoveTag">@tag</Chip>
                                     }
                                 </MudChipSet>
                                 <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"

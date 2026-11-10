@@ -248,4 +248,31 @@ public sealed class UiConventionScannerTests
 
         Assert.Equal(0, UiConventionScanner.Cv11(CssPath, source).Count);
     }
+
+    /// <summary>CV13: a raw <c>MudChip</c> is counted wherever it is written, but not a <c>MudChipSet</c>, a <c>Chip</c> or the generic type name in code.</summary>
+    [Fact]
+    public void Cv13_RawMudChip_IsCounted()
+    {
+        const string source = """
+            <MudChipSet T="string"><MudChip T="string" Size="Size.Small">a</MudChip></MudChipSet>
+            <Chip T="string" Look="ChipLook.Tag">b</Chip>
+            <MudChip T="TaskId" Size="Size.Small" Value="x" />
+            @code { private void Close(MudChip<string> chip) { } }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv13(RazorPath, source);
+
+        Assert.Equal("CV13", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV13: the one <c>Chip</c> component is the only file allowed to draw a <c>MudChip</c>.</summary>
+    [Fact]
+    public void Cv13_ChipRazor_IsExempt()
+    {
+        const string source = """<MudChip T="T" Size="Size.Small">@this.ChildContent</MudChip>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv13("src/Huddle.App/Components/Shared/Chip.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv13("src/Huddle.App/Components/Shared/StatusChip.razor", source).Count);
+    }
 }

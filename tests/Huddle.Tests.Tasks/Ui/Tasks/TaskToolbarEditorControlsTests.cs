@@ -232,7 +232,7 @@ public sealed class TaskToolbarEditorControlsTests
     /// <summary>Opens the toolbar's Group by chip menu.</summary>
     /// <param name="root">The rendered toolbar host.</param>
     private static Task OpenGroupByAsync(IRenderedComponent<ContainerFragment> root) =>
-        root.InvokeAsync(() => root.Find(".task-toolbar-group .task-filter-chip-button").ClickAsync());
+        root.InvokeAsync(() => root.Find(".task-toolbar-group .chip-trigger").ClickAsync());
 
     /// <summary>The Group by choices the open menu offers, after None.</summary>
     /// <param name="root">The rendered toolbar host.</param>

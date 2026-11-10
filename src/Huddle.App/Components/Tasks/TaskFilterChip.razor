@@ -5,35 +5,20 @@
     share the one look: dashed while unset, filled once set.
 *@
 
-<span class="@this.CssClass" role="@(this.NoMenu ? "group" : null)" aria-label="@(this.NoMenu ? $"{this.Label} filter: {this.Value}" : null)">
+<Chip T="string" Look="ChipLook.Filter" IsSet="@this.IsSet" Class="@this.Class"
+      role="@(this.NoMenu ? "group" : null)" aria-label="@(this.NoMenu ? $"{this.Label} filter: {this.Value}" : null)"
+      MenuContent="@(this.NoMenu ? null : this.ChildContent)" TriggerLabel="@($"{this.Label} filter: {this.Value}")"
+      OnClear="@this.OnClear" ClearLabel="@($"Clear {this.Label} filter")">
     @if (this.NoMenu)
     {
-        @* The same pill without the caret or the menu: the text is drawn by the same button so it looks identical, but it does
-           nothing, so it is out of the tab order and hidden from assistive technology, whose group above carries the text. *@
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="task-filter-chip-button task-filter-chip-static" tabindex="-1" aria-hidden="true">
-            @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
-        </MudButton>
+        @* The same chip without the caret or the menu: nothing here is pressable, so the text is hidden from assistive technology, whose group above carries it. *@
+        <span aria-hidden="true">@this.Label: <strong class="chip-value">@this.Value</strong></span>
     }
     else
     {
-        <MudMenu Dense="true" Class="task-filter-chip-menu">
-            <ActivatorContent Context="menuContext">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" OnClick="menuContext.ToggleAsync"
-                           Class="task-filter-chip-button" aria-label="@($"{this.Label} filter: {this.Value}")">
-                    @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
-                </MudButton>
-            </ActivatorContent>
-            <ChildContent>
-                @this.ChildContent
-            </ChildContent>
-        </MudMenu>
+        <span>@this.Label: <strong class="chip-value">@this.Value</strong></span>
     }
-    @if (this.IsSet)
-    {
-        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="this.OnClear" Class="task-filter-chip-clear"
-                       aria-label="@($"Clear {this.Label} filter")" />
-    }
-</span>
+</Chip>
 
 @code {
     /// <summary>The filter's name, shown before the colon.</summary>
@@ -68,8 +53,4 @@
     /// <summary>Extra classes for the chip's wrapper, so a caller can name it.</summary>
     [Parameter]
     public string? Class { get; set; }
-
-    private string CssClass => this.IsSet
-        ? $"task-filter-chip filter-chip is-set task-filter-chip-set {this.Class}"
-        : $"task-filter-chip filter-chip task-filter-chip-unset {this.Class}";
 }

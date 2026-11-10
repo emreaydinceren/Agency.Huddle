@@ -174,10 +174,10 @@
     }
 
     @* Ad hoc like the filters in the Filter menu: toggles the effective View's Requests-only filter. *@
-    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="@(this.EffectiveView.Filter.RequestsOnly ? "task-toolbar-requests filter-chip filter-chip-set" : "task-toolbar-requests filter-chip")"
-             Icon="@(this.EffectiveView.Filter.RequestsOnly ? Icons.Material.Filled.Check : null)"
-             aria-pressed="@(this.EffectiveView.Filter.RequestsOnly ? "true" : "false")"
-             OnClick="this.OnRequestsToggledAsync">Requests</MudChip>
+    <Chip T="string" Look="ChipLook.Filter" IsSet="@this.EffectiveView.Filter.RequestsOnly" Class="task-toolbar-requests"
+          Icon="@(this.EffectiveView.Filter.RequestsOnly ? Icons.Material.Filled.Check : null)"
+          aria-pressed="@(this.EffectiveView.Filter.RequestsOnly ? "true" : "false")"
+          OnClick="this.OnRequestsToggledAsync">Requests</Chip>
 
     <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" Compact="true" Class="task-toolbar-search" />
 

@@ -13,7 +13,7 @@
 
 <div class="task-decision-card">
     <div class="task-decision-header">
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Text="@HumanGateCopy.DecisionChip" />
+        <Chip T="string" Look="ChipLook.Status" Color="Color.Warning" Text="@HumanGateCopy.DecisionChip" />
     </div>
     <div class="task-decision-first-line">@this.FirstLine</div>
     <div class="task-decision-accept-sentence">@HumanGateCopy.AcceptSentence(this.AssigneeName, this.Task.Action)</div>

@@ -48,7 +48,7 @@
                             case NotePropertyKind.List or NotePropertyKind.Aliases or NotePropertyKind.Tags:
                                 @foreach (string item in this.ChipItems(property))
                                 {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip library-properties-chip">@this.Linked(NotePropertyText.Prepare(item))</MudChip>
+                                    <Chip T="string" Look="ChipLook.Tag" Class="library-properties-chip">@this.Linked(NotePropertyText.Prepare(item))</Chip>
                                 }
 
                                 @if (this.UsesRawFallback(property))

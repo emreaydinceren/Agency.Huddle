@@ -574,18 +574,6 @@
           "type": "string",
           "description": "The rule after a Feed day heading."
         },
-        "feed.live.background": {
-          "type": "string",
-          "description": "The Live chip\u0027s fill."
-        },
-        "feed.live.line": {
-          "type": "string",
-          "description": "The Live chip\u0027s outline."
-        },
-        "feed.live.ink": {
-          "type": "string",
-          "description": "The Live chip\u0027s text."
-        },
         "feed.note.background": {
           "type": "string",
           "description": "The Feed\u0027s read-only note fill."

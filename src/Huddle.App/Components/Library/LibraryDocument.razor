@@ -40,7 +40,7 @@
         @* Archived: read through the fallback from an old Teams path, or opened in the Archive root itself (SB-R20). *@
         @if (this.Path.Archived || this.Path.Root.Kind == LibraryRootKind.Archive)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Inventory2" Class="library-document-archived">Archived</MudChip>
+            <Chip T="string" Look="ChipLook.Tag" Icon="@Icons.Material.Filled.Inventory2" Class="library-document-archived">Archived</Chip>
         }
         <MudSpacer />
         @if (this.mode != LibraryMode.Read && this.content is { Kind: LibraryFileKind.Markdown, Editable: true })

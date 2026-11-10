@@ -68,7 +68,7 @@ public sealed partial class TypeScaleTests
         Assert.All(ThemeCatalog.BuiltIn, descriptor => Assert.Equal(lineHeight, TypeScaleTests.RoleOf(descriptor.Theme.Typography, role).LineHeight));
     }
 
-    /// <summary>The Status and Tag chips share one shape: 22px high, a 6px corner, 0 8px padding, 12px text at 500.</summary>
+    /// <summary>The Status and Tag chips share one shape: 24px high, a 6px corner, 0 8px padding, 12px text at 500.</summary>
     /// <param name="selector">The chip rule to inspect.</param>
     [Theory]
     [InlineData(".mud-chip.status-chip {")]
@@ -81,7 +81,7 @@ public sealed partial class TypeScaleTests
 
         string body = css[rule..css.IndexOf('}', rule)];
 
-        Assert.Contains("height: 22px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("height: 24px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("padding: 0 8px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
