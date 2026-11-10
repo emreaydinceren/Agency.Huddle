@@ -22,8 +22,8 @@
   "palette": {
     "background": "#ffffff",
     "surface": "#ffffff",
-    "drawerBackground": "#fafafa",
-    "backgroundGray": "#f4f4f5",
+    "drawerBackground": "#ffffff",
+    "backgroundGray": "#f0f0f2",
     "tableHover": "#f3f3f5",
     "divider": "#d2d2da",
     "dividerLight": "#e7e7eb",
@@ -61,7 +61,6 @@
     "gate.radius": "8px",
     "gate.padding": "12px 14px",
     "toolbar.line": "ref(line.region)",
-    "list.row.hover": "ref(ground.sidebar)",
     "list.group.background": "ref(ink.wash)",
     "selected.task.background": "ref(current.background)",
     "list.needs.background": "ref(tone.primary.soft)",
@@ -76,7 +75,7 @@
     "feed.live.line": "ref(ink.line)",
     "feed.live.ink": "ref(text.subtle)",
     "feed.card.hover.fill": "mix(ref(hover) 55%, palette.surface)",
-    "ink.strip": "palette.drawerBackground",
+    "ink.strip": "palette.background",
     "ink.wash": "palette.backgroundGray",
     "ink.line": "palette.dividerLight",
     "ink.field": "palette.linesInputs",
@@ -88,7 +87,7 @@
     "line.control": "palette.linesInputs",
     "hover": "palette.tableHover",
     "accent.ink": "palette.primaryDarken",
-    "current.background": "mix(palette.dividerLight 82%, palette.background)",
+    "current.background": "#e5e5ea",
     "current.background.hover": "ref(current.background)",
     "selected.background": "ref(tone.primary.soft)",
     "selected.background.hover": "mix(palette.primary 14%, palette.background)",
@@ -115,7 +114,7 @@
     "message.line-height": "1.45",
     "send.bg": "palette.primary",
     "send.fg": "palette.primaryContrastText",
-    "ring": "palette.background"
+    "ring": "ref(ground.page)"
   },
   "traits": {
     "message": "row",

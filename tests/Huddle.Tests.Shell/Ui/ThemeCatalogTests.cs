@@ -74,7 +74,7 @@ public sealed class ThemeCatalogTests
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
         Assert.Equal("#8379D8", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
-        Assert.Equal("#0B0B0F", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
+        Assert.Equal("#08080B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
     }
 
     /// <summary>
@@ -379,7 +379,7 @@ public sealed class ThemeCatalogTests
         Assert.Equal("#ffffff", light.Surface.ToString(MudColorOutputFormats.Hex));
         Assert.Equal("#f6f6f1", light.Background.ToString(MudColorOutputFormats.Hex));
         Assert.Equal("#1c2125", dark.Surface.ToString(MudColorOutputFormats.Hex));
-        Assert.Equal("#161a1d", dark.Background.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#14181a", dark.Background.ToString(MudColorOutputFormats.Hex));
     }
 
     /// <summary>The picker order is the eight ids left after P5-D4: Lumen, Fluent, Nordic and Cobalt Soft, each light then dark.</summary>

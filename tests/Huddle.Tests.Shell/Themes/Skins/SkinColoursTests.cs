@@ -40,7 +40,7 @@ public sealed class SkinColoursTests
 
         Assert.Equal("#e7e7eb", lumen.Token("ink.line")?.Hex);
         Assert.Equal(lumen.Token("line.region"), lumen.Token("ink.line"));
-        Assert.Equal("#f4f4f5", lumen.Token("ink.wash")?.Hex);
+        Assert.Equal("#f0f0f2", lumen.Token("ink.wash")?.Hex);
         Assert.Equal(0.0, lumen.Difference("ink.line", "line.region"));
         Assert.True(lumen.Difference("ink.line", "ink.field") > 2);
     }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Agency.Huddle.App.Themes;
 using MudBlazor.Utilities;
 
@@ -15,6 +16,13 @@ public sealed class SkinColourRulesTests
 
     /// <summary>The faintest contrast against Surface at which a Line still outlines a card (the darkest Theme's Line is 1.15:1).</summary>
     private const double MinimumLineContrast = 1.1;
+
+    /// <summary>The ground tokens besides Surface: each is a surface a page, panel, lane or well is painted on.</summary>
+    private static readonly string[] GroundKeys = ["ground.page", "ground.sidebar", "ground.rail", "ground.raised", "ground.sunk", "ink.strip", "ink.wash"];
+
+    /// <summary>The state tokens: a hovered row, the current row, a selected or set item, and their hovered forms.</summary>
+    private static readonly string[] StateKeys =
+        ["hover", "current.background", "current.background.hover", "selected.background", "selected.background.hover", "selected.task.background", "list.row.hover", "tabs.item.hover"];
 
     /// <summary>Every shipped skin, as a theory's data: the Theme in both modes (eight).</summary>
     public static TheoryData<string> SkinIds => [.. SkinColours.All.Select(static colours => colours.Id)];
@@ -83,6 +91,57 @@ public sealed class SkinColourRulesTests
         double difference = DeltaE.Ciede2000(colours.Token("board.column.line") ?? throw new InvalidOperationException("board.column.line is not a colour."), colours.Surface);
 
         Assert.True(difference >= VisibleDifference, $"{skinId}: the Board lane border is only ΔE {difference:F1} from Surface.");
+    }
+
+    /// <summary>
+    /// Two grounds a Theme names differently are either one value or a visible step apart (plan D1): Surface, the
+    /// <c>ground.*</c> tokens, <c>ink.strip</c> and <c>ink.wash</c> are pairwise ΔE 3 or more apart, or exactly equal.
+    /// </summary>
+    /// <param name="skinId">The skin under test.</param>
+    [Theory]
+    [MemberData(nameof(SkinIds))]
+    public void Grounds_AreEqualOrAVisibleStepApart(string skinId)
+    {
+        SkinColours colours = Skin(skinId);
+        List<(string Name, SrgbColour Colour)> grounds = [("surface", colours.Surface)];
+        grounds.AddRange(GroundKeys.Select(key => (key, colours.Token(key) ?? throw new InvalidOperationException(key + " is not a colour."))));
+
+        Assert.Empty(TooClose(grounds));
+    }
+
+    /// <summary>
+    /// Two states a Theme names differently are either one value or a visible step apart (plan D1): hover, the current
+    /// row, a selected or set item, and their hovered forms are pairwise ΔE 3 or more apart, or exactly equal.
+    /// </summary>
+    /// <param name="skinId">The skin under test.</param>
+    [Theory]
+    [MemberData(nameof(SkinIds))]
+    public void States_AreEqualOrAVisibleStepApart(string skinId)
+    {
+        SkinColours colours = Skin(skinId);
+        List<(string Name, SrgbColour Colour)> states = [.. StateKeys.Select(key => (key, colours.Token(key) ?? throw new InvalidOperationException(key + " is not a colour.")))];
+
+        Assert.Empty(TooClose(states));
+    }
+
+    private static List<string> TooClose(List<(string Name, SrgbColour Colour)> entries)
+    {
+        List<string> tooClose = [];
+        for (int first = 0; first < entries.Count; first++)
+        {
+            for (int second = first + 1; second < entries.Count; second++)
+            {
+                (string firstName, SrgbColour firstColour) = entries[first];
+                (string secondName, SrgbColour secondColour) = entries[second];
+                double difference = DeltaE.Ciede2000(firstColour, secondColour);
+                if (!string.Equals(firstColour.Hex, secondColour.Hex, StringComparison.Ordinal) && difference < VisibleDifference)
+                {
+                    tooClose.Add(string.Create(CultureInfo.InvariantCulture, $"{firstName} {firstColour.Hex} / {secondName} {secondColour.Hex} (ΔE {difference:F1})"));
+                }
+            }
+        }
+
+        return tooClose;
     }
 
     private static double ContrastAgainstSurface(SkinColours colours, SrgbColour? colour) =>

@@ -74,7 +74,7 @@ public sealed class FluentSkinTests
         Skin light = Load("fluent-light");
         Skin dark = Load("fluent-dark");
 
-        Assert.Equal("#e8ecf1", light.Tokens["ground.rail"]);
+        Assert.Equal("#e1e6ec", light.Tokens["ground.rail"]);
         Assert.Equal("#0f0f0f", dark.Tokens["ground.rail"]);
         Assert.Equal("ref(accent.ink)", dark.Tokens["tone.info.ink"]);
         Assert.Equal("#115ea3", dark.Tokens["send.bg"]);
@@ -97,7 +97,7 @@ public sealed class FluentSkinTests
         Assert.Equal("palette.backgroundGray", light.Tokens["board.column.background"]);
         Assert.False(light.Tokens.ContainsKey("board.column.line"));
         Assert.Equal("ref(ink.wash)", light.Tokens["board.count.background"]);
-        Assert.Equal(light.Tokens["ground.sunk"], dark.Tokens["board.column.background"]);
+        Assert.Equal("ref(ink.wash)", dark.Tokens["board.column.background"]);
         Assert.Equal("1.75em", light.Tokens["note.h1.size"]);
         Assert.Equal("#d6d6d6", dark.Tokens["note.prose.ink"]);
     }

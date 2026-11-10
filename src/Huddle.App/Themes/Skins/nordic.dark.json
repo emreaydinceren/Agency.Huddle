@@ -11,9 +11,9 @@
     "5-25": "0 16px 48px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.35)"
   },
   "palette": {
-    "background": "#161a1d",
+    "background": "#14181a",
     "surface": "#1c2125",
-    "drawerBackground": "#121518",
+    "drawerBackground": "#14181a",
     "backgroundGray": "#222830",
     "tableHover": "#222830",
     "divider": "#363f45",
@@ -38,6 +38,7 @@
   },
   "tokens": {
     "ground.rail": "palette.drawerBackground",
+    "selected.task.background": "mix(palette.info 18%, palette.background)",
     "tone.primary.soft": "mix(palette.primary 14%, palette.background)",
     "tone.primary.tint": "mix(palette.primary 7%, palette.background)",
     "tone.info.soft": "mix(palette.info 15%, palette.background)",

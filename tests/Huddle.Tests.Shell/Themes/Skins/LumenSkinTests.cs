@@ -62,7 +62,7 @@ public sealed class LumenSkinTests
         Assert.Equal("palette.backgroundGray", light.Tokens["ground.rail"]);
         Assert.Equal("palette.primary", light.Tokens["needs"]);
         Assert.Equal("palette.primaryContrastText", light.Tokens["send.fg"]);
-        Assert.Equal("mix(palette.dividerLight 90%, palette.background)", dark.Tokens["current.background"]);
+        Assert.Equal("palette.dividerLight", dark.Tokens["current.background"]);
     }
 
     /// <summary>
