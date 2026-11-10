@@ -47,7 +47,6 @@
     "overlayDark": "rgba(0,0,0,0.4)"
   },
   "tokens": {
-    "editor.radius": "12px",
     "editor.shadow": "ref(shadow.card)",
     "editor.toolbar.line": "ref(line.region)",
     "editor.text.ink": "ref(text.subtle)",
@@ -59,8 +58,7 @@
     "edit.header.background": "ref(ground.page)",
     "gate.background": "ref(tone.warning.tint)",
     "gate.line": "ref(tone.warning.line)",
-    "gate.radius": "12px",
-    "gate.padding": "12px 16px 14px",
+    "gate.padding": "12px 16px 16px",
     "toolbar.line": "ref(line.region)",
     "list.selected.bar": "palette.info",
     "list.needs.background": "ref(tone.warning.tint)",
@@ -71,7 +69,6 @@
     "board.needs.line": "ref(tone.warning.line)",
     "board.needs.halo": "0 0 0 4px mix(palette.warning 8%, transparent)",
     "board.card.hover.shadow": "mud(elevation-2)",
-    "feed.card.radius": "12px",
     "feed.card.open.line": "mix(palette.primary 45%, ref(line.control))",
     "feed.unseen.background": "ref(tone.primary.tint)",
     "control.selected.line": "ref(line.control)",

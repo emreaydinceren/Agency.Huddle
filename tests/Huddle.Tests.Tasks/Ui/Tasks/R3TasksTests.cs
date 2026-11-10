@@ -817,16 +817,17 @@ public sealed class R3TasksTests
         Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".task-filter-chip-set .task-filter-chip-button"), StringComparison.Ordinal);
     }
 
-    /// <summary>The Dense switch is an Accent switch, like the Fields switches.</summary>
+    /// <summary>The toolbar has no Dense switch: the List has one row height, so there is no mode to toggle.</summary>
     [Fact]
-    public async Task DenseSwitch_IsAccent()
+    public async Task Toolbar_HasNoDenseSwitch()
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        Assert.Equal(Color.Primary, cut.FindComponents<MudSwitch<bool>>().Single(s => HasClass(s.Instance.Class, "task-toolbar-dense")).Instance.Color);
+        Assert.DoesNotContain(cut.FindComponents<MudSwitch<bool>>(), s => HasClass(s.Instance.Class, "task-toolbar-dense"));
+        Assert.Empty(cut.FindAll(".task-toolbar-dense"));
     }
 
     // ---- helpers ----

@@ -107,7 +107,7 @@ button:focus-visible {
 .mud-drawer .mud-navmenu .mud-nav-link {
     width: calc(100% - 2 * var(--nav-inset));
     margin-inline: var(--nav-inset);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
@@ -326,7 +326,7 @@ button:focus-visible {
     width: calc(100% - 8px);
     margin-inline: 4px;
     padding-inline: 12px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     background-color: var(--hu-selected-background);
     color: var(--hu-accent-ink) !important;
     font-weight: 500;
@@ -494,7 +494,7 @@ b {
 .floating-panel {
     box-shadow: var(--hu-shadow-panel);
     border: 1px solid var(--ink-line);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     z-index: var(--mud-zindex-popover);
 }
 
@@ -553,7 +553,7 @@ a.team-ref,
 .mention.mention--me {
     color: var(--mud-palette-text-primary);
     background: var(--hu-tone-warning-soft);
-    border-radius: calc(var(--mud-default-borderradius) * .5);
+    border-radius: var(--hu-radius-inner);
     padding: 0 4px;
 }
 
@@ -603,7 +603,7 @@ a.team-ref,
    three quarters of the base radius. A selected MudListItem and the active sidebar row already wear it. */
 .selected-shape {
     margin-inline: 4px;
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     background-color: var(--hu-selected-background);
     color: var(--hu-accent-ink);
     font-weight: 500;
@@ -667,7 +667,7 @@ a.team-ref,
     background: var(--hu-tone-warning-tint);
     border: 1px solid var(--hu-tone-warning-line);
     border-left: 3px solid var(--hu-needs);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
 }
 
 /* -- surface=paper: buttons, flat (15.1) ----------------------------------------------------------------------- */
@@ -722,7 +722,7 @@ a.team-ref,
 /* -- surface=paper: inputs, hover line, label ink, one-line height, helper text (15.2) ----------------------- */
 :root:has([data-hu-surface="paper"]) .mud-input.mud-input-outlined {
     background-color: var(--hu-field-background);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="paper"]) .mud-input-label {
@@ -751,7 +751,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-dialog {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
 }
 
 :root:has([data-hu-surface="paper"]) .mud-dialog .mud-dialog-title {
@@ -761,7 +761,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--hu-line-region);
     background: var(--hu-ground-sunk);
-    border-radius: 0 0 calc(var(--mud-default-borderradius) * 1.5) calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: 0 0 var(--hu-radius-panel) var(--hu-radius-panel);
 }
 
 /* -- surface=paper: popovers and floating panels (15.5) ------------------------------------------------------------- */
@@ -772,7 +772,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .profile-popover {
     background: var(--hu-ground-raised);
     border: 1px solid var(--hu-line-control);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--hu-radius-panel);
 }
 
 :root:has([data-hu-surface="paper"]) .mud-list-item:hover,
@@ -784,7 +784,7 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-tooltip.mud-tooltip-default {
     background: var(--mud-palette-text-primary);
     color: var(--hu-ground-page);
-    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border-radius: var(--hu-radius-control);
     padding: 4px 8px;
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
@@ -818,7 +818,7 @@ a.team-ref,
 :root:has([data-hu-surface="hairline"]) .member-health-alert {
     background: var(--hu-tone-warning-tint);
     border: 1px solid var(--hu-tone-warning-line);
-    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    border-radius: var(--hu-radius-panel);
     box-shadow: inset 3px 0 0 var(--hu-needs);
 }
 
@@ -854,7 +854,7 @@ a.team-ref,
 /* -- surface=hairline: inputs, the control line and the focus tokens (15.2) --------------------------------------------- */
 :root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined {
     background: var(--hu-ground-raised);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined .mud-input-outlined-border {
@@ -888,7 +888,7 @@ a.team-ref,
 :root:has([data-hu-surface="hairline"]) .mud-dialog {
     background: var(--hu-ground-raised);
     border: 0;
-    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-shadow-panel);
 }
 
@@ -900,7 +900,7 @@ a.team-ref,
 :root:has([data-hu-surface="hairline"]) .mud-dialog .mud-dialog-actions {
     border-top: 1px solid var(--hu-line-region);
     background: var(--hu-ground-sunk);
-    border-radius: 0 0 calc(var(--mud-default-borderradius) + 2px) calc(var(--mud-default-borderradius) + 2px);
+    border-radius: 0 0 var(--hu-radius-panel) var(--hu-radius-panel);
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-popover.mud-paper,
@@ -910,7 +910,7 @@ a.team-ref,
 :root:has([data-hu-surface="hairline"]) .profile-popover {
     background: var(--hu-ground-raised);
     border: 0;
-    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    border-radius: var(--hu-radius-panel);
     box-shadow: var(--hu-shadow-panel);
 }
 
@@ -922,7 +922,7 @@ a.team-ref,
 :root:has([data-hu-surface="hairline"]) .mud-tooltip.mud-tooltip-default {
     background: var(--mud-palette-text-primary);
     color: var(--hu-ground-page);
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     padding: 4px 8px;
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
@@ -954,7 +954,7 @@ a.team-ref,
     width: 36px;
     min-width: 36px;
     height: 22px;
-    border-radius: 999px;
+    border-radius: var(--hu-radius-full);
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-base-medium {

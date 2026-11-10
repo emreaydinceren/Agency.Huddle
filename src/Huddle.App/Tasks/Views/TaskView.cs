@@ -32,10 +32,6 @@ public sealed record TaskView
     /// <summary>The Board's columns. Empty for a List.</summary>
     public IReadOnlyList<BoardColumn> Columns { get; init; } = [];
 
-    /// <summary>Whether the List uses compact rows. <see langword="null"/> (the default, not written to <c>views.json</c>, so a View that never set it stays byte-identical) reads as dense.</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? Dense { get; init; }
-
     /// <summary>The List's column widths in CSS pixels, by field key, as the Human last dragged them. <see langword="null"/> (not written to <c>views.json</c>) leaves every column to size itself.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyDictionary<string, int>? ColumnWidths { get; init; }

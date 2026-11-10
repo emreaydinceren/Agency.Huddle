@@ -175,7 +175,7 @@ public sealed class AppCssTasksTests
         Assert.Contains("display: flex", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The List's header cells are 12px/600 secondary, its rows 36px (32px Dense) and its fixed columns 110, 120 and 40px (S5).</summary>
+    /// <summary>The List's header cells are 12px/600 secondary, its header and body rows 32px (one row height, no Dense mode) and its fixed columns 110, 120 and 40px (S5).</summary>
     [Fact]
     public void AppCss_ListHeaderRowsAndColumns_FollowTheSpec()
     {
@@ -183,8 +183,9 @@ public sealed class AppCssTasksTests
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains(".mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {\n    font-size: var(--mud-typography-caption-size);\n    font-weight: 600;\n    color: var(--mud-palette-text-secondary);", css.Replace("\r\n", "\n"), StringComparison.Ordinal);
-        Assert.Contains("height: 36px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
-        Assert.Contains("height: 32px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
+        Assert.Contains("height: 32px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
+        Assert.Contains("height: 32px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
+        Assert.DoesNotContain(".mud-table-dense .mud-table-body", CssText.AppCss(CssNewlines.AsIs), StringComparison.Ordinal);
         Assert.Contains("width: 110px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-list-grid thead th.task-list-id-cell"), StringComparison.Ordinal);
         Assert.Contains("width: 120px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-list-grid thead th.task-list-priority-cell"), StringComparison.Ordinal);
         Assert.Contains("width: 40px;", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-list-grid thead th:last-child"), StringComparison.Ordinal);
@@ -224,7 +225,7 @@ public sealed class AppCssTasksTests
 
         Assert.Contains("background-color: var(--hu-board-column-background);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--hu-board-column-line);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-radius: var(--hu-feed-card-radius);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("border-radius: var(--hu-radius-panel);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);
     }
 

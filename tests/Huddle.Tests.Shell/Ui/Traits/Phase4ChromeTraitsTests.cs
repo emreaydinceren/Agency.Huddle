@@ -71,14 +71,14 @@ public sealed partial class Phase4ChromeTraitsTests
         string sidebar = Body("surface", "hairline", ".sidebar-panel + .sidebar-panel");
 
         Assert.Contains("border: 1px solid var(--hu-line-control);", kind, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("border-radius: 999px;", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-full);", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("var(--hu-tone-warning-line)", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border: 1px solid var(--hu-line-region);", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", agent, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: var(--hu-shadow-panel);", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border: 0;", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) + 2px);", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-panel);", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: var(--hu-shadow-panel);", popover, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border: 0;", popover, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", filled, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup

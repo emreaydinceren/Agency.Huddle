@@ -67,7 +67,7 @@
     align-items: center;
     padding: 2px;
     border: 0;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -128,7 +128,7 @@
     margin-inline-start: 2px;
     padding: 0;
     border: 0;
-    border-radius: var(--mud-default-borderradius);
+    border-radius: var(--hu-radius-card);
     background: transparent;
     color: inherit;
     cursor: pointer;

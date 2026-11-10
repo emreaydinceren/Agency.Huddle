@@ -181,12 +181,6 @@
 
     <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" Compact="true" Class="task-toolbar-search" />
 
-    @if (this.EffectiveView.Kind == ViewKind.List)
-    {
-        <MudSwitch T="bool" Value="@(this.EffectiveView.Dense ?? true)" ValueChanged="this.OnDenseChangedAsync" Label="Dense" Color="Color.Primary"
-                   Class="task-toolbar-dense" />
-    }
-
     @* Group by is a filter-style chip, like Status: "Group by: Assignee" with a menu of choices, and a clear button once one is
        chosen. It ends the row, pushed to the right edge. *@
     <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
@@ -507,9 +501,6 @@
 
     private Task OnRequestsToggledAsync() =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { RequestsOnly = !this.EffectiveView.Filter.RequestsOnly } });
-
-    private Task OnDenseChangedAsync(bool dense) =>
-        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Dense = dense });
 
     private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
 

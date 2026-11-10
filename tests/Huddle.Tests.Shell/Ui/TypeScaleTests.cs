@@ -83,7 +83,7 @@ public sealed partial class TypeScaleTests
 
         Assert.Contains("height: 22px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("padding: 0 8px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border-radius: var(--hu-radius-control);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
@@ -233,7 +233,7 @@ public sealed partial class TypeScaleTests
         Assert.Matches(@"\.message-row\.grouped\s*\{\s*margin-top:\s*-12px;", css);
         Assert.Matches(@"\.task-ref::before\s*\{[^}]*width:\s*8px;\s*height:\s*8px;", css);
         Assert.Matches(@"\.message-sender\s*\{\s*font-size:\s*var\(--mud-typography-body2-size\);\s*font-weight:\s*600;", css);
-        Assert.Matches(@"\.message-bubble\s*\{[^}]*border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 1\.5\);", css);
+        Assert.Matches(@"\.message-bubble\s*\{[^}]*border-radius:\s*var\(--hu-radius-panel\);", css);
         Assert.Matches(@"\.day-separator\s*\{[^}]*margin-block:\s*24px 16px;", css);
     }
 

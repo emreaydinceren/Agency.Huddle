@@ -36,7 +36,7 @@ public sealed class ThemeAlignmentSourceTests
     {
         string css = CssText.AppCss();
 
-        Assert.Contains("border-radius: 999px;", CssText.RuleBody(css, ".mud-chip.tag-chip.task-tag", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-full);", CssText.RuleBody(css, ".mud-chip.tag-chip.task-tag", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("width: 6px;", CssText.RuleBody(css, ".mud-chip.task-tag::before", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.All(HueSelectors, selector => Assert.Contains("background: var(--mud-palette-", CssText.RuleBody(css, selector, RuleMatch.Last), StringComparison.Ordinal)); // contains-ok: stylesheet source text, not markup
     }
