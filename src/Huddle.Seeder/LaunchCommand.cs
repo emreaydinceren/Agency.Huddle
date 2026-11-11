@@ -14,7 +14,7 @@ internal static class LaunchCommand
         string? repo = SeedRootGuard.FindRepositoryRoot(AppContext.BaseDirectory) ?? SeedRootGuard.FindRepositoryRoot(Environment.CurrentDirectory);
         string mock = repo is null
             ? "<path to mock-acp.exe>"
-            : Path.Combine(repo, "src", "Huddle.MockAdapter", "bin", "Debug", "net10.0", "mock-acp.exe");
+            : Path.Combine(repo, "src", "Huddle.MockAdapter", "bin", "Debug", "net11.0", "mock-acp.exe");
         string project = repo is null ? "src/Huddle.App" : Path.Combine(repo, "src", "Huddle.App");
 
         return string.Join(' ',

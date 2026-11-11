@@ -279,7 +279,7 @@
 
     private async Task RestoreFocusAsync()
     {
-        _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("huddleSearch.restoreFocus", this.disposed.Token));
+        _ = await BrowserCall.InvokeVoidAsync(this.JS, "huddleSearch.restoreFocus", this.disposed.Token);
     }
 
     private Task CloseAsync()

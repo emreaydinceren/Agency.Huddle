@@ -225,7 +225,7 @@ internal static class ConnectorApprovalForm
                 continue;
             }
 
-            kept.Append(rune.ToString());
+            kept.Append(rune);
         }
 
         return kept.ToString();

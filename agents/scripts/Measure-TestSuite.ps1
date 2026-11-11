@@ -14,7 +14,7 @@
       - Full run:               Run-Tests.ps1 -Label <label>, wall time and total/failed/skipped from the
                                 run's log.
       - Per assembly:           one row per test assembly: tests and duration. The duration comes from the
-                                `<dll> (net10.0|x64) passed (<dur>)` lines of the Run-Tests log. The log
+                                `<dll> (net11.0|x64) passed (<dur>)` lines of the Run-Tests log. The log
                                 carries no per-assembly count, so the count comes from running the built
                                 test executable with `--list-tests` (n/a if that fails, and always n/a
                                 under -ParseOnly).
@@ -84,7 +84,7 @@ function ConvertTo-Seconds {
     Parses a Run-Tests log into the per-assembly rows and the totals block.
 
 .DESCRIPTION
-    Per-assembly lines look like "<path>\<Name>.dll (net10.0|x64) passed (1m 17s 982ms)". The same lines
+    Per-assembly lines look like "<path>\<Name>.dll (net11.0|x64) passed (1m 17s 982ms)". The same lines
     are printed twice (once as each assembly finishes, once in the closing summary), so they are
     de-duplicated by assembly path, keeping the last. Totals come from the "  total: N" block.
 #>

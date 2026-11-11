@@ -31,7 +31,7 @@ public sealed class GatewayConnectionGuardTests
         using HttpRequestMessage negotiate = GatewayGateHost.Request(HttpMethod.Post, "/_blazor/negotiate?negotiateVersion=1", cookie);
         using HttpResponseMessage response = await host.Client.SendAsync(negotiate, ct);
         response.EnsureSuccessStatusCode();
-        string token = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("connectionToken").GetString() ?? string.Empty;
+        string token = JsonElement.Parse(await response.Content.ReadAsStringAsync(ct)).GetProperty("connectionToken").GetString() ?? string.Empty;
 
         WebSocketClient sockets = host.Factory.Server.CreateWebSocketClient();
         sockets.ConfigureRequest = request =>

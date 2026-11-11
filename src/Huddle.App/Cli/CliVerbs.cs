@@ -167,25 +167,25 @@ internal static class CliVerbs
         InstanceInfo? info = RunningCopy(context.DataDir);
         if (info is null)
         {
-            await context.Console.Error.WriteLineAsync("No desktop copy is running.").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync("No desktop copy is running.", ct).ConfigureAwait(false);
             return 1;
         }
 
         string? url = await DesktopBootstrapClient.RequestUrlAsync(info, context.Handler, ct).ConfigureAwait(false);
         if (url is null)
         {
-            await context.Console.Error.WriteLineAsync("The running copy did not hand out a sign-in link (it may be an older version, or it did not answer).").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync("The running copy did not hand out a sign-in link (it may be an older version, or it did not answer).", ct).ConfigureAwait(false);
             return 1;
         }
 
         if (json)
         {
-            await context.Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { url })).ConfigureAwait(false);
+            await context.Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { url }), ct).ConfigureAwait(false);
             return 0;
         }
 
         context.Opener.Open(url);
-        await context.Console.Out.WriteLineAsync("Opened Huddle in your browser.").ConfigureAwait(false);
+        await context.Console.Out.WriteLineAsync("Opened Huddle in your browser.", ct).ConfigureAwait(false);
         return 0;
     }
 }

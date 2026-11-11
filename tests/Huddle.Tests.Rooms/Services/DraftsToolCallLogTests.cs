@@ -22,7 +22,7 @@ public sealed class DraftsToolCallLogTests
             return [];
         }
 
-        return [.. File.ReadAllLines(path).Select(static line => JsonDocument.Parse(line).RootElement.Clone())];
+        return [.. File.ReadAllLines(path).Select(static line => JsonElement.Parse(line))];
     }
 
     /// <summary>A call that goes pending then completed is logged once, with the milliseconds between first sighting and completion.</summary>

@@ -145,7 +145,7 @@ with an empty one-to-one Room named after itself. Run in `T-A`, from the repo ro
 
 ```powershell
 dotnet run --project src\Huddle.Seeder -- --scenario uat --root C:\seeds\huddle\uat
-$mock = (Resolve-Path src\Huddle.MockAdapter\bin\Debug\net10.0\mock-acp.exe).Path
+$mock = (Resolve-Path src\Huddle.MockAdapter\bin\Debug\net11.0\mock-acp.exe).Path
 dotnet run --project src/Huddle.App -- --urls http://localhost:5100 `
   --Team:DataDir=C:\seeds\huddle\uat\data `
   --Team:DemoAgent:Enabled=false `

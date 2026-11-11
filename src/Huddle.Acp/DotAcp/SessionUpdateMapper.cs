@@ -2,6 +2,7 @@ namespace Agency.Huddle.Acp.DotAcp;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 
@@ -261,9 +262,11 @@ internal static class SessionUpdateMapper
 
     /// <summary>
     /// Maps a usage update's <c>cost</c>, or returns <see langword="null"/> when the Adapter sent none.
-    /// The wire carries a JSON number, so <see cref="Convert.ToDecimal(double)"/> rounds it to the
-    /// nearest representable decimal; a non-finite amount is treated as no cost rather than thrown on,
-    /// because an optional field must never fail a notification.
+    /// The wire carries a JSON number, which is a <see cref="double"/> here. A plain conversion keeps that
+    /// double's exact binary value since .NET 11 (0.054828 becomes 0.0548280000000000017...), so the amount is
+    /// taken at the 15 significant digits a double can promise, as <see cref="Convert.ToDecimal(double)"/> did before.
+    /// A non-finite amount is treated as no cost rather than thrown on, because an optional field must never
+    /// fail a notification.
     /// </summary>
     /// <param name="cost">The wire cost, or <see langword="null"/> when omitted.</param>
     internal static UsageCost? MapCost(dotacp.protocol.Cost? cost)
@@ -273,7 +276,8 @@ internal static class SessionUpdateMapper
             return null;
         }
 
-        return new UsageCost(Convert.ToDecimal(cost.Amount), cost.Currency);
+        decimal amount = decimal.Parse(cost.Amount.ToString("G15", CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture);
+        return new UsageCost(amount, cost.Currency);
     }
 
     /// <summary>Maps the first entry of a tool call's <c>locations</c>, or returns <see langword="null"/> when there is none.</summary>

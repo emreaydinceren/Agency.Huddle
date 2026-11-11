@@ -155,7 +155,7 @@ Build the solution once. The build produces the mock adapter.
 
 ```powershell
 dotnet build Huddle.slnx
-Test-Path src\Huddle.MockAdapter\bin\Debug\net10.0\mock-acp.exe
+Test-Path src\Huddle.MockAdapter\bin\Debug\net11.0\mock-acp.exe
 ```
 
 ```text
@@ -204,7 +204,7 @@ committed.
     "--Team:Tasks:WakeEnabled=false",
     "--Team:Acp:Enabled=true",
     "--Team:Acp:Adapters:0:Id=mock",
-    "--Team:Acp:Adapters:0:Command=E:\\Repos\\Huddle\\src\\Huddle.MockAdapter\\bin\\Debug\\net10.0\\mock-acp.exe",
+    "--Team:Acp:Adapters:0:Command=E:\\Repos\\Huddle\\src\\Huddle.MockAdapter\\bin\\Debug\\net11.0\\mock-acp.exe",
     "--Team:Acp:Adapters:0:Args:0=--mock",
     "--Team:Acp:Adapters:0:UsesToolNamePrefix=false"
   ],

@@ -78,7 +78,6 @@
     private async Task CloseAsync()
     {
         this.open = false;
-        this.StateHasChanged();
         await this.button.FocusAsync();
     }
 

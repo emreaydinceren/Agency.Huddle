@@ -1,6 +1,5 @@
 using System.Buffers.Text;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Agency.Huddle.App.Gateway;
 using Agency.Huddle.Tests.Ui;

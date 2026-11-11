@@ -19,7 +19,7 @@ when a question isn't theirs. You are one member among several.
 Both agents are separate `claude` processes. Neither has database access.
 Everything they know arrived as a line of JSON on a named pipe.
 
-Built on .NET 10 and Blazor Server. **560 tests, zero build warnings.**
+Built on .NET 11 and Blazor Server. **560 tests, zero build warnings.**
 
 Why it is shaped this way, and what it argues with: [Agents as colleagues, not a
 pipeline](docs/why-agency-huddle.md).
@@ -56,7 +56,7 @@ one to do.
 
 ## Try it
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download). No Node, no API
+Requires the [.NET 11 SDK](https://dotnet.microsoft.com/download). No Node, no API
 key, and no account needed for this first run:
 
 ```powershell

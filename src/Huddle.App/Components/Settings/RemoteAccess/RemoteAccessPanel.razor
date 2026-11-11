@@ -326,11 +326,38 @@
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
+        // Every admin call below acts as this.user, so the panel follows the circuit's identity instead of reading it once.
+        this.AuthProvider.AuthenticationStateChanged += this.OnAuthenticationStateChanged;
+        await this.ApplyAuthenticationAsync(this.AuthProvider.GetAuthenticationStateAsync());
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        this.AuthProvider.AuthenticationStateChanged -= this.OnAuthenticationStateChanged;
+        this.timer?.Dispose();
+    }
+
+    /// <summary>
+    /// Takes the identity <paramref name="pending"/> resolves to. Without the Admin scope the panel shows nothing and
+    /// stops polling; the first time the scope is present it loads the settings and starts the one-second refresh.
+    /// </summary>
+    /// <param name="pending">The authentication state to apply.</param>
+    private async Task ApplyAuthenticationAsync(Task<AuthenticationState> pending)
+    {
         // No ConfigureAwait(false): the continuation sets component state (rules.md).
-        AuthenticationState state = await this.AuthProvider.GetAuthenticationStateAsync();
+        AuthenticationState state = await pending;
         this.user = state.User;
         this.thisDeviceId = this.user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
         if (!this.user.HasClaim(GatewayClaims.Scope, GatewayScopes.Admin))
+        {
+            this.ready = false;
+            this.timer?.Dispose();
+            this.timer = null;
+            return;
+        }
+
+        if (this.ready)
         {
             return;
         }
@@ -343,8 +370,14 @@
         this.timer = this.Clock.CreateTimer(this.OnTick, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => this.timer?.Dispose();
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> pending)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            await this.ApplyAuthenticationAsync(pending);
+            this.StateHasChanged();
+        });
+    }
 
     private void OnTick(object? state)
     {

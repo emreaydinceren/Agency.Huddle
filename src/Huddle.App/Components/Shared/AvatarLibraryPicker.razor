@@ -123,7 +123,7 @@ else if (this.catalog is not null && this.results is not null)
         }
 
         this.searchGuarded = true;
-        await this.JS.InvokeVoidAsync("huddleAvatarLibrary.guardSearchEscape", this.searchWrap);
+        await BrowserCall.InvokeVoidAsync(this.JS, "huddleAvatarLibrary.guardSearchEscape", this.searchWrap);
     }
 
     /// <summary>Loads the catalogue once; an unreadable library shows the message instead of the filters.</summary>

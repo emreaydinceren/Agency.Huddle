@@ -287,7 +287,8 @@ public sealed class LibraryEditorTests
         // refuses a deferred Setup<IJSObjectReference> outright), so the one call whose timing this
         // test controls - `create` - is served by a hand-written IJSRuntime instead, replacing
         // bUnit's default registration for this test only.
-        DeferredCreateModule module = new();
+        TaskCompletionSource<IJSObjectReference> createResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        DeferredCreateModule module = new(createResult);
         using MudBunitContext context = new();
         context.Services.AddSingleton<IJSRuntime>(new SingleModuleJSRuntime(module));
 
@@ -303,7 +304,7 @@ public sealed class LibraryEditorTests
         // continuation that reacts to it runs on the renderer's own dispatcher, not this thread, so
         // the test awaits the handle's own dispose signal rather than assuming it has run by now.
         RecordingJSObjectReference lateHandle = new();
-        module.CompleteCreate(lateHandle);
+        createResult.SetResult(lateHandle);
         await lateHandle.Disposed.WaitAsync(TimeSpan.FromSeconds(2), Xunit.TestContext.Current.CancellationToken);
 
         Assert.Equal(1, lateHandle.DisposeInvocationCount);
@@ -312,10 +313,20 @@ public sealed class LibraryEditorTests
     /// <summary>A minimal <see cref="IJSRuntime"/> whose only handled call is <c>import</c>, returning the given module.</summary>
     private sealed class SingleModuleJSRuntime(IJSObjectReference module) : IJSRuntime
     {
+        // The answers live in a type that does not implement IJSRuntime, so no call is made through one (the Blazor analyzer BL0016 reads that as an interop call).
+        private readonly ImportAnswer answer = new(module);
+
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+            this.answer.For<TValue>(identifier);
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            this.answer.For<TValue>(identifier);
+    }
+
+    /// <summary>Answers <c>import</c> with the given module and refuses every other call.</summary>
+    private sealed class ImportAnswer(IJSObjectReference module)
+    {
+        public ValueTask<TValue> For<TValue>(string identifier) =>
             string.Equals(identifier, "import", StringComparison.Ordinal)
                 ? new ValueTask<TValue>((TValue)module)
                 : throw new NotSupportedException($"Unexpected interop call '{identifier}'.");
@@ -323,57 +334,82 @@ public sealed class LibraryEditorTests
 
     /// <summary>
     /// Stands in for the imported <c>library-editor.js</c> module. Its <c>create</c> call does not
-    /// complete until <see cref="CompleteCreate"/> is called, so a test can dispose the component
-    /// while that call is still in flight.
+    /// complete until the test completes <paramref name="createResult"/>, so the test can dispose the
+    /// component while that call is still in flight.
     /// </summary>
-    private sealed class DeferredCreateModule : IJSObjectReference
+    /// <param name="createResult">Holds the handle <c>create</c> answers with; the test completes it.</param>
+    private sealed class DeferredCreateModule(TaskCompletionSource<IJSObjectReference> createResult) : IJSObjectReference
     {
-        private readonly TaskCompletionSource<IJSObjectReference> createResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public void CompleteCreate(IJSObjectReference handle) => this.createResult.SetResult(handle);
+        // The answer lives in a type that does not implement IJSObjectReference, so no call is made through one (the Blazor analyzer BL0016 reads that as an interop call).
+        private readonly CreateAnswer answer = new(createResult);
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+            this.answer.ForAsync<TValue>(identifier, CancellationToken.None);
 
-        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            this.answer.ForAsync<TValue>(identifier, cancellationToken);
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>Answers <c>create</c> once the test completes the result, and refuses every other call.</summary>
+    private sealed class CreateAnswer(TaskCompletionSource<IJSObjectReference> result)
+    {
+        public async ValueTask<TValue> ForAsync<TValue>(string identifier, CancellationToken cancellationToken)
         {
             if (!string.Equals(identifier, "create", StringComparison.Ordinal))
             {
                 throw new NotSupportedException($"Unexpected interop call '{identifier}'.");
             }
 
-            IJSObjectReference handle = await this.createResult.Task.WaitAsync(cancellationToken);
+            IJSObjectReference handle = await result.Task.WaitAsync(cancellationToken);
             return (TValue)handle;
         }
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     /// <summary>A minimal <see cref="IJSObjectReference"/> the test completes and inspects directly, standing in for the CodeMirror handle a late-arriving <c>create</c> call would hand back.</summary>
     private sealed class RecordingJSObjectReference : IJSObjectReference
     {
-        private readonly TaskCompletionSource disposedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        // The state lives in a type that does not implement IJSObjectReference, so no call is made on one (the Blazor analyzer BL0016 reads that as an interop call).
+        private readonly DisposeLog log = new();
 
-        public int DisposeInvocationCount { get; private set; }
+        public int DisposeInvocationCount => this.log.Count;
 
         /// <summary>Completes once <c>dispose</c> has been invoked, so a test can await the effect of a fire-and-forget continuation instead of racing it.</summary>
-        public Task Disposed => this.disposedSignal.Task;
+        public Task Disposed => this.log.Signal;
 
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            this.log.Observe(identifier);
+            return ValueTask.FromResult(default(TValue)!);
+        }
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
-            if (string.Equals(identifier, "dispose", StringComparison.Ordinal))
-            {
-                this.DisposeInvocationCount++;
-                this.disposedSignal.TrySetResult();
-            }
-
+            this.log.Observe(identifier);
             return ValueTask.FromResult(default(TValue)!);
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>Counts the <c>dispose</c> calls a handle receives and signals the first.</summary>
+    private sealed class DisposeLog
+    {
+        private readonly TaskCompletionSource signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int Count { get; private set; }
+
+        public Task Signal => this.signal.Task;
+
+        public void Observe(string identifier)
+        {
+            if (string.Equals(identifier, "dispose", StringComparison.Ordinal))
+            {
+                this.Count++;
+                this.signal.TrySetResult();
+            }
+        }
     }
 
     /// <summary>

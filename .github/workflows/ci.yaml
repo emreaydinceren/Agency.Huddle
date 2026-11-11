@@ -43,10 +43,10 @@ jobs:
         shell: bash
 
     container:
-      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
-      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it. Bump this together with
+      # Exact patch, not the floating :10.0 tag. global.json requires 11.0.100 with
+      # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it. Bump this together with
       # global.json and the two Gitea workflows — one decision, three places.
-      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+      image: mcr.microsoft.com/dotnet/sdk:11.0.100
 
     env:
       # Pinned off, not merely left unset. The E2E/ folder of Huddle.Acp.Tests drives a real

@@ -167,7 +167,7 @@ flake". Reproduce it first. A class looped alone catches some; most need **paral
 load** — 12–40 copies of the built exe at once, each running the class a few times:
 
 ```bash
-exe=tests/<Project>/bin/Debug/net10.0/<Project>.exe; mkdir -p "$TEMP/flake"
+exe=tests/<Project>/bin/Debug/net11.0/<Project>.exe; mkdir -p "$TEMP/flake"
 for p in $(seq 16); do ( for i in 1 2 3 4; do timeout 300 $exe -noLogo -class "Agency.Huddle.Tests.Ui.RoomListTests" > "$TEMP/flake/$p-$i.txt" 2>&1; done ) & done; wait
 grep -l "\[FAIL\]" "$TEMP"/flake/*.txt | wc -l
 ```

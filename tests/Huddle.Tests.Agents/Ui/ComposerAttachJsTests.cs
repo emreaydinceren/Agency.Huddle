@@ -27,7 +27,7 @@ public sealed class ComposerAttachJsTests
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
         Assert.True(process.ExitCode == 0, error);
-        return JsonDocument.Parse(output).RootElement.Clone();
+        return JsonElement.Parse(output);
     }
 
     /// <summary>A paste carrying files puts them in the hidden input, fires <c>change</c> and stops the browser default (spec 6.5).</summary>

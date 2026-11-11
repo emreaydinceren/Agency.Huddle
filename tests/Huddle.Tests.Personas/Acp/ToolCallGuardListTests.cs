@@ -169,7 +169,7 @@ public sealed class ToolCallGuardListTests
         string root = Path.Combine(Path.GetTempPath(), "huddle-guardlist", ".claude");
         string inside = Path.Combine(root, "memory", "x.md");
         ProtectedDirectoryGuard guard = new(root);
-        ToolCallInfo Call(string path) => new("c1", "Write", ToolKind.Edit, ToolCallStatus.Pending, $$"""{"file_path":{{System.Text.Json.JsonSerializer.Serialize(path)}}}""");
+        static ToolCallInfo Call(string path) => new("c1", "Write", ToolKind.Edit, ToolCallStatus.Pending, $$"""{"file_path":{{System.Text.Json.JsonSerializer.Serialize(path)}}}""");
 
         Assert.Equal($"'{inside}' is inside the agent's own configuration directory '{root}'.", guard.RefusalFor(Call(inside), "Nova"));
         Assert.Null(guard.RefusalFor(Call(Path.Combine(Path.GetTempPath(), "huddle-guardlist", "notes.md")), "Nova"));
@@ -180,7 +180,7 @@ public sealed class ToolCallGuardListTests
     public void MergeGateGuard_RefusesAPushWithTheGatesReason_AndLeavesOtherCommandsAlone()
     {
         MergeGateGuard guard = new(new RefusingGate());
-        ToolCallInfo Call(string command) => new("c1", "Bash", ToolKind.Execute, ToolCallStatus.Pending, $$"""{"command":{{System.Text.Json.JsonSerializer.Serialize(command)}}}""");
+        static ToolCallInfo Call(string command) => new("c1", "Bash", ToolKind.Execute, ToolCallStatus.Pending, $$"""{"command":{{System.Text.Json.JsonSerializer.Serialize(command)}}}""");
 
         Assert.Equal("'git push' is held by the merge gate: needs evidence.", guard.RefusalFor(Call("git push"), "Nova"));
         Assert.Null(guard.RefusalFor(Call("git status"), "Nova"));

@@ -206,7 +206,7 @@
             if (this.selfReference is not null && !string.Equals(this.attachedRoomId, this.RoomId, StringComparison.Ordinal))
             {
                 this.attachedRoomId = this.RoomId;
-                await this.JS.InvokeVoidAsync("teamComposer.setDraftKey", this.textarea, DraftKey(this.RoomId));
+                await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.setDraftKey", this.textarea, DraftKey(this.RoomId));
             }
 
             return;
@@ -215,7 +215,7 @@
         this.selfReference = DotNetObjectReference.Create(this);
         this.attachedRoomId = this.RoomId;
         object? fileInputHost = this.AttachmentsAvailable ? this.attachHost : null;
-        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference, DraftKey(this.RoomId), fileInputHost);
+        await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.attach", this.textarea, this.selfReference, DraftKey(this.RoomId), fileInputHost);
     }
 
     /// <summary>Re-renders when a chip is added, finishes or is removed; the event can arrive on any thread.</summary>
@@ -256,8 +256,6 @@
         {
             await this.picker.ClearAsync();
         }
-
-        this.StateHasChanged();
     }
 
     /// <summary>Saves one picked file once it has the turn; a failure is shown on its chip or as the status line and never stops the other files.</summary>
@@ -320,7 +318,7 @@
     /// <summary>Sends the typed text the way Enter does - the script reads the box, calls <see cref="SendAsync"/> and clears it - then returns focus to the box.</summary>
     private async Task SendClickedAsync()
     {
-        await this.JS.InvokeVoidAsync("teamComposer.send", this.textarea);
+        await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.send", this.textarea);
         await this.textarea.FocusAsync();
     }
 
@@ -453,7 +451,7 @@
     private async Task OnPickClickAsync(ReferencePickerRow row)
     {
         this.ClosePicker();
-        await this.JS.InvokeVoidAsync("teamComposer.insertReference", this.textarea, row.InsertText);
+        await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.insertReference", this.textarea, row.InsertText);
     }
 
     /// <summary>Takes one group's result from the picker's search, on the renderer, and drops an update of an older search.</summary>
@@ -495,7 +493,7 @@
             {
                 this.ClosePicker();
                 this.StateHasChanged();
-                await this.JS.InvokeVoidAsync("teamComposer.pickerClosed", this.textarea);
+                await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.pickerClosed", this.textarea);
             }
         });
     }
@@ -577,7 +575,7 @@
     {
         try
         {
-            _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("teamComposer.detach", this.textarea));
+            _ = await BrowserCall.InvokeVoidAsync(this.JS, "teamComposer.detach", this.textarea);
         }
         catch (InvalidOperationException)
         {

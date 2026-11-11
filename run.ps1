@@ -237,7 +237,7 @@ if (-not $NoAcp -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
 $needsAcpSetup = -not $NoAcp -and -not (Test-Path $acpAdapterEntryPoint)
 
 # -NoBuild runs whatever is compiled, so it needs something to be compiled.
-$appAssembly = Join-Path $appProject 'bin/Debug/net10.0/Huddle.App.dll'
+$appAssembly = Join-Path $appProject 'bin/Debug/net11.0/Huddle.App.dll'
 if ($NoBuild -and -not (Test-Path $appAssembly)) {
     Write-Host "-NoBuild was passed but $appAssembly does not exist." -ForegroundColor Yellow
     Write-Host '   Run ./run.ps1 once without -NoBuild to compile it first.' -ForegroundColor Gray

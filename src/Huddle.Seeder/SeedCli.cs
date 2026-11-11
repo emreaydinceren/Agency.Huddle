@@ -18,20 +18,20 @@ internal static class SeedCli
         (SeedRequest? request, string? message, int exitCode) = Parse(args, clock);
         if (request is null)
         {
-            await (exitCode == 0 ? output : error).WriteLineAsync(message).ConfigureAwait(false);
+            await (exitCode == 0 ? output : error).WriteLineAsync(message, ct).ConfigureAwait(false);
             return exitCode;
         }
 
         try
         {
-            await output.WriteLineAsync($"Wiping and rebuilding {request.Root} ({request.Scenario.Name}, run date {request.Today:yyyy-MM-dd})...").ConfigureAwait(false);
+            await output.WriteLineAsync($"Wiping and rebuilding {request.Root} ({request.Scenario.Name}, run date {request.Today:yyyy-MM-dd})...", ct).ConfigureAwait(false);
             SeedSummary summary = await SeedRunner.RunAsync(request, SeedRootGuard.DefaultProtectedFolders(), ct).ConfigureAwait(false);
             Report(summary, output);
             return 0;
         }
         catch (InvalidOperationException ex)
         {
-            await error.WriteLineAsync(ex.Message).ConfigureAwait(false);
+            await error.WriteLineAsync(ex.Message, ct).ConfigureAwait(false);
             return 1;
         }
     }

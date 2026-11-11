@@ -588,8 +588,8 @@ run the test executable:
 
 ```
 dotnet build Team.slnx
-./tests/Team.Acp.Tests/bin/Debug/net10.0/Team.Acp.Tests.exe
-./tests/Team.Acp.Tests/bin/Debug/net10.0/Team.Acp.Tests.exe -filter "/*/*/ClassName/*"
+./tests/Team.Acp.Tests/bin/Debug/net11.0/Team.Acp.Tests.exe
+./tests/Team.Acp.Tests/bin/Debug/net11.0/Team.Acp.Tests.exe -filter "/*/*/ClassName/*"
 ```
 
 The filter flag is a **single dash** and takes xunit's query-filter language

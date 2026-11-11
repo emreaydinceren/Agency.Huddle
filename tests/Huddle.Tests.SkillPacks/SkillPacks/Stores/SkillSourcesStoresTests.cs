@@ -219,7 +219,7 @@ public sealed class SourceLogTests
 
         string[] lines = File.ReadAllLines(file);
         Assert.Equal(50, lines.Length);
-        Assert.All(lines, static line => Assert.Equal(JsonValueKind.Object, JsonDocument.Parse(line).RootElement.ValueKind));
+        Assert.All(lines, static line => Assert.Equal(JsonValueKind.Object, JsonElement.Parse(line).ValueKind));
     }
 
     /// <summary>A line starts with at, computer, huddle, event and subject; computer is Team:ComputerName.</summary>

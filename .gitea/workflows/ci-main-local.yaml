@@ -20,11 +20,11 @@ jobs:
   secret-scan:
     runs-on: dotnet-10-local
     container:
-      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
-      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it, and a runner holding a
+      # Exact patch, not the floating :10.0 tag. global.json requires 11.0.100 with
+      # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
       # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
       # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
-      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+      image: mcr.microsoft.com/dotnet/sdk:11.0.100
     defaults:
       run:
         shell: bash
@@ -69,11 +69,11 @@ jobs:
   validate:
     runs-on: dotnet-10-local
     container:
-      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
-      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it, and a runner holding a
+      # Exact patch, not the floating :10.0 tag. global.json requires 11.0.100 with
+      # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
       # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
       # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
-      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+      image: mcr.microsoft.com/dotnet/sdk:11.0.100
     defaults:
       run:
         shell: bash
@@ -99,7 +99,7 @@ jobs:
       # Huddle.Acp.Tests' AgentProcessLauncherTests ([Trait("Category", "Process")]) launch a
       # real `node -e` subprocess to prove the stdio pipe wiring works. The dotnet SDK image
       # has no Node, and those 6 tests fail with `Failed to start 'node'` without this step.
-      # Ubuntu 24.04 (this image's base) ships Node 18, which is plenty for `node -e`. The ACP
+      # Ubuntu 26.04 (this image's base) ships Node 22, which is plenty for `node -e`. The ACP
       # adapter itself wants something newer, but it only runs under TEAM_E2E=1, which CI pins off.
       - name: 🟩 Install Node.js
         run: |
@@ -108,9 +108,9 @@ jobs:
           apt-get install -y -qq nodejs
           node --version
 
-      # global.json pins SDK 10.0.400 with rollForward=latestPatch, so only a 10.0.4xx SDK
+      # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK
       # satisfies it. A stale cached sdk:10.0 image fails here with "Requested SDK version:
-      # 10.0.400 ... Install the [10.0.400] .NET SDK" — pull the image, don't debug the code.
+      # 11.0.100 ... Install the [11.0.100] .NET SDK" — pull the image, don't debug the code.
       - name: 📦 Restore dependencies
         run: dotnet restore Huddle.slnx
 
@@ -144,7 +144,7 @@ jobs:
       # composed app does not boot as a process - which is the only thing this step asserts.
       # It builds nothing, so it must follow the build step. 120s rather than the script's 60s
       # default: this runner is arm64 and cold-starts slowly.
-      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:10.0.401 - PowerShell 7.6.6,
+      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:11.0.100 - PowerShell 7.7.0,
       # installed as a global tool by the image (PowerShell.Linux.arm64 on this runner).
       - name: 🩺 Health endpoint smoke test
         run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120

@@ -271,7 +271,7 @@
         }
 
         this.self = DotNetObjectReference.Create(this);
-        _ = await BrowserCall.TryAsync(() => this.JS.InvokeVoidAsync("taskListResize.register", this.self));
+        _ = await BrowserCall.InvokeVoidAsync(this.JS, "taskListResize.register", this.self);
     }
 
     /// <summary>The visible columns' keys in display order: ID and Title, then the View's shown fields (grouping-only columns are hidden).</summary>

@@ -63,7 +63,13 @@
             return;
         }
 
-        IJSObjectReference createdModule = await this.JS.InvokeAsync<IJSObjectReference>("import", "./library-editor.js");
+        (bool moduleLoaded, IJSObjectReference? createdModule) = await BrowserCall.InvokeAsync<IJSObjectReference>(this.JS, "import", "./library-editor.js");
+        if (!moduleLoaded || createdModule is null)
+        {
+            // The circuit is gone, so there is no editor to create.
+            return;
+        }
+
         if (this.disposed)
         {
             await createdModule.DisposeAsync();
@@ -72,11 +78,16 @@
 
         this.module = createdModule;
         this.selfReference = DotNetObjectReference.Create(this);
-        IJSObjectReference createdHandle = await this.module.InvokeAsync<IJSObjectReference>(
-            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode, this.LineNumbers);
+        (bool handleCreated, IJSObjectReference? createdHandle) = await BrowserCall.InvokeAsync<IJSObjectReference>(
+            this.module, "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode, this.LineNumbers);
+        if (!handleCreated || createdHandle is null)
+        {
+            return;
+        }
+
         if (this.disposed)
         {
-            await createdHandle.InvokeVoidAsync("dispose");
+            await BrowserCall.InvokeVoidAsync(createdHandle, "dispose");
             await createdHandle.DisposeAsync();
             return;
         }
@@ -92,7 +103,12 @@
             throw new InvalidOperationException("The editor has not been created yet.");
         }
 
-        return await this.handle.InvokeAsync<string>("getText");
+        (bool read, string? text) = await BrowserCall.InvokeAsync<string>(this.handle, "getText");
+
+        // Never answer an empty string for a gone circuit: a save would write it over the file.
+        return read && text is not null
+            ? text
+            : throw new InvalidOperationException("The editor's browser connection is gone, so its text cannot be read.");
     }
 
     /// <summary>Replaces the editor's text and resets its dirty flag.</summary>
@@ -104,7 +120,7 @@
             throw new InvalidOperationException("The editor has not been created yet.");
         }
 
-        await this.handle.InvokeVoidAsync("setText", text);
+        await BrowserCall.InvokeVoidAsync(this.handle, "setText", text);
     }
 
     /// <summary>Moves the caret to the start of <paramref name="line"/> (1-based, clamped to the document) and scrolls it to the top. A no-op before the editor exists.</summary>
@@ -116,7 +132,7 @@
             return;
         }
 
-        await this.handle.InvokeVoidAsync("revealLine", line);
+        await BrowserCall.InvokeVoidAsync(this.handle, "revealLine", line);
     }
 
     /// <summary>
