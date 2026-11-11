@@ -80,7 +80,7 @@ internal static class NoteTagText
         {
             if (!IsInvisible(rune))
             {
-                _ = builder.Append(rune.ToString());
+                _ = builder.Append(rune);
             }
         }
 

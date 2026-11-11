@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Components.Shared;
 using Microsoft.JSInterop;
 using MudBlazor;
 
@@ -25,7 +26,7 @@ internal static class LibraryClipboard
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
 
-        bool copied = await js.InvokeAsync<bool>("huddleClipboard.copy", fullPath).ConfigureAwait(false);
+        (_, bool copied) = await BrowserCall.InvokeAsync<bool>(js, "huddleClipboard.copy", fullPath).ConfigureAwait(false);
         snackbar.Add(
             copied ? "Path copied" : "Couldn't copy the path.",
             copied ? Severity.Success : Severity.Warning,

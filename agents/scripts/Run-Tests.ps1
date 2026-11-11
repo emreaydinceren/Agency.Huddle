@@ -189,7 +189,7 @@ if ($RedTask) {
 .DESCRIPTION
     Recognises three families of line, learned from a real run's output (see Conversation/logs and the
     delivery report for a sample):
-      - Per-assembly result lines:      "<dll path> (net10.0|x64) <passed|failed|Zero tests ran> (<dur>)"
+      - Per-assembly result lines:      "<dll path> (net11.0|x64) <passed|failed|Zero tests ran> (<dur>)"
       - The totals block:               "  total: N", "  failed: N", "  succeeded: N", "  skipped: N",
                                          "  duration: <dur>", plus "Passed!"/"Failed!" on the summary line.
       - Individual failing tests:       xunit v3's in-proc console reporter prints a failing test as a
@@ -197,7 +197,7 @@ if ($RedTask) {
                                          test name and a "(<duration>)" suffix, e.g.
                                          "failed Agency.Huddle.Tests.Foo.Bar_Baz (12ms)". This is distinct
                                          from the per-assembly "<dll> ... failed (<dur>)" line because it
-                                         has no "(net10.0|x64)" segment and the name is dotted, not a path.
+                                         has no "(net11.0|x64)" segment and the name is dotted, not a path.
 #>
 function Get-TestRunSummary {
     # Deliberately not [Parameter(Mandatory)]: PowerShell's mandatory-parameter binder rejects any
@@ -226,7 +226,7 @@ function Get-TestRunSummary {
             $zeroTestsRan = $true
         }
 
-        # Per-assembly summary: "<path>.dll (net10.0|x64) <passed|failed|Zero tests ran> (<dur>)"
+        # Per-assembly summary: "<path>.dll (net11.0|x64) <passed|failed|Zero tests ran> (<dur>)"
         if ($line -match '^\s*(?<path>\S+\.dll)\s+\((?<tfm>[^)]+)\)\s+(?<status>passed|failed|Zero tests ran)\s+\((?<dur>[^)]+)\)\s*$') {
             $assemblyLines += $line.Trim()
             continue

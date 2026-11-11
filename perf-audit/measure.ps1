@@ -32,8 +32,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $out = $PSScriptRoot
-$driver = Join-Path $repo 'tools/LoadDriver/bin/Release/net10.0/LoadDriver.dll'
-$report = Join-Path $repo 'tools/AllocReport/bin/Release/net10.0/AllocReport.dll'
+$driver = Join-Path $repo 'tools/LoadDriver/bin/Release/net11.0/LoadDriver.dll'
+$report = Join-Path $repo 'tools/AllocReport/bin/Release/net11.0/AllocReport.dll'
 
 $appPid = (Get-Process Huddle.App -ErrorAction Stop | Select-Object -First 1).Id
 Write-Host "Huddle.App PID $appPid"

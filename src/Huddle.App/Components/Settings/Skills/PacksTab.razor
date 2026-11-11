@@ -79,6 +79,6 @@ else
         }
 
         this.scrolled = true;
-        _ = await BrowserCall.TryAsync(() => this.JS.InvokeAsync<bool>("teamScroll.intoView", $"pack-card-{this.highlight}"));
+        _ = await BrowserCall.InvokeAsync<bool>(this.JS, "teamScroll.intoView", $"pack-card-{this.highlight}");
     }
 }

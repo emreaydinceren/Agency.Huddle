@@ -24,14 +24,14 @@ internal static class CliDevices
 
         if (parsed.Url is not null && !IsLoopbackHttp(parsed.Url))
         {
-            await context.Console.Error.WriteLineAsync("--url must be a loopback http URL (http://127.0.0.1:PORT, http://[::1]:PORT or http://localhost:PORT); nothing was sent.").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync("--url must be a loopback http URL (http://127.0.0.1:PORT, http://[::1]:PORT or http://localhost:PORT); nothing was sent.", ct).ConfigureAwait(false);
             return 2;
         }
 
         string? baseUrl = parsed.Url ?? CliVerbs.RunningCopy(context.DataDir)?.Url;
         if (baseUrl is null)
         {
-            await context.Console.Error.WriteLineAsync("No desktop copy is running. Pass --url http://127.0.0.1:PORT to reach a copy started another way.").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync("No desktop copy is running. Pass --url http://127.0.0.1:PORT to reach a copy started another way.", ct).ConfigureAwait(false);
             return 1;
         }
 
@@ -50,12 +50,12 @@ internal static class CliDevices
         }
         catch (HttpRequestException ex)
         {
-            await context.Console.Error.WriteLineAsync($"Could not reach Huddle at {baseUrl}: {ex.Message}").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync($"Could not reach Huddle at {baseUrl}: {ex.Message}", ct).ConfigureAwait(false);
             return 1;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            await context.Console.Error.WriteLineAsync($"Huddle at {baseUrl} did not answer in time.").ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync($"Huddle at {baseUrl} did not answer in time.", ct).ConfigureAwait(false);
             return 1;
         }
     }
@@ -138,7 +138,7 @@ internal static class CliDevices
                 return await ListAsync(client, root, context, ct).ConfigureAwait(false);
             case "approve" when parsed.Id is null:
                 _ = await ListAsync(client, root, context, ct).ConfigureAwait(false);
-                await context.Console.Error.WriteLineAsync("Pass a request id to approve one: huddle devices approve REQUEST_ID").ConfigureAwait(false);
+                await context.Console.Error.WriteLineAsync("Pass a request id to approve one: huddle devices approve REQUEST_ID", ct).ConfigureAwait(false);
                 return 1;
             case "approve":
                 using (StringContent? body = parsed.Scopes.Count == 0 ? null : JsonBody(parsed.Scopes))
@@ -161,11 +161,11 @@ internal static class CliDevices
         using HttpResponseMessage response = await client.PostAsync(new Uri(url), body, ct).ConfigureAwait(false);
         if (response.IsSuccessStatusCode)
         {
-            await context.Console.Out.WriteLineAsync("Done.").ConfigureAwait(false);
+            await context.Console.Out.WriteLineAsync("Done.", ct).ConfigureAwait(false);
             return 0;
         }
 
-        await context.Console.Error.WriteLineAsync(FailureText(response.StatusCode)).ConfigureAwait(false);
+        await context.Console.Error.WriteLineAsync(FailureText(response.StatusCode), ct).ConfigureAwait(false);
         return 1;
     }
 
@@ -182,14 +182,14 @@ internal static class CliDevices
         using HttpResponseMessage response = await client.GetAsync(new Uri(root), ct).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            await context.Console.Error.WriteLineAsync(FailureText(response.StatusCode)).ConfigureAwait(false);
+            await context.Console.Error.WriteLineAsync(FailureText(response.StatusCode), ct).ConfigureAwait(false);
             return 1;
         }
 
         using JsonDocument json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
-        await context.Console.Out.WriteLineAsync("Devices:").ConfigureAwait(false);
+        await context.Console.Out.WriteLineAsync("Devices:", ct).ConfigureAwait(false);
         await PrintRowsAsync(json.RootElement, "devices", "deviceId", "pairedVia", context).ConfigureAwait(false);
-        await context.Console.Out.WriteLineAsync("Pending requests:").ConfigureAwait(false);
+        await context.Console.Out.WriteLineAsync("Pending requests:", ct).ConfigureAwait(false);
         await PrintRowsAsync(json.RootElement, "requests", "requestId", "ingress", context).ConfigureAwait(false);
         return 0;
     }

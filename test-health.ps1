@@ -139,7 +139,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 }
 
 $appDir = Join-Path $repoRoot 'src/Huddle.App'
-$appDll = Join-Path $appDir "bin/$Configuration/net10.0/Huddle.App.dll"
+$appDll = Join-Path $appDir "bin/$Configuration/net11.0/Huddle.App.dll"
 
 if (-not (Test-Path -LiteralPath $appDll)) {
     Write-Banner 'FAIL' "no $Configuration build to test." 'Red'

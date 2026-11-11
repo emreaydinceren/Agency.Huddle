@@ -447,11 +447,11 @@
             this.handledTarget = target;
             this.lastRenderedSignature = renderedSignature;
             this.humanSent = false;
-            this.holdBottom = await this.JS.InvokeAsync<bool>("teamScroll.toMessage", this.container, target);
+            (_, this.holdBottom) = await BrowserCall.InvokeAsync<bool>(this.JS, "teamScroll.toMessage", this.container, target);
             if (!this.holdBottom)
             {
                 // Not in the Transcript (a stale hit): open at the bottom, as without a target.
-                await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
+                await BrowserCall.InvokeVoidAsync(this.JS, "teamScroll.toBottom", this.container);
             }
 
             await this.OnJumped.InvokeAsync();
@@ -460,7 +460,7 @@
 
         var sentSinceLastRender = this.humanSent;
         this.humanSent = false;
-        if (this.holdBottom && (sentSinceLastRender ||await this.JS.InvokeAsync<bool>("teamScroll.isAtBottom", this.container)))
+        if (this.holdBottom && (sentSinceLastRender || (await BrowserCall.InvokeAsync<bool>(this.JS, "teamScroll.isAtBottom", this.container)).Value))
         {
             this.holdBottom = false;
         }
@@ -476,6 +476,6 @@
             return;
         }
 
-        await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
+        await BrowserCall.InvokeVoidAsync(this.JS, "teamScroll.toBottom", this.container);
     }
 }

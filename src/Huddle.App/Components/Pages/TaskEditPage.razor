@@ -261,11 +261,13 @@ else
     {
         this.hasPending = pending;
         this.SyncTabTitle();
-        this.StateHasChanged();
     }
 
     /// <summary>The editor's Save label or enabled state changed: draw the header's Save again.</summary>
-    private void OnFooterStateChanged() => this.StateHasChanged();
+    private void OnFooterStateChanged()
+    {
+        // Bound to an EventCallback, so the framework re-renders this page once the handler returns; the delegate must stay bound or the callback would not.
+    }
 
     /// <summary>Sets the Tab's title, with " ●" after it while edits are pending, as the Library's document title does, and tells the Tab strip whether closing needs a question.</summary>
     private void SyncTabTitle()

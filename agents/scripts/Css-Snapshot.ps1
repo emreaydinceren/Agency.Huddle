@@ -211,8 +211,8 @@ if (-not (Test-Path -LiteralPath $Chrome)) { throw "Chrome was not found at '$Ch
 $Out = [System.IO.Path]::GetFullPath($Out)
 
 $appProject = Join-Path $repoRoot 'src\Huddle.App'
-$mockExe = Join-Path $repoRoot 'src\Huddle.MockAdapter\bin\Debug\net10.0\mock-acp.exe'
-$seedExe = Join-Path $repoRoot 'src\Huddle.Seeder\bin\Debug\net10.0\huddle-seed.exe'
+$mockExe = Join-Path $repoRoot 'src\Huddle.MockAdapter\bin\Debug\net11.0\mock-acp.exe'
+$seedExe = Join-Path $repoRoot 'src\Huddle.Seeder\bin\Debug\net11.0\huddle-seed.exe'
 
 if ($Build) {
     foreach ($project in 'src\Huddle.App', 'src\Huddle.MockAdapter', 'src\Huddle.Seeder') {

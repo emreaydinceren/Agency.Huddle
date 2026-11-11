@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Components.Shared;
 using Microsoft.JSInterop;
 using MudBlazor;
 
@@ -26,7 +27,7 @@ internal static class PromptClipboard
         ArgumentNullException.ThrowIfNull(snackbar);
         ArgumentNullException.ThrowIfNull(text);
 
-        bool copied = await js.InvokeAsync<bool>(CopyHelper, ct, new object?[] { text }).ConfigureAwait(false);
+        (_, bool copied) = await BrowserCall.InvokeAsync<bool>(js, CopyHelper, ct, text).ConfigureAwait(false);
         if (copied)
         {
             snackbar.Add(CopiedMessage, Severity.Success, configure: null, key: SnackbarKey);

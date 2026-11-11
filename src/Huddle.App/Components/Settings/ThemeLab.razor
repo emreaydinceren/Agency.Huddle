@@ -184,13 +184,26 @@
 
     private string? ErrorFor(string key) => this.errors.TryGetValue(key, out string? message) ? message : null;
 
-    private async Task<IJSObjectReference> ModuleAsync() =>
-        this.module ??= await this.JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+    /// <summary>The script module, imported once; <see langword="null"/> when the circuit is already gone.</summary>
+    private async Task<IJSObjectReference?> ModuleAsync()
+    {
+        if (this.module is null)
+        {
+            (_, this.module) = await BrowserCall.InvokeAsync<IJSObjectReference>(this.JS, "import", ModulePath);
+        }
+
+        return this.module;
+    }
 
     private async Task ApplyAsync()
     {
-        IJSObjectReference loaded = await this.ModuleAsync();
-        await loaded.InvokeVoidAsync("apply", this.model.StyleCss, this.model.PaletteVariables);
+        IJSObjectReference? loaded = await this.ModuleAsync();
+        if (loaded is null)
+        {
+            return;
+        }
+
+        await BrowserCall.InvokeVoidAsync(loaded, "apply", this.model.StyleCss, this.model.PaletteVariables);
     }
 
     private async Task OnPaletteChangedAsync(string key, string? value)
@@ -245,14 +258,24 @@
     private async Task OnInspectChangedAsync(bool enabled)
     {
         this.inspecting = enabled;
-        IJSObjectReference loaded = await this.ModuleAsync();
-        await loaded.InvokeVoidAsync("inspect", enabled, "theme-lab-inspect-output");
+        IJSObjectReference? loaded = await this.ModuleAsync();
+        if (loaded is null)
+        {
+            return;
+        }
+
+        await BrowserCall.InvokeVoidAsync(loaded, "inspect", enabled, "theme-lab-inspect-output");
     }
 
     private async Task ExportAsync()
     {
-        IJSObjectReference loaded = await this.ModuleAsync();
-        await loaded.InvokeVoidAsync("copy", this.model.ExportJson());
+        IJSObjectReference? loaded = await this.ModuleAsync();
+        if (loaded is null)
+        {
+            return;
+        }
+
+        await BrowserCall.InvokeVoidAsync(loaded, "copy", this.model.ExportJson());
         this.status = "Copied to the clipboard.";
     }
 }

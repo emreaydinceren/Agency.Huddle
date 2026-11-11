@@ -30,10 +30,10 @@ Adapter is `mock`, so the Chief of Staff's Greeting Turn is answered by the free
    ```jsonc
    "Team": { "Acp": { "Enabled": true, "Adapters": [
      { "Id": "mock",   "DisplayName": "Mock",   "Description": "a scripted adapter - no model",
-       "Command": "<repo>/src/Huddle.MockAdapter/bin/Debug/net10.0/mock-acp.exe",
+       "Command": "<repo>/src/Huddle.MockAdapter/bin/Debug/net11.0/mock-acp.exe",
        "Args": ["--mock"], "UsesToolNamePrefix": false },
      { "Id": "mock2",  "DisplayName": "Mock 2", "Description": "a second scripted adapter - no model",
-       "Command": "<repo>/src/Huddle.MockAdapter/bin/Debug/net10.0/mock-acp.exe",
+       "Command": "<repo>/src/Huddle.MockAdapter/bin/Debug/net11.0/mock-acp.exe",
        "Args": ["--mock", "--second"], "UsesToolNamePrefix": false },
      { "Id": "claude", "DisplayName": "Claude", "Description": "cloud, spends money per turn",
        "Command": "node", "UsesToolNamePrefix": true, "IsolateUserSettings": true }

@@ -289,7 +289,7 @@
             return;
         }
 
-        await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
+        _ = await BrowserCall.InvokeAsync<bool>(this.JS, "huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
     }
 
     /// <summary>Whether the byline and the History apply: History is on and this is a Markdown document.</summary>
@@ -328,7 +328,7 @@
         }
 
         this.selfReference = DotNetObjectReference.Create(this);
-        await this.JS.InvokeVoidAsync("huddleLibrary.onVisible", this.selfReference);
+        await BrowserCall.InvokeVoidAsync(this.JS, "huddleLibrary.onVisible", this.selfReference);
     }
 
     /// <inheritdoc />
@@ -576,7 +576,6 @@
     private async Task OnReloadFreshnessAsync()
     {
         await this.ReloadFromDiskAsync();
-        this.StateHasChanged();
     }
 
     /// <summary>The freshness notice's Keep mine button: hides the notice and updates nothing else, so

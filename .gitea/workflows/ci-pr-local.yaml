@@ -108,15 +108,6 @@ jobs:
           apt-get install -y -qq nodejs
           node --version
 
-      # Every project targets net10.0, but the SDK 11 image carries only the .NET 11 runtime, so
-      # without this step each test host dies with "You must install or update .NET" and the run
-      # reports zero tests. Installing the 10.0 runtime keeps the tests on the runtime the product
-      # targets (a DOTNET_ROLL_FORWARD override would test on a different one). Pin the patch.
-      - name: 🟦 Install .NET 10 runtime
-        run: |
-          set -euo pipefail
-          curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --runtime aspnetcore --version 10.0.15 --install-dir /usr/share/dotnet
-          dotnet --list-runtimes
       # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK
       # satisfies it. A stale cached sdk:10.0 image fails here with "Requested SDK version:
       # 11.0.100 ... Install the [11.0.100] .NET SDK" — pull the image, don't debug the code.

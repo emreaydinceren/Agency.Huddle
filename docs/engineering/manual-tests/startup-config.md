@@ -276,7 +276,7 @@ Expecting `mybot` here is a category error, not a defect — do not file it. If 
 
 **Inconclusive if**
 
-Do not confuse `prompts.json` (the override file, under App_Data, absent until saved) with `prompts.default.json` (generated, sits beside the binary at `src\Huddle.App\bin\Debug\net10.0\prompts.default.json`, always present). Finding `prompts.default.json` is not a result. If you cannot tell which field you edited, undo by clicking that field's own reset control and re-reading the Save button state.
+Do not confuse `prompts.json` (the override file, under App_Data, absent until saved) with `prompts.default.json` (generated, sits beside the binary at `src\Huddle.App\bin\Debug\net11.0\prompts.default.json`, always present). Finding `prompts.default.json` is not a result. If you cannot tell which field you edited, undo by clicking that field's own reset control and re-reading the Save button state.
 
 > [!NOTE]
 > This test deliberately leaves a `prompts.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\prompts.json`) if a later test needs a first-run state.
@@ -838,7 +838,7 @@ The complete silence in the browser is the POINT of this test, not a defect. To 
 
 **Inconclusive if**
 
-If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10.0/Huddle.App.dll`) rather than `dotnet run`, you also get Production and port 5000 — that is the same configuration outcome, not a second defect. ALWAYS read the `Hosting environment:` line before judging any ACP-related result anywhere in this script.
+If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net11.0/Huddle.App.dll`) rather than `dotnet run`, you also get Production and port 5000 — that is the same configuration outcome, not a second defect. ALWAYS read the `Hosting environment:` line before judging any ACP-related result anywhere in this script.
 
 > [!NOTE]
 > Development sets `Team:Acp:Enabled: true`; Production leaves it at its shipped default of false.

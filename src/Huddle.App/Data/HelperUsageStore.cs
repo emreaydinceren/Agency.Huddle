@@ -1,3 +1,4 @@
+using System.Globalization;
 using Agency.Huddle.App.Helpers;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -74,9 +75,18 @@ internal sealed class HelperUsageStore
             return HelperUsage.None;
         }
 
-        decimal? cost = reader.IsDBNull(3) ? null : (decimal)reader.GetDouble(3);
+        decimal? cost = reader.IsDBNull(3) ? null : ToDecimal(reader.GetDouble(3));
         return new HelperUsage(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), cost, reader.IsDBNull(4) ? null : reader.GetString(4));
     }
+
+    /// <summary>
+    /// Reads a stored cost (a SQLite <c>REAL</c>, so a <see cref="double"/>) back as money. A plain conversion keeps the
+    /// double's exact binary value since .NET 11 (0.03 becomes 0.0299999999999999988...), so the cost is taken at the
+    /// 15 significant digits a double can promise, as the conversion did before.
+    /// </summary>
+    /// <param name="value">The stored cost.</param>
+    private static decimal ToDecimal(double value) =>
+        decimal.Parse(value.ToString("G15", CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture);
 
     /// <summary>Reads what every Helper has used, all time: the calls made and the reported cost per currency.</summary>
     /// <returns>The calls summed over every Helper and day, and one cost per currency; no cost entry when none was reported.</returns>
@@ -94,7 +104,7 @@ internal sealed class HelperUsageStore
             calls += reader.GetInt32(0);
             if (!reader.IsDBNull(1) && !reader.IsDBNull(2))
             {
-                costs.Add(new StoredSpend(reader.GetString(1), (decimal)reader.GetDouble(2)));
+                costs.Add(new StoredSpend(reader.GetString(1), ToDecimal(reader.GetDouble(2))));
             }
         }
 

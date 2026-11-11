@@ -46,6 +46,6 @@
         }
 
         this.scrolled = true;
-        _ = await BrowserCall.TryAsync(() => this.Js.InvokeAsync<bool>("teamScroll.intoView", fragment));
+        _ = await BrowserCall.InvokeAsync<bool>(this.Js, "teamScroll.intoView", fragment);
     }
 }
