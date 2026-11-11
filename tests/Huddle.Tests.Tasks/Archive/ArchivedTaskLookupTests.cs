@@ -28,7 +28,7 @@ public sealed class ArchivedTaskLookupTests
         TaskItem? found = fixture.Store.FindArchived(Id("HOME-0001"));
 
         Assert.NotNull(found);
-        Assert.Equal(Path.Combine(fixture.Dir.Path, Path.Combine(ArchivedIdSegments)), found.Path);
+        Assert.Equal(Path.Combine([fixture.Dir.Path, .. ArchivedIdSegments]), found.Path);
         Assert.Null(fixture.Store.Get(Id("HOME-0001")));
     }
 
@@ -75,7 +75,7 @@ public sealed class ArchivedTaskLookupTests
     {
         using ArchivedTaskFixture fixture = new();
         Assert.NotNull(fixture.Store.FindArchived(Id("HOME-0001")));
-        File.Delete(Path.Combine(fixture.Dir.Path, Path.Combine(ArchivedIdSegments)));
+        File.Delete(Path.Combine([fixture.Dir.Path, .. ArchivedIdSegments]));
 
         TaskItem? cached = fixture.Store.FindArchived(Id("HOME-0001"));
         fixture.Store.ArchiveChanged();

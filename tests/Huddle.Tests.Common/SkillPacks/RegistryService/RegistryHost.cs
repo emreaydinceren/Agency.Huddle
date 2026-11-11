@@ -142,7 +142,7 @@ internal sealed class RegistryHost : IDisposable
     /// <summary>Writes SKILLS.md with the given Packs and Catalogs rows.</summary>
     public void SkillsMd(string[] packs, string[]? catalogs = null)
     {
-        string Rows(string[] rows) => string.Concat(rows.Select(static row => $"| {row} |\n"));
+        static string Rows(string[] rows) => string.Concat(rows.Select(static row => $"| {row} |\n"));
         Write(this.Dir, "SKILLS.md", $"# Skills registry\n\n## Packs\n\n| Local path |\n| --- |\n{Rows(packs)}\n## Catalogs\n\n| Local path |\n| --- |\n{Rows(catalogs ?? [])}");
     }
 

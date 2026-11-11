@@ -27,7 +27,7 @@ public sealed class ThemeLabJsTests
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
         Assert.True(process.ExitCode == 0, error);
-        return JsonDocument.Parse(output).RootElement.Clone();
+        return JsonElement.Parse(output);
     }
 
     /// <summary>Only rules that match the element and read a <c>--hu-*</c> token in a property are reported, through nested at-rules and past an unreadable sheet.</summary>

@@ -511,7 +511,7 @@ public sealed class FeedCardTests
         await using MudBunitContext ctx = host.NewContext();
         FakeHeldMentionWake wake = new();
         ctx.Services.AddSingleton<IHeldMentionWake>(wake);
-        FeedItem Held(bool resolved = false) =>
+        static FeedItem Held(bool resolved = false) =>
             FeedTestData.Item(
                 FeedSourceType.RoomMentionHeld,
                 new RoomMentionHeldPayload("room-1", "Merge", null, "Bo", "u-bo", "m-1"),
