@@ -62,7 +62,7 @@
                 {
                     <MudNavMenu Class="nav-settings">
                         <MudTooltip Text="Feed" Placement="Placement.Right">
-                            <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.DynamicFeed" aria-label="Feed" />
+                            <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.Feed" aria-label="Feed" />
                         </MudTooltip>
                     </MudNavMenu>
                 }
@@ -71,7 +71,7 @@
                 <MudNavMenu Class="nav-settings">
                     <ArchivedChats />
                     <MudTooltip Text="Settings" Placement="Placement.Right">
-                        <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
+                        <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Settings" />
                     </MudTooltip>
                 </MudNavMenu>
             </Bottom>
@@ -145,7 +145,7 @@
     /// <summary>The Sidebar's own width in pixels: 240 until the Human drags it.</summary>
     private int sidebarWidth = SidebarResizeHandle.DefaultWidthPx;
 
-    /// <summary>The Activity bar's 48px and the drawer's 1px edge, plus the Sidebar's width while a view is selected.</summary>
+    /// <summary>The Activity bar's 52px and the drawer's 1px edge, plus the Sidebar's width while a view is selected.</summary>
     private string DrawerWidth => string.Create(
         System.Globalization.CultureInfo.InvariantCulture,
         $"{SidebarResizeHandle.ActivityBarPx + (this.sidebarView is null ? 0 : this.sidebarWidth)}px");

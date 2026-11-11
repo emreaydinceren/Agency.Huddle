@@ -842,6 +842,47 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     color: var(--mud-palette-text-primary);
 }
 
+/* Markdown shown outside a note keeps the note's block rhythm at the host's own size: the global reset zeroes block margins and strips
+   list markers, so without this the Task description preview and the Skills help dialog ran their paragraphs and lists together. */
+:is(.task-detail-description-preview, .skills-help-text) {
+    overflow-wrap: anywhere;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) :is(h1, h2, h3, h4, h5, h6) {
+    margin: 16px 0 8px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) :is(p, ul, ol, pre, blockquote, table) {
+    margin: 0 0 12px;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) ul,
+:is(.task-detail-description-preview, .skills-help-text) ol {
+    padding-inline-start: 24px;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) ul {
+    list-style: disc;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) ol {
+    list-style: decimal;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) li + li {
+    margin-top: 4px;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) > :first-child {
+    margin-top: 0;
+}
+
+:is(.task-detail-description-preview, .skills-help-text) > :last-child {
+    margin-bottom: 0;
+}
+
 /* The leading YAML frontmatter as a Properties block (LibraryProperties.razor): a hairline card of key/value
    rows, the keys muted in a column of their own, and a list field's items as chips. */
 .library-properties {

@@ -406,7 +406,7 @@ public sealed partial class FeedPageTests
         string tag = layout[layout.LastIndexOf("<MudTooltip", link, StringComparison.Ordinal)..layout.IndexOf("</MudTooltip>", link, StringComparison.Ordinal)];
         Assert.Contains("Text=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
         Assert.Contains("aria-label=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
-        Assert.Contains("Icons.Material.Outlined.DynamicFeed", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
+        Assert.Contains("Icons.Material.Outlined.Feed", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
     }
 
     /// <summary>

@@ -452,11 +452,11 @@ emoji-picker {
     min-height: 0;
 }
 
-/* The Room header: a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
-   strip, as on every other page. This wrapper supplies the 16px above the row; the Chrome line under the header comes
-   from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
+/* The Room header: a PageHeader with a Chrome line, so the title row is the same 32px as on every other page. A Room sits
+   closer to the tab strip than a page does: this wrapper supplies 8px above the row (half the page's 16px); the Chrome line
+   under the header comes from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
 .room-header {
-    padding-top: 16px;
+    padding-top: 8px;
 }
 
 .room-header .page-header {
@@ -602,6 +602,12 @@ emoji-picker {
     border-bottom: 1px solid var(--hu-line-region);
 }
 
+/* MudBlazor pads the toolbar 24px a side. The left keeps it (the trail's start); the right gives most of it back so the
+   actions end 8px from the window's edge, not 24px short of it. */
+.mud-appbar.top-bar .mud-toolbar-gutters {
+    padding-inline-end: 8px;
+}
+
 .top-bar-grid {
     display: grid;
     grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 32rem) minmax(max-content, 1fr);
@@ -655,7 +661,12 @@ emoji-picker {
 
 .page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
     padding: 0;
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* The trail's last crumb is the page the Human is on. */
+.page-breadcrumbs .page-breadcrumbs-list .mud-breadcrumb-item:last-child {
+    font-weight: 600;
 }
 
 /* MudBlazor draws the separator as body text at 38% opacity (2.4:1 on Huddle Light); it is supporting text,
@@ -725,7 +736,7 @@ emoji-picker {
 }
 
 /* ---- The Activity bar (S5) and the Sidebar's views (S2) --------------------------------------
-   The left drawer (.shell-nav) lays its two children side by side: the 48px Activity bar, then the Sidebar,
+   The left drawer (.shell-nav) lays its two children side by side: the 52px Activity bar, then the Sidebar,
    whose views stack as the whole drawer did before. Global for the reason given above: both sit inside
    child components. The buttons take the secondary text colour; the selected one wears the Selected treatment
    below. */
@@ -735,9 +746,9 @@ emoji-picker {
 
 .activity-bar {
     display: flex;
-    flex: 0 0 48px;
+    flex: 0 0 52px;
     flex-direction: column;
-    width: 48px;
+    width: 52px;
     background-color: var(--hu-ground-rail);
 }
 
@@ -752,7 +763,7 @@ emoji-picker {
     margin-top: auto;
 }
 
-/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape. */
+/* Each button is a 40px tile inside the 52px column, so the pressed one reads as the Selected shape. */
 .activity-bar-item.mud-icon-button {
     width: 40px;
     height: 40px;
@@ -817,7 +828,15 @@ emoji-picker {
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
+/* The bottom toolbar's links are the same 40px icon-only tiles as the buttons above them. Each sits in a MudTooltip wrapper that
+   is an inline-block as wide as the tile, so left in a block menu it hugs the bar's left edge; the menu centres its column the
+   way the top toolbar does, which puts every tile on the bar's axis. */
+.activity-bar .nav-settings {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .activity-bar .nav-settings .mud-nav-link {
     justify-content: center;
     align-items: center;
@@ -831,10 +850,17 @@ emoji-picker {
     display: none;
 }
 
+/* The label is hidden, so the icon's trailing gap to it goes too; left in, it pushes the icon off the tile's centre. */
+.activity-bar .nav-settings .mud-nav-link .mud-nav-link-icon {
+    margin: 0;
+}
+
 /* The hairline between the bar and the Sidebar belongs to the Sidebar, so it goes when the Sidebar collapses and
-   never narrows the bar's 48px buttons. */
+   never narrows the bar's 52px column. */
 .sidebar-views {
-    border-inline-start: 1px solid var(--hu-line-region);
+    /* The control line, not the region hairline: where the bar and the Sidebar are near-equal grounds (Nordic, Lumen, Fluent
+       Light) the fainter region line vanishes, and this edge must read in every Theme. */
+    border-inline-start: 1px solid var(--hu-line-control);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -904,10 +930,10 @@ body.sidebar-resizing {
     border-inline-start: 1px solid var(--hu-line-region);
 }
 
-/* The Right sidebar sits on the page ground, not the Left sidebar's (the doubled .mud-drawer above gives it that); the
-   tripled class outranks it. Both are Surface until a Theme sets the two ground tokens apart. */
+/* The Right sidebar has its own ground, not the Left sidebar's (the doubled .mud-drawer above gives it that); the
+   tripled class outranks it. It follows the page ground until a Theme sets ground.right. */
 .mud-drawer.mud-drawer.right-sidebar {
-    background-color: var(--hu-ground-page);
+    background-color: var(--hu-ground-right);
 }
 
 .right-sidebar .mud-drawer-content {
@@ -1615,9 +1641,9 @@ body.sidebar-resizing {
 }
 
 /* -- nav=tile: the sidebar, quiet rows in the subtle ink and the current row a lifted tile ---------------------- */
-/* The sides are 4px, not 8px, so a row's label starts where the Left menu grid's VS Code proportions put it. */
+/* The sides are 4px, not 8px, so a row's label starts where the Left menu grid's VS Code proportions put it. The edge
+   against the Activity bar stays: its two grounds are near-equal in these Themes, so the line is what separates them. */
 :root:has([data-hu-nav="tile"]) .sidebar-views {
-    border-inline-start: 0;
     padding: 8px 4px 16px;
 }
 
@@ -1674,7 +1700,7 @@ body.sidebar-resizing {
 /* ---- surface=paper: Nordic ------------------------------------------------------------------- */
 /* -- surface=paper: top bar, breadcrumbs (7.4) ------------------------------------------------------------------- */
 :root:has([data-hu-surface="paper"]) .page-breadcrumbs-list {
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -1809,7 +1835,7 @@ body.sidebar-resizing {
 /* ---- surface=hairline: Lumen ----------------------------------------------------------------- */
 /* -- surface=hairline: top bar, breadcrumbs and the search box (7.4) ------------------------------------------------ */
 :root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list {
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
     color: var(--hu-text-subtle);
 }
 

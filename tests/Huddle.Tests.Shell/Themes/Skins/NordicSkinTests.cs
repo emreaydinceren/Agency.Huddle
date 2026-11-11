@@ -48,7 +48,7 @@ public sealed class NordicSkinTests
         Dictionary<string, string> light = TokensOf("nordic.light.json");
         Dictionary<string, string> dark = TokensOf("nordic.dark.json");
 
-        Assert.Equal("palette.backgroundGray", light["ground.rail"]);
+        Assert.Equal("#e6e6de", light["ground.rail"]);
         Assert.Equal("palette.drawerBackground", dark["ground.rail"]);
         Assert.Equal("mix(palette.primary 14%, palette.background)", dark["tone.primary.soft"]);
         Assert.Equal("palette.overlayDark", dark["scrim"]);

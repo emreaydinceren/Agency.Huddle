@@ -585,9 +585,9 @@
    scrollbar on its right; the notices and the Composer do not, so each centred its 760px column in a pane the
    scrollbar's width wider than the Transcript's, and the columns sat half that width apart. The list now always
    reserves the gutter, and the Composer and the notices reserve the same width on their right. --room-scrollbar is
-   the thin scrollbar's width (the * rule above), so the columns match wherever the pane is wide or narrow. */
+   the scrollbar's width (--scrollbar-size, base.css), so the columns match wherever the pane is wide or narrow. */
 :root {
-    --room-scrollbar: 10px;
+    --room-scrollbar: var(--scrollbar-size);
 }
 
 .room-column > .message-list {

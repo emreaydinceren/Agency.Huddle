@@ -43,7 +43,7 @@
     else
     {
         <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass"
-                    Icon="@(this.oneToOneAgent is null ? Icons.Material.Filled.Chat : null)">
+                    Icon="@(this.oneToOneAgent is null ? Icons.Material.Outlined.Chat : null)">
             @if (this.oneToOneAgent is not null)
             {
                 @* A 1:1 Room's leading visual is the Agent's 32px avatar, picture included; a group Room takes the Chat icon (UX-016, OP-5). *@

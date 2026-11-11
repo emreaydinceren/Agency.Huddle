@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Tabs;
 using MudBlazor;
 
 namespace Agency.Huddle.App.Components.Layout;
@@ -10,11 +11,11 @@ internal static class SidebarViews
 
     private static readonly SidebarViewItem[] All =
     [
-        new(SidebarView.Chats, "Chats", Icons.Material.Filled.Chat),
+        new(SidebarView.Chats, "Chats", Icons.Material.Outlined.Chat),
         new(SidebarView.Teams, "Teams", Icons.Material.Outlined.Groups),
         new(SidebarView.Agents, "Agents", Icons.Material.Filled.Group),
-        new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.TaskAlt),
-        new(SidebarView.Library, "Library", Icons.Material.Filled.MenuBook),
+        new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.Checklist),
+        new(SidebarView.Library, "Library", MaterialSymbols.Newsstand),
         new(SidebarView.Scheduled, "Scheduled", Icons.Material.Outlined.Schedule),
     ];
 

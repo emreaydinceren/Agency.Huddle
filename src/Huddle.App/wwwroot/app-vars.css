@@ -24,6 +24,7 @@
     --hu-ground-page: var(--mud-palette-surface);
     --hu-ground-sidebar: var(--mud-palette-surface);
     --hu-ground-rail: var(--mud-palette-surface);
+    --hu-ground-right: var(--hu-ground-page);
     --hu-ground-raised: var(--mud-palette-surface);
     --hu-ground-sunk: var(--mud-palette-surface);
     --hu-line-region: var(--mud-palette-lines-default);

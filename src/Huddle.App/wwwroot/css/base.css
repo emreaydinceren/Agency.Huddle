@@ -35,8 +35,37 @@ html {
    buttons. A rule further down may still hide a thumb until hover (the hiring pool grid). */
 * {
     box-sizing: border-box;
-    scrollbar-width: thin;
-    scrollbar-color: var(--ink-line) transparent;
+}
+
+/* The thin scrollbar is 10px; the scrollbar is 20% wider than that, less 10%: 10.8px. The keyword "thin" cannot be scaled, so
+   Chromium draws it from these pseudo-elements, which it ignores on any element that sets scrollbar-width or scrollbar-color.
+   Other engines keep the keyword form below. --room-scrollbar (room.css) is this width, so the Room's columns keep their gutter. */
+:root {
+    --scrollbar-size: calc(10px * 1.2 * 0.9);
+}
+
+@supports selector(::-webkit-scrollbar) {
+    *::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+    }
+
+    *::-webkit-scrollbar-track,
+    *::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background-color: var(--ink-line);
+        border-radius: var(--hu-radius-full);
+    }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--ink-line) transparent;
+    }
 }
 
 /* Native controls and scrollbars follow the Theme's mode. A dark Theme left at the default scheme drew light scrollbars,
@@ -187,6 +216,17 @@ button:focus-visible {
 
 .mud-tab-slider {
     height: 2px;
+}
+
+/* The Team page's tab rail is a quarter shorter than MudBlazor's 48px tab: 36px. */
+.team-page-tabs .mud-tab {
+    min-height: calc(48px * 0.75);
+}
+
+/* The bar the tabs sit in is no taller than the tabs: MudBlazor gives the toolbar and its wrapper the same 48px. */
+.team-page-tabs :is(.mud-tabs-tabbar, .mud-tabs-toolbar, .mud-tabs-tabbar-inner, .mud-tabs-tabbar-wrapper) {
+    min-height: calc(48px * 0.75);
+    height: calc(48px * 0.75);
 }
 
 /* An alert's sentence is body text in TextPrimary; only its icon and a 3px leading bar carry the status colour
