@@ -34,6 +34,9 @@ internal static class MudVariables
         // Composer, the notices and the reference picker keep the Transcript's column (#485).
         "--room-scrollbar",
 
+        // The scrollbar's width, declared on :root in base.css: 10px, the thin scrollbar, plus 20%. --room-scrollbar is this value.
+        "--scrollbar-size",
+
         "--mud-appbar-height",
         "--mud-default-borderradius",
         "--mud-drawer-width-left",

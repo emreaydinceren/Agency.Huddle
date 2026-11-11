@@ -63,7 +63,7 @@ public sealed partial class AuditBatchBCssTests
     public void AppCss_TranscriptNoticesComposerAndPicker_ShareOneColumn()
     {
         Assert.Matches(@"scrollbar-gutter:\s*stable", AuditBatchBCssTests.DeclarationsFor(".room-column > .message-list"));
-        Assert.Matches(@"--room-scrollbar:\s*10px", AuditBatchBCssTests.DeclarationsFor(":root"));
+        Assert.Matches(@"--room-scrollbar:\s*var\(--scrollbar-size\)", AuditBatchBCssTests.DeclarationsFor(":root"));
         Assert.Matches(@"padding:\s*16px calc\(24px \+ var\(--room-scrollbar\)\) 16px 24px", AuditBatchBCssTests.DeclarationsFor(".composer"));
 
         string picker = AuditBatchBCssTests.DeclarationsFor(".composer-picker");

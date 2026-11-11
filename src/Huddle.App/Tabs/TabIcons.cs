@@ -15,15 +15,15 @@ internal static class TabIcons
     /// <param name="name">A name from <see cref="TabDescriptor.Icon"/>.</param>
     public static string For(string name) => name switch
     {
-        "chat" => Icons.Material.Filled.Chat,
+        "chat" => Icons.Material.Outlined.Chat,
         "team" => Icons.Material.Outlined.Groups,
         "project" => Icons.Material.Filled.LibraryBooks,
-        "tasks" => Icons.Material.Outlined.TaskAlt,
+        "tasks" => Icons.Material.Outlined.Checklist,
         "agents" => Icons.Material.Filled.Group,
-        "settings" => Icons.Material.Filled.Settings,
-        "library" => Icons.Material.Filled.MenuBook,
+        "settings" => Icons.Material.Outlined.Settings,
+        "library" => MaterialSymbols.Newsstand,
         "needs-you" => Icons.Material.Filled.NotificationsActive,
-        "feed" => Icons.Material.Outlined.DynamicFeed,
+        "feed" => Icons.Material.Outlined.Feed,
         "scheduled" => Icons.Material.Outlined.Schedule,
         _ => Icons.Material.Filled.Description,
     };

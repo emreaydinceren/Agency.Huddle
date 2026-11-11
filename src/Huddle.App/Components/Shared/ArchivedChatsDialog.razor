@@ -50,7 +50,7 @@
                     else
                     {
                         @* Icon, name and date, then the one primary action as a text button; Delete lives in the row's menu. *@
-                        <span class="archived-chats-icon"><MudIcon Icon="@Icons.Material.Filled.Chat" /></span>
+                        <span class="archived-chats-icon"><MudIcon Icon="@Icons.Material.Outlined.Chat" /></span>
                         <span class="archived-chats-name flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</span>
                         <span class="archived-chats-date">@this.DateLabel(room)</span>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>

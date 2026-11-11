@@ -162,10 +162,14 @@
 }
 
 .role-suggested {
-    padding: 4px 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 2px 8px;
     border: 1px solid var(--mud-palette-success);
     border-radius: var(--hu-radius-full);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
+    white-space: nowrap;
     color: var(--mud-palette-success-darken);
     background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
 }

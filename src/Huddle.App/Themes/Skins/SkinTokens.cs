@@ -211,6 +211,7 @@ internal static class SkinTokens
         Add(tokens, "ground.page", "palette.surface", "The page ground.");
         Add(tokens, "ground.sidebar", "palette.surface", "The left drawer and the tree header.");
         Add(tokens, "ground.rail", "palette.surface", "The activity bar.");
+        Add(tokens, "ground.right", "ref(ground.page)", "The Right sidebar.");
         Add(tokens, "ground.raised", "palette.surface", "Cards, the composer and panels.");
         Add(tokens, "ground.sunk", "palette.surface", "Lanes, wells and the search box.");
         Add(tokens, "line.region", "palette.linesDefault", "The hairline between regions.");

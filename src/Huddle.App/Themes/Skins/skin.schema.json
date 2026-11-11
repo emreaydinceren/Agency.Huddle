@@ -374,6 +374,10 @@
           "type": "string",
           "description": "The activity bar."
         },
+        "ground.right": {
+          "type": "string",
+          "description": "The Right sidebar."
+        },
         "ground.raised": {
           "type": "string",
           "description": "Cards, the composer and panels."

@@ -50,7 +50,7 @@
         }
         @if (this.text is not null)
         {
-            <div class="process-tab-document">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
+            <div class="process-tab-document library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
         }
     }
 </div>

@@ -103,7 +103,7 @@
     "ink.field": "palette.linesDefault",
     "ground.page": "palette.background",
     "ground.sidebar": "palette.drawerBackground",
-    "ground.rail": "ref(ground.sidebar)",
+    "ground.rail": "#f5f7fb",
     "ground.sunk": "ref(ground.sidebar)",
     "line.region": "palette.divider",
     "line.control": "palette.linesInputs",

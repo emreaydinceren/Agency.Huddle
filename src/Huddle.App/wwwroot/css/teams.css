@@ -277,11 +277,11 @@
     gap: 12px;
 }
 
-/* The roles wrap into rows of whole 200px-or-wider cards, so none is cut through at any width; the first dozen show and
-   "Show all roles" reveals the rest (BuildTeam). */
+/* The roles wrap into rows of whole 230px-or-wider cards (200px plus 15%, room for the Add button and the Suggested pill on one
+   line), so none is cut through at any width; the first dozen show and "Show all roles" reveals the rest (BuildTeam). */
 .role-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 12px;
 }
 

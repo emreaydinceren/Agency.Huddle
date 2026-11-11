@@ -10,13 +10,13 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class BuildTeamGridLayoutSourceTests
 {
-    /// <summary>The roles wrap into rows of whole cards (#474): an auto-fill grid of 200px-or-wider columns, never a sideways scroller that cuts a card through.</summary>
+    /// <summary>The roles wrap into rows of whole cards (#474): an auto-fill grid of 230px-or-wider columns (200px plus 15%, so a card holds its Add button and Suggested pill on one line), never a sideways scroller that cuts a card through.</summary>
     [Fact]
     public void AppCss_RoleGrid_WrapsIntoWholeCards()
     {
         string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".role-grid");
 
-        Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.DoesNotContain("overflow-x", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.DoesNotContain("grid-auto-flow", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }

@@ -108,6 +108,7 @@ public sealed class SkinTokensTests
         Add("ground.page", Surface);
         Add("ground.sidebar", Surface);
         Add("ground.rail", Surface);
+        Add("ground.right", "var(--hu-ground-page)");
         Add("ground.raised", Surface);
         Add("ground.sunk", Surface);
         Add("line.region", "var(--mud-palette-lines-default)");

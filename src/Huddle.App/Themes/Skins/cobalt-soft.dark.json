@@ -44,6 +44,8 @@
     "gate.line": "mix(palette.secondary 50%, palette.surface)",
     "board.background": "#172037",
     "board.column.background": "#111829",
+    "ground.rail": "ref(ground.sidebar)",
+    "ground.right": "#182037",
     "ground.sunk": "palette.tableHover",
     "ink.strip": "palette.tableHover",
     "ink.wash": "palette.backgroundGray",

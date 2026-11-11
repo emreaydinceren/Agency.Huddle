@@ -416,6 +416,8 @@
 .search-bar .mud-input-control .mud-input.mud-input-outlined.mud-focused,
 .search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
     background: var(--hu-ground-sunk);
+    /* The fill is clipped to the radius of the outline MudBlazor draws, so a square fill cannot show past its rounded corners. */
+    border-radius: var(--hu-radius-card);
 }
 
 /* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */

@@ -24,6 +24,8 @@
     "control.track": "#2e2e2e",
     "feed.note.line": "#1f5f99",
     "ground.rail": "#0f0f0f",
+    "ground.sidebar": "#1a1a1a",
+    "ground.right": "#1a1a1a",
     "ground.sunk": "#333333",
     "ink.strip": "ref(ground.sunk)",
     "ink.wash": "ref(ground.sunk)",

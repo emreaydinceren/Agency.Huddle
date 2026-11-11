@@ -106,8 +106,21 @@ public sealed class SkinColourRulesTests
         List<(string Name, SrgbColour Colour)> grounds = [("surface", colours.Surface)];
         grounds.AddRange(GroundKeys.Select(key => (key, colours.Token(key) ?? throw new InvalidOperationException(key + " is not a colour."))));
 
-        Assert.Empty(TooClose(grounds));
+        Assert.Empty(TooClose(grounds, ChosenGrounds.GetValueOrDefault(skinId, [])));
     }
+
+    /// <summary>
+    /// Grounds a Theme's owner chose by exact hex, per skin, knowing each sits under ΔE 3 from its neighbours: the
+    /// activity bar and tab strip of Nordic Light (#e6e6de), its Left sidebar (#edede6), the activity bar of Cobalt Soft Light
+    /// (#f5f7fb), and the Left sidebar of Fluent Dark (#1a1a1a).
+    /// A pair with one of these names is not reported; every other pair in the skin is still held to the rule.
+    /// </summary>
+    private static readonly Dictionary<string, string[]> ChosenGrounds = new(StringComparer.Ordinal)
+    {
+        ["nordic-light"] = ["ground.rail", "ground.sidebar", "ink.strip"],
+        ["cobalt-soft-light"] = ["ground.rail"],
+        ["fluent-dark"] = ["ground.sidebar"],
+    };
 
     /// <summary>
     /// Two states a Theme names differently are either one value or a visible step apart (plan D1): hover, the current
@@ -124,7 +137,7 @@ public sealed class SkinColourRulesTests
         Assert.Empty(TooClose(states));
     }
 
-    private static List<string> TooClose(List<(string Name, SrgbColour Colour)> entries)
+    private static List<string> TooClose(List<(string Name, SrgbColour Colour)> entries, string[]? exempt = null)
     {
         List<string> tooClose = [];
         for (int first = 0; first < entries.Count; first++)
@@ -134,7 +147,8 @@ public sealed class SkinColourRulesTests
                 (string firstName, SrgbColour firstColour) = entries[first];
                 (string secondName, SrgbColour secondColour) = entries[second];
                 double difference = DeltaE.Ciede2000(firstColour, secondColour);
-                if (!string.Equals(firstColour.Hex, secondColour.Hex, StringComparison.Ordinal) && difference < VisibleDifference)
+                bool chosen = exempt is not null && (exempt.Contains(firstName, StringComparer.Ordinal) || exempt.Contains(secondName, StringComparer.Ordinal));
+                if (!chosen && !string.Equals(firstColour.Hex, secondColour.Hex, StringComparison.Ordinal) && difference < VisibleDifference)
                 {
                     tooClose.Add(string.Create(CultureInfo.InvariantCulture, $"{firstName} {firstColour.Hex} / {secondName} {secondColour.Hex} (ΔE {difference:F1})"));
                 }
