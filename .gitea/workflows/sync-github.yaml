@@ -30,7 +30,7 @@ jobs:
     container:
       # Same image the CI jobs use, so the runner already holds it. The job needs no .NET
       # at all — only git, python3 and curl — so the tag is about not pulling a second image.
-      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+      image: mcr.microsoft.com/dotnet/sdk:11.0.100
     defaults:
       run:
         shell: bash
