@@ -37,7 +37,7 @@ internal static class FeedSummary
             RoomMentionHeldPayload p => new(
                 [Text("held a request to "), Strong(p.Waiting), Text(" in "), RoomChip(p.RoomId, p.RoomName ?? "a Room that was deleted"), Text(": the Room's Budget ran out")],
                 $"Nothing was sent to {p.Waiting}. Continue on the Room's Budget card sends it; after a restart that card is gone, so use Wake {p.Waiting}"),
-            RoomCreatedPayload p => new([Text("opened "), RoomChip(p.RoomId, RoomLabel(p))], Agents(p)),
+            RoomCreatedPayload p => new([Text("created "), RoomChip(p.RoomId, p.RoomName)], Agents(p)),
             RoomJoinedPayload p => new([Strong(p.Member), Text(" joined "), RoomChip(p.RoomId, p.RoomName)], null, OmitActor: true),
             RoomArchivedPayload p => new([Text("archived "), RoomChip(p.RoomId, p.RoomName)], null),
             DocumentChangedPayload p => new([Text(DocumentVerb(p.Kind) + " "), DocumentChip(p)], p.Summary.Length > 0 ? p.Summary : null),
@@ -183,13 +183,11 @@ internal static class FeedSummary
         _ => "edited",
     };
 
-    private static string RoomLabel(RoomCreatedPayload p) =>
-        p.Members.Count == 2 ? p.Members[0] + " ↔ " + p.Members[1] : p.RoomName;
-
+    /// <summary>"3 Agents" for a group Room; nothing for a one-to-one, whose name already says who is in it.</summary>
     private static string? Agents(RoomCreatedPayload p)
     {
-        int count = Math.Max(p.Members.Count - 1, 1);
-        return string.Create(CultureInfo.InvariantCulture, $"{count} Agent{(count == 1 ? string.Empty : "s")}");
+        int count = p.Members.Count - 1;
+        return count > 1 ? string.Create(CultureInfo.InvariantCulture, $"{count} Agents") : null;
     }
 
     private static string? InTeam(string team) => team.Length > 0 ? "in " + team : null;

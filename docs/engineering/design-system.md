@@ -301,6 +301,7 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 | Editable long text | `body1` | | 14px | 1.55 | 400 | Prompt fields, Agent instructions, a Skill's body. Monospace only when the content is code. Never the input's default weight or line height |
 | Row text: rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows |
 | Metadata, timestamps, helper lines, counts | `caption` | | 12px | 1.35 | 400 | "11:48", "3 Members + you" (UX-037) |
+| Fine: a second line that only qualifies the first | | | 11px, `var(--font-size-fine)` | inherits | 400 | A 1:1 Room's Agent title under the name in the sidebar. MudBlazor has no role this small, so `app-vars.css` declares the size |
 | Button | `button` | | 13px | 1.4 | 500 | A button's label, Small buttons included (see [Spacing, density and size](#spacing-density-and-size)) |
 
 **Minimum size.** No text renders below 11px, with no exceptions. An avatar's letters are 40% of its
@@ -322,8 +323,8 @@ A wide pane leaves the measure alone. The Transcript is one column of 760px, cen
 Agent's `.message-body` is at most 75ch and the Human's bubble `min(75%, 75ch + 32px)`.
 An empty state's sentence is capped tighter, at 45ch.
 
-**Hierarchy.** The steps are 20, 16, 14, 13 and 12px, so a page reads as an outline: page
-title, section heading, card title and body, rows, meta.
+**Hierarchy.** The steps are 20, 16, 14, 13, 12 and 11px, so a page reads as an outline: page
+title, section heading, card title and body, rows, meta, and the fine line that qualifies a row.
 
 - A heading is never smaller than the text it heads, and a section heading is one size
   step above the text in its section, not only heavier. A card title may be the same size
@@ -338,7 +339,7 @@ title, section heading, card title and body, rows, meta.
 
 **In stylesheets, font sizes come from the typography variables**:
 `var(--mud-typography-body1-size)`, `-body2-size`, `-caption-size`, `-subtitle1-size`,
-`-subtitle2-size` and `-button-size`. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). The
+`-subtitle2-size` and `-button-size`, plus `var(--font-size-fine)` for the 11px rung. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). The
 Library is the one place a size is derived rather than picked (see [The Library](#the-library)),
 because long-form reading
 needs a size the UI scale doesn't have: rendered Markdown (`.library-rendered`, Read mode
@@ -690,8 +691,11 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **A 1:1 Room shows the Agent's small avatar; a group Room shows the Room icon**
   (UX-016). That avatar is 32px (`.room-row-avatar.avatar-transcript`), so it draws the Agent's
   picture: the face is how the Human finds the Room. The Agent's title sits on its own line below
-  the name at every sidebar width, muted at caption size (`.room-row-title`); the row grows to fit.
-  An Agent with no Persona, or a title that repeats the name, shows no title.
+  the name at every sidebar width, in Quiet ink at the fine rung, 11px (`.room-row-title`); the row grows to fit.
+  An Agent with no Persona, or a title that repeats the name, shows no title. The avatar overhangs
+  its slot's start by 4px, so its row's text box does not clip, and each line truncates itself. It
+  keeps 8px to its name, so a 1:1 Room's name starts 8px after a group Room's.
+  Room rows stand 4px apart (`.room-nav-row + .room-nav-row`).
 - **Sidebar action links** ("New chat", "Build a team", "New view") take the
   `nav-action-link` class: secondary text colour (not the accent), the "+" in the leading slot
   and the label on the text line like any row. Don't set `IconColor` on them, and don't repeat

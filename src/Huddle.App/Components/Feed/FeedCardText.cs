@@ -42,22 +42,22 @@ internal static class FeedCardText
     /// <returns>The badge.</returns>
     public static FeedBadge BadgeOf(FeedSourceType? type) => type switch
     {
-        FeedSourceType.TaskNeedsYou => new("check", Icons.Material.Filled.Check),
-        FeedSourceType.DocumentChanged or FeedSourceType.TeamMemoryNotFiled or FeedSourceType.AgentsMdChangeSkipped => new("document", Icons.Material.Filled.Description),
-        FeedSourceType.TaskAssignedToYou => new("person", Icons.Material.Filled.Person),
-        FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => new("gauge", Icons.Material.Filled.Speed),
-        FeedSourceType.HelperFailing => new("alert", Icons.Material.Outlined.ErrorOutline),
-        FeedSourceType.TaskGateOn or FeedSourceType.GateDecisionDue => new("lock", Icons.Material.Filled.Lock),
-        FeedSourceType.RoomMention => new("mention", Icons.Material.Filled.AlternateEmail),
-        FeedSourceType.RoomQuestion => new("question", Icons.Material.Filled.QuestionMark),
-        FeedSourceType.RoomForm => new("form", Icons.Material.Filled.ListAlt),
-        FeedSourceType.RoomJob => new("schedule", Icons.Material.Filled.Schedule),
-        FeedSourceType.TaskCreated or FeedSourceType.RoomCreated => new("plus", Icons.Material.Filled.Add),
-        FeedSourceType.RoomJoined => new("joined", Icons.Material.Filled.GroupAdd),
-        FeedSourceType.RoomArchived => new("archived", Icons.Material.Filled.Archive),
-        FeedSourceType.RequestAwaitsYou => new("request", Icons.Material.Filled.Inbox),
-        FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => new("device", Icons.Material.Outlined.Devices),
-        _ => new("other", Icons.Material.Filled.Circle),
+        FeedSourceType.TaskNeedsYou => new("check", Icons.Material.Filled.Check, "Needs you"),
+        FeedSourceType.DocumentChanged or FeedSourceType.TeamMemoryNotFiled or FeedSourceType.AgentsMdChangeSkipped => new("document", Icons.Material.Filled.Description, "Document"),
+        FeedSourceType.TaskAssignedToYou => new("person", Icons.Material.Filled.Person, "Assigned to you"),
+        FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => new("gauge", Icons.Material.Filled.Speed, "Limit reached"),
+        FeedSourceType.HelperFailing => new("alert", Icons.Material.Outlined.ErrorOutline, "Failing"),
+        FeedSourceType.TaskGateOn or FeedSourceType.GateDecisionDue => new("lock", Icons.Material.Filled.Lock, "Human Gate"),
+        FeedSourceType.RoomMention => new("mention", Icons.Material.Filled.AlternateEmail, "Mention"),
+        FeedSourceType.RoomQuestion => new("question", Icons.Material.Filled.QuestionMark, "Question"),
+        FeedSourceType.RoomForm => new("form", Icons.Material.Filled.ListAlt, "Form"),
+        FeedSourceType.RoomJob => new("schedule", Icons.Material.Filled.Schedule, "Scheduled job"),
+        FeedSourceType.TaskCreated or FeedSourceType.RoomCreated => new("plus", Icons.Material.Filled.Add, "Created"),
+        FeedSourceType.RoomJoined => new("joined", Icons.Material.Filled.GroupAdd, "Joined"),
+        FeedSourceType.RoomArchived => new("archived", Icons.Material.Filled.Archive, "Archived"),
+        FeedSourceType.RequestAwaitsYou => new("request", Icons.Material.Filled.Inbox, "Request"),
+        FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => new("device", Icons.Material.Outlined.Devices, "Device"),
+        _ => new("other", Icons.Material.Filled.Circle, "Activity"),
     };
 
     /// <summary>The context word of the meta line: where the item belongs.</summary>

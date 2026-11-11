@@ -1205,9 +1205,10 @@ body.sidebar-resizing {
    the name. The row is a flex line so the avatar stays centred when the title wraps to a second line. */
 .room-row-avatar {
     flex: 0 0 auto;
-    /* The avatar is 32px in a 24px slot: it overhangs the slot by 4px a side, so its centre stays on the icon line and
-       the name starts where a group Room's name does. */
-    margin-inline: calc((var(--nav-slot) - 32px) / 2) calc((var(--nav-slot) - 32px) / 2 + var(--nav-gap));
+    /* The avatar is 32px in a 24px slot: it overhangs the slot's start by 4px, so its centre stays near the icon line,
+       and keeps a full 8px from its name. The name therefore starts 8px after a group Room's: a face needs the room an
+       18px icon does not. */
+    margin-inline: calc((var(--nav-slot) - 32px) / 2) 8px;
     vertical-align: middle;
 }
 
@@ -1215,6 +1216,24 @@ body.sidebar-resizing {
     display: flex;
     align-items: center;
     min-width: 0;
+}
+
+/* The avatar's 4px overhang into the row's start padding must not be clipped, so this text box does not clip; its
+   name and title truncate themselves instead. Five classes outrank the sidebar's own truncating rule. */
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text:has(> .room-row-avatar) {
+    overflow: visible;
+}
+
+.mud-nav-link-text > .room-row-avatar ~ .sidebar-row-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Rooms stand a little apart, so each face and its two lines read as one row. */
+.room-nav-row + .room-nav-row {
+    margin-top: 4px;
 }
 
 /* Two lines at every sidebar width: the name, then the Agent's title muted below it. Each truncates with an ellipsis
@@ -1237,7 +1256,7 @@ body.sidebar-resizing {
 }
 
 .room-row-title {
-    font-size: var(--mud-typography-caption-size);
+    font-size: var(--font-size-fine);
     font-weight: 400;
     color: var(--mud-palette-text-secondary);
 }

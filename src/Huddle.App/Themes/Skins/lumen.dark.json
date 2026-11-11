@@ -37,6 +37,7 @@
     "overlayDark": "rgba(0,0,0,0.6)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#17152c",
     "note.prose.ink": "#d4d4dc",
     "ground.rail": "palette.background",
     "accent.ink": "mix(palette.primary 46%, palette.textPrimary)",

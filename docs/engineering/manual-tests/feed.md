@@ -59,14 +59,14 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Steps**
 
 1. Open the panel from the bell. Read the Category control at its top and the rows.
-2. Choose `All`, then `Tasks`, then `Rooms`, then `Needs you`.
+2. Choose `All`, then `Needs you`.
 3. Close the panel and open it again.
 4. Read the last line of the panel and press it.
 
 **Pass if — all of these**
 
-- At step 1 six Categories show in this order, each with a count: `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`. `Needs you` is selected, shows `2`, and lists the Form (`Ada is waiting for you to fill in a Form in Ada`) and the Task (`assigned you`).
-- At step 2 each choice changes the rows to that Category's items, and `All` includes the Task creation and the Room items too.
+- At step 1 two Categories show in this order: `All` with no number, and `Needs you`. `Needs you` is selected, shows `2`, and lists the Form (`Ada is waiting for you to fill in a Form in Ada`) and the Task (`assigned you`).
+- At step 2 `All` includes the Task creation and the Room items too, and `Needs you` narrows back to the two Notifications.
 - At step 3 the panel opens on `Needs you` again: the choice is not remembered.
 - At step 4 the last line reads `See all activity` and it opens a Feed Tab at an address that ends `/feed?category=needs-you`.
 
@@ -183,16 +183,16 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 1. Press the `Feed` icon at the top of the Activity bar. Hover it.
 2. Read the page header and the line under it.
 3. Read the filter bar.
-4. Press `Rooms`, then `Needs you`, then `All`. Read the address each time.
-5. Open the Team select, choose a Team, read the counts and the address, then choose `All teams`.
+4. Press `Needs you`, then `All`. Read the address each time. Then change the address to `/feed?category=rooms`.
+5. Open the Team select, choose a Team, read the `Needs you` count and the address, then choose `All teams`.
 
 **Pass if — all of these**
 
 - At step 1 a Tab titled `Feed` opens and the tooltip reads `Feed`.
 - At step 2 the title reads `Feed`, a green chip with a dot reads `Live`, the subtitle reads `What Agents and Huddle did, newest first. Each line links to the Task, Room or document it's about.`, and under it an eye icon and the line `Read-only — the Feed never changes the work and never shows message text.`
-- At step 3 seven segments read `All`, `Needs you`, `Tasks`, `Documents`, `Rooms`, `Gates`, `Helpers`, each followed by a number, and at the right a select that shows `All teams`.
-- At step 4 the address becomes `/feed?category=rooms`, then `/feed?category=needs-you`, then `/feed`, and the list changes to that Category. Returning to `All` from `Needs you` or from any other Category works every time, and the highlighted segment follows.
-- At step 5 the select lists `All teams` first, then every Team, the address gains `?team=<Team>`, and the `Documents` count is `0` while a Team is chosen.
+- At step 3 two segments read `All` (no number) and `Needs you` followed by a number, and at the right a select that shows `All teams`.
+- At step 4 the address becomes `/feed?category=needs-you`, then `/feed`, and the list changes each time with the highlighted segment following. The old `/feed?category=rooms` address shows everything, with `All` highlighted.
+- At step 5 the select lists `All teams` first, then every Team, the address gains `?team=<Team>`, and the `Needs you` count covers only that Team.
 
 ### FEED-08 — A card expands to a Task preview with buttons that change nothing
 
@@ -215,18 +215,18 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 1 a line reads `Task · <Team>`, an inset preview shows the id, title, Status, Assignee, Due and Proof, and under `In the Feed` up to five rows list items about the same Task, one tagged `This item`. The buttons are `Open Task` (filled) and, when the Task has an origin Room, `Open Room`.
+- At step 1 a line reads `Task · <Team>`, an inset preview shows the id, title, Status, Assignee, Due and Proof, and under `In the Feed` up to five rows list the Task's other items; the item you expanded is not among them. The buttons are `Open Task` (filled) and, when the Task has an origin Room, `Open Room`.
 - At step 2 the first card collapses: only one card is expanded at a time.
 - At step 3 the expanded card collapses.
 - At step 4 `Open Task` opens the Task in a Tab.
 - At step 5, where such a Task exists, `Review in Needs you` is outlined with a warning icon and opens the Needs You page on that Task. No card offers Accept, Reply, Dismiss or Decline.
 - At step 6 nothing about the Task has changed, and its Change log has no new entry.
 
-### FEED-09 — Clicking an avatar filters the Feed to that Agent
+### FEED-09 — Clicking an avatar opens the profile, and the Agent filter lives in the address
 
 **Free** · about 6 min
 
-*Proves spec U-8: the filter is in the address, so the Tab remembers it.*
+*Proves spec U-8: an avatar opens the profile popover, and an `?agent=` filter in the address is remembered by the Tab.*
 
 **Before you start**
 
@@ -234,16 +234,19 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. In the Feed Tab click Ada's avatar on a card.
-2. Read the address and the filter bar.
-3. Press the `×` on the chip.
-4. Click Ada's avatar again, then close the Tab and reopen it from Tab history, or reload the browser.
+1. In the Feed Tab click Ada's avatar on a card. Then press Escape.
+2. Hover the small round badge at the bottom right of any card's avatar.
+3. Change the address to `/feed?agent=Ada` and read the filter bar.
+4. Close the Tab and reopen it from Tab history, or reload the browser.
+5. Press the `×` on the chip.
 
 **Pass if — all of these**
 
-- At step 2 the address is `/feed?agent=Ada`, only Ada's cards are listed, and a chip reads `Agent: Ada ×` just left of the Team select. The segment counts change to Ada's items only.
-- At step 3 the chip goes, the address is `/feed` again and every card is back.
-- At step 4 the Tab still shows only Ada's cards. A card whose actor is Huddle or `You` has an avatar that is not a button.
+- At step 1 Ada's profile popover opens beside the avatar, with Edit and Message, and the address stays `/feed`. Escape closes it and focus returns to the avatar. A card whose actor is Huddle or a Helper has a mark that is not a button.
+- At step 2 a tooltip names the badge in words, for example `Created` or `Needs you`.
+- At step 3 only Ada's cards are listed, and a chip reads `Agent: Ada ×` just left of the Team select. The segment counts change to Ada's items only.
+- At step 4 the Tab still shows only Ada's cards.
+- At step 5 the chip goes, the address is `/feed` again and every card is back.
 
 ### FEED-10 — New items wait behind a pill when the list is scrolled
 

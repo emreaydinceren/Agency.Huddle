@@ -143,15 +143,16 @@ public sealed partial class AuditBatchBCssTests
 
     /// <summary>
     /// A label after an icon starts one gap after the slot, a label whose mark sits inside it (a 1:1 Room's avatar) starts
-    /// flush, and MudBlazor's own 12px text inset is gone, so every label of a level starts on one line.
+    /// flush, and MudBlazor's own 12px text inset is gone. A 1:1 Room's avatar keeps 8px from its name.
     /// </summary>
     [Fact]
     public void AppCss_SidebarRowLabelAfterIcon_DropsTheTextInset()
     {
         Assert.Matches(@"margin-inline-start:\s*var\(--nav-gap\)", AuditBatchBCssTests.DeclarationsFor(".sidebar-views .mud-nav-link > .mud-nav-link-icon + .mud-nav-link-text"));
         Assert.Matches(@"margin-inline-start:\s*0", CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".sidebar-views .mud-nav-link > .mud-nav-link-text:has(> .room-row-avatar, > .needs-you-icons)"));
-        // The 32px avatar overhangs the 24px slot by 4px a side and ends on the gap, so its name starts where a group Room's does (#475).
-        Assert.Matches(@"margin-inline:\s*calc\(\(var\(--nav-slot\) - 32px\) / 2\) calc\(\(var\(--nav-slot\) - 32px\) / 2 \+ var\(--nav-gap\)\)", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
+        // The 32px avatar overhangs the 24px slot's start by 4px and keeps 8px to its name; the #475 alignment with a group Room's
+        // name left no gap at all, so the owner traded it for the space (2026-11-10).
+        Assert.Matches(@"margin-inline:\s*calc\(\(var\(--nav-slot\) - 32px\) / 2\) 8px;", AuditBatchBCssTests.DeclarationsFor(".room-row-avatar"));
     }
 
     /// <summary>The destination rows (Agents, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>

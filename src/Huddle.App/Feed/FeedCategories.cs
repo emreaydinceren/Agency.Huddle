@@ -5,9 +5,20 @@ internal static class FeedCategories
 {
     private static readonly Dictionary<FeedCategory, IReadOnlyList<FeedSourceType>> TypesByCategory = BuildIndex();
 
-    /// <summary>The nine Categories in the order the Category control, the counts and the panel draw them.</summary>
+    /// <summary>Every Category, in the order <see cref="FeedStore.Counts"/> reads their counts.</summary>
     public static IReadOnlyList<FeedCategory> Order { get; } =
         [FeedCategory.All, FeedCategory.NeedsYou, FeedCategory.Tasks, FeedCategory.Documents, FeedCategory.Rooms, FeedCategory.Gates, FeedCategory.Helpers, FeedCategory.Devices, FeedCategory.SecondBrain];
+
+    /// <summary>
+    /// The two Categories the Feed Tab's control and the panel offer, in order: All and Needs you. The kind Categories (Tasks, Rooms and the
+    /// rest) still sort items for <see cref="Of"/> and the counts, but no control offers them: each item already says its kind.
+    /// </summary>
+    public static IReadOnlyList<FeedCategory> Choices { get; } = [FeedCategory.All, FeedCategory.NeedsYou];
+
+    /// <summary>The offered Category a parsed one reads as: Needs you stays, anything else (an old <c>?category=rooms</c> link) reads as All.</summary>
+    /// <param name="category">The Category, from an address or a stored Tab.</param>
+    /// <returns>All or Needs you.</returns>
+    public static FeedCategory Offered(FeedCategory category) => category == FeedCategory.NeedsYou ? FeedCategory.NeedsYou : FeedCategory.All;
 
     /// <summary>The label a Category carries in the Category control and the panel.</summary>
     /// <param name="category">The Category.</param>

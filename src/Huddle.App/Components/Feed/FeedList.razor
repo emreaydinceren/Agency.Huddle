@@ -30,12 +30,12 @@
                 {
                     @if (this.Mode == FeedListMode.Cards)
                     {
-                        <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo" OnAgent="this.OnAgent"
+                        <FeedCard @key="group.Lead.Id" Group="group" TabSeenUpTo="this.TabSeenUpTo"
                                   Expanded="this.expandedId == group.Lead.Id" OnToggle="@(() => this.Toggle(group.Lead.Id))" />
                     }
                     else
                     {
-                        <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" OnAgent="this.OnAgent" />
+                        <FeedItemRow @key="group.Lead.Id" Group="group" OnDismiss="this.OnDismiss" OnDismissMany="this.OnDismissMany" />
                     }
                 }
             </div>
@@ -67,10 +67,6 @@
     /// <summary>Called with the items the list draws from its waiting or arriving items: at once when it is at its top, or when the "new items" pill is pressed.</summary>
     [Parameter]
     public EventCallback<IReadOnlyList<FeedItem>> OnNewItemsInserted { get; set; }
-
-    /// <summary>Passed to every row: called with an Agent's Name when its avatar is clicked.</summary>
-    [Parameter]
-    public EventCallback<string> OnAgent { get; set; }
 
     /// <summary>Whether each group is a compact row (the Right sidebar panel) or an expandable card (the Feed Tab).</summary>
     [Parameter]

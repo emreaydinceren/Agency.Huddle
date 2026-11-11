@@ -1,23 +1,23 @@
 @*
     "In the Feed" of an expanded Feed card (Feed spec 6.13): up to five compact rows about the card's target, and for a Task about its origin
-    Room and the Library files it links, newest first. The card's own item is tagged "This item". It only reads the store.
+    Room and the Library files it links, newest first. The card's own item is left out: the card already shows it. With nothing else
+    to list the section is not drawn. It only reads the store.
 *@
 @using Agency.Huddle.App.Feed
 @inject FeedStore Store
 
-<div class="feed-related">
-    <div class="group-label feed-related-caption">In the Feed</div>
-    @foreach (FeedItem related in this.items)
-    {
-        <div class="@(related.Id == this.Item.Id ? "feed-related-row feed-related-own" : "feed-related-row")" @key="related.Id">
-            <FeedItemRow Group="new FeedGroup([related])" />
-            @if (related.Id == this.Item.Id)
-            {
-                <span class="feed-related-tag">This item</span>
-            }
-        </div>
-    }
-</div>
+@if (this.items.Count > 0)
+{
+    <div class="feed-related">
+        <div class="group-label feed-related-caption">In the Feed</div>
+        @foreach (FeedItem related in this.items)
+        {
+            <div class="feed-related-row" @key="related.Id">
+                <FeedItemRow Group="new FeedGroup([related])" />
+            </div>
+        }
+    </div>
+}
 
 @code {
     /// <summary>The most related items shown.</summary>
@@ -48,7 +48,8 @@
 
         this.loadedFor = this.Item;
         this.loadedTargets = [.. this.ExtraTargets];
-        this.items = this.Store.Related(this.Item, this.ExtraTargets, Limit);
+        // One more than the limit is read, so leaving the card's own item out still lists up to five others.
+        this.items = [.. this.Store.Related(this.Item, this.ExtraTargets, Limit + 1).Where(related => related.Id != this.Item.Id).Take(Limit)];
         this.LoadCount++;
     }
 }

@@ -47,14 +47,6 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.feed-row-avatar-button {
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    border-radius: 50%;
-}
-
 .feed-row-body {
     min-width: 0;
 }

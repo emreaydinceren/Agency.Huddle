@@ -19,18 +19,13 @@ public sealed class FeedItemRowTests
 
     private static string Words(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-    private IRenderedComponent<FeedItemRow> Render(MudBunitContext ctx, IReadOnlyList<FeedItem> items, Action<FeedItem>? onDismiss = null, Action<string>? onAgent = null) =>
+    private IRenderedComponent<FeedItemRow> Render(MudBunitContext ctx, IReadOnlyList<FeedItem> items, Action<FeedItem>? onDismiss = null) =>
         ctx.Render<FeedItemRow>(parameters =>
         {
             parameters.Add(row => row.Group, new FeedGroup(items));
             if (onDismiss is not null)
             {
                 parameters.Add(row => row.OnDismiss, EventCallback.Factory.Create(this, onDismiss));
-            }
-
-            if (onAgent is not null)
-            {
-                parameters.Add(row => row.OnAgent, EventCallback.Factory.Create(this, onAgent));
             }
         });
 
@@ -55,7 +50,7 @@ public sealed class FeedItemRowTests
             (Item(FeedSourceType.RoomQuestion, new RoomWaitPayload("r1", "Backend", null), notify: true), "Nova asked you a Question in Backend", "Asked 12:00 · waiting for you"),
             (Item(FeedSourceType.RoomForm, new RoomWaitPayload("r1", "Backend", null), notify: true), "Nova is waiting for you to fill in a Form in Backend", "Asked 12:00 · waiting for you"),
             (Item(FeedSourceType.RoomBudget, new RoomWaitPayload("r1", "Backend", null), notify: true, actor: huddle), "Huddle Backend reached its Budget", "Paused 12:00 · waiting for you to continue or wrap up"),
-            (Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Backend", null, ["Nova", "Kai", "Vera"])), "Nova opened Backend · 2 Agents", null),
+            (Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Backend", null, ["Nova", "Kai", "Vera"])), "Nova created Backend · 2 Agents", null),
             (Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("r1", "Backend", null, "Kai")), "Kai joined Backend", null),
             (Item(FeedSourceType.RoomArchived, new RoomArchivedPayload("r1", "Backend", null)), "Nova archived Backend", null),
             (Item(FeedSourceType.DocumentChanged, new DocumentChangedPayload(Path.Combine(root, "plan.md"), "Notes", "plan.md", "edited", "Reworded the intro")), "Nova edited plan.md · Reworded the intro", null),
@@ -225,25 +220,23 @@ public sealed class FeedItemRowTests
         Assert.Equal([notification], dismissed);
     }
 
-    /// <summary>An Agent's avatar is a button that reports the Agent's Name; Huddle and the Human have no such button.</summary>
+    /// <summary>An Agent's avatar is the profile button that opens their profile; Huddle and the Human have no such button.</summary>
     [Fact]
-    public async Task Avatar_ClickReportsTheAgent_NotForHuddleOrHuman()
+    public void Avatar_AgentIsTheProfileButton_NotHuddleOrHuman()
     {
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
-        await using MudBunitContext ctx = FeedTestData.NewContext(library);
-        List<string> clicked = [];
+        using MudBunitContext ctx = FeedTestData.NewContext(library);
         FeedItem agent = Item(FeedSourceType.RoomArchived, new RoomArchivedPayload("r1", "Backend", null));
         FeedItem huddle = agent with { Actor = FeedActor.Huddle };
         FeedItem human = agent with { Actor = new FeedActor(FeedActorKind.Human, "Emre") };
 
-        IRenderedComponent<FeedItemRow> agentRow = this.Render(ctx, [agent], onAgent: clicked.Add);
-        IRenderedComponent<FeedItemRow> huddleRow = this.Render(ctx, [huddle], onAgent: clicked.Add);
-        IRenderedComponent<FeedItemRow> humanRow = this.Render(ctx, [human], onAgent: clicked.Add);
-        await agentRow.InvokeAsync(() => agentRow.Find("button.feed-row-avatar-button").ClickAsync());
+        IRenderedComponent<FeedItemRow> agentRow = this.Render(ctx, [agent]);
+        IRenderedComponent<FeedItemRow> huddleRow = this.Render(ctx, [huddle]);
+        IRenderedComponent<FeedItemRow> humanRow = this.Render(ctx, [human]);
 
-        Assert.Empty(huddleRow.FindAll("button.feed-row-avatar-button"));
-        Assert.Empty(humanRow.FindAll("button.feed-row-avatar-button"));
-        Assert.Equal(["Nova"], clicked);
+        Assert.Equal("Show Nova's profile", agentRow.Find(".feed-row-avatar button.profile-avatar-button").GetAttribute("aria-label"));
+        Assert.Empty(huddleRow.FindAll("button.profile-avatar-button"));
+        Assert.Empty(humanRow.FindAll("button.profile-avatar-button"));
         Assert.Equal("You", Words(humanRow.Find(".feed-row-summary .feed-row-actor").TextContent));
     }
 

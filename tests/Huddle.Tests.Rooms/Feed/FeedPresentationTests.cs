@@ -56,9 +56,9 @@ public sealed class FeedPresentationTests
         Assert.Equal("is waiting for you to fill in a Form in Pricing", Flatten(FeedSummary.Of(Item(FeedSourceType.RoomForm, new RoomWaitPayload("r1", "Pricing", null), true))));
         Assert.Equal("Pricing reached its Budget", Flatten(FeedSummary.Of(Item(FeedSourceType.RoomBudget, new RoomWaitPayload("r1", "Pricing", null), true))));
         Assert.Equal("mentioned you in a Room that was deleted", Flatten(FeedSummary.Of(Item(FeedSourceType.RoomMention, new RoomWaitPayload("r1", null, null), true))));
-        FeedSummaryLine opened = FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Nova", null, ["You", "Nova"])));
-        Assert.Equal("opened You ↔ Nova", Flatten(opened));
-        Assert.Equal("1 Agent", opened.Context);
+        FeedSummaryLine created = FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Nova", null, ["You", "Nova"])));
+        Assert.Equal("created Nova", Flatten(created));
+        Assert.Null(created.Context);
         Assert.Equal("3 Agents", FeedSummary.Of(Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("r1", "Plan", null, ["You", "A", "B", "C"]))).Context);
         FeedSummaryLine joined = FeedSummary.Of(Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("r1", "Plan", null, "Sage")));
         Assert.Equal("Sage joined Plan", Flatten(joined));
@@ -222,6 +222,19 @@ public sealed class FeedPresentationTests
     {
         Assert.Equal("document", FeedCardText.BadgeOf(FeedSourceType.AgentsMdChangeSkipped).Name);
         Assert.Equal("AGENTS.md files", FeedSummary.NounOf(FeedSourceType.AgentsMdChangeSkipped));
+    }
+
+    /// <summary>Every badge names its meaning in words for its tooltip, and a created Task or Room says "Created".</summary>
+    [Fact]
+    public void BadgeOf_EverySourceType_HasATooltipLabel()
+    {
+        foreach (FeedSourceType type in Enum.GetValues<FeedSourceType>())
+        {
+            Assert.False(string.IsNullOrWhiteSpace(FeedCardText.BadgeOf(type).Label), type.ToString());
+        }
+
+        Assert.Equal("Created", FeedCardText.BadgeOf(FeedSourceType.TaskCreated).Label);
+        Assert.Equal("Created", FeedCardText.BadgeOf(FeedSourceType.RoomCreated).Label);
     }
 
     /// <summary>Ages are compact on a row and spelled on a card.</summary>

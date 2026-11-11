@@ -6174,7 +6174,7 @@ File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-08--a-card-expands-
 
 ### FEED-09 — Clicking an avatar filters the Feed to that Agent
 
-File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-09--clicking-an-avatar-filters-the-feed-to-that-agent)
+File: [`docs/engineering/manual-tests/feed.md`](feed.md#feed-09--clicking-an-avatar-opens-the-profile-and-the-agent-filter-lives-in-the-address)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

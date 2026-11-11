@@ -4,7 +4,7 @@
     align-items: center;
     gap: 4px;
     max-width: 100%;
-    padding: 0 4px;
+    padding: 0 8px;
     min-height: 0;
     width: auto;
     vertical-align: baseline;
@@ -24,6 +24,17 @@
     width: auto;
     padding: 0;
     color: inherit;
+}
+
+/* MudNavLink wraps the icon and label in a block with its own 12px start margin: that put 17px before the icon and 5px
+   after the label, and sat the icon on the text baseline, above the pill's centre. A centred flex row with no margin
+   gives both ends the pill's own padding and centres the icon. */
+.feed-segments ::deep .feed-chip .mud-nav-link-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin: 0;
 }
 
 .feed-segments ::deep .feed-chip .mud-icon-root {

@@ -22,7 +22,6 @@
 @inject TabService Tabs
 @inject NavigationManager Navigation
 @inject IServiceProvider Services
-@inject IJSRuntime Js
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4 feed-page">
     @if (!this.Enabled)
@@ -47,11 +46,15 @@
         </div>
 
         <div class="feed-filter-bar">
-            <div class="feed-category-scroller" @ref="this.categoryScroller">
-                <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="FeedCategories.Order.Count">
-                    @foreach (FeedCategory entry in FeedCategories.Order)
+            <div class="feed-category-scroller">
+                <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="FeedCategories.Choices.Count">
+                    @foreach (FeedCategory entry in FeedCategories.Choices)
                     {
-                        <MudToggleItem Value="@entry">@FeedCategories.Label(entry) <span class="@("feed-count" + (entry == FeedCategory.NeedsYou ? " feed-count-needsyou" : string.Empty))">@FeedCategories.CountOf(this.counts, entry)</span></MudToggleItem>
+                        @* Only Needs you carries a count: it is the one number that asks something of the Human. *@
+                        <MudToggleItem Value="@entry">@FeedCategories.Label(entry)@if (entry == FeedCategory.NeedsYou)
+                            {
+                                @(" ")<span class="feed-count feed-count-needsyou">@FeedCategories.CountOf(this.counts, entry)</span>
+                            }</MudToggleItem>
                     }
                 </HuddleSegmentedControl>
             </div>
@@ -80,7 +83,7 @@
             <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
         }
 
-        <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" OnAgent="this.OnAgentChosen" />
+        <FeedList @key="this.Pager.ListKey" @ref="this.list" Items="this.Pager.Items" Mode="FeedListMode.Cards" TabSeenUpTo="this.tabSeenUpTo" />
 
         @if (this.Pager.HasMore)
         {
@@ -104,8 +107,6 @@
     private ITimer? seenTimer;
     private bool subscribed;
     private long tabSeenUpTo;
-    private ElementReference categoryScroller;
-    private bool revealCategory;
 
     /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
     [CascadingParameter]
@@ -174,7 +175,7 @@
             {
                 FeedCategory.NeedsYou => "Asks from your Agents appear here.",
                 FeedCategory.All when this.team is null => "What your Agents do appears here.",
-                _ => "Try All, or another Team.",
+                _ => "Try another Team.",
             };
         }
     }
@@ -207,7 +208,7 @@
         (string? wantedCategory, string? wantedAgent, string? wantedTeam) = this.Page is { } page
             ? ReadFilter(page.Url)
             : (this.Category, this.Agent, this.Team);
-        FeedCategory parsed = FeedCategories.Parse(wantedCategory);
+        FeedCategory parsed = FeedCategories.Offered(FeedCategories.Parse(wantedCategory));
         string? parsedAgent = string.IsNullOrWhiteSpace(wantedAgent) ? null : wantedAgent;
         string? parsedTeam = string.IsNullOrWhiteSpace(wantedTeam) ? null : wantedTeam;
         string filter = $"{parsed}|{parsedAgent}|{parsedTeam}";
@@ -217,39 +218,19 @@
         }
 
         this.loadedFilter = filter;
-        this.revealCategory = true;
         this.category = parsed;
         this.agent = parsedAgent;
         this.team = parsedTeam;
         this.Load();
     }
 
-    /// <summary>
-    /// Starts the two-second timer that marks the Tab seen, and after a render that loaded a new filter scrolls the Category control
-    /// so its selected segment shows in a column too narrow for all nine.
-    /// </summary>
+    /// <summary>Starts the two-second timer that marks the Tab seen.</summary>
     /// <param name="firstRender">Whether this is the first render.</param>
-    /// <returns>A task that completes once the control was scrolled.</returns>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && this.Enabled)
         {
             this.seenTimer = this.Clock.CreateTimer(this.MarkTabSeen, null, TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
-        }
-
-        if (!this.revealCategory || !this.Enabled)
-        {
-            return;
-        }
-
-        this.revealCategory = false;
-        try
-        {
-            await this.Js.InvokeVoidAsync("huddleFeed.revealSelected", this.categoryScroller);
-        }
-        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
-        {
-            // The circuit is gone or the page has no script, and only the scroll position is lost.
         }
     }
 
@@ -332,8 +313,6 @@
             this.GoTo(this.category, this.agent, next);
         }
     }
-
-    private void OnAgentChosen(string name) => this.GoTo(this.category, name, this.team);
 
     private void ClearAgent() => this.GoTo(this.category, null, this.team);
 

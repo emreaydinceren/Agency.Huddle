@@ -168,7 +168,8 @@ public sealed class SkinTokensTests
         Add("feed.card.open.shadow", "var(--hu-shadow-card-hover)");
         Add("feed.card.hover.line", "var(--hu-line-control)");
         Add("feed.card.hover.fill", "var(--hu-ground-raised)");
-        Add("feed.card.open.line", "var(--hu-line-control)");
+        Add("feed.card.needs.fill", "var(--mud-palette-surface)");
+        Add("feed.card.open.line","var(--hu-line-control)");
         Add("feed.card.kindbar", "0px");
         Add("feed.card.kindbar.ink", "var(--mud-palette-primary)");
         Add("feed.detail.background", "transparent");

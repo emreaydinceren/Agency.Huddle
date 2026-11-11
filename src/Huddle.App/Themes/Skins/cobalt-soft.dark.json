@@ -38,6 +38,7 @@
     "overlayDark": "rgba(0,0,0,0.62)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#212945",
     "detail.decision.background": "#172037",
     "gate.background": "mix(palette.secondary 15%, palette.surface)",
     "gate.line": "mix(palette.secondary 50%, palette.surface)",

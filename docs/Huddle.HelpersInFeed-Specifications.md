@@ -253,7 +253,7 @@ its `room-mention` Notification.
   3. **`MessageList.razor`** draws a Task wake-up as the muted system row only inside its Human
      branch, so a Huddle wake-up would fall into the Agent branch with an initials avatar and the
      agent-facing "Call get_task" line. HF-10 draws a Huddle-posted wake-up as the same system row and
-     any other Huddle Message as an ordinary row with the Huddle mark (`ToggleOn`, as the Feed
+     any other Huddle Message as an ordinary row with the Huddle mark (`AutoAwesome`, as the Feed
      draws Huddle) and the name "Huddle".
   4. **`ReadRecordsTool`** refuses an unscoped Room that holds a sender who is neither an Agent
      nor the Human ("participants outside Team"). A Huddle Message is not a participant, so HF-10

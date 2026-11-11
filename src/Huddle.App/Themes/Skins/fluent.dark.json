@@ -14,6 +14,7 @@
     "25": "0 0 8px rgba(0,0,0,.24), 0 32px 64px rgba(0,0,0,.28)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#132b46",
     "note.prose.ink": "#d6d6d6",
     "detail.background": "rgba(36,36,36,.78)",
     "board.column.background": "ref(ink.wash)",

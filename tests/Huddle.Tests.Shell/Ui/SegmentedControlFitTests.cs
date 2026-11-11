@@ -46,7 +46,7 @@ public sealed class SegmentedControlFitTests
     [Fact]
     public void FeedCategories_FitTheIndicator()
     {
-        Assert.InRange(FeedCategories.Order.Count, 2, IndicatorPositions);
+        Assert.InRange(FeedCategories.Choices.Count, 2, IndicatorPositions);
     }
 
     /// <summary>

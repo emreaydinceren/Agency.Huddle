@@ -74,7 +74,8 @@ internal static class SkinTokens
         Add(tokens, "feed.card.open.shadow", "ref(shadow.card.hover)", "An open Feed card's shadow.");
         Add(tokens, "feed.card.hover.line", "ref(line.control)", "A Feed card's border while hovered.");
         Add(tokens, "feed.card.hover.fill", "ref(ground.raised)", "A Feed card's fill while hovered.");
-        Add(tokens, "feed.card.open.line", "ref(line.control)", "An open Feed card's border.");
+        Add(tokens, "feed.card.needs.fill", "palette.surface", "A Feed card's fill when it is in the Needs you category.");
+        Add(tokens, "feed.card.open.line","ref(line.control)", "An open Feed card's border.");
         Add(tokens, "feed.card.kindbar", "0px", "The width of the kind bar on a Feed card's left edge.");
         Add(tokens, "feed.card.kindbar.ink", "palette.primary", "The kind bar's colour for an item with no kind.");
         Add(tokens, "feed.detail.background", "transparent", "The expanded panel of a Feed card.");

@@ -28,9 +28,11 @@
     <div class="feed-card-top">
         <div class="feed-card-avatar">
             @this.AvatarContent
-            <span class="@("feed-card-badge feed-badge-" + this.Category)" data-badge="@this.Badge.Name" aria-hidden="true">
-                <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
-            </span>
+            <MudTooltip Text="@this.Badge.Label" RootClass="feed-card-badge-tip">
+                <span class="@("feed-card-badge feed-badge-" + this.Category)" data-badge="@this.Badge.Name" aria-hidden="true">
+                    <MudIcon Icon="@this.Badge.Icon" Size="Size.Small" />
+                </span>
+            </MudTooltip>
         </div>
         <div class="feed-card-main" role="button" tabindex="0" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.OnToggle" @onkeydown="this.OnBodyKeyDown">
             <div class="feed-card-summary feed-clamp-3">
@@ -202,10 +204,6 @@
     [Parameter]
     public EventCallback OnToggle { get; set; }
 
-    /// <summary>Called with an Agent's Name when the avatar is clicked. Huddle and the Human have no such click, and without a handler the avatar is not a button.</summary>
-    [Parameter]
-    public EventCallback<string> OnAgent { get; set; }
-
     private FeedItem Lead => this.Group.Lead;
 
     private FeedSummaryLine Line => FeedSummary.Of(this.Lead);
@@ -226,6 +224,7 @@
         + (this.Unseen ? " feed-card-unseen" : string.Empty)
         + (this.Expanded ? " feed-card-expanded" : string.Empty)
         + (this.Lead.Notify && !this.Group.AnyUnresolved ? " feed-card-resolved" : string.Empty)
+        + (this.Lead.Notify && this.Group.AnyUnresolved ? " feed-card-needsyou" : string.Empty)
         + (this.Pill is { Kind: FeedPillKind.Waiting } ? " feed-card-waiting" : string.Empty);
 
     private string AgeClass => this.Unseen ? "feed-card-age feed-card-age-unseen" : "feed-card-age";
@@ -378,28 +377,13 @@
     private RenderFragment AvatarContent => builder =>
     {
         FeedActor actor = this.Lead.Actor;
-        if (actor.Kind == FeedActorKind.Agent && this.OnAgent.HasDelegate)
-        {
-            builder.OpenElement(8, "button");
-            builder.AddAttribute(9, "type", "button");
-            builder.AddAttribute(10, "class", "feed-card-avatar-button");
-            builder.AddAttribute(11, "aria-label", actor.Name);
-            builder.AddAttribute(12, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => this.OnAgent.InvokeAsync(actor.Name)));
-            builder.OpenComponent<AgentAvatar>(0);
-            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.AvatarOwner);
-            builder.AddComponentParameter(3, nameof(AgentAvatar.Avatar), this.Avatars.Get(this.AvatarOwner));
-            builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
-            builder.CloseComponent();
-            builder.CloseElement();
-            return;
-        }
-
         if (actor.Kind is FeedActorKind.Agent or FeedActorKind.Human)
         {
-            builder.OpenComponent<AgentAvatar>(0);
-            builder.AddComponentParameter(1, nameof(AgentAvatar.Name), this.AvatarOwner);
-            builder.AddComponentParameter(3, nameof(AgentAvatar.Avatar), this.Avatars.Get(this.AvatarOwner));
-            builder.AddComponentParameter(2, nameof(AgentAvatar.Size), Size.Medium);
+            builder.OpenComponent<ProfileAvatar>(0);
+            builder.AddComponentParameter(1, nameof(ProfileAvatar.Name), this.AvatarOwner);
+            builder.AddComponentParameter(2, nameof(ProfileAvatar.Avatar), this.Avatars.Get(this.AvatarOwner));
+            builder.AddComponentParameter(3, nameof(ProfileAvatar.Size), Size.Medium);
+            builder.AddComponentParameter(4, nameof(ProfileAvatar.Team), this.MetaTeam);
             builder.CloseComponent();
             return;
         }
@@ -413,10 +397,10 @@
         builder.CloseElement();
     };
 
-    /// <summary>The icon of an actor with no avatar: Huddle's switch, a Helper's mark, or the pencil of an edit made outside Huddle.</summary>
+    /// <summary>The icon of an actor with no avatar: Huddle's sparkle, a Helper's mark, or the pencil of an edit made outside Huddle.</summary>
     private static string MarkIcon(FeedActorKind kind) => kind switch
     {
-        FeedActorKind.Huddle => Icons.Material.Filled.ToggleOn,
+        FeedActorKind.Huddle => Icons.Material.Filled.AutoAwesome,
         FeedActorKind.Helper => Icons.Material.Outlined.Psychology,
         _ => Icons.Material.Filled.EditNote,
     };

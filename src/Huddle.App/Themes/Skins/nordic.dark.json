@@ -37,6 +37,7 @@
     "overlayDark": "rgba(0,0,0,0.6)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#262c2d",
     "ground.rail": "palette.drawerBackground",
     "selected.task.background": "mix(palette.info 18%, palette.background)",
     "tone.primary.soft": "mix(palette.primary 14%, palette.background)",

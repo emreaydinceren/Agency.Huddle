@@ -46,6 +46,7 @@
     "overlayDark": "rgba(6,10,22,0.46)"
   },
   "tokens": {
+    "feed.card.needs.fill": "#eff2fa",
     "note.h1.size": "1.875em",
     "note.h1.tracking": "-0.025em",
     "detail.background": "ref(ground.raised)",

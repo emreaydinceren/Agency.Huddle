@@ -309,14 +309,15 @@ public sealed class FeedCardTests
         Assert.NotNull(card.Find(".feed-preview-footer .mud-icon-root"));
     }
 
-    /// <summary>A Task that is gone shows the deleted line and keeps the Feed part.</summary>
+    /// <summary>A Task that is gone shows the deleted line and keeps the Feed part, which still lists the Task's other items.</summary>
     [Fact]
     public async Task Preview_Task_Deleted()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        _ = host.Post(FeedSourceType.TaskCreated, "GRO-404", new TaskCreatedPayload("GRO-404", "Gone", "Growth", null), minutesAgo: 30);
         await using MudBunitContext ctx = host.NewContext();
 
-        IRenderedComponent<FeedCard> card = Render(ctx, NeedsYouItem("GRO-404"), expanded: true);
+        IRenderedComponent<FeedCard> card = Render(ctx, NeedsYouItem("GRO-404", itemId: 99), expanded: true);
 
         Assert.Equal("This Task was deleted", Words(card.Find(".feed-preview-deleted").TextContent));
         Assert.Empty(card.FindAll(".feed-preview-title"));
@@ -395,9 +396,9 @@ public sealed class FeedCardTests
         Assert.Equal("This document was deleted", Words(card.Find(".feed-preview-deleted").TextContent));
     }
 
-    /// <summary>"In the Feed" lists items about the target, the origin Room and the linked files, and tags the card's own item.</summary>
+    /// <summary>"In the Feed" lists items about the target, the origin Room and the linked files, and leaves out the card's own item.</summary>
     [Fact]
-    public async Task Related_ListsTargetOriginRoomAndAttachments_TagsThisItem()
+    public async Task Related_ListsTargetOriginRoomAndAttachments_LeavesOutThisItem()
     {
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         string root = host.Library.CreatePinnedRoot("Notes");
@@ -413,9 +414,21 @@ public sealed class FeedCardTests
         IRenderedComponent<FeedCard> card = Render(ctx, own, expanded: true);
 
         Assert.Equal("In the Feed", card.Find(".feed-related-caption").TextContent.Trim());
-        Assert.Equal(4, card.FindAll(".feed-related .feed-row").Count);
-        Assert.Single(card.FindAll(".feed-related-own"));
-        Assert.Equal("This item", card.Find(".feed-related-own .feed-related-tag").TextContent.Trim());
+        Assert.Equal(3, card.FindAll(".feed-related .feed-row").Count);
+        Assert.DoesNotContain(card.FindAll(".feed-related .feed-row"), row => row.TextContent.Contains("wait for your approval", StringComparison.Ordinal));
+    }
+
+    /// <summary>A card whose own item is the only one about its target draws no "In the Feed" section at all.</summary>
+    [Fact]
+    public async Task Related_OnlyTheOwnItem_DrawsNoSection()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        FeedItem own = host.Post(FeedSourceType.RoomCreated, "room-9", new RoomCreatedPayload("room-9", "Backend", null, ["You", "Nova", "Kai"]), minutesAgo: 5);
+        await using MudBunitContext ctx = host.NewContext();
+
+        IRenderedComponent<FeedCard> card = Render(ctx, own, expanded: true);
+
+        Assert.Empty(card.FindAll(".feed-related"));
     }
 
     /// <summary>Review in Needs you shows only for an unresolved Notification about a gated Task that waits in Needs You, and opens its anchor.</summary>
@@ -668,7 +681,7 @@ public sealed class FeedCardTests
         IRenderedComponent<FeedCard> card = Render(ctx, item);
 
         Assert.Empty(card.FindAll(".mud-avatar:not(.avatar-square)")); // the Team chip's rounded square is the only avatar left
-        Assert.Empty(card.FindAll(".feed-card-avatar-button"));
+        Assert.Empty(card.FindAll(".profile-avatar-button"));
         Assert.NotNull(card.Find(".feed-card-mark .mud-icon-root"));
         Assert.Equal("Needs Human (Helper)", card.Find(".feed-card-actor").TextContent.Trim());
         Assert.Equal("Sends a document outside the Team", card.Find(".feed-card-purpose").TextContent.Trim());
