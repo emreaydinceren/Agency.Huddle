@@ -135,6 +135,7 @@ runs. Cap the container's CPU and run the **built test executable** in parallel 
 ```bash
 docker run --rm --cpus=1 -v "$PWD:/repo:ro" -v huddle-nuget:/root/.nuget/packages \
   -w /repo mcr.microsoft.com/dotnet/sdk:11.0.100 bash -c '
+    curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --runtime aspnetcore --version 10.0.15 --install-dir /usr/share/dotnet >/dev/null
     cp -r /repo /src && cd /src && rm -rf */*/bin */*/obj
     dotnet build tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj -c Release -v q
     for p in $(seq 8); do
@@ -182,6 +183,7 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
   -w /work -e TEAM_E2E=0 mcr.microsoft.com/dotnet/sdk:11.0.100 bash -c '
     set -euo pipefail
     apt-get update -qq && apt-get install -y -qq nodejs
+    curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --runtime aspnetcore --version 10.0.15 --install-dir /usr/share/dotnet
     dotnet restore Huddle.slnx
     dotnet build   Huddle.slnx --configuration Release --no-restore
     dotnet test    Huddle.slnx --configuration Release --no-build --
@@ -258,6 +260,7 @@ Check these before reading the code.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `Requested SDK version: 11.0.100 ... Install the [11.0.100] .NET SDK` at the restore step | `global.json` moved ahead of the image pinned in the workflows, so the container's SDK no longer satisfies `rollForward: latestPatch` | Bump `image:` in **both** workflows to a tag whose SDK matches. Do not loosen `global.json` to chase the image, and do not go back to the floating `:10.0` tag |
+| `Zero tests ran` with `You must install or update .NET ... Framework: 'Microsoft.NETCore.App', version '10.0.0'` and only 11.0.0 listed | The projects target `net10.0` but the SDK 11 image carries only the .NET 11 runtime. A dev machine that also has the 10.0 runtime hides it | Keep the *Install .NET 10 runtime* step in **both** workflows (and `ci.yaml`); do not set `DOTNET_ROLL_FORWARD`, which tests on a runtime the product does not target |
 | Six `AgentProcessLauncherTests` and the `ComposerScriptTests` fail with `Failed to start 'node'` | The Install Node.js step was removed, reordered after the test step, or its `apt-get` failed | Restore the step; confirm `node --version` printed in the log |
 | `Zero tests ran`, job exits 5, and the step reads as a no-op rather than a failure | The trailing `--` was dropped from `dotnet test` | Put it back. This SDK's Microsoft Testing Platform CLI requires it; it is not a typo |
 | `The following test projects are using VSTest test runner` | Restore assets are stale or missing, so the `xunit.v3` props never imported and the test projects evaluated as `Library` instead of `Exe`. The message names the wrong cause. | Delete `bin/` and `obj/`, then restore again in the same container as the build |
