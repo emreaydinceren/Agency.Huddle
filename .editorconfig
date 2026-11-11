@@ -724,8 +724,6 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.MA0004.severity = none
 
 [tests/**.cs]
-# BL0016 (an interop call must sit in a try/catch) protects a live circuit from a dropped connection; the IJSRuntime and IJSObjectReference fakes in tests have no circuit. Product code is held to it through BrowserCall.
-dotnet_diagnostic.BL0016.severity = none
 # Meziantou is scoped to product code (src); test code is out of scope.
 dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.MA0004.severity = none
