@@ -3,8 +3,8 @@
     avatar editor is itself in a dialog, by the editor in place of its own content (audit B8k: at most two dialogs
     deep). It loads the catalogue once on open through IAvatarLibraryLoader, keeps it in the single `catalog` field and nulls that field (and the cached
     result list) in Dispose, so closing the dialog frees the whole library (R-1). Nothing else keeps it: no static
-    field, no event subscription. Filter state is a skin, a text and two ordered selection lists; AvatarCatalog.Search
-    does the filtering. The chip clouds are static (D-5): only AvatarChipCloud.Arrange reorders them, so pressing a
+    field, no event subscription. Filter state is a skin, a text and one ordered tag selection; AvatarCatalog.Search
+    does the filtering. The tag cloud is static (D-5): only AvatarChipCloud.Arrange reorders it, so pressing a
     chip moves that chip and no other. Thumbnails are text-free buttons whose accessible name is the aria-label only.
     A filter change swaps the grid element (@key) so the browser starts a fresh scroll position at the top without JS.
     The search box sits in a wrapper that stops keydown bubbling, so Escape clears the text first and only a second
@@ -37,12 +37,10 @@ else if (this.catalog is not null && this.results is not null)
                 }
             </div>
             <div class="avatar-library-search-wrap" @ref="this.searchWrap" @onkeydown:stopPropagation="true">
-                <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a profession or a tag"
+                <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a tag, for example red hair"
                               Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
                               OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </div>
-            <ChipCloud Title="Professions" Pool="this.catalog.Professions" Selected="this.selectedProfessions" Cap="ProfessionCap"
-                       OnToggle="this.ToggleProfession" />
             <ChipCloud Title="Tags" Pool="this.TagPool()" Selected="this.selectedTags" Cap="TagCap"
                        OnToggle="this.ToggleTag" />
             <div class="avatar-library-status">
@@ -80,10 +78,7 @@ else if (this.catalog is not null && this.results is not null)
 @code {
     private const int PageSize = 48;
 
-    /// <summary>How many professions show before "Show all": a row or two, so the filters leave the pictures most of the dialog (audit B8j).</summary>
-    private const int ProfessionCap = 12;
-
-    /// <summary>How many tags show before "Show all", for the same reason.</summary>
+    /// <summary>How many tags show before "Show all": a row or two, so the filters leave the pictures most of the dialog (audit B8j).</summary>
     private const int TagCap = 12;
 
     private static readonly (string Label, SkinGroup? Group)[] SkinChoices =
@@ -107,7 +102,6 @@ else if (this.catalog is not null && this.results is not null)
     private bool unreadable;
     private SkinGroup? skin;
     private string text = string.Empty;
-    private readonly List<string> selectedProfessions = [];
     private readonly List<string> selectedTags = [];
     private int shown = PageSize;
     private int gridVersion;
@@ -159,7 +153,6 @@ else if (this.catalog is not null && this.results is not null)
         AvatarLibraryQuery query = new(
             this.skin,
             this.text,
-            new HashSet<string>(this.selectedProfessions, StringComparer.OrdinalIgnoreCase),
             new HashSet<string>(this.selectedTags, StringComparer.OrdinalIgnoreCase));
         this.results = this.catalog.Search(query);
         this.shown = PageSize;
@@ -195,12 +188,6 @@ else if (this.catalog is not null && this.results is not null)
         }
     }
 
-    private void ToggleProfession(string name)
-    {
-        Toggle(this.selectedProfessions, name);
-        this.Refilter();
-    }
-
     private void ToggleTag(string name)
     {
         Toggle(this.selectedTags, name);
@@ -219,7 +206,6 @@ else if (this.catalog is not null && this.results is not null)
     {
         this.skin = null;
         this.text = string.Empty;
-        this.selectedProfessions.Clear();
         this.selectedTags.Clear();
         this.Refilter();
     }

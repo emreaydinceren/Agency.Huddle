@@ -7,18 +7,15 @@ namespace Agency.Huddle.Tests.Avatars;
 /// <see cref="AvatarCatalog"/> of 120 records on every call, or an unreadable result. It reads no file and
 /// keeps only a weak reference to the last catalogue it handed out.
 /// <para>
-/// Record <c>i</c> (0 to 119): file <c>av-{i:D3}.png</c>; profession <c>i % 6</c> of Accountant, Artist, Butler,
-/// Chef, Nurse, Pilot (20 each); skin tone <c>i % 5</c> of fair, light, tan, dark, brown (Light group 48,
+/// Record <c>i</c> (0 to 119): file <c>av-{i:D3}.png</c>; skin tone <c>i % 5</c> of fair, light, tan, dark, brown (Light group 48,
 /// Tan group 48, Dark group 24); gender man for even and woman for odd <c>i</c>. Tags: the excluded
-/// <c>skin-*</c>, <c>bg-blue</c>, gender and profession slug, plus <c>glasses</c> when <c>i % 3 == 0</c> (40),
+/// <c>skin-*</c>, <c>bg-blue</c> and gender, plus <c>glasses</c> when <c>i % 3 == 0</c> (40),
 /// <c>vest</c> when <c>i % 7 == 0</c> (18) and <c>tagNN</c> with NN = <c>i % 50</c> (3 each for 00 to 19, 2 each for
 /// 20 to 49). The tag pool is therefore 52 entries: glasses, vest, tag00 to tag19, tag20 to tag49.
 /// </para>
 /// </summary>
 internal sealed class FakeAvatarLibraryLoader(bool unreadable = false) : IAvatarLibraryLoader
 {
-    private static readonly string[] Professions = ["Accountant", "Artist", "Butler", "Chef", "Nurse", "Pilot"];
-
     private static readonly string[] Tones = ["fair", "light", "tan", "dark", "brown"];
 
     /// <summary>A weak reference to the catalogue returned by the latest <see cref="LoadAsync"/>, or null before the first call.</summary>
@@ -31,10 +28,9 @@ internal sealed class FakeAvatarLibraryLoader(bool unreadable = false) : IAvatar
         List<LibraryAvatar> avatars = [];
         for (int i = 0; i < 120; i++)
         {
-            string profession = Professions[i % 6];
             string tone = Tones[i % 5];
             string gender = (i % 2) == 0 ? "man" : "woman";
-            List<string> tags = ["skin-" + tone, "bg-blue", gender, profession.ToLowerInvariant()];
+            List<string> tags = ["skin-" + tone, "bg-blue", gender];
             if ((i % 3) == 0)
             {
                 tags.Add("glasses");
@@ -46,7 +42,7 @@ internal sealed class FakeAvatarLibraryLoader(bool unreadable = false) : IAvatar
             }
 
             tags.Add("tag" + (i % 50).ToString("D2", System.Globalization.CultureInfo.InvariantCulture));
-            avatars.Add(new LibraryAvatar("av-" + i.ToString("D3", System.Globalization.CultureInfo.InvariantCulture) + ".png", profession, tone, gender, tags));
+            avatars.Add(new LibraryAvatar("av-" + i.ToString("D3", System.Globalization.CultureInfo.InvariantCulture) + ".png", tone, gender, tags));
         }
 
         return new AvatarCatalog(avatars);

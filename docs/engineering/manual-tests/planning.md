@@ -41,7 +41,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 1.8h |
 | 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | 3.1h |
 | 19 | [Adapter commands](adapter-commands.md) | 7 | 6 | 1.8h |
-| 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 28 | — | 3.3h |
+| 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 27 | — | 3.1h |
 | 21 | [File Changes, Watched Folders and Memory](file-changes.md) | 12 | 10 | 3.2h |
 | 22 | [Library explorer and editor](library.md) | 22 | 1 | 3.6h |
 | 23 | [Prompt blocks](prompt-blocks.md) | 6 | 5 | 1.4h |

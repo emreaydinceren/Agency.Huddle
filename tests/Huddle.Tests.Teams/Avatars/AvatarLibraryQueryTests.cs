@@ -3,32 +3,31 @@ using Agency.Huddle.App.Avatars;
 namespace Agency.Huddle.Tests.Avatars;
 
 /// <summary>
-/// Pins <c>AvatarCatalog.Search</c>: skin group, prefix text over hyphen-split tokens, professions OR,
-/// tags AND, and that all four combine as AND while master order is preserved.
+/// Pins <c>AvatarCatalog.Search</c>: skin group, prefix text over hyphen-split tag tokens, tags AND, and
+/// that all three combine as AND while master order is preserved.
 /// </summary>
 public sealed class AvatarLibraryQueryTests
 {
     /// <summary>Builds a fixture avatar whose file name doubles as its identity in assertions.</summary>
-    private static LibraryAvatar Av(string file, string profession, string tone, params string[] tags) =>
-        new(file, profession, tone, "woman", tags);
+    private static LibraryAvatar Av(string file, string tone, params string[] tags) =>
+        new(file, tone, "woman", tags);
 
     /// <summary>Builds a query from loose parts, with case-insensitive sets as the real dialog uses.</summary>
-    private static AvatarLibraryQuery Q(SkinGroup? skin = null, string text = "", string[]? professions = null, string[]? tags = null) =>
+    private static AvatarLibraryQuery Q(SkinGroup? skin = null, string text = "", string[]? tags = null) =>
         new(
             skin,
             text,
-            new HashSet<string>(professions ?? [], StringComparer.OrdinalIgnoreCase),
             new HashSet<string>(tags ?? [], StringComparer.OrdinalIgnoreCase));
 
     /// <summary>One avatar per documented tone plus an unknown one, in a fixed order.</summary>
     private static AvatarCatalog Tones() => new(
     [
-        Av("fair.png", "Pilot", "fair"),
-        Av("light.png", "Pilot", "light"),
-        Av("tan.png", "Pilot", "tan"),
-        Av("brown.png", "Pilot", "brown"),
-        Av("dark.png", "Pilot", "dark"),
-        Av("olive.png", "Pilot", "olive"),
+        Av("fair.png", "fair"),
+        Av("light.png", "light"),
+        Av("tan.png", "tan"),
+        Av("brown.png", "brown"),
+        Av("dark.png", "dark"),
+        Av("olive.png", "olive"),
     ]);
 
     /// <summary>Projects results to their file names.</summary>
@@ -93,7 +92,7 @@ public sealed class AvatarLibraryQueryTests
     [InlineData("hair bunx", 0)]
     public void Text_PrefixMatchesTagWord(string text, int expected)
     {
-        AvatarCatalog catalog = new([Av("a.png", "Pilot", "fair", "hair bun")]);
+        AvatarCatalog catalog = new([Av("a.png", "fair", "hair bun")]);
 
         IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: text));
 
@@ -111,8 +110,8 @@ public sealed class AvatarLibraryQueryTests
     {
         AvatarCatalog catalog = new(
         [
-            Av("a.png", "Pilot", "fair", "bg-pink"),
-            Av("b.png", "Chef", "fair", "skin-fair"),
+            Av("a.png", "fair", "bg-pink"),
+            Av("b.png", "fair", "skin-fair"),
         ]);
 
         IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: text));
@@ -120,15 +119,15 @@ public sealed class AvatarLibraryQueryTests
         Assert.Equal(expected, found.Count);
     }
 
-    /// <summary>The profession counts as searchable text, and every word must match something.</summary>
+    /// <summary>Every word in the box must prefix a token of some tag, not necessarily the same tag.</summary>
     [Theory]
-    [InlineData("chief", 1)]
-    [InlineData("chief staff", 1)]
-    [InlineData("chief glasses", 1)]
-    [InlineData("chief hat", 0)]
+    [InlineData("red", 1)]
+    [InlineData("red hair", 1)]
+    [InlineData("red glasses", 1)]
+    [InlineData("red hat", 0)]
     public void Text_MultipleWords_AreAnded(string text, int expected)
     {
-        AvatarCatalog catalog = new([Av("a.png", "Chief of Staff", "fair", "glasses")]);
+        AvatarCatalog catalog = new([Av("a.png", "fair", "red hair", "glasses")]);
 
         IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: text));
 
@@ -139,10 +138,10 @@ public sealed class AvatarLibraryQueryTests
     [Theory]
     [InlineData("PINK")]
     [InlineData("pInK")]
-    [InlineData("chef")]
+    [InlineData("bg")]
     public void Text_IsCaseInsensitive(string text)
     {
-        AvatarCatalog catalog = new([Av("a.png", "CHEF", "fair", "Bg-Pink")]);
+        AvatarCatalog catalog = new([Av("a.png", "fair", "Bg-Pink")]);
 
         IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: text));
 
@@ -161,31 +160,15 @@ public sealed class AvatarLibraryQueryTests
         Assert.Equal(6, found.Count);
     }
 
-    /// <summary>Several selected professions keep an avatar of any of them.</summary>
-    [Fact]
-    public void Professions_Several_AreOred()
-    {
-        AvatarCatalog catalog = new(
-        [
-            Av("pilot.png", "Pilot", "fair"),
-            Av("chef.png", "Chef", "fair"),
-            Av("dj.png", "DJ", "fair"),
-        ]);
-
-        string[] files = Files(catalog.Search(Q(professions: ["pilot", "CHEF"])));
-
-        Assert.Equal(["pilot.png", "chef.png"], files);
-    }
-
     /// <summary>Several selected tags keep only an avatar that carries all of them.</summary>
     [Fact]
     public void Tags_Several_AreAnded()
     {
         AvatarCatalog catalog = new(
         [
-            Av("both.png", "Pilot", "fair", "hat", "beard"),
-            Av("hat.png", "Pilot", "fair", "hat"),
-            Av("beard.png", "Pilot", "fair", "beard"),
+            Av("both.png", "fair", "hat", "beard"),
+            Av("hat.png", "fair", "hat"),
+            Av("beard.png", "fair", "beard"),
         ]);
 
         string[] files = Files(catalog.Search(Q(tags: ["HAT", "beard"])));
@@ -193,24 +176,23 @@ public sealed class AvatarLibraryQueryTests
         Assert.Equal(["both.png"], files);
     }
 
-    /// <summary>Skin, text, profession and tag filters all have to pass together.</summary>
+    /// <summary>Skin, tag and text filters all have to pass together.</summary>
     [Fact]
     public void AllFilters_Combine_AsAnd()
     {
         AvatarCatalog catalog = new(
         [
-            Av("hit.png", "Pilot", "fair", "hat"),
-            Av("wrongSkin.png", "Pilot", "dark", "hat"),
-            Av("wrongProfession.png", "Chef", "fair", "hat"),
-            Av("wrongTag.png", "Pilot", "fair", "beard"),
-            Av("wrongText.png", "Pilot", "fair", "hat", "hair bun"),
+            Av("hit.png", "fair", "hat", "hair bun"),
+            Av("wrongSkin.png", "dark", "hat", "hair bun"),
+            Av("wrongTag.png", "fair", "beard", "hair bun"),
+            Av("wrongText.png", "fair", "hat", "long hair"),
         ]);
 
-        AvatarLibraryQuery query = Q(SkinGroup.Light, "hat", ["Pilot"], ["hat"]);
+        AvatarLibraryQuery query = Q(SkinGroup.Light, "bun", ["hat"]);
 
         string[] files = Files(catalog.Search(query));
 
-        Assert.Equal(["hit.png", "wrongText.png"], files);
+        Assert.Equal(["hit.png"], files);
     }
 
     /// <summary>Results keep the order the avatars were supplied in.</summary>
@@ -219,9 +201,9 @@ public sealed class AvatarLibraryQueryTests
     {
         AvatarCatalog catalog = new(
         [
-            Av("z.png", "Pilot", "fair"),
-            Av("a.png", "Pilot", "fair"),
-            Av("m.png", "Pilot", "fair"),
+            Av("z.png", "fair"),
+            Av("a.png", "fair"),
+            Av("m.png", "fair"),
         ]);
 
         string[] files = Files(catalog.Search(AvatarLibraryQuery.Empty));
@@ -242,9 +224,9 @@ public sealed class AvatarLibraryQueryTests
     [Fact]
     public void Search_UnknownToneWithTextAndTag_FoundUnderAll()
     {
-        AvatarCatalog catalog = new([Av("o.png", "Pilot", "olive", "hat")]);
+        AvatarCatalog catalog = new([Av("o.png", "olive", "hat")]);
 
-        IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: "pil", tags: ["hat"]));
+        IReadOnlyList<LibraryAvatar> found = catalog.Search(Q(text: "ha", tags: ["hat"]));
 
         Assert.Single(found);
     }

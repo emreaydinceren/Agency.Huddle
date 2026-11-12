@@ -71,7 +71,7 @@ user folder first.
 | `teamTypes` | The types the job suits. It drives the first cloud. |
 | `persona` | The persona file below the pool folder; `personas/<id>.md` when omitted. |
 | `model`, `requires`, `suggestedNames`, `packs` | As on a role in ADR-0038, now owned by the job. |
-| `avatars` | Avatar library files that suit the job, best first. A suggestion for the avatar picker. |
+| `avatars` | Avatar library files suggested for the job, best first. A suggestion for the avatar picker. The library has no professions (since 2026-11-12), so these are chosen by gender and skin, not by job. |
 
 ### 2.2 A persona
 
@@ -152,5 +152,5 @@ default process; adding a type needs no C#.
   so it does not appear in the clouds).
 - Using a job's `avatars` to pick the avatar of a hire (the field is data only).
 - Refactoring the avatar picker onto `ChipCloud`.
-- Avatars for the jobs the library covers weakly (Lawyer, Compliance Officer, Recruiter, Sales
-  Representative, Event Planner, Real Estate Agent and others).
+- Avatars that show the job. The bundled avatar library is pixel-art people with no professions
+  (since 2026-11-12), so no picture is tied to a job.

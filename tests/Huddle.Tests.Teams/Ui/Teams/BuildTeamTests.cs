@@ -1298,7 +1298,7 @@ public sealed class BuildTeamTests
         public Task<AvatarLibraryLoadResult> LoadAsync(CancellationToken cancellationToken)
         {
             string[] files = ["lib-1.png", "lib-2.png", "lib-3.png"];
-            AvatarCatalog catalog = new(files.Select(static file => new LibraryAvatar(file, "Chef", "fair", "man", [])));
+            AvatarCatalog catalog = new(files.Select(static file => new LibraryAvatar(file, "fair", "man", [])));
             return Task.FromResult(new AvatarLibraryLoadResult(catalog, 0, false));
         }
 

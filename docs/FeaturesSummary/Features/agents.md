@@ -151,7 +151,7 @@ may notice:
   comes back if you return to initials or a label.
 - **Saving.** While you create or edit an Agent, **Apply** holds the avatar until you save the card. On a
   viewed Agent, **Save** writes it at once.
-- **Filtering the library.** Two professions show either one, and two tags show only pictures with both.
+- **Filtering the library.** Filter by skin tone, by text and by tags. Two tags show only pictures with both.
 - **Your own library.** Set `Team:AvatarLibrary:Dir` to a folder with a `master.json` and pictures. A folder
   that doesn't exist turns the library off, and uploading still works.
 

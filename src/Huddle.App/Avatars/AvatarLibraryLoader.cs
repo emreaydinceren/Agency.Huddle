@@ -160,14 +160,12 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
             cancellationToken.ThrowIfCancellationRequested();
 
             string? file = ReadString(record, "file");
-            string? profession = ReadString(record, "profession");
-            bool ok = !string.IsNullOrWhiteSpace(profession)
-                && IsSafeImageName(file)
+            bool ok = IsSafeImageName(file)
                 && file is not null
                 && !seen.Contains(file)
                 && HasImageContent(Path.Combine(dir, file));
 
-            if (!ok || file is null || profession is null)
+            if (!ok || file is null)
             {
                 skipped++;
                 if (examples.Count < MaxExamples)
@@ -181,7 +179,6 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
             seen.Add(file);
             valid.Add(new LibraryAvatar(
                 file,
-                profession,
                 ReadString(record, "skin_tone") ?? string.Empty,
                 ReadString(record, "gender_presentation") ?? string.Empty,
                 ReadTags(record)));

@@ -12,13 +12,13 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Pins the Avatar Library picker (Spec §6.5, §6.6 and §6.9): a modal <c>MudDialog</c> with a skin switch, a
-/// debounced text box, two static chip clouds whose selected chips float left with an X, a shown-of-total count
+/// debounced text box, one static tag chip cloud whose selected chips float left with an X, a shown-of-total count
 /// line with Clear all, and a paged grid of text-free thumbnail buttons. It is driven by
 /// <see cref="FakeAvatarLibraryLoader"/>'s 120 records (see that class for the exact fixture).
 /// <para>
 /// Markup contract: <c>.avatar-library-filters</c> (never scrolls) holds <c>button.avatar-library-skin</c> x4,
-/// <c>.avatar-library-search</c> (a <c>MudTextField&lt;string&gt;</c>), two shared <c>ChipCloud</c>s (<c>.chip-cloud</c> labelled Professions and
-/// Tags, each holding <c>button.chip-cloud-chip</c> with <c>.chip-cloud-chip-text</c>;
+/// <c>.avatar-library-search</c> (a <c>MudTextField&lt;string&gt;</c>), one shared <c>ChipCloud</c> (<c>.chip-cloud</c> labelled
+/// Tags, holding <c>button.chip-cloud-chip</c> with <c>.chip-cloud-chip-text</c>;
 /// a selected chip has <c>aria-pressed="true"</c>, two <c>.chip-cloud-bracket</c> and one
 /// <c>.chip-cloud-close</c>), <c>.chip-cloud-all</c> (toggle: Show all / Show fewer),
 /// <c>.avatar-library-count</c> and <c>.avatar-library-clear</c>. <c>.avatar-library-grid</c> (the only scroller)
@@ -32,8 +32,6 @@ public sealed class AvatarLibraryDialogTests
 
     private const string Skin = "button.avatar-library-skin";
 
-    private const string Professions = ".chip-cloud[aria-label='Professions']";
-
     private const string Tags = ".chip-cloud[aria-label='Tags']";
 
     private const string Count = ".avatar-library-count";
@@ -45,8 +43,6 @@ public sealed class AvatarLibraryDialogTests
     private const string TagsAll = ".chip-cloud[aria-label='Tags'] .chip-cloud-all";
 
     private const string SearchInput = ".avatar-library-search input";
-
-    private static readonly string[] AlphabeticalProfessions = ["Accountant", "Artist", "Butler", "Chef", "Nurse", "Pilot"];
 
     /// <summary>It opens as a modal dialog titled "Choose an avatar" with the shared options, and no drawer exists.</summary>
     [Fact]
@@ -112,7 +108,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("120 of 120", harness.CountText);
     }
 
-    /// <summary>The count line reports how many avatars match (four professions OR-ed match 80 of 120 while 48 thumbnails show), not how many are shown, and Show more leaves it unchanged.</summary>
+    /// <summary>The count line reports how many avatars match ("woman" matches the 60 odd records while 48 thumbnails show), not how many are shown, and Show more leaves it unchanged.</summary>
     [Fact]
     public async Task Count_ShowsMatches_NotShown()
     {
@@ -120,63 +116,58 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("120 of 120", harness.CountText);
         Assert.Equal(48, harness.Thumbs.Count);
 
-        await harness.PressChipAsync(Professions, "Chef");
-        await harness.PressChipAsync(Professions, "Pilot");
-        await harness.PressChipAsync(Professions, "Nurse");
-        await harness.PressChipAsync(Professions, "Artist");
+        await harness.TypeAsync("woman");
 
-        Assert.Equal("80 of 120", harness.CountText);
+        Assert.Equal("60 of 120", harness.CountText);
         Assert.Equal(48, harness.Thumbs.Count);
 
         await harness.ClickAsync(More);
 
-        Assert.Equal("80 of 120", harness.CountText);
-        Assert.Equal(80, harness.Thumbs.Count);
+        Assert.Equal("60 of 120", harness.CountText);
+        Assert.Equal(60, harness.Thumbs.Count);
     }
 
-    /// <summary>Typing "butl" narrows the grid to the 20 Butlers.</summary>
+    /// <summary>Typing "ves" narrows the grid to the 18 records tagged vest.</summary>
     [Fact]
     public async Task TextBox_FiltersGrid()
     {
         await using Harness harness = await Harness.OpenAsync();
 
-        await harness.TypeAsync("butl");
+        await harness.TypeAsync("ves");
 
-        Assert.Equal(20, harness.Thumbs.Count);
-        Assert.Equal("20 of 120", harness.CountText);
-        Assert.All(harness.Thumbs, static t => Assert.EndsWith(" Butler", t.GetAttribute("aria-label"), StringComparison.Ordinal));
+        Assert.Equal(18, harness.Thumbs.Count);
+        Assert.Equal("18 of 120", harness.CountText);
+        string[] expected = [.. Enumerable.Range(0, 120).Where(static i => i % 7 == 0).Select(static i => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"/avatar-library/av-{i:D3}.png"))];
+        Assert.Equal(expected, harness.Thumbs.Select(static t => t.QuerySelector("img")?.GetAttribute("src")));
     }
 
-    /// <summary>Pressing a profession chip floats it to the far left, pressed and with a close X, narrows the grid, and moves no other chip.</summary>
+    /// <summary>The picker offers no Professions filter: no cloud, no heading, and the search box asks for a tag.</summary>
     [Fact]
-    public async Task ProfessionChip_Selected_FloatsLeftWithClose()
+    public async Task Picker_HasNoProfessionsCloudOrHeading()
     {
         await using Harness harness = await Harness.OpenAsync();
-        Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
 
-        await harness.PressChipAsync(Professions, "Chef");
-
-        Assert.Equal(["Chef", "Accountant", "Artist", "Butler", "Nurse", "Pilot"], harness.ChipTexts(Professions));
-        IElement first = harness.Chips(Professions)[0];
-        Assert.Equal("true", first.GetAttribute("aria-pressed"));
-        Assert.NotNull(first.QuerySelector(".chip-cloud-close"));
-        Assert.Equal("20 of 120", harness.CountText);
-        Assert.Single(harness.Chips(Professions), static c => c.QuerySelector(".chip-cloud-close") is not null);
+        Assert.Empty(harness.Cut.FindAll(".chip-cloud[aria-label='Professions']"));
+        Assert.DoesNotContain(harness.Cut.FindAll(".chip-cloud-title"), static t => t.TextContent.Contains("Profession", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("Profession", harness.Cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(harness.Cut.FindAll(".chip-cloud"));
+        Assert.Equal("type a tag, for example red hair", harness.Cut.Find(SearchInput).GetAttribute("placeholder"));
     }
 
-    /// <summary>Pressing the selected chip's X deselects it: the cloud returns to alphabetical order and the count to 120 of 120.</summary>
+    /// <summary>Pressing the selected tag chip's X deselects it: the cloud returns to its opening order and the count to 120 of 120.</summary>
     [Fact]
-    public async Task ProfessionChip_Close_RestoresOrder()
+    public async Task TagChip_Close_RestoresOrder()
     {
         await using Harness harness = await Harness.OpenAsync();
-        await harness.PressChipAsync(Professions, "Chef");
+        IReadOnlyList<string> before = harness.ChipTexts(Tags);
+        await harness.PressChipAsync(Tags, "tag05");
 
-        IElement close = Assert.IsAssignableFrom<IElement>(harness.Chips(Professions)[0].QuerySelector(".chip-cloud-close"));
+        IElement close = Assert.IsAssignableFrom<IElement>(harness.Chips(Tags)[0].QuerySelector(".chip-cloud-close"));
         await harness.Cut.InvokeAsync(() => close.ClickAsync());
 
-        Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
+        Assert.Equal(before, harness.ChipTexts(Tags));
         Assert.Equal("120 of 120", harness.CountText);
-        Assert.Empty(harness.Cut.FindAll(Professions + " .chip-cloud-close"));
+        Assert.Empty(harness.Cut.FindAll(Tags + " .chip-cloud-close"));
     }
 
     /// <summary>Pressing a tag chip floats it left with a close X, keeps the rest in order and narrows the grid to the 3 records carrying it.</summary>
@@ -237,10 +228,10 @@ public sealed class AvatarLibraryDialogTests
     public async Task ClearAll_ResetsEverything()
     {
         await using Harness harness = await Harness.OpenAsync();
+        IReadOnlyList<string> tagsBefore = harness.ChipTexts(Tags);
         await harness.Cut.InvokeAsync(() => harness.SkinButton("Dark").ClickAsync());
-        await harness.TypeAsync("chef");
+        await harness.TypeAsync("man");
         await harness.PressChipAsync(Tags, "glasses");
-        await harness.PressChipAsync(Professions, "Chef");
         Assert.Equal("4 of 120", harness.CountText);
 
         await harness.ClickAsync(Clear);
@@ -249,7 +240,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("true", harness.SkinButton("All").GetAttribute("aria-pressed"));
         Assert.Equal(string.Empty, harness.Cut.Find(SearchInput).GetAttribute("value") ?? string.Empty);
         Assert.Empty(harness.Cut.FindAll("button.chip-cloud-chip[aria-pressed=true]"));
-        Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
+        Assert.Equal(tagsBefore, harness.ChipTexts(Tags));
     }
 
     /// <summary>A text matching nothing shows "No avatars match." and 0 of 120.</summary>
@@ -266,14 +257,14 @@ public sealed class AvatarLibraryDialogTests
         Assert.Empty(harness.Cut.FindAll(More));
     }
 
-    /// <summary>The first thumbnail's aria-label is the raw skin tone, gender and profession: "fair man Accountant"; the second "light woman Artist".</summary>
+    /// <summary>The first thumbnail's aria-label is the raw skin tone and gender, then its descriptive tags: "fair man, glasses, vest, tag00"; the second "light woman, tag01".</summary>
     [Fact]
-    public async Task Thumbnail_HasAriaLabel_RawSkinGenderProfession()
+    public async Task Thumbnail_HasAriaLabel_RawSkinGenderAndTags()
     {
         await using Harness harness = await Harness.OpenAsync();
 
-        Assert.Equal("fair man Accountant", harness.Thumbs[0].GetAttribute("aria-label"));
-        Assert.Equal("light woman Artist", harness.Thumbs[1].GetAttribute("aria-label"));
+        Assert.Equal("fair man, glasses, vest, tag00", harness.Thumbs[0].GetAttribute("aria-label"));
+        Assert.Equal("light woman, tag01", harness.Thumbs[1].GetAttribute("aria-label"));
         Assert.Equal("button", harness.Thumbs[0].GetAttribute("type"));
         IElement image = Assert.IsAssignableFrom<IElement>(harness.Thumbs[0].QuerySelector("img"));
         Assert.Equal("/avatar-library/av-000.png", image.GetAttribute("src"));
@@ -332,9 +323,9 @@ public sealed class AvatarLibraryDialogTests
         await using Harness harness = await Harness.OpenAsync();
 
         Assert.Equal(200d, harness.Cut.FindComponent<MudTextField<string>>().Instance.DebounceInterval);
-        await harness.TypeAsync("butl");
+        await harness.TypeAsync("ves");
 
-        Assert.Equal(20, harness.Thumbs.Count);
+        Assert.Equal(18, harness.Thumbs.Count);
     }
 
     /// <summary>Escape in the text box clears it without closing; a second Escape closes the dialog with Cancel.</summary>
@@ -343,7 +334,7 @@ public sealed class AvatarLibraryDialogTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using Harness harness = await Harness.OpenAsync();
-        await harness.TypeAsync("butl");
+        await harness.TypeAsync("ves");
 
         await harness.Cut.InvokeAsync(() => harness.Cut.Find(SearchInput).KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
 
@@ -438,7 +429,6 @@ public sealed class AvatarLibraryDialogTests
         Assert.Null(grid.QuerySelector(".avatar-library-skin, .avatar-library-search, .chip-cloud-chip,.avatar-library-count, .avatar-library-clear, .avatar-library-tags-all"));
         Assert.Equal(4, filters.QuerySelectorAll(Skin).Length);
         Assert.NotNull(filters.QuerySelector(".avatar-library-search"));
-        Assert.NotNull(filters.QuerySelector(Professions));
         Assert.NotNull(filters.QuerySelector(Tags));
         Assert.NotNull(filters.QuerySelector(Count));
         Assert.NotNull(filters.QuerySelector(Clear));
@@ -451,13 +441,13 @@ public sealed class AvatarLibraryDialogTests
     public async Task SelectedState_IsNotColourAlone()
     {
         await using Harness harness = await Harness.OpenAsync();
-        await harness.PressChipAsync(Professions, "Butler");
+        await harness.PressChipAsync(Tags, "vest");
 
-        IElement chip = harness.Chips(Professions)[0];
+        IElement chip = harness.Chips(Tags)[0];
         Assert.Equal("true", chip.GetAttribute("aria-pressed"));
         Assert.Equal(2, chip.QuerySelectorAll(".chip-cloud-bracket").Length);
         Assert.Single(chip.QuerySelectorAll(".chip-cloud-close"));
-        Assert.All(harness.Chips(Professions).Skip(1), static c =>
+        Assert.All(harness.Chips(Tags).Skip(1), static c =>
         {
             Assert.Equal("false", c.GetAttribute("aria-pressed"));
             Assert.Empty(c.QuerySelectorAll(".chip-cloud-bracket, .chip-cloud-close"));
@@ -466,23 +456,20 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("false", harness.SkinButton("Tan").GetAttribute("aria-pressed"));
     }
 
-    /// <summary>Pressing a chip in either cloud moves only that chip: every other chip keeps its relative order and none disappears.</summary>
+    /// <summary>Pressing two tag chips moves only those chips, first in press order: every other chip keeps its relative order and none disappears.</summary>
     [Fact]
     public async Task Chip_Press_NeverMovesAnotherChip()
     {
         await using Harness harness = await Harness.OpenAsync();
-        IReadOnlyList<string> professionsBefore = harness.ChipTexts(Professions);
         IReadOnlyList<string> tagsBefore = harness.ChipTexts(Tags);
 
-        await harness.PressChipAsync(Professions, "Pilot");
+        await harness.PressChipAsync(Tags, "vest");
         await harness.PressChipAsync(Tags, "tag05");
 
-        IReadOnlyList<string> professionsAfter = harness.ChipTexts(Professions);
         IReadOnlyList<string> tagsAfter = harness.ChipTexts(Tags);
-        Assert.Equal(professionsBefore.Count, professionsAfter.Count);
-        Assert.Equal(professionsBefore.Where(static t => t != "Pilot"), professionsAfter.Skip(1));
         Assert.Equal(tagsBefore.Count, tagsAfter.Count);
-        Assert.Equal(tagsBefore.Where(static t => t != "tag05"), tagsAfter.Skip(1));
+        Assert.Equal(["vest", "tag05"], tagsAfter.Take(2));
+        Assert.Equal(tagsBefore.Where(static t => t != "vest" && t != "tag05"), tagsAfter.Skip(2));
     }
 
     /// <summary>The dialog has no confirm button: no dialog actions and no button named OK, Select, Confirm, Choose, Save or Done.</summary>
@@ -506,7 +493,6 @@ public sealed class AvatarLibraryDialogTests
         await harness.TypeAsync("zzzz");
 
         Assert.Equal("Clear all", harness.Cut.Find(Clear).TextContent.Trim());
-        Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
         Assert.Equal(12, harness.ChipTexts(Tags).Count);
 
         await harness.ClickAsync(Clear);
