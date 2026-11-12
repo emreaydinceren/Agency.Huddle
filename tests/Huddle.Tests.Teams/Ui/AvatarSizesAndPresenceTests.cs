@@ -19,7 +19,7 @@ public sealed class AvatarSizesAndPresenceTests
     /// <summary>The darkening every filled badge tone gets so the white glyph reads: the tone mixed this far toward black.</summary>
     private const int BadgeTowardBlackPercent = 20;
 
-    /// <summary>The Large avatar (a profile) is 72px, the Transcript avatar 32px, and the letters stay 40% of the diameter on the ADR-0056 scale: 11px at 24px and 13px at 32px.</summary>
+    /// <summary>The Large avatar (a profile) is 72px, the Transcript class 32px, a card's Medium avatar and a Message's avatar 50px, and the letters stay 40% of the diameter on the ADR-0056 scale: 11px at 24px and 13px at 32px.</summary>
     [Fact]
     public void Stylesheet_AvatarSizes_AreTheFourDiameters()
     {
@@ -35,7 +35,12 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Contains("height: 32px;", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("max(13px, calc(32px * 0.4))", transcript, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("max(11px, calc(24px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-small", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("max(11px, calc(40px * 0.4))", CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-medium", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        string medium = CssText.RuleBodyLoose(css, ".mud-avatar.mud-avatar-medium", false);
+        Assert.Contains("width: 50px;", medium, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("max(11px, calc(50px * 0.4))", medium, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        string message = CssText.RuleBodyLoose(css, ".message-list .mud-avatar.avatar-transcript", false);
+        Assert.Contains("width: 50px;", message, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("max(11px, calc(50px * 0.4))", message, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>

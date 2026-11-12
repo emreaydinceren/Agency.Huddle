@@ -252,9 +252,9 @@ public sealed class AgentAvatarTests
         Assert.Contains("avatar-monogram", root.ClassList);
     }
 
-    /// <summary>A picture is the same circle with the <c>avatar-image</c> hairline class, and a transparent one sits on the plain colour, not the letter mix.</summary>
+    /// <summary>A picture gets the <c>avatar-image</c> class and no inline colour: it sits on the neutral fill from the stylesheet, not the Agent's stored colour.</summary>
     [Fact]
-    public async Task Render_Image_GetsTheHairlineClass_AndSitsOnThePlainColour()
+    public async Task Render_Image_GetsTheImageClass_AndNoInlineColour()
     {
         await using MudBunitContext ctx = new();
         Avatar avatar = new(Label: null, Image: "abc123.png", Background: "#4a154b");
@@ -266,7 +266,7 @@ public sealed class AgentAvatarTests
         var root = cut.Find(".mud-avatar");
         Assert.Contains("avatar-image", root.ClassList);
         Assert.DoesNotContain("avatar-monogram", root.ClassList);
-        Assert.Equal(["background: #4a154b"], Declarations(root));
+        Assert.Empty(Declarations(root));
     }
 
     /// <summary>The root's inline style as its trimmed, non-empty declarations (MudBlazor appends its own separators).</summary>

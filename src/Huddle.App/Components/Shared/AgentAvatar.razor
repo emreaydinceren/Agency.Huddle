@@ -232,24 +232,16 @@
     /// <see cref="Resolved"/> has none - so the Theme's own accent applies through <c>.avatar-monogram</c> in
     /// <c>app.css</c>. A monogram hands the Agent's colour to <c>app.css</c> as this avatar's own primary
     /// (<see cref="AvatarColours.MonogramStyle(string)"/>), which makes the fill and letters for the Theme in force;
-    /// there is no per-colour black or white choice); a picture, which may be transparent, sits on the colour itself.
+    /// there is no per-colour black or white choice). A picture gets no inline style: it sits on one neutral fill from
+    /// <c>shell.css</c> (<c>.avatar-image</c>), so the art carries the Agent's look rather than a loud colour behind it.
+    /// The stored colour is kept, because the same Agent is drawn as a monogram at 24px.
     /// Built entirely from this C# string, never a literal typed into the markup above: a later task fails the build
     /// on a colour literal found inside any literal inline style attribute under <c>Components/</c>.
     /// </summary>
-    private string? InlineStyle
-    {
-        get
-        {
-            if (this.Resolved.Background is null)
-            {
-                return null;
-            }
-
-            return this.ImageSource is not null
-                ? $"background: {this.Resolved.Background};"
-                : AvatarColours.MonogramStyle(this.Resolved.Background);
-        }
-    }
+    private string? InlineStyle =>
+        this.Resolved.Background is null || this.ImageSource is not null
+            ? null
+            : AvatarColours.MonogramStyle(this.Resolved.Background);
 
     /// <summary>
     /// Two letters, always. A name of several words reads as its first and last word's initials ("Emily Lee" is EL,
