@@ -2,6 +2,7 @@
 @page "/teams/{Team}/{Tab}"
 @page "/teams/{Team}/projects/{Project}"
 @page "/teams/{Team}/projects/{Project}/{Tab}"
+@page "/teams/{Team}/no-project/files"
 @implements IDisposable
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Library
@@ -54,6 +55,23 @@
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
         </MudAlert>
     }
+    else if (this.NoProjectRoute)
+    {
+        @* The sidebar's No project Library: the Team's folder without its Project folders, so only the files that belong
+           to no Project are left. It has no tabs: the No project scope's Rooms and Tasks are in the sidebar. *@
+        <PageHeader Title="No project" Subtitle="@($"Files in {summary.Name} that belong to no project")" />
+        @if (this.TeamConfig.Value.Library.Enabled)
+        {
+            <TeamFilesTab Team="@summary.Name" HiddenFolders="@summary.Projects" Search="@this.SearchFor(TeamPageTab.Files)"
+                          SearchChanged="@(text => this.SetSearch(TeamPageTab.Files, text))" />
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
+                <span class="team-page-notice-text">The Library is turned off in this installation.</span>
+            </MudAlert>
+        }
+    }
     else
     {
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
@@ -89,13 +107,18 @@
                 </TitleTrailing>
                 <Actions>
                     <TeamShortcutButton Team="@sourceTeam" />
-                    @* Says plainly what the avatar's pencil does; quieter than Duplicate (text, no border). Same condition as the avatar button. *@
+                    @* Every header action is the same small outlined button with a leading icon, so none reads as primary.
+                       Edit avatar says plainly what the avatar's pencil does; same condition as the avatar button. *@
                     @if (summary.TeamType is not null)
                     {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
+                                   Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
                     }
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
                                Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                    @* Asks T16's question first (TeamArchiveActions), as the Details tab's Archive does. *@
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
+                               Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</MudButton>
                 </Actions>
             </PageHeader>
         }
@@ -133,7 +156,7 @@
                 @foreach (TeamPageTab tab in available)
                 {
                     TeamPageTab current = tab;
-                    <MudTabPanel Text="@current.ToString()" @key="current"
+                    <MudTabPanel Text="@TeamPageTabs.Label(current)" @key="current"
                                  Icon="@TabIcon(current)">
                         @switch (current)
                         {
@@ -176,6 +199,14 @@
     /// <summary>The Project named by the route, or <see langword="null"/> on a Team page.</summary>
     [Parameter]
     public string? Project { get; set; }
+
+    /// <summary>The Tab this page is shown in, whose address tells the No project route apart (the browser address names only the focused group's Tab).</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <summary>Whether the route is <c>/teams/{Team}/no-project/files</c>, the No project scope's Library.</summary>
+    private bool NoProjectRoute => string.IsNullOrWhiteSpace(this.Project)
+        && string.Equals(TabKeys.Describe(this.Page?.Url ?? this.Navigation.Uri).Key, TabKeys.NoProjectFilesKey(this.Team), StringComparison.Ordinal);
 
     /// <summary>The tab segment named by the route; anything unknown or disabled falls back to the page's default tab.</summary>
     [Parameter]
@@ -280,6 +311,15 @@
         if (!string.Equals(replaced, toSave.Image, StringComparison.Ordinal))
         {
             store.DeleteImage(replaced);
+        }
+    }
+
+    /// <summary>Asks T16's question and archives the Team; once archived the page goes Home, as the Details tab's Archive does.</summary>
+    private async Task ArchiveTeamAsync(string team)
+    {
+        if (await TeamArchiveActions.ArchiveTeamAsync(this.Archive, this.DialogService, this.Snackbar, team))
+        {
+            this.Navigation.NavigateTo("/");
         }
     }
 

@@ -413,6 +413,18 @@
     color: var(--mud-palette-text-secondary);
 }
 
+/* "No project", last under PROJECTS: quieter still than "Start a project" (caption size, secondary colour, no icon), so it
+   reads as a filter on the sections below rather than another Project. Selected, it takes the selected look. */
+.teams-nav-host .teams-nav-switcher-item.teams-nav-no-project {
+    padding-block: 2px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+}
+
+.teams-nav-host .teams-nav-switcher-item.teams-nav-no-project:not(.selected-shape) {
+    color: var(--mud-palette-text-secondary);
+}
+
 .teams-nav-host .teams-nav-switcher-build-icon {
     flex: none;
     font-size: var(--icon-size-row);

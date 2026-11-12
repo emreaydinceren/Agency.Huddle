@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Sidebar;
@@ -130,7 +131,7 @@ public sealed class TasksPageDetailTests
         Assert.Empty(sameTeam.FindAll(".tasks-empty .empty-state-title"));
 
         IRenderedComponent<ContainerFragment> otherTeam = RenderPage(otherCtx, ViewStore.AllTasksId, team: "Growth");
-        Assert.Equal("No Team-level tasks in Growth yet",otherTeam.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("No tasks in Growth yet", otherTeam.Find(".tasks-empty .empty-state-title").TextContent.Trim());
         Assert.Empty(otherTeam.FindAll(".tasks-empty-action"));
 
         TaskView saved = Assert.IsType<TaskView>(harness.Views.Get(ViewStore.AllTasksId));
@@ -184,9 +185,13 @@ public sealed class TasksPageDetailTests
         Assert.Equal(expected, watched);
     }
 
-    /// <summary>The Project route (<c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c>) shows only that Project's Tasks, matching Team and Project ignoring case; the Team route shows only the Team's Tasks that have no Project.</summary>
+    /// <summary>
+    /// The Project route (<c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c>) shows only that Project's Tasks, matching Team and Project
+    /// ignoring case; the Team route shows every Task of the Team, in a Project or not; the No project route
+    /// (<c>/teams/{Team}/no-project/tasks/{ViewId}</c>) shows only the Team's Tasks that have no Project.
+    /// </summary>
     [Fact]
-    public async Task ProjectRoute_NarrowsToTheProject_AndTheTeamRouteExcludesProjectTasks()
+    public async Task ProjectRoute_NarrowsToTheProject_TheTeamRouteShowsAll_AndNoProjectExcludesProjectTasks()
     {
         using TaskToolHarness harness = new();
         CreateTask(harness, "Teamlevel");
@@ -194,30 +199,40 @@ public sealed class TasksPageDetailTests
         CreateTask(harness, "Inbeta", "Beta");
         await using MudBunitContext projectCtx = UiTestHost.Create().WithHarness(harness);
         await using MudBunitContext teamCtx = UiTestHost.Create().WithHarness(harness);
+        await using MudBunitContext noProjectCtx = UiTestHost.Create().WithHarness(harness);
+        noProjectCtx.Services.GetRequiredService<NavigationManager>().NavigateTo($"/teams/Platform/no-project/tasks/{ViewStore.AllTasksId}");
 
         IRenderedComponent<ContainerFragment> project = RenderPage(projectCtx, ViewStore.AllTasksId, team: "platform", project: "alpha");
         IRenderedComponent<ContainerFragment> team = RenderPage(teamCtx, ViewStore.AllTasksId, team: "Platform");
+        IRenderedComponent<ContainerFragment> noProject = RenderPage(noProjectCtx, ViewStore.AllTasksId, team: "Platform");
 
         Assert.NotNull(FindTaskRow(project, "Inalpha"));
         Assert.DoesNotContain(project.FindAll("td"), static td => td.TextContent.Contains("Teamlevel", StringComparison.Ordinal) || td.TextContent.Contains("Inbeta", StringComparison.Ordinal));
         Assert.NotNull(FindTaskRow(team, "Teamlevel"));
-        Assert.DoesNotContain(team.FindAll("td"), static td => td.TextContent.Contains("Inalpha", StringComparison.Ordinal) || td.TextContent.Contains("Inbeta", StringComparison.Ordinal));
+        Assert.NotNull(FindTaskRow(team, "Inalpha"));
+        Assert.NotNull(FindTaskRow(team, "Inbeta"));
+        Assert.NotNull(FindTaskRow(noProject, "Teamlevel"));
+        Assert.DoesNotContain(noProject.FindAll("td"), static td => td.TextContent.Contains("Inalpha", StringComparison.Ordinal) || td.TextContent.Contains("Inbeta", StringComparison.Ordinal));
     }
 
-    /// <summary>The empty states name the scope: "{Team} / {Project}" on a Project route and "Team-level" on a Team route that has only Project Tasks.</summary>
+    /// <summary>The empty states name the scope: "{Team} / {Project}" on a Project route, the Team on a Team route, and "outside a project" on a No project route that has only Project Tasks.</summary>
     [Fact]
-    public async Task EmptyState_ProjectAndTeamRoutes_NameTheirScope()
+    public async Task EmptyState_ProjectTeamAndNoProjectRoutes_NameTheirScope()
     {
         using TaskToolHarness harness = new();
         CreateTask(harness, "Inalpha", "Alpha");
         await using MudBunitContext projectCtx = UiTestHost.Create().WithHarness(harness);
         await using MudBunitContext teamCtx = UiTestHost.Create().WithHarness(harness);
+        await using MudBunitContext noProjectCtx = UiTestHost.Create().WithHarness(harness);
+        noProjectCtx.Services.GetRequiredService<NavigationManager>().NavigateTo($"/teams/Platform/no-project/tasks/{ViewStore.AllTasksId}");
 
         IRenderedComponent<ContainerFragment> project = RenderPage(projectCtx, ViewStore.AllTasksId, team: "Platform", project: "Beta");
-        IRenderedComponent<ContainerFragment> team = RenderPage(teamCtx, ViewStore.AllTasksId, team: "Platform");
+        IRenderedComponent<ContainerFragment> team = RenderPage(teamCtx, ViewStore.AllTasksId, team: "Growth");
+        IRenderedComponent<ContainerFragment> noProject = RenderPage(noProjectCtx, ViewStore.AllTasksId, team: "Platform");
 
         Assert.Equal("No tasks in Platform / Beta yet", project.Find(".tasks-empty .empty-state-title").TextContent.Trim());
-        Assert.Equal("No Team-level tasks in Platform yet", team.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("No tasks in Growth yet", team.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("No tasks outside a project in Platform yet", noProject.Find(".tasks-empty .empty-state-title").TextContent.Trim());
     }
 
     /// <summary>"+ New task" on a Project route starts the new Task in that Team and Project.</summary>

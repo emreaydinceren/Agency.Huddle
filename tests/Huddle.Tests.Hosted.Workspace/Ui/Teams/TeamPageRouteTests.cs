@@ -24,8 +24,8 @@ public sealed class TeamPageRouteTests
     /// <summary>Each of the four routes answers 200 with its own prerendered title and opens its default (or named) tab.</summary>
     [Theory]
     [InlineData("/teams/Business", "Business", "Members", ".team-roster")]
-    [InlineData("/teams/Business/files", "Business", "Files", ".team-files-tab")]
-    [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project", "Files", ".team-files-tab")]
+    [InlineData("/teams/Business/files", "Business", "Library", ".team-files-tab")]
+    [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project", "Library", ".team-files-tab")]
     [InlineData("/teams/Business/projects/Marketing%20Project/tasks", "Marketing Project", "Tasks", ".team-tasks-tab")]
     public async Task Route_Returns200_WithTheTitleAndTheActiveTab(string path, string expectedTitle, string expectedTab, string expectedPanel)
     {

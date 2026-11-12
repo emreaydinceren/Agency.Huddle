@@ -34,9 +34,9 @@ public sealed class TeamPageTests
 
     private const string StatusSelector = ".team-page-notice[role='status']";
 
-    /// <summary>The page declares exactly the four route templates of Spec §6.6, with <c>projects</c> a literal segment.</summary>
+    /// <summary>The page declares exactly the four route templates of Spec §6.6, with <c>projects</c> a literal segment, plus the No project Library.</summary>
     [Fact]
-    public void Routes_AreTheFourTemplatesOfTheSpec()
+    public void Routes_AreTheFourTemplatesOfTheSpec_AndTheNoProjectLibrary()
     {
         string[] templates = [.. typeof(TeamPage)
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
@@ -47,6 +47,7 @@ public sealed class TeamPageTests
         string[] expected =
         [
             "/teams/{Team}",
+            "/teams/{Team}/no-project/files",
             "/teams/{Team}/projects/{Project}",
             "/teams/{Team}/projects/{Project}/{Tab}",
             "/teams/{Team}/{Tab}",
@@ -74,12 +75,12 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Members,Files,Tasks,Details", nameof(TeamRoster))]
-    [InlineData(true, true, "Marketing Project", "Files,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Members,Tasks,Details", nameof(TeamRoster))]
+    [InlineData(true, true, null, "Members,Library,Details", nameof(TeamRoster))]
+    [InlineData(true, true, "Marketing Project", "Library,Tasks", nameof(TeamFilesTab))]
+    [InlineData(false, true, null, "Members,Details", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Members,Files,Details", nameof(TeamRoster))]
-    [InlineData(true, false, "Marketing Project", "Files", nameof(TeamFilesTab))]
+    [InlineData(true, false, null, "Members,Library,Details", nameof(TeamRoster))]
+    [InlineData(true, false, "Marketing Project", "Library", nameof(TeamFilesTab))]
     [InlineData(false, false, null, "Members,Details", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
@@ -117,6 +118,7 @@ public sealed class TeamPageTests
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
     [InlineData(null, "nonsense", true, nameof(TeamRoster))]
+    [InlineData(null, "tasks", true, nameof(TeamRoster))]
     [InlineData("Marketing Project", "nonsense", true, nameof(TeamFilesTab))]
     [InlineData(null, "FILES", true, nameof(TeamFilesTab))]
     [InlineData(null, "files", false, nameof(TeamRoster))]
@@ -136,7 +138,6 @@ public sealed class TeamPageTests
     /// <param name="project">The Project, or <see langword="null"/> for a Team page.</param>
     [Theory]
     [InlineData("files", null)]
-    [InlineData("tasks", null)]
     [InlineData("files", "Marketing Project")]
     [InlineData("tasks", "Marketing Project")]
     public async Task Tab_FilesOrTasks_ReceivesTheTeamAndProject(string tab, string? project)
@@ -152,6 +153,25 @@ public sealed class TeamPageTests
             : (TasksParameters(cut).Get(p => p.Team), TasksParameters(cut).Get(p => p.Project));
         Assert.Equal("Business", team);
         Assert.Equal(project, actualProject);
+    }
+
+    /// <summary>
+    /// The No project Library (<c>/teams/{Team}/no-project/files</c>) is headed "No project", draws no tabs, and shows the Team's
+    /// folder with every Project folder hidden, so only the files that belong to no Project are left.
+    /// </summary>
+    [Fact]
+    public async Task NoProjectRoute_ShowsTheTeamsFilesWithItsProjectFoldersHidden()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/business/no-project/files");
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "business");
+
+        Assert.Equal("No project", cut.Find("h1").TextContent.Trim());
+        Assert.Empty(TabHeaders(cut));
+        Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
+        Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
+        Assert.Equal(["Marketing Project", "Other Project"], FilesParameters(cut).Get(p => p.HiddenFolders));
     }
 
     /// <summary>A lower-case route spelling reaches the tabs and the Members stub as the catalog's own spelling.</summary>
@@ -193,7 +213,7 @@ public sealed class TeamPageTests
     /// <param name="expectedPath">The path navigated to.</param>
     [Theory]
     [InlineData("Business", null, null, 1, "/teams/Business/files")]
-    [InlineData("Business", null, null, 2, "/teams/Business/tasks")]
+    [InlineData("Business", null, null, 2, "/teams/Business/details")]
     [InlineData("Business", null, "files", 0, "/teams/Business/members")]
     [InlineData("Business", "Marketing Project", null, 1, "/teams/Business/projects/Marketing%20Project/tasks")]
     [InlineData("Sales & Ops", "Q4 #1", "tasks", 0, "/teams/Sales%20%26%20Ops/projects/Q4%20%231/files")]
@@ -225,9 +245,9 @@ public sealed class TeamPageTests
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
         Assert.Equal([nameof(TeamRoster)], RenderedTabs(cut));
 
-        cut.Render(p => p.Add(x => x.Tab, "tasks"));
+        cut.Render(p => p.Add(x => x.Tab, "files"));
 
-        Assert.Equal([nameof(TeamTasksTab)], RenderedTabs(cut));
+        Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
     }
 
     /// <summary>An unknown Team shows the Warning alert naming it with a link to the Agents page, and renders no tabs.</summary>
@@ -297,16 +317,16 @@ public sealed class TeamPageTests
 
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
         Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
-        Assert.Equal("Members,Files,Tasks,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Members,Library,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
-    /// <summary>Each tab keeps its own search text while the route switches tabs on the same Team, and the text is not carried across tabs.</summary>
+    /// <summary>Each tab keeps its own search text while the route switches tabs on the same Project, and the text is not carried across tabs.</summary>
     [Fact]
     public async Task Search_IsKeptPerTab_WhileSwitchingTabs()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
-        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", "Marketing Project");
 
         cut.Render(p => p.Add(x => x.Tab, "files"));
         Assert.Null(FilesParameters(cut).Get(p => p.Search));
@@ -456,16 +476,19 @@ public sealed class TeamPageTests
         Assert.Contains("pa-4", cut.Find(".mud-container").ClassList);
     }
 
-    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Agents for Members, Library for Files, Tasks for Tasks; Details, which has no entity, takes the Info icon.</summary>
+    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Agents for Members, Library for Library, Tasks for a Project's Tasks; Details, which has no entity, takes the Info icon.</summary>
     [Fact]
     public async Task TabRail_IconsComeFromTabIcons()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+        IRenderedComponent<TeamPage> project = RenderPage(ctx, "Business", "Marketing Project");
 
         string?[] icons = [.. cut.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
-        Assert.Equal([TabIcons.For("agents"), TabIcons.For("library"), TabIcons.For("tasks"), Icons.Material.Outlined.Info], icons);
+        Assert.Equal([TabIcons.For("agents"), TabIcons.For("library"), Icons.Material.Outlined.Info], icons);
+        string?[] projectIcons = [.. project.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
+        Assert.Equal([TabIcons.For("library"), TabIcons.For("tasks")], projectIcons);
     }
 
     /// <summary>The "turned off" notice is a status, not an alert: it says nothing went wrong (UX-V13 family, U19 carry-over).</summary>
@@ -700,8 +723,10 @@ public sealed class TeamPageTests
         IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
 
         string[] actions = [.. cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())];
-        Assert.Equal(["Edit avatar…", "Duplicate"], actions);
-        await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions .mud-button-text"));
+        Assert.Equal(["Edit avatar…", "Duplicate", "Archive"], actions);
+        // Every header action is the same small outlined button, as Duplicate is.
+        Assert.All(cut.FindAll(".page-header-actions button"), static button => Assert.Contains("mud-button-outlined", button.ClassList));
+        await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions button"));
 
         cut.WaitForElement(AgentProfileCardTestSupport.EditorDialog);
         Assert.True(AgentProfileCardTestSupport.HasEditorButton(cut, "Save"));
@@ -715,7 +740,7 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        Assert.Equal(["Duplicate"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+        Assert.Equal(["Duplicate", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
         Assert.Empty(cut.FindAll("button.team-page-avatar"));
     }
 }

@@ -189,6 +189,27 @@ public sealed class ArchiveTeamUiTests
         Assert.Equal("Team", Assert.Single(team.FindAll(".page-header-title .page-kind-chip")).TextContent.Trim());
     }
 
+    /// <summary>The Team page's header Archive button asks T16's question for that Team and archives it once on Archive.</summary>
+    [Fact]
+    public async Task TeamPage_HeaderArchive_AsksThenArchivesTheTeam()
+    {
+        RecordingArchiveService archive = new();
+        await using MudBunitContext ctx = NewPageContext(archive);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamPage>(0);
+            builder.AddAttribute(1, nameof(TeamPage.Team), "Business");
+            builder.CloseComponent();
+        });
+
+        Assert.Equal("Archive", Assert.Single(cut.FindAll(".page-header-actions button.team-page-archive")).TextContent.Trim());
+        _ = cut.InvokeAsync(() => cut.Find("button.team-page-archive").ClickAsync());
+        await cut.WaitForAssertionAsync(() => Assert.Equal("Archive Business?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        await cut.InvokeAsync(() => DialogButton(cut, "Archive").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Business"], archive.Archived));
+    }
+
     /// <summary>A Team page (not a Project page) has no project-archive button.</summary>
     [Fact]
     public async Task TeamPage_HasNoProjectArchiveButton()
