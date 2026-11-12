@@ -469,6 +469,22 @@ and does not. Its keys are log-category prefixes, and a category comes from
 everything in the table above stays under `Team:`. See
 [Traps](engineering/traps.md) for what a stale `"Team"` key there does silently.
 
+The console shows only errors. `Logging:Console:LogLevel` in `appsettings.json` sets
+`Default` to `Error` and keeps `Microsoft.Hosting.Lifetime` at `Information`, so the
+`Now listening on:` line that `test-health.ps1` and the manual tests wait for still
+prints. A console-specific list beats `Logging:LogLevel` for every category, so the
+shared list now decides only what the log file gets. `Team:FileLog:Enabled` is on in
+every environment, so a quiet console still leaves the run's record in
+`<DataDir>/logs`.
+
+To see more on the console for one run, pass `--log-level LEVEL` (`Trace`, `Debug`,
+`Information`, `Warning`, `Error`, `Critical` or `None`, any case), or
+`./run.ps1 -LogLevel LEVEL`. It is shorthand for
+`--Logging:Console:LogLevel:Agency.Huddle=LEVEL`: it raises Huddle's own categories,
+leaves framework categories at `Error`, and does not touch the log file. Any other
+value exits 2 with the list of levels. For framework output too, use the full form,
+for example `--Logging:Console:LogLevel:Default=Debug`.
+
 ## Remote access command line
 
 The `huddle` verbs run before the web host is built, so they never start the server. An unknown first word (no `-`, no

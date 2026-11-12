@@ -65,6 +65,13 @@
     Print what would run, then exit without building or starting anything. With -Clean
     (or -CleanOnly), lists the actual files that would be deleted.
 
+.PARAMETER LogLevel
+    How much of Huddle's own logging the console shows for this run: Trace, Debug,
+    Information, Warning, Error, Critical or None. Passed to the app as --log-level.
+    Left out, the console shows only errors (plus the "Now listening on" start-up lines).
+    Framework logs stay at errors either way, and the log file under
+    <DataDir>/logs is not affected: it keeps the levels in appsettings*.json.
+
 .EXAMPLE
     ./run.ps1
     ./run.ps1 -Port 5200
@@ -75,6 +82,7 @@
     ./run.ps1 -Clean
     ./run.ps1 -CleanOnly -DataDir C:\temp\scratch-data
     ./run.ps1 -DryRun
+    ./run.ps1 -LogLevel Debug
 #>
 [CmdletBinding()]
 param(
@@ -86,7 +94,9 @@ param(
     [string]$SeedRoot = (Join-Path ([System.IO.Path]::GetPathRoot($env:SystemRoot)) 'seeds/huddle/software-co'),
     [switch]$Clean,
     [switch]$CleanOnly,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [ValidateSet('Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical', 'None')]
+    [string]$LogLevel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -244,10 +254,16 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
     exit 1
 }
 
+# Everything after `--` goes to Huddle.App rather than to `dotnet run`.
+$appArgs = @($seedArgs)
+if ($LogLevel) {
+    $appArgs += @('--log-level', $LogLevel)
+}
+
 $buildCommand = "dotnet build `"$appProject`""
 $runCommand = "dotnet run --project `"$appProject`" --no-build --urls $url"
-if ($Seed) {
-    $runCommand += ' -- ' + ($seedArgs -join ' ')
+if ($appArgs.Count -gt 0) {
+    $runCommand += ' -- ' + ($appArgs -join ' ')
 }
 
 if ($DryRun) {
@@ -453,11 +469,16 @@ try {
     # Always --no-build: either this script just built, or -NoBuild asked for
     # whatever is already compiled. Either way `dotnet run` must not build again.
     $runArgs = @('run', '--project', $appProject, '--no-build', '--urls', $url)
-    if ($Seed) {
+    if ($appArgs.Count -gt 0) {
         # `--` ends dotnet run's own options; everything after it goes to Huddle.App.
         $runArgs += '--'
-        $runArgs += $seedArgs
+        $runArgs += $appArgs
+    }
+    if ($Seed) {
         Write-Host "Seed data: $dataDir" -ForegroundColor Gray
+    }
+    if ($LogLevel) {
+        Write-Host "Console log level: $LogLevel" -ForegroundColor Gray
     }
 
     & dotnet @runArgs

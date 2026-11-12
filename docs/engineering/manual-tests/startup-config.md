@@ -397,7 +397,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 - Step 1 fails with a file-in-use error. It usually names `team.db`, but the open log file under `App_Data\logs` is locked too and the recursive delete may report that one first; either is correct.
 - After the app is stopped, step 3 succeeds and step 4 returns False.
 - After relaunch with the guard, the sidebar room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it — a fresh App_Data holds no Rooms.
-- The App_Data listing contains `team.db`, `team.db-wal` and `team.db-shm`, a `Agents` folder holding `Chief of Staff\Chief of Staff.md` and the marker file `.layout-migrated`, a `Skills` folder, an `avatars` folder, and (because Development enables `Team:FileLog`) a `logs` folder. Other folders created by features (a `Teams` folder, for one) may appear; they are not judged.
+- The App_Data listing contains `team.db`, `team.db-wal` and `team.db-shm`, a `Agents` folder holding `Chief of Staff\Chief of Staff.md` and the marker file `.layout-migrated`, a `Skills` folder, an `avatars` folder, and (because `Team:FileLog` is on by default) a `logs` folder. Other folders created by features (a `Teams` folder, for one) may appear; they are not judged.
 - The listing does NOT contain `prompts.json`, `appearance.json`, or a top-level `work` directory.
 - No `rooms` directory exists yet; it appears only after the first Message is sent in some Room.
 
