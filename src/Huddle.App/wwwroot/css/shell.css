@@ -198,10 +198,11 @@
 }
 
 /* ---- Avatars ---------------------------------------------------------------------------
-   Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px in the Transcript (.avatar-transcript),
-   40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter, held to the ADR-0056
+   Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px for .avatar-transcript in headers and the 1:1
+   sidebar row, 50px on cards, tiles and a Message in the Transcript (Medium, and .avatar-transcript inside .message-list)
+   and 72px on a profile (Large). Letters are 40% of the diameter, held to the ADR-0056
    scale: 11px at 24px and below (the 18px Team avatar on a Feed card is a Small avatar resized, so it gets 11px too),
-   13px at 32px (12.8px rounded up), 16px and 28.8px above. The declaration uses max() so it stays a computed size, not a literal one.
+   13px at 32px (12.8px rounded up), 20px and 28.8px above. The declaration uses max() so it stays a computed size, not a literal one.
    Monogram: the Agent's colour (AgentAvatar overrides --mud-palette-primary on the avatar itself; the Theme
    accent when none is chosen) at 40% over Surface, with letters mixed 75% toward TextPrimary at weight 600. A Dark
    Theme (MainLayout renders .theme-mode-dark) runs the colour at 40% over its Surface with letters mixed 75% toward
@@ -233,21 +234,35 @@
 }
 
 /* Huddle's own mark in the Transcript (ADR-0065): a Message Huddle wrote itself has no Agent, so it wears the outlined
-   tile the Feed draws for Huddle, at the Transcript's 32px. */
+   tile the Feed draws for Huddle, at the Transcript's 50px. */
 .huddle-mark {
     display: inline-flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 50px;
+    height: 50px;
     border: 1px solid var(--ink-line);
     border-radius: 50%;
     color: var(--mud-palette-text-secondary);
 }
 
 .mud-avatar.mud-avatar-medium {
-    font-size: max(11px, calc(40px * 0.4));
+    width: 50px;
+    height: 50px;
+    font-size: max(11px, calc(50px * 0.4));
+}
+
+/* A Message's avatar in the Transcript is the card size, 50px, so the face reads beside its words. The sidebar's 1:1 row,
+   the Room and Team headers and the Team shortcuts keep .avatar-transcript's 32px. */
+.message-list .mud-avatar.avatar-transcript {
+    width: 50px;
+    height: 50px;
+    font-size: max(11px, calc(50px * 0.4));
+}
+
+.message-list .mud-avatar.avatar-transcript.avatar-label-len-1 {
+    font-size: max(11px, calc(50px * 0.55));
 }
 
 .mud-avatar.mud-avatar-large {
@@ -265,7 +280,7 @@
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-1 {
-    font-size: max(11px, calc(40px * 0.55));
+    font-size: max(11px, calc(50px * 0.55));
 }
 
 .mud-avatar.mud-avatar-large.avatar-label-len-1 {
@@ -273,11 +288,11 @@
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-4 {
-    font-size: max(11px, calc(40px * 0.3));
+    font-size: max(11px, calc(50px * 0.3));
 }
 
 .mud-avatar.mud-avatar-medium.avatar-label-len-5 {
-    font-size: max(11px, calc(40px * 0.24));
+    font-size: max(11px, calc(50px * 0.24));
     letter-spacing: -0.02em;
 }
 
@@ -355,9 +370,17 @@ emoji-picker {
     flex: none;
 }
 
-/* A picture or illustration is the same circle with a 1px inner hairline in Divider, drawn over the image. */
-.mud-avatar.avatar-image {
+/* A picture or illustration sits on one neutral fill, never the Agent's colour: TextPrimary 10% over Surface in a Light
+   Theme, 24% in a Dark one (a lifted slate, so the art's near-black outline still reads). Its ring is the monogram's
+   recipe - the fill mixed 20% toward TextPrimary (Light) or white (Dark) - drawn over the image, since the image covers
+   the avatar's own box-shadow. Three classes, so the fill beats MudBlazor's .mud-avatar-filled-primary. */
+.mud-avatar.mud-avatar-filled.avatar-image {
     position: relative;
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
+}
+
+:root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-image {
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 24%, var(--mud-palette-surface));
 }
 
 .mud-avatar.avatar-image::after {
@@ -365,8 +388,12 @@ emoji-picker {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1px var(--ink-line);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface)), var(--mud-palette-text-primary) 20%);
     pointer-events: none;
+}
+
+:root:has(.theme-mode-dark) .mud-avatar.avatar-image::after {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--mud-palette-text-primary) 24%, var(--mud-palette-surface)), var(--mud-palette-white) 20%);
 }
 
 /* A rounded square's hairline follows its corners. Spelled out rather than "inherit", which the radius convention test does not allow. */

@@ -410,7 +410,8 @@ small mark below them). A row is 32px; there is no density switch and no other r
 | 24px | A Status or Tag chip; an avatar in a row or the sidebar; a Feed row's avatar |
 | 28px | A Small button, an icon button, a toolbar row, a Filter chip; the dialog close button |
 | 32px | Every row: the sidebar, a menu item, a picker row, the Library tree, the Task List, the Task edit page's properties; the page title's row |
-| 40px | The Activity bar's tile; an avatar on a card or tile, a Feed card's avatar included |
+| 40px | The Activity bar's tile |
+| 50px | An avatar on a card or tile, a Feed card's avatar included, and a Message's avatar in the Transcript |
 | 44px | The least a touch target gets: a Library tree row on a touch screen |
 
 An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at three widths only:
@@ -510,8 +511,8 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
 - **An avatar is a circle at one of four sizes (a Team's is a rounded square).** `Small` (24px) in rows, the sidebar, the
   `TeamAvatar` wraps `AgentAvatar` with `Shape="RoundedSquare"`, adding `.avatar-square`; the sizes and
   the picture's hairline are the same. An Agent or the Human is never a square, and a Team never a circle.
-  Board and the Room header; `.avatar-transcript` (32px) in the Transcript, where it fills the
-  32px `.message-gutter`; `Medium` (40px) on cards and tiles, the Agents tile and roster
+  Board and the Room header; `.avatar-transcript` (32px) in headers and a 1:1 Room's sidebar row, and 50px on a
+  Message in the Transcript, where it fills the 50px `.message-gutter`; `Medium` (50px) on cards and tiles, the Agents tile and roster
   cards; `Large` (72px) on a `AgentProfileCard` and in the avatar editor. Pass the class and the
   `Size`; don't set a width or radius of your own.
 - **An Agent's handle is written `@alias`**, wherever it is shown.
@@ -536,9 +537,9 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | Part | Rule |
 | --- | --- |
 | Letters | One word gives its first two letters ("Helen" gives HE). Several words give the first and last initials. A one-letter name stays one letter. An empty name gives "?" |
-| Letter size | 40% of the diameter, on the type scale: 11px, 13px, 16px and 28.8px on 24px, 32px, 40px and 72px. Never under 11px |
+| Letter size | 40% of the diameter, on the type scale: 11px, 13px, 20px and 28.8px on 24px, 32px, 50px and 72px. Never under 11px |
 | Text label | Up to six characters, in place of the monogram. Under 40px the first three are drawn, at 40px five and at 72px all six; a long label shrinks to fit, a single character grows to 55% of the diameter |
-| Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Line rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
+| Image | A photo or illustration keeps the same circle on one neutral fill, never the Agent's colour: `TextPrimary` 10% over Surface in a Light Theme, 24% in a Dark one. Its 1px inset ring is the monogram's recipe, the fill mixed 20% toward `TextPrimary` (Light) or white (Dark), so mixed kinds sit together. The Agent's stored colour stays for the monogram. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
 | Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else |
 
@@ -743,7 +744,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 
 The Room is the Transcript over the Composer in one column.
 
-- **An Agent's message has no card.** It is plain 14px text beside a 32px avatar; the body is
+- **An Agent's message has no card.** It is plain 14px text beside a 50px avatar; the body is
   at most 75ch. The Human's bubble keeps its tint, at most `min(75%, 75ch + 32px)`, with a 12px
   radius. Both sit in the 760px centred column.
 - **Names, times and gaps.** The sender is 13px at 600; the time is 12px `TextSecondary`, 8px
@@ -829,7 +830,7 @@ The Room is the Transcript over the Composer in one column.
   220px cards that scroll sideways, and the roster does the same with 20rem cards in `.roster-grid`
   (the one place a card grid scrolls; the team types still wrap): the description is up to three lines at 13px, "Hiring pool" is meta text, Add is
   a Small outlined button at the bottom left and "Suggested" sits to its right. A roster card
-  has a 40px avatar with the presence badge and no status dot beside the name, the name at
+  has a 50px avatar with the presence badge and no status dot beside the name, the name at
   14px/600, the role at 13px `TextSecondary`, "Member", "New" or "1 skill" as meta text, and
   its actions on one row (Edit, Message, and Remove in the menu).
 - **The save bar** renders only when there are unsaved changes, and is
@@ -843,7 +844,7 @@ The Room is the Transcript over the Composer in one column.
 
 The grid is `repeat(auto-fill, minmax(240px, 1fr))`. The `<li>` is the bordered card and holds
 the opening `<button class="agent-tile">`, so the Task link is not nested in a button. A
-tile has a 40px avatar with the badge, the name at 14px/600, the role at 13px `TextSecondary`,
+tile has a 50px avatar with the badge, the name at 14px/600, the role at 13px `TextSecondary`,
 `@alias · State` as 12px meta text, and "Working on SUPP-0002" at 12px with the Task as a link
 to `/tasks/item/{id}`. A tile has 12px padding. Its content is left-aligned on one edge, the "Working on" line
 included. Group headings are the section heading (16px/600) with a 12px count
