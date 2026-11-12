@@ -79,8 +79,11 @@ Options:
 ## How a picture is drawn
 
 Each avatar is painted in layers on a 32 × 32 grid: hair behind the head, the body and neckline,
-the head and face, the fringe, a mustache or beard, then glasses on top. Wearers of glasses have no
-brow row, because the top of the frame sits right under it. An outline is added around the whole
-figure. Hair and facial hair get a darker edge where they meet skin, and where brown hair meets the
-darker skin (close in tone) that edge is drawn in the outline colour so the two stay apart. The PNG is that grid scaled 8 times with nearest-neighbour, so the
+the head and face, the fringe, the hair's edge, a mustache or short boxed beard, then glasses on
+top. Wearers of glasses have no brow row, because the top of the frame sits right under it. An
+outline is added around the whole figure. Hair gets a darker edge where it meets skin, and where
+brown hair meets the darker skin (close in tone) that edge is drawn in the outline colour so the two
+stay apart. Facial hair sits on the mouth row and moves the lip one row down, which keeps a row of
+skin between it and the glasses; its colour is the hair colour stepped darker until it stands off
+the skin (`facial_tones`), so a blonde beard on fair skin or a brown one on darker skin still shows. The PNG is that grid scaled 8 times with nearest-neighbour, so the
 pixels stay square.

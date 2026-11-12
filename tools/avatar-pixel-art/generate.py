@@ -112,8 +112,6 @@ def hair_back(c, gender, length, h):
         c.rect(9, 10, 14, 10, dark)
     elif length == "long":
         c.rect(9, 10, 14, 13, dark)
-    elif length == "medium":
-        c.rect(9, 10, 14, 9, dark)
 
 
 def hair_front(c, gender, length, h):
@@ -122,15 +120,17 @@ def hair_front(c, gender, length, h):
     if gender == "m":
         c.shape({6: (13, 18), 7: (11, 20), 8: (10, 21), 9: (10, 21), 10: [(10, 14), (17, 21)], 11: [(10, 11), (20, 21)]}, base)
         c.dots([(14, 7), (15, 7), (12, 8), (13, 9), (18, 8)], hl)
-        c.dots([(15, 10), (16, 10), (15, 11)], base)
+        if length != "medium":
+            c.dots([(15, 10), (16, 10), (15, 11)], base)
         if length == "short":
             c.rect(10, 12, 1, 2, base)
             c.rect(21, 12, 1, 2, base)
-        elif length == "medium":  # over the ears, to the jaw
-            c.rect(9, 11, 2, 7, base)
-            c.rect(21, 11, 2, 7, base)
-            c.dots([(10, 13), (21, 15)], hl)
-            c.dots([(9, 12), (22, 12), (9, 17), (22, 17)], dark)
+        elif length == "medium":  # a centre part, then uneven locks over the ears that stop at the jaw
+            c.shape({11: [(10, 12), (19, 21)], 12: [(10, 11), (20, 21)]}, base)
+            c.rect(10, 13, 1, 5, base)
+            c.rect(21, 13, 1, 4, base)
+            c.dots([(10, 12), (21, 11), (10, 15)], hl)
+            c.dots([(10, 18), (11, 18), (21, 17)], dark)
         else:
             c.rect(9, 11, 2, 11, base)
             c.rect(21, 11, 2, 11, base)
@@ -149,8 +149,8 @@ def hair_front(c, gender, length, h):
         elif length == "medium":  # to the shoulders
             c.rect(9, 11, 3, 13, base)
             c.rect(20, 11, 3, 13, base)
-            c.row(24, 9, 11, dark)
-            c.row(24, 20, 22, dark)
+            c.row(24, 10, 11, dark)  # the tips turn in on the shoulders
+            c.row(24, 20, 21, dark)
             c.dots([(10, 13), (10, 18), (21, 14), (21, 20)], hl)
         else:
             c.rect(9, 11, 3, 16, base)
@@ -195,17 +195,41 @@ def head(c, skin, gender):
         c.dots([(12, 17), (19, 17)], blush)
 
 
-def facial_hair(c, kind, h):
-    """A mustache or a full beard in the hair colour, drawn before the hairline pass so it gets the same edge."""
-    base, hl, _ = h
-    if kind == "mustache":  # wider than the mouth, tips drooping, so it reads as hair and not as lips
-        c.row(17, 13, 18, base)
-        c.dots([(13, 18), (18, 18)], base)
-        c.dots([(15, 17)], hl)
-    elif kind == "beard":
-        c.dots([(11, 16), (20, 16)], base)
-        c.shape({17: (11, 20), 18: [(12, 14), (17, 19)], 19: (13, 18), 20: (14, 17), 21: (15, 16)}, base)
-        c.dots([(13, 18), (18, 19), (15, 20)], hl)
+def luma(col):
+    """Perceived brightness of a '#rrggbb' colour, 0 to 255."""
+    return 0.299 * int(col[1:3], 16) + 0.587 * int(col[3:5], 16) + 0.114 * int(col[5:7], 16)
+
+
+def facial_tones(skin, h):
+    """(main, light) for facial hair: the hair colour, stepped darker until it stands off the skin.
+
+    The light tone leans towards the skin, so the texture stays as strong as the contrast allows.
+    """
+    base, _, dark = h
+    for main in (base, dark, mix(dark, OUTLINE, 0.5)):
+        if abs(luma(main) - luma(skin[1])) >= 70:
+            break
+    return main, mix(main, skin[1], 0.3)
+
+
+def facial_hair(c, kind, skin, h):
+    """A mustache, or a short boxed beard with one, in tones that stand off the skin.
+
+    Both sit on the mouth row and move the lip one row down. That leaves a row of skin under the
+    nose, so the hair never touches the bottom rim of the glasses, and the lip shows below the
+    mustache instead of inside it. Drawn after the hairline pass, so it keeps its own shading.
+    """
+    if kind == "none":
+        return
+    main, light = facial_tones(skin, h)
+    if kind == "mustache":
+        c.row(18, 13, 18, main)
+    else:
+        c.dots([(11, 16), (20, 16), (11, 17), (20, 17)], main)
+        c.shape({18: (12, 19), 19: (13, 18), 20: (14, 17)}, main)
+        c.dots([(13, 19), (16, 20)], light)
+    c.dots([(14, 18), (17, 18)], light)
+    c.row(19, 15, 16, skin[3])
 
 
 def mix(a, b, t):
@@ -255,8 +279,8 @@ def draw(a):
         c.row(12, 12, 13, h[2])
         c.row(12, 18, 19, h[2])
     hair_front(c, a["gender"], a["hair_length"], h)
-    facial_hair(c, a["facial_hair"], h)
     hairline(c, skin, h, strong=a["skin"] == "darker" and a["hair_color"] == "brown")
+    facial_hair(c, a["facial_hair"], skin, h)
     if a["glasses"] != "none":
         glasses(c, skin, FRAMES[a["glasses"]])
     c.px = {p: v for p, v in c.px.items() if inside(*p)}
