@@ -403,8 +403,8 @@ function buildRoutes(manifestText, settingsPaths) {
     steps: [{ click: { sel: '.mud-nav-link-text', text: 'New chat' } }, { waitFor: { sel: '.new-chat-panel' } }],
   });
   routes.push({
-    name: 'open-archived-chats', path: '/feed',
-    steps: [{ click: { sel: '[aria-label="Archived chats"]' } }, { waitFor: { sel: '.mud-dialog' } }],
+    name: 'open-archived-page', path: '/feed',
+    steps: [{ click: { sel: '[aria-label="Archived"]' } }, { waitFor: { sel: '.archived-page' } }],
   });
   routes.push({
     name: 'open-reference-picker', path: room('Platform standup', 'root'),

@@ -401,7 +401,7 @@ finds where `Team:DataDir` actually resolved.
   wraps it) or `aria-label`, never by text alone.
 - **Four controls are icon buttons with no visible text.** **Remove** on the
   Agent card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
-  **Settings** in the drawer (`Settings`, pinned to the bottom) and **Archived chats**
+  **Settings** in the drawer (`Settings`, pinned to the bottom) and **Archived**
   in the drawer (`Archive`, directly above Settings). Each carries a `MudTooltip` and
   an `aria-label` spelling the name this script uses, so **find them by
   `aria-label`, never by button text** — in DevTools,

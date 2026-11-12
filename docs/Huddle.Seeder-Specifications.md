@@ -202,7 +202,7 @@ They are what turns the seeder red when the app changes underneath it.
 | Id | Requirement | Pinned by `SoftwareCoScenarioTests.` |
 | --- | --- | --- |
 | SEED-SC-1 | Exactly four Teams with two or more Projects (Platform: API v2 and Observability; Growth: Onboarding Revamp, Pricing Page and Lifecycle Emails; Support: Help Center and Incident Tooling; Home and Family: five Projects, §9), and exactly three Agents span two or more of them. | `Plan_HasFourWorkingTeamsAndSharedAgents` |
-| SEED-SC-2 | Two edge Teams: Sandbox (nobody in it) and Archive (people, no Projects). | `Plan_HasTheEdgeTeams` |
+| SEED-SC-2 | Two edge Teams: Sandbox (nobody in it) and Records (people, no Projects). Records was named Archive until 2026-11-12, when the app's special "Archive" Team folder was retired. | `Plan_HasTheEdgeTeams` |
 | SEED-SC-3 | Thirteen Agents: Grace, Marcus, Lena, Owen, Sofia, Dana, Alan, Maya and Ben, then Hattie, Theo, Ravi and Iris (§9.4). Alan holds the `incident-postmortem` Skill. | `Plan_HasTheAgreedCast` |
 | SEED-SC-4 | Every one of the eight Task statuses, and the derived states: overdue, blocked, a blocker that is already finished, a sub-task, a Duplicate, unassigned, assigned to the Human, at the Team root and in a Project, tagged, and a description over 600 characters. | `Plan_CoversEveryTaskStatus`, `Plan_CoversTheDerivedTaskStates` |
 | SEED-SC-5 | One Project with no Tasks. | `Plan_HasAProjectWithNoTasks` |
@@ -424,7 +424,7 @@ means the test pins a literal list or count ([A.3](#a3-values-tests-pin-exactly)
 | **Add a Team or Project** | `SoftwareCoLibrary.Teams`; Agents join through their `Teams` list. The colour and `_team.md` are automatic. A new folder must also get four documents and its memory (SEED-SC-13, -14). | `Plan_HasFourWorkingTeamsAndSharedAgents` (exact), `Plan_HasTheEdgeTeams`, `Plan_EveryTeamAndProjectHasFourDocuments`, `Plan_MemoryCoversEveryTeamProjectAndAgent` |
 | **Add a document** | `SoftwareCoNotes.Documents`: `new("Teams/<Team>[/<Project>]/<Name>.md", """…""")`. No `#word` anywhere: a heading `# Title` is fine, `#tag` is not. A `[[Link]]` must match an existing file stem. Stems are global, so pick a new one. | `Plan_LibraryHasBacklinksAndOneUnresolvedLink`, `Plan_Library_HasNestedSharedTagsAcrossTeams` |
 | **Add memory** | `SoftwareCoNotes.Memory`: one line ending `\n`, at `Teams/<T>/memory/`, `Teams/<T>/<P>/memory/` or `Agents/<N>/work/memory/`. | `Plan_MemoryCoversEveryTeamProjectAndAgent`, `Plan_HasThreeKindsOfMemory` |
-| **Add a Task** | `SoftwareCoTasks.Core`. The id prefix is the Team's first four letters (`PLAT`, `GROW`, `SUPP`, `ARCH`, `HOME`), and the next number is free. Dates are offsets; overdue is `DueOffset <= -2`. `Closed = true` only for a finished status. For a Sprint, add it to `SprintByTask`. | `Plan_CoversEveryTaskStatus` (exact count, 46), `Plan_TaskIdsAreUniqueAndUseTheDerivedPrefix`, `Plan_ClosedMeansFinished`, `Plan_ReferencesResolve` |
+| **Add a Task** | `SoftwareCoTasks.Core`. The id prefix is the Team's first four letters (`PLAT`, `GROW`, `SUPP`, `RECO`, `HOME`), and the next number is free. Dates are offsets; overdue is `DueOffset <= -2`. `Closed = true` only for a finished status. For a Sprint, add it to `SprintByTask`. | `Plan_CoversEveryTaskStatus` (exact count, 46), `Plan_TaskIdsAreUniqueAndUseTheDerivedPrefix`, `Plan_ClosedMeansFinished`, `Plan_ReferencesResolve` |
 | **Add a Request** | `SoftwareCoRequests.All` (it joins `SoftwareCoTasks.All`). | `Plan_CoversEveryTaskStatus` (64), `Requests_ParseWithTheAppsRequestFields` |
 | **Add a Room or Messages** | A key constant plus an entry in `SoftwareCoRooms.All`. Keep 8 to 15 Messages, sent only by members or the Human, running forward in time. Cite with `{{lib:…}}`, `{{room:key}}`, `{{team:Name}}`, `{{upload:file}}`. An unanswered `@You` outside `Launch crew` breaks Needs You. | `Plan_HasTheAgreedRooms` (exact), `Plan_RoomTranscriptsAreConsistent`, `NeedsYou_OneRoomHoldsAnUnansweredMention` (exact), `Tokens_NeverSurviveIntoATranscript_AndNamedRoomsCiteDocuments` |
 | **Add a Feed item** | `SoftwareCoFeed.All`. A waiting Notification (`Notify: true` and no `ResolvedMinutesAgo`) must be true of the seed, or Huddle drops it at start-up. | `SeedFeedTests` (five grouped TaskCreated items from Owen, exact) |
@@ -442,7 +442,7 @@ When you change one of these on purpose, change the test in the same commit.
 | `SoftwareCoScenarioTests.Description_NamesTheCoveredFeatures` | The full description string |
 | `Plan_HasTheAgreedCast` | The thirteen names in order, the Teams of Lena, Maya, Dana and Ben, and Alan's Skill |
 | `Plan_HasFourWorkingTeamsAndSharedAgents` | Exactly Platform, Growth, Support and Home and Family have two or more Projects, and exactly three Agents span two or more of them |
-| `Plan_HasTheEdgeTeams` | Archive's members are exactly Grace and Dana |
+| `Plan_HasTheEdgeTeams` | Records' members are exactly Grace and Dana |
 | `Plan_CoversEveryTaskStatus` | 64 Tasks (41 core, 5 Requests, 18 Home and Family) |
 | `Plan_HasTheAgreedRooms` | The six root Room names in order, the four Team Rooms, six other Team-scoped Rooms, two root one-to-ones, and the one archived Room |
 | `Plan_LibraryHasBacklinksAndOneUnresolvedLink` | The only unresolved link is `Legal-Checklist` |

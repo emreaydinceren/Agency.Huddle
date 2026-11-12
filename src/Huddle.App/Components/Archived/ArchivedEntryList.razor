@@ -1,0 +1,215 @@
+@*
+    One tab of the Archived page: a toolbar with the tab's actions (Restore, and Delete for a chat), then the archived
+    entries as a single-select listbox. The page owns the selection (Selected, SelectedChanged), so the toolbar it fills can
+    enable Restore for it. With no entries the list is an empty state and the toolbar is not drawn.
+
+    The list is one Tab stop (a roving tabindex: the selected row, else the first). On a focused row, Up, Down, Home and End
+    move the selection and the focus, Space selects, and Enter restores (OnActivate); after a restore removes the row, the
+    selection and the focus move to the row that took its place, so the keyboard is never dropped to the page. A click selects
+    and a double-click restores. Rows are divs with role="option", not buttons: a button would also click on Enter and select
+    the row being restored.
+*@
+
+@if (this.Entries.Count == 0)
+{
+    <EmptyState Title="@this.EmptyTitle" Text="@this.EmptyText" />
+}
+else
+{
+    string? focusTarget = this.FocusTarget;
+    <div class="archived-toolbar" role="toolbar" aria-label="@($"{this.Label} actions")">
+        @this.Actions
+    </div>
+    <div class="archived-list" role="listbox" aria-label="@this.Label">
+        @foreach (ArchivedEntry entry in this.Entries)
+        {
+            string key = entry.Key;
+            bool selected = string.Equals(key, this.Selected, StringComparison.Ordinal);
+            <div role="option" @key="key" @ref="this.rowRefs[key]" aria-selected="@(selected ? "true" : "false")"
+                 tabindex="@(string.Equals(key, focusTarget, StringComparison.Ordinal) ? "0" : "-1")"
+                 class="@(selected ? "archived-row selected-shape" : "archived-row")"
+                 @onclick="@(() => this.SelectAsync(key))" @ondblclick="@(() => this.OnActivate.InvokeAsync(key))"
+                 @onkeydown="@(e => this.OnKeyDownAsync(key, e))">
+                <span class="archived-row-icon"><MudIcon Icon="@this.Icon" /></span>
+                <span class="archived-row-text flex-1-truncate" title="@(entry.Detail is null ? entry.Name : $"{entry.Name} · {entry.Detail}")">
+                    <span class="archived-row-name">@entry.Name</span>
+                    @if (entry.Detail is { } detail)
+                    {
+                        <span class="archived-row-detail"> · @detail</span>
+                    }
+                </span>
+                @if (entry.Date is { } date)
+                {
+                    <span class="archived-row-date">@date</span>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The rows, by key, so a keyboard move can focus the row it selected.</summary>
+    private readonly Dictionary<string, ElementReference> rowRefs = new(StringComparer.Ordinal);
+
+    /// <summary>The row to focus after the next render, set by a keyboard move or a keyboard restore.</summary>
+    private string? pendingFocus;
+
+    /// <summary>The rows, in the order to draw them.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ArchivedEntry> Entries { get; set; } = [];
+
+    /// <summary>The selected row's <see cref="ArchivedEntry.Key"/>, or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? Selected { get; set; }
+
+    /// <summary>Raised with the key of the row a click, Space or an arrow key selected.</summary>
+    [Parameter]
+    public EventCallback<string?> SelectedChanged { get; set; }
+
+    /// <summary>Raised with a double-clicked row's key, or the focused row's on Enter: restore it.</summary>
+    [Parameter]
+    public EventCallback<string> OnActivate { get; set; }
+
+    /// <summary>The list's accessible name ("Archived Teams"); the toolbar is named after it.</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The icon every row leads with.</summary>
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The empty state's title.</summary>
+    [Parameter, EditorRequired]
+    public string EmptyTitle { get; set; } = string.Empty;
+
+    /// <summary>The empty state's line under the title.</summary>
+    [Parameter, EditorRequired]
+    public string EmptyText { get; set; } = string.Empty;
+
+    /// <summary>The toolbar's buttons.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>The list's one Tab stop: the selected row while it is listed, else the first row.</summary>
+    private string? FocusTarget
+    {
+        get
+        {
+            if (this.Selected is { } selected && this.IndexOf(selected) >= 0)
+            {
+                return selected;
+            }
+
+            return this.Entries.Count > 0 ? this.Entries[0].Key : null;
+        }
+    }
+
+    /// <summary>Focuses the row a keyboard action asked for, once it is drawn.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.pendingFocus is { } key && this.rowRefs.TryGetValue(key, out ElementReference row))
+        {
+            this.pendingFocus = null;
+            await row.FocusAsync();
+        }
+    }
+
+    private async Task SelectAsync(string key)
+    {
+        this.pendingRemoval = null;
+        await this.SelectedChanged.InvokeAsync(key);
+    }
+
+    /// <summary>The keyboard on a focused row: Up, Down, Home and End move; Space selects; Enter restores.</summary>
+    /// <param name="key">The focused row's key.</param>
+    /// <param name="e">The key pressed.</param>
+    private async Task OnKeyDownAsync(string key, KeyboardEventArgs e)
+    {
+        // A new key press supersedes a refused restore's wait, which would otherwise move the selection later.
+        this.pendingRemoval = null;
+        int index = this.IndexOf(key);
+        int last = this.Entries.Count - 1;
+        int? target = e.Key switch
+        {
+            "ArrowDown" => Math.Min(index + 1, last),
+            "ArrowUp" => Math.Max(index - 1, 0),
+            "Home" => 0,
+            "End" => last,
+            _ => null,
+        };
+
+        if (target is int move && index >= 0)
+        {
+            await this.MoveToAsync(this.Entries[move].Key);
+        }
+        else if (e.Key is " " or "Spacebar")
+        {
+            await this.SelectAsync(key);
+        }
+        else if (e.Key == "Enter")
+        {
+            await this.ActivateAsync(key, index);
+        }
+    }
+
+    /// <summary>
+    /// Restores the row; when it leaves the list, the row now in its place (or the new last row) is selected and focused. The
+    /// page's new rows may reach this list only on the render after the restore, so the move waits for them in
+    /// <see cref="OnParametersSetAsync"/> when they have not arrived yet.
+    /// </summary>
+    /// <param name="key">The row to restore.</param>
+    /// <param name="index">Where it was in the list.</param>
+    private async Task ActivateAsync(string key, int index)
+    {
+        await this.OnActivate.InvokeAsync(key);
+        this.pendingRemoval = (key, index);
+        await this.FollowRemovalAsync();
+    }
+
+    /// <summary>The row a keyboard restore asked to remove and where it was, until the list shows whether it went.</summary>
+    private (string Key, int Index)? pendingRemoval;
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        await this.FollowRemovalAsync();
+    }
+
+    /// <summary>
+    /// Once the list no longer holds the restored row, selects and focuses the row in its place. A list that still holds it
+    /// was refused (or has not changed yet) and is left as it is; an empty list shows the empty state.
+    /// </summary>
+    private async Task FollowRemovalAsync()
+    {
+        if (this.pendingRemoval is not var (key, index) || this.IndexOf(key) >= 0)
+        {
+            return;
+        }
+
+        this.pendingRemoval = null;
+        if (this.Entries.Count > 0)
+        {
+            await this.MoveToAsync(this.Entries[Math.Min(Math.Max(index, 0), this.Entries.Count - 1)].Key);
+        }
+    }
+
+    private async Task MoveToAsync(string key)
+    {
+        this.pendingFocus = key;
+        await this.SelectedChanged.InvokeAsync(key);
+    }
+
+    private int IndexOf(string key)
+    {
+        for (int index = 0; index < this.Entries.Count; index++)
+        {
+            if (string.Equals(this.Entries[index].Key, key, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+}

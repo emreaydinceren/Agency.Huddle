@@ -116,7 +116,7 @@ internal static class SoftwareCoRooms
             new(Human, 90, "15:05", "And what should we change?"),
             new("Dana", 90, "15:06", "We had no status page. Customers wrote in while we were fixing the problem. Please make it a Q3 goal."),
             new("Grace", 90, "15:08", "Agreed. And on-call needs an automated rotation; the spreadsheet is a single point of failure."),
-            new("Dana", 90, "15:09", "Also archive the old ticket data. ARCH-0001 covers it."),
+            new("Dana", 90, "15:09", "Also archive the old ticket data. RECO-0001 covers it."),
             new(Human, 90, "15:12", "Noted. I will archive this Room; we can still read it."),
         ], WithReferences: false),
         new(IncidentWarRoom, "Incident 0412 war room", ["Alan", "Dana", "Marcus"], false,

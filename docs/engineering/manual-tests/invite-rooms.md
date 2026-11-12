@@ -1512,14 +1512,14 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 3. Right-click the row.
 4. Click **Archive**.
 5. Watch the sidebar for up to 3 seconds WITHOUT reloading.
-6. Click the **Archived chats** icon (`aria-label="Archived chats"`, `ArchivedChats.razor:14`), directly above the Settings button at the bottom-left.
+6. Click the **Archived** icon (`aria-label="Archived"`, `ArchivedLink.razor`), directly above the Settings button at the bottom-left, then the **Chats** tab.
 
 **Pass if — all of these**
 
 - The `⋮` button appears on hover and is reachable by Tab, and is visible when focused.
 - Right-clicking opens a menu offering exactly **Archive** and **Delete**, and no browser context menu appears.
 - The Room disappears from the sidebar WITHOUT a page reload.
-- The Archived chats dialog lists that Room, with an **Unarchive** button beside it.
+- The Archived page's **Chats** tab lists that Room; selecting it enables **Restore**.
 - The other Room is untouched and still visible.
 
 **Fail if — any of these**
@@ -1527,7 +1527,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 - The Room only disappears after F5 -> `RoomsChanged` is not reaching `RoomList`.
 - The browser's own context menu appears -> `@oncontextmenu:preventDefault` is not applied.
 - The `⋮` is unreachable by keyboard -> it is being hidden with `display:none` rather than `opacity`, which takes it out of the Tab order.
-- The Room vanishes from the sidebar but the Archived chats dialog is empty -> it is being hidden without the `archived_rooms` row being written, and the Room is now unreachable.
+- The Room vanishes from the sidebar but the Archived page's Chats tab is empty -> it is being hidden without the `archived_rooms` row being written, and the Room is now unreachable.
 
 **Inconclusive if**
 
@@ -1545,15 +1545,15 @@ If the app was started on a freshly seeded folder and only one Room is visible, 
 
 **Steps**
 
-1. Open **Archived chats**.
-2. Click **Unarchive** beside the Room.
+1. Open **Archived** and its **Chats** tab.
+2. Select the Room and click **Restore**.
 3. Watch the sidebar WITHOUT reloading.
 4. Click the Room and read its Transcript.
 
 **Pass if — all of these**
 
 - The Room reappears in the sidebar immediately, in `created, id` order — not necessarily at the bottom.
-- It leaves the Archived chats list, which either empties or shrinks by one.
+- It leaves the Chats tab's list, which either empties or shrinks by one.
 - Its Transcript holds exactly what it held before archiving, in the same order.
 
 **Fail if — any of these**
@@ -1625,7 +1625,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 - After step 2 you land on another Room — its id is in the address bar and its `<h1>` names it. You are never left on an archived Room.
 - Step 4 does NOT move you anywhere; switching Rooms normally is unaffected.
 - After step 5 you are on `/` and the page shows the empty state, not a blank panel and not an error.
-- Archived chats lists them all.
+- The Archived page's **Chats** tab lists them all.
 
 **Fail if — any of these**
 
@@ -1642,7 +1642,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 
 **Before you start**
 
-- Bo's own two-Member Room (`Bo`), which nothing before INVITEROOMS-37 has touched; INVITEROOMS-37 step 5 archived it along with every other Room, so it now sits under **Archived chats**. Do NOT re-run the seeder line to get it back: that wipes the archived and deleted Rooms INVITEROOMS-39 needs. Instead open **Archived chats** and click **Unarchive** beside `Bo`, then open it. If you have not run INVITEROOMS-37 it is simply in the sidebar.
+- Bo's own two-Member Room (`Bo`), which nothing before INVITEROOMS-37 has touched; INVITEROOMS-37 step 5 archived it along with every other Room, so it now sits on the Archived page's **Chats** tab. Do NOT re-run the seeder line to get it back: that wipes the archived and deleted Rooms INVITEROOMS-39 needs. Instead open **Archived**, select `Bo` on the **Chats** tab and click **Restore**, then open it. If you have not run INVITEROOMS-37 it is simply in the sidebar.
 - The `Bo` Room holds at least one Message. If it is empty, send `hi` and wait for Bo's reply.
 
 **Steps**
@@ -1651,7 +1651,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 2. Open **Agents**, click the `Bo` tile, and read its actions. Close the card.
 3. Start a new chat with `Bo` (New chat, tick `Bo`, Start chat).
 4. Read the new Room's id, `<h1>` and Transcript.
-5. Open **Archived chats** and Unarchive OLD.
+5. Open **Archived**, select OLD on the **Chats** tab and click **Restore**.
 6. Read the sidebar.
 
 **Pass if — all of these**
@@ -1686,11 +1686,11 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 1. Stop the app (Ctrl+C in `T-A`). Do NOT re-run the seeder line or delete `C:\seeds\huddle\uat\data`.
 2. Start it again with the app command of `P-LAUNCH-UAT` only, and open the browser.
 3. Read the sidebar.
-4. Open **Archived chats**.
+4. Open **Archived** and its **Chats** tab.
 
 **Pass if — all of these**
 
-- The archived Room is still absent from the sidebar and still listed under Archived chats.
+- The archived Room is still absent from the sidebar and still listed on the Archived page's Chats tab.
 - The deleted Room is in neither place.
 - Every other Room is present, in the same order, with its Transcript intact.
 - `T-A` logs no schema, migration or SQLite error at startup.

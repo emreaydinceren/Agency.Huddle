@@ -301,8 +301,8 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: attachment (there is no attachment field on a Message), file share.
 
 **Archived**
-: Hidden from the sidebar and listed elsewhere instead. For a Room it is the
-  **Archived Chats** list: reversible, and a display filter only — an Archived Room is
+: Hidden from the sidebar and listed on the **Archived** page instead, where
+  **Restore** brings it back. For a Room it is the page's **Chats** tab: reversible, and a display filter only — an Archived Room is
   still live, and Agents still post into it. For a Team or a Project it means the
   folder has been moved to `{DataDir}/Archive`, where it is read-only.
 : *Avoid*: hidden, closed, muted, inactive, soft-deleted. A Room that was

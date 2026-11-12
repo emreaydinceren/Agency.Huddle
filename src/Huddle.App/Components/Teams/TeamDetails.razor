@@ -1,5 +1,4 @@
 @using Agency.Huddle.App.Components.Pages
-@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.SecondBrain
 @using Agency.Huddle.App.Teams
 @inject ITeamCatalog Catalog
@@ -31,23 +30,10 @@
     /// <summary>Asks T16's question with the counts and the Agents left without a Team, then archives the Team once on Archive.</summary>
     private async Task ArchiveAsync()
     {
-        ArchiveConfirmation counts = this.Archive.Confirm(this.Team);
-        string title = $"Archive {this.Team}?";
-        string message = counts.Text(this.Team)[(title.Length + 1)..];
-        if (!await this.Dialogs.ConfirmAsync(title, message, "Archive"))
+        if (await TeamArchiveActions.ArchiveTeamAsync(this.Archive, this.Dialogs, this.Snackbar, this.Team))
         {
-            return;
-        }
-
-        ArchiveOutcome outcome = await this.Archive.ArchiveTeamAsync(this.Team, CancellationToken.None);
-        if (outcome.Done)
-        {
-            // The Team page is for a live Team; the archived Team is listed in the sidebar's Archived Teams group.
+            // The Team page is for a live Team; the archived Team is listed on the Archived page.
             this.Navigation.NavigateTo("/");
-        }
-        else if (outcome.Refusal is { } refusal)
-        {
-            _ = this.Snackbar.Add(refusal, Severity.Warning, key: "team-archive");
         }
     }
 

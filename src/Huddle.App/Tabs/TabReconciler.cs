@@ -51,6 +51,30 @@ internal static class TabReconciler
         }
     }
 
+    /// <summary>
+    /// Closes every Tab of <paramref name="team"/>: its page, its Task Views, and its Projects' pages and Task Views. Called when
+    /// the Human archives the Team, where an empty catalog is a fact and not "not loaded yet", so the last Team's Tabs close too
+    /// (<see cref="ReconcileTeams"/> leaves those open).
+    /// </summary>
+    /// <param name="tabs">The Tabs to close in.</param>
+    /// <param name="team">The Team, compared ignoring case as its Tab keys are lower-cased.</param>
+    public static void CloseTeamTabs(TabService tabs, string team)
+    {
+        ArgumentNullException.ThrowIfNull(tabs);
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+
+        string lower = team.ToLowerInvariant();
+        string[] prefixes = [ProjectKeyPrefix + lower + "/", "team-tasks:" + lower + "/", "project-tasks:" + lower + "/"];
+        foreach (Tab tab in tabs.Tabs)
+        {
+            if (string.Equals(tab.Key, TeamKeyPrefix + lower, StringComparison.Ordinal)
+                || prefixes.Any(prefix => tab.Key.StartsWith(prefix, StringComparison.Ordinal)))
+            {
+                tabs.CloseByKey(tab.Key);
+            }
+        }
+    }
+
     /// <summary>Retitles and closes Room Tabs against <paramref name="rooms"/>; Tabs for other pages are left alone.</summary>
     /// <param name="tabs">The Tabs to bring in step.</param>
     /// <param name="rooms">Every Room that exists now, archived or not.</param>

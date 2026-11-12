@@ -111,18 +111,20 @@ public sealed class SidebarConsistencyTests
     }
 
     /// <summary>
-    /// A nested row moves in by setting <c>--nav-level</c>, never a padding of its own: the Teams nav's Rooms and Library
-    /// folders are level 1, the rows inside them a quarter level further, and no stale indent literal or token is left (UX-015).
+    /// A nested row moves in by setting <c>--nav-level</c>, never a padding of its own: an open Team's scope block is level 1,
+    /// the rows of a folder inside it a quarter level further, and no stale indent literal or token is left (UX-015). The
+    /// <c>.teams-nav-folder</c> rules went with the retired Archived Teams group, their last user.
     /// </summary>
     [Fact]
-    public void TeamsNav_FoldersAreLevelOne_AndTheirRowsAQuarterFurther()
+    public void TeamsNav_ScopeBlockIsLevelOne_AndItsFolderRowsAQuarterFurther()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
 
         Assert.DoesNotContain("3.875rem", css, StringComparison.Ordinal);
         Assert.DoesNotContain("--nav-indent", css, StringComparison.Ordinal);
-        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-folder"), "--nav-level: 1;");
-        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-folder .mud-collapse-container"), "--nav-level: 1.25");
+        Assert.DoesNotContain(".teams-nav-folder", css, StringComparison.Ordinal);
+        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-scope-block"), "--nav-level: 1;");
+        ShellSidebarRowsTests.SourceHas(CssText.RuleBodyInList(css, ".teams-nav-host .teams-nav-scope-block .teams-nav-subfolder .mud-collapse-container"), "--nav-level: 1.25");
     }
 
     /// <summary>

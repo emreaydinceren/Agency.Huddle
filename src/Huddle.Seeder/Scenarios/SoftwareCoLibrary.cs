@@ -101,7 +101,7 @@ internal static class SoftwareCoLibrary
         new("Growth", ["Onboarding Revamp", "Pricing Page", "Lifecycle Emails"]),
         new("Support", ["Help Center", "Incident Tooling"]),
         new("Sandbox", []),
-        new("Archive", []),
+        new("Records", []),
     ];
 
     /// <summary>The picture files: a chart in a Team folder (Library image preview). Agent avatars come from the Avatar Library (<c>AvatarWriter</c>).</summary>

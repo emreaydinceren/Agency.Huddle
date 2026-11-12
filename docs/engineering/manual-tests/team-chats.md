@@ -183,7 +183,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 1. Close the app. In `<data>\Teams\`, rename the folder `Marketing` to `Marketing-old` in Explorer. This is the test data folder, not the repository.
 2. Start the app with the `P-LAUNCH-UAT` launch command and open `/`.
 3. Look at the **Teams** group and at **Rooms**.
-4. Open **Archived chats** at the bottom of the sidebar.
+4. Open **Archived** at the bottom of the Activity bar, then its **Chats** tab.
 5. Rename the folder back to `Marketing` and restart the app.
 
 **Pass if — all of these**
@@ -207,9 +207,9 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Steps**
 
 1. Restart the app, then wait one minute.
-2. Look at **Marketing** in the sidebar and at **Archived chats**.
+2. Look at **Marketing** in the sidebar and at the Archived page's **Chats** tab.
 3. Add **Kim** to Marketing through the `teams:` line on Kim's card.
-4. Wait a minute, then open **Archived chats** and look at the Team Room.
+4. Wait a minute, then open the Archived page's **Chats** tab and look at the Team Room.
 
 **Pass if — all of these**
 
@@ -280,7 +280,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 1. Start the app and wait up to two minutes for the digest to fire.
 2. Open Ada's root one-to-one under **Rooms** and read its newest message.
-3. Open the Team Room from **Archived chats** and read its newest message.
+3. Open the archived Team Room (it is listed on the Archived page's **Chats** tab) and read its newest message.
 
 **Pass if — all of these**
 

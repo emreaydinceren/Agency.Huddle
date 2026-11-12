@@ -9,7 +9,7 @@ internal static class SoftwareCoTasks
     private const string Platform = "Platform";
     private const string Growth = "Growth";
     private const string Support = "Support";
-    private const string Archive = "Archive";
+    private const string Records = "Records";
     private const string ApiV2 = "API v2";
     private const string Observability = "Observability";
     private const string Onboarding = "Onboarding Revamp";
@@ -406,10 +406,10 @@ internal static class SoftwareCoTasks
             Body = "First response and resolution targets per priority, agreed with Dana.",
         },
 
-        // ---- Archive team root ----
+        // ---- Records team root ----
         new()
         {
-            Id = "ARCH-0001", Location = new(Archive, null), Title = "Archive the 2025 support data",
+            Id = "RECO-0001", Location = new(Records, null), Title = "Archive the 2025 support data",
             Status = "Done", Priority = "Low", Creator = "Dana", Assignee = "Dana", Closed = true,
             Tags = ["retention"], CreatedDaysAgo = 60, LastTouchedDaysAgo = 45,
             Body = "Tickets and macros from 2025 exported to cold storage and removed from the live system.",

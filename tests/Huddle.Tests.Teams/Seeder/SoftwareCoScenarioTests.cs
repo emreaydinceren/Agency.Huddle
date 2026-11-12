@@ -22,7 +22,7 @@ public sealed partial class SoftwareCoScenarioTests
     public void Description_NamesTheCoveredFeatures()
     {
         Assert.Equal(
-            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
+            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records.",
             new SoftwareCoScenario().Description);
     }
 
@@ -48,7 +48,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben", "Hattie", "Theo", "Ravi", "Iris"], plan.Agents.Select(t => t.Name));
         Assert.Equal(["Platform", "Growth"], plan.Agents.Single(t => t.Name == "Lena").Teams);
         Assert.Equal(["Growth"], plan.Agents.Single(t => t.Name == "Maya").Teams);
-        Assert.Equal(["Support", "Archive"], plan.Agents.Single(t => t.Name == "Dana").Teams);
+        Assert.Equal(["Support", "Records"], plan.Agents.Single(t => t.Name == "Dana").Teams);
         Assert.Empty(plan.Agents.Single(t => t.Name == "Ben").Teams);
         Assert.Equal(["incident-postmortem"], plan.Agents.Single(t => t.Name == "Alan").Skills);
     }
@@ -62,8 +62,8 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.All(plan.Agents.SelectMany(t => t.Teams), team => Assert.Contains(plan.Teams, t => t.Name == team));
         Assert.DoesNotContain(plan.Agents, t => t.Teams.Contains("Sandbox"));
         Assert.Empty(plan.Teams.Single(t => t.Name == "Sandbox").Projects);
-        Assert.Empty(plan.Teams.Single(t => t.Name == "Archive").Projects);
-        Assert.Equal(["Grace", "Dana"], plan.Agents.Where(t => t.Teams.Contains("Archive")).Select(t => t.Name));
+        Assert.Empty(plan.Teams.Single(t => t.Name == "Records").Projects);
+        Assert.Equal(["Grace", "Dana"], plan.Agents.Where(t => t.Teams.Contains("Records")).Select(t => t.Name));
     }
 
     /// <summary>SEED-INV-7: Names and aliases are unique, and no alias equals another Agent's Name, as the Persona loader requires.</summary>

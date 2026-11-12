@@ -54,7 +54,7 @@ start-up with a message naming `Team:PipeName`. PRs: #67, then #335.
 
 **Activity bar.** A VS Code-style strip at the far left. Its buttons choose what the
 sidebar shows: **Chats**, **Teams**, **Agents**, **Tasks**, **Library**, **Scheduled** and
-**Remote access**, plus a **Feed** icon. **Archived chats** and **Settings** sit at the
+**Remote access**, plus a **Feed** icon. **Archived** and **Settings** sit at the
 bottom. Selecting the active button folds the sidebar away. PRs: #206, then #334.
 
 **Team shortcuts.** Every Team gets an avatar tile at the top of the Activity bar, on by
@@ -68,12 +68,12 @@ all off; the Team page has **Add shortcut**. The choice is remembered per browse
 
 - **Chats** shows the **Needs you** card, then **Group by: All | Team**. **All** has a
   **Needs you** folder above an **All** folder; **Team** puts every chat in a folder per
-  Team, with **Archive** last and collapsed. Waiting chats wear a **Needs you** pill. A
+  Team, in name order. Waiting chats wear a **Needs you** pill. A
   one-to-one Room's row shows the Agent's picture and title.
 - **Teams** lists each Team as a root row. An open Team holds a **Rooms** folder (its Team
   Room first), a **Library** folder (its Projects) and a **Tasks** folder (every View,
   narrowed to that Team at `/teams/{Team}/tasks/{View}`). **Build a team** is at the
-  bottom, and archived Teams are listed with **Unarchive**.
+  bottom. Archived Teams and Projects are restored from the **Archived** page.
 - The sidebar is resizable, 200 to 480 px, and remembers its width per browser.
 
 PRs: #249, #251, #273, #276, #332, #335.
@@ -568,10 +568,10 @@ Helper writes the summary once per edit; if it is off, paused or takes over 30 s
 Agent gets the changed lines instead. A small edit it judges not meaningful reaches no Agent
 and is listed in the Feed. PRs: #376.
 
-**Archive.** A Team is archived from its **Details** tab, a Project from its row, and the whole
+**Archive.** A Team is archived from its row's menu or its **Details** tab, a Project from its row's menu or its page, and the whole
 folder moves unchanged into the read-only **Archive** root. It leaves every prompt, its Rooms
 are archived and its Tasks leave the Boards; Huddle first says how many open Tasks it would
-hide. Old links open the file with an **Archived** chip, and **Unarchive** restores members,
+hide. Old links open the file with an **Archived** chip. The **Archived** page (Teams, Projects and Chats tabs) lists what is archived, and **Restore** brings back members,
 manager and Rooms. PRs: #335.
 
 **Workspaces.** A Team's readable workspace, such as a code repository, is routed into its

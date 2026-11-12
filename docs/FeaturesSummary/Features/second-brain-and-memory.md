@@ -62,7 +62,7 @@ Archive a Team from its **Details** tab or a Project from its row. The folder mo
 read-only **Archive**, its Rooms are archived and its Tasks leave the Boards. Huddle first says how
 many open Tasks it would hide.
 
-Old links still open the file, with an **Archived** chip, and **Unarchive** restores members, manager
+Old links still open the file, with an **Archived** chip, and **Restore** on the Archived page brings back members, manager
 and Rooms.
 
 ## Good to know

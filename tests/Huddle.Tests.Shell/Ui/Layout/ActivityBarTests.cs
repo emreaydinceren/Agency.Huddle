@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Ui.Layout;
 
 /// <summary>
 /// Pins the Activity bar (<c>S5</c>): one pressed button per selected Sidebar view, a click on the selected one
-/// collapses the Sidebar (<c>S2</c>), and Archived chats and Settings sit in its bottom toolbar.
+/// collapses the Sidebar (<c>S2</c>), and Archived and Settings sit in its bottom toolbar.
 /// </summary>
 public sealed class ActivityBarTests
 {
@@ -80,7 +80,7 @@ public sealed class ActivityBarTests
         Assert.Equal([null, SidebarView.Tasks], reported);
     }
 
-    /// <summary>Source pin: the shell's drawer opens on the default view, and Archived chats and Settings are in the Activity bar's bottom toolbar, not the Sidebar.</summary>
+    /// <summary>Source pin: the shell's drawer opens on the default view, and Archived and Settings are in the Activity bar's bottom toolbar, not the Sidebar.</summary>
     [Fact]
     public void MainLayout_PutsTheFooterInTheActivityBarsBottomToolbar()
     {
@@ -88,9 +88,9 @@ public sealed class ActivityBarTests
 
         int bottom = layout.IndexOf("<Bottom>", StringComparison.Ordinal);
         int bottomEnd = layout.IndexOf("</Bottom>", StringComparison.Ordinal);
-        int archived = layout.IndexOf("<ArchivedChats", StringComparison.Ordinal);
+        int archived = layout.IndexOf("<ArchivedLink", StringComparison.Ordinal);
         int settings = layout.IndexOf("Href=\"/settings\"", StringComparison.Ordinal);
-        Assert.True(bottom >= 0 && bottom < archived && archived < settings && settings < bottomEnd, "Archived chats and Settings must sit inside the Activity bar's Bottom slot");
+        Assert.True(bottom >= 0 && bottom < archived && archived < settings && settings < bottomEnd, "Archived and Settings must sit inside the Activity bar's Bottom slot");
         Assert.Contains("sidebarView = SidebarViews.Default", layout, StringComparison.Ordinal); // contains-ok: a source pin on one field initialiser in a file that holds much else
         Assert.Equal(SidebarView.Chats, SidebarViews.Default);
     }

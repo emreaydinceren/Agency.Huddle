@@ -98,22 +98,6 @@
                                Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
                 </Actions>
             </PageHeader>
-            @if (this.Archive.ArchivedProjects(summary.Name) is { Count: > 0 } archivedProjects)
-            {
-                string archivedIn = summary.Name;
-                <div class="team-archived-projects">
-                    <MudText Typo="Typo.subtitle2" Class="team-archived-projects-title">Archived Projects</MudText>
-                    @foreach (string archivedProject in archivedProjects)
-                    {
-                        string archivedName = archivedProject;
-                        <div class="team-archived-project" @key="archivedName">
-                            <span class="team-archived-project-name">@archivedName</span>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="team-archived-project-unarchive"
-                                       OnClick="@(() => this.UnarchiveProjectAsync(archivedIn, archivedName))">Unarchive</MudButton>
-                        </div>
-                    }
-                </div>
-            }
         }
         else
         {
@@ -125,7 +109,7 @@
                     <span class="page-kind-chip team-project-kind">Project</span>
                 </TitleTrailing>
                 <Actions>
-                    @* No confirmation: a Project's files and Tasks only move, and Unarchive on the Team page brings them back. *@
+                    @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
                                Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</MudButton>
                 </Actions>
@@ -302,28 +286,9 @@
     /// <summary>Archives the Project and returns to its Team's page; a refusal is shown as a warning and the Project page stays.</summary>
     private async Task ArchiveProjectAsync(string team, string project)
     {
-        ArchiveOutcome outcome = await this.Archive.ArchiveProjectAsync(team, project, CancellationToken.None);
-        if (outcome.Done)
+        if (await TeamArchiveActions.ArchiveProjectAsync(this.Archive, this.Snackbar, team, project))
         {
             this.Navigation.NavigateTo(TeamHref(team));
-            return;
-        }
-
-        this.ShowRefusal(outcome);
-    }
-
-    /// <summary>Unarchives the Project; the list is read again on the render that follows, and a refusal is shown as a warning.</summary>
-    private async Task UnarchiveProjectAsync(string team, string project)
-    {
-        ArchiveOutcome outcome = await this.Archive.UnarchiveProjectAsync(team, project, CancellationToken.None);
-        this.ShowRefusal(outcome);
-    }
-
-    private void ShowRefusal(ArchiveOutcome outcome)
-    {
-        if (!outcome.Done && outcome.Refusal is { } refusal)
-        {
-            _ = this.Snackbar.Add(refusal, Severity.Warning, key: "team-archive");
         }
     }
 

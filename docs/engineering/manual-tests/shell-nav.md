@@ -1,6 +1,6 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/agents`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New chat** inside it), the `Teams` group, **Agents**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/agents`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New chat** inside it), the `Teams` group, **Agents**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
 **43 tests** · 43 free, none paid · about 3.5 hours.
 
@@ -364,7 +364,7 @@ None expected. If the app is not listening, fix the launch first.
 **Pass if — all of these**
 
 - Step 2 printed `289px` on all four routes (the Activity bar, its edge and the open Sidebar).
-- Step 3 lists exactly two entries, in this order, on all four routes: `activity-bar` and `sidebar-views` (`MainLayout.razor`: the Activity bar, whose bottom toolbar holds the Archived chats and Settings menu, then the Sidebar's five views: Chats, Teams, Agents, Tasks and Library).
+- Step 3 lists exactly two entries, in this order, on all four routes: `activity-bar` and `sidebar-views` (`MainLayout.razor`: the Activity bar, whose bottom toolbar holds the Archived and Settings menu, then the Sidebar's five views: Chats, Teams, Agents, Tasks and Library).
 - Step 4 printed exactly `Settings -> /settings` and `Agents -> /agents`, in that order, on all four routes (every Sidebar view stays mounted while hidden, so the Agents link is found whichever view is selected) — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
 - Step 5 printed `"hidden"` on all four routes — `.main-column` is still the literal `Class` MudMainContent carries and its CSS rule is unchanged.
 - The drawer scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
@@ -1245,11 +1245,11 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 
 **Steps**
 
-1. Look at the drawer. Note where **Settings** sits relative to the **Library** link and **Archived chats** and relative to the bottom of the viewport.
+1. Look at the drawer. Note where **Settings** sits relative to the **Library** link and **Archived** and relative to the bottom of the viewport.
 2. Note whether **Settings** shows any text, and hover it. Note what the tooltip says.
 3. In DevTools, run `document.querySelector('[aria-label="Settings"]').getAttribute('href')`. Note the value.
 4. Note whether **Agents** still shows its text, and whether an icon sits to its left.
-5. Note whether **Archived chats** shows any text, and hover it. Note what the tooltip says.
+5. Note whether **Archived** shows any text, and hover it. Note what the tooltip says.
 6. Make the browser window SHORT (about 400px tall) so the drawer's content overflows, and scroll the drawer. Note where Settings is now.
 7. Repeat steps 1 and 5 with the Huddle Dark theme selected (`Settings -> Appearance`, then **Huddle Dark** in the theme list).
 
@@ -1258,8 +1258,8 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 - **Settings** sits at the BOTTOM of the drawer, separated from the **Library** link by empty space rather than immediately below it.
 - **Settings** shows no text, hovering it reveals a tooltip reading `Settings`, and step 3 returns `/settings`.
 - **Agents** still reads "Agents", with an icon to its left.
-- **Archived chats** shows no text and hovering it reveals a tooltip reading `Archived chats`.
-- The Settings and Archived chats icons are legible under Huddle Dark as well as light.
+- **Archived** shows no text and hovering it reveals a tooltip reading `Archived`.
+- The Settings and Archived icons are legible under Huddle Dark as well as light.
 
 **Fail if — any of these**
 
@@ -1273,7 +1273,7 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 The drawer content is shorter than the viewport in step 6 no matter how small you make the window - some browsers clamp minimum height. Record what you could see for steps 1-5 and mark step 6 INCONCLUSIVE.
 
 > [!NOTE]
-> Settings and Archived chats are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedChats.razor:13-15`). Do not file that as an inconsistency with **Agents**, which keeps its label on purpose. Rooms in the list have no leading icon (`RoomList.razor:53`).
+> Settings and Archived are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedLink.razor`). Do not file that as an inconsistency with **Agents**, which keeps its label on purpose. Rooms in the list have no leading icon (`RoomList.razor:53`).
 
 ---
 

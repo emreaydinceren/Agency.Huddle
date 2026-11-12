@@ -53,7 +53,7 @@ standing conventions. This area adds:
 - The `<h1>` reads `Ada` (a word, not 32 hex characters).
 - The muted line beneath it reads exactly `You, Ada`.
 - A button labelled `Invite agent` sits at the right of the header row.
-- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Rooms` group (closed until opened, or open when the current page is one of its Rooms) holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Agents` link, a `Tasks` group and a single `Library` link (no Library folder rows and no Add folder in the sidebar); then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
+- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Rooms` group (closed until opened, or open when the current page is one of its Rooms) holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Agents` link, a `Tasks` group and a single `Library` link (no Library folder rows and no Add folder in the sidebar); then two icon-only links at the bottom, Archived and Settings (a tooltip names Settings).
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
 - Clicking `Bo` changes the `<h1>` to `Bo` and changes the id in the address bar.

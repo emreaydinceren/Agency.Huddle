@@ -138,7 +138,7 @@ removal is recorded. Its Rooms are archived.
 
 1. Find an older Message in any Room that links to `Teams/Property Investment/outputs/teardown.md`. Click the link.
 2. Read the Library view. Try to edit and save the file.
-3. Some time later, open the archived Team and choose **Unarchive**. Check `<data>\Teams\Property Investment\` and the Rooms list.
+3. Some time later, open the Archived page, select the Team on its **Teams** tab and choose **Restore**. Check `<data>\Teams\Property Investment\` and the Rooms list.
 
 **Expect**: the Library opens the archived file, marked *archived* and read-only, and a save is refused. After unarchiving,
 the folder returns to `Teams\Property Investment\`, its members get the label back and restart, and the Rooms the archive

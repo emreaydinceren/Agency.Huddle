@@ -24,7 +24,7 @@ their contents, Tasks, and Rooms down to the matching Message.
 
 The **Activity bar** at the far left switches the sidebar between **Chats**, **Teams**, **Agents**,
 **Tasks**, **Library**, **Scheduled** and **Remote access**. It also has a **Feed** icon, with
-**Archived chats** and **Settings** at the bottom. Selecting the active button folds the sidebar away.
+**Archived** and **Settings** at the bottom. Selecting the active button folds the sidebar away.
 
 Team tiles at the top of the bar narrow the sidebar to one Team. Right-click a tile to remove it or turn
 them all off.
@@ -82,8 +82,8 @@ Notifications bell and the Right sidebar toggle.
 
 | Button | What the sidebar shows |
 | --- | --- |
-| **Chats** | The **Needs you** card, then **Group by: All \| Team**. **All** has **Needs you** and **All** folders. **Team** puts every chat in a folder per Team, with **Archive** last and collapsed |
-| **Teams** | Each Team as a root row, with **Rooms**, **Library** and **Tasks** folders. **Build a team** is at the bottom, and archived Teams have **Unarchive** |
+| **Chats** | The **Needs you** card, then **Group by: All \| Team**. **All** has **Needs you** and **All** folders. **Team** puts every chat in a folder per Team, in name order |
+| **Teams** | Each Team as a root row, with **Rooms**, **Library** and **Tasks** folders. **Build a team** is at the bottom. Archived Teams are on the **Archived** page |
 | **Agents** | A link to the page listing every Agent |
 | **Tasks** | **All Tasks**, **My Tasks**, your Views and **New view** |
 | **Library** | A link to the Library page |
