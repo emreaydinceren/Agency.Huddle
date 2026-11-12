@@ -83,6 +83,58 @@ public sealed class LibraryAvatarTests
         Assert.Equal("pixel-avatar_dark_m_01", actual);
     }
 
+    /// <summary>Blank or white-space parts never leave an empty or dangling piece in the name, and a record with nothing else falls back to the file name.</summary>
+    [Theory]
+    [InlineData("", "", new[] { "" }, "a")]
+    [InlineData("  ", " ", new[] { "  " }, "a")]
+    [InlineData("fair", "woman", new[] { "hat", "" }, "fair woman, hat")]
+    [InlineData(" fair ", " woman ", new[] { " hat " }, "fair woman, hat")]
+    public void AccessibleName_BlankParts_AreLeftOut(string skinTone, string gender, string[] tags, string expected)
+    {
+        LibraryAvatar avatar = new("a.png", skinTone, gender, tags);
+
+        string actual = avatar.AccessibleName;
+
+        Assert.Equal(expected, actual);
+    }
+
+    /// <summary>A tag repeated in another case is read once, in the casing first written.</summary>
+    [Fact]
+    public void AccessibleName_RepeatedTagIgnoringCase_ReadOnce()
+    {
+        LibraryAvatar avatar = new("a.png", "fair", "man", ["hat", "Hat", "HAT", "vest"]);
+
+        string actual = avatar.AccessibleName;
+
+        Assert.Equal("fair man, hat, vest", actual);
+    }
+
+    /// <summary>A hyphen in a tag is read as a space, so <c>no-glasses</c> is announced as two words.</summary>
+    [Fact]
+    public void AccessibleName_HyphenatedTag_ReadWithASpace()
+    {
+        LibraryAvatar avatar = new("a.png", "dark", "man", ["pink top", "no-glasses"]);
+
+        string actual = avatar.AccessibleName;
+
+        Assert.Equal("dark man, pink top, no glasses", actual);
+    }
+
+    /// <summary>A bare <c>glasses</c> is dropped when a coloured glasses tag already says it, and kept when nothing else does.</summary>
+    [Theory]
+    [InlineData(new[] { "short hair", "glasses", "red glasses" }, "fair man, short hair, red glasses")]
+    [InlineData(new[] { "red glasses", "GLASSES" }, "fair man, red glasses")]
+    [InlineData(new[] { "short hair", "glasses" }, "fair man, short hair, glasses")]
+    [InlineData(new[] { "glasses", "no-glasses" }, "fair man, glasses, no glasses")]
+    public void AccessibleName_BareGlasses_DroppedOnlyWhenAColourSaysIt(string[] tags, string expected)
+    {
+        LibraryAvatar avatar = new("a.png", "fair", "man", tags);
+
+        string actual = avatar.AccessibleName;
+
+        Assert.Equal(expected, actual);
+    }
+
     /// <summary>A fair or light tone is in the Light group.</summary>
     [Theory]
     [InlineData("fair", "Light")]
