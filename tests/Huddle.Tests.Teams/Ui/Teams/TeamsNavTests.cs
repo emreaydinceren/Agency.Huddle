@@ -347,11 +347,11 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-panel")));
     }
 
-    /// <summary>Under a Team shortcut, the header card's Unfold More button unfolds the other Teams inside the same card (not a popover), each drawn as the Team row is, and picking one folds it, raises <see cref="TeamsNav.TeamChanged"/> with it and opens its Team page.</summary>
+    /// <summary>Under a Team shortcut, the header card's Unfold More button unfolds every Team inside the same card (not a popover) in catalog order, the shown one marked in its own place so no Team moves with the selection, each drawn as the Team row is, and picking one folds it, raises <see cref="TeamsNav.TeamChanged"/> with it and opens its Team page.</summary>
     [Fact]
-    public async Task Team_Set_Switcher_UnfoldsTheOtherTeamsUnderTheCard_AndRaisesThePickedOne()
+    public async Task Team_Set_Switcher_UnfoldsEveryTeamInCatalogOrder_AndRaisesThePickedOne()
     {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Taxes"]), Team("Lab #2"), Team("Sales")] };
+        FakeTeamCatalog catalog = new() { Teams = [Team("Lab #2"), Team("Business", projects: ["Taxes"]), Team("Sales")] };
         List<string?> picked = [];
 
         await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
@@ -368,14 +368,18 @@ public sealed class TeamsNavTests
             IElement card = cut.Find(".teams-nav-team-card.teams-nav-team-card-open");
             IElement list = Assert.Single(card.Children, child => child.ClassList.Contains("teams-nav-switcher-list"));
             Assert.True(list.PreviousElementSibling?.ClassList.Contains("teams-nav-scope-header"));
-            string[] expected = ["Lab #2", "Sales"];
+            string[] expected = ["Lab #2", "Business", "Sales"];
             string[] names = [.. list.QuerySelectorAll(".teams-nav-switcher-item:not(.teams-nav-switcher-build) .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
             Assert.Equal(expected, names);
             Assert.Equal("Build a team", list.Children[^1].TextContent.Trim());
             string[] subtitles = [.. list.QuerySelectorAll(".teams-nav-switcher-item .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
-            string[] expectedSubtitles = ["1 member", "1 member"];
+            string[] expectedSubtitles = ["1 member", "1 member", "1 member"];
             Assert.Equal(expectedSubtitles, subtitles);
-            Assert.Equal(2, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
+            Assert.Equal(3, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
+            IElement current = Assert.Single(list.QuerySelectorAll(".teams-nav-switcher-item[aria-current='true']"));
+            Assert.Equal("Business", current.GetAttribute("title"));
+            Assert.Same(current, list.Children[1]);
+            Assert.Contains("selected-shape", current.ClassList);
         });
         Assert.Equal("true", cut.Find("button.teams-nav-switcher-button").GetAttribute("aria-expanded"));
 

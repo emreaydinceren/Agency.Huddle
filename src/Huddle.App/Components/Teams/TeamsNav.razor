@@ -28,7 +28,7 @@
 
     With Team set (a Team shortcut in the Activity bar, TeamShortcutBar.razor) it lists that one Team's scope list and
     sections and nothing else: no Team row and no "Show all" over the Teams. Its header card ends in an Unfold More
-    button that unfolds the other Teams inside the card, then "Build a team"; picking a Team folds it, raises TeamChanged
+    button that unfolds every Team inside the card in catalog order (the one shown marked in its own place, so no Team moves with the selection), then "Build a team"; picking a Team folds it, raises TeamChanged
     (MainLayout shows that Team's view as its shortcut tile would) and opens the Team page. Its Rooms section is drawn
     even when empty and splits into "Needs you" and "All" while a Room in the scope waits on the Human. A Team with no
     Rooms, Projects or Task Views shows its header card (the link to the Team page, and the switcher), an empty state,
@@ -323,14 +323,20 @@
                         Class="teams-nav-switcher-button" aria-label="Switch team" title="Switch team"
                         aria-expanded="@(this.switcherOpen ? "true" : "false")" OnClick="this.ToggleSwitcher" />;
 
-    /// <summary>The other Teams, unfolded under the header card while <see cref="switcherOpen"/>, then "Build a team"; picking a Team shows its view, as its shortcut tile would.</summary>
-    /// <param name="current">The Team the view shows, which the card already names and the list leaves out.</param>
+    /// <summary>
+    /// Every Team in catalog order, unfolded under the header card while <see cref="switcherOpen"/>, then "Build a team".
+    /// The Team shown stays in its own place, marked, so a Team's position never moves with the selection; picking
+    /// another shows its view, as its shortcut tile would.
+    /// </summary>
+    /// <param name="current">The Team the view shows, marked in the list.</param>
     private RenderFragment TeamSwitcherList(string current) =>
         @<div class="teams-nav-switcher-list" role="list" aria-label="Teams">
-            @foreach (TeamSummary other in this.Catalog.Teams.Where(candidate => !string.Equals(candidate.Name, current, StringComparison.OrdinalIgnoreCase)))
+            @foreach (TeamSummary other in this.Catalog.Teams)
             {
                 string name = other.Name;
-                <button type="button" role="listitem" class="teams-nav-switcher-item" @key="name" title="@name"
+                bool isCurrent = string.Equals(name, current, StringComparison.OrdinalIgnoreCase);
+                <button type="button" role="listitem" class="@(isCurrent ? "teams-nav-switcher-item selected-shape" : "teams-nav-switcher-item")"
+                        @key="name" title="@name" aria-current="@(isCurrent ? "true" : null)"
                         @onclick="@(() => this.SwitchTeamAsync(name))">
                     <TeamAvatar Team="@name" Avatar="other.Avatar" Size="Size.Medium" Class="teams-nav-scope-avatar" />
                     <span class="teams-nav-scope-text">
