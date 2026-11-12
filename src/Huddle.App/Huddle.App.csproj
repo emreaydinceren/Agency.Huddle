@@ -7,6 +7,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);CA1031;CA1848</NoWarn>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- MUD0002 (the analyzer inside the MudBlazor package): an attribute on a Mud component that is not one of its
+         parameters must be a real HTML attribute, data-*, aria-* or role. The default, LowerCase, let a lowercase
+         misspelt parameter (dense, variant) through as a dead HTML attribute. Every configuration, so CI enforces it.
+         See docs/engineering/analyzer-decisions.md#mudblazor-analyzers. -->
+    <MudAllowedAttributePattern>HTMLAttributes</MudAllowedAttributePattern>
   </PropertyGroup>
 
   <ItemGroup>

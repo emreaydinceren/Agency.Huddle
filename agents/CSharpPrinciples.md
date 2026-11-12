@@ -24,7 +24,7 @@ When adding or updating a dependency:
 
 ## What the build enforces
 
-Seven analyzer layers run on every `dotnet build`, and anything at `warning` or above
+Eight analyzer layers run on every `dotnet build`, and anything at `warning` or above
 fails it. Knowing which layer a diagnostic comes from tells you where its rule lives.
 
 | Prefix | Source | Where the severity is set |
@@ -36,6 +36,7 @@ fails it. Knowing which layer a diagnostic comes from tells you where its rule l
 | `MA` | Meziantou.Analyzer, product code under `src/` only (`tests/**` is switched off) | `.editorconfig`; see [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#meziantouanalyzer) |
 | `xUnit` | xunit.v3 analyzers, test projects only | Package defaults |
 | `HUD` | This repo's own rules, `src/Huddle.Analyzers`, referenced by `Huddle.App` | Warning (so a failed build) by default; each rule applies only in an assembly that declares the helper its fix uses. See [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#huddleanalyzers) |
+| `MUD` | MudBlazor's own analyzer, shipped inside the `MudBlazor` package, so it runs wherever MudBlazor is referenced | Package defaults (warnings); `MudAllowedAttributePattern=HTMLAttributes` in `Huddle.App.csproj`. See [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#mudblazor-analyzers) |
 
 Rules that used to be prose-only and are now enforced, so a violation is a failed build rather
 than a review comment:

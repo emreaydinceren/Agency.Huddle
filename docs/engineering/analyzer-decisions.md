@@ -401,6 +401,25 @@ non-hosted types) failed those tests. A throwaway file with one violation of eac
 `Microsoft.CodeAnalysis.CSharp` stays on the 4.x line, because an analyzer must not reference a newer
 Roslyn than the SDK compiler that loads it.
 
+## MudBlazor analyzers
+
+The `MudBlazor` package ships its own Roslyn analyzer (`analyzers/dotnet/cs/MudBlazor.Analyzers.dll`), so
+nothing references it explicitly: it runs in every project that references MudBlazor, and
+`TreatWarningsAsErrors` turns each `MUD####` warning into a failed build. Its rules live in the package,
+so a MudBlazor upgrade can add build errors without any change here. 9.12.0 contains `MUD0002`,
+`MUD0010`, `MUD0011` and `MUD0012`; only `MUD0002` is documented, on
+[mudblazor.com/features/analyzers](https://mudblazor.com/features/analyzers).
+
+| Rule | Reports | Setting and why |
+| --- | --- | --- |
+| `MUD0002` | An attribute on a Mud component that is not one of its parameters and not allowed by `MudAllowedAttributePattern`. It names the `.razor` file, not the line. When the attribute is a parameter removed in v7, v8 or v9, the message names its replacement. | `HTMLAttributes` in `Huddle.App.csproj`, in every configuration so CI enforces it. Only real HTML attributes, `data-*`, `aria-*` and `role` pass. The default, `LowerCase`, let a lowercase misspelt parameter (`dense`, `variant`) through as a dead HTML attribute. `DataAndAria` would refuse the `id` attributes in use, and `None` every `role` and `aria-*`. |
+| `MUD0012` | A test reading a bindable parameter straight off `.Instance`. | Package default. Read it with `GetState`; see [BlazorTesting.md](../../agents/BlazorTesting.md). |
+| `MUD0010`, `MUD0011` | Undocumented; they have not fired here. | Package default. |
+
+**Proof.** A throwaway `<MudButton dense="true" role="button" id="probe">` in `Huddle.App` failed the
+build with `MUD0002` on `dense` only, and was the only error, so the existing markup already meets
+`HTMLAttributes`. No test project has a `.razor` file, so the setting covers all of our markup.
+
 ## Non-Sonar settings
 
 | Setting | Where | Decision and reason |
