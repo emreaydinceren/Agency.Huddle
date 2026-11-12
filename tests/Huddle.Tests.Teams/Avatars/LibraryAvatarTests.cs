@@ -126,6 +126,10 @@ public sealed class LibraryAvatarTests
     [InlineData(new[] { "red glasses", "GLASSES" }, "fair man, red glasses")]
     [InlineData(new[] { "short hair", "glasses" }, "fair man, short hair, glasses")]
     [InlineData(new[] { "glasses", "no-glasses" }, "fair man, glasses, no glasses")]
+    [InlineData(new[] { "glasses", "without glasses" }, "fair man, glasses, without glasses")]
+    [InlineData(new[] { "glasses", "NOT-GLASSES" }, "fair man, glasses, NOT GLASSES")]
+    [InlineData(new[] { "glasses", "big red glasses" }, "fair man, glasses, big red glasses")]
+    [InlineData(new[] { "glasses", "sunglasses" }, "fair man, glasses, sunglasses")]
     public void AccessibleName_BareGlasses_DroppedOnlyWhenAColourSaysIt(string[] tags, string expected)
     {
         LibraryAvatar avatar = new("a.png", "fair", "man", tags);

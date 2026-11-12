@@ -345,7 +345,7 @@ upload button. It appears only in the **An image** choice, and only when a libra
 ```text
 +- Choose an avatar ------------------------------------------- X -+
 |  Skin tone   [ All ][ Light ][ Tan ][ Dark ]                     |
-|  Search      [ type a tag, for example beard ............. ]   |
+|  Search      [ type a tag, for example beard ............... ]   |
 |                                                                  |
 |  Tags                                                            |
 |  (glasses) (short hair) (no-glasses) (black hair) (brown hair)   |

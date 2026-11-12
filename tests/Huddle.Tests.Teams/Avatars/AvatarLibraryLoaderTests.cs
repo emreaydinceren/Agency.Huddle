@@ -100,6 +100,36 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         Assert.Empty(avatar.Tags);
     }
 
+    /// <summary>
+    /// Tags, skin tone and gender are read trimmed and blank tags are dropped, so a padded <c>" hat"</c> and a plain
+    /// <c>"hat"</c> are one chip that finds both pictures, never two chips that look alike.
+    /// </summary>
+    [Fact]
+    public async Task Load_PaddedAndBlankValues_AreTrimmedIntoOneTag()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
+        File.WriteAllBytes(Path.Combine(this.root, "b.png"), PngBytes);
+        this.WriteMaster("""
+            {"avatars":[
+              {"file":"a.png","skin_tone":" fair ","gender_presentation":" woman ","tags":["hat","", "  "]},
+              {"file":"b.png","tags":[" hat ","vest "]}
+            ]}
+            """);
+        AvatarLibraryLoader loader = this.CreateLoader(this.root);
+
+        AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
+
+        Assert.NotNull(result.Catalog);
+        Assert.Equal(["hat"], result.Catalog.All[0].Tags);
+        Assert.Equal(["hat", "vest"], result.Catalog.All[1].Tags);
+        Assert.Equal("fair", result.Catalog.All[0].SkinTone);
+        Assert.Equal("woman", result.Catalog.All[0].Gender);
+        Assert.Equal([new TagCount("hat", 2), new TagCount("vest", 1)], result.Catalog.Tags);
+        HashSet<string> selected = new(["hat"], StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(2, result.Catalog.Search(new AvatarLibraryQuery(null, string.Empty, selected)).Count);
+    }
+
     /// <summary>A record with no <c>profession</c> field loads: a safe, unique file with image content is enough.</summary>
     [Fact]
     public async Task Load_NoProfessionField_Loads()
