@@ -10,11 +10,11 @@ public sealed class TeamPageTabsTests
     private static readonly TeamPageFeatures TasksOnly = new(Library: false, Tasks: true);
     private static readonly TeamPageFeatures NeitherFeature = new(Library: false, Tasks: false);
 
-    /// <summary>Team with both features on includes Members, Files, Tasks and Details.</summary>
+    /// <summary>Team with both features on includes Members, Files and Details: a Team page has no Tasks tab (the sidebar lists its Task Views).</summary>
     [Fact]
-    public void Available_Team_BothFeatures_ReturnsMembersFilesAndTasks()
+    public void Available_Team_BothFeatures_ReturnsMembersFilesAndDetails_WithNoTasks()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, Both);
         Assert.Equal(expected, actual);
     }
@@ -28,11 +28,11 @@ public sealed class TeamPageTabsTests
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>Team with Tasks on and Library off includes Members, Tasks and Details.</summary>
+    /// <summary>Team with Tasks on and Library off includes only Members and Details: Tasks never adds a tab to a Team page.</summary>
     [Fact]
-    public void Available_Team_TasksOnly_ReturnsMembersAndTasks()
+    public void Available_Team_TasksOnly_ReturnsMembersAndDetails()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Tasks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, TasksOnly);
         Assert.Equal(expected, actual);
     }
@@ -226,10 +226,10 @@ public sealed class TeamPageTabsTests
         TeamPageFeatures libraryAndProcess = new(Library: true, Tasks: false, Process: true);
         TeamPageFeatures onlyProcess = new(Library: false, Tasks: false, Process: true);
 
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, withProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, withProcess));
         Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, libraryAndProcess));
         Assert.Equal([TeamPageTab.Members, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, onlyProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, Both));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, Both));
     }
 
     /// <summary>The "details" segment resolves to the Details tab on a Team page, and a Project page has none.</summary>

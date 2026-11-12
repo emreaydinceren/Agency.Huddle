@@ -13,8 +13,8 @@
 @using Agency.Huddle.App.Library
 
 <div class="team-files-tab">
-    <LibraryExplorer @key="this.ScopePath"
-                     Scopes="@this.Scopes" Layout="LibraryExplorerLayout.SideBySide" ShowTitle="false" ShowScopeRoot="false"
+    <LibraryExplorer @key="this.StateKey"
+                     Scopes="@this.Scopes" HiddenFolders="@this.HiddenFolders" Layout="LibraryExplorerLayout.SideBySide" ShowTitle="false" ShowScopeRoot="false"
                      Filter="@this.Search" FilterChanged="this.SearchChanged"
                      StateKey="@this.StateKey" />
 </div>
@@ -42,5 +42,10 @@
 
     private IReadOnlyList<LibraryLocation> Scopes => [new LibraryLocation("teams", this.ScopePath)];
 
-    private string StateKey => $"team:{this.ScopePath}";
+    /// <summary>Folders directly under the Team's folder that the explorer leaves out: the No project view passes the Team's Projects, so only files that belong to no Project are shown.</summary>
+    [Parameter]
+    public IReadOnlyCollection<string>? HiddenFolders { get; set; }
+
+    /// <summary>Keyed apart for the No project view, so it neither shares the Team tab's remembered tree nor reuses its explorer.</summary>
+    private string StateKey => this.HiddenFolders is { Count: > 0 } ? $"team:{this.ScopePath}:no-project" : $"team:{this.ScopePath}";
 }

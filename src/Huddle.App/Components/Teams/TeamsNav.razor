@@ -12,10 +12,13 @@
 
     Below the list come the sections of the selected scope, each under a header (a hairline above, a small uppercase
     label and an optional trailing icon button), none of them collapsible:
-    ROOMS (the "+" opens the New chat panel for the Team and the selected Project; Team scope lists the Rooms with no
-    Project or whose Project is gone, a Project lists its own), TASKS (the same Views as TaskViewNav.razor, each linking
-    to /teams/{Team}/tasks/{ViewId} or /teams/{Team}/projects/{Project}/tasks/{ViewId}; Rename and Delete stay on the
-    Tasks view's own rows) and LIBRARY (one Files link to the Files tab of the scope).
+    PROJECTS (the "+" starts a Project; the Project rows, then, once there is a Project, the quiet "No project" toggle,
+    which narrows the sections below to what belongs to no Project), ROOMS (the "+" opens the New chat panel for the Team and the selected
+    Project; Team scope lists every Room of the Team, No project the Rooms with no Project or whose Project is gone, a
+    Project its own), TASKS (the "+" opens New view; the same Views as TaskViewNav.razor, each linking to
+    /teams/{Team}/tasks/{ViewId}, /teams/{Team}/no-project/tasks/{ViewId} or /teams/{Team}/projects/{Project}/tasks/{ViewId};
+    Rename and Delete stay on the Tasks view's own rows) and LIBRARY (one Files link to the Library tab of the scope; No
+    project links to /teams/{Team}/no-project/files, the Team's folder without its Project folders).
 
     Copies TaskViewNav.razor's shape: subscribe to ITeamCatalog.Changed, marshal with
     DispatchAsync and unsubscribe in Dispose (the catalog is a singleton, so an undisposed
@@ -73,6 +76,7 @@
         {
             bool isExpanded = this.OneTeam is not null || this.IsExpanded(team.Name);
             string? scope = this.SelectedProject(team);
+            bool noProject = this.IsNoProject(team, scope);
             @if (this.OneTeam is null)
             {
                 @* Keyed by the Team, so its menu is never reused for another Team's row and keeps its own @ref (see menuRefs). *@
@@ -103,7 +107,7 @@
                             <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
                             @if (this.ProjectsAllowed)
                             {
-                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">New project…</MudMenuItem>
                             }
                             <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
                                          OnClick="@(() => this.ArchiveTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Archive team…</MudMenuItem>
@@ -126,22 +130,28 @@
                         @this.TeamCard(team, scope is null, this.OpenTaskCounts(team.Name))
                     </div>
                     <EmptyState Title="@($"Nothing in {team.Name} yet")" Text="Its Rooms, Projects and Task Views will be listed here." />
-                    @* Nothing to list yet, but the Human can still start a chat here and reach the Team's Files. *@
+                    @* Nothing to list yet, but the Human can still start a chat or a Project here and reach the Team's Files. *@
                     <div class="teams-nav-scope-block" data-team="@team.Name">
-                        @this.RoomsSection(team, null, allRooms)
+                        @if (this.ProjectsAllowed)
+                        {
+                            <div class="teams-nav-section teams-nav-section-projects" data-section="projects">
+                                @SectionHeader("Projects", this.StartProjectButton(team.Name))
+                            </div>
+                        }
+                        @this.RoomsSection(team, null, allRooms, noProject: false)
                         @this.LibrarySection(team.Name, null)
                     </div>
                 }
                 else
                 {
                     <div class="teams-nav-scope-block" data-team="@team.Name">
-                        @this.ScopeList(team, scope)
-                        @this.RoomsSection(team, scope, allRooms)
+                        @this.ScopeList(team, scope, noProject)
+                        @this.RoomsSection(team, scope, allRooms, noProject)
                         @if (this.ShowsTasksFolder)
                         {
-                            @this.TasksSection(team.Name, scope)
+                            @this.TasksSection(team.Name, scope, noProject)
                         }
-                        @this.LibrarySection(team.Name, scope)
+                        @this.LibrarySection(team.Name, scope, noProject)
                     </div>
                 }
             }
@@ -209,21 +219,64 @@
 
     private bool IsWaiting(Room room) => this.waitingIds.Contains(room.Id);
 
-    /// <summary>The scope list: the Team's own row, then a row per Project (cut to the first few until "Show all", always keeping the selected one).</summary>
+    /// <summary>
+    /// The scope list: the Team's own row, then under a PROJECTS header a row per Project (cut to the first few until "Show all",
+    /// always keeping the selected one), then, once there is a Project, the quiet "No project" row. The header's "+" starts a Project.
+    /// </summary>
     /// <param name="team">The Team whose scopes to list.</param>
-    /// <param name="selected">The selected Project, or <see langword="null"/> for the Team row.</param>
-    private RenderFragment ScopeList(TeamSummary team, string? selected)
+    /// <param name="selected">The selected Project, or <see langword="null"/> for the Team row or No project.</param>
+    /// <param name="noProject">Whether "No project" is the selected scope.</param>
+    private RenderFragment ScopeList(TeamSummary team, string? selected, bool noProject)
     {
         IReadOnlyDictionary<string, int> counts = this.OpenTaskCounts(team.Name);
         string listKey = FolderKey(team.Name, ProjectFolder);
         return @<div class="teams-nav-scopes">
-            @this.TeamCard(team, selected is null, counts)
-            @foreach (string project in SidebarRows.Visible(team.Projects, this.showAllRows.Contains(listKey), candidate => string.Equals(candidate, selected, StringComparison.OrdinalIgnoreCase)))
+            @this.TeamCard(team, selected is null && !noProject, counts)
+            @if (this.ProjectsAllowed || team.Projects.Count > 0)
             {
-                @this.ScopeRow(team, project, string.Equals(project, selected, StringComparison.OrdinalIgnoreCase), counts)
+                <div class="teams-nav-section teams-nav-section-projects" data-section="projects">
+                    @SectionHeader("Projects", this.ProjectsAllowed ? this.StartProjectButton(team.Name) : null)
+                    @foreach (string project in SidebarRows.Visible(team.Projects, this.showAllRows.Contains(listKey), candidate => string.Equals(candidate, selected, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        @this.ScopeRow(team, project, string.Equals(project, selected, StringComparison.OrdinalIgnoreCase), counts)
+                    }
+                    <ShowAllRow Total="team.Projects.Count" Expanded="this.showAllRows.Contains(listKey)" OnToggle="@(() => this.ToggleShowAllRows(listKey))" />
+                    @if (team.Projects.Count > 0)
+                    {
+                        @this.NoProjectRow(team.Name, noProject, counts)
+                    }
+                </div>
             }
-            <ShowAllRow Total="team.Projects.Count" Expanded="this.showAllRows.Contains(listKey)" OnToggle="@(() => this.ToggleShowAllRows(listKey))" />
         </div>;
+    }
+
+    /// <summary>The PROJECTS header's "+" (tooltip "Start a project"), the same button as the ROOMS and TASKS headers' "+": it opens the New project prompt.</summary>
+    /// <param name="team">The Team the Project is started in.</param>
+    private RenderFragment StartProjectButton(string team) =>
+        @<MudTooltip Text="Start a project">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add teams-nav-start-project"
+                           aria-label="Start a project" OnClick="@(() => this.NewProjectAsync(team, null))" />
+        </MudTooltip>;
+
+    /// <summary>
+    /// The quiet "No project" row: selecting it narrows the sections below to the Team's Rooms and Tasks that belong to no Project.
+    /// It has no page of its own, so it is a toggle button rather than a link; a second click returns to the Team row.
+    /// </summary>
+    /// <param name="team">The Team.</param>
+    /// <param name="selected">Whether No project is the selected scope.</param>
+    /// <param name="counts">The Team's open Task counts (see <see cref="OpenTaskCounts"/>); the Team-level ones are under the empty key.</param>
+    private RenderFragment NoProjectRow(string team, bool selected, IReadOnlyDictionary<string, int> counts)
+    {
+        int open = counts.GetValueOrDefault(string.Empty);
+        return @<button type="button" class="@(selected ? "teams-nav-switcher-item teams-nav-no-project selected-shape" : "teams-nav-switcher-item teams-nav-no-project")"
+                        aria-pressed="@(selected ? "true" : "false")" title="Rooms, Tasks and files that belong to no project"
+                        @onclick="@(() => this.ToggleNoProject(team))">
+            <span class="sidebar-row-label">@Tasks.NoProjectLabel</span>
+            @if (this.TeamConfig.Value.Tasks.Enabled)
+            {
+                <span class="sidebar-row-meta teams-nav-scope-count" title="@(open == 0 ? "No open tasks" : Plural.Of(open, "open task", "open tasks"))">@(open == 0 ? "—" : open.ToString(CultureInfo.InvariantCulture))</span>
+            }
+        </button>;
     }
 
     /// <summary>
@@ -478,15 +531,20 @@
 
     /// <summary>The ROOMS section of a scope: the header with its "+", the New chat panel while open, then the scope's Rooms.</summary>
     /// <param name="team">The Team.</param>
-    /// <param name="project">The selected Project, or <see langword="null"/> for the Team scope.</param>
+    /// <param name="project">The selected Project, or <see langword="null"/> for the Team scope or No project.</param>
     /// <param name="allRooms">Every Room listed under the Team.</param>
-    private RenderFragment RoomsSection(TeamSummary team, string? project, IReadOnlyList<Room> allRooms)
+    /// <param name="noProject">Whether No project is the selected scope: only the Rooms with no Project (or whose Project is gone); the Team scope lists every Room.</param>
+    private RenderFragment RoomsSection(TeamSummary team, string? project, IReadOnlyList<Room> allRooms, bool noProject)
     {
-        List<Room> rooms = [.. ScopeRooms(team, allRooms, project)];
-        string roomsKey = FolderKey(team.Name, RoomsFolder + project);
-        RenderFragment add = @<MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add"
-                                             aria-label="@($"New chat in {project ?? team.Name}")"
-                                             OnClick="@(() => this.ToggleNewChat(team.Name, project))" />;
+        List<Room> rooms = project is null && !noProject ? [.. allRooms] : [.. ScopeRooms(team, allRooms, project)];
+        string scopeKey = ScopeFolderSuffix(project, noProject);
+        string roomsKey = FolderKey(team.Name, RoomsFolder + scopeKey);
+        string newChatLabel = $"New chat in {project ?? team.Name}";
+        RenderFragment add = @<MudTooltip Text="@newChatLabel">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add"
+                           aria-label="@newChatLabel"
+                           OnClick="@(() => this.ToggleNewChat(team.Name, project))" />
+        </MudTooltip>;
         return @<div class="teams-nav-section teams-nav-section-rooms" data-section="rooms">
             @SectionHeader("Rooms", add)
             @if (this.IsNewChatOpen(team.Name, project))
@@ -503,20 +561,20 @@
             }
             else
             {
-                @this.ShortcutRooms(team.Name, project, rooms)
+                @this.ShortcutRooms(team.Name, scopeKey, rooms)
             }
         </div>;
     }
 
     /// <summary>A shortcut's Rooms: the Chats view's All grouping for one scope, the Rooms waiting on the Human in a "Needs you" folder and the rest in "All", every Room listed with no "Show all". With nothing waiting there is nothing to split, so the Rooms are listed flat.</summary>
     /// <param name="team">The shortcut's Team.</param>
-    /// <param name="project">The selected Project, or <see langword="null"/> for the Team scope.</param>
+    /// <param name="scopeKey">The selected scope's part of the folder keys (see <see cref="ScopeFolderSuffix"/>).</param>
     /// <param name="rooms">The scope's Rooms.</param>
-    private RenderFragment ShortcutRooms(string team, string? project, List<Room> rooms)
+    private RenderFragment ShortcutRooms(string team, string scopeKey, List<Room> rooms)
     {
         List<Room> waiting = [.. rooms.Where(this.IsWaiting)];
-        string needsYouKey = FolderKey(team, NeedsYouFolder + project);
-        string allKey = FolderKey(team, AllFolder + project);
+        string needsYouKey = FolderKey(team, NeedsYouFolder + scopeKey);
+        string allKey = FolderKey(team, AllFolder + scopeKey);
         return @<text>
             @if (waiting.Count > 0)
             {
@@ -547,16 +605,22 @@
 
     /// <summary>The TASKS section: every View, each linking to the Tasks page narrowed to the Team, or to the Team's Project when <paramref name="project"/> is set.</summary>
     /// <param name="team">The Team the Views are narrowed to.</param>
-    /// <param name="project">The Project they are narrowed to, or <see langword="null"/> for the Team's Tasks that have no Project.</param>
-    private RenderFragment TasksSection(string team, string? project)
+    /// <param name="project">The Project they are narrowed to, or <see langword="null"/> for every Task of the Team (or, with <paramref name="noProject"/>, its Tasks that have no Project).</param>
+    /// <param name="noProject">Whether No project is the selected scope.</param>
+    private RenderFragment TasksSection(string team, string? project, bool noProject)
     {
-        string tasksKey = FolderKey(team, TasksFolder + project);
+        string tasksKey = FolderKey(team, TasksFolder + ScopeFolderSuffix(project, noProject));
+        string? titleScope = noProject ? Tasks.NoProjectLabel : project;
+        RenderFragment add = @<MudTooltip Text="New task view">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add teams-nav-new-view"
+                           aria-label="New task view" OnClick="this.NewTaskView" />
+        </MudTooltip>;
         return @<div class="teams-nav-section teams-nav-section-tasks" data-section="tasks">
-            @SectionHeader("Tasks")
-            @foreach (TaskView view in SidebarRows.Visible(this.Views.Views, this.showAllRows.Contains(tasksKey), candidate => this.IsActiveView(team, project, candidate)))
+            @SectionHeader("Tasks", add)
+            @foreach (TaskView view in SidebarRows.Visible(this.Views.Views, this.showAllRows.Contains(tasksKey), candidate => this.IsActiveView(team, project, noProject, candidate)))
             {
-                <NavTabLink @key="view.Id" Href="@ViewHref(team, project, view.Id)"
-                            TabTitle="@Tasks.TeamViewTitle(team, view.Name, project)"
+                <NavTabLink @key="view.Id" Href="@ViewHref(team, project, noProject, view.Id)"
+                            TabTitle="@Tasks.TeamViewTitle(team, view.Name, titleScope)"
                             Icon="@(view.Kind == ViewKind.Kanban ? Icons.Material.Outlined.ViewKanban : Icons.Material.Outlined.ViewList)"
                             Class="nav-team-view-link"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
             }
@@ -564,22 +628,28 @@
         </div>;
     }
 
-    /// <summary>The LIBRARY section: one Files link to the Files tab of the Team or of its Project; nothing while the Library is off.</summary>
+    /// <summary>The LIBRARY section: one Files link to the Library of the Team, of its Project, or of No project (the Team's files outside every Project folder); nothing while the Library is off.</summary>
     /// <param name="team">The Team.</param>
-    /// <param name="project">The Project, or <see langword="null"/> for the Team's own Library.</param>
-    private RenderFragment LibrarySection(string team, string? project)
+    /// <param name="project">The Project, or <see langword="null"/> for the Team's own Library or No project's.</param>
+    /// <param name="noProject">Whether No project is the selected scope.</param>
+    private RenderFragment LibrarySection(string team, string? project, bool noProject = false)
     {
         if (!this.TeamConfig.Value.Library.Enabled)
         {
             return static _ => { };
         }
 
-        string href = project is null
-            ? $"/teams/{Uri.EscapeDataString(team)}/files"
-            : $"/teams/{Uri.EscapeDataString(team)}/projects/{Uri.EscapeDataString(project)}/files";
+        string teamHref = $"/teams/{Uri.EscapeDataString(team)}";
+        string href = project is not null ? $"{teamHref}/projects/{Uri.EscapeDataString(project)}/files" : $"{teamHref}/files";
+        if (project is null && noProject)
+        {
+            href = $"{teamHref}/{NoProjectSegment}/files";
+        }
+
+        string title = project ?? (noProject ? Tasks.NoProjectLabel : team);
         return @<div class="teams-nav-section teams-nav-section-library" data-section="library">
             @SectionHeader("Library")
-            <NavTabLink Href="@href" TabTitle="@(project ?? team)" Icon="@Icons.Material.Filled.LibraryBooks"
+            <NavTabLink Href="@href" TabTitle="@title" Icon="@Icons.Material.Filled.LibraryBooks"
                         Class="teams-nav-library-link"><span class="sidebar-row-label">Files</span></NavTabLink>
         </div>;
     }
@@ -711,13 +781,57 @@
         ? $"/teams/{Uri.EscapeDataString(team)}"
         : $"/teams/{Uri.EscapeDataString(team)}/projects/{Uri.EscapeDataString(project)}";
 
-    /// <summary>The address of <paramref name="viewId"/> narrowed to <paramref name="team"/> (the Tasks page's <c>/teams/{Team}/tasks/{ViewId}</c> route), or to its <paramref name="project"/> (<c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c>).</summary>
-    private static string ViewHref(string team, string? project, string viewId) => project is null
-        ? $"/teams/{Uri.EscapeDataString(team)}/tasks/{Uri.EscapeDataString(viewId)}"
-        : $"/teams/{Uri.EscapeDataString(team)}/projects/{Uri.EscapeDataString(project)}/tasks/{Uri.EscapeDataString(viewId)}";
+    /// <summary>
+    /// The address of <paramref name="viewId"/> narrowed to <paramref name="team"/> (the Tasks page's <c>/teams/{Team}/tasks/{ViewId}</c> route),
+    /// to its Tasks with no Project (<c>/teams/{Team}/no-project/tasks/{ViewId}</c>), or to its <paramref name="project"/>
+    /// (<c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c>).
+    /// </summary>
+    private static string ViewHref(string team, string? project, bool noProject, string viewId)
+    {
+        string teamHref = $"/teams/{Uri.EscapeDataString(team)}";
+        string view = Uri.EscapeDataString(viewId);
+        if (project is not null)
+        {
+            return $"{teamHref}/projects/{Uri.EscapeDataString(project)}/tasks/{view}";
+        }
 
-    private bool IsActiveView(string team, string? project, TaskView view) =>
-        string.Equals("/" + SidebarRows.CurrentPath(this.Navigation), ViewHref(team, project, view.Id), StringComparison.OrdinalIgnoreCase);
+        return noProject ? $"{teamHref}/{NoProjectSegment}/tasks/{view}" : $"{teamHref}/tasks/{view}";
+    }
+
+    private bool IsActiveView(string team, string? project, bool noProject, TaskView view) =>
+        string.Equals("/" + SidebarRows.CurrentPath(this.Navigation), ViewHref(team, project, noProject, view.Id), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The address segment of the No project scope's Task Views (<c>/teams/{Team}/no-project/tasks/{ViewId}</c>).</summary>
+    private const string NoProjectSegment = "no-project";
+
+    /// <summary>The selected scope's part of a folder key: the Project, a control-character marker for No project, or nothing for the Team scope.</summary>
+    private static string ScopeFolderSuffix(string? project, bool noProject) => project ?? (noProject ? "\u0001none" : string.Empty);
+
+    /// <summary>Teams whose selected scope is No project (their entry in <see cref="selections"/> is then <see langword="null"/>).</summary>
+    private readonly HashSet<string> noProjectTeams = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Whether No project is <paramref name="team"/>'s selected scope: chosen, and the Team still has a Project for it to differ from the Team row.</summary>
+    private bool IsNoProject(TeamSummary team, string? scope) =>
+        scope is null && team.Projects.Count > 0 && this.noProjectTeams.Contains(team.Name);
+
+    /// <summary>A click on "No project" selects it, or returns to the Team row when it is already selected; a New chat panel left open closes.</summary>
+    private void ToggleNoProject(string team)
+    {
+        bool wasSelected = this.selections.GetValueOrDefault(team) is null && this.noProjectTeams.Contains(team);
+        this.SelectScope(team, null);
+        if (!wasSelected)
+        {
+            this.noProjectTeams.Add(team);
+        }
+    }
+
+    /// <summary>The Tasks section's "+": opens the New view page in the preview Tab, as the Tasks view's "New view" link does.</summary>
+    private void NewTaskView()
+    {
+        const string href = "/tasks/new";
+        _ = this.Tabs.Open(href, "New view");
+        this.Navigation.NavigateTo(href);
+    }
 
     /// <summary>The Rooms listed under the Team (see <see cref="roomsByTeam"/>), in a Project or not, or none before they load.</summary>
     private IReadOnlyList<Room> RoomsOf(TeamSummary team) =>
@@ -743,7 +857,8 @@
     /// <param name="project">The Project to select, or <see langword="null"/> for the Team row.</param>
     private void SelectScope(string team, string? project)
     {
-        bool changed = !string.Equals(this.selections.GetValueOrDefault(team), project, StringComparison.OrdinalIgnoreCase);
+        bool leftNoProject = this.noProjectTeams.Remove(team);
+        bool changed = leftNoProject || !string.Equals(this.selections.GetValueOrDefault(team), project, StringComparison.OrdinalIgnoreCase);
         this.selections[team] = project;
         if (changed)
         {
@@ -869,8 +984,18 @@
         if (roomEntry is { } entry)
         {
             string? project = this.RoomScope(entry.Team, entry.Room);
-            this.SelectScope(entry.Team, project);
+            // A Room with no Project is listed under No project as well as the Team row, so it keeps No project selected.
+            if (project is not null || !this.noProjectTeams.Contains(entry.Team))
+            {
+                this.SelectScope(entry.Team, project);
+            }
+
             this.OpenRoomFolders(entry.Team, project);
+        }
+        else if (string.Equals(segments.ElementAtOrDefault(2), NoProjectSegment, StringComparison.OrdinalIgnoreCase))
+        {
+            this.SelectScope(this.routeTeam, null);
+            _ = this.noProjectTeams.Add(this.routeTeam);
         }
         else if (TryReadScope(segments, out string? scope))
         {
@@ -914,8 +1039,12 @@
     /// <param name="project">The Room's scope: its Project, or <see langword="null"/> for the Team scope.</param>
     private void OpenRoomFolders(string teamName, string? project)
     {
-        this.closedFolders.Remove(FolderKey(teamName, NeedsYouFolder + project));
-        this.closedFolders.Remove(FolderKey(teamName, AllFolder + project));
+        // The Team scope lists every Room, and No project the Rooms with none, so their folders open too.
+        foreach (string scopeKey in new[] { project ?? string.Empty, string.Empty, ScopeFolderSuffix(null, noProject: true) }.Distinct(StringComparer.Ordinal))
+        {
+            this.closedFolders.Remove(FolderKey(teamName, NeedsYouFolder + scopeKey));
+            this.closedFolders.Remove(FolderKey(teamName, AllFolder + scopeKey));
+        }
     }
 
     /// <summary>
@@ -1029,13 +1158,13 @@
     private bool ProjectsAllowed => this.TeamConfig.Value.Library.Enabled || this.TeamConfig.Value.Tasks.Enabled;
 
     /// <summary>Asks for a Project name, creates the Project's folder in <paramref name="team"/> and opens its page.</summary>
-    /// <param name="team">The Team whose row's menu was used.</param>
-    private async Task NewProjectAsync(string team)
+    /// <param name="team">The Team to start the Project in.</param>
+    /// <param name="menu">The Team row's menu when its item asked, closed before the prompt opens; <see langword="null"/> for the "Start a project" row.</param>
+    private async Task NewProjectAsync(string team, MudMenu? menu)
     {
         IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
         TeamSummary summary = teams.FirstOrDefault(t => string.Equals(t.Name, team, StringComparison.OrdinalIgnoreCase))
             ?? new TeamSummary(team, [], [], false);
-        this.menuRefs.TryGetValue(team, out MudMenu? menu);
         string? project = await MenuDialogs.AfterClosingAsync(menu, () => NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null)));
         if (project is null)
         {

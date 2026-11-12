@@ -39,11 +39,7 @@ internal static class TeamPageTabs
                 tabs.Add(TeamPageTab.Files);
             }
 
-            if (features.Tasks)
-            {
-                tabs.Add(TeamPageTab.Tasks);
-            }
-
+            // A Team page has no Tasks tab: the sidebar's TASKS section lists the Team's Task Views instead.
             if (features.Process)
             {
                 tabs.Add(TeamPageTab.Process);
@@ -96,6 +92,18 @@ internal static class TeamPageTabs
         // No available tabs; return Files as default
         return TeamPageTab.Files;
     }
+
+    /// <summary>Returns the label a tab shows: the Files tab reads "Library", as the sidebar's section does; the others their own name.</summary>
+    /// <param name="tab">The tab to label.</param>
+    /// <returns>"Members", "Library", "Tasks", "Process" or "Details".</returns>
+    public static string Label(TeamPageTab tab) => tab switch
+    {
+        TeamPageTab.Members => "Members",
+        TeamPageTab.Files => "Library",
+        TeamPageTab.Tasks => "Tasks",
+        TeamPageTab.Process => "Process",
+        _ => "Details",
+    };
 
     /// <summary>Returns the URL segment for a tab.</summary>
     /// <param name="tab">The tab to convert to a segment.</param>

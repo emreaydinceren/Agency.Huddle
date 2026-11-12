@@ -31,6 +31,7 @@
 @page "/tasks/item/{TaskIdText}"
 @page "/teams/{Team}/tasks/{ViewId}"
 @page "/teams/{Team}/projects/{Project}/tasks/{ViewId}"
+@page "/teams/{Team}/no-project/tasks/{ViewId}"
 @implements IDisposable
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Components.Shared.Dialogs
@@ -454,7 +455,10 @@
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
 
-    /// <summary>Whether <paramref name="task"/> belongs to the route's scope: the Project's Tasks on a Project route, the Team's Tasks with no Project on a Team route, and every Task on an unscoped route.</summary>
+    /// <summary>
+    /// Whether <paramref name="task"/> belongs to the route's scope: the Project's Tasks on a Project route, the Team's Tasks with no
+    /// Project on a No project route, every Task of the Team (in a Project or not) on a Team route, and every Task on an unscoped route.
+    /// </summary>
     /// <param name="task">The Task to test.</param>
     private bool InRouteScope(TaskItem task)
     {
@@ -468,16 +472,32 @@
             return false;
         }
 
-        return this.Project is { } project
-            ? string.Equals(task.Location.Project, project, StringComparison.OrdinalIgnoreCase)
-            : task.Location.Project is null;
+        if (this.Project is { } project)
+        {
+            return string.Equals(task.Location.Project, project, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return !this.NoProjectRoute || task.Location.Project is null;
     }
 
-    /// <summary>The "No tasks yet" title of a Team or Project route.</summary>
+    /// <summary>Whether the route is <c>/teams/{Team}/no-project/tasks/{ViewId}</c>: the Team's Tasks that belong to no Project (the sidebar's "No project" scope).</summary>
+    private bool NoProjectRoute => this.Team is not null && this.Project is null
+        && this.TabKey.StartsWith($"team-tasks:{this.Team.ToLowerInvariant()}/no-project/", StringComparison.Ordinal);
+
+    /// <summary>The "No tasks yet" title of a Team, No project or Project route.</summary>
     /// <param name="team">The route's Team.</param>
-    private string RouteEmptyTitle(string team) => this.Project is { } project
-        ? $"No tasks in {team} / {project} yet"
-        : $"No Team-level tasks in {team} yet";
+    private string RouteEmptyTitle(string team)
+    {
+        if (this.Project is { } project)
+        {
+            return $"No tasks in {team} / {project} yet";
+        }
+
+        return this.NoProjectRoute ? $"No tasks outside a project in {team} yet" : $"No tasks in {team} yet";
+    }
+
+    /// <summary>What a Tab's title names after the Team: the route's Project, "No project" on a No project route, or nothing.</summary>
+    private string? TitleScope => this.NoProjectRoute ? NoProjectLabel : this.Project;
 
     /// <summary>How many of the Tasks the page shows are not yet Done, Cancelled, Duplicate or Rejected.</summary>
     private int OpenCount => this.FilteredTasks(this.search).Count(static task => !task.Status.IsTerminal());
@@ -563,7 +583,7 @@
     /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
     /// <c>TabKeys.Describe</c> names it; every other route is the View's display name, which is the Tab's title too.
     /// </summary>
-    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : TeamViewTitle(this.Team, this.effectiveView.Name, this.Project);
+    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : TeamViewTitle(this.Team, this.effectiveView.Name, this.TitleScope);
 
     /// <summary>The title of a View's Tab: its name, followed by the Team it is narrowed to (<c>/teams/{Team}/tasks/{ViewId}</c>) so it stays apart from the unscoped View's Tab.</summary>
     /// <param name="team">The route's Team, or <see langword="null"/> for an unscoped View.</param>
@@ -609,8 +629,14 @@
             return [new TrailCrumb(team, teamHref, "team"), new TrailCrumb(project, projectHref, "project"), new TrailCrumb("Tasks", $"{projectHref}/tasks", "tasks"), view];
         }
 
-        return [new TrailCrumb(team, teamHref, "team"), new TrailCrumb("Tasks", $"{teamHref}/tasks", "tasks"), view];
+        // The Team page has no Tasks tab, so the Tasks crumb of a Team-wide or No project View is a label, not a link.
+        return this.NoProjectRoute
+            ? [new TrailCrumb(team, teamHref, "team"), new TrailCrumb(NoProjectLabel, null, "project"), new TrailCrumb("Tasks", null, "tasks"), view]
+            : [new TrailCrumb(team, teamHref, "team"), new TrailCrumb("Tasks", null, "tasks"), view];
     }
+
+    /// <summary>How the sidebar and a Tab's title name the Team's scope of Rooms, Tasks and files that belong to no Project.</summary>
+    internal const string NoProjectLabel = "No project";
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();

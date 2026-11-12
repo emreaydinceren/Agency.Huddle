@@ -28,6 +28,8 @@ internal static class TabTrail
             ["rooms", ..] => [new("Rooms", "/", "chat")],
             ["teams", var team, "projects", var project, "tasks", _] =>
                 [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new(project, $"{TeamHref(team)}/projects/{Uri.EscapeDataString(project)}", "project")],
+            ["teams", var team, "no-project", "files"] => [new("Teams", null, "team"), new(team, TeamHref(team), "team")],
+            ["teams", var team, "no-project", "tasks", _] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new("No project", null, "project")],
             ["teams", var team, "projects", var project, ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new(project, null, "project")],
             ["teams", ..] => [new("Teams", null, "team")],
             ["tasks", _, ..] => [new("Tasks", "/tasks", "tasks")],

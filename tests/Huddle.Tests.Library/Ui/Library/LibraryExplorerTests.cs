@@ -784,6 +784,44 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(expectedSelected, SelectedNames(cut)));
     }
 
+    /// <summary>
+    /// <c>HiddenFolders</c> leaves those folders under the scope (matched ignoring case) out of both the tree and the search,
+    /// as a Team's No project Library does with its Project folders; the rest of the scope's files and folders stay.
+    /// </summary>
+    [Fact]
+    public async Task HiddenFolders_AreLeftOutOfTheTreeAndTheSearch()
+    {
+        string team = this.SeedTeam("Business");
+        Directory.CreateDirectory(Path.Combine(team, "Q4 Launch"));
+        Directory.CreateDirectory(Path.Combine(team, "Notes"));
+        File.WriteAllText(Path.Combine(team, "brief.md"), "team level");
+        File.WriteAllText(Path.Combine(team, "Q4 Launch", "launch brief.md"), "in the Project");
+        string[] hidden = ["q4 launch"];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        SetupStorage(ctx);
+        IRenderedComponent<ContainerFragment> tree = RenderWithHidden(ctx, hidden, filter: null);
+        tree.WaitForAssertion(() => Assert.Equal(["Notes", "brief.md"], NodeNames(tree).Order(StringComparer.Ordinal).ToList()));
+
+        await using MudBunitContext searchCtx = this.fixture.NewContext();
+        SetupStorage(searchCtx);
+        IRenderedComponent<ContainerFragment> search = RenderWithHidden(searchCtx, hidden, filter: "brief");
+        search.WaitForAssertion(() => Assert.Equal([("Business/brief.md", "brief.md", string.Empty)], Hits(search)));
+    }
+
+    /// <summary>Renders the explorer over the Business Team's folder, flattened, with <paramref name="hidden"/> folders and an optional filter.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderWithHidden(MudBunitContext ctx, IReadOnlyCollection<string> hidden, string? filter) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<LibraryExplorer>(0);
+            builder.AddAttribute(1, nameof(LibraryExplorer.Scopes), (IReadOnlyList<LibraryLocation>)[new LibraryLocation("teams", "Business")]);
+            builder.AddAttribute(2, nameof(LibraryExplorer.ShowScopeRoot), false);
+            builder.AddAttribute(3, nameof(LibraryExplorer.HiddenFolders), hidden);
+            builder.AddAttribute(4, nameof(LibraryExplorer.Filter), filter);
+            builder.AddAttribute(5, nameof(LibraryExplorer.StateKey), "hidden-test");
+            builder.CloseComponent();
+        });
+
     /// <summary>[6.5] A null, empty or whitespace <c>Filter</c> shows the tree unchanged: no result list, and the
     /// tree's wrapper is not hidden (Spec §6.8).</summary>
     /// <param name="filter">The filter the host passes.</param>

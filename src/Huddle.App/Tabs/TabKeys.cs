@@ -52,6 +52,9 @@ internal static class TabKeys
             ["teams", "build"] => new("team-build", "Build a team", "team"),
             ["teams", var team, "projects", var project, "tasks", var view] => new($"project-tasks:{Lower(team)}/{Lower(project)}/{view}", view, "tasks"),
             ["teams", var team, "projects", var project, ..] => new($"project:{Lower(team)}/{Lower(project)}", project, "project"),
+            // Under the Team's "team-tasks:" prefix, so archiving the Team closes it with the Team's other Views.
+            ["teams", var team, "no-project", "files"] => new(NoProjectFilesKey(team), "No project", "library"),
+            ["teams", var team, "no-project", "tasks", var view] => new($"team-tasks:{Lower(team)}/no-project/{view}", view, "tasks"),
             ["teams", var team, "tasks", var view] => new($"team-tasks:{Lower(team)}/{view}", view, "tasks"),
             ["teams", var team, ..] => new($"team:{Lower(team)}", team, "team"),
             ["tasks"] => new("tasks", "Tasks", "tasks"),
@@ -74,4 +77,12 @@ internal static class TabKeys
     }
 
     private static string Lower(string name) => name.ToLowerInvariant();
+
+    /// <summary>The key of a Team's No project Library (<c>/teams/{Team}/no-project/files</c>): under the Team's <c>team-tasks:</c> prefix, so archiving the Team closes it too.</summary>
+    /// <param name="team">The Team, in any case.</param>
+    public static string NoProjectFilesKey(string team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        return $"team-tasks:{Lower(team)}/no-project/\u0001files";
+    }
 }

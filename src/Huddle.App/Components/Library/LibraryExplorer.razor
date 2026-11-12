@@ -97,7 +97,7 @@
                     }
                 </div>
                 <div class="@this.TreeClass()">
-                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" ShowScopeRoot="@this.ShowScopeRoot" SelectedPath="@this.selectedPath" SelectedPathChanged="@this.OnSelectedPathChanged" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
+                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" HiddenFolders="@this.HiddenFolders" ShowScopeRoot="@this.ShowScopeRoot" SelectedPath="@this.selectedPath" SelectedPathChanged="@this.OnSelectedPathChanged" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
                 </div>
                 @if (this.resultTerm is not null)
                 {
@@ -245,6 +245,13 @@
     [Parameter]
     public string? Filter { get; set; }
 
+    /// <summary>
+    /// Names of folders directly under the first scope that neither the tree nor the search shows, compared ignoring case.
+    /// A Team's No project Library passes its Project folders, so only the files that belong to no Project are left.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyCollection<string>? HiddenFolders { get; set; }
+
     /// <summary>Raised with the field's text (blank as <see langword="null"/>) after the field's debounce,
     /// and with <see langword="null"/> when a folder hit clears the filter, so a two-way host updates its
     /// own value.</summary>
@@ -342,12 +349,33 @@
             }
 
             LibrarySearchResult result = await this.FileService.FindAsync(scope, term, MaxHits - rows.Count, ct);
-            rows.AddRange(result.Hits.Select(entry => new SearchRow(entry, FolderPathWithin(scope, entry.Path))));
+            rows.AddRange(result.Hits
+                .Select(entry => new SearchRow(entry, FolderPathWithin(scope, entry.Path)))
+                .Where(row => !this.IsUnderHiddenFolder(scope, row)));
             more |= result.Truncated;
         }
 
         return (rows, more);
     }
+
+    /// <summary>Whether a search hit lies in (or is) one of <see cref="HiddenFolders"/> under the first scope, so the search shows nothing the tree hides.</summary>
+    private bool IsUnderHiddenFolder(LibraryPath scope, SearchRow row)
+    {
+        if (this.HiddenFolders is not { Count: > 0 } hidden || this.resolvedScopes.Count == 0 || !LibraryPathComparer.Instance.Equals(scope, this.resolvedScopes[0]))
+        {
+            return false;
+        }
+
+        string top = row.FolderPath.Length > 0 ? row.FolderPath.Split('/')[0] : string.Empty;
+        if (top.Length == 0 && row.Entry.IsFolder)
+        {
+            top = GetLeaf(row.Entry.Path.RelativePath);
+        }
+
+        return top.Length > 0 && hidden.Contains(top, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string GetLeaf(string relativePath) => relativePath[(relativePath.LastIndexOf('/') + 1)..];
 
     /// <summary>The hit's folder, relative to its scope, built from <c>RelativePath</c> strings (never
     /// <c>FullPath</c>): empty for a hit directly under the scope.</summary>

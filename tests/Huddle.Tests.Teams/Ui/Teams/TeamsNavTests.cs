@@ -337,12 +337,12 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
         Assert.Empty(cut.FindAll(".new-chat-panel"));
 
-        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-panel").GetAttribute("aria-label")));
         Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-panel")));
     }
@@ -956,6 +956,103 @@ public sealed class TeamsNavTests
         Assert.Equal("A Project named \"marketing\" already exists in Business.", cut.Find(".mud-dialog .mud-input-helper-text").TextContent.Trim());
     }
 
+    /// <summary>The PROJECTS header's "+" (tooltip "Start a project") opens the same New project dialog for its Team, and OK creates the Project in that Team.</summary>
+    [Fact]
+    public async Task ProjectsHeaderPlus_OpensTheNewProjectDialog_AndCreatesTheProjectInThatTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        FakeTeamFolders folders = new();
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, folders: folders);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        // The "+" sits in the PROJECTS header, as the ROOMS and TASKS "+" sit in theirs, with a tooltip saying what it does.
+        cut.WaitForAssertion(() => Assert.Equal("Start a project", Section(cut, "projects").QuerySelector(".teams-nav-section-header button.teams-nav-start-project")?.GetAttribute("aria-label")));
+        Assert.Single(Section(cut, "projects").QuerySelectorAll(".teams-nav-section-header .mud-tooltip-root"));
+        Assert.Contains("teams-nav-section-add", cut.Find("button.teams-nav-start-project").ClassList);
+
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.teams-nav-start-project").ClickAsync(); });
+        cut.WaitForAssertion(() => Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        catalog.Teams = [Team("Business", projects: ["Marketing", "Q4 Launch"])];
+        await SubmitNameAsync(cut, "Q4 Launch");
+
+        string[] expected = ["EnsureProjectIn:Business/Q4 Launch"];
+        cut.WaitForAssertion(() => Assert.Equal(expected, folders.Calls));
+    }
+
+    /// <summary>
+    /// "No project" narrows the sections to what belongs to no Project: the Rooms with no Project (or whose Project is gone),
+    /// the <c>/no-project/tasks/{V}</c> Views and the <c>/no-project/files</c> Library; the Team row loses the Selected shape,
+    /// and a second click returns to the Team scope.
+    /// </summary>
+    [Fact]
+    public async Task NoProject_NarrowsTheSectionsToItemsWithNoProject_AndASecondClickReturnsToTheTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(3, SectionHrefs(cut, "rooms").Length));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-no-project").ClickAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("true", cut.Find("button.teams-nav-no-project").GetAttribute("aria-pressed"));
+            Assert.Empty(SelectedLabels(cut));
+            string?[] rooms = ["/rooms/teamroom", "/rooms/orphan"];
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
+            string?[] views = ["/teams/Business/no-project/tasks/all-tasks", "/teams/Business/no-project/tasks/my-tasks"];
+            Assert.Equal(views, SectionHrefs(cut, "tasks"));
+            string?[] library = ["/teams/Business/no-project/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+        });
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-no-project").ClickAsync());
+
+        string[] team = ["Business"];
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(team, SelectedLabels(cut));
+            Assert.Equal(3, SectionHrefs(cut, "rooms").Length);
+        });
+    }
+
+    /// <summary>A No project Task View's address selects No project, and opening a Room with no Project from there keeps it selected.</summary>
+    [Fact]
+    public async Task NoProjectAddress_SelectsNoProject_AndARoomWithNoProjectKeepsIt()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/teams/Business/no-project/tasks/my-tasks");
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal("true", cut.Find("button.teams-nav-no-project").GetAttribute("aria-pressed")));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/teamroom"));
+        await Flush(cut);
+
+        Assert.Equal("true", cut.Find("button.teams-nav-no-project").GetAttribute("aria-pressed"));
+        Assert.Empty(SelectedLabels(cut));
+    }
+
+    /// <summary>The Rooms "+" and the Tasks "+" each carry a tooltip saying what they do, and the Tasks "+" opens the New view page.</summary>
+    [Fact]
+    public async Task SectionPlusButtons_HaveTooltips_AndTheTasksPlusOpensNewView()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-new-view")));
+
+        Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
+        Assert.Equal("New task view", cut.Find("button.teams-nav-new-view").GetAttribute("aria-label"));
+        Assert.Single(Section(cut, "rooms").QuerySelectorAll(".mud-tooltip-root"));
+        Assert.Single(Section(cut, "tasks").QuerySelectorAll(".mud-tooltip-root"));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-new-view").ClickAsync());
+
+        Assert.Equal("tasks/new", nav.ToBaseRelativePath(nav.Uri));
+    }
+
     /// <summary>OK on "Q4 Launch" calls <c>EnsureProjectIn("Business", "Q4 Launch")</c> once and navigates to the escaped Project route.</summary>
     [Fact]
     public async Task NewProject_Ok_CreatesTheProject_AndNavigatesToIt()
@@ -1105,6 +1202,7 @@ public sealed class TeamsNavTests
                 "/rooms/teamroom",
                 "/rooms/older",
                 "/rooms/newer",
+                "/rooms/inproject",
                 "/teams/Business/tasks/all-tasks",
                 "/teams/Business/tasks/my-tasks",
                 "/teams/Business/files",
@@ -1120,9 +1218,9 @@ public sealed class TeamsNavTests
         });
     }
 
-    /// <summary>The sections of the selected scope are headed ROOMS, TASKS and LIBRARY, in that order, each header above its own links.</summary>
+    /// <summary>The Project rows sit under a PROJECTS header, and the sections of the selected scope are headed ROOMS, TASKS and LIBRARY after it, in that order, each header above its own links.</summary>
     [Fact]
-    public async Task ExpandedTeam_SectionHeaders_AppearInTheOrderRoomsTasksLibrary()
+    public async Task ExpandedTeam_SectionHeaders_AppearInTheOrderProjectsRoomsTasksLibrary()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
@@ -1133,10 +1231,10 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            string[] titles = ["Rooms", "Tasks", "Library"];
+            string[] titles = ["Projects", "Rooms", "Tasks", "Library"];
             Assert.Equal(titles, SectionTitles(cut));
             string[] kinds = [.. cut.FindAll(".teams-nav-section").Select(section => section.GetAttribute("data-section") ?? string.Empty)];
-            string[] expectedKinds = ["rooms", "tasks", "library"];
+            string[] expectedKinds = ["projects", "rooms", "tasks", "library"];
             Assert.Equal(expectedKinds, kinds);
             string?[] rooms = ["/rooms/teamroom"];
             Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
@@ -1164,7 +1262,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("Rooms", Section(cut, "rooms").QuerySelector(".teams-nav-section-title")?.TextContent.Trim());
-            Assert.Equal("New chat in Business", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label"));
+            Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
             Assert.Empty(SectionHrefs(cut, "rooms"));
         });
     }
@@ -1217,7 +1315,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(library, SectionHrefs(cut, "library"));
-            string[] titles = ["Rooms", "Library"];
+            string[] titles = ["Projects", "Rooms", "Library"];
             Assert.Equal(titles, SectionTitles(cut));
             Assert.Empty(cut.FindAll(".teams-nav-scope-count"));
         });
@@ -1634,9 +1732,9 @@ public sealed class TeamsNavTests
         });
     }
 
-    /// <summary>The Team row is selected by default and its sections list only the Rooms with no Project, the Team's Task Views and the Team's Files link; exactly one row wears the Selected shape.</summary>
+    /// <summary>The Team row is selected by default (No project is not) and its sections list every Room of the Team, in a Project or not, the Team's Task Views and the Team's Files link; exactly one row wears the Selected shape.</summary>
     [Fact]
-    public async Task TeamScope_IsSelectedByDefault_AndItsSectionsHoldOnlyTeamLevelItems()
+    public async Task TeamScope_IsSelectedByDefault_AndItsRoomsAreEveryRoomOfTheTeam()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
 
@@ -1649,7 +1747,8 @@ public sealed class TeamsNavTests
             Assert.Equal(selected, SelectedLabels(cut));
             Assert.Equal("true", ScopeRow(cut, "Business").QuerySelector("a")?.GetAttribute("aria-current"));
             Assert.Null(ScopeRow(cut, "Marketing").QuerySelector("a")?.GetAttribute("aria-current"));
-            string?[] rooms = ["/rooms/teamroom", "/rooms/orphan"];
+            Assert.Equal("false", cut.Find("button.teams-nav-no-project").GetAttribute("aria-pressed"));
+            string?[] rooms = ["/rooms/teamroom", "/rooms/inproject", "/rooms/orphan"];
             Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
             string?[] views = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks"];
             Assert.Equal(views, SectionHrefs(cut, "tasks"));
@@ -1685,7 +1784,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "rooms").Length));
+        cut.WaitForAssertion(() => Assert.Equal(3, SectionHrefs(cut, "rooms").Length));
 
         await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
 
@@ -1764,7 +1863,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "rooms").Length));
+        cut.WaitForAssertion(() => Assert.Equal(3, SectionHrefs(cut, "rooms").Length));
 
         await cut.InvokeAsync(() => nav.NavigateTo("/rooms/inproject"));
 
@@ -1934,9 +2033,9 @@ public sealed class TeamsNavTests
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label")));
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
 
-        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() =>
         {
@@ -1954,9 +2053,9 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Marketing", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label")));
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Marketing", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
 
-        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() =>
         {
@@ -1973,8 +2072,8 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-section-add")));
-        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".teams-nav-section-rooms button.teams-nav-section-add")));
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".new-chat-panel")));
 
         await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));

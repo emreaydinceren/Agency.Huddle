@@ -160,6 +160,13 @@
     [Parameter]
     public bool ShowScopeRoot { get; set; } = true;
 
+    /// <summary>
+    /// Names of folders directly under the first scope that the tree leaves out, compared ignoring case: the No project
+    /// view of a Team's Library hides its Project folders this way. Folders deeper down, and files, are never hidden.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyCollection<string>? HiddenFolders { get; set; }
+
     /// <summary>The currently selected node, if any.</summary>
     [Parameter]
     public LibraryPath? SelectedPath { get; set; }
@@ -489,10 +496,18 @@
                 StringComparer.Ordinal);
         }
 
+        IReadOnlyCollection<string> hidden = this.Scopes.Count > 0 && LibraryPathComparer.Instance.Equals(parent, this.Scopes[0])
+            ? this.HiddenFolders ?? []
+            : [];
         List<TreeItemData<LibraryPath>> items = [];
         foreach (LibraryEntry entry in entries)
         {
             string leafName = GetLeafName(entry.Path.RelativePath);
+            if (entry.IsFolder && hidden.Contains(leafName, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             this.orphanFlags[entry.Path] = orphanNames is not null && orphanNames.Contains(leafName);
 
             items.Add(new TreeItemData<LibraryPath>
