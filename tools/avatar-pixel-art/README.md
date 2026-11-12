@@ -6,24 +6,36 @@ PNGs and `master.json` are its output, and are never edited by hand.
 
 ## The set
 
-Every combination of these is drawn once: 2 × 3 × 3 × 7 = 126 avatars.
+Every combination of these is drawn three times: 2 × 3 × 7 × 3 = 126 avatars.
 
 | Attribute | Values |
 | --- | --- |
 | Gender | man, woman |
 | Skin | fair, olive, darker (recorded as `fair`, `tan`, `dark` so the picker's Light / Tan / Dark buttons find them) |
-| Hair colour | blonde, brown, black |
 | Outfit colour | black, blue, red, pink, white, beige, gray |
 
-Two attributes are spread across each gender's 63 avatars by ratio rather than combined:
+Hair colour is weighted by skin, so the hair is believable for the face: natural red hair is rare
+outside fair skin and blonde is rare on darker skin. Per gender, each skin has 21 avatars
+(`HAIR_COLOR_COUNTS`):
+
+| Skin | Blonde | Brown | Black | Red |
+| --- | --- | --- | --- | --- |
+| fair | 5 | 6 | 4 | 6 |
+| olive | 3 | 8 | 8 | 2 |
+| darker | 1 | 8 | 12 | 0 |
+
+The rest are spread across each gender's 63 avatars by ratio:
 
 | Attribute | Men | Women |
 | --- | --- | --- |
-| Hair length | 70% short, 30% long (44 / 19) | 30% short, 70% long (19 / 44) |
-| Glasses | 40% none, 20% each red, blue and black frames (25 / 13 / 13 / 12) | same |
+| Hair length | 60% short, 25% medium, 15% long | 25% short, 35% medium, 40% long |
+| Glasses | 40% none, 20% each red, blue and black frames | same |
+| Facial hair | 55% none, 15% mustache, 30% beard | none |
 
-The counts are exact (largest remainder), and which avatar gets long hair or glasses is a shuffle
-seeded by `SEED`, so every run writes byte-identical files.
+The counts are exact (largest remainder), and who gets which value is a shuffle seeded by `SEED`,
+so every run writes byte-identical files. A last pass (`repair`) swaps glasses or hair colour
+between avatars until no colours clash: red hair never has red frames or a red top, and black hair
+on darker skin never has black frames. The swaps keep every count exact.
 
 ## Regenerate
 
@@ -55,18 +67,20 @@ Options:
 - **A colour or a shape:** edit the palettes (`SKINS`, `HAIRS`, `OUTFITS`, `FRAMES`) or the drawing
   functions, rerun, and look at `--sheet` before committing. Bump `GENERATED` so `master.json` says
   when the art changed.
-- **A new value** (a ninth outfit colour, a fourth skin): add it to its table. The file numbers
-  and the long-hair and glasses shuffle then change for many existing avatars, so step 3 above
-  matters: a suggestion or a seeded agent may now point at a different face.
+- **A new value** (an eighth outfit colour, a fourth skin): add it to its table. The file numbers
+  and the shuffles then change for many existing avatars, so step 3 above matters: a suggestion
+  or a seeded agent may now point at a different face. A hair colour also needs a row of counts in
+  `HAIR_COLOR_COUNTS` that still sums to 21 per skin.
 - **A new skin tone word:** `skin_tone` must be one `SkinGroups.cs` maps, or the avatar appears
   only under **All**. A new word needs a code change and a test there.
-- **`SEED`:** changing it reshuffles who has long hair and glasses. Leave it alone unless that is
-  the point.
+- **`SEED`:** changing it reshuffles hair colour, hair length, glasses and facial hair. Leave it
+  alone unless that is the point.
 
 ## How a picture is drawn
 
 Each avatar is painted in layers on a 32 × 32 grid: hair behind the head, the body and neckline,
-the head and face, the fringe, then glasses. An outline is added around the whole figure, and
-where brown hair meets the darker skin (close in tone) the hair edge is drawn in the outline
-colour so the two stay apart. The PNG is that grid scaled 8 times with nearest-neighbour, so the
+the head and face, the fringe, a mustache or beard, then glasses on top. Wearers of glasses have no
+brow row, because the top of the frame sits right under it. An outline is added around the whole
+figure. Hair and facial hair get a darker edge where they meet skin, and where brown hair meets the
+darker skin (close in tone) that edge is drawn in the outline colour so the two stay apart. The PNG is that grid scaled 8 times with nearest-neighbour, so the
 pixels stay square.

@@ -1,8 +1,10 @@
 """Generate the bundled Avatar Library: 126 pixel-art avatars, their PNGs and master.json.
 
-Every Gender x Skin x Hair colour x Outfit colour combination is drawn once (2 * 3 * 3 * 7 = 126).
-Hair length and glasses are allocated across each gender's 63 avatars in fixed ratios, with exact
-counts and a seeded shuffle, so the same script always produces the same files.
+Every Gender x Skin x Outfit colour combination is drawn three times (2 * 3 * 7 * 3 = 126).
+Hair colour is weighted by skin (HAIR_COLOR_COUNTS); hair length, glasses and, for men, facial
+hair are allocated across each gender's 63 avatars in fixed ratios. Every allocation uses exact
+counts and a seeded shuffle, so the same script always produces the same files. A last pass swaps
+out colour clashes (see clashes()).
 
 Usage (from the repository root):
 
@@ -22,7 +24,7 @@ from PIL import Image
 
 GRID = 32                 # the art is drawn on a 32 x 32 grid
 PNG_SIDE = 256            # BundledAvatarLibraryTests pins 256 x 256
-SEED = 20261111           # changing it reshuffles who gets long hair and glasses
+SEED = 20261111           # changing it reshuffles hair, glasses and facial hair
 GENERATED = "2026-11-12"  # written into master.json; bump it when the art changes
 PROFESSION = "Pixel Avatar"
 OUTLINE = "#2a1f2d"
@@ -43,6 +45,7 @@ HAIRS = {  # base, highlight, dark
     "blonde": ("#e2b650", "#f5d98a", "#b8892c"),
     "brown": ("#7a4a2a", "#a0673d", "#55321b"),
     "black": ("#1e1b1e", "#433b46", "#0f0d10"),
+    "red": ("#a8482a", "#cf6a3c", "#6e2a17"),  # copper, not orange
 }
 OUTFITS = {  # base, shade, light accent
     "black": ("#2e2e35", "#1c1c21", "#4a4a55"),
@@ -54,8 +57,19 @@ OUTFITS = {  # base, shade, light accent
     "gray": ("#8a8f99", "#6b707a", "#aab0ba"),
 }
 FRAMES = {"red": "#c0392b", "blue": "#2f6fd0", "black": "#16141a"}
-HAIR_LENGTH_RATIOS = {"m": [("short", 0.7), ("long", 0.3)], "f": [("short", 0.3), ("long", 0.7)]}
+# Per gender, 21 avatars of each skin. Weighted so the hair is believable for the skin: natural red
+# hair is rare outside fair skin, and blonde is rare on darker skin.
+HAIR_COLOR_COUNTS = {
+    "fair": {"blonde": 5, "brown": 6, "black": 4, "red": 6},
+    "olive": {"blonde": 3, "brown": 8, "black": 8, "red": 2},
+    "darker": {"blonde": 1, "brown": 8, "black": 12, "red": 0},
+}
+HAIR_LENGTH_RATIOS = {
+    "m": [("short", 0.6), ("medium", 0.25), ("long", 0.15)],
+    "f": [("short", 0.25), ("medium", 0.35), ("long", 0.4)],
+}
 GLASSES_RATIOS = [("none", 0.4), ("red", 0.2), ("blue", 0.2), ("black", 0.2)]
+FACIAL_HAIR_RATIOS = [("none", 0.55), ("mustache", 0.15), ("beard", 0.3)]  # men only
 
 HEAD = {9: (12, 19), **{y: (11, 20) for y in range(10, 18)}, 18: (12, 19), 19: (13, 18), 20: (14, 17)}
 TORSO = {23: (9, 22), 24: (7, 24), **{y: (5, 26) for y in range(25, 32)}}
@@ -92,10 +106,14 @@ def hair_back(c, gender, length, h):
     if gender == "f" and length == "long":
         c.rect(9, 10, 14, 18, dark)
         c.shape({28: [(9, 11), (20, 22)], 29: [(10, 11), (20, 21)]}, dark)
+    elif gender == "f" and length == "medium":
+        c.rect(9, 10, 14, 14, dark)
     elif gender == "f":
         c.rect(9, 10, 14, 10, dark)
     elif length == "long":
         c.rect(9, 10, 14, 13, dark)
+    elif length == "medium":
+        c.rect(9, 10, 14, 9, dark)
 
 
 def hair_front(c, gender, length, h):
@@ -108,6 +126,11 @@ def hair_front(c, gender, length, h):
         if length == "short":
             c.rect(10, 12, 1, 2, base)
             c.rect(21, 12, 1, 2, base)
+        elif length == "medium":  # over the ears, to the jaw
+            c.rect(9, 11, 2, 7, base)
+            c.rect(21, 11, 2, 7, base)
+            c.dots([(10, 13), (21, 15)], hl)
+            c.dots([(9, 12), (22, 12), (9, 17), (22, 17)], dark)
         else:
             c.rect(9, 11, 2, 11, base)
             c.rect(21, 11, 2, 11, base)
@@ -123,6 +146,12 @@ def hair_front(c, gender, length, h):
             c.row(19, 9, 11, dark)
             c.row(19, 20, 22, dark)
             c.dots([(10, 13), (10, 15), (21, 14)], hl)
+        elif length == "medium":  # to the shoulders
+            c.rect(9, 11, 3, 13, base)
+            c.rect(20, 11, 3, 13, base)
+            c.row(24, 9, 11, dark)
+            c.row(24, 20, 22, dark)
+            c.dots([(10, 13), (10, 18), (21, 14), (21, 20)], hl)
         else:
             c.rect(9, 11, 3, 16, base)
             c.rect(20, 11, 3, 16, base)
@@ -164,6 +193,19 @@ def head(c, skin, gender):
     if gender == "f":
         c.dots([(12, 14), (19, 14)], EYE)
         c.dots([(12, 17), (19, 17)], blush)
+
+
+def facial_hair(c, kind, h):
+    """A mustache or a full beard in the hair colour, drawn before the hairline pass so it gets the same edge."""
+    base, hl, _ = h
+    if kind == "mustache":  # wider than the mouth, tips drooping, so it reads as hair and not as lips
+        c.row(17, 13, 18, base)
+        c.dots([(13, 18), (18, 18)], base)
+        c.dots([(15, 17)], hl)
+    elif kind == "beard":
+        c.dots([(11, 16), (20, 16)], base)
+        c.shape({17: (11, 20), 18: [(12, 14), (17, 19)], 19: (13, 18), 20: (14, 17), 21: (15, 16)}, base)
+        c.dots([(13, 18), (18, 19), (15, 20)], hl)
 
 
 def mix(a, b, t):
@@ -213,6 +255,7 @@ def draw(a):
         c.row(12, 12, 13, h[2])
         c.row(12, 18, 19, h[2])
     hair_front(c, a["gender"], a["hair_length"], h)
+    facial_hair(c, a["facial_hair"], h)
     hairline(c, skin, h, strong=a["skin"] == "darker" and a["hair_color"] == "brown")
     if a["glasses"] != "none":
         glasses(c, skin, FRAMES[a["glasses"]])
@@ -238,15 +281,50 @@ def allocate(n, weights, rng):
     return pool
 
 
+def clashes(a):
+    """True when colours fight: red hair with red frames or a red top, or black frames on black hair and darker skin."""
+    if a["hair_color"] == "red" and "red" in (a["glasses"], a["outfit"]):
+        return True
+    return a["skin"] == "darker" and a["hair_color"] == "black" and a["glasses"] == "black"
+
+
+def repair(avatars):
+    """Swap glasses (within a gender) or hair colour (within a gender and skin) until nothing clashes.
+
+    Swaps keep every count exact. The scan order is fixed, so the result is deterministic.
+    """
+    def same_group(a, b, key):
+        return a["gender"] == b["gender"] and (key == "glasses" or a["skin"] == b["skin"])
+
+    for a in avatars:
+        for key in ("glasses", "hair_color"):
+            if not clashes(a):
+                break
+            for b in avatars:
+                if b is a or not same_group(a, b, key) or a[key] == b[key]:
+                    continue
+                a[key], b[key] = b[key], a[key]
+                if not clashes(a) and not clashes(b):
+                    break
+                a[key], b[key] = b[key], a[key]
+    left = [a for a in avatars if clashes(a)]
+    if left:
+        raise ValueError(f"{len(left)} avatar(s) still clash; adjust the counts or the rules")
+
+
 def build_set():
     rng = random.Random(SEED)
     avatars = []
     for gender in ("m", "f"):
-        combos = [(s, hc, o) for s in SKINS for hc in HAIRS for o in OUTFITS]
+        combos = [(s, o) for s in SKINS for o in OUTFITS for _ in range(3)]
+        colours = {s: allocate(21, [(hc, n / 21) for hc, n in HAIR_COLOR_COUNTS[s].items()], rng) for s in SKINS}
         lengths = allocate(len(combos), HAIR_LENGTH_RATIOS[gender], rng)
         glasses = allocate(len(combos), GLASSES_RATIOS, rng)
-        for (s, hc, o), ln, gl in zip(combos, lengths, glasses):
-            avatars.append({"gender": gender, "skin": s, "hair_color": hc, "hair_length": ln, "glasses": gl, "outfit": o})
+        facial = allocate(len(combos), FACIAL_HAIR_RATIOS, rng) if gender == "m" else ["none"] * len(combos)
+        for (s, o), ln, gl, fh in zip(combos, lengths, glasses, facial):
+            avatars.append({"gender": gender, "skin": s, "hair_color": colours[s].pop(), "hair_length": ln,
+                            "glasses": gl, "facial_hair": fh, "outfit": o})
+    repair(avatars)
     numbers = collections.Counter()
     for a in avatars:
         tone = SKINS[a["skin"]][0]
@@ -267,6 +345,8 @@ def record(i, a):
     ]
     if has_glasses:
         tags.append(f"{a['glasses']} glasses")
+    if a["facial_hair"] != "none":
+        tags.append(a["facial_hair"])
     return {
         "id": i,
         "file": a["file"],
@@ -278,7 +358,8 @@ def record(i, a):
         "hair_color": a["hair_color"],
         "glasses": has_glasses,
         "glasses_color": a["glasses"] if has_glasses else None,
-        "outfit": f"{a['outfit']} top",
+        "facial_hair": a["facial_hair"],
+        "outfit":f"{a['outfit']} top",
         "outfit_color": a["outfit"],
         "tags": tags,
     }
@@ -301,7 +382,7 @@ def master(avatars):
             "skin_tone uses fair, tan and dark, the words the picker's Light / Tan / Dark buttons map; the art calls them fair, olive and darker.",
             "Backgrounds are transparent, so there is no background_color.",
         ],
-        "vocab_counts": {k: counts(k) for k in ("skin_tone", "gender_presentation", "hair_length", "hair_color", "glasses_color", "outfit_color")},
+        "vocab_counts": {k: counts(k) for k in ("skin_tone", "gender_presentation", "hair_length", "hair_color", "glasses_color", "facial_hair", "outfit_color")},
         "distinct_tags": sorted({t for r in records for t in r["tags"] if t not in excluded and not t.startswith("skin-")}),
         "avatars": records,
     }
@@ -375,7 +456,8 @@ def main():
     if args.svg_dir:
         args.svg_dir.mkdir(parents=True, exist_ok=True)
         for a, grid, r in zip(avatars, grids, master(avatars)["avatars"]):
-            title = f"{r['skin_tone']} {r['gender_presentation']}, {r['hair']} hair, {r['outfit']}"
+            beard = "" if r["facial_hair"] == "none" else f", {r['facial_hair']}"
+            title = f"{r['skin_tone']} {r['gender_presentation']}, {r['hair']} hair{beard}, {r['outfit']}"
             write_text(args.svg_dir / (Path(a["file"]).stem + ".svg"), to_svg(grid, title))
     if args.sheet:
         contact_sheet(grids, args.sheet)

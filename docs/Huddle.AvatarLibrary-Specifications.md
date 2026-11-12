@@ -137,8 +137,10 @@ The mapping lives in code (`SkinGroups`), not in `master.json`. An unrecognised 
 PNG, 256 × 256, with a transparent background, each well under `AvatarImage.MaxBytes` (512 000);
 the whole bundled library is about 150 KB. Each picture is 32 × 32 pixel art scaled 8 times with
 nearest-neighbour. `tools/avatar-pixel-art/generate.py` writes every PNG and `master.json` from
-code, byte-identically on every run: one avatar for each gender × skin × hair colour × outfit
-colour, with hair length and glasses spread by fixed ratios. Its README says how to change the set.
+code, byte-identically on every run: three avatars for each gender × skin × outfit colour, with
+hair colour (blonde, brown, black, red) weighted by skin, and hair length (short, medium, long),
+glasses and, for men, a mustache or beard spread by fixed ratios. Its README says how to change the
+set.
 
 History: the first bundled library (2026-10-10) was 324 illustrated pictures (35 MB) cropped from
 generated grid images kept outside the repository, so it could not be regenerated. It was replaced
