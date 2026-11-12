@@ -948,7 +948,7 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 | --- | --- | --- | --- | --- |
 | [AVATARLIB-01](avatar-library.md#avatarlib-01--a-library-switched-off-no-button-anywhere) |  | Active | |  |
 | [AVATARLIB-02](avatar-library.md#avatarlib-02--masterjson-missing-no-button-but-the-picture-mount-stays) |  | Active | |  |
-| [AVATARLIB-03](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-324-l1-m1-m2) |  | Active | |  |
+| [AVATARLIB-03](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-126-l1-m1-m2) |  | Active | |  |
 | [AVATARLIB-04](avatar-library.md#avatarlib-04--the-dialog-layout-matches-the-mock-up-and-the-filters-stay-in-view-m2) |  | Active | |  |
 | [AVATARLIB-05](avatar-library.md#avatarlib-05--pictures-carry-no-visible-text-caption-or-tooltip-d-4-l15) |  | Active | |  |
 | [AVATARLIB-06](avatar-library.md#avatarlib-06--screen-reader-announces-each-picture-l15) |  | Active | |  |
@@ -962,14 +962,14 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 | [AVATARLIB-14](avatar-library.md#avatarlib-14--nothing-matches-the-empty-state-and-clear-all-stays-l12-m4) |  | Active | |  |
 | [AVATARLIB-15](avatar-library.md#avatarlib-15--the-narrowed-state-matches-the-mock-up-and-other-chips-do-not-move-m3-d-5) |  | Active | |  |
 | [AVATARLIB-16](avatar-library.md#avatarlib-16--show-more-adds-48-and-any-filter-change-returns-to-48-at-the-top-grid-paging) |  | Active | |  |
-| [AVATARLIB-17](avatar-library.md#avatarlib-17--the-tag-cloud-shows-40-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap) |  | Active | |  |
+| [AVATARLIB-17](avatar-library.md#avatarlib-17--the-tag-cloud-shows-12-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap) |  | Active | |  |
 | [AVATARLIB-18](avatar-library.md#avatarlib-18--picking-copies-the-file-the-card-shows-the-new-image-and-nothing-is-written-until-save-l9-l10) |  | Active | |  |
 | [AVATARLIB-19](avatar-library.md#avatarlib-19--settings--profile-the-avatar-windows-save-writes-at-once-l11) |  | Active | |  |
 | [AVATARLIB-20](avatar-library.md#avatarlib-20--a-malformed-masterjson-shows-the-unreadable-message-and-one-warning-l14-m5) |  | Active | |  |
 | [AVATARLIB-21](avatar-library.md#avatarlib-21--skipped-records-are-reported-once-with-a-count-and-examples) |  | Active | |  |
 | [AVATARLIB-22](avatar-library.md#avatarlib-22--reopening-reads-the-file-afresh-r-1-l16-escape-and-enter-behave) |  | Active | |  |
 | [AVATARLIB-23](avatar-library.md#avatarlib-23--the-picker-sits-above-the-avatar-window-and-the-card-and-focus-and-escape-stay-in-order) |  | Active | |  |
-| [AVATARLIB-24](avatar-library.md#avatarlib-24--real-library-first-look-324-pictures-each-the-right-size-and-shape) |  | Active | |  |
+| [AVATARLIB-24](avatar-library.md#avatarlib-24--real-library-first-look-126-pictures-each-the-right-size-and-shape) |  | Active | |  |
 | [AVATARLIB-25](avatar-library.md#avatarlib-25--on-settings--profile-a-half-made-choice-in-the-avatar-window-stays-chosen-and-an-outside-edit-still-reaches-the-card) |  | Active | |  |
 | [AVATARLIB-26](avatar-library.md#avatarlib-26--a-library-file-that-vanishes-before-the-pick-that-image-could-not-be-read) |  | Active | |  |
 | [AVATARLIB-27](avatar-library.md#avatarlib-27--the-avatar-window-opens-from-the-avatar-in-every-card-mode-and-applies-or-saves-as-the-mode-says) |  | Active | |  |

@@ -4613,7 +4613,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 
 ### AVATARLIB-03 — The button appears only under **An image**, and the dialog opens at 48 of 324 (L1, M1, M2)
 
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-324-l1-m1-m2)
+File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-126-l1-m1-m2)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4711,7 +4711,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 
 ### AVATARLIB-17 — The tag cloud shows 40, **Show all** reveals the rest, and a selected tag stays visible (tag cap)
 
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-17--the-tag-cloud-shows-40-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap)
+File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-17--the-tag-cloud-shows-12-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4760,7 +4760,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 
 ### AVATARLIB-24 — Real library, first look: 324 pictures, each the right size and shape
 
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-24--real-library-first-look-324-pictures-each-the-right-size-and-shape)
+File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-24--real-library-first-look-126-pictures-each-the-right-size-and-shape)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
