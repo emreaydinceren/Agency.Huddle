@@ -349,6 +349,24 @@
     background-color: var(--hu-hover);
 }
 
+/* The Team shown keeps its place in the list and wears the selected look, edge to edge like the other rows. */
+.teams-nav-host .teams-nav-switcher-item.selected-shape {
+    margin-inline: 0;
+    border-radius: 0;
+    background-color: var(--hu-selected-background);
+    color: var(--hu-accent-ink);
+}
+
+.teams-nav-host .teams-nav-switcher-item.selected-shape:hover,
+.teams-nav-host .teams-nav-switcher-item.selected-shape:focus-visible {
+    background-color: var(--hu-selected-background-hover);
+}
+
+/* surface=paper (Nordic): the same tint as the selected scope row and the Settings theme picker. */
+:root:has([data-hu-surface="paper"]) .teams-nav-host .teams-nav-switcher-item.selected-shape {
+    background-color: var(--hu-tone-primary-tint);
+}
+
 /* "Build a team", last in the switcher: a quiet action row like the old sidebar link (a small "+" and the label in the
    row's regular weight and secondary colour), not another Team. */
 .teams-nav-host .teams-nav-switcher-item.teams-nav-switcher-build {
