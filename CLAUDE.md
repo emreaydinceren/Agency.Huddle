@@ -2,12 +2,10 @@
 
 The product is **Agency.Huddle**. Two identifiers still carry the old code name
 `Team` and must not be renamed to match the brand: the `mcp__team__` tool prefix
-(model-facing prompt text in 12 code files and every persona; a test pins it; no
-brand benefit) and the `Team:` config root (a breaking change for any running
-install). Everything else moved: namespaces moved to `Agency.Huddle.*` on
-2026-09-12 — the separate, compiler-verified decision — and projects, assemblies,
-folders and the solution followed, so the project `Huddle.App` declares
-`Agency.Huddle.App`, and the two former solution files are now the single
+(model-facing prompt text across `src/Huddle.App` and every persona; a test pins it;
+no brand benefit) and the `Team:` config root (a breaking change for any running
+install). Everything else carries the brand: namespaces are `Agency.Huddle.*`, so
+the project `Huddle.App` declares `Agency.Huddle.App`, and the one solution is
 `Huddle.slnx` at the repo root.
 
 ## Orientation
@@ -24,9 +22,8 @@ When you add, rename or delete a page under `docs/`, change `docs/Index.md` in t
 same commit. `agents/scripts/Check-DocIndex.ps1` (run by `Check-All.ps1`) fails
 otherwise.
 
-Do **not** orient from `README.md`. It belongs to the ACP effort, and its chat
-section is several milestones behind — it still reports the app as "not yet
-functional" and links a spec that no longer exists.
+Do not orient from `README.md`: it belongs to the ACP effort and is not kept in step
+with the chat surface's pages, which `docs/Index.md` routes.
 
 ## Two projects, one build root
 
@@ -81,13 +78,12 @@ check-in. Verify on Windows (build, tests, the `Check-*` scripts) and let CI cat
 Linux-only failure. Run the repro only to debug a red CI run, and only when the CI log is not
 enough.
 
-Most red runs are avoidable without the repro. In the last week of October about 25 fixes went
-in for red CI, in four recurring groups: tests that assumed timing under load, product races that
-only load exposed, paths that assumed Windows (`\`, case-insensitivity), and fixtures moved outside
-`.gitleaks.toml`'s path allowlist. Before pushing a test, read the flaky-test table and
-[Passing on Linux CI](agents/Testing.md#passing-on-linux-ci) in `agents/Testing.md`. When you
-fix a root cause, grep for the same shape and fix every instance in the same PR: four classes
-went red one after another with the same `Dispose`-vs-`StopAsync` race.
+Most red runs are avoidable without the repro. They fall into four recurring groups: tests that
+assume timing under load, product races that only load exposes, paths that assume Windows (`\`,
+case-insensitivity), and fixtures outside `.gitleaks.toml`'s path allowlist. Before pushing a test,
+read the flaky-test table and [Passing on Linux CI](agents/Testing.md#passing-on-linux-ci) in
+`agents/Testing.md`. When you fix a root cause, grep for the same shape and fix every instance in
+the same PR, because the siblings go red one after another otherwise.
 
 Read `agents/CIPipeline.md` before debugging a red run. It carries the local Docker
 repro and the environmental failure modes, including the two that look like code
