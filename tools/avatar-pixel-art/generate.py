@@ -23,7 +23,7 @@ from PIL import Image
 GRID = 32                 # the art is drawn on a 32 x 32 grid
 PNG_SIDE = 256            # BundledAvatarLibraryTests pins 256 x 256
 SEED = 20261111           # changing it reshuffles who gets long hair and glasses
-GENERATED = "2026-11-11"  # written into master.json; bump it when the art changes
+GENERATED = "2026-11-12"  # written into master.json; bump it when the art changes
 PROFESSION = "Pixel Avatar"
 OUTLINE = "#2a1f2d"
 EYE = "#1d1626"
@@ -150,7 +150,7 @@ def body(c, skin, outfit, gender):
     c.dots([(9, 24), (22, 24), (8, 25), (23, 25)], ol)
 
 
-def head(c, skin, gender, glasses):
+def head(c, skin, gender):
     _, s, sh, mouth, blush = skin
     c.shape(HEAD, s)
     c.dots([(10, 13), (10, 14), (10, 15), (21, 13), (21, 14), (21, 15)], s)
@@ -164,17 +164,28 @@ def head(c, skin, gender, glasses):
     if gender == "f":
         c.dots([(12, 14), (19, 14)], EYE)
         c.dots([(12, 17), (19, 17)], blush)
-    if glasses != "none":
-        f = FRAMES[glasses]
-        for x0 in (11, 17):
-            c.rect(x0 + 1, 14, 2, 2, LENS)
-            c.row(13, x0, x0 + 3, f)
-            c.row(16, x0, x0 + 3, f)
-            c.rect(x0, 14, 1, 2, f)
-            c.rect(x0 + 3, 14, 1, 2, f)
-        c.row(14, 15, 16, f)
-        c.rect(13, 14, 1, 2, EYE)
-        c.rect(18, 14, 1, 2, EYE)
+
+
+def mix(a, b, t):
+    """Blend two '#rrggbb' colours: t = 0 gives a, t = 1 gives b."""
+    return "#" + "".join(f"{round(int(a[k:k + 2], 16) * (1 - t) + int(b[k:k + 2], 16) * t):02x}" for k in (1, 3, 5))
+
+
+def glasses(c, skin, frame):
+    """Round frames over the finished face and hair: a 3 x 2 lens with the eye in its middle column.
+
+    Drawn last so the outer rims sit on top of the side hair and the hairline pass never sees them.
+    The lens is the skin lightened towards LENS, so it reads as glass and not as the white of an eye.
+    """
+    lens = mix(skin[1], LENS, 0.55)
+    for x0 in (11, 16):
+        c.rect(x0 + 1, 14, 3, 2, lens)
+        c.rect(x0 + 2, 14, 1, 2, EYE)
+        c.row(13, x0 + 1, x0 + 3, frame)
+        c.row(16, x0 + 1, x0 + 3, frame)
+    c.rect(11, 14, 1, 2, frame)
+    c.rect(20, 14, 1, 2, frame)
+    c.row(14, 15, 16, frame)  # the inner rims stop here and double as the bridge; (15, 15) and (16, 15) stay skin
 
 
 def hairline(c, skin, h, strong):
@@ -197,13 +208,14 @@ def draw(a):
     skin, h = SKINS[a["skin"]], HAIRS[a["hair_color"]]
     hair_back(c, a["gender"], a["hair_length"], h)
     body(c, skin, OUTFITS[a["outfit"]], a["gender"])
-    head(c, skin, a["gender"], a["glasses"])
-    c.row(12, 12, 13, h[2])
-    c.row(12, 18, 19, h[2])
+    head(c, skin, a["gender"])
+    if a["glasses"] == "none":  # the top rim sits one row under the brows and would fuse with them
+        c.row(12, 12, 13, h[2])
+        c.row(12, 18, 19, h[2])
     hair_front(c, a["gender"], a["hair_length"], h)
     hairline(c, skin, h, strong=a["skin"] == "darker" and a["hair_color"] == "brown")
     if a["glasses"] != "none":
-        c.row(14, 15, 16, FRAMES[a["glasses"]])
+        glasses(c, skin, FRAMES[a["glasses"]])
     c.px = {p: v for p, v in c.px.items() if inside(*p)}
     figure = set(c.px)
     for (x, y) in figure:
