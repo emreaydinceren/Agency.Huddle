@@ -107,8 +107,8 @@ public sealed class ReferencePurposeProviderTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        Room room = await harness.Directory.CreateRoomAsync("Standup", [], "Platform", false, ct);
-        _ = await harness.Directory.CreateRoomAsync("Elsewhere", [], "Marketing", false, ct);
+        Room room = await harness.Directory.CreateRoomAsync("Standup", [], "Platform", false, ct: ct);
+        _ = await harness.Directory.CreateRoomAsync("Elsewhere", [], "Marketing", false, ct: ct);
         RoomSearchProvider provider = Provider(harness, Chats(harness));
 
         SearchResult result = await provider.SearchAsync(Query("platf", SearchPurpose.Reference), ct);
@@ -143,8 +143,8 @@ public sealed class ReferencePurposeProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         _ = await harness.Directory.CreateRoomAsync("Zeta root", [], ct);
-        _ = await harness.Directory.CreateRoomAsync("Zeta scoped", [], "Platform", false, ct);
-        _ = await harness.Directory.CreateRoomAsync("Zeta team room", [], "Platform", true, ct);
+        _ = await harness.Directory.CreateRoomAsync("Zeta scoped", [], "Platform", false, ct: ct);
+        _ = await harness.Directory.CreateRoomAsync("Zeta team room", [], "Platform", true, ct: ct);
         RoomSearchProvider provider = Provider(harness, Chats(harness));
 
         foreach (SearchPurpose purpose in new[] { SearchPurpose.Reference, SearchPurpose.Box })

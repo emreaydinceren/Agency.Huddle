@@ -213,7 +213,7 @@ internal sealed partial class TeamRoomReconciler(
         string[] ids = [KnownIds.Human, .. members.Select(static m => m.Id)];
         try
         {
-            Room created = await directory.CreateRoomAsync(team.Name, ids, team.Name, true, ct).ConfigureAwait(false);
+            Room created = await directory.CreateRoomAsync(team.Name, ids, team.Name, true, ct: ct).ConfigureAwait(false);
             events.PublishRoomsChanged();
             await this.PostCreatedAsync(created, members, ct).ConfigureAwait(false);
             return created;

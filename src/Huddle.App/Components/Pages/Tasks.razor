@@ -30,6 +30,7 @@
 @page "/tasks/new"
 @page "/tasks/item/{TaskIdText}"
 @page "/teams/{Team}/tasks/{ViewId}"
+@page "/teams/{Team}/projects/{Project}/tasks/{ViewId}"
 @implements IDisposable
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Components.Shared.Dialogs
@@ -179,10 +180,10 @@
                 {
                     <EmptyState Title="No tasks yet" Text="Choose New task in the toolbar to add the first one." />
                 }
-                else if (this.Team is { } team && !this.Store.All.Any(task => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)))
+                else if (this.Team is { } team && !this.Store.All.Any(this.InRouteScope))
                 {
-                    @* The Team route's own "No tasks yet": Reset filters cannot help, since the Team is not part of the View's filter. *@
-                    <EmptyState Title="@($"No tasks in {team} yet")" Text="Choose New task in the toolbar to add the first one." />
+                    @* The Team or Project route's own "No tasks yet": Reset filters cannot help, since the Team and Project are not part of the View's filter. *@
+                    <EmptyState Title="@this.RouteEmptyTitle(team)" Text="Choose New task in the toolbar to add the first one." />
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
@@ -223,6 +224,13 @@
     /// </summary>
     [Parameter]
     public string? Team { get; set; }
+
+    /// <summary>
+    /// The route's Project for <c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c> (a Project's Tasks folder in the sidebar) - null for every other route.
+    /// With a Project the page shows only that Project's Tasks; with only a <see cref="Team"/> it shows the Team's Tasks that have no Project.
+    /// </summary>
+    [Parameter]
+    public string? Project { get; set; }
 
     private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
     private string? search;
@@ -438,13 +446,38 @@
             searchText,
             this.Human.Name,
             currentSprint: this.Sprints.Current?.Id);
-        if (this.Team is { } team)
+        if (this.Team is not null)
         {
-            filtered = [.. filtered.Where(task => string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase))];
+            filtered = [.. filtered.Where(this.InRouteScope)];
         }
 
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
+
+    /// <summary>Whether <paramref name="task"/> belongs to the route's scope: the Project's Tasks on a Project route, the Team's Tasks with no Project on a Team route, and every Task on an unscoped route.</summary>
+    /// <param name="task">The Task to test.</param>
+    private bool InRouteScope(TaskItem task)
+    {
+        if (this.Team is not { } team)
+        {
+            return true;
+        }
+
+        if (!string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return this.Project is { } project
+            ? string.Equals(task.Location.Project, project, StringComparison.OrdinalIgnoreCase)
+            : task.Location.Project is null;
+    }
+
+    /// <summary>The "No tasks yet" title of a Team or Project route.</summary>
+    /// <param name="team">The route's Team.</param>
+    private string RouteEmptyTitle(string team) => this.Project is { } project
+        ? $"No tasks in {team} / {project} yet"
+        : $"No Team-level tasks in {team} yet";
 
     /// <summary>How many of the Tasks the page shows are not yet Done, Cancelled, Duplicate or Rejected.</summary>
     private int OpenCount => this.FilteredTasks(this.search).Count(static task => !task.Status.IsTerminal());
@@ -499,8 +532,13 @@
     /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
     private Task OnCreateClickedAsync(NewTaskDefaults defaults)
     {
-        return this.OnNewTaskAsync(this.Team is { } team && !string.Equals(team, defaults.Team, StringComparison.OrdinalIgnoreCase)
-            ? new NewTaskDefaults(team, null)
+        if (this.Team is { } team && this.Project is { } project)
+        {
+            return this.OnNewTaskAsync(new NewTaskDefaults(team, project));
+        }
+
+        return this.OnNewTaskAsync(this.Team is { } routeTeam && !string.Equals(routeTeam, defaults.Team, StringComparison.OrdinalIgnoreCase)
+            ? new NewTaskDefaults(routeTeam, null)
             : defaults);
     }
 
@@ -525,12 +563,21 @@
     /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
     /// <c>TabKeys.Describe</c> names it; every other route is the View's display name, which is the Tab's title too.
     /// </summary>
-    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : TeamViewTitle(this.Team, this.effectiveView.Name);
+    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : TeamViewTitle(this.Team, this.effectiveView.Name, this.Project);
 
     /// <summary>The title of a View's Tab: its name, followed by the Team it is narrowed to (<c>/teams/{Team}/tasks/{ViewId}</c>) so it stays apart from the unscoped View's Tab.</summary>
     /// <param name="team">The route's Team, or <see langword="null"/> for an unscoped View.</param>
     /// <param name="view">The View's name.</param>
-    internal static string TeamViewTitle(string? team, string view) => team is null ? view : $"{view} · {team}";
+    /// <param name="project">The route's Project, or <see langword="null"/> for a Team-level or unscoped View.</param>
+    internal static string TeamViewTitle(string? team, string view, string? project = null)
+    {
+        if (team is null)
+        {
+            return view;
+        }
+
+        return project is null ? $"{view} · {team}" : $"{view} · {team} / {project}";
+    }
 
     /// <summary>The key of the Tab showing this page, from its own address (the browser URL names only the focused group's Tab).</summary>
     private string TabKey => TabKeys.Describe(this.Page?.Url ?? this.Navigation.Uri).Key;
@@ -556,6 +603,12 @@
         }
 
         string teamHref = $"/teams/{Uri.EscapeDataString(team)}";
+        if (this.Project is { } project)
+        {
+            string projectHref = $"{teamHref}/projects/{Uri.EscapeDataString(project)}";
+            return [new TrailCrumb(team, teamHref, "team"), new TrailCrumb(project, projectHref, "project"), new TrailCrumb("Tasks", $"{projectHref}/tasks", "tasks"), view];
+        }
+
         return [new TrailCrumb(team, teamHref, "team"), new TrailCrumb("Tasks", $"{teamHref}/tasks", "tasks"), view];
     }
 

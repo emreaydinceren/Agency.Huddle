@@ -62,7 +62,7 @@ public sealed class RoomLifecycleFeedTests
         User nova = await fixture.AddAgentAsync("Nova", ct);
         User kai = await fixture.AddAgentAsync("Kai", ct);
 
-        Room room = await fixture.Service.CreateRoomForAsync([nova.Id, kai.Id], null, new FeedActor(FeedActorKind.Agent, "Nova"), ct);
+        Room room = await fixture.Service.CreateRoomForAsync([nova.Id, kai.Id], null, null, new FeedActor(FeedActorKind.Agent, "Nova"), ct);
 
         FeedMessage post = Assert.Single(feed.Posts);
         Assert.Equal(room.Id, post.TargetKey);

@@ -34,7 +34,7 @@ public sealed class ChatOnboardingPosterTests
     }
 
     private static Task<Room> TeamRoomAsync(Setup setup, CancellationToken ct) =>
-        setup.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, setup.Nova.Id, setup.Kai.Id], "Marketing", true, ct);
+        setup.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, setup.Nova.Id, setup.Kai.Id], "Marketing", true, ct: ct);
 
     /// <summary>T18: the post lands in the Team Room as the Human, and its text really Mentions the recipient under the parser the reply gate uses.</summary>
     [Fact]

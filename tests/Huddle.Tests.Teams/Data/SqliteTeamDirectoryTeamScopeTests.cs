@@ -43,8 +43,8 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
 
         Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, ct);
         Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], ct);
-        Room? explicitRootPair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, null, ct);
-        Room? explicitRootSet = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], null, ct);
+        Room? explicitRootPair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, null, ct: ct);
+        Room? explicitRootSet = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], null, ct: ct);
 
         Assert.Null(pair);
         Assert.Null(set);
@@ -63,8 +63,8 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         Room sales = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Sales", ct: ct);
         Room marketing = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
 
-        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
-        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct);
+        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
         Room? rootPair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, ct);
 
         Assert.Equal(marketing.Id, pair?.Id);
@@ -82,8 +82,8 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
         await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], ct);
 
-        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
-        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct);
+        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
 
         Assert.Null(pair);
         Assert.Null(set);
@@ -98,8 +98,8 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
         Room marketing = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
 
-        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "mARKETING", ct);
-        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "marketing", ct);
+        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "mARKETING", ct: ct);
+        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "marketing", ct: ct);
 
         Assert.Equal(marketing.Id, pair?.Id);
         Assert.Equal(marketing.Id, set?.Id);
@@ -115,8 +115,8 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         Room marketing = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
         await directory.SetRoomArchivedAsync(marketing.Id, true, ct);
 
-        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
-        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct);
+        Room? pair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? set = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
 
         Assert.Null(pair);
         Assert.Null(set);
@@ -170,7 +170,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
         await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
 
         Room? live = await directory.FindTeamRoomAsync("marketing", ct);
         await directory.SetRoomArchivedAsync(teamRoom.Id, true, ct);
@@ -189,7 +189,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
         await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
-        await directory.CreateRoomAsync("Sales", [KnownIds.Human, nova.Id], "Sales", true, ct);
+        await directory.CreateRoomAsync("Sales", [KnownIds.Human, nova.Id], "Sales", true, ct: ct);
 
         Room? unflagged = await directory.FindTeamRoomAsync("Marketing", ct);
         Room? unknown = await directory.FindTeamRoomAsync("Support", ct);
@@ -205,10 +205,10 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
 
         await Assert.ThrowsAsync<SqliteException>(
-            () => directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "MARKETING", true, ct));
+            () => directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "MARKETING", true, ct: ct));
 
         IReadOnlyList<Room> rooms = await directory.GetRoomsForTeamAsync("Marketing", ct);
         Assert.Single(rooms);
@@ -221,11 +221,11 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         int before = (await directory.GetRoomsAsync(ct)).Count;
 
         await Assert.ThrowsAsync<SqliteException>(
-            () => directory.CreateRoomAsync("Again", [KnownIds.Human, nova.Id], "Marketing", true, ct));
+            () => directory.CreateRoomAsync("Again", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct));
 
         Assert.Equal(before, (await directory.GetRoomsAsync(ct)).Count);
     }
@@ -237,7 +237,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
 
         await directory.DeleteRoomAsync(teamRoom.Id, ct);
@@ -255,7 +255,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
 
         SqliteTeamDirectory restarted = new(dir.Options());
         await restarted.InitializeAsync("You", ct);
@@ -296,7 +296,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         Room? legacyRoom = await directory.GetRoomAsync("legacy-room", ct);
         Assert.NotNull(legacyRoom);
         Assert.Null(legacyRoom.Team);
-        Room scoped = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct);
+        Room scoped = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct: ct);
         Assert.Equal(scoped.Id, (await directory.FindTeamRoomAsync("Marketing", ct))?.Id);
     }
 
@@ -307,13 +307,13 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
 
-        Room? pairBefore = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
-        Room? setBefore = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct);
+        Room? pairBefore = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? setBefore = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
         Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
-        Room? pairAfter = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
-        Room? setAfter = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct);
+        Room? pairAfter = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? setAfter = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
 
         Assert.Null(pairBefore);
         Assert.Null(setBefore);
@@ -328,7 +328,7 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
         Room root = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], ct);
 
@@ -346,6 +346,82 @@ public sealed class SqliteTeamDirectoryTeamScopeTests
         Assert.True(forTeam.Single(r => r.Id == teamRoom.Id).IsTeamRoom);
         Assert.False(forTeam.Single(r => r.Id == chat.Id).IsTeamRoom);
         Assert.True((await directory.FindTeamRoomAsync("Marketing", ct))?.IsTeamRoom);
+    }
+
+    /// <summary>A Room created with a Project reads back that Project through every read; a Room without one reads back null.</summary>
+    [Fact]
+    public async Task CreateRoom_WithProject_RoundTripsProjectOnEveryRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
+
+        Room inProject = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", project: "Launch", ct: ct);
+        Room teamLevel = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", ct: ct);
+
+        Assert.Equal("Launch", inProject.Project);
+        Assert.Null(teamLevel.Project);
+        Assert.Equal("Launch", (await directory.GetRoomAsync(inProject.Id, ct))?.Project);
+        IReadOnlyList<Room> all = await directory.GetRoomsAsync(ct);
+        Assert.Equal("Launch", all.Single(r => r.Id == inProject.Id).Project);
+        Assert.Null(all.Single(r => r.Id == teamLevel.Id).Project);
+        IReadOnlyList<Room> forTeam = await directory.GetRoomsForTeamAsync("Marketing", ct);
+        Assert.Equal("Launch", forTeam.Single(r => r.Id == inProject.Id).Project);
+    }
+
+    /// <summary>A Project without a Team is refused and creates nothing.</summary>
+    [Fact]
+    public async Task CreateRoom_ProjectWithoutTeam_Throws()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], null, project: "Launch", ct: ct));
+
+        Assert.Empty(await directory.GetRoomsAsync(ct));
+    }
+
+    /// <summary>Deleting a Room removes its Project row, so the delete does not trip the foreign key and nothing is left behind.</summary>
+    [Fact]
+    public async Task DeleteRoom_RemovesTheProjectRow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
+        Room room = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", project: "Launch", ct: ct);
+
+        await directory.DeleteRoomAsync(room.Id, ct);
+
+        Assert.Null(await directory.GetRoomAsync(room.Id, ct));
+        using SqliteConnection connection = new($"Data Source={Path.Combine(dir.Options().Value.DataDir, "team.db")}");
+        await connection.OpenAsync(ct);
+        using SqliteCommand count = connection.CreateCommand();
+        count.CommandText = "SELECT COUNT(*) FROM room_projects;";
+        Assert.Equal(0L, await count.ExecuteScalarAsync(ct));
+    }
+
+    /// <summary>A one-to-one lookup keeps the Team-level Room and a Project's Room apart, in both directions, for both lookups.</summary>
+    [Fact]
+    public async Task Find_ScopedByProject_KeepsTeamLevelAndProjectRoomsApart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        (SqliteTeamDirectory directory, User nova) = await Seed(dir, ct);
+        Room teamLevel = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", ct: ct);
+        Room inProject = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", project: "Launch", ct: ct);
+
+        Room? teamPair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct: ct);
+        Room? projectPair = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", "launch", ct);
+        Room? teamSet = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", ct: ct);
+        Room? projectSet = await directory.FindRoomWithExactMemberSetAsync([KnownIds.Human, nova.Id], "Marketing", "launch", ct);
+        Room? otherProject = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", "Other", ct);
+
+        Assert.Equal(teamLevel.Id, teamPair?.Id);
+        Assert.Equal(inProject.Id, projectPair?.Id);
+        Assert.Equal(teamLevel.Id, teamSet?.Id);
+        Assert.Equal(inProject.Id, projectSet?.Id);
+        Assert.Null(otherProject);
     }
 
     private static async Task<(SqliteTeamDirectory Directory, User Nova)> Seed(TempDataDir dir, CancellationToken ct)

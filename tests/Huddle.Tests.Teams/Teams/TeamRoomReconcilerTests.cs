@@ -122,7 +122,7 @@ public sealed class TeamRoomReconcilerTests
         await f.Reconciler.ReconcileAsync(ct);
         User? nova = await f.Directory.FindUserByNameAsync("Nova", ct);
         Assert.NotNull(nova);
-        Room chat = await f.Directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", false, ct);
+        Room chat = await f.Directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Marketing", false, ct: ct);
         f.Catalog.Teams = [Team("Sales", "Ada")];
 
         await f.Reconciler.ReconcileAsync(ct);
@@ -397,7 +397,7 @@ public sealed class TeamRoomReconcilerTests
         using Fixture f = await Fixture.CreateAsync(["Nova"], ct);
         User? nova = await f.Directory.FindUserByNameAsync("Nova", ct);
         Assert.NotNull(nova);
-        Room ghost = await f.Directory.CreateRoomAsync("Ghost chat", [KnownIds.Human, nova.Id], "Ghost", false, ct);
+        Room ghost = await f.Directory.CreateRoomAsync("Ghost chat", [KnownIds.Human, nova.Id], "Ghost", false, ct: ct);
         f.Catalog.Teams = [Team("Marketing", "Nova")];
 
         await f.Reconciler.ReconcileAsync(ct);

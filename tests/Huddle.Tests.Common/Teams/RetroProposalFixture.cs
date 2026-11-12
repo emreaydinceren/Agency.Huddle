@@ -143,10 +143,10 @@ internal sealed class RetroProposalFixture : IDisposable
         _ = harness.Personas.Add(new PersonaIdentity("Rae", "Retro", "rae", ["Platform"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Rae.");
         _ = harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", ["Platform"], Skills: skill), "You are Sam.");
         _ = harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
-        Room room = await harness.Directory.CreateRoomAsync("Platform", [KnownIds.Human, harness.NovaId ?? ""], "Platform", teamRoom: true, ct);
+        Room room = await harness.Directory.CreateRoomAsync("Platform", [KnownIds.Human, harness.NovaId ?? ""], "Platform", teamRoom: true, ct: ct);
         Room other = await harness.Directory.CreateRoomAsync("Chat", [KnownIds.Human, harness.KaiId ?? ""], ct);
         Room root = await harness.Directory.CreateRoomAsync("Retro", [KnownIds.Human, harness.NovaId ?? ""], ct);
-        Room otherTeam = await harness.Directory.CreateRoomAsync("Other", [KnownIds.Human, harness.NovaId ?? "", harness.KaiId ?? ""], "Other", teamRoom: true, ct);
+        Room otherTeam = await harness.Directory.CreateRoomAsync("Other", [KnownIds.Human, harness.NovaId ?? "", harness.KaiId ?? ""], "Other", teamRoom: true, ct: ct);
         RetroProposalFixture fixture = new(harness, room.Id, other.Id, root.Id, otherTeam.Id);
         fixture.Ids["Nova"] = harness.NovaId ?? "";
         fixture.Ids["Kai"] = harness.KaiId ?? "";

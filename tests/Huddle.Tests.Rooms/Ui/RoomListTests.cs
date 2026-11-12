@@ -264,7 +264,7 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct);
+        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct: ct);
         var rootRoom = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Marketing")).Chat;
 
@@ -285,7 +285,7 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct: ct);
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Sales")).Chat;
 
         await using var ctx = NewContext(directory, chat, events);
@@ -307,7 +307,7 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct: ct);
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Sales")).Chat;
         _ = await chat.SetRoomArchivedAsync(orphan.Id, archived: true, ct);
 
@@ -327,7 +327,7 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        _ = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        _ = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct: ct);
         var catalog = KnownTeam("Sales");
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: catalog).Chat;
         await using var ctx = NewContext(directory, chat, events);
@@ -435,7 +435,7 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        var teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct);
+        var teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct: ct);
         var rootRoom = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Marketing")).Chat;
 

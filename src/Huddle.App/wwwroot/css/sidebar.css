@@ -170,11 +170,11 @@
     font-weight: inherit;
 }
 
-/* ---- Teams nav: the Team, folder, Project and Room rows in the sidebar -------------------------
+/* ---- Teams nav: the Team, scope, section and Room rows in the sidebar -------------------------
    A Team is a root row of the Teams view, under no section header: its chevron fills the leading slot and its name
-   starts on the text line, with "Build a team" in line with them. An open Team's Rooms and Library folders are one
-   level in (Left menu): their folder icon sits under the Team's name. A folder's rows step a quarter level further,
-   as the Chats view's folders do. The level is set on the folder, and its header and rows inherit it. */
+   starts on the text line, with "Build a team" in line with them. The Archived Teams folder is one level in (Left
+   menu): its folder icon sits under the Team's name. A folder's rows step a quarter level further, as the Chats
+   view's folders do. The level is set on the folder, and its header and rows inherit it. */
 .teams-nav-host .teams-nav-folder {
     --nav-level: 1;
 }
@@ -193,10 +193,225 @@
     --nav-level: 0.25;
 }
 
-/* The shortcut's Rooms folder splits into Needs you and All while a Room waits on the Human: those two headers sit at the
-   Rooms folder's row step, and their own rows step a quarter level further. */
-.sidebar-view-team .teams-nav-host .teams-nav-folder .teams-nav-subfolder .mud-collapse-container {
-    --nav-level: 0.5;
+/* An open Team's scope list and the sections under it (TeamsNav.razor) sit one level in from the Team row, so their
+   marks sit under its name; a shortcut has no Team row, so they are root rows. Every row inside inherits the level. */
+.teams-nav-host .teams-nav-scope-block {
+    --nav-level: 1;
+}
+
+.sidebar-view-team .teams-nav-host .teams-nav-scope-block {
+    --nav-level: 0;
+}
+
+/* The "Needs you" and "All" folders of a shortcut's Rooms section are headers at the section's level, their rows a quarter further. */
+.teams-nav-host .teams-nav-scope-block .teams-nav-subfolder .mud-collapse-container {
+    --nav-level: 1.25;
+}
+
+.sidebar-view-team .teams-nav-host .teams-nav-scope-block .teams-nav-subfolder .mud-collapse-container {
+    --nav-level: 0.25;
+}
+
+/* A scope row: a round chip (or the Team's avatar), the name and the count of open Tasks. The selected row wears
+   .selected-shape; the row is not a NavLink, so MudBlazor's active class never doubles the look. */
+.teams-nav-host .teams-nav-scope-row {
+    margin-inline: var(--nav-inset);
+    border-radius: var(--hu-radius-control);
+}
+
+.teams-nav-host .teams-nav-scope-row:not(.selected-shape):hover {
+    background-color: var(--hu-hover);
+}
+
+/* surface=paper (Nordic): the selected scope row matches the Settings theme picker's selected row (settings.css). */
+:root:has([data-hu-surface="paper"]) .teams-nav-host .teams-nav-scope-row.selected-shape {
+    background-color: var(--hu-tone-primary-tint);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+}
+
+.teams-nav-host .teams-nav-scope-link {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-gap);
+    min-height: var(--nav-row-height);
+    padding-inline: calc(var(--nav-pad) + var(--nav-level, 0) * var(--nav-step)) var(--nav-end);
+    color: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-decoration: none;
+}
+
+.teams-nav-host .teams-nav-scope-chip,
+.teams-nav-host .mud-avatar.teams-nav-scope-avatar {
+    flex: none;
+    width: var(--nav-slot);
+    height: var(--nav-slot);
+    margin-inline-end: var(--nav-gap);
+}
+
+.teams-nav-host .teams-nav-scope-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--hu-hover);
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host .teams-nav-scope-chip .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.teams-nav-host .selected-shape .teams-nav-scope-chip {
+    color: var(--hu-accent-ink);
+}
+
+.teams-nav-host .teams-nav-scope-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.teams-nav-host .teams-nav-scope-count {
+    margin-inline-start: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The Team's header card: one bordered container holding the Team's row (the 40px avatar, the name in bold over a
+   quiet "{Team type} · N members" line) and, while a shortcut's switcher is unfolded, the other Teams drawn the same
+   way below it. A small gap separates it from the Project rows. */
+.teams-nav-host .teams-nav-team-card {
+    margin: 0 var(--nav-inset) 8px;
+    overflow: hidden;
+    border: 1px solid var(--hu-line-control);
+    border-radius: var(--hu-radius-card);
+}
+
+.teams-nav-host .teams-nav-team-card-open {
+    background-color: var(--hu-switcher-background);
+}
+
+.teams-nav-host .teams-nav-team-card .teams-nav-scope-row.teams-nav-scope-header {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding-block: 4px;
+    border-radius: 0;
+}
+
+/* surface=paper (Nordic): the selected card keeps its one border, drawn in the selected ring's colour, instead of a second ring inside it. */
+:root:has([data-hu-surface="paper"]) .teams-nav-host .teams-nav-team-card:has(> .teams-nav-scope-header.selected-shape) {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+}
+
+:root:has([data-hu-surface="paper"]) .teams-nav-host .teams-nav-team-card .teams-nav-scope-header.selected-shape {
+    box-shadow: none;
+}
+
+.teams-nav-host .teams-nav-scope-header .teams-nav-scope-link {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* A shortcut's header card ends in the Unfold More button; the link keeps the rest of the card. */
+.teams-nav-host .teams-nav-scope-header .teams-nav-switcher-button {
+    flex: none;
+    margin-inline-end: 4px;
+}
+
+/* The unfolded switcher, inside the card under the Team's row: each Team laid out as that row is, left-aligned. */
+.teams-nav-host .teams-nav-switcher-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.teams-nav-host .teams-nav-switcher-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--nav-gap);
+    width: 100%;
+    min-width: 0;
+    min-height: var(--nav-row-height);
+    padding: 4px var(--nav-end) 4px calc(var(--nav-pad) + var(--nav-level, 0) * var(--nav-step));
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: start;
+    cursor: pointer;
+}
+
+.teams-nav-host .teams-nav-switcher-item:hover,
+.teams-nav-host .teams-nav-switcher-item:focus-visible {
+    background-color: var(--hu-hover);
+}
+
+/* "Build a team", last in the switcher: a quiet action row like the old sidebar link (a small "+" and the label in the
+   row's regular weight and secondary colour), not another Team. */
+.teams-nav-host .teams-nav-switcher-item.teams-nav-switcher-build {
+    padding-block: 2px;
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host .teams-nav-switcher-build-icon {
+    flex: none;
+    font-size: var(--icon-size-row);
+}
+
+.teams-nav-host .teams-nav-team-card .mud-avatar.teams-nav-scope-avatar {
+    width: 40px;
+    height: 40px;
+}
+
+.teams-nav-host .teams-nav-scope-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.teams-nav-host .teams-nav-team-card .teams-nav-scope-label {
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 600;
+}
+
+.teams-nav-host .teams-nav-scope-subtitle {
+    overflow: hidden;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A section of the selected scope: a hairline above its header, then the caption-size label (the labels=upper look,
+   always) and an optional trailing icon button, ending on the trailing line. Headers do not collapse. */
+.teams-nav-host .teams-nav-section-header {
+    display: flex;
+    align-items: center;
+    min-height: var(--nav-row-height);
+    margin: 8px var(--nav-inset) 0;
+    padding-inline: calc(var(--nav-pad) + var(--nav-level, 0) * var(--nav-step)) 0;
+    border-top: 1px solid var(--ink-line);
+}
+
+.teams-nav-host .teams-nav-section-title {
+    flex: 1 1 auto;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host .teams-nav-section-add.mud-icon-button {
+    width: var(--nav-slot);
+    height: var(--nav-slot);
+    padding: 0;
+    color: var(--mud-palette-text-secondary);
 }
 
 .sidebar-views .teams-nav-host .teams-nav-subfolder.mud-nav-group > .mud-nav-link {
@@ -229,11 +444,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.teams-nav-host .nav-project-link .mud-nav-link-icon {
-    font-size: var(--mud-typography-subtitle1-size);
-    color: var(--mud-palette-text-secondary);
 }
 
 /* The chevron is a button over the Team link's empty slot, so it floats there rather than pushing the name. */

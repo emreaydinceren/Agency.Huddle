@@ -49,7 +49,7 @@ public sealed class RoomCopyLinkTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
-        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, name, team, teamRoom, ct);
+        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, name, team, teamRoom, ct: ct);
         string expected = $"[{label}](/rooms/{room.Id})";
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -68,7 +68,7 @@ public sealed class RoomCopyLinkTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
-        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Marketing", "Marketing", teamRoom: true, ct);
+        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Marketing", "Marketing", teamRoom: true, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -83,7 +83,7 @@ public sealed class RoomCopyLinkTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
-        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
+        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(true);
@@ -104,7 +104,7 @@ public sealed class RoomCopyLinkTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
-        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
+        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(false);
@@ -125,7 +125,7 @@ public sealed class RoomCopyLinkTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
-        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct);
+        Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -227,6 +227,8 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(TestOptions.Create(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddPersonaStore();
+        ctx.Services.AddTaskStore();
+        ctx.Services.AddTeamTypes();
         ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<TabService>();
         return ctx;
@@ -254,7 +256,7 @@ public sealed class RoomCopyLinkTests
         ITeamDirectory directory = factory.Services.GetRequiredService<ITeamDirectory>();
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        return await directory.CreateRoomAsync(name, [KnownIds.Human, agent.Id], team, teamRoom: teamRoom, ct);
+        return await directory.CreateRoomAsync(name, [KnownIds.Human, agent.Id], team, teamRoom: teamRoom, ct: ct);
     }
 
     /// <summary>Renders the Room page for <paramref name="roomId"/> beside the popover provider its menus need.</summary>

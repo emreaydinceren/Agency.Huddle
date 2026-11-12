@@ -40,7 +40,7 @@ public sealed class TaskTriggerTeamScopeTests
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
         AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room root = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, agents.Nova.Id], ct);
-        Room scoped = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct);
+        Room scoped = await harness.Directory.CreateRoomAsync("Nova", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct: ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: "gone", location: Marketing));
 
         await WakeAsync(harness, task, HumanActor);
@@ -95,7 +95,7 @@ public sealed class TaskTriggerTeamScopeTests
         using TempDataDir dir = new();
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
         AgentPair agents = await RegisterAgentsAsync(harness, ct);
-        Room teamRoom = await harness.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, agents.Nova.Id], "Marketing", true, ct);
+        Room teamRoom = await harness.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, agents.Nova.Id], "Marketing", true, ct: ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: "gone", location: Marketing));
 
         await WakeAsync(harness, task, HumanActor);
@@ -115,7 +115,7 @@ public sealed class TaskTriggerTeamScopeTests
         using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, Catalog());
         AgentPair agents = await RegisterAgentsAsync(harness, ct);
         Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
-        _ = await harness.Directory.CreateRoomAsync("Scoped", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct);
+        _ = await harness.Directory.CreateRoomAsync("Scoped", [KnownIds.Human, agents.Nova.Id], "Marketing", false, ct: ct);
         TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: origin.Id, location: Marketing));
 
         await WakeAsync(harness, task, HumanActor);

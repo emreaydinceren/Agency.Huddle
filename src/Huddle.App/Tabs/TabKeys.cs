@@ -50,6 +50,7 @@ internal static class TabKeys
             [] => new("chat", "Rooms", "chat"),
             ["rooms", var roomId, ..] => new($"room:{roomId}", "Chat", "chat"),
             ["teams", "build"] => new("team-build", "Build a team", "team"),
+            ["teams", var team, "projects", var project, "tasks", var view] => new($"project-tasks:{Lower(team)}/{Lower(project)}/{view}", view, "tasks"),
             ["teams", var team, "projects", var project, ..] => new($"project:{Lower(team)}/{Lower(project)}", project, "project"),
             ["teams", var team, "tasks", var view] => new($"team-tasks:{Lower(team)}/{view}", view, "tasks"),
             ["teams", var team, ..] => new($"team:{Lower(team)}", team, "team"),

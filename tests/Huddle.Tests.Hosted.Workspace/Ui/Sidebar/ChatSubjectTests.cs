@@ -53,7 +53,7 @@ public sealed class ChatSubjectTests
         ITeamDirectory directory = factory.Services.GetRequiredService<ITeamDirectory>();
         User? agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        return await directory.CreateRoomAsync(name, [KnownIds.Human, agent.Id], null, teamRoom: false, ct);
+        return await directory.CreateRoomAsync(name, [KnownIds.Human, agent.Id], null, teamRoom: false, ct: ct);
     }
 
     private static RenderFragment ChatFragment(string roomId) => builder =>

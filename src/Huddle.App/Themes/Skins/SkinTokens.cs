@@ -229,6 +229,10 @@ internal static class SkinTokens
         Add(tokens, "current.icon", "ref(accent.ink)", "The current row's icon.");
         Add(tokens, "current.weight", "500", "The current row's font weight.");
         Add(tokens, "current.shadow", "none", "The current row's lifted-tile shadow.");
+        Add(tokens, "shortcut.selected.background", "ref(current.background)", "The selected Team shortcut tile in the Activity bar.");
+        Add(tokens, "shortcut.selected.background.hover", "ref(current.background.hover)", "The selected Team shortcut tile while hovered or focused.");
+        Add(tokens, "shortcut.selected.shadow", "ref(current.shadow)", "The selected Team shortcut tile's shadow or outline.");
+        Add(tokens, "switcher.background", "ref(ground.sunk)", "The Team header card while its list of Teams is unfolded under a Team shortcut.");
         Add(tokens, "selected.background", "mix(palette.primary 14%, palette.surface)", "A chosen item in a set, and a filter or control once it is set.");
         Add(tokens, "selected.background.hover", "mix(palette.primary 20%, palette.surface)", "A chosen item while hovered.");
         Add(tokens, "selected.task.background", "ref(selected.background)", "The selected Task row and card.");

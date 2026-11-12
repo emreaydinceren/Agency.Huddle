@@ -130,7 +130,7 @@ public sealed class TasksPageDetailTests
         Assert.Empty(sameTeam.FindAll(".tasks-empty .empty-state-title"));
 
         IRenderedComponent<ContainerFragment> otherTeam = RenderPage(otherCtx, ViewStore.AllTasksId, team: "Growth");
-        Assert.Equal("No tasks in Growth yet", otherTeam.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("No Team-level tasks in Growth yet",otherTeam.Find(".tasks-empty .empty-state-title").TextContent.Trim());
         Assert.Empty(otherTeam.FindAll(".tasks-empty-action"));
 
         TaskView saved = Assert.IsType<TaskView>(harness.Views.Get(ViewStore.AllTasksId));
@@ -184,8 +184,97 @@ public sealed class TasksPageDetailTests
         Assert.Equal(expected, watched);
     }
 
-    /// <summary>Renders <see cref="TasksPage"/>, optionally routed to <paramref name="viewId"/> and narrowed to <paramref name="team"/>.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string? viewId = null, string? team = null) =>
+    /// <summary>The Project route (<c>/teams/{Team}/projects/{Project}/tasks/{ViewId}</c>) shows only that Project's Tasks, matching Team and Project ignoring case; the Team route shows only the Team's Tasks that have no Project.</summary>
+    [Fact]
+    public async Task ProjectRoute_NarrowsToTheProject_AndTheTeamRouteExcludesProjectTasks()
+    {
+        using TaskToolHarness harness = new();
+        CreateTask(harness, "Teamlevel");
+        CreateTask(harness, "Inalpha", "Alpha");
+        CreateTask(harness, "Inbeta", "Beta");
+        await using MudBunitContext projectCtx = UiTestHost.Create().WithHarness(harness);
+        await using MudBunitContext teamCtx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> project = RenderPage(projectCtx, ViewStore.AllTasksId, team: "platform", project: "alpha");
+        IRenderedComponent<ContainerFragment> team = RenderPage(teamCtx, ViewStore.AllTasksId, team: "Platform");
+
+        Assert.NotNull(FindTaskRow(project, "Inalpha"));
+        Assert.DoesNotContain(project.FindAll("td"), static td => td.TextContent.Contains("Teamlevel", StringComparison.Ordinal) || td.TextContent.Contains("Inbeta", StringComparison.Ordinal));
+        Assert.NotNull(FindTaskRow(team, "Teamlevel"));
+        Assert.DoesNotContain(team.FindAll("td"), static td => td.TextContent.Contains("Inalpha", StringComparison.Ordinal) || td.TextContent.Contains("Inbeta", StringComparison.Ordinal));
+    }
+
+    /// <summary>The empty states name the scope: "{Team} / {Project}" on a Project route and "Team-level" on a Team route that has only Project Tasks.</summary>
+    [Fact]
+    public async Task EmptyState_ProjectAndTeamRoutes_NameTheirScope()
+    {
+        using TaskToolHarness harness = new();
+        CreateTask(harness, "Inalpha", "Alpha");
+        await using MudBunitContext projectCtx = UiTestHost.Create().WithHarness(harness);
+        await using MudBunitContext teamCtx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> project = RenderPage(projectCtx, ViewStore.AllTasksId, team: "Platform", project: "Beta");
+        IRenderedComponent<ContainerFragment> team = RenderPage(teamCtx, ViewStore.AllTasksId, team: "Platform");
+
+        Assert.Equal("No tasks in Platform / Beta yet", project.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+        Assert.Equal("No Team-level tasks in Platform yet", team.Find(".tasks-empty .empty-state-title").TextContent.Trim());
+    }
+
+    /// <summary>"+ New task" on a Project route starts the new Task in that Team and Project.</summary>
+    [Fact]
+    public async Task NewTaskHeaderButton_ProjectRoute_StartsTheNewTaskInThatProject()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId, team: "Platform", project: "Alpha");
+
+        await cut.InvokeAsync(() => cut.Find(".tasks-new-task").ClickAsync());
+
+        Agency.Huddle.App.Tabs.Tab tab = Assert.Single(harness.Tabs.Tabs, static t => string.Equals(t.Key, "task-new-edit", StringComparison.Ordinal));
+        Assert.Equal("/tasks/item/new/edit?team=Platform&project=Alpha", tab.Url);
+    }
+
+    /// <summary>A Project route's Tab title carries the Project, apart from the Team route's.</summary>
+    [Fact]
+    public void TeamViewTitle_WithAProject_CarriesTheProject()
+    {
+        Assert.Equal("All Tasks · Platform / Alpha", TasksPage.TeamViewTitle("Platform", "All Tasks", "Alpha"));
+        Assert.Equal("All Tasks · Platform", TasksPage.TeamViewTitle("Platform", "All Tasks"));
+        Assert.Equal("All Tasks", TasksPage.TeamViewTitle(null, "All Tasks"));
+    }
+
+    /// <summary>The Project route's breadcrumb trail adds a Project crumb that links to the Project's page, ahead of Tasks.</summary>
+    [Fact]
+    public async Task ProjectRoute_TrailCarriesTheProjectCrumb()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        Agency.Huddle.App.Tabs.Tab tab = harness.Tabs.Open($"/teams/Platform/projects/Alpha/tasks/{ViewStore.AllTasksId}");
+        TabPageContext context = new(tab.Url, tab.Id);
+
+        _ = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.CascadingValue<TabPageContext>>(0);
+            builder.AddComponentParameter(1, "Value", context);
+            builder.AddComponentParameter(2, "ChildContent", (Microsoft.AspNetCore.Components.RenderFragment)(inner =>
+            {
+                inner.OpenComponent<TasksPage>(0);
+                inner.AddAttribute(1, nameof(TasksPage.ViewId), ViewStore.AllTasksId);
+                inner.AddAttribute(2, nameof(TasksPage.Team), "Platform");
+                inner.AddAttribute(3, nameof(TasksPage.Project), "Alpha");
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+
+        IReadOnlyList<TrailCrumb> trail = harness.Tabs.Trail(tab);
+        Assert.Equal(["Platform", "Alpha", "Tasks", "All Tasks"], trail.Select(static c => c.Text));
+        Assert.Equal("/teams/Platform/projects/Alpha", trail[1].Href);
+        Assert.Equal("/teams/Platform/projects/Alpha/tasks", trail[2].Href);
+    }
+
+    /// <summary>Renders <see cref="TasksPage"/>, optionally routed to <paramref name="viewId"/> and narrowed to <paramref name="team"/> and <paramref name="project"/>.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string? viewId = null, string? team = null, string? project = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TasksPage>(0);
@@ -199,13 +288,18 @@ public sealed class TasksPageDetailTests
                 builder.AddAttribute(2, nameof(TasksPage.Team), team);
             }
 
+            if (project is not null)
+            {
+                builder.AddAttribute(3, nameof(TasksPage.Project), project);
+            }
+
             builder.CloseComponent();
         });
 
     /// <summary>Creates a Task through the real <see cref="TaskService"/>, exactly as a Human would.</summary>
-    private static TaskItem CreateTask(TaskToolHarness harness, string title)
+    private static TaskItem CreateTask(TaskToolHarness harness, string title, string? project = null)
     {
-        TaskResult result = harness.Service.Create(new TaskDraft(title, "Platform", null), TaskActors.Human(harness.Options.Value));
+        TaskResult result = harness.Service.Create(new TaskDraft(title, "Platform", project), TaskActors.Human(harness.Options.Value));
         return Assert.IsType<TaskResult.Saved>(result).Task;
     }
 

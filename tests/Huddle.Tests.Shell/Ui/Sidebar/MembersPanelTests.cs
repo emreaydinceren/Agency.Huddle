@@ -25,7 +25,7 @@ public sealed class MembersPanelTests
             ids.Add(agent.Id);
         }
 
-        return await fixture.Directory.CreateRoomAsync("Room", ids, "Alpha", false, ct);
+        return await fixture.Directory.CreateRoomAsync("Room", ids, "Alpha", false, ct: ct);
     }
 
     private static IRenderedComponent<CascadingValue<SidebarPanelContext>> RenderPanel(MudBunitContext ctx, SidebarPanelContext panelCtx, PageSubject subject) =>

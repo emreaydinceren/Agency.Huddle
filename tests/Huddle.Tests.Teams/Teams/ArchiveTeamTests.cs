@@ -448,7 +448,7 @@ public sealed class ArchiveTeamTests
         {
             User? nova = await this.Directory.FindUserByNameAsync("Nova", ct);
             Assert.NotNull(nova);
-            return await this.Directory.CreateRoomAsync(team + " room", [KnownIds.Human, nova.Id], team, true, ct);
+            return await this.Directory.CreateRoomAsync(team + " room", [KnownIds.Human, nova.Id], team, true, ct: ct);
         }
 
         public void Dispose()

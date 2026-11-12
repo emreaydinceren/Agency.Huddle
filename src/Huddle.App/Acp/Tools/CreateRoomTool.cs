@@ -123,7 +123,7 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
         try
         {
             User? caller = await teamDirectory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
-            room = await chat.CreateRoomForAsync(agentIds, null, new FeedActor(FeedActorKind.Agent, caller?.Name ?? "An Agent"), cancellationToken).ConfigureAwait(false);
+            room = await chat.CreateRoomForAsync(agentIds, null, null, new FeedActor(FeedActorKind.Agent, caller?.Name ?? "An Agent"), cancellationToken).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {

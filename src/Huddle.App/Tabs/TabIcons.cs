@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Components.Shared;
 using MudBlazor;
 
 namespace Agency.Huddle.App.Tabs;
@@ -15,7 +16,7 @@ internal static class TabIcons
     /// <param name="name">A name from <see cref="TabDescriptor.Icon"/>.</param>
     public static string For(string name) => name switch
     {
-        "chat" => Icons.Material.Outlined.Chat,
+        "chat" => ActionIcons.Chat,
         "team" => Icons.Material.Outlined.Groups,
         "project" => Icons.Material.Filled.LibraryBooks,
         "tasks" => Icons.Material.Outlined.Checklist,

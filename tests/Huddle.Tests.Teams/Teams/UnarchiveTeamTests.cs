@@ -152,7 +152,7 @@ public sealed class UnarchiveTeamTests
         Room otherTeam = await f.CreateRoomAsync("Other", ct);
         _ = await f.Service.ArchiveTeamAsync(Home, ct);
         // A Team owns one Room, so the unrelated archived Room has no Team; it is not in archivedRooms.
-        Room later = await f.Directory.CreateRoomAsync("loose", [KnownIds.Human], null, false, ct);
+        Room later = await f.Directory.CreateRoomAsync("loose", [KnownIds.Human], null, false, ct: ct);
         await f.Directory.SetRoomArchivedAsync(later.Id, true, ct);
         ForgetHome(f);
 

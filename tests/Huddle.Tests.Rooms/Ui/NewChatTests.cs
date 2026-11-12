@@ -39,6 +39,36 @@ public sealed class NewChatTests
         Assert.Equal("New chat in Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
     }
 
+    /// <summary>With a Project the heading names the Team and the Project.</summary>
+    [Fact]
+    public async Task WithProject_HeadingNamesTheTeamAndTheProject()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, ["Nova", "Bo"], ["Nova"], ct);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, "Marketing", project: "Launch");
+
+        Assert.Equal("New chat in Marketing / Launch", cut.Find(".new-chat-heading").TextContent.Trim());
+    }
+
+    /// <summary>Choosing Start with a Project creates a Room that carries the Team and the Project.</summary>
+    [Fact]
+    public async Task WithProject_Start_CreatesARoomInTheProject()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, ["Nova"], ["Nova"], ct);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, "Marketing", project: "Launch");
+        await cut.InvokeAsync(() => cut.Find(".new-chat-agents input[type=checkbox]").ChangeAsync(new ChangeEventArgs { Value = true }));
+
+        await cut.InvokeAsync(() => cut.Find(".new-chat-start").ClickAsync());
+
+        ITeamDirectory directory = ctx.Services.GetRequiredService<ITeamDirectory>();
+        Room room = Assert.Single(await directory.GetRoomsForTeamAsync("Marketing", ct));
+        Assert.Equal("Launch", room.Project);
+    }
+
     /// <summary>Agents of the Team are listed before the others, whatever order the directory returns them in.</summary>
     [Fact]
     public async Task WithTeam_ListsTheTeamsMembersFirst()
@@ -163,7 +193,7 @@ public sealed class NewChatTests
             _ = await directory.UpsertAgentUserAsync(agent, null, ct);
         }
 
-        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Marketing", [], members, true)] };
+        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Marketing", ["Launch"], members, true)] };
         FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
         ChatService chat = new(directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
 
@@ -179,13 +209,18 @@ public sealed class NewChatTests
         return ctx;
     }
 
-    private IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx, string? team, Action? onClosed = null, Action? onStarted = null) =>
+    private IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx, string? team, Action? onClosed = null, Action? onStarted = null, string? project = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<NewChat>(0);
             if (team is not null)
             {
                 builder.AddAttribute(1, nameof(NewChat.Team), team);
+            }
+
+            if (project is not null)
+            {
+                builder.AddAttribute(4, nameof(NewChat.Project), project);
             }
 
             if (onClosed is not null)

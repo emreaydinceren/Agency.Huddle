@@ -3,7 +3,9 @@ namespace Agency.Huddle.App.Tabs;
 /// <summary>
 /// Works out the breadcrumb trail of a Tab from its URL: the ancestors of the page, never the page itself
 /// (design-system "A page"). Every page shows its name as its h1, so the trail never repeats it; a page with
-/// no ancestor (Agents, Settings) has an empty trail and the bar draws none.
+/// no ancestor (Agents, Settings) has an empty trail and the bar draws none. The one exception is a Project
+/// page, whose trail ends in the Project as the current crumb (plain text), so the bar names the Project the
+/// Teams sidebar has selected.
 /// Pure and synchronous, like <see cref="TabKeys"/>, whose table of URLs it follows.
 /// </summary>
 internal static class TabTrail
@@ -24,7 +26,9 @@ internal static class TabTrail
         return segments switch
         {
             ["rooms", ..] => [new("Rooms", "/", "chat")],
-            ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team")],
+            ["teams", var team, "projects", var project, "tasks", _] =>
+                [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new(project, $"{TeamHref(team)}/projects/{Uri.EscapeDataString(project)}", "project")],
+            ["teams", var team, "projects", var project, ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new(project, null, "project")],
             ["teams", ..] => [new("Teams", null, "team")],
             ["tasks", _, ..] => [new("Tasks", "/tasks", "tasks")],
             _ => [],

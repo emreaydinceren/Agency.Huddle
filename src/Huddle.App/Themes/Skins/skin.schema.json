@@ -422,6 +422,22 @@
           "type": "string",
           "description": "The current row\u0027s lifted-tile shadow."
         },
+        "shortcut.selected.background": {
+          "type": "string",
+          "description": "The selected Team shortcut tile in the Activity bar."
+        },
+        "shortcut.selected.background.hover": {
+          "type": "string",
+          "description": "The selected Team shortcut tile while hovered or focused."
+        },
+        "shortcut.selected.shadow": {
+          "type": "string",
+          "description": "The selected Team shortcut tile\u0027s shadow or outline."
+        },
+        "switcher.background": {
+          "type": "string",
+          "description": "The Team header card while its list of Teams is unfolded under a Team shortcut."
+        },
         "selected.background": {
           "type": "string",
           "description": "A chosen item in a set, and a filter or control once it is set."

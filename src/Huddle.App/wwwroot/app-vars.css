@@ -36,6 +36,10 @@
     --hu-current-icon: var(--hu-accent-ink);
     --hu-current-weight: 500;
     --hu-current-shadow: none;
+    --hu-shortcut-selected-background: var(--hu-current-background);
+    --hu-shortcut-selected-background-hover: var(--hu-current-background-hover);
+    --hu-shortcut-selected-shadow: var(--hu-current-shadow);
+    --hu-switcher-background: var(--hu-ground-sunk);
     --hu-selected-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     --hu-selected-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
     --hu-selected-task-background: var(--hu-selected-background);

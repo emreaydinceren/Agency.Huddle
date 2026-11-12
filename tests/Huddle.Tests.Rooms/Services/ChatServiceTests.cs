@@ -1265,6 +1265,9 @@ public sealed class ChatServiceTests
         return (service, events);
     }
 
+    private static FakeTeamCatalog CatalogWithProject(string team, string project) =>
+        new() { Teams = [new TeamSummary(team, [project], [], false)] };
+
     private static FakeTeamCatalog CatalogWith(params string[] teams) =>
         new() { Teams = [.. teams.Select(t => new TeamSummary(t, [], [], false))] };
 
@@ -1284,7 +1287,7 @@ public sealed class ChatServiceTests
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
         Room root = await service.EnsureRoomForAsync(nova, ct);
 
-        Room scoped = await service.CreateRoomForAsync([nova.Id], "Marketing", ct);
+        Room scoped = await service.CreateRoomForAsync([nova.Id], "Marketing", ct: ct);
 
         Assert.NotEqual(root.Id, scoped.Id);
         Assert.Equal("Marketing", scoped.Team);
@@ -1308,7 +1311,7 @@ public sealed class ChatServiceTests
         Assert.NotNull(bo);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
 
-        Room room = await service.CreateRoomForAsync([nova.Id, bo.Id], "Marketing", ct);
+        Room room = await service.CreateRoomForAsync([nova.Id, bo.Id], "Marketing", ct: ct);
 
         Assert.Equal("Marketing", room.Team);
         Assert.Equal(RoomNaming.Derive([nova, bo]), room.Name);
@@ -1329,12 +1332,60 @@ public sealed class ChatServiceTests
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
         Room teamOneToOne = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
 
-        Room first = await service.CreateRoomForAsync([nova.Id], null, ct);
+        Room first = await service.CreateRoomForAsync([nova.Id], null, ct: ct);
         Room second = await service.CreateRoomForAsync([nova.Id], ct);
 
         Assert.Null(first.Team);
         Assert.Equal(first.Id, second.Id);
         Assert.NotEqual(teamOneToOne.Id, first.Id);
+    }
+
+    /// <summary>A Project the Team's catalog entry does not list is refused for a one-to-one and a group, and creates nothing.</summary>
+    [Fact]
+    public async Task CreateRoomFor_UnknownProject_ThrowsChatException_AndCreatesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? bo = await directory.UpsertAgentUserAsync("Bo", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(bo);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWithProject("Marketing", "Launch"));
+
+        ChatException unknown = await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Marketing", "Ghosts", ct));
+        Assert.Equal("Unknown project 'Ghosts' in team 'Marketing'.", unknown.Message);
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id, bo.Id], "Marketing", "Ghosts", ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], null, "Launch", ct));
+
+        Assert.Empty(await directory.GetRoomsAsync(ct));
+    }
+
+    /// <summary>A Project typed in another case is stored in the catalog's spelling, for a one-to-one and a group, and a Project's one-to-one is not the Team-level one.</summary>
+    [Fact]
+    public async Task CreateRoomFor_Project_StoresTheCatalogSpelling_AndKeepsOneToOnesApart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? bo = await directory.UpsertAgentUserAsync("Bo", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(bo);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWithProject("Marketing", "Launch"));
+        Room teamLevel = await service.CreateRoomForAsync([nova.Id], "Marketing", ct: ct);
+
+        Room one = await service.CreateRoomForAsync([nova.Id], "marketing", "lAUNCH", ct);
+        Room again = await service.CreateRoomForAsync([nova.Id], "Marketing", "Launch", ct);
+        Room group = await service.CreateRoomForAsync([nova.Id, bo.Id], "Marketing", "launch", ct);
+
+        Assert.Equal("Launch", one.Project);
+        Assert.Equal(one.Id, again.Id);
+        Assert.NotEqual(teamLevel.Id, one.Id);
+        Assert.Null((await directory.GetRoomAsync(teamLevel.Id, ct))?.Project);
+        Assert.Equal("Launch", group.Project);
     }
 
     /// <summary>A Team the catalog does not know is refused with a <see cref="ChatException"/> and creates nothing.</summary>
@@ -1351,8 +1402,8 @@ public sealed class ChatServiceTests
         Assert.NotNull(bo);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
 
-        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Ghosts", ct));
-        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id, bo.Id], "Ghosts", ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Ghosts", ct: ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id, bo.Id], "Ghosts", ct: ct));
         await Assert.ThrowsAsync<ChatException>(() => service.EnsureTeamOneToOneAsync("Ghosts", nova, ct));
 
         Assert.Empty(await directory.GetRoomsAsync(ct));
@@ -1370,7 +1421,7 @@ public sealed class ChatServiceTests
         Assert.NotNull(nova);
         (ChatService service, _) = CreateService(dir, directory);
 
-        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Marketing", ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Marketing", ct: ct));
     }
 
     /// <summary>A Team typed in another case resolves to the catalog's spelling, which is what is stored.</summary>
@@ -1385,7 +1436,7 @@ public sealed class ChatServiceTests
         Assert.NotNull(nova);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
 
-        Room room = await service.CreateRoomForAsync([nova.Id], "marketing", ct);
+        Room room = await service.CreateRoomForAsync([nova.Id], "marketing", ct: ct);
 
         Assert.Equal("Marketing", room.Team);
     }
@@ -1463,7 +1514,7 @@ public sealed class ChatServiceTests
         await directory.InitializeAsync("You", ct);
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(nova);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
 
         ChatException exception = await Assert.ThrowsAsync<ChatException>(
@@ -1483,7 +1534,7 @@ public sealed class ChatServiceTests
         await directory.InitializeAsync("You", ct);
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(nova);
-        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
         Room rootLookalike = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], ct);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
@@ -1505,7 +1556,7 @@ public sealed class ChatServiceTests
         await directory.InitializeAsync("You", ct);
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(nova);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct: ct);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
 
         Room oneToOne = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
@@ -1529,7 +1580,7 @@ public sealed class ChatServiceTests
         User? kai = await directory.UpsertAgentUserAsync("Kai", null, ct);
         Assert.NotNull(nova);
         Assert.NotNull(kai);
-        Room teamRoom = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct: ct);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Nova"));
 
         Room invited = await service.InviteAsync(teamRoom.Id, "Kai", ct);
@@ -1550,7 +1601,7 @@ public sealed class ChatServiceTests
         User? kai = await directory.UpsertAgentUserAsync("Kai", null, ct);
         Assert.NotNull(nova);
         Assert.NotNull(kai);
-        await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct);
+        await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct: ct);
         Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Nova", ct: ct);
         (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Nova"));
 

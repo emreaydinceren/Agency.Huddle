@@ -519,7 +519,7 @@ public sealed partial class ChatService
     /// existing Room, so this is the one entry point for starting any conversation.
     /// </summary>
     public Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, CancellationToken ct = default) =>
-        this.CreateRoomForAsync(agentIds, null, ct);
+        this.CreateRoomForAsync(agentIds, null, null, ct);
 
     /// <summary>
     /// Creates a Room holding the Human and the named Agents, scoped to <paramref name="team"/> when one
@@ -527,33 +527,40 @@ public sealed partial class ChatService
     /// </summary>
     /// <param name="agentIds">The Agents to invite.</param>
     /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="project">
+    /// The Project of <paramref name="team"/> the Room belongs to, or <see langword="null"/> for none. Matched ignoring
+    /// case against the Team's Projects in the catalog and stored in the catalog's spelling.
+    /// </param>
     /// <param name="ct">Cancels the lookups and the write.</param>
     /// <returns>The Room.</returns>
-    /// <exception cref="ChatException">The Team is unknown, no Agent is named, or an id is not an Agent.</exception>
-    public Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, CancellationToken ct = default) =>
-        this.CreateRoomCoreAsync(agentIds, team, null, ct);
+    /// <exception cref="ChatException">The Team is unknown, the Project is not one of the Team's, no Agent is named, or an id is not an Agent.</exception>
+    public Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, string? project = null, CancellationToken ct = default) =>
+        this.CreateRoomCoreAsync(agentIds, team, project, null, ct);
 
-    /// <summary>As <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <summary>As <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, string?, CancellationToken)"/>, naming who asked for the Feed item.</summary>
     /// <param name="agentIds">The Agents to invite.</param>
     /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="project">The Team's Project, or <see langword="null"/> for none.</param>
     /// <param name="actor">Who asked, as the Feed names them.</param>
     /// <param name="ct">Cancels the lookups and the write.</param>
-    internal Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, FeedActor actor, CancellationToken ct = default)
+    internal Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, string? project, FeedActor actor, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        return this.CreateRoomCoreAsync(agentIds, team, actor, ct);
+        return this.CreateRoomCoreAsync(agentIds, team, project, actor, ct);
     }
 
-    /// <summary>The body of <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, CancellationToken)"/>.</summary>
+    /// <summary>The body of <see cref="CreateRoomForAsync(IReadOnlyList{string}, string?, string?, CancellationToken)"/>.</summary>
     /// <param name="agentIds">The Agents to invite.</param>
     /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="project">The Team's Project, or <see langword="null"/> for none.</param>
     /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
     /// <param name="ct">Cancels the lookups and the write.</param>
-    private async Task<Room> CreateRoomCoreAsync(IReadOnlyList<string> agentIds, string? team, FeedActor? actor, CancellationToken ct)
+    private async Task<Room> CreateRoomCoreAsync(IReadOnlyList<string> agentIds, string? team, string? project, FeedActor? actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(agentIds);
 
         string? scope = this.ResolveTeam(team);
+        string? projectScope = this.ResolveProject(scope, project);
 
         if (agentIds.Count == 0)
         {
@@ -576,13 +583,13 @@ public sealed partial class ChatService
         {
             return scope is null
                 ? await this.EnsureRoomCoreAsync(agents[0], actor, ct).ConfigureAwait(false)
-                : await this.EnsureTeamOneToOneCoreAsync(scope, agents[0], actor, ct).ConfigureAwait(false);
+                : await this.EnsureTeamOneToOneCoreAsync(scope, projectScope, agents[0], actor, ct).ConfigureAwait(false);
         }
 
         var name = RoomNaming.Derive(agents);
         var memberIds = new List<string>(agents.Count + 1) { KnownIds.Human };
         memberIds.AddRange(agents.Select(a => a.Id));
-        Room room = await this.teamDirectory.CreateRoomAsync(name, memberIds, scope, false, ct).ConfigureAwait(false);
+        Room room = await this.teamDirectory.CreateRoomAsync(name, memberIds, scope, false, projectScope, ct).ConfigureAwait(false);
         ChatService.LogCreatedRoom(this.logger, room.Id, room.Name, memberIds.Count);
         this.events.PublishRoomsChanged();
         await this.PostRoomCreatedAsync(room, [.. agents.Select(a => a.Name)], actor, ct).ConfigureAwait(false);
@@ -600,27 +607,29 @@ public sealed partial class ChatService
     /// <returns>The Team-scoped one-to-one.</returns>
     /// <exception cref="ChatException">The Team is unknown.</exception>
     public Task<Room> EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct = default) =>
-        this.EnsureTeamOneToOneCoreAsync(team, agent, null, ct);
+        this.EnsureTeamOneToOneCoreAsync(team, null, agent, null, ct);
 
     /// <summary>The body of <see cref="EnsureTeamOneToOneAsync(string, User, CancellationToken)"/>.</summary>
     /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
+    /// <param name="project">The Team's Project, or <see langword="null"/> for the Team-level one-to-one.</param>
     /// <param name="agent">The Agent.</param>
     /// <param name="actor">Who asked, or <see langword="null"/> for the Human.</param>
     /// <param name="ct">Cancels the lookup and the write.</param>
-    private async Task<Room> EnsureTeamOneToOneCoreAsync(string team, User agent, FeedActor? actor, CancellationToken ct)
+    private async Task<Room> EnsureTeamOneToOneCoreAsync(string team, string? project, User agent, FeedActor? actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(agent);
 
         string scope = this.ResolveTeam(team) ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown team '{team}'.");
+        string? projectScope = this.ResolveProject(scope, project);
 
-        Room? existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, scope, ct).ConfigureAwait(false);
+        Room? existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, scope, projectScope, ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
-        Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, ct).ConfigureAwait(false);
+        Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, projectScope, ct).ConfigureAwait(false);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
         await this.PostOneToOneCreatedAsync(room, agent, actor, ct).ConfigureAwait(false);
@@ -640,6 +649,24 @@ public sealed partial class ChatService
 
         return this.TeamCatalog?.Find(team)?.Name
             ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown team '{team}'.");
+    }
+
+    /// <summary>
+    /// Resolves a Project name to the spelling the catalog lists it under for <paramref name="resolvedTeam"/>.
+    /// <see langword="null"/> in, <see langword="null"/> out; a Project without a Team, or one the Team does not
+    /// list, is refused.
+    /// </summary>
+    private string? ResolveProject(string? resolvedTeam, string? project)
+    {
+        if (project is null)
+        {
+            return null;
+        }
+
+        string? listed = resolvedTeam is null
+            ? null
+            : this.TeamCatalog?.Find(resolvedTeam)?.Projects.FirstOrDefault(p => string.Equals(p, project, StringComparison.OrdinalIgnoreCase));
+        return listed ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown project '{project}' in team '{resolvedTeam}'.");
     }
 
     /// <summary>

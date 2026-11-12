@@ -45,7 +45,7 @@ public sealed partial class PageBreadcrumbsTests
         Assert.Equal("/teams/Core", link.GetAttribute("href"));
         Assert.Equal("Core", link.TextContent.Trim());
         Assert.Equal("Teams", Words(bar.Find(".page-breadcrumbs span.page-crumb").TextContent));
-        Assert.Equal("Teams › Core", Words(bar.Find(".page-breadcrumbs").TextContent));
+        Assert.Equal("Teams › Core › Alpha", Words(bar.Find(".page-breadcrumbs").TextContent));
     }
 
     /// <summary>A page with no ancestor (Agents) draws no breadcrumb at all: no one-crumb trail repeating its h1.</summary>

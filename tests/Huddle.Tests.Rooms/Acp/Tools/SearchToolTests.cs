@@ -222,7 +222,7 @@ public sealed class SearchToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Scene scene = await CreateSceneAsync(ct);
-        Room archived = await scene.Harness.Directory.CreateRoomAsync("Old design", [], "Design", false, ct);
+        Room archived = await scene.Harness.Directory.CreateRoomAsync("Old design", [], "Design", false, ct: ct);
         await scene.Harness.Options.CreateChatStore().AppendAsync(archived.Id, new ChatMessage("old-1", T0, "kai-id", "Kai", "secret plan from long ago"), ct);
         await scene.Harness.Directory.SetRoomArchivedAsync(archived.Id, true, ct);
         SearchTool tool = scene.Tool();
@@ -377,8 +377,8 @@ public sealed class SearchToolTests
         User nova = await harness.Directory.UpsertAgentUserAsync("Quinn", null, ct) ?? throw new InvalidOperationException("Directory refused a user.");
         FileChatStore chats = harness.Options.CreateChatStore();
         Room own = await harness.Directory.CreateRoomAsync("Own", [nova.Id], ct);
-        Room teamScoped = await harness.Directory.CreateRoomAsync("Platform notes", [], Team, false, ct);
-        Room elsewhere = await harness.Directory.CreateRoomAsync("Design notes", [], "Design", false, ct);
+        Room teamScoped = await harness.Directory.CreateRoomAsync("Platform notes", [], Team, false, ct: ct);
+        Room elsewhere = await harness.Directory.CreateRoomAsync("Design notes", [], "Design", false, ct: ct);
         await chats.AppendAsync(own.Id, new ChatMessage("own-1", T0, nova.Id, "Quinn", "the secret plan is ready"), ct);
         await chats.AppendAsync(teamScoped.Id, new ChatMessage("team-1", T0, "kai-id", "Kai", "secret plan for platform"), ct);
         await chats.AppendAsync(elsewhere.Id, new ChatMessage("else-1", T0, "kai-id", "Kai", "secret plan for design"), ct);

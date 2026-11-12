@@ -876,9 +876,11 @@ Persona file works belongs in the User Guide.
 
    - **The page title model.** The page name is the `h1`, and every page shows its `h1`: there
      is no `HideTitle`. The breadcrumb holds only the ancestors, so it never repeats the
-     title: a Room shows "Rooms", a Team "Teams", a Project "Teams › {Team}", Build a team
-     "Teams", and a Task View "Tasks", with the View's display name (never its slug) as the
-     `h1`. A page with no ancestor, such as Settings, shows no breadcrumb.
+     title: a Room shows "Rooms", a Team "Teams", Build a team "Teams", and a Task View
+     "Tasks", with the View's display name (never its slug) as the `h1`. A page with no
+     ancestor, such as Settings, shows no breadcrumb. The one exception is a Project page,
+     whose trail is "Teams › {Team} › {Project}", the Project as the current crumb, so the bar
+     names the Project the Teams sidebar has selected.
    - **The document title is the bare page name**: "Platform", "Grace", "My Tasks". There
      is no "— Huddle" suffix. `PageHeader` sets it; a page that has no `PageHeader` sets
      `<PageTitle>` itself.
