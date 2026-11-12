@@ -56,7 +56,7 @@ user folder first.
       "requires": [ "email:read" ],
       "suggestedNames": [ "Ann", "Raj", "Eve" ],
       "packs": [ "msbuild-authoring" ],
-      "avatars": [ "accountant_fair_m_01.png" ]
+      "avatars": [ "pixel-avatar_fair_m_01.png" ]
     }
   ]
 }

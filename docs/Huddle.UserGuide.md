@@ -577,8 +577,8 @@ pictures to pick from.
   keep it, or **Cancel** to keep your old avatar. On your own avatar in
   **Settings › Appearance** the picture is saved at once.
 
-The library comes with Huddle: its 324 pictures are in the repository, in
-`src/Huddle.App/AvatarLibrary`, and are used as they are, with nothing to set up.
+The library comes with Huddle: 126 pixel-art people, in the repository in
+`src/Huddle.App/AvatarLibrary`, used as they are with nothing to set up.
 To use a library of your own instead, set `Team:AvatarLibrary:Dir` to its folder
 (it needs a `master.json` and the pictures, like the bundled one). If you set it
 to a folder that does not exist there is no library at all and no button, which

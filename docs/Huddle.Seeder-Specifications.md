@@ -164,7 +164,7 @@ on a page of identical monograms.
 
 | Id | Requirement | Pinned by `SeedAvatarTests.` |
 | --- | --- | --- |
-| SEED-AV-1 | **Every Agent has a picture from the bundled Avatar Library** (`src/Huddle.App/AvatarLibrary`, read through the app's `AvatarLibraryLoader`). The scenario names the file in `SeedAgent.AvatarFile`, choosing one whose profession fits the Agent's title. | `Plan_EveryAgentNamesALibraryPicture` |
+| SEED-AV-1 | **Every Agent has a picture from the bundled Avatar Library** (`src/Huddle.App/AvatarLibrary`, read through the app's `AvatarLibraryLoader`). The scenario names the file in `SeedAgent.AvatarFile`, choosing one whose gender matches the Agent's and that no other Agent in the scenario uses. | `Plan_EveryAgentNamesALibraryPicture` |
 | SEED-AV-2 | **The picture's gender matches the name.** `SeedAgent.Gender` (`Man` or `Woman`) is the scenario's reading of the name, and the picture's `gender_presentation` in `master.json` must equal it. A mismatch fails the run, not just the test. | `Plan_EveryPictureMatchesItsAgentsGender` |
 | SEED-AV-3 | **No two Agents in a scenario share a picture.** | `Plan_NoTwoAgentsSharePicture` |
 | SEED-AV-4 | **The pick is a copy.** The seeder copies the bytes into `avatars/` under a stable name (the same file on every run) and writes the `avatars.json` entry through the app's `AvatarStore`, as the picker's Save does. Each Agent's background is a different colour of the app's `AvatarPalette`, chosen the same hue-spread way. | `SeedRoundTripTests.Avatars_EveryAgentsImageIsTheLibraryPicture`, `SeedRefreshTests.Avatars_ImageEntryResolvesToAFileOnDisk` |
@@ -293,10 +293,10 @@ that shape this section:
 
 | Agent | Title | Picture | Role and ownership |
 | --- | --- | --- | --- |
-| **Hattie** (woman) | Household Coordinator | `chief-of-staff_brown_f_01.png` | Manager (`household-manager`). Owns `Kids and School`, the Sunday preview and the "who owns what" list |
-| **Theo** (man) | Meal Planner | `cook_tan_m_01.png` | `meal-planner`. Owns `Meals`: menus, the pantry, the grocery list, allergies |
-| **Ravi** (man) | Home Keeper | `blue-collar-worker_tan_m_01.png` | `home-keeper`. Owns `Home Maintenance`: the maintenance calendar, contractors, warranties |
-| **Iris** (woman) | Family Admin | `librarian_dark_f_01.png` | `schedule-keeper`. Owns `Family Admin` and `Holidays and Events`: renewals, insurance, appointments, where documents are kept |
+| **Hattie** (woman) | Household Coordinator | `pixel-avatar_tan_f_01.png` | Manager (`household-manager`). Owns `Kids and School`, the Sunday preview and the "who owns what" list |
+| **Theo** (man) | Meal Planner | `pixel-avatar_tan_m_02.png` | `meal-planner`. Owns `Meals`: menus, the pantry, the grocery list, allergies |
+| **Ravi** (man) | Home Keeper | `pixel-avatar_tan_m_03.png` | `home-keeper`. Owns `Home Maintenance`: the maintenance calendar, contractors, warranties |
+| **Iris** (woman) | Family Admin | `pixel-avatar_dark_f_01.png` | `schedule-keeper`. Owns `Family Admin` and `Holidays and Events`: renewals, insurance, appointments, where documents are kept |
 
 Personalities follow the `software-co` pattern: a voice line, then *How you work*, then
 *Boundaries*. Each Agent turns agreed work into a Task with one owner and records lasting
@@ -420,7 +420,7 @@ means the test pins a literal list or count ([A.3](#a3-values-tests-pin-exactly)
 
 | To… | Touch | Tests it trips |
 | --- | --- | --- |
-| **Add or rename an Agent** | `SoftwareCoAgents.All`: the positional fields, then `{ Gender = …, AvatarFile = "…" }`. Pick the file from `src/Huddle.App/AvatarLibrary/master.json`: same `gender_presentation`, a fitting `profession`, unused in the scenario. Add the Agent to Rooms and Feed actors by name. The background colour is assigned for you. | `Plan_HasTheAgreedCast` (exact), `SeedAvatarTests`, `Plan_RoomTranscriptsAreConsistent` |
+| **Add or rename an Agent** | `SoftwareCoAgents.All`: the positional fields, then `{ Gender = …, AvatarFile = "…" }`. Pick the file from `src/Huddle.App/AvatarLibrary/master.json`: same `gender_presentation`, unused in the scenario. Add the Agent to Rooms and Feed actors by name. The background colour is assigned for you. | `Plan_HasTheAgreedCast` (exact), `SeedAvatarTests`, `Plan_RoomTranscriptsAreConsistent` |
 | **Add a Team or Project** | `SoftwareCoLibrary.Teams`; Agents join through their `Teams` list. The colour and `_team.md` are automatic. A new folder must also get four documents and its memory (SEED-SC-13, -14). | `Plan_HasFourWorkingTeamsAndSharedAgents` (exact), `Plan_HasTheEdgeTeams`, `Plan_EveryTeamAndProjectHasFourDocuments`, `Plan_MemoryCoversEveryTeamProjectAndAgent` |
 | **Add a document** | `SoftwareCoNotes.Documents`: `new("Teams/<Team>[/<Project>]/<Name>.md", """…""")`. No `#word` anywhere: a heading `# Title` is fine, `#tag` is not. A `[[Link]]` must match an existing file stem. Stems are global, so pick a new one. | `Plan_LibraryHasBacklinksAndOneUnresolvedLink`, `Plan_Library_HasNestedSharedTagsAcrossTeams` |
 | **Add memory** | `SoftwareCoNotes.Memory`: one line ending `\n`, at `Teams/<T>/memory/`, `Teams/<T>/<P>/memory/` or `Agents/<N>/work/memory/`. | `Plan_MemoryCoversEveryTeamProjectAndAgent`, `Plan_HasThreeKindsOfMemory` |

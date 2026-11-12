@@ -169,14 +169,14 @@
         "Sam"
       ],
       "avatars": [
-        "software-development-manager_fair_m_01.png",
-        "software-development-manager_fair_f_01.png",
-        "software-development-manager_tan_f_01.png",
-        "software-development-manager_tan_m_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_light_f_01.png",
-        "software-development-manager_tan_f_02.png",
-        "software-development-manager_brown_f_01.png"
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_fair_f_01.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_fair_f_02.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_tan_f_03.png"
       ]
     },
     {
@@ -220,14 +220,14 @@
         "Ravi"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "software-development-manager_fair_f_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_light_f_01.png",
-        "software-development-manager_brown_f_01.png"
+        "pixel-avatar_tan_m_02.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_fair_f_03.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_dark_m_01.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_fair_f_04.png",
+        "pixel-avatar_tan_f_05.png"
       ]
     },
     {
@@ -273,14 +273,14 @@
         "msbuild-authoring"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "developer_fair_m_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_m_03.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_02.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_dark_f_01.png"
       ]
     },
     {
@@ -320,14 +320,14 @@
         "code-review-and-quality"
       ],
       "avatars": [
-        "software-developer_fair_m_01.png",
-        "software-developer_tan_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_fair_f_01.png",
-        "software-developer_tan_f_01.png",
-        "detective_brown_f_01.png",
-        "detective_dark_f_01.png",
-        "software-developer_light_m_01.png"
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_m_04.png",
+        "pixel-avatar_dark_m_03.png",
+        "pixel-avatar_fair_f_05.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_dark_f_02.png",
+        "pixel-avatar_fair_m_09.png"
       ]
     },
     {
@@ -359,14 +359,14 @@
         "Marco"
       ],
       "avatars": [
-        "software-developer_tan_f_01.png",
-        "software-developer_tan_m_01.png",
-        "police_fair_m_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_brown_f_01.png",
-        "police_brown_f_01.png"
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_tan_m_05.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_dark_m_04.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_tan_f_12.png"
       ]
     },
     {
@@ -404,14 +404,14 @@
         "Otto"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "detective_fair_m_01.png",
-        "detective_fair_f_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_m_06.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_fair_f_06.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_dark_m_05.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_dark_f_03.png"
       ]
     },
     {
@@ -443,14 +443,14 @@
         "msbuild-authoring"
       ],
       "avatars": [
-        "software-development-manager_tan_m_01.png",
-        "software-development-manager_fair_m_01.png",
-        "software-development-manager_tan_f_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_light_f_01.png",
-        "software-development-manager_fair_f_01.png",
-        "software-development-manager_brown_f_01.png",
-        "software-developer_dark_m_01.png"
+        "pixel-avatar_tan_m_07.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_fair_f_07.png",
+        "pixel-avatar_fair_f_08.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_dark_m_06.png"
       ]
     },
     {
@@ -510,14 +510,14 @@
         "Cal"
       ],
       "avatars": [
-        "software-development-manager_fair_f_01.png",
-        "software-development-manager_tan_f_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "chief-of-staff_fair_f_02.png",
-        "software-development-manager_light_m_01.png",
-        "student_dark_m_01.png"
+        "pixel-avatar_fair_f_09.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_fair_f_10.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_dark_m_07.png"
       ]
     },
     {
@@ -557,14 +557,14 @@
         "Maya"
       ],
       "avatars": [
-        "butler_fair_f_02.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "butler_tan_m_01.png",
-        "butler_light_m_01.png",
-        "butler_dark_m_01.png",
-        "butler_tan_f_01.png"
+        "pixel-avatar_fair_f_11.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_m_08.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_dark_m_08.png",
+        "pixel-avatar_tan_f_21.png"
       ]
     },
     {
@@ -597,14 +597,14 @@
         "Theo"
       ],
       "avatars": [
-        "teacher_fair_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_01.png",
-        "teacher_tan_f_02.png",
-        "teacher_dark_f_01.png",
-        "teacher_light_m_01.png",
-        "nanny_light_m_01.png"
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_dark_m_09.png",
+        "pixel-avatar_fair_f_12.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_dark_f_04.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_fair_m_03.png"
       ]
     },
     {
@@ -636,14 +636,14 @@
         "Rafa"
       ],
       "avatars": [
-        "cook_fair_f_01.png",
-        "cook_tan_m_01.png",
-        "cook_dark_f_01.png",
-        "cook_light_m_01.png",
-        "cook_brown_f_01.png",
-        "cook_fair_m_01.png",
-        "cook_tan_f_01.png",
-        "cook_dark_m_01.png"
+        "pixel-avatar_fair_f_13.png",
+        "pixel-avatar_tan_m_09.png",
+        "pixel-avatar_dark_f_05.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_dark_m_10.png"
       ]
     },
     {
@@ -674,14 +674,14 @@
         "Wren"
       ],
       "avatars": [
-        "blue-collar-worker_fair_m_01.png",
-        "blue-collar-worker_tan_f_01.png",
-        "blue-collar-worker_dark_m_02.png",
-        "blue-collar-worker_brown_f_01.png",
-        "blue-collar-worker_tan_m_01.png",
-        "blue-collar-worker_fair_f_01.png",
-        "blue-collar-worker_dark_f_01.png",
-        "blue-collar-worker_dark_m_01.png"
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_dark_m_11.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_tan_m_10.png",
+        "pixel-avatar_fair_f_14.png",
+        "pixel-avatar_dark_f_06.png",
+        "pixel-avatar_dark_m_12.png"
       ]
     },
     {
@@ -713,14 +713,14 @@
         "Lina"
       ],
       "avatars": [
-        "banker_fair_m_01.png",
-        "banker_fair_f_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "banker_tan_m_01.png",
-        "banker_light_m_01.png",
-        "banker_dark_m_01.png",
-        "banker_dark_f_01.png",
-        "chief-of-staff_brown_f_01.png"
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_fair_f_15.png",
+        "pixel-avatar_tan_m_11.png",
+        "pixel-avatar_tan_m_12.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_dark_m_13.png",
+        "pixel-avatar_dark_f_07.png",
+        "pixel-avatar_tan_f_07.png"
       ]
     },
     {
@@ -754,14 +754,14 @@
         "Ola"
       ],
       "avatars": [
-        "accountant_fair_m_01.png",
-        "accountant_fair_m_02.png",
-        "accountant_tan_m_02.png",
-        "accountant_light_m_02.png",
-        "accountant_tan_f_03.png",
-        "accountant_brown_f_04.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png"
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_tan_m_13.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_tan_f_10.png"
       ]
     },
     {
@@ -797,14 +797,14 @@
         "Clara"
       ],
       "avatars": [
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_tan_f_01.png",
-        "customer-support_brown_f_01.png",
-        "software-development-manager_light_m_01.png"
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_m_14.png",
+        "pixel-avatar_dark_m_14.png",
+        "pixel-avatar_dark_m_15.png",
+        "pixel-avatar_fair_f_16.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_fair_m_14.png"
       ]
     },
     {
@@ -838,14 +838,14 @@
         "Rafael"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "marketing-manager_fair_f_01.png",
-        "podcaster_tan_m_01.png",
-        "podcaster_dark_m_01.png",
-        "podcaster_dark_m_02.png",
-        "podcaster_tan_f_01.png",
-        "podcaster_brown_f_01.png",
-        "chief-of-staff_light_m_01.png"
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_fair_f_17.png",
+        "pixel-avatar_tan_m_15.png",
+        "pixel-avatar_dark_m_16.png",
+        "pixel-avatar_dark_m_17.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_fair_m_16.png"
       ]
     },
     {
@@ -877,14 +877,14 @@
         "Asha"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_dark_f_01.png",
-        "professor_fair_m_01.png",
-        "professor_light_m_01.png",
-        "professor_tan_f_02.png",
-        "librarian_tan_m_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_dark_m_18.png",
+        "pixel-avatar_dark_f_08.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_tan_m_16.png",
+        "pixel-avatar_tan_f_16.png"
       ]
     },
     {
@@ -917,14 +917,14 @@
         "Aisha"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "podcaster_fair_f_01.png",
-        "librarian_tan_f_01.png",
-        "podcaster_tan_m_01.png",
-        "podcaster_dark_m_01.png",
-        "podcaster_dark_m_02.png",
-        "podcaster_brown_f_01.png",
-        "librarian_light_m_01.png"
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_fair_f_18.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_tan_m_17.png",
+        "pixel-avatar_dark_m_19.png",
+        "pixel-avatar_dark_m_20.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_fair_m_21.png"
       ]
     },
     {
@@ -956,14 +956,14 @@
         "Esme"
       ],
       "avatars": [
-        "librarian_fair_m_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_fair_f_01.png",
-        "librarian_tan_f_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_tan_m_18.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_dark_m_21.png",
+        "pixel-avatar_fair_f_19.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_dark_f_09.png"
       ]
     },
     {
@@ -995,14 +995,14 @@
         "Greta"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_tan_f_01.png",
-        "teacher_fair_m_01.png",
-        "teacher_dark_f_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_dark_m_01.png",
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_dark_f_10.png",
+        "pixel-avatar_tan_m_19.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_01.png"
       ]
     },
     {
@@ -1034,14 +1034,14 @@
         "Claire"
       ],
       "avatars": [
-        "professor_fair_m_01.png",
-        "professor_light_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_dark_f_01.png",
-        "scientist_tan_f_01.png",
-        "genius-professor_brown_m_01.png",
-        "genius-professor_fair_f_01.png",
-        "genius-professor_tan_f_02.png"
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_dark_m_02.png",
+        "pixel-avatar_dark_f_11.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_tan_m_20.png",
+        "pixel-avatar_fair_f_20.png",
+        "pixel-avatar_tan_f_03.png"
       ]
     },
     {
@@ -1073,14 +1073,14 @@
         "Lucas"
       ],
       "avatars": [
-        "librarian_fair_m_01.png",
-        "librarian_tan_f_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_fair_f_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_tan_m_21.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_dark_m_03.png",
+        "pixel-avatar_fair_f_21.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_dark_f_12.png"
       ]
     },
     {
@@ -1114,14 +1114,14 @@
         "Yusuf"
       ],
       "avatars": [
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_tan_f_01.png",
-        "data-analyst_brown_f_02.png",
-        "accountant_light_m_01.png"
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_fair_f_01.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_fair_m_12.png"
       ]
     },
     {
@@ -1155,14 +1155,14 @@
         "Ilse"
       ],
       "avatars": [
-        "detective_fair_m_01.png",
-        "detective_fair_f_01.png",
-        "professor_tan_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_tan_f_01.png",
-        "professor_dark_f_01.png",
-        "detective_brown_f_01.png",
-        "professor_light_m_01.png"
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_fair_f_02.png",
+        "pixel-avatar_tan_m_02.png",
+        "pixel-avatar_dark_m_04.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_dark_f_13.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_fair_m_14.png"
       ]
     },
     {
@@ -1193,14 +1193,14 @@
         "Owen"
       ],
       "avatars": [
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_tan_f_01.png",
-        "data-analyst_brown_f_02.png",
-        "accountant_light_m_01.png"
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_m_03.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_fair_f_03.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_fair_m_17.png"
       ]
     },
     {
@@ -1231,14 +1231,14 @@
         "Stefan"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_fair_f_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_m_04.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_dark_m_05.png",
+        "pixel-avatar_fair_f_04.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_dark_f_14.png"
       ]
     },
     {
@@ -1270,14 +1270,14 @@
         "Sana"
       ],
       "avatars": [
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_tan_f_01.png",
-        "data-analyst_brown_f_02.png",
-        "detective_dark_m_01.png"
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_fair_f_05.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_m_05.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_dark_m_06.png"
       ]
     },
     {
@@ -1308,14 +1308,14 @@
         "Ama"
       ],
       "avatars": [
-        "software-development-manager_fair_m_01.png",
-        "software-development-manager_fair_f_01.png",
-        "software-development-manager_tan_f_01.png",
-        "designer_tan_m_01.png",
-        "designer_brown_f_01.png",
-        "chief-of-staff_light_m_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_brown_f_01.png"
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_fair_f_06.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_tan_m_06.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_tan_f_21.png"
       ]
     },
     {
@@ -1348,14 +1348,14 @@
         "Imani"
       ],
       "avatars": [
-        "designer_fair_m_01.png",
-        "designer_fair_f_01.png",
-        "designer_brown_f_01.png",
-        "designer_tan_m_01.png",
-        "designer_light_m_01.png",
-        "designer_tan_f_01.png",
-        "artist_brown_m_01.png",
-        "accountant_light_m_01.png"
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_fair_f_07.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_tan_m_07.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_tan_m_08.png",
+        "pixel-avatar_fair_m_06.png"
       ]
     },
     {
@@ -1386,14 +1386,14 @@
         "Marta"
       ],
       "avatars": [
-        "designer_fair_m_01.png",
-        "designer_tan_m_01.png",
-        "designer_fair_f_01.png",
-        "designer_brown_f_01.png",
-        "data-analyst_brown_f_01.png",
-        "designer_light_m_01.png",
-        "designer_tan_f_01.png",
-        "data-analyst_light_m_01.png"
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_tan_m_09.png",
+        "pixel-avatar_fair_f_08.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_fair_m_09.png"
       ]
     },
     {
@@ -1424,14 +1424,14 @@
         "Selin"
       ],
       "avatars": [
-        "software-development-manager_tan_m_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_light_f_01.png",
-        "software-development-manager_tan_f_01.png",
-        "software-development-manager_brown_f_01.png",
-        "police_fair_m_01.png",
-        "police_dark_m_01.png",
-        "software-development-manager_fair_m_01.png"
+        "pixel-avatar_tan_m_10.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_fair_f_09.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_dark_m_07.png",
+        "pixel-avatar_fair_m_12.png"
       ]
     },
     {
@@ -1462,14 +1462,14 @@
         "Malik"
       ],
       "avatars": [
-        "software-developer_tan_f_01.png",
-        "software-developer_tan_m_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_fair_f_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_tan_m_11.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_dark_m_08.png",
+        "pixel-avatar_fair_f_10.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_dark_f_15.png"
       ]
     },
     {
@@ -1502,14 +1502,14 @@
         "Tess"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_tan_f_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_m_12.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_tan_f_12.png"
       ]
     },
     {
@@ -1542,14 +1542,14 @@
         "Amina"
       ],
       "avatars": [
-        "marketing-manager_fair_f_01.png",
-        "tv-reporter_fair_m_01.png",
-        "tv-reporter_dark_m_01.png",
-        "tv-reporter_brown_f_01.png",
-        "tv-reporter_tan_m_01.png",
-        "tv-reporter_light_m_01.png",
-        "tv-reporter_tan_f_01.png",
-        "tv-reporter_dark_f_01.png"
+        "pixel-avatar_fair_f_11.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_dark_m_09.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_tan_m_13.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_dark_f_16.png"
       ]
     },
     {
@@ -1582,14 +1582,14 @@
         "Asha"
       ],
       "avatars": [
-        "accountant_brown_f_01.png",
-        "accountant_fair_f_01.png",
-        "accountant_tan_f_02.png",
-        "accountant_light_m_02.png",
-        "accountant_brown_f_03.png",
-        "accountant_fair_f_02.png",
-        "banker_dark_m_01.png",
-        "accountant_tan_m_01.png"
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_f_12.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_f_13.png",
+        "pixel-avatar_dark_m_10.png",
+        "pixel-avatar_tan_m_14.png"
       ]
     },
     {
@@ -1623,14 +1623,14 @@
         "Leah"
       ],
       "avatars": [
-        "accountant_fair_f_01.png",
-        "detective_fair_m_01.png",
-        "detective_tan_m_01.png",
-        "detective_brown_f_01.png",
-        "accountant_tan_m_01.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_light_m_02.png"
+        "pixel-avatar_fair_f_14.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_tan_m_15.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_tan_m_16.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_fair_m_03.png"
       ]
     },
     {
@@ -1663,14 +1663,14 @@
         "Nia"
       ],
       "avatars": [
-        "accountant_fair_f_01.png",
-        "detective_fair_m_01.png",
-        "detective_tan_m_01.png",
-        "detective_brown_f_01.png",
-        "accountant_tan_m_01.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_light_m_02.png"
+        "pixel-avatar_fair_f_15.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_tan_m_17.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_m_18.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_fair_m_06.png"
       ]
     },
     {
@@ -1705,14 +1705,14 @@
         "Elena"
       ],
       "avatars": [
-        "professor_fair_m_01.png",
-        "professor_light_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_dark_f_01.png",
-        "librarian_fair_m_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_tan_f_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_dark_m_11.png",
+        "pixel-avatar_dark_f_17.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_tan_m_19.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_tan_f_02.png"
       ]
     },
     {
@@ -1745,14 +1745,14 @@
         "Sofia"
       ],
       "avatars": [
-        "chief-of-staff_fair_m_01.png",
-        "butler_fair_f_02.png",
-        "butler_tan_m_01.png",
-        "butler_light_m_01.png",
-        "butler_dark_m_01.png",
-        "butler_tan_f_01.png",
-        "butler_brown_f_01.png",
-        "butler_light_m_02.png"
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_fair_f_16.png",
+        "pixel-avatar_tan_m_20.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_dark_m_12.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_fair_m_12.png"
       ]
     },
     {
@@ -1785,14 +1785,14 @@
         "Rohan"
       ],
       "avatars": [
-        "explorer_fair_m_01.png",
-        "explorer_tan_m_01.png",
-        "explorer_dark_m_01.png",
-        "explorer_tan_f_01.png",
-        "explorer_brown_f_01.png",
-        "explorer_dark_f_01.png",
-        "explorer_dark_m_02.png",
-        "explorer_fair_f_01.png"
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_m_21.png",
+        "pixel-avatar_dark_m_13.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_dark_f_18.png",
+        "pixel-avatar_dark_m_14.png",
+        "pixel-avatar_fair_f_17.png"
       ]
     },
     {
@@ -1827,14 +1827,14 @@
         "Hana"
       ],
       "avatars": [
-        "accountant_fair_m_01.png",
-        "accountant_light_m_02.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_brown_f_02.png",
-        "accountant_fair_m_02.png",
-        "accountant_tan_m_02.png",
-        "accountant_tan_f_03.png"
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_tan_f_09.png"
       ]
     },
     {
@@ -1869,14 +1869,14 @@
         "Mira"
       ],
       "avatars": [
-        "nutrition-yoga-coach_light_m_01.png",
-        "nutrition-yoga-coach_tan_m_01.png",
-        "nutrition-yoga-coach_fair_f_01.png",
-        "nutrition-yoga-coach_brown_f_01.png",
-        "nanny_light_m_01.png",
-        "nanny_dark_m_01.png",
-        "nanny_brown_f_01.png",
-        "customer-support_fair_m_01.png"
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_m_02.png",
+        "pixel-avatar_fair_f_18.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_dark_m_15.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_fair_m_20.png"
       ]
     },
     {
@@ -1915,14 +1915,14 @@
         "Milo"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_dark_f_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_brown_f_01.png"
+        "pixel-avatar_fair_f_19.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_m_03.png",
+        "pixel-avatar_dark_m_16.png",
+        "pixel-avatar_dark_f_19.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_tan_f_13.png"
       ]
     },
     {
@@ -1952,14 +1952,14 @@
         "Aiko"
       ],
       "avatars": [
-        "teacher_fair_m_01.png",
-        "teacher_light_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_01.png",
-        "teacher_dark_f_01.png",
-        "professor_tan_m_01.png",
-        "professor_light_m_01.png"
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_dark_m_17.png",
+        "pixel-avatar_fair_f_20.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_dark_f_20.png",
+        "pixel-avatar_tan_m_04.png",
+        "pixel-avatar_fair_m_04.png"
       ]
     },
     {
@@ -1991,14 +1991,14 @@
         "Lucy"
       ],
       "avatars": [
-        "teacher_tan_m_01.png",
-        "teacher_light_m_01.png",
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_02.png",
-        "teacher_fair_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_dark_f_01.png",
-        "professor_light_m_01.png"
+        "pixel-avatar_tan_m_05.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_fair_f_21.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_18.png",
+        "pixel-avatar_dark_f_21.png",
+        "pixel-avatar_fair_m_07.png"
       ]
     },
     {
@@ -2028,14 +2028,14 @@
         "Oscar"
       ],
       "avatars": [
-        "teacher_fair_f_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_tan_f_01.png",
-        "professor_tan_m_01.png",
-        "professor_dark_m_01.png",
-        "copywriter_fair_m_01.png",
-        "teacher_light_m_01.png",
-        "chief-of-staff_brown_f_01.png"
+        "pixel-avatar_fair_f_01.png",
+        "pixel-avatar_dark_m_19.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_tan_m_06.png",
+        "pixel-avatar_dark_m_20.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_tan_f_17.png"
       ]
     },
     {
@@ -2065,14 +2065,14 @@
         "Noor"
       ],
       "avatars": [
-        "teacher_dark_m_01.png",
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_01.png",
-        "teacher_fair_m_01.png",
-        "teacher_tan_m_01.png",
-        "teacher_light_m_01.png",
-        "teacher_dark_f_01.png",
-        "professor_light_m_01.png"
+        "pixel-avatar_dark_m_21.png",
+        "pixel-avatar_fair_f_02.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_tan_m_07.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_dark_f_01.png",
+        "pixel-avatar_fair_m_12.png"
       ]
     },
     {
@@ -2104,14 +2104,14 @@
         "Selin"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "software-developer_brown_f_01.png",
-        "banker_dark_m_01.png"
+        "pixel-avatar_fair_f_03.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_m_08.png",
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_dark_m_01.png"
       ]
     },
     {
@@ -2148,14 +2148,14 @@
         "Kirsten"
       ],
       "avatars": [
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_fair_f_01.png",
-        "butler_light_m_02.png",
-        "chief-of-staff_light_m_01.png",
-        "butler_tan_m_01.png",
-        "butler_dark_m_01.png",
-        "butler_tan_f_01.png",
-        "butler_brown_f_01.png"
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_fair_f_04.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_m_09.png",
+        "pixel-avatar_dark_m_02.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_tan_f_02.png"
       ]
     },
     {
@@ -2191,14 +2191,14 @@
         "Elif"
       ],
       "avatars": [
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_fair_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "butler_dark_m_02.png",
-        "butler_brown_f_02.png"
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_fair_f_05.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_tan_m_10.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_dark_m_03.png",
+        "pixel-avatar_tan_f_05.png"
       ]
     },
     {
@@ -2233,14 +2233,14 @@
         "Tess"
       ],
       "avatars": [
-        "accountant_light_m_01.png",
-        "accountant_brown_f_02.png",
-        "accountant_light_m_02.png",
-        "accountant_fair_f_02.png",
-        "data-analyst_fair_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_tan_m_02.png",
-        "accountant_tan_f_03.png"
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_fair_f_06.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_tan_m_11.png",
+        "pixel-avatar_tan_f_08.png"
       ]
     },
     {
@@ -2269,14 +2269,14 @@
         "Marta"
       ],
       "avatars": [
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_02.png",
-        "nutrition-yoga-coach_tan_m_01.png",
-        "nutrition-yoga-coach_fair_f_01.png",
-        "teacher_light_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_dark_f_01.png",
-        "nutrition-yoga-coach_light_m_01.png"
+        "pixel-avatar_fair_f_07.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_tan_m_12.png",
+        "pixel-avatar_fair_f_08.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_dark_m_04.png",
+        "pixel-avatar_dark_f_02.png",
+        "pixel-avatar_fair_m_03.png"
       ]
     },
     {
@@ -2305,14 +2305,14 @@
         "Benji"
       ],
       "avatars": [
-        "explorer_dark_m_01.png",
-        "explorer_dark_m_02.png",
-        "detective_fair_m_01.png",
-        "detective_fair_f_01.png",
-        "student_tan_m_01.png",
-        "student_light_m_01.png",
-        "student_tan_f_01.png",
-        "student_brown_f_01.png"
+        "pixel-avatar_dark_m_05.png",
+        "pixel-avatar_dark_m_06.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_fair_f_09.png",
+        "pixel-avatar_tan_m_13.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_tan_f_11.png"
       ]
     },
     {
@@ -2342,14 +2342,14 @@
         "Freya"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_tan_f_01.png",
-        "teacher_fair_m_01.png",
-        "teacher_tan_m_01.png",
-        "teacher_light_m_01.png",
-        "teacher_dark_f_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_07.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_tan_m_14.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_dark_f_03.png",
+        "pixel-avatar_tan_f_13.png"
       ]
     },
     {
@@ -2379,14 +2379,14 @@
         "Petra"
       ],
       "avatars": [
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_02.png",
-        "tv-reporter_fair_m_01.png",
-        "tv-reporter_tan_m_01.png",
-        "tv-reporter_light_m_01.png",
-        "tv-reporter_dark_m_01.png",
-        "tv-reporter_brown_f_01.png",
-        "tv-reporter_dark_f_01.png"
+        "pixel-avatar_fair_f_10.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_tan_m_15.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_dark_m_08.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_dark_f_04.png"
       ]
     },
     {
@@ -2416,14 +2416,14 @@
         "Ines"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_brown_f_01.png"
+        "pixel-avatar_fair_f_11.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_tan_m_16.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_f_18.png"
       ]
     },
     {
@@ -2454,14 +2454,14 @@
         "Keiko"
       ],
       "avatars": [
-        "banker_fair_m_01.png",
-        "banker_dark_m_01.png",
-        "banker_fair_f_01.png",
-        "banker_brown_f_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_01.png",
-        "customer-support_tan_f_01.png",
-        "customer-support_brown_f_01.png"
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_dark_m_09.png",
+        "pixel-avatar_fair_f_12.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_tan_m_17.png",
+        "pixel-avatar_dark_m_10.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_f_21.png"
       ]
     },
     {
@@ -2493,14 +2493,14 @@
         "Rafael"
       ],
       "avatars": [
-        "librarian_tan_f_01.png",
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_m_18.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_fair_f_13.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_dark_m_11.png",
+        "pixel-avatar_tan_f_03.png"
       ]
     },
     {
@@ -2532,14 +2532,14 @@
         "Sienna"
       ],
       "avatars": [
-        "marketing-manager_fair_f_01.png",
-        "copywriter_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_tan_f_01.png",
-        "customer-support_dark_f_01.png",
-        "customer-support_brown_f_01.png",
-        "dj_brown_f_01.png"
+        "pixel-avatar_fair_f_14.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_m_19.png",
+        "pixel-avatar_dark_m_12.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_dark_f_05.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_tan_f_06.png"
       ]
     },
     {
@@ -2570,14 +2570,14 @@
         "Linus"
       ],
       "avatars": [
-        "customer-support_dark_m_01.png",
-        "customer-support_brown_f_01.png",
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "data-analyst_tan_f_02.png"
+        "pixel-avatar_dark_m_13.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_m_20.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_fair_f_15.png",
+        "pixel-avatar_tan_f_09.png"
       ]
     },
     {
@@ -2609,14 +2609,14 @@
         "Bea"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "banker_tan_f_01.png",
-        "banker_light_m_01.png",
-        "banker_dark_m_01.png"
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_dark_m_14.png"
       ]
     },
     {
@@ -2647,14 +2647,14 @@
         "Celia"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "librarian_tan_f_01.png",
-        "software-development-manager_tan_m_01.png",
-        "librarian_fair_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_tan_m_21.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_dark_m_15.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_dark_f_06.png"
       ]
     },
     {
@@ -2687,14 +2687,14 @@
         "Kenji"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "librarian_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_dark_m_16.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_dark_f_07.png"
       ]
     },
     {
@@ -2726,14 +2726,14 @@
         "Sana"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "detective_fair_m_01.png",
-        "detective_fair_f_01.png",
-        "student_light_m_01.png",
-        "student_dark_m_01.png",
-        "student_brown_f_01.png",
-        "student_dark_f_01.png"
+        "pixel-avatar_tan_m_02.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_fair_f_16.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_dark_m_17.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_dark_f_08.png"
       ]
     },
     {
@@ -2764,14 +2764,14 @@
         "Tariq"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "developer_fair_m_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_m_03.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_dark_m_18.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_dark_f_09.png"
       ]
     },
     {
@@ -2802,14 +2802,14 @@
         "Ayla"
       ],
       "avatars": [
-        "software-developer_tan_f_01.png",
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_dark_f_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png"
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_tan_m_04.png",
+        "pixel-avatar_dark_m_19.png",
+        "pixel-avatar_fair_f_17.png",
+        "pixel-avatar_dark_f_10.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_f_01.png"
       ]
     },
     {
@@ -2841,14 +2841,14 @@
         "Kwame"
       ],
       "avatars": [
-        "marketing-manager_fair_f_01.png",
-        "customer-support_fair_m_01.png",
-        "podcaster_tan_m_01.png",
-        "podcaster_dark_m_01.png",
-        "podcaster_dark_m_02.png",
-        "podcaster_tan_f_01.png",
-        "podcaster_brown_f_01.png",
-        "customer-support_brown_f_01.png"
+        "pixel-avatar_fair_f_18.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_m_05.png",
+        "pixel-avatar_dark_m_20.png",
+        "pixel-avatar_dark_m_21.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_tan_f_04.png"
       ]
     },
     {
@@ -2880,14 +2880,14 @@
         "Priya"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "software-development-manager_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "software-development-manager_tan_m_01.png",
-        "software-development-manager_light_m_01.png",
-        "software-development-manager_tan_f_01.png",
-        "software-development-manager_brown_f_01.png",
-        "chief-of-staff_brown_f_01.png"
+        "pixel-avatar_fair_f_19.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_m_06.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_tan_f_07.png"
       ]
     },
     {
@@ -2919,14 +2919,14 @@
         "Ruth"
       ],
       "avatars": [
-        "librarian_fair_m_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_fair_f_01.png",
-        "librarian_tan_f_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_m_07.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_dark_m_01.png",
+        "pixel-avatar_fair_f_20.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_dark_f_11.png"
       ]
     },
     {
@@ -2957,14 +2957,14 @@
         "Amara"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_tan_f_02.png",
-        "professor_dark_f_01.png",
-        "professor_fair_m_01.png",
-        "professor_tan_m_01.png",
-        "professor_light_m_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_dark_m_02.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_dark_f_12.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_tan_m_08.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_tan_f_11.png"
       ]
     },
     {
@@ -2996,14 +2996,14 @@
         "Sven"
       ],
       "avatars": [
-        "accountant_light_m_02.png",
-        "accountant_fair_m_01.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_tan_f_02.png",
-        "accountant_brown_f_02.png",
-        "accountant_tan_m_02.png",
-        "accountant_fair_f_02.png"
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_tan_m_09.png",
+        "pixel-avatar_fair_f_21.png"
       ]
     },
     {
@@ -3033,14 +3033,14 @@
         "June"
       ],
       "avatars": [
-        "accountant_tan_f_02.png",
-        "accountant_fair_f_02.png",
-        "detective_fair_m_01.png",
-        "accountant_tan_m_01.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png",
-        "accountant_brown_f_02.png",
-        "accountant_light_m_02.png"
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_f_01.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_tan_m_10.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_m_09.png"
       ]
     },
     {
@@ -3072,14 +3072,14 @@
         "Sam"
       ],
       "avatars": [
-        "accountant_fair_m_01.png",
-        "accountant_fair_m_02.png",
-        "accountant_tan_m_02.png",
-        "accountant_light_m_02.png",
-        "accountant_tan_f_03.png",
-        "accountant_brown_f_04.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png"
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_tan_m_11.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_f_20.png"
       ]
     },
     {
@@ -3111,14 +3111,14 @@
         "Dev"
       ],
       "avatars": [
-        "accountant_fair_m_01.png",
-        "accountant_fair_m_02.png",
-        "accountant_tan_m_02.png",
-        "accountant_light_m_02.png",
-        "accountant_tan_f_03.png",
-        "accountant_brown_f_04.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png"
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_m_12.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_f_02.png"
       ]
     },
     {
@@ -3148,14 +3148,14 @@
         "Tobias"
       ],
       "avatars": [
-        "accountant_fair_m_01.png",
-        "accountant_tan_m_02.png",
-        "accountant_light_m_02.png",
-        "accountant_fair_f_02.png",
-        "accountant_tan_f_03.png",
-        "accountant_brown_f_04.png",
-        "accountant_light_m_01.png",
-        "accountant_brown_f_01.png"
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_m_13.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_fair_f_02.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_f_05.png"
       ]
     },
     {
@@ -3187,14 +3187,14 @@
         "Hanna"
       ],
       "avatars": [
-        "customer-support_dark_m_01.png",
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_tan_f_01.png",
-        "customer-support_brown_f_01.png",
-        "software-development-manager_light_m_01.png"
+        "pixel-avatar_dark_m_03.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_m_14.png",
+        "pixel-avatar_dark_m_04.png",
+        "pixel-avatar_fair_f_03.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_fair_m_01.png"
       ]
     },
     {
@@ -3226,14 +3226,14 @@
         "Mina"
       ],
       "avatars": [
-        "customer-support_tan_f_01.png",
-        "librarian_light_m_01.png",
-        "librarian_tan_f_01.png",
-        "customer-support_fair_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_dark_f_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_dark_m_05.png",
+        "pixel-avatar_fair_f_04.png",
+        "pixel-avatar_dark_f_13.png",
+        "pixel-avatar_tan_f_10.png"
       ]
     },
     {
@@ -3264,14 +3264,14 @@
         "Joel"
       ],
       "avatars": [
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "customer-support_dark_m_01.png",
-        "data-analyst_fair_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_brown_f_02.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png"
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_fair_f_05.png",
+        "pixel-avatar_dark_m_06.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_tan_m_15.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_tan_m_16.png",
+        "pixel-avatar_dark_m_07.png"
       ]
     },
     {
@@ -3301,14 +3301,14 @@
         "Eli"
       ],
       "avatars": [
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_dark_f_01.png",
-        "librarian_light_m_01.png",
-        "customer-support_dark_m_01.png",
-        "customer-support_tan_f_01.png",
-        "customer-support_brown_f_01.png"
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_m_17.png",
+        "pixel-avatar_fair_f_06.png",
+        "pixel-avatar_dark_f_14.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_08.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_tan_f_14.png"
       ]
     },
     {
@@ -3341,14 +3341,14 @@
         "Yuki"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "police_dark_m_02.png",
-        "police_dark_f_01.png"
+        "pixel-avatar_fair_f_07.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_tan_m_18.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_dark_m_09.png",
+        "pixel-avatar_dark_f_15.png"
       ]
     },
     {
@@ -3378,14 +3378,14 @@
         "Cole"
       ],
       "avatars": [
-        "data-analyst_fair_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "banker_dark_m_01.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_tan_f_01.png",
-        "data-analyst_brown_f_02.png"
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_fair_f_08.png",
+        "pixel-avatar_dark_m_10.png",
+        "pixel-avatar_tan_m_19.png",
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_tan_f_18.png",
+        "pixel-avatar_tan_f_19.png"
       ]
     },
     {
@@ -3416,14 +3416,14 @@
         "Stella"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "podcaster_fair_f_01.png",
-        "tv-reporter_tan_m_01.png",
-        "tv-reporter_light_m_01.png",
-        "tv-reporter_dark_m_01.png",
-        "tv-reporter_tan_f_01.png",
-        "tv-reporter_brown_f_01.png",
-        "tv-reporter_dark_f_01.png"
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_fair_f_09.png",
+        "pixel-avatar_tan_m_20.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_dark_m_11.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_f_21.png",
+        "pixel-avatar_dark_f_16.png"
       ]
     },
     {
@@ -3454,14 +3454,14 @@
         "Mateo"
       ],
       "avatars": [
-        "data-analyst_fair_m_01.png",
-        "data-analyst_brown_f_01.png",
-        "data-analyst_fair_f_01.png",
-        "accountant_light_m_02.png",
-        "data-analyst_tan_m_01.png",
-        "data-analyst_light_m_01.png",
-        "data-analyst_tan_f_01.png",
-        "data-analyst_brown_f_02.png"
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_fair_f_10.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_tan_m_21.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_tan_f_03.png"
       ]
     },
     {
@@ -3491,14 +3491,14 @@
         "Ana"
       ],
       "avatars": [
-        "architect_tan_m_01.png",
-        "architect_fair_m_01.png",
-        "architect_brown_m_01.png",
-        "architect_fair_f_01.png",
-        "architect_tan_f_01.png",
-        "architect_dark_f_01.png",
-        "architect_light_m_01.png",
-        "architect_brown_f_01.png"
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_m_02.png",
+        "pixel-avatar_fair_f_11.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_dark_f_17.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_tan_f_05.png"
       ]
     },
     {
@@ -3529,14 +3529,14 @@
         "Omar"
       ],
       "avatars": [
-        "architect_fair_m_01.png",
-        "architect_tan_m_01.png",
-        "architect_brown_m_01.png",
-        "architect_fair_f_01.png",
-        "architect_dark_f_01.png",
-        "accountant_tan_m_02.png",
-        "accountant_light_m_02.png",
-        "accountant_brown_f_04.png"
+        "pixel-avatar_fair_m_18.png",
+        "pixel-avatar_tan_m_03.png",
+        "pixel-avatar_tan_m_04.png",
+        "pixel-avatar_fair_f_12.png",
+        "pixel-avatar_dark_f_18.png",
+        "pixel-avatar_tan_m_05.png",
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_tan_f_06.png"
       ]
     },
     {
@@ -3568,14 +3568,14 @@
         "Nell"
       ],
       "avatars": [
-        "architect_brown_m_01.png",
-        "architect_fair_m_01.png",
-        "architect_tan_m_01.png",
-        "architect_fair_f_01.png",
-        "architect_dark_f_01.png",
-        "librarian_brown_f_01.png",
-        "architect_light_m_01.png",
-        "architect_tan_f_01.png"
+        "pixel-avatar_tan_m_06.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_tan_m_07.png",
+        "pixel-avatar_fair_f_13.png",
+        "pixel-avatar_dark_f_19.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_f_08.png"
       ]
     },
     {
@@ -3608,14 +3608,14 @@
         "Ivan"
       ],
       "avatars": [
-        "blue-collar-worker_fair_f_01.png",
-        "blue-collar-worker_fair_m_01.png",
-        "blue-collar-worker_dark_m_02.png",
-        "blue-collar-worker_tan_f_01.png",
-        "blue-collar-worker_tan_m_01.png",
-        "blue-collar-worker_dark_m_01.png",
-        "blue-collar-worker_brown_f_01.png",
-        "architect_brown_m_01.png"
+        "pixel-avatar_fair_f_14.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_dark_m_12.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_tan_m_08.png",
+        "pixel-avatar_dark_m_13.png",
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_tan_m_09.png"
       ]
     },
     {
@@ -3645,14 +3645,14 @@
         "Noor"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "professor_dark_m_01.png",
-        "professor_dark_f_01.png",
-        "professor_fair_m_01.png",
-        "professor_light_m_01.png",
-        "professor_tan_f_02.png",
-        "librarian_tan_m_01.png",
-        "librarian_brown_f_01.png"
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_dark_m_14.png",
+        "pixel-avatar_dark_f_20.png",
+        "pixel-avatar_fair_m_03.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_tan_f_11.png",
+        "pixel-avatar_tan_m_10.png",
+        "pixel-avatar_tan_f_12.png"
       ]
     },
     {
@@ -3682,14 +3682,14 @@
         "Kurt"
       ],
       "avatars": [
-        "detective_tan_m_01.png",
-        "librarian_fair_m_01.png",
-        "librarian_tan_m_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png",
-        "librarian_fair_f_01.png",
-        "librarian_brown_f_01.png",
-        "librarian_dark_f_01.png"
+        "pixel-avatar_tan_m_11.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_m_12.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_15.png",
+        "pixel-avatar_fair_f_15.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_dark_f_21.png"
       ]
     },
     {
@@ -3719,14 +3719,14 @@
         "Celeste"
       ],
       "avatars": [
-        "grandmother_brown_f_02.png",
-        "grandmother_brown_f_03.png",
-        "student_fair_m_01.png",
-        "student_light_m_01.png",
-        "student_dark_m_01.png",
-        "student_tan_f_01.png",
-        "librarian_fair_m_01.png",
-        "librarian_tan_m_01.png"
+        "pixel-avatar_tan_f_14.png",
+        "pixel-avatar_tan_f_15.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_fair_m_08.png",
+        "pixel-avatar_dark_m_16.png",
+        "pixel-avatar_tan_f_16.png",
+        "pixel-avatar_fair_m_09.png",
+        "pixel-avatar_tan_m_13.png"
       ]
     },
     {
@@ -3758,14 +3758,14 @@
         "Lin"
       ],
       "avatars": [
-        "nanny_light_m_01.png",
-        "nanny_dark_m_01.png",
-        "nanny_tan_f_01.png",
-        "nanny_dark_f_01.png",
-        "butler_fair_f_02.png",
-        "nanny_fair_m_01.png",
-        "nanny_tan_m_01.png",
-        "nanny_brown_f_01.png"
+        "pixel-avatar_fair_m_10.png",
+        "pixel-avatar_dark_m_17.png",
+        "pixel-avatar_tan_f_17.png",
+        "pixel-avatar_dark_f_01.png",
+        "pixel-avatar_fair_f_16.png",
+        "pixel-avatar_fair_m_11.png",
+        "pixel-avatar_tan_m_14.png",
+        "pixel-avatar_tan_f_18.png"
       ]
     },
     {
@@ -3798,14 +3798,14 @@
         "Asha"
       ],
       "avatars": [
-        "banker_dark_m_01.png",
-        "accountant_tan_f_02.png",
-        "accountant_fair_f_02.png",
-        "banker_fair_m_01.png",
-        "banker_brown_f_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_01.png",
-        "customer-support_brown_f_01.png"
+        "pixel-avatar_dark_m_18.png",
+        "pixel-avatar_tan_f_19.png",
+        "pixel-avatar_fair_f_17.png",
+        "pixel-avatar_fair_m_12.png",
+        "pixel-avatar_tan_f_20.png",
+        "pixel-avatar_tan_m_15.png",
+        "pixel-avatar_dark_m_19.png",
+        "pixel-avatar_tan_f_21.png"
       ]
     },
     {
@@ -3836,14 +3836,14 @@
         "Petra"
       ],
       "avatars": [
-        "chief-of-staff_fair_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "chief-of-staff_fair_f_02.png",
-        "chief-of-staff_tan_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "librarian_light_m_01.png",
-        "librarian_dark_m_01.png"
+        "pixel-avatar_fair_m_13.png",
+        "pixel-avatar_fair_m_14.png",
+        "pixel-avatar_tan_f_01.png",
+        "pixel-avatar_fair_f_18.png",
+        "pixel-avatar_tan_m_16.png",
+        "pixel-avatar_tan_f_02.png",
+        "pixel-avatar_fair_m_15.png",
+        "pixel-avatar_dark_m_20.png"
       ]
     },
     {
@@ -3874,14 +3874,14 @@
         "Kiri"
       ],
       "avatars": [
-        "teacher_fair_f_01.png",
-        "teacher_tan_f_02.png",
-        "chief-of-staff_fair_m_01.png",
-        "teacher_tan_m_01.png",
-        "teacher_light_m_01.png",
-        "teacher_dark_m_01.png",
-        "teacher_dark_f_01.png",
-        "hippie_light_m_01.png"
+        "pixel-avatar_fair_f_19.png",
+        "pixel-avatar_tan_f_03.png",
+        "pixel-avatar_fair_m_16.png",
+        "pixel-avatar_tan_m_17.png",
+        "pixel-avatar_fair_m_17.png",
+        "pixel-avatar_dark_m_21.png",
+        "pixel-avatar_dark_f_02.png",
+        "pixel-avatar_fair_m_18.png"
       ]
     },
     {
@@ -3912,14 +3912,14 @@
         "Lise"
       ],
       "avatars": [
-        "copywriter_fair_m_01.png",
-        "podcaster_fair_f_01.png",
-        "tv-reporter_tan_m_01.png",
-        "tv-reporter_light_m_01.png",
-        "tv-reporter_dark_m_01.png",
-        "tv-reporter_tan_f_01.png",
-        "tv-reporter_brown_f_01.png",
-        "tv-reporter_dark_f_01.png"
+        "pixel-avatar_fair_m_19.png",
+        "pixel-avatar_fair_f_20.png",
+        "pixel-avatar_tan_m_18.png",
+        "pixel-avatar_fair_m_20.png",
+        "pixel-avatar_dark_m_01.png",
+        "pixel-avatar_tan_f_04.png",
+        "pixel-avatar_tan_f_05.png",
+        "pixel-avatar_dark_f_03.png"
       ]
     },
     {
@@ -3951,14 +3951,14 @@
         "Ada"
       ],
       "avatars": [
-        "chief-of-staff_fair_f_01.png",
-        "blue-collar-worker_fair_f_01.png",
-        "chief-of-staff_tan_m_01.png",
-        "chief-of-staff_light_m_01.png",
-        "chief-of-staff_tan_f_01.png",
-        "chief-of-staff_brown_f_01.png",
-        "blue-collar-worker_dark_m_01.png",
-        "blue-collar-worker_dark_m_02.png"
+        "pixel-avatar_fair_f_21.png",
+        "pixel-avatar_fair_f_01.png",
+        "pixel-avatar_tan_m_19.png",
+        "pixel-avatar_fair_m_21.png",
+        "pixel-avatar_tan_f_06.png",
+        "pixel-avatar_tan_f_07.png",
+        "pixel-avatar_dark_m_02.png",
+        "pixel-avatar_dark_m_03.png"
       ]
     },
     {
@@ -3988,14 +3988,14 @@
         "Kai"
       ],
       "avatars": [
-        "architect_tan_m_01.png",
-        "architect_tan_f_01.png",
-        "explorer_fair_m_01.png",
-        "explorer_dark_m_01.png",
-        "explorer_brown_f_01.png",
-        "explorer_dark_f_01.png",
-        "architect_fair_m_01.png",
-        "architect_light_m_01.png"
+        "pixel-avatar_tan_m_20.png",
+        "pixel-avatar_tan_f_08.png",
+        "pixel-avatar_fair_m_01.png",
+        "pixel-avatar_dark_m_04.png",
+        "pixel-avatar_tan_f_09.png",
+        "pixel-avatar_dark_f_04.png",
+        "pixel-avatar_fair_m_02.png",
+        "pixel-avatar_fair_m_03.png"
       ]
     },
     {
@@ -4027,14 +4027,14 @@
         "Malik"
       ],
       "avatars": [
-        "software-developer_tan_f_01.png",
-        "customer-support_fair_m_01.png",
-        "customer-support_tan_m_01.png",
-        "customer-support_dark_m_02.png",
-        "customer-support_fair_f_01.png",
-        "customer-support_dark_f_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png"
+        "pixel-avatar_tan_f_10.png",
+        "pixel-avatar_fair_m_04.png",
+        "pixel-avatar_tan_m_21.png",
+        "pixel-avatar_dark_m_05.png",
+        "pixel-avatar_fair_f_02.png",
+        "pixel-avatar_dark_f_05.png",
+        "pixel-avatar_fair_m_05.png",
+        "pixel-avatar_tan_f_11.png"
       ]
     },
     {
@@ -4066,14 +4066,14 @@
         "Finn"
       ],
       "avatars": [
-        "software-developer_tan_m_01.png",
-        "software-developer_tan_f_01.png",
-        "software-developer_fair_m_01.png",
-        "software-developer_dark_m_01.png",
-        "software-developer_fair_f_01.png",
-        "software-developer_light_m_01.png",
-        "software-developer_brown_f_01.png",
-        "software-developer_dark_f_01.png"
+        "pixel-avatar_tan_m_01.png",
+        "pixel-avatar_tan_f_12.png",
+        "pixel-avatar_fair_m_06.png",
+        "pixel-avatar_dark_m_06.png",
+        "pixel-avatar_fair_f_03.png",
+        "pixel-avatar_fair_m_07.png",
+        "pixel-avatar_tan_f_13.png",
+        "pixel-avatar_dark_f_06.png"
       ]
     }
   ]

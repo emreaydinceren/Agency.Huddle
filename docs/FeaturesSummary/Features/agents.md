@@ -36,8 +36,8 @@ settings, and the card tells you so.
 
 - **Initials** or **a short label** of up to six characters, with an emoji picker, on a background
   colour you choose.
-- **A ready-made picture.** 324 ship with Huddle, and you can filter them by skin tone, profession
-  and tag.
+- **A ready-made picture.** 126 pixel-art people ship with Huddle, and you can filter them by skin
+  tone and tag (hair, glasses, top colour).
 - **Your own image.** PNG, JPEG or WebP, up to 512 KB.
 
 ## Look after a running Agent
