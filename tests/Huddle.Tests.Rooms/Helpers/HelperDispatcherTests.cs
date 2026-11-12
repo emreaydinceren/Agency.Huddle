@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
@@ -66,6 +67,19 @@ public sealed class HelperDispatcherTests : IDisposable
     /// <param name="count">How many applies.</param>
     private Task AppliedAsync(int count) =>
         Eventually.UntilAsync(() => this.helper.Applied.Count >= count, TestContext.Current.CancellationToken, TestBudgets.Standard);
+
+    /// <summary>
+    /// Counts finished judgements. <see cref="HelperDispatcher.StatusChanged"/> is raised only after a run's result and its Feed
+    /// item are stored, so waiting on this count, not on a store the run writes earlier, leaves no gap before the Feed asserts.
+    /// </summary>
+    /// <param name="dispatcher">The dispatcher to watch.</param>
+    /// <returns>Reads how many judgements have finished so far.</returns>
+    private static Func<int> CountJudgements(HelperDispatcher dispatcher)
+    {
+        StrongBox<int> count = new();
+        dispatcher.StatusChanged += () => Interlocked.Increment(ref count.Value);
+        return () => Volatile.Read(ref count.Value);
+    }
 
     /// <summary>Nothing runs until the wait has passed; then the input is judged and applied once.</summary>
     [Fact]
@@ -296,20 +310,21 @@ public sealed class HelperDispatcherTests : IDisposable
     public async Task Enqueue_OverBudget_PostsOnePauseItem()
     {
         (HelperDispatcher dispatcher, _, HelperSettingsStore settings, HelperUsageStore usage) = this.Build();
+        Func<int> judged = CountJudgements(dispatcher);
         settings.Save(this.helper.Id, new HelperSettingsRow(true, null, null, null, 1));
-        dispatcher.Enqueue(this.helper.Id, "k1", "first");
-        this.clock.Advance(TimeSpan.FromSeconds(11));
-        await this.AppliedAsync(1);
-        string day = this.clock.GetLocalNow().Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        string[] keys = ["k1", "k2", "k3"];
 
-        foreach (string key in new[] { "k2", "k3" })
+        for (int i = 0; i < keys.Length; i++)
         {
-            int skipped = usage.Get(this.helper.Id, day).Skipped;
-            dispatcher.Enqueue(this.helper.Id, key, key);
+            int expected = i + 1;
+            dispatcher.Enqueue(this.helper.Id, keys[i], keys[i]);
             this.clock.Advance(TimeSpan.FromSeconds(11));
-            await Eventually.UntilAsync(() => usage.Get(this.helper.Id, day).Skipped > skipped, TestContext.Current.CancellationToken, TestBudgets.Standard);
+            await Eventually.UntilAsync(() => judged() >= expected, TestContext.Current.CancellationToken, TestBudgets.Standard);
         }
 
+        string day = this.clock.GetLocalNow().Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        _ = Assert.Single(this.helper.Applied);
+        Assert.Equal(2, usage.Get(this.helper.Id, day).Skipped);
         FeedMessage post = Assert.Single(this.feed.Posts);
         Assert.Equal(FeedSourceType.HelperPaused, post.SourceType);
         Assert.Equal("helper:Scripted", post.TargetKey);
@@ -320,6 +335,7 @@ public sealed class HelperDispatcherTests : IDisposable
     public async Task Enqueue_ThreeFailuresInARow_PostsOneFailingItem()
     {
         (HelperDispatcher dispatcher, HelperStatusStore status, _, _) = this.Build();
+        Func<int> judged = CountJudgements(dispatcher);
         this.helper.ApplyHandler = static (_, _, _) => new HelperApplied.Refused("Only You can turn off the gate.");
 
         for (int i = 1; i <= 4; i++)
@@ -327,9 +343,10 @@ public sealed class HelperDispatcherTests : IDisposable
             dispatcher.Enqueue(this.helper.Id, "k" + i, "text" + i);
             this.clock.Advance(TimeSpan.FromSeconds(11));
             int expected = i;
-            await Eventually.UntilAsync(() => status.Get(this.helper.Id).ConsecutiveFailures >= expected, TestContext.Current.CancellationToken, TestBudgets.Standard);
+            await Eventually.UntilAsync(() => judged() >= expected, TestContext.Current.CancellationToken, TestBudgets.Standard);
         }
 
+        Assert.Equal(4, status.Get(this.helper.Id).ConsecutiveFailures);
         FeedMessage post = Assert.Single(this.feed.Posts);
         Assert.Equal(FeedSourceType.HelperFailing, post.SourceType);
         Assert.Equal(3, Assert.IsType<HelperFailingPayload>(post.Payload).Failures);

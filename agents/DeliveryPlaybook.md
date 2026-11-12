@@ -138,8 +138,10 @@ The Team Pages delivery (whole run, 320M re-read) put the same lesson in one tab
   Core and grep the rest by heading; the whole file read was 10K tokens for every fresh agent.
 - **Disable MCP servers the delivery doesn't need** before starting. Each agent inherits their tool
   definitions, and every agent here started at 38–50K before its first read.
-- **Define one tool-limited agent type per delivery** (Read, Edit, Write, Grep, Glob, Bash,
-  PowerShell). It cut each agent's starting context from ~71K to ~23K in the Second Brain delivery.
+- **Dispatch implementers as the tool-limited `delivery-dev` agent type**
+  (`.claude/agents/delivery-dev.md`: Read, Edit, Write, Grep, Glob, Bash, PowerShell), naming the
+  brief and facts files in each prompt. The limited tool list cuts an agent's starting context from
+  ~71K to ~23K.
 - **The manager's own context dominated cost late in a run (600K+).** Chain logic pairs red→green
   in one dispatch once the red is approved, and keep check-ins short.
 - **Measure at each retrospective** with the tally in the `/Execute-Project-Plan` command's

@@ -26,6 +26,8 @@ internal sealed class FakeAgentSession : IAgentSession
     private bool promptInFlight;
     private int cancelCallCount;
     private bool cancelObservedPromptInFlight;
+    private int deleteCalls;
+    private bool disposedAtDelete;
     private CancellationToken lastPromptCancellationToken;
 
     /// <summary>Initializes a new instance of the <see cref="FakeAgentSession"/> class.</summary>
@@ -330,11 +332,32 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
-    /// <summary>How many times <see cref="DeleteAsync"/> has been called.</summary>
-    public int DeleteCalls { get; private set; }
+    /// <summary>
+    /// How many times <see cref="DeleteAsync"/> has been called. Read under the lock that writes it together with
+    /// <see cref="DisposedAtDelete"/>, so a test that waits on this count never reads that flag half-written.
+    /// </summary>
+    public int DeleteCalls
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.deleteCalls;
+            }
+        }
+    }
 
     /// <summary>Whether <see cref="Disposed"/> was already true when the last <see cref="DeleteAsync"/> call arrived.</summary>
-    public bool DisposedAtDelete { get; private set; }
+    public bool DisposedAtDelete
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.disposedAtDelete;
+            }
+        }
+    }
 
     /// <summary>When set, <see cref="DeleteAsync"/> counts the call and then throws this.</summary>
     public Exception? DeleteFailure { get; set; }
@@ -350,8 +373,8 @@ internal sealed class FakeAgentSession : IAgentSession
         Exception? failure;
         lock (this.gate)
         {
-            this.DeleteCalls++;
-            this.DisposedAtDelete = this.Disposed;
+            this.deleteCalls++;
+            this.disposedAtDelete = this.Disposed;
             failure = this.DeleteFailure;
         }
 

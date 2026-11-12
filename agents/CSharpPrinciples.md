@@ -11,7 +11,7 @@ Two files at the **repository root** — not under `src/` — split this between
 
 | File | Owns |
 | --- | --- |
-| `Directory.Packages.props` | **Package versions.** One `<PackageVersion>` per dependency. Central package management is on, so a `Version` attribute on a `PackageReference` is a build error. The one exception in this file is `<GlobalPackageReference>` (the Sonar analyzer), which carries its own `Version` by design. |
+| `Directory.Packages.props` | **Package versions.** One `<PackageVersion>` per dependency. Central package management is on, so a `Version` attribute on a `PackageReference` is a build error. The exceptions in this file are the `<GlobalPackageReference>` entries (the analyzers every project gets: Sonar, BannedApiAnalyzers, Meziantou and ClrHeapAllocationAnalyzer), which carry their own `Version` by design. |
 | `Directory.Build.props` | **Compiler settings** — `TreatWarningsAsErrors=true`, `Nullable=enable`, `ImplicitUsings=enable`, `EnforceCodeStyleInBuild=true`, `AnalysisLevel=latest-recommended`, and the Sonar `NoWarn` denylist. It switches central package management on but holds no versions itself. |
 
 All code must be warning-free and null-safe.
@@ -24,7 +24,7 @@ When adding or updating a dependency:
 
 ## What the build enforces
 
-Eight analyzer layers run on every `dotnet build`, and anything at `warning` or above
+Nine analyzer layers run on every `dotnet build`, and anything at `warning` or above
 fails it. Knowing which layer a diagnostic comes from tells you where its rule lives.
 
 | Prefix | Source | Where the severity is set |
@@ -34,11 +34,12 @@ fails it. Knowing which layer a diagnostic comes from tells you where its rule l
 | `CA` | .NET code-quality analyzers at `AnalysisLevel=latest-recommended` | The SDK's recommended set, plus overrides in `.editorconfig` and per-project `NoWarn` |
 | `S` | SonarAnalyzer.CSharp, a curated subset | Opted in by ID in `.editorconfig`; everything else denylisted in `Directory.Build.props` |
 | `MA` | Meziantou.Analyzer, product code under `src/` only (`tests/**` is switched off) | `.editorconfig`; see [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#meziantouanalyzer) |
+| `RS` | Microsoft.CodeAnalysis.BannedApiAnalyzers (`RS0030`), every project | Package defaults (warning); the banned APIs are listed in `BannedSymbols.txt` |
 | `xUnit` | xunit.v3 analyzers, test projects only | Package defaults |
 | `HUD` | This repo's own rules, `src/Huddle.Analyzers`, referenced by `Huddle.App` | Warning (so a failed build) by default; each rule applies only in an assembly that declares the helper its fix uses. See [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#huddleanalyzers) |
 | `MUD` | MudBlazor's own analyzer, shipped inside the `MudBlazor` package, so it runs wherever MudBlazor is referenced | Package defaults (warnings); `MudAllowedAttributePattern=HTMLAttributes` in `Huddle.App.csproj`. See [analyzer-decisions.md](../docs/engineering/analyzer-decisions.md#mudblazor-analyzers) |
 
-Rules that used to be prose-only and are now enforced, so a violation is a failed build rather
+House rules the build enforces, so a violation is a failed build rather
 than a review comment:
 
 | Rule | Enforced by |
@@ -206,8 +207,6 @@ These do not fail the build, but the code is consistent about them and reviewers
 ## C# Conventions
 
 - Always use XML doc comments (`///`) for all class and method comments — never plain `//` comments for documentation. Use `<summary>`, `<param>`, `<returns>`, and `<see cref="..."/>` tags as appropriate. This applies to test projects as well as production code. The compiler does not check this (`CS1591` is suppressed) — review and the `PreToolUse` hook do.
-- Do NOT use `yield return` inside try-catch blocks — this does not compile in C#
-- Do NOT instantiate abstract classes directly; use interfaces or concrete implementations
 - Sealed classes cannot be mocked — use functional/integration tests or extract an interface
 - Always verify builds pass (`dotnet build Huddle.slnx`) after code changes before declaring success — build the **solution**, not one project, because the test projects carry their own analyzers
 
