@@ -18,7 +18,7 @@ internal sealed record SeedAgent(
     /// <summary>The gender the scenario reads from <see cref="Name"/>; <see cref="AvatarFile"/> must show the same.</summary>
     public required SeedGender Gender { get; init; }
 
-    /// <summary>The picture's bare file name in the bundled Avatar Library, such as <c>designer_tan_f_01.png</c>.</summary>
+    /// <summary>The picture's bare file name in the bundled Avatar Library, such as <c>pixel-avatar_tan_f_03.png</c>.</summary>
     public required string AvatarFile { get; init; }
 
     /// <summary>The team-type role the Agent was "hired" into, written <c>type/role@version</c>, or <see langword="null"/>; written as <c>_role</c>.</summary>

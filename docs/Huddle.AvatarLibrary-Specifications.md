@@ -6,10 +6,17 @@
 its image rules) · **Vocabulary:** [language.md](engineering/language.md) (**Avatar**, **Agent**,
 **Human**)
 
-This is the design for choosing an Avatar image from a ready-made library of 324 illustrated
-people, found by skin tone, a free-text search, and two clouds of toggle chips (professions and
-tags). The picker is a **modal dialog**, not a drawer or sliding panel. A pick **copies** the image
-into the Avatar store ADR-0019 already built, so nothing downstream of the picker changes.
+This is the design for choosing an Avatar image from a ready-made library of people, found by skin
+tone, a free-text search, and two clouds of toggle chips (professions and tags). The picker is a
+**modal dialog**, not a drawer or sliding panel. A pick **copies** the image into the Avatar store
+ADR-0019 already built, so nothing downstream of the picker changes.
+
+> [!NOTE]
+> **The bundled library changed on 2026-11-11.** It was 324 illustrated people across about 40
+> professions. It is now 126 pixel-art people, all with the one profession `Pixel Avatar`, written
+> by `tools/avatar-pixel-art/generate.py` (§5.3). The picker did not change. The use cases and
+> mocks below still use the professions of the illustrated set, because they show how the picker
+> behaves with several professions, as a library of your own (`Team:AvatarLibrary:Dir`) may have.
 
 It is written for the engineers or agents building it, with no memory of the conversation that
 produced it. Read §4 for the shape, §5 for the library's data contract, §6 for the subsystems and
@@ -27,7 +34,7 @@ Appendix A for the ordered, test-first task list.
 ## 1. Goal
 
 A Human giving an Agent (or themselves) a face should not need to find, crop and upload an image.
-They open a dialog, narrow 324 pictures to a handful, and click one.
+They open a dialog, narrow the library's pictures to a handful, and click one.
 
 1. **A library, not a gallery of captions.** The dialog shows pictures and chips. No thumbnail
    carries visible text, a caption or a tooltip.
@@ -46,7 +53,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 
 | # | Situation | What happens |
 | --- | --- | --- |
-| L1 | The Human clicks an Agent's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of 324 pictures and the filters |
+| L1 | The Human clicks an Agent's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of the library's pictures (126 in the bundled one) and the filters |
 | L2 | They press **Tan** | Only avatars whose `skin_tone` is `tan` or `brown` remain |
 | L3 | They type `headset` | Only avatars with a profession or tag word starting `headset` remain |
 | L4 | They press the **Butler** profession chip | The chip moves to the far left and shows an X. Only butlers remain |
@@ -60,7 +67,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
 | L13 | `Team:AvatarLibrary:Dir` is set to a folder that is missing or has no `master.json` | No **Choose from library** button anywhere. (Unset uses the bundled library.) |
 | L14 | `master.json` is malformed | The dialog opens, shows **The avatar library could not be read**, and a warning is logged |
-| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair woman Podcaster* |
+| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair woman Pixel Avatar* |
 | L16 | The dialog is closed | The parsed catalogue is no longer reachable (R-1) |
 
 ## 3. Non-goals
@@ -81,7 +88,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 
 ```text
 Team:AvatarLibrary:Dir ──► folder ├─ master.json            read when the dialog opens, then dropped
-                                  └─ <name>.png × 324       served as-is, never held in memory
+                                  └─ <name>.png × 126       served as-is, never held in memory
 
  AvatarEditorDialog (from AgentProfileCard) / Appearance.razor
         │  "Choose from library"   (only if AvatarLibraryLocator.IsConfigured)
@@ -103,8 +110,8 @@ directly and the server never holds them.
 
 ### 5.1 `master.json`
 
-The folder and its `master.schema.md` were brought into the repository unchanged (§6.1). Huddle reads only this much; every other
-field (grid, crop box, hair, outfit, colours, counts, notes) is ignored and may change freely.
+The bundled `master.json` and its `master.schema.md` are written by the generator (§5.3). Huddle reads only this much; every other
+field (hair, glasses, outfit, colours, counts, notes) is ignored and may change freely.
 
 | Path | Used for |
 | --- | --- |
@@ -118,20 +125,25 @@ field (grid, crop box, hair, outfit, colours, counts, notes) is ignored and may 
 
 | `skin_tone` | Group | Count today |
 | --- | --- | --- |
-| `fair`, `light` | **Light** | 112 |
-| `tan`, `brown` | **Tan** | 131 |
-| `dark` | **Dark** | 81 |
+| `fair`, `light` | **Light** | 42 (all `fair`) |
+| `tan`, `brown` | **Tan** | 42 (all `tan`) |
+| `dark` | **Dark** | 42 |
 
 The mapping lives in code (`SkinGroups`), not in `master.json`. An unrecognised or missing
 `skin_tone` belongs to no group, so it appears only under **All**.
 
 ### 5.3 Images
 
-PNG, 256 × 256, with a transparent corner outside the avatar circle, each well under
-`AvatarImage.MaxBytes` (512 000). The library was resized from about 600 px on 2026-10-08 (173 MB →
-35 MB) with the originals kept in a sibling `avatars-originals` folder outside the library folder. The
-324 pictures, `master.json` and `master.schema.md` were copied into `src/Huddle.App/AvatarLibrary` on 2026-10-10 (35 MB)
-from the external folder they were made in; that folder, `avatars-originals` and `avatars-grids` stay outside the repository.
+PNG, 256 × 256, with a transparent background, each well under `AvatarImage.MaxBytes` (512 000);
+the whole bundled library is about 150 KB. Each picture is 32 × 32 pixel art scaled 8 times with
+nearest-neighbour. `tools/avatar-pixel-art/generate.py` writes every PNG and `master.json` from
+code, byte-identically on every run: one avatar for each gender × skin × hair colour × outfit
+colour, with hair length and glasses spread by fixed ratios. Its README says how to change the set.
+
+History: the first bundled library (2026-10-10) was 324 illustrated pictures (35 MB) cropped from
+generated grid images kept outside the repository, so it could not be regenerated. It was replaced
+by the generated set on 2026-11-11, and the hiring pool's and the seeder's avatar choices were
+re-pointed at it by gender and skin.
 
 ## 6. Subsystems
 
@@ -243,7 +255,7 @@ Selecting a chip never hides or disables another chip, and counts do not change 
 backdrop click, with focus trapped. It is not a `MudDrawer` or any sliding panel.
 
 Top to bottom: the title **Choose an avatar**; the skin switch `[All | Light | Tan | Dark]`; the
-text box; the profession chips; the tag chips and **Show all**; a line **{matches} of 324** (how
+text box; the profession chips; the tag chips and **Show all**; a line **{matches} of {total}** (how
 many avatars satisfy the filters, out of the whole library; paging never changes it) with **Clear
 all**; then the grid.
 
@@ -251,7 +263,7 @@ all**; then the grid.
   resets it to 48 and scrolls it to the top.
 - **A thumbnail** is a `<button>` containing an `<img>` of the library file at `/avatar-library/<file>`
   with `alt=""`, and `aria-label="{skin_tone} {gender_presentation} {profession}"` built from the
-  **raw** `skin_tone` (so `fair woman Podcaster`, not `Light woman Podcaster`). No `title`, no
+  **raw** `skin_tone` (so `fair woman Pixel Avatar`, not `Light woman Pixel Avatar`). No `title`, no
   caption, no tooltip.
 - Result is `DialogResult.Ok(fileName)`; cancelling returns `DialogResult.Cancel()`.
 - **Nested dialog.** From `AgentProfileCard`, which is itself a `MudDialog`, this opens a second dialog

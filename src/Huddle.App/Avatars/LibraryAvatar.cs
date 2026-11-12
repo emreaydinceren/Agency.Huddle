@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.Avatars;
 internal sealed record LibraryAvatar(string File, string Profession, string SkinTone, string Gender, IReadOnlyList<string> Tags)
 {
     /// <summary>
-    /// The name a screen reader announces for the avatar: the raw skin tone, gender and profession, for example <c>fair woman Podcaster</c>.
+    /// The name a screen reader announces for the avatar: the raw skin tone, gender and profession, for example <c>fair woman Pixel Avatar</c>.
     /// </summary>
     internal string AccessibleName => $"{this.SkinTone} {this.Gender} {this.Profession}";
 

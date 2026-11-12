@@ -92,7 +92,7 @@ public sealed class AvatarLibraryMountTests : IDisposable
 
         await using WebApplicationFactoryHandle handle = Host(null);
         using HttpClient client = handle.Factory.CreateClient();
-        using HttpResponseMessage response = await client.GetAsync("/avatar-library/cook_tan_f_01.png", ct);
+        using HttpResponseMessage response = await client.GetAsync("/avatar-library/pixel-avatar_tan_f_01.png", ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);

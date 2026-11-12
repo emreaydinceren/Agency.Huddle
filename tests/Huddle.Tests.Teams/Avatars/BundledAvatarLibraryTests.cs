@@ -14,7 +14,7 @@ namespace Agency.Huddle.Tests.Avatars;
 public sealed class BundledAvatarLibraryTests
 {
     /// <summary>The number of pictures the shipped library holds.</summary>
-    private const int ExpectedCount = 324;
+    private const int ExpectedCount = 126;
 
     /// <summary>The side, in pixels, of every shipped picture, which the picker's 72 px thumbnails and the avatar circle are sized for.</summary>
     private const uint ExpectedSide = 256;
@@ -32,7 +32,7 @@ public sealed class BundledAvatarLibraryTests
         Assert.True(Locator().IsConfigured);
     }
 
-    /// <summary>The shipped index loads whole: every one of the 324 records is valid, and none is skipped as unsafe, missing, oversize or a duplicate.</summary>
+    /// <summary>The shipped index loads whole: every one of the 126 records is valid, and none is skipped as unsafe, missing, oversize or a duplicate.</summary>
     [Fact]
     public async Task BundledIndex_LoadsEveryRecordWithNoneSkipped()
     {
