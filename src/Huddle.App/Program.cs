@@ -39,7 +39,15 @@ if (CliVerbs.Handles(args))
     return await CliVerbs.RunAsync(args, verbContext, CancellationToken.None).ConfigureAwait(false);
 }
 
-var builder = WebApplication.CreateBuilder(args);
+// --log-level LEVEL is shorthand for the console's level of Huddle's own logs; the console shows only
+// errors otherwise. A bad value is a usage error, like an unknown verb, not a silently ignored key.
+if (!LogLevelArgument.TryTranslate(args, out string[]? hostArgs, out string? logLevelError))
+{
+    await Console.Error.WriteLineAsync(logLevelError).ConfigureAwait(false);
+    return 2;
+}
+
+var builder = WebApplication.CreateBuilder(hostArgs);
 
 // Desktop mode: one instance per data dir. The lock is held until the process ends. A second launch
 // hands off to the running instance (opens its browser) and exits; the first launch removes a stale
@@ -66,7 +74,7 @@ if (desktop.Enabled)
 // constructor that throws there takes the process with it - the empty Team:Acp:Enabled that
 // SqliteTeamDirectory's options binder rejects is the worked example. A provider added after that
 // point would exist only in runs that did not need it. Does nothing unless Team:FileLog:Enabled is
-// true, which appsettings.Development.json sets and appsettings.json leaves off.
+// true, which appsettings.json sets: the console shows only errors, so the file is the run's record.
 builder.Logging.AddTeamFileLogging(builder.Configuration);
 
 builder.Services.AddRazorComponents()

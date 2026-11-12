@@ -52,7 +52,7 @@ The free lane. Run both lines in `T-A`, in this order, in the same window:
 
 ```powershell
 $env:Team__Acp__Enabled = 'false'
-dotnet run --project src/Huddle.App --urls http://localhost:5100
+dotnet run --project src/Huddle.App --urls http://localhost:5100 -- --log-level Debug
 ```
 
 Wait for `Now listening on: http://localhost:5100`. Confirm the guard took with
@@ -87,7 +87,7 @@ Remove-Item Env:TEAM_E2E -ErrorAction SilentlyContinue
 $env:Team__AgentMessageBudget = '4'        # the test names a smaller number if it needs one
 $env:Team__Acp__TokenBudget   = '200000'   # a ceiling per Persona, not a target
 $env:Team__Acp__Enabled       = 'true'
-dotnet run --project src/Huddle.App --urls http://localhost:5100
+dotnet run --project src/Huddle.App --urls http://localhost:5100 -- --log-level Debug
 ```
 
 Every Persona must already be Sonnet / low before the first Message. After the last
@@ -147,6 +147,7 @@ with an empty one-to-one Room named after itself. Run in `T-A`, from the repo ro
 dotnet run --project src\Huddle.Seeder -- --scenario uat --root C:\seeds\huddle\uat
 $mock = (Resolve-Path src\Huddle.MockAdapter\bin\Debug\net11.0\mock-acp.exe).Path
 dotnet run --project src/Huddle.App -- --urls http://localhost:5100 `
+  --log-level Debug `
   --Team:DataDir=C:\seeds\huddle\uat\data `
   --Team:DemoAgent:Enabled=false `
   --Team:Acp:Enabled=true `
@@ -236,9 +237,12 @@ is the only `O-WIRE`. Names allow letters, digits, `_`, `-` and single interior 
 
 ### O-LOG
 
-`T-A`'s scrolling output. Development sets the `Agency.Huddle` level to `Debug`, so
-every log line these tests quote is visible without configuration, and adapter stderr
-arrives as `[agent stderr] {Line}`. That level buys nothing in the free lane: there
+`T-A`'s scrolling output. The console shows only errors unless the launch passes
+`--log-level`, so every launch procedure above passes `--log-level Debug`: with it,
+every log line these tests quote is visible, and adapter stderr arrives as
+`[agent stderr] {Line}`. A test that launches with its own command line must add
+`-- --log-level Debug` (or `--log-level Debug` after an existing `--`) before it reads
+this oracle. The same lines are also in the run's file under `<DataDir>\logs`. That level buys nothing in the free lane: there
 are no `Debug`-level log statements in `Huddle.App` or `Huddle.Contracts` at all, and
 the only three in the solution live in `Huddle.Acp`. Every line quoted in this script
 is `info:` or `warn:`, so a free-lane console with no `dbug:` line in it is correct. Scroll to the bottom before each test so you
