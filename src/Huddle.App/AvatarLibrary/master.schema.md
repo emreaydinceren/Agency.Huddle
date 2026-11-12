@@ -16,7 +16,7 @@
 | `count` | integer | Number of records in `avatars`. |
 | `notes` | string[] | Short reading notes. |
 | `vocab_counts` | object | Counts of each value for `skin_tone`, `gender_presentation`, `hair_length`, `hair_color`, `glasses_color`, `facial_hair` and `outfit_color`. `glasses_color` counts `none` for no glasses. |
-| `distinct_tags` | string[] | Sorted list of every tag, excluding the profession slug, skin tone and gender. |
+| `distinct_tags` | string[] | Sorted list of every tag, excluding skin tone and gender. |
 | `avatars` | object[] | The avatar records, described below. |
 
 ## Avatar record (`avatars[]`)
@@ -25,7 +25,6 @@
 |---|---|---|
 | `id` | integer | Sequential id, starting at 1. |
 | `file` | string | PNG file name in this folder. Pattern: `pixel-avatar_<skin>_<m or f>_<nn>.png`, `nn` from 01 to 21. Unique. |
-| `profession` | string | Always `Pixel Avatar`. The loader skips a record without a profession. |
 | `skin_tone` | string | One of `fair`, `tan`, `dark`: the words the picker's **Light**, **Tan** and **Dark** buttons map (`SkinGroups.cs`). The art calls them fair, olive and darker. |
 | `gender_presentation` | string | `man` or `woman`. |
 | `hair` | string | Length and colour, for example `long blonde`. |
@@ -40,7 +39,7 @@
 
 ### `tags`
 
-In this order: `pixel-avatar`, `skin-<tone>`, `man` or `woman`, `<length> hair`, `<colour> hair`,
+In this order: `skin-<tone>`, `man` or `woman`, `<length> hair`, `<colour> hair`,
 `<colour> top`, then `glasses` or `no-glasses`, then `<colour> glasses` when there are glasses,
 then `mustache` or `beard` when there is facial hair.
 
@@ -55,7 +54,6 @@ then `mustache` or `beard` when there is facial hair.
 {
  "id": 3,
  "file": "pixel-avatar_fair_m_03.png",
- "profession": "Pixel Avatar",
  "skin_tone": "fair",
  "gender_presentation": "man",
  "hair": "short black",
@@ -66,6 +64,6 @@ then `mustache` or `beard` when there is facial hair.
  "facial_hair": "beard",
  "outfit": "black top",
  "outfit_color": "black",
- "tags": ["pixel-avatar", "skin-fair", "man", "short hair", "black hair", "black top", "glasses", "red glasses", "beard"]
+ "tags": ["skin-fair", "man", "short hair", "black hair", "black top", "glasses", "red glasses", "beard"]
 }
 ```

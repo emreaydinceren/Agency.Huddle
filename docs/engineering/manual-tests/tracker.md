@@ -38,6 +38,7 @@ A removed test's heading is deleted and its id is listed here, so no id is ever 
   INVITEROOMS-01; ROOMMESSAGING-18, 19, 20; REPLYGATEBUDGET-01; AGENTSLIBRARY-26.
 - **2026-10, manual-tests repair:** SHELLNAV-21 and 22; APPEARANCETHEME-05, 08, 10, 11, 12, 13, 19 and 25 (retired in
   place before, now deleted per decision D11); TP-T13 (team-pages).
+- **2026-11-12, Avatar Library professions removed:** AVATARLIB-10 (two professions combine by OR).
 ## Status
 
 | Status | Means | What to do |
@@ -954,10 +955,9 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 | [AVATARLIB-06](avatar-library.md#avatarlib-06--screen-reader-announces-each-picture-l15) |  | Active | |  |
 | [AVATARLIB-07](avatar-library.md#avatarlib-07--skin-switch-narrows-to-one-group-l2) |  | Active | |  |
 | [AVATARLIB-08](avatar-library.md#avatarlib-08--search-matches-the-start-of-a-word-not-the-middle-l3) |  | Active | |  |
-| [AVATARLIB-09](avatar-library.md#avatarlib-09--a-selected-profession-floats-left-with-an-x-the-x-restores-it-l4-l7) |  | Active | |  |
-| [AVATARLIB-10](avatar-library.md#avatarlib-10--two-professions-combine-by-or-and-both-chips-stay-at-the-left-l5-d-6) |  | Active | |  |
+| [AVATARLIB-09](avatar-library.md#avatarlib-09--a-selected-tag-floats-left-with-an-x-the-x-restores-it-l6-l7) |  | Active | |  |
 | [AVATARLIB-11](avatar-library.md#avatarlib-11--two-tags-combine-by-and-l6-d-6) |  | Active | |  |
-| [AVATARLIB-12](avatar-library.md#avatarlib-12--filters-combine-across-the-four-controls-as-and-l8-setup) |  | Active | |  |
+| [AVATARLIB-12](avatar-library.md#avatarlib-12--filters-combine-across-the-three-controls-as-and-l8-setup) |  | Active | |  |
 | [AVATARLIB-13](avatar-library.md#avatarlib-13--clear-all-resets-everything-l8) |  | Active | |  |
 | [AVATARLIB-14](avatar-library.md#avatarlib-14--nothing-matches-the-empty-state-and-clear-all-stays-l12-m4) |  | Active | |  |
 | [AVATARLIB-15](avatar-library.md#avatarlib-15--the-narrowed-state-matches-the-mock-up-and-other-chips-do-not-move-m3-d-5) |  | Active | |  |

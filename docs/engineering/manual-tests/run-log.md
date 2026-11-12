@@ -4611,7 +4611,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### AVATARLIB-03 — The button appears only under **An image**, and the dialog opens at 48 of 324 (L1, M1, M2)
+### AVATARLIB-03 — The button appears only under **An image**, and the dialog opens at 48 of 126 (L1, M1, M2)
 
 File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-126-l1-m1-m2)
 
@@ -4653,16 +4653,9 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### AVATARLIB-09 — A selected profession floats left with an X; the X restores it (L4, L7)
+### AVATARLIB-09 — A selected tag floats left with an X; the X restores it (L6, L7)
 
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-09--a-selected-profession-floats-left-with-an-x-the-x-restores-it-l4-l7)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-
-### AVATARLIB-10 — Two professions combine by OR, and both chips stay at the left (L5, D-6)
-
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-10--two-professions-combine-by-or-and-both-chips-stay-at-the-left-l5-d-6)
+File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-09--a-selected-tag-floats-left-with-an-x-the-x-restores-it-l6-l7)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4674,9 +4667,9 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### AVATARLIB-12 — Filters combine across the four controls as AND (L8 setup)
+### AVATARLIB-12 — Filters combine across the three controls as AND (L8 setup)
 
-File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-12--filters-combine-across-the-four-controls-as-and-l8-setup)
+File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-12--filters-combine-across-the-three-controls-as-and-l8-setup)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4709,7 +4702,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### AVATARLIB-17 — The tag cloud shows 40, **Show all** reveals the rest, and a selected tag stays visible (tag cap)
+### AVATARLIB-17 — The tag cloud shows 12, **Show all** reveals the rest, and a selected tag stays visible (tag cap)
 
 File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-17--the-tag-cloud-shows-12-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap)
 
@@ -4758,7 +4751,7 @@ File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avat
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### AVATARLIB-24 — Real library, first look: 324 pictures, each the right size and shape
+### AVATARLIB-24 — Real library, first look: 126 pictures, each the right size and shape
 
 File: [`docs/engineering/manual-tests/avatar-library.md`](avatar-library.md#avatarlib-24--real-library-first-look-126-pictures-each-the-right-size-and-shape)
 

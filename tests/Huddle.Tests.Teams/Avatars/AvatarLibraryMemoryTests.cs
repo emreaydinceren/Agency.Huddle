@@ -82,12 +82,12 @@ public sealed class AvatarLibraryMemoryTests : IDisposable
         File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
         File.WriteAllBytes(Path.Combine(this.root, "b.png"), PngBytes);
         string master = Path.Combine(this.root, "master.json");
-        File.WriteAllText(master, """{"avatars":[{"file":"a.png","profession":"Chef"}]}""");
+        File.WriteAllText(master, """{"avatars":[{"file":"a.png"}]}""");
         TeamOptions options = new() { AvatarLibrary = new AvatarLibraryOptions { Dir = this.root } };
         AvatarLibraryLoader loader = new(new AvatarLibraryLocator(Options.Create(options)), NullLogger<AvatarLibraryLoader>.Instance);
 
         AvatarLibraryLoadResult first = await loader.LoadAsync(ct);
-        File.WriteAllText(master, """{"avatars":[{"file":"a.png","profession":"Chef"},{"file":"b.png","profession":"Pilot"}]}""");
+        File.WriteAllText(master, """{"avatars":[{"file":"a.png"},{"file":"b.png"}]}""");
         AvatarLibraryLoadResult second = await loader.LoadAsync(ct);
 
         Assert.NotNull(first.Catalog);

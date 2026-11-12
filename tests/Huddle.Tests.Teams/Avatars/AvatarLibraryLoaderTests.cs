@@ -51,7 +51,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         Assert.Equal(0, result.Skipped);
     }
 
-    /// <summary>Only the five declared fields reach the record; unknown fields are ignored without error.</summary>
+    /// <summary>Only the four declared fields reach the record; unknown fields, including the retired <c>profession</c>, are ignored without error.</summary>
     [Fact]
     public async Task Load_ReadsOnlyDeclaredFields()
     {
@@ -77,7 +77,6 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         Assert.NotNull(result.Catalog);
         LibraryAvatar avatar = Assert.Single(result.Catalog.All);
         Assert.Equal("a.png", avatar.File);
-        Assert.Equal("Podcaster", avatar.Profession);
         Assert.Equal("fair", avatar.SkinTone);
         Assert.Equal("woman", avatar.Gender);
         Assert.Equal(["mic", "calm"], avatar.Tags);
@@ -89,7 +88,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
-        this.WriteMaster("""{"avatars":[{"file":"a.png","profession":"Chef"}]}""");
+        this.WriteMaster("""{"avatars":[{"file":"a.png"}]}""");
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
 
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
@@ -101,20 +100,43 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         Assert.Empty(avatar.Tags);
     }
 
-    /// <summary>A record with a blank profession is skipped and counted.</summary>
+    /// <summary>A record with no <c>profession</c> field loads: a safe, unique file with image content is enough.</summary>
     [Fact]
-    public async Task Load_BlankProfession_IsSkipped()
+    public async Task Load_NoProfessionField_Loads()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
-        this.WriteMaster("""{"avatars":[{"file":"a.png","profession":"  "}]}""");
+        this.WriteMaster("""{"avatars":[{"file":"a.png","skin_tone":"dark","gender_presentation":"man","tags":["beard"]}]}""");
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
 
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
 
         Assert.NotNull(result.Catalog);
-        Assert.Empty(result.Catalog.All);
-        Assert.Equal(1, result.Skipped);
+        LibraryAvatar avatar = Assert.Single(result.Catalog.All);
+        Assert.Equal("a.png", avatar.File);
+        Assert.Equal("dark", avatar.SkinTone);
+        Assert.Equal("man", avatar.Gender);
+        Assert.Equal(["beard"], avatar.Tags);
+        Assert.Equal(0, result.Skipped);
+    }
+
+    /// <summary>A record with a blank or null <c>profession</c> loads rather than being skipped.</summary>
+    [Theory]
+    [InlineData("\"  \"")]
+    [InlineData("\"\"")]
+    [InlineData("null")]
+    public async Task Load_BlankProfession_Loads(string profession)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
+        this.WriteMaster("{\"avatars\":[{\"file\":\"a.png\",\"profession\":" + profession + "}]}");
+        AvatarLibraryLoader loader = this.CreateLoader(this.root);
+
+        AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
+
+        Assert.NotNull(result.Catalog);
+        Assert.Equal("a.png", Assert.Single(result.Catalog.All).File);
+        Assert.Equal(0, result.Skipped);
     }
 
     /// <summary>Malformed JSON is unreadable, logs one warning and never throws.</summary>
@@ -173,9 +195,9 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         File.WriteAllBytes(Path.Combine(library, "sub.png"), PngBytes);
         File.WriteAllText(Path.Combine(library, "master.json"), """
             {"avatars":[
-              {"file":"../outside.png","profession":"A"},
-              {"file":"..\\outside.png","profession":"B"},
-              {"file":"sub/x.png","profession":"C"}
+              {"file":"../outside.png"},
+              {"file":"..\\outside.png"},
+              {"file":"sub/x.png"}
             ]}
             """);
         AvatarLibraryLoader loader = this.CreateLoader(library);
@@ -193,7 +215,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         File.WriteAllBytes(Path.Combine(this.root, "here.png"), PngBytes);
-        this.WriteMaster("""{"avatars":[{"file":"here.png","profession":"A"},{"file":"gone.png","profession":"B"}]}""");
+        this.WriteMaster("""{"avatars":[{"file":"here.png"},{"file":"gone.png"}]}""");
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
 
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
@@ -213,9 +235,9 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         File.WriteAllBytes(Path.Combine(this.root, "real.webp"), WebpBytes);
         this.WriteMaster("""
             {"avatars":[
-              {"file":"pic.svg","profession":"A"},
-              {"file":"fake.png","profession":"B"},
-              {"file":"real.webp","profession":"C"}
+              {"file":"pic.svg"},
+              {"file":"fake.png"},
+              {"file":"real.webp"}
             ]}
             """);
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
@@ -235,7 +257,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         byte[] big = new byte[AvatarImage.MaxBytes + 1];
         PngBytes.CopyTo(big, 0);
         File.WriteAllBytes(Path.Combine(this.root, "big.png"), big);
-        this.WriteMaster("""{"avatars":[{"file":"big.png","profession":"A"}]}""");
+        this.WriteMaster("""{"avatars":[{"file":"big.png"}]}""");
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
 
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
@@ -253,8 +275,8 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
         this.WriteMaster("""
             {"avatars":[
-              {"file":"a.png","profession":"First"},
-              {"file":"A.PNG","profession":"Second"}
+              {"file":"a.png","tags":["first"]},
+              {"file":"A.PNG","tags":["second"]}
             ]}
             """);
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
@@ -262,7 +284,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
         AvatarLibraryLoadResult result = await loader.LoadAsync(ct);
 
         Assert.NotNull(result.Catalog);
-        Assert.Equal("First", Assert.Single(result.Catalog.All).Profession);
+        Assert.Equal(["first"], Assert.Single(result.Catalog.All).Tags);
         Assert.Equal(1, result.Skipped);
     }
 
@@ -271,7 +293,7 @@ public sealed class AvatarLibraryLoaderTests : IDisposable
     public async Task Load_Skipped_LogsOneWarning()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        string records = string.Join(",", Enumerable.Range(0, 8).Select(i => $$"""{"file":"missing{{i}}.png","profession":"P"}"""));
+        string records = string.Join(",", Enumerable.Range(0, 8).Select(i => $$"""{"file":"missing{{i}}.png"}"""));
         this.WriteMaster("{\"avatars\":[" + records + "]}");
         AvatarLibraryLoader loader = this.CreateLoader(this.root);
 

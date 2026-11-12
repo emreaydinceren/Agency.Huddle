@@ -2,42 +2,26 @@
 
 Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the **Avatar** window of an Agent card and of the Human's own profile card on **Settings → Profile**) narrows the bundled library's 126 pixel-art pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
-**28 tests** · all free · about 3.3 hours.
+**27 tests** · all free · about 3.1 hours.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
-Coverage: use cases L1 to L16 and mock states M1 to M5 from the specification. Each test names the cases it proves. `<data>` is `<repo>\src\Huddle.App\App_Data` on the free lane (see [Common procedures](common.md)).
+Coverage: use cases L1 to L16 (except L4 and L5, removed with professions on 2026-11-12) and mock states M1 to M5 from the specification. Each test names the cases it proves. `<data>` is `<repo>\src\Huddle.App\App_Data` on the free lane (see [Common procedures](common.md)).
 
 ## Setup
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free), which also defines the terminals and the standing conventions. This area adds:
 
 1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup first. The picker copies files into `<data>\avatars` and rewrites `<data>\avatars.json`, and that backup is the only undo.
-2. **The library.** The app ships with its library: 126 pixel-art PNGs, each 256 × 256 with a transparent background and under the 512 000-byte cap, and a `master.json` index, in `<repo>\src\Huddle.App\AvatarLibrary`, copied beside the app by the build. `tools/avatar-pixel-art/generate.py` generates both. Every picture has the one profession `Pixel Avatar`, and the files are named `pixel-avatar_<skin>_<m|f>_<nn>.png`, where the skin is `fair`, `tan` or `dark` (42 each, the **Light**, **Tan** and **Dark** groups) and `nn` runs from `01` to `21`, for example `pixel-avatar_tan_f_01.png`. The tag cloud holds 21 tags, most frequent first: `glasses` 76, `short hair` 54, `no-glasses` 50, `black hair` 48, `brown hair` 44, `medium hair` 38, `long hair` 34, `blue glasses` 26, `red glasses` 26, `black glasses` 24, `beard` 19, then `beige top`, `black top`, `blonde hair`, `blue top`, `gray top`, `pink top`, `red top` and `white top` 18 each, `red hair` 16 and `mustache` 9. With `Team:AvatarLibrary:Dir` unset the app uses it, so most tests need no configuration. On this page `<lib>` is the library folder the app is using: that repo folder, or your copy when `Dir` is set.
-3. **A copy to edit.** AVATARLIB-02, -09, -10, -12, -13, -15, -20, -21, -22 and -26 use a copy of the library: some rename, edit or delete library files, and -09, -10, -12 and -15 need more than one profession, which the bundled library does not have (-13 clears the filters -12 left set, so it runs in the same session). Never edit the repo's folder. Copy it first and point the app at the copy. In `T-A`, before the two lines of `P-LAUNCH-FREE`:
+2. **The library.** The app ships with its library: 126 pixel-art PNGs, each 256 × 256 with a transparent background and under the 512 000-byte cap, and a `master.json` index, in `<repo>\src\Huddle.App\AvatarLibrary`, copied beside the app by the build. `tools/avatar-pixel-art/generate.py` generates both. The records carry no profession (the picker has no professions since 2026-11-12), and the files are named `pixel-avatar_<skin>_<m|f>_<nn>.png`, where the skin is `fair`, `tan` or `dark` (42 each, the **Light**, **Tan** and **Dark** groups) and `nn` runs from `01` to `21`, for example `pixel-avatar_tan_f_01.png`. The tag cloud holds 21 tags, most frequent first: `glasses` 76, `short hair` 54, `no-glasses` 50, `black hair` 48, `brown hair` 44, `medium hair` 38, `long hair` 34, `blue glasses` 26, `red glasses` 26, `black glasses` 24, `beard` 19, then `beige top`, `black top`, `blonde hair`, `blue top`, `gray top`, `pink top`, `red top` and `white top` 18 each, `red hair` 16 and `mustache` 9. With `Team:AvatarLibrary:Dir` unset the app uses it, so most tests need no configuration. On this page `<lib>` is the library folder the app is using: that repo folder, or your copy when `Dir` is set.
+3. **A copy to edit.** AVATARLIB-02, -20, -21, -22 and -26 rename, edit or delete library files, so they use a copy of the library. Never edit the repo's folder. Copy it first and point the app at the copy. In `T-A`, before the two lines of `P-LAUNCH-FREE`:
 
    ```powershell
    Copy-Item <repo>\src\Huddle.App\AvatarLibrary E:\tmp\avatar-library -Recurse
    $env:Team__AvatarLibrary__Dir = 'E:\tmp\avatar-library'
    ```
 
-   **Then give the copy three professions.** Run this once, in the same `T-A`, right after the copy. It rewrites the copy's `master.json` only: every record numbered `01` to `06` (`pixel-avatar_*_*_01.png` to `_06.png`, both genders, all three skins) becomes `Gardener`, every record numbered `15` to `18` becomes `Pilot`, and the record's `pixel-avatar` tag becomes the new profession's own slug, so the tag cloud does not grow a `pixel-avatar` chip:
-
-   ```powershell
-   $path = 'E:\tmp\avatar-library\master.json'
-   $index = Get-Content $path -Raw | ConvertFrom-Json
-   foreach ($avatar in $index.avatars) {
-       $number = [int]$avatar.file.Substring($avatar.file.Length - 6, 2)
-       $profession = if ($number -le 6) { 'Gardener' } elseif ($number -ge 15 -and $number -le 18) { 'Pilot' } else { $null }
-       if ($profession) {
-           $avatar.profession = $profession
-           $avatar.tags = @($avatar.tags | ForEach-Object { if ($_ -eq 'pixel-avatar') { $profession.ToLowerInvariant() } else { $_ } })
-       }
-   }
-   $index | ConvertTo-Json -Depth 10 | Set-Content $path -Encoding utf8
-   ```
-
-   The copy then has three profession chips, in this order: **Gardener** (36 pictures), **Pilot** (24) and **Pixel Avatar** (66). Check it in the picker: pressing **Gardener** alone reads `36 of 126`. Nothing else changes, so the skin counts, the 21 tags and their counts, and every count this page gives for a test on the bundled library are the same on the copy; only the profession chips, and the accessible names of the 60 changed pictures (for example `fair man Gardener`), differ.
+   The copy is identical to the bundled library until a test edits it, so every count this page gives holds on either. The other tests may run on either one.
 
    The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\tmp\avatar-library"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because a library of your own is not under `<data>`. Those tests call the copy "the library folder". To go back to the bundled library, clear the variable (`Remove-Item Env:Team__AvatarLibrary__Dir`) and restart.
 4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
@@ -146,15 +130,15 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Read the dialog from top to bottom: the skin switch, the search box, the profession chips, the tag chips with **Show all**, the count line with **Clear all**, then the grid.
-2. Scroll the grid to its end. Confirm that the skin switch, search box, both chip clouds and the count line stay where they are.
+1. Read the dialog from top to bottom: the skin switch, the search box with the placeholder `type a tag, for example red hair`, the tag chips with **Show all**, the count line with **Clear all**, then the grid.
+2. Scroll the grid to its end. Confirm that the skin switch, search box, tag cloud and count line stay where they are.
 3. Press **Show all (21)** in the tag cloud (the button then reads **Show fewer**). If the tag cloud shows a scrollbar, scroll inside it; then scroll the grid.
 4. Resize the browser window to below 600 px wide (for example 400 px). Repeat steps 2 and 3.
 5. Press **Show fewer**, then resize the window back to full width.
 
 **Pass if — all of these**
 
-- The order matches the top-to-bottom list in step 1.
+- The order matches the top-to-bottom list in step 1. There is no **Professions** heading or cloud.
 - Scrolling moves only the grid. The skin switch, search box, count line and **Clear all** are never scrolled out of view.
 - With **Show all** open, the tag cloud is never taller than 30 % of the window height (where its 21 chips need more room, as they may below 600 px, it scrolls inside itself), and the count line and at least part of the grid stay in view, at both widths.
 - Below 600 px the dialog fills the screen, and no control or picture requires a sideways scroll.
@@ -183,12 +167,13 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - No picture shows text, a caption or a tooltip, at rest or on hover.
-- The accessibility name of a picture is in the form `{skin} {gender} {profession}`, for example `fair woman Pixel Avatar` (on the copy of Setup step 3, `fair woman Gardener` or `fair woman Pilot` for a changed picture), and the picture has no `title` attribute.
+- The accessibility name of a picture is the raw skin tone and the gender, then the picture's tags, joined with `, `: for `pixel-avatar_fair_m_03.png`, `fair man, short hair, black hair, black top, glasses, red glasses, beard`. It has no `skin-fair` and no second `man`, and the picture has no `title` attribute.
 
 **Fail if — any of these**
 
 - A tooltip appears on hover, or a `title` attribute is present -> D-4 is broken.
-- The name says `Light woman` where the file says `fair` -> the accessible name is built from the grouped skin, not the raw `skin_tone`.
+- The name says `Light man` where the file says `fair` -> the accessible name is built from the grouped skin, not the raw `skin_tone`.
+- The name holds `skin-fair`, or says `man` twice -> the name does not drop the tags the picker already shows another way (`AvatarTags.IsDescriptive`).
 
 ### AVATARLIB-06 — Screen reader announces each picture (L15)
 
@@ -208,7 +193,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Pass if — all of these**
 
-- The announcement for a picture is close to `fair woman Pixel Avatar` (skin, gender, profession), with no file name and no tag list.
+- The announcement for a picture is close to `fair man, short hair, black hair, black top, glasses, red glasses, beard` (skin and gender, then the tags), with no file name and no `skin-` tag.
 - The focused picture shows a visible ring, the same ring the pointer hover shows.
 
 **Fail if — any of these**
@@ -246,7 +231,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 6 min
 
-*Proves that the text box matches a prefix of a profession or tag word, and that it waits briefly before filtering.*
+*Proves that the text box matches a prefix of a word of a tag, and that it waits briefly before filtering.*
 
 **Before you start**
 
@@ -262,7 +247,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - `woman` reads `63 of 126`, and every name has `woman` in it.
-- `man` also reads `63 of 126`, and every name has `man`, none `woman`: a word that merely contains `man` in the middle (`woman`) does not match it.
+- `man` also reads `63 of 126`, every name starts with the skin then `man,` (for example `tan man, short hair, …`), and no name has `woman` in it: a word that merely contains `man` in the middle (`woman`) does not match it. Checking that a name contains `man` proves nothing, because `woman` contains it too.
 - `no` reads `50 of 126`: it finds the pictures with the `no-glasses` tag, because `-` splits the token.
 - `blond` reads `18 of 126`, the pictures with `blonde hair`, because it is the start of `blonde`. `BLOND` gives the same `18 of 126`.
 - The grid changes roughly 200 ms after you stop typing, not on every keystroke.
@@ -273,58 +258,32 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 - `no` finds nothing -> hyphen splitting is missing.
 - `BLOND` differs from `blond` -> matching is case-sensitive.
 
-### AVATARLIB-09 — A selected profession floats left with an X; the X restores it (L4, L7)
+### AVATARLIB-09 — A selected tag floats left with an X; the X restores it (L6, L7)
 
 **Free** · about 6 min
 
-*Proves that a pressed chip moves to the far left of its cloud with an X, and that the X puts it back.*
+*Proves that a pressed chip moves to the far left of its cloud with an X, and that the X puts it back in its place.*
 
 **Before you start**
 
-- The app runs on the copy of the library with three professions (Setup step 3). The dialog is open, unfiltered. The profession cloud reads **Gardener**, **Pilot**, **Pixel Avatar**, in that alphabetical order.
+- The dialog is open, unfiltered. The tag cloud starts `glasses`, `short hair`, `no-glasses`, and `beard` is the 11th chip, between `black glasses` and `beige top`.
 
 **Steps**
 
-1. Press the **Pilot** chip.
-2. Read the profession cloud and the count.
-3. Press the X on **Pilot**.
+1. Press the `beard` chip.
+2. Read the tag cloud and the count.
+3. Press the X on `beard`.
 4. Read the cloud and the count again.
 
 **Pass if — all of these**
 
-- After step 1, **Pilot** sits at the far left with an X, ahead of **Gardener** and **Pixel Avatar**, and the count reads `24 of 126`.
+- After step 1, `beard` sits at the far left with an X, ahead of `glasses`, and the count reads `19 of 126`.
 - The chip carries `aria-pressed="true"` in the accessibility view.
-- After step 3, **Pilot** is back in its alphabetical place between **Gardener** and **Pixel Avatar**, and the count is `126 of 126` again.
+- After step 3, `beard` is back in its place between `black glasses` and `beige top`, and the count is `126 of 126` again.
 
 **Fail if — any of these**
 
 - The chip moves but has no X, or the X does not restore it -> the selected state is not complete.
-
-### AVATARLIB-10 — Two professions combine by OR, and both chips stay at the left (L5, D-6)
-
-**Free** · about 5 min
-
-*Proves that selecting a second profession widens the result to either profession, and that the order of selection is kept.*
-
-**Before you start**
-
-- The app runs on the copy of the library with three professions (Setup step 3). Nothing selected.
-
-**Steps**
-
-1. Press **Pixel Avatar**. Note the count.
-2. Press **Gardener**. Note the count and the order of the two chips.
-3. Press **Gardener** again to deselect it. Confirm the count returns to the step 1 count.
-
-**Pass if — all of these**
-
-- After step 1 the count reads `66 of 126`. After step 2 it reads `102 of 126`: the 66 Pixel Avatar pictures plus the 36 Gardener pictures, with no overlap (an avatar has one profession).
-- **Pixel Avatar** is left of **Gardener**, in the order they were pressed, although **Gardener** comes first alphabetically. Both have an X.
-- Deselecting **Gardener** returns it to its alphabetical place (first of the unselected chips, before **Pilot**) and the count to `66 of 126`.
-
-**Fail if — any of these**
-
-- The count after step 2 is `66 of 126` or `0 of 126` -> the professions are combined with AND, not OR.
 
 ### AVATARLIB-11 — Two tags combine by AND (L6, D-6)
 
@@ -352,31 +311,31 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - The count grows when `long hair` is added (to `90 of 126`, the pictures with either tag) -> tags are combined with OR.
 
-### AVATARLIB-12 — Filters combine across the four controls as AND (L8 setup)
+### AVATARLIB-12 — Filters combine across the three controls as AND (L8 setup)
 
 **Free** · about 5 min
 
-*Proves that a skin group, text, a profession and a tag all narrow together.*
+*Proves that a skin group, text and tags all narrow together.*
 
 **Before you start**
 
-- The app runs on the copy of the library with three professions (Setup step 3). Nothing selected, skin set to All, search empty.
+- Nothing selected, skin set to All, search empty.
 
 **Steps**
 
 1. Press **Tan**. Note the count.
 2. Type `long` in the search box, after the 200 ms pause. Note the count.
-3. Press **Gardener**. Note the count.
-4. Press the tag `glasses`. Note the count.
+3. Press the tag `glasses`. Note the count.
+4. Press the tag `blue glasses`. Note the count.
 
 **Pass if — all of these**
 
-- The counts read `42 of 126`, `12 of 126`, `3 of 126` and `2 of 126`, each smaller than the step before.
-- The two remaining pictures are `pixel-avatar_tan_m_04.png` and `_tan_f_02`: each is tan, a Gardener, carries the tag `long hair` (the word starting `long`), and carries the tag `glasses`.
+- The counts read `42 of 126`, `12 of 126`, `8 of 126` and `2 of 126`, each smaller than the step before.
+- The two remaining pictures are `pixel-avatar_tan_m_04.png` and `pixel-avatar_tan_m_10.png`: each is tan, carries the tag `long hair` (the word starting `long`), and carries the tags `glasses` and `blue glasses`.
 
 **Fail if — any of these**
 
-- A step increases the count, or leaves it unchanged -> one of the four controls is widening the result or is not applied.
+- A step increases the count, or leaves it unchanged -> one of the three controls is widening the result or is not applied.
 
 ### AVATARLIB-13 — Clear all resets everything (L8)
 
@@ -391,11 +350,11 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Press **Clear all**.
-2. Read the skin switch, the search box, both clouds, the count and the grid.
+2. Read the skin switch, the search box, the tag cloud, the count and the grid.
 
 **Pass if — all of these**
 
-- Skin is **All**. The search box is empty. No chip is selected, and every chip is back in its place (**Gardener**, **Pilot**, **Pixel Avatar**; `glasses` first among the tags).
+- Skin is **All**. The search box is empty. No chip is selected, and every chip is back in its place (`glasses`, `short hair`, `no-glasses`, and so on, with `blue glasses` eighth).
 - The count reads `126 of 126` and the grid shows the first 48.
 
 **Fail if — any of these**
@@ -432,29 +391,31 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 8 min
 
-*Proves that a combined narrowing looks as the mock-up shows, and that pressing one chip never moves or hides another.*
+*Proves that a combined narrowing looks as the mock-up shows, that selected chips keep the order they were pressed in, and that pressing one chip never moves or hides another.*
 
 **Before you start**
 
-- The app runs on the copy of the library with three professions (Setup step 3). Nothing selected. Note the position of the chips **Pilot**, `short hair`, `no-glasses` and `beige top` (the last tag shown before **Show all (21)**).
+- Nothing selected. Note the position of the chips `short hair`, `no-glasses` and `beige top` (the last tag shown before **Show all (21)**).
 
 **Steps**
 
 1. Press **Tan**. Type `long` in the search box. Wait for the filter.
-2. Press **Gardener**, then **Pixel Avatar**. Press the tags `glasses` then `blue glasses`.
-3. Read both clouds. Note where **Pilot**, `short hair`, `no-glasses` and `beige top` sit now.
-4. Press **Pixel Avatar** again to deselect it.
+2. Press the tag `black hair`, then the tag `glasses`.
+3. Read the tag cloud. Note where `short hair`, `no-glasses` and `beige top` sit now.
+4. Press `black hair` again to deselect it.
 
 **Pass if — all of these**
 
-- Selected chips sit at the left of their clouds in the order pressed, each with an X: `[Gardener X] [Pixel Avatar X] Pilot`, and `[glasses X] [blue glasses X]` then the other tags. The rest follow in their usual order.
+- Selected chips sit at the left of the cloud in the order pressed, each with an X: `[black hair X] [glasses X]`, although `glasses` comes before `black hair` in the cloud. The rest follow in their usual order.
 - After step 3 the unselected chips are in the same order and places as before step 1, apart from the selected ones moved to the left. None is hidden, disabled or recounted, and `beige top` is still the last tag before **Show all (21)**.
-- The count line gives the number of pictures that match the filters: `12 of 126` after step 1, `8 of 126` after the two professions, `5 of 126` after `glasses`, `2 of 126` after `blue glasses`, and it drops to `1 of 126` when **Pixel Avatar** is deselected in step 4.
+- The count line gives the number of pictures that match the filters: `12 of 126` after step 1, `7 of 126` after `black hair`, `4 of 126` after `glasses`, and it rises to `8 of 126` when `black hair` is deselected in step 4.
+- After step 4, `black hair` is back in its place between `no-glasses` and `brown hair`, and `[glasses X]` alone sits at the left.
 - Each selected chip has `aria-pressed="true"`, and is shown by its bracket and X, not by colour alone.
 
 **Fail if — any of these**
 
 - An unselected chip disappears, greys out or changes its place other than by the selected chips moving to the left -> D-5 is broken.
+- The selected chips are in cloud order (`[glasses X] [black hair X]`) rather than the order pressed -> the selection order is lost.
 
 ### AVATARLIB-16 — **Show more** adds 48, and any filter change returns to 48 at the top (grid paging)
 
@@ -504,7 +465,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - Before **Show all**, the cloud shows 12 tags, the most frequent first, then alphabetical: `glasses`, `short hair`, `no-glasses`, `black hair`, `brown hair`, `medium hair`, `long hair`, `blue glasses`, `red glasses`, `black glasses`, `beard`, `beige top`. The button reads **Show all (21)**.
 - After **Show all**, all 21 tags are shown, ending `pink top`, `red top`, `white top`, `red hair`, `mustache`, and the button reads **Show fewer**.
-- The profession cloud has no **Show all**: its one chip (three on the copy of Setup step 3) is under its cap of 12.
+- There is no **Professions** cloud: the tag cloud is the only chip cloud.
 - The tag chosen in step 3 remains visible after the cloud is collapsed, at the left with an X, because a selected tag is shown beyond the cap.
 
 **Fail if — any of these**
@@ -613,9 +574,9 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 - In `master.json`, add three records to the end of the `avatars` list:
 
   ```json
-  { "file": "..\\secret.png", "profession": "Pixel Avatar" },
-  { "file": "missing-picture.png", "profession": "Pixel Avatar" },
-  { "file": "fake.svg", "profession": "Pixel Avatar" }
+  { "file": "..\\secret.png", "skin_tone": "tan", "gender_presentation": "man", "tags": [] },
+  { "file": "missing-picture.png", "skin_tone": "tan", "gender_presentation": "man", "tags": [] },
+  { "file": "fake.svg", "skin_tone": "tan", "gender_presentation": "man", "tags": [] }
   ```
 
 - Restart the app.
@@ -652,15 +613,16 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Open the dialog. Click in the search box and type `blond`, wait, and note the count (`18 of 126`). Press Escape once: this clears the search box only. Press Escape again: the dialog closes.
-2. Open `master.json` in an editor, find the record for `pixel-avatar_dark_m_12.png`, and change its `profession` value to `Juggler`. Save.
-3. Reopen the dialog from the same place. Type `juggler` in the search box.
+2. Open `master.json` in an editor and find the record for `pixel-avatar_dark_m_12.png`. Add `"green hat"` as the last entry of its `tags` list, and add the field `"profession": "Gardener",` to the same record, a field the picker no longer reads. Save.
+3. Reopen the dialog from the same place. Type `gardener` in the search box and read the count. Clear it and type `green`.
 4. Use Tab to reach a picture, and press Enter on it.
 5. Restore `master.json` from `master.json.good`.
 
 **Pass if — all of these**
 
 - The first Escape, with focus in the search box, clears the text and leaves the dialog open. The second closes the dialog.
-- After the reopening, a **Juggler** chip is in the profession cloud, and `juggler` reads `1 of 126` and finds the picture changed in step 2 (accessible name `dark man Juggler`), with no restart.
+- After the reopening, with no restart, the tag cloud has a `green hat` chip, last under **Show all (22)**, and `green` reads `1 of 126` and finds the picture changed in step 2 (accessible name `dark man, medium hair, brown hair, pink top, no-glasses, green hat`).
+- `gardener` reads `0 of 126`, and no **Professions** cloud appears: the old `profession` field is ignored, and the record is not skipped for carrying it.
 - Enter on a focused picture closes the dialog and sets the pending image, as a click does.
 
 **Fail if — any of these**
@@ -868,7 +830,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 **Pass if — all of these**
 
 - **Choose from library** is present beside **Choose an image**, with no configuration.
-- The picker reads `126 of 126`, its profession cloud holds the one chip **Pixel Avatar**, and every picture loads.
+- The picker reads `126 of 126`, its only chip cloud is **Tags**, with **Show all (21)**, and every picture loads.
 - The `pixel-avatar_tan_f_01.png` URL shows a picture, and the `master.json` URL returns 404.
 
 **Fail if — any of these**

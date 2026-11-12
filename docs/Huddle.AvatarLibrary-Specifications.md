@@ -7,16 +7,26 @@ its image rules) · **Vocabulary:** [language.md](engineering/language.md) (**Av
 **Human**)
 
 This is the design for choosing an Avatar image from a ready-made library of people, found by skin
-tone, a free-text search, and two clouds of toggle chips (professions and tags). The picker is a
+tone, a free-text search, and a cloud of tag chips. The picker is a
 **modal dialog**, not a drawer or sliding panel. A pick **copies** the image into the Avatar store
 ADR-0019 already built, so nothing downstream of the picker changes.
 
 > [!NOTE]
 > **The bundled library changed on 2026-11-11.** It was 324 illustrated people across about 40
 > professions. It is now 126 pixel-art people, all with the one profession `Pixel Avatar`, written
-> by `tools/avatar-pixel-art/generate.py` (§5.3). The picker did not change. The use cases and
-> mocks below still use the professions of the illustrated set, because they show how the picker
-> behaves with several professions, as a library of your own (`Team:AvatarLibrary:Dir`) may have.
+> by `tools/avatar-pixel-art/generate.py` (§5.3). The picker did not change then, and the use cases
+> and mocks kept the professions of the illustrated set until the next note.
+
+> [!NOTE]
+> **Professions were removed on 2026-11-12, from the picker and from the data.** The bundled
+> `master.json` has no `profession` field and no `pixel-avatar` tag, and the picker has no
+> **Professions** cloud. Its filters are the skin buttons, the search box and the **Tags** cloud.
+> The loader no longer reads `profession`: a library of your own that still has it is read as
+> before, with the field ignored, and a tag that used to be a profession's slug (such as
+> `gardener`) is now an ordinary tag. The use cases, the data contract (§5), the filters (§6.4 to
+> §6.6) and the mocks (§6.9) below describe the picker without professions; L4 and L5 are
+> removed. The test names in §7, decision D-6 and the Appendix A task list are kept as written
+> when the picker was built, so they still name professions: read them as history.
 
 It is written for the engineers or agents building it, with no memory of the conversation that
 produced it. Read §4 for the shape, §5 for the library's data contract, §6 for the subsystems and
@@ -38,8 +48,8 @@ They open a dialog, narrow the library's pictures to a handful, and click one.
 
 1. **A library, not a gallery of captions.** The dialog shows pictures and chips. No thumbnail
    carries visible text, a caption or a tooltip.
-2. **Four ways to narrow, all combining.** A skin tone switch, a text box, profession chips and tag
-   chips. Each one can only shrink the result (§6.4).
+2. **Three ways to narrow, all combining.** A skin tone switch, a text box and tag chips. Each one
+   can only shrink the result (§6.4).
 3. **A pick is a copy.** The chosen file is read and handed to the same code path an upload uses.
    The library can be moved or deleted afterwards and every Agent keeps its face.
 4. **Nothing stays in memory.** The library's index is read when the dialog opens and is released
@@ -55,11 +65,11 @@ They open a dialog, narrow the library's pictures to a handful, and click one.
 | --- | --- | --- |
 | L1 | The Human clicks an Agent's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of the library's pictures (126 in the bundled one) and the filters |
 | L2 | They press **Tan** | Only avatars whose `skin_tone` is `tan` or `brown` remain |
-| L3 | They type `headset` | Only avatars with a profession or tag word starting `headset` remain |
-| L4 | They press the **Butler** profession chip | The chip moves to the far left and shows an X. Only butlers remain |
-| L5 | They also press **Cook** | Butlers **or** cooks remain. Both chips sit at the left |
-| L6 | They press the tags `glasses` and `bow tie` | Only avatars with **both** tags remain |
-| L7 | They press the X on `Butler` | The chip returns to its normal place; the grid widens again |
+| L3 | They type `blond` | Only avatars with a tag word starting `blond` remain (`blonde hair`) |
+| L4 | *Removed 2026-11-12* | Pressed a profession chip; there are no professions |
+| L5 | *Removed 2026-11-12* | Pressed a second profession, which combined by OR |
+| L6 | They press the tags `glasses` and `long hair` | Each chip moves to the far left and shows an X, in the order pressed. Only avatars with **both** tags remain |
+| L7 | They press the X on `glasses` | The chip returns to its normal place; the grid widens again |
 | L8 | They press **Clear all** | Every filter resets to All, empty text, no chips |
 | L9 | They click a picture | The picker closes. The **Avatar** window previews the picture and shows **New image selected (not yet saved)**, exactly as after an upload; **Apply** puts it on the card, and the card's **Save** writes it (from a viewed Agent the window's own **Save** does) |
 | L10 | They press **Cancel** in the window, or on the card after **Apply** | Nothing is written. The copy happens at Save, as for an upload |
@@ -67,7 +77,7 @@ They open a dialog, narrow the library's pictures to a handful, and click one.
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
 | L13 | `Team:AvatarLibrary:Dir` is set to a folder that is missing or has no `master.json` | No **Choose from library** button anywhere. (Unset uses the bundled library.) |
 | L14 | `master.json` is malformed | The dialog opens, shows **The avatar library could not be read**, and a warning is logged |
-| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair woman Pixel Avatar* |
+| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair man, short hair, black hair, black top, glasses, red glasses, beard* |
 | L16 | The dialog is closed | The parsed catalogue is no longer reachable (R-1) |
 
 ## 3. Non-goals
@@ -77,7 +87,7 @@ They open a dialog, narrow the library's pictures to a handful, and click one.
 - **Resizing or decoding an image.** ADR-0019 refuses an image decoder. The library's files are
   prepared to 256 × 256 beforehand (§5.3). The app only checks them.
 - **Referencing library files from `avatars.json`.** Rejected in D-1.
-- **Showing a profession or tag as text on a picture,** including as a tooltip or `title`.
+- **Showing a tag as text on a picture,** including as a tooltip or `title`.
 - **A gender filter,** or a filter on hair, outfit and background colour as separate controls.
   `man`, `woman` and `bg-*` are searchable by the text box only. Adding a control later needs no
   schema change.
@@ -116,10 +126,15 @@ field (hair, glasses, outfit, colours, counts, notes) is ignored and may change 
 | Path | Used for |
 | --- | --- |
 | `avatars[].file` | The image's bare file name in the same folder |
-| `avatars[].profession` | The profession chip; the text box; the accessible name |
 | `avatars[].skin_tone` | `fair`, `light`, `tan`, `brown`, `dark` → skin group (§6.4); the accessible name |
 | `avatars[].gender_presentation` | `man` or `woman`; the accessible name |
-| `avatars[].tags` | The tag chips; the text box |
+| `avatars[].tags` | The tag chips; the text box; the accessible name |
+
+There is no `profession` field. A library that still has one is read as usual and the field is
+ignored. A record is valid when its `file` is a safe bare image name, is the first record with that
+name, and the file holds PNG, JPEG or WebP bytes (§6.8). Nothing else is required: a record with
+no `skin_tone`, `gender_presentation` or `tags` is kept, appears only under **All**, and has a
+shorter accessible name (§6.6).
 
 ### 5.2 Skin groups
 
@@ -216,37 +231,34 @@ A second `UseStaticFiles` mount at `/avatar-library` with a `PhysicalFileProvide
 internal sealed record AvatarLibraryQuery(
     SkinGroup? Skin,                       // null = All
     string Text,
-    IReadOnlySet<string> Professions,      // exact, ordinal-ignore-case
     IReadOnlySet<string> Tags);            // exact, ordinal-ignore-case
 ```
 
 `Search(query)` is a pure function returning avatars in `master.json` order. An avatar passes
-only if **all four** hold:
+only if **all three** hold:
 
 | Control | Rule |
 | --- | --- |
 | Skin | `Skin` is null, or the avatar's group equals it |
-| Text | Split into words on whitespace. Each word must be a **prefix** of some token of the avatar's profession or any of its tags. Tokens are split on whitespace and `-`, so `pink` finds `bg-pink` and `bun` finds `hair bun`. Ordinal, ignore case. An empty box passes everyone |
-| Professions | None selected, or the avatar's profession is **any** of those selected (OR) |
+| Text | Split into words on whitespace. Each word must be a **prefix** of some token of any of the avatar's tags. Tokens are split on whitespace and `-`, so `no` finds `no-glasses` and `blond` finds `blonde hair`, while `man` does not find `woman`. Ordinal, ignore case. An empty box passes everyone |
 | Tags | The avatar carries **every** selected tag (AND) |
 
-Professions OR because an avatar has exactly one, so AND would always be empty. Tags AND because
-each additional tag is meant to narrow.
+Tags AND because each additional tag is meant to narrow.
 
-### 6.5 The chip clouds
+### 6.5 The tag cloud
 
-Both clouds are built once per dialog opening from the loaded catalogue and are then **static**.
-Selecting a chip never hides or disables another chip, and counts do not change (D-5).
+The one chip cloud, **Tags**, is built once per dialog opening from the loaded catalogue and is then
+**static**. Selecting a chip never hides or disables another chip, and counts do not change (D-5).
+There is no profession cloud.
 
 | Cloud | Pool | Order |
 | --- | --- | --- |
-| Professions | The distinct `profession` values (42 today) | Alphabetical |
-| Tags | The records' tags, **minus** the profession slug, `skin-*`, `man`, `woman` and `bg-*` (about 433) | Most frequent first, then alphabetical |
+| Tags | The records' tags, **minus** `skin-*`, `bg-*`, `man` and `woman` (`AvatarTags.IsDescriptive`; 21 in the bundled library). There is no profession-slug exclusion, so a library of your own whose tags include a former profession slug, such as `gardener`, shows it as an ordinary tag | Most frequent first, then alphabetical |
 
 - **Selected chips float to the far left**, in the order they were selected, each with an **X** that
   switches it off. Unselected chips follow in the order above.
-- The tag cloud shows the first **40** pool entries plus every selected tag, with a **Show all**
-  control. The profession cloud shows all.
+- The cloud shows the first **12** pool entries plus every selected tag, with a **Show all (n)**
+  control that reveals the rest and then reads **Show fewer**.
 - Chips are real buttons: keyboard-operable, with the selected state exposed to assistive
   technology (`aria-pressed`).
 
@@ -257,16 +269,19 @@ Selecting a chip never hides or disables another chip, and counts do not change 
 backdrop click, with focus trapped. It is not a `MudDrawer` or any sliding panel.
 
 Top to bottom: the title **Choose an avatar**; the skin switch `[All | Light | Tan | Dark]`; the
-text box; the profession chips; the tag chips and **Show all**; a line **{matches} of {total}** (how
+text box, with the placeholder `type a tag, for example red hair`; the tag chips and **Show all**; a
+line **{matches} of {total}** (how
 many avatars satisfy the filters, out of the whole library; paging never changes it) with **Clear
 all**; then the grid.
 
 - **The grid** shows the first 48 results with **Show more** (48 at a time). Any change to a filter
   resets it to 48 and scrolls it to the top.
 - **A thumbnail** is a `<button>` containing an `<img>` of the library file at `/avatar-library/<file>`
-  with `alt=""`, and `aria-label="{skin_tone} {gender_presentation} {profession}"` built from the
-  **raw** `skin_tone` (so `fair woman Pixel Avatar`, not `Light woman Pixel Avatar`). No `title`, no
-  caption, no tooltip.
+  with `alt=""`, and an `aria-label` (`LibraryAvatar.AccessibleName`): the **raw** `skin_tone` and
+  the `gender_presentation`, then the descriptive tags (the tag cloud's rule, §6.5) in record order,
+  joined with `, `. For example `fair man, short hair, black hair, black top, glasses, red glasses,
+  beard`, never `Light man, …`. With no skin or gender it is the tags alone; with nothing at all, the
+  file name without its extension. No `title`, no caption, no tooltip.
 - Result is `DialogResult.Ok(fileName)`; cancelling returns `DialogResult.Cancel()`.
 - **Nested dialog.** From `AgentProfileCard`, which is itself a `MudDialog`, this opens a second dialog
   above it. Confirm the stack's focus and Escape behaviour in task 6 before relying on it. From
@@ -298,6 +313,7 @@ does the same and writes at once, as it does for an upload. **`AvatarStore`, `Av
 | Folder present, `master.json` missing | `IsConfigured` is false, so no button; the `/avatar-library` mount is still added and serves the folder's pictures, because the mount follows the folder, not the index (§6.3). `master.json` itself returns 404 |
 | `master.json` unreadable, malformed or over 4 MB | Dialog shows the unreadable message; one warning logged; nothing thrown |
 | A record with an empty or unsafe `file` (separator, `..`) | Skipped |
+| A record with a `profession` field | Kept; the field is ignored |
 | A record whose file is missing, not a real PNG/JPEG/WebP, or over the cap | Skipped; counted |
 | Skipped records | **One** warning on open: the count and up to five example names, never one line each |
 | Duplicate `file` values | The first wins; the rest are skipped and counted |
@@ -322,23 +338,19 @@ upload button. It appears only in the **An image** choice, and only when a libra
 +------------------------------------------------------------------+
 ```
 
-**M2 — Just opened, nothing chosen.** The dialog, 324 results, 48 shown.
+**M2 — Just opened, nothing chosen.** The dialog, 126 results, 48 shown.
 
 ```text
 +- Choose an avatar ------------------------------------------- X -+
 |  Skin tone   [ All ][ Light ][ Tan ][ Dark ]                     |
-|  Search      [ type a profession or a tag ................... ]   |
-|                                                                  |
-|  Professions                                                     |
-|  (Accountant) (Architect) (Artist) (Athlete) (Banker) (Barista)  |
-|  (Blue-Collar Worker) (Butler) (Chemist) (Chief of Staff)        |
-|  (Cook) (Copywriter) (Customer Support) (Data Analyst) ...       |
+|  Search      [ type a tag, for example red hair ............. ]   |
 |                                                                  |
 |  Tags                                                            |
-|  (glasses) (no-glasses) (laptop) (headset) (hair bun) (cap) ...  |
-|  (blazer) (cardigan) (vest) (bow tie) (headphones)   Show all    |
+|  (glasses) (short hair) (no-glasses) (black hair) (brown hair)   |
+|  (medium hair) (long hair) (blue glasses) (red glasses)          |
+|  (black glasses) (beard) (beige top)            Show all (21)    |
 |                                                                  |
-|  324 of 324                                        [ Clear all ] |
+|  126 of 126                                        [ Clear all ] |
 | ---------------------------------------------------------------- |
 |  (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o)                 |
 |  (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o)                 |
@@ -348,31 +360,29 @@ upload button. It appears only in the **An image** choice, and only when a libra
 +------------------------------------------------------------------+
 ```
 
-**M3 — Narrowed.** Tan, the text `gl`, professions Butler and Cook, tags `glasses` and `vest`. The
-selected chips have floated to the left of their cloud, in the order they were pressed, each with
-an X. The unselected chips follow and have not moved, hidden or changed (D-5).
+**M3 — Narrowed.** Tan, the text `long`, then the tags `black hair` and `glasses`. The selected
+chips have floated to the left of the cloud, in the order they were pressed, each with an X. The
+unselected chips follow and have not moved, hidden or changed (D-5).
 
 ```text
 +- Choose an avatar ------------------------------------------- X -+
 |  Skin tone   [ All ][ Light ][*Tan*][ Dark ]                     |
-|  Search      [ gl ........................................... ]   |
-|                                                                  |
-|  Professions                                                     |
-|  [Butler x] [Cook x] (Accountant) (Architect) (Artist) ...       |
+|  Search      [ long ......................................... ]   |
 |                                                                  |
 |  Tags                                                            |
-|  [glasses x] [vest x] (no-glasses) (laptop) (headset) ...        |
+|  [black hair x] [glasses x] (short hair) (no-glasses)            |
+|  (brown hair) (medium hair) (long hair) ...     Show all (21)    |
 |                                                                  |
-|  5 of 324                                          [ Clear all ] |
+|  4 of 126                                          [ Clear all ] |
 | ---------------------------------------------------------------- |
-|  (o) {o} (o) (o) (o)                                             |
+|  (o) {o} (o) (o)                                                 |
 +------------------------------------------------------------------+
 ```
 
 **M4 — Nothing matches.** The chips and **Clear all** stay, so the Human can undo.
 
 ```text
-|  0 of 324                                          [ Clear all ] |
+|  0 of 126                                          [ Clear all ] |
 | ---------------------------------------------------------------- |
 |                     No avatars match.                            |
 |             Remove a chip or press Clear all.                    |
@@ -393,7 +403,7 @@ an X. The unselected chips follow and have not moved, hidden or changed (D-5).
 
 | Aspect | Rule |
 | --- | --- |
-| Layout | The title, the skin switch, the search box, both clouds and the count line stay at the top of the dialog; only the grid scrolls. The filters are never scrolled out of reach |
+| Layout | The title, the skin switch, the search box, the tag cloud and the count line stay at the top of the dialog; only the grid scrolls. The filters are never scrolled out of reach |
 | Thumbnails | 72 px circles, 12 px apart, wrapping to the dialog's width. No text, caption or tooltip of any kind |
 | States | Hover and keyboard focus draw the same visible ring. The pressed skin button and the selected chips are visibly distinct without relying on colour alone (the X, the bracket and `aria-pressed`) |
 | Chips | Pressing an unselected chip selects it and moves it to the left of its cloud; pressing the X, or the chip itself, deselects it and returns it to its place. Pressing never moves any other chip |
@@ -411,12 +421,12 @@ Every test has a `///` summary, at least one `Assert`, and uses `TestContext.Cur
 `Skin_Light_IncludesFairAndLight`, `Skin_Tan_IncludesTanAndBrown`,
 `Skin_Dark_IncludesOnlyDark`, `Skin_All_IncludesUnknownTone`, `Skin_Group_ExcludesUnknownTone`,
 `Text_PrefixMatchesTagWord`, `Text_MatchesHyphenSplitToken`, `Text_MultipleWords_AreAnded`,
-`Text_IsCaseInsensitive`, `Text_Empty_PassesEveryone`, `Professions_Several_AreOred`,
+`Text_IsCaseInsensitive`, `Text_Empty_PassesEveryone`,
 `Tags_Several_AreAnded`, `AllFilters_Combine_AsAnd`, `Search_PreservesMasterOrder`,
 `Search_NoMatch_ReturnsEmpty`.
 
 **`AvatarCatalogTests`**
-`ProfessionPool_IsDistinctAndAlphabetical`, `TagPool_ExcludesProfessionSkinGenderAndBackground`,
+`TagPool_ExcludesSkinGenderAndBackground`, `TagPool_FormerProfessionSlug_IsOrdinaryTag`,
 `TagPool_OrdersByFrequencyThenName`, `TagPool_IsUnchangedByAnyQuery` (D-5).
 
 **`AvatarLibraryLoaderTests`** (a temp folder with tiny real PNGs)
@@ -447,10 +457,10 @@ under `Avatars/` declares a `static` field of the catalogue type. `Reopen_ReadsF
 **`AvatarLibraryDialogTests`** (bUnit)
 `Opens_AsDialog_NotDrawer` (asserts `.mud-dialog` and no `.mud-drawer`),
 `ShowsFirst48_AndShowMoreAdds48`, `SkinSwitch_FiltersGrid`, `TextBox_FiltersGrid`,
-`ProfessionChip_Selected_FloatsLeftWithClose`, `ProfessionChip_Close_RestoresOrder`,
+`TagChip_Close_RestoresOrder`, `Picker_HasNoProfessionsCloudOrHeading`,
 `TagChip_Selected_FloatsLeftWithClose`, `TagCloud_CappedAtForty_ShowAllReveals`,
 `SelectedTag_StaysVisibleBeyondCap`, `ClearAll_ResetsEverything`, `NoMatch_ShowsEmptyState`,
-`Thumbnail_HasAriaLabel_RawSkinGenderProfession`, `Thumbnail_HasNoTitleOrVisibleText`,
+`Thumbnail_HasAriaLabel_RawSkinGenderAndTags`, `Thumbnail_HasNoTitleOrVisibleText`,
 `Click_ClosesWithFileName`, `Unreadable_ShowsMessage`, `Search_DebouncesTwoHundredMilliseconds`,
 `SearchEscape_ClearsThenCloses`, `Filters_AreOutsideTheScrollingGrid`,
 `SelectedState_IsNotColourAlone` (the X, the bracket and `aria-pressed` are all present),
@@ -476,8 +486,8 @@ to update.
 
 ## 9. Open items
 
-None blocking. To confirm at build time: the nested-dialog behaviour (6.6, task 6) and the tag cloud
-cap of 40 once seen with real data.
+None blocking. To confirm at build time: the nested-dialog behaviour (6.6, task 6). The tag cloud
+cap, first set at 40, is 12 since the pixel-art library (21 tags).
 
 ## 10. Decisions
 
@@ -488,7 +498,7 @@ cap of 40 once seen with real data.
 | D-3 | **A modal `MudDialog`.** | A drawer or sliding panel (rejected by the product owner); an inline expander inside the card |
 | D-4 | **No visible text on pictures; the accessible name is `aria-label` only.** | Captions or tooltips; `title`, which is a tooltip |
 | D-5 | **Chip clouds are static: no hiding, disabling or recounting.** | Faceted chips that vanish when they would give zero results (rejected by the product owner) |
-| D-6 | **Professions OR, tags AND, groups AND.** | AND everywhere, which makes two professions always empty; OR for tags, which widens when the Human means to narrow |
+| D-6 | **Professions OR, tags AND, groups AND.** (Professions removed 2026-11-12: tags AND and groups AND remain.) | AND everywhere, which makes two professions always empty; OR for tags, which widens when the Human means to narrow |
 | D-7 | **Resize in advance; the app only validates.** | An image decoder in the app, refused in ADR-0019 |
 | D-8 | **Load on open, drop on close; no cache, no watcher.** | A singleton snapshot with change detection like `AvatarStore`: faster to reopen, but the index is resident forever, which was ruled out |
 | D-9 | **`Team:AvatarLibrary:Dir`** as a nested options object. | A flat `Team:AvatarLibraryDir`, against the pattern of `Library`, `Teams` and `Tasks` |

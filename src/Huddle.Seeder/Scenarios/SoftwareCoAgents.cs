@@ -33,7 +33,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_tan_f_02.png",
+            AvatarFile = "pixel-avatar_tan_f_21.png",
         },
         new(
             "Marcus",
@@ -55,7 +55,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_dark_m_01.png",
+            AvatarFile = "pixel-avatar_dark_m_13.png",
         },
         new(
             "Lena",
@@ -78,7 +78,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_fair_f_02.png",
+            AvatarFile = "pixel-avatar_fair_f_12.png",
         },
         new(
             "Owen",
@@ -102,7 +102,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_fair_m_01.png",
+            AvatarFile = "pixel-avatar_fair_m_05.png",
         },
         new(
             "Sofia",
@@ -125,7 +125,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_tan_f_03.png",
+            AvatarFile = "pixel-avatar_tan_f_17.png",
         },
         new(
             "Dana",
@@ -148,7 +148,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_dark_f_02.png",
+            AvatarFile = "pixel-avatar_dark_f_08.png",
         },
         new(
             "Alan",
@@ -172,7 +172,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_tan_m_04.png",
+            AvatarFile = "pixel-avatar_tan_m_03.png",
         },
         new(
             "Maya",
@@ -195,7 +195,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_fair_f_03.png",
+            AvatarFile = "pixel-avatar_fair_f_18.png",
         },
         new(
             "Ben",
@@ -217,7 +217,7 @@ internal static class SoftwareCoAgents
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_fair_m_02.png",
+            AvatarFile = "pixel-avatar_fair_m_04.png",
         },
     ];
 

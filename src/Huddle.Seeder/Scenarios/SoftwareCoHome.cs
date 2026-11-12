@@ -66,7 +66,7 @@ internal static class SoftwareCoHome
             """)
         {
             Gender = SeedGender.Woman,
-            AvatarFile = "pixel-avatar_tan_f_01.png",
+            AvatarFile = "pixel-avatar_tan_f_11.png",
             Role = "household/household-manager@1.1.0",
         },
         new(
@@ -91,7 +91,7 @@ internal static class SoftwareCoHome
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_tan_m_02.png",
+            AvatarFile = "pixel-avatar_tan_m_14.png",
             Role = "household/meal-planner@1.1.0",
         },
         new(
@@ -114,7 +114,7 @@ internal static class SoftwareCoHome
             """)
         {
             Gender = SeedGender.Man,
-            AvatarFile = "pixel-avatar_tan_m_03.png",
+            AvatarFile = "pixel-avatar_tan_m_20.png",
             Role = "household/home-keeper@1.1.0",
         },
         new(

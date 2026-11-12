@@ -11,14 +11,12 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Pins U26 rows UX-R19: the Avatar Library renders its Professions and Tags through two shared
-/// <see cref="ChipCloud"/>s drawing the Filter chip, not through its own chip markup, and <c>app.css</c> no longer
+/// Pins U26 rows UX-R19: the Avatar Library renders its Tags through one shared
+/// <see cref="ChipCloud"/> drawing the Filter chip, not through its own chip markup, and <c>app.css</c> no longer
 /// carries the duplicate avatar-library chip rules.
 /// </summary>
 public sealed class AvatarLibraryChipCloudTests
 {
-    private const string ProfessionsCloud = ".chip-cloud[aria-label='Professions']";
-
     private const string TagsCloud = ".chip-cloud[aria-label='Tags']";
 
     /// <summary>The wash is retired: no chip carries <c>is-quiet</c> and the parameter is gone; only the chip that is set carries <c>is-set</c>, the Filter chip's set state.</summary>
@@ -38,30 +36,31 @@ public sealed class AvatarLibraryChipCloudTests
         Assert.Equal(2, cloud.FindAll(".chip-cloud-chip").Count);
     }
 
-    /// <summary>The library shows two <see cref="ChipCloud"/>s titled Professions and Tags, and none of the old avatar-library chip markup.</summary>
+    /// <summary>The library shows one <see cref="ChipCloud"/>, titled Tags, with no Professions cloud or heading, and none of the old avatar-library chip markup.</summary>
     [Fact]
-    public async Task Library_RendersTwoChipClouds()
+    public async Task Library_RendersOnlyTheTagsChipCloud()
     {
         await using Harness harness = await Harness.OpenAsync();
 
-        Assert.Equal(["Professions", "Tags"], harness.Cut.FindAll(".chip-cloud-title").Select(static t => t.TextContent.Trim()));
-        Assert.Equal(2, harness.Cut.FindAll(".chip-cloud").Count);
-        Assert.NotEmpty(harness.Cut.FindAll(ProfessionsCloud + " .chip-cloud-chip"));
+        Assert.Equal(["Tags"], harness.Cut.FindAll(".chip-cloud-title").Select(static t => t.TextContent.Trim()));
+        Assert.Single(harness.Cut.FindAll(".chip-cloud"));
+        Assert.Empty(harness.Cut.FindAll(".chip-cloud[aria-label='Professions']"));
+        Assert.DoesNotContain("Professions", harness.Cut.Markup, StringComparison.OrdinalIgnoreCase);
         Assert.NotEmpty(harness.Cut.FindAll(TagsCloud + " .chip-cloud-chip"));
         Assert.Empty(harness.Cut.FindAll(".is-quiet"));
         Assert.Empty(harness.Cut.FindAll(".avatar-library-chip, .avatar-library-chip-text, .avatar-library-cloud, .avatar-library-cloud-title, .avatar-library-tags-all"));
     }
 
-    /// <summary>Pressing a profession chip selects it: it moves first, reads <c>aria-pressed</c> true and gains the two brackets and the X.</summary>
+    /// <summary>Pressing a tag chip selects it: it moves first, reads <c>aria-pressed</c> true and gains the two brackets and the X.</summary>
     [Fact]
-    public async Task Library_PressingAProfession_SelectsItWithBracketsAndClose()
+    public async Task Library_PressingATag_SelectsItWithBracketsAndClose()
     {
         await using Harness harness = await Harness.OpenAsync();
 
-        await harness.Cut.InvokeAsync(() => harness.Chip(ProfessionsCloud, "Chef").ClickAsync());
+        await harness.Cut.InvokeAsync(() => harness.Chip(TagsCloud, "vest").ClickAsync());
 
-        IElement first = harness.Cut.FindAll(ProfessionsCloud + " .chip-cloud-chip")[0];
-        Assert.Equal("Chef", first.QuerySelector(".chip-cloud-chip-text")?.TextContent.Trim());
+        IElement first = harness.Cut.FindAll(TagsCloud + " .chip-cloud-chip")[0];
+        Assert.Equal("vest", first.QuerySelector(".chip-cloud-chip-text")?.TextContent.Trim());
         Assert.Equal("true", first.GetAttribute("aria-pressed"));
         Assert.Equal(2, first.QuerySelectorAll(".chip-cloud-bracket").Length);
         Assert.Single(first.QuerySelectorAll(".chip-cloud-close"));

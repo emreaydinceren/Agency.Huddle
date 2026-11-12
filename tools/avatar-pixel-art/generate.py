@@ -26,7 +26,6 @@ GRID = 32                 # the art is drawn on a 32 x 32 grid
 PNG_SIDE = 256            # BundledAvatarLibraryTests pins 256 x 256
 SEED = 20261111           # changing it reshuffles hair, glasses and facial hair
 GENERATED = "2026-11-12"  # written into master.json; bump it when the art changes
-PROFESSION = "Pixel Avatar"
 OUTLINE = "#2a1f2d"
 EYE = "#1d1626"
 LENS = "#eef5fb"
@@ -362,7 +361,7 @@ def record(i, a):
     word = "man" if a["gender"] == "m" else "woman"
     has_glasses = a["glasses"] != "none"
     tags = [
-        "pixel-avatar", f"skin-{tone}", word,
+        f"skin-{tone}", word,
         f"{a['hair_length']} hair", f"{a['hair_color']} hair",
         f"{a['outfit']} top",
         "glasses" if has_glasses else "no-glasses",
@@ -374,7 +373,6 @@ def record(i, a):
     return {
         "id": i,
         "file": a["file"],
-        "profession": PROFESSION,
         "skin_tone": tone,
         "gender_presentation": word,
         "hair": f"{a['hair_length']} {a['hair_color']}",
@@ -395,7 +393,7 @@ def master(avatars):
     def counts(key):
         return dict(sorted(collections.Counter(str(r[key]).lower() for r in records).items()))
 
-    excluded = {"pixel-avatar", "man", "woman"}
+    excluded = {"man", "woman"}
     return {
         "description": "Master index of the bundled pixel-art avatars. One record per PNG in this folder.",
         "generated": GENERATED,

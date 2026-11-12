@@ -49,7 +49,7 @@ internal sealed class UatScenario : IScenario
                 """)
             {
                 Gender = SeedGender.Woman,
-                AvatarFile = "pixel-avatar_fair_f_01.png",
+                AvatarFile = "pixel-avatar_fair_f_21.png",
             },
             new(
                 Bo,
@@ -63,7 +63,7 @@ internal sealed class UatScenario : IScenario
                 """)
             {
                 Gender = SeedGender.Man,
-                AvatarFile = "pixel-avatar_tan_m_01.png",
+                AvatarFile = "pixel-avatar_tan_m_17.png",
             },
         ],
         Skills = [],
