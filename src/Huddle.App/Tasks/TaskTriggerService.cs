@@ -1350,14 +1350,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         // The fallback Room lives in the Task's Team Scope (Team chats D-15); a Team the catalog does not know stays at the root.
         string? scope = this.teams?.Find(task.Location.Team)?.Name;
-        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct).ConfigureAwait(false);
+        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct: ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
         List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
-        return await this.chat.CreateRoomForAsync(agentIds, scope, FeedActor.Huddle, ct).ConfigureAwait(false);
+        return await this.chat.CreateRoomForAsync(agentIds, scope, null, FeedActor.Huddle, ct).ConfigureAwait(false);
     }
 
     /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>

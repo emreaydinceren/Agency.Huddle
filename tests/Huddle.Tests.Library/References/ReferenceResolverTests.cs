@@ -57,7 +57,7 @@ public sealed class ReferenceResolverTests
         List<string> members = [KnownIds.Human, fixture.Nova.Id];
         Room root = await fixture.Directory.CreateRoomAsync("Plan", members, ct);
         Room scoped = await fixture.Directory.CreateRoomAsync("Plan", members, team: "Marketing", ct: ct);
-        Room teamRoom = await fixture.Directory.CreateRoomAsync("Marketing", members, "Marketing", true, ct);
+        Room teamRoom = await fixture.Directory.CreateRoomAsync("Marketing", members, "Marketing", true, ct: ct);
 
         IReadOnlyList<ResolvedReference> result = await fixture.Resolver().ResolveAsync(
             [
@@ -203,7 +203,7 @@ public sealed class ReferenceResolverTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
         fixture.Catalog.Teams = [new TeamSummary("Marketing", [], ["Nova"], true), new TeamSummary("Sales", [], [], true)];
-        Room teamRoom = await fixture.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, fixture.Nova.Id], "Marketing", true, ct);
+        Room teamRoom = await fixture.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, fixture.Nova.Id], "Marketing", true, ct: ct);
         await fixture.Directory.SetRoomArchivedAsync(teamRoom.Id, true, ct);
 
         IReadOnlyList<ResolvedReference> result = await fixture.Resolver().ResolveAsync(

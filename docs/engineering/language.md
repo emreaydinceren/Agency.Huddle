@@ -275,7 +275,9 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Room**
 : A named conversation with a fixed set of Members whose history is one
-  Transcript. There is exactly one kind of Room.
+  Transcript. There is exactly one kind of Room. A Room in a Team may also
+  belong to one Project of that Team, set at creation and never changed
+  ([ADR-0082](../adr/0082-a-room-may-belong-to-one-project-of-its-team.md)).
 : *Avoid*: channel, chat, conversation, thread. Also avoid *Direct Room* and
   *Group Room* — a Room is a Room, and behaviour follows from member count.
 
@@ -819,7 +821,7 @@ See
 
 **Project**
 : An optional grouping of Tasks inside one Team: the folder below the Team's
-  folder. Its name is unique only within its Team, so write it as
+  folder. A Room of that Team may also belong to it (ADR-0082). Its name is unique only within its Team, so write it as
   *Team / Project* wherever the Team isn't clear.
 : *Avoid*: epic, milestone, board.
 

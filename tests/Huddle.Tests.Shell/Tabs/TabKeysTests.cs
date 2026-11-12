@@ -9,6 +9,7 @@ public sealed class TabKeysTests
     [InlineData("/teams/Core", "team:core")]
     [InlineData("/teams/Core/tasks", "team:core")]
     [InlineData("/teams/Core/tasks/board", "team-tasks:core/board")]
+    [InlineData("/teams/Core/projects/Alpha/tasks/board", "project-tasks:core/alpha/board")]
     [InlineData("/teams/Core/projects/Alpha", "project:core/alpha")]
     [InlineData("/teams/Core/projects/Alpha/files", "project:core/alpha")]
     [InlineData("/teams/build", "team-build")]
@@ -65,6 +66,21 @@ public sealed class TabKeysTests
         Assert.NotNull(page);
         Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.Tasks), page.Component);
         Assert.Equal("Growth Team", page.Parameters["Team"]);
+        Assert.Equal("my-tasks", page.Parameters["ViewId"]);
+    }
+
+    /// <summary>A Project's Tasks-folder address opens the Tasks page with its Team, Project and View, not the Project page.</summary>
+    [Fact]
+    public void Resolve_ProjectViewAddress_OpensTheTasksPageNarrowedToTheProject()
+    {
+        TabPageRoutes app = new(typeof(Agency.Huddle.App.ServiceCollectionExtensions).Assembly);
+
+        TabPage? page = app.Resolve("/teams/Growth%20Team/projects/Q4/tasks/my-tasks");
+
+        Assert.NotNull(page);
+        Assert.Equal(typeof(Agency.Huddle.App.Components.Pages.Tasks), page.Component);
+        Assert.Equal("Growth Team", page.Parameters["Team"]);
+        Assert.Equal("Q4", page.Parameters["Project"]);
         Assert.Equal("my-tasks", page.Parameters["ViewId"]);
     }
 }

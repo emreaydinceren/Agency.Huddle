@@ -475,8 +475,8 @@ internal static class TaskTriggerTestSupport
             inner.CreateRoomAsync(name, memberIds, ct);
 
         /// <inheritdoc />
-        public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, string? team, bool teamRoom = false, CancellationToken ct = default) =>
-            inner.CreateRoomAsync(name, memberIds, team, teamRoom, ct);
+        public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, string? team, bool teamRoom = false, string? project = null, CancellationToken ct = default) =>
+            inner.CreateRoomAsync(name, memberIds, team, teamRoom, project, ct);
 
         /// <inheritdoc />
         public Task<IReadOnlyList<Room>> GetRoomsForTeamAsync(string team, CancellationToken ct = default) =>
@@ -498,16 +498,16 @@ internal static class TaskTriggerTestSupport
             inner.FindRoomWithExactMembersAsync(humanId, agentId, ct);
 
         /// <inheritdoc />
-        public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default) =>
-            inner.FindRoomWithExactMembersAsync(humanId, agentId, team, ct);
+        public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, string? project = null, CancellationToken ct = default) =>
+            inner.FindRoomWithExactMembersAsync(humanId, agentId, team, project, ct);
 
         /// <inheritdoc />
         public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default) =>
             inner.FindRoomWithExactMemberSetAsync(memberIds, ct);
 
         /// <inheritdoc />
-        public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, string? team, CancellationToken ct = default) =>
-            inner.FindRoomWithExactMemberSetAsync(memberIds, team, ct);
+        public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, string? team, string? project = null, CancellationToken ct = default) =>
+            inner.FindRoomWithExactMemberSetAsync(memberIds, team, project, ct);
 
         /// <inheritdoc />
         public Task SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default) =>

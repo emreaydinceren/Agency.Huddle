@@ -41,13 +41,13 @@ Finance Tracker. Every spend or signature waits for you. Only the Household Mana
 | **Process** | The Team's rules and gates, on a Team with a `_team.md` file |
 | **Details** | Type, name, purpose, Library folder and archive |
 
-A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team folder is a Project.
+A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team folder is a Project. In the sidebar, an open Team lists itself and its Projects as a selectable list, each with its number of open Tasks. Pick one to see its Rooms, Tasks and Library link below the list.
 
 ## Other things you can do
 
 - **Duplicate** a Team's roster into a new Team, hiring each member afresh.
-- **Add a shortcut.** Each Team can have an avatar tile in the Activity bar, opening its Rooms,
-  Library and Tasks. Tiles are on by default.
+- **Add a shortcut.** Each Team can have an avatar tile in the Activity bar, opening its Team and Project
+  list with their Rooms, Tasks and Library. Tiles are on by default.
 - **Give a Team an avatar**, drawn as a rounded square so it never reads as a person.
 - **See the Team's spend** as a total per currency.
 - **Connect a workspace**, such as a code repository, so members know where the real work lives.
@@ -112,6 +112,10 @@ exists, add the Team to the `teams:` line on its card.
 Use **New project** in a Team's More (⋮) menu or its **Files** tab, or create a folder directly inside the
 Team folder. The names `memory`, `raw` and `outputs` are excluded, along with any name starting with `_` or
 `.`. A Project has no members of its own, so the Team works it, and there is no separate record.
+
+To start a chat inside a Project, select the Project in the sidebar and press the "+" on its **ROOMS** section. The Room belongs to
+that Project from then on, is listed under ROOMS when that Project is selected, and can't be moved. A Room whose Project is later archived appears in
+the Team's own Rooms instead.
 
 ### Team types
 

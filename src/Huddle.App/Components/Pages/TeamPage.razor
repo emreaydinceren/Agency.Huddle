@@ -83,6 +83,10 @@
                         <TeamAvatar Team="@summary.Name" Avatar="summary.Avatar" Size="Size.Small" Class="avatar-transcript" />
                     }
                 </TitleLeading>
+                <TitleTrailing>
+                    @* The page's kind, drawn in every Theme (shell.css), matching the Project page's "Project" pill. *@
+                    <span class="page-kind-chip team-page-kind">Team</span>
+                </TitleTrailing>
                 <Actions>
                     <TeamShortcutButton Team="@sourceTeam" />
                     @* Says plainly what the avatar's pencil does; quieter than Duplicate (text, no border). Same condition as the avatar button. *@
@@ -116,6 +120,10 @@
             string projectTeam = summary.Name;
             string projectName = project ?? string.Empty;
             <PageHeader Title="@project">
+                <TitleTrailing>
+                    @* The page's kind, drawn in every Theme (shell.css), so a Project page is told apart from its Team's page. *@
+                    <span class="page-kind-chip team-project-kind">Project</span>
+                </TitleTrailing>
                 <Actions>
                     @* No confirmation: a Project's files and Tasks only move, and Unarchive on the Team page brings them back. *@
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"

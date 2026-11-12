@@ -235,6 +235,19 @@ public sealed class ArchiveTeamUiTests
         cut.WaitForAssertion(() => Assert.Equal([("Business", "Marketing")], archive.ProjectsArchived));
     }
 
+    /// <summary>A Project page's title row carries one kind pill reading "Project" and a Team page's one reading "Team", each on the h1's line.</summary>
+    [Fact]
+    public async Task TitleRow_CarriesThePageKindPill()
+    {
+        await using MudBunitContext ctx = NewPageContext(new FakeArchiveService());
+
+        IRenderedComponent<TeamPage> project = RenderPage(ctx, "Marketing");
+        Assert.Equal("Project", Assert.Single(project.FindAll(".page-header-title .page-kind-chip")).TextContent.Trim());
+
+        IRenderedComponent<TeamPage> team = RenderPage(ctx);
+        Assert.Equal("Team", Assert.Single(team.FindAll(".page-header-title .page-kind-chip")).TextContent.Trim());
+    }
+
     /// <summary>A Team page (not a Project page) has no project-archive button.</summary>
     [Fact]
     public async Task TeamPage_HasNoProjectArchiveButton()
@@ -344,6 +357,8 @@ public sealed class ArchiveTeamUiTests
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddPersonaStore();
+        ctx.Services.AddTaskStore();
+        ctx.Services.AddTeamTypes();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders());
         ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));

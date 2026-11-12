@@ -46,7 +46,7 @@ else
                     {
                         <TeamAvatar Team="@roomTeam" Avatar="this.TeamCatalog.Find(roomTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="avatar-transcript room-team-avatar" />
                     }
-                    @* The Room's kind, hidden in app.css; a style pack may show it as a chip (Nordic, ADR-0057). *@
+                    @* The Room's kind as a pill, drawn in every Theme (shell.css); a style pack may restyle it (ADR-0057). *@
                     <span class="room-kind-chip">@this.RoomKind</span>
                     @if (!this.isRenaming && !this.isTeamRoom)
                     {

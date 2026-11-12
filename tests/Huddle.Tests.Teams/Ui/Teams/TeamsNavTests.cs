@@ -16,21 +16,24 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Tabs;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
 /// Pins Spec §6.5's listing half: <c>TeamsNav</c> is one <c>MudNavMenu.teams-nav</c> whose root rows
 /// are the Teams, under no "Teams" header; each Team is a <c>div.hover-reveal-row</c> whose link goes to
-/// the escaped <c>/teams/{team}</c> route, and an open Team holds a Rooms folder and a Library folder
-/// (its Projects as <c>nav-project-link</c> rows). A memberless Team shows a "No members" hint, the
-/// "Team actions" menu (button or right-click) offers "New project", and "Build a team" trails the list.
-/// It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on dispose.
+/// the escaped <c>/teams/{team}</c> route. An open Team is a scope list (the Team, then its Projects, each with a count of
+/// open Tasks and one of them selected) followed by the sections of the selected scope: ROOMS (with a "+"), TASKS and
+/// LIBRARY. A memberless Team shows a "No members" hint, the "Team actions" menu (button or right-click) offers
+/// "New project", and "Build a team" trails the list. It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on dispose.
 /// </summary>
 public sealed class TeamsNavTests
 {
@@ -52,9 +55,9 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>Projects sit right after their own Team's row, and every segment of every href is escaped.</summary>
+    /// <summary>Every open Team lists its scope rows (the Team, then its Projects) and its sections, right after its own row, and every segment of every href is escaped.</summary>
     [Fact]
-    public async Task Project_Rows_AreNestedUnderTheirTeam()
+    public async Task OpenTeams_ListTheirScopeRowsAndSections_AfterTheirOwnRow()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -72,17 +75,23 @@ public sealed class TeamsNavTests
         string?[] expectedHrefs =
         [
             "/teams/Business",
+            "/teams/Business",
             "/teams/Business/projects/2025%20Taxes%20Project",
             "/teams/Business/projects/Marketing",
             "/teams/Business/tasks/all-tasks",
             "/teams/Business/tasks/my-tasks",
+            "/teams/Business/files",
+            "/teams/Sales%20%26%20Ops",
             "/teams/Sales%20%26%20Ops",
             "/teams/Sales%20%26%20Ops/tasks/all-tasks",
             "/teams/Sales%20%26%20Ops/tasks/my-tasks",
+            "/teams/Sales%20%26%20Ops/files",
+            "/teams/Lab%20%232",
             "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
             "/teams/Lab%20%232/tasks/all-tasks",
             "/teams/Lab%20%232/tasks/my-tasks",
+            "/teams/Lab%20%232/files",
             "/teams/build",
         ];
         cut.WaitForAssertion(() =>
@@ -92,8 +101,7 @@ public sealed class TeamsNavTests
         });
 
         string[] expectedProjects = ["2025 Taxes Project", "Marketing", "Item #1"];
-        string[] actualProjects = [.. cut.FindAll(".nav-project-link a").Select(a => a.TextContent.Trim())];
-        Assert.Equal(expectedProjects, actualProjects);
+        Assert.Equal(expectedProjects, ProjectTexts(cut));
     }
 
     /// <summary>The Team row's link goes to the Team page, and its "Team actions" button opens a menu whose items are "New chat" and "New project".</summary>
@@ -116,6 +124,61 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
+    /// <summary>The Team's header card names the Team in its label and, under it, the Team type's display name and the member count.</summary>
+    [Fact]
+    public async Task TeamHeaderCard_WithAType_ShowsTheTypeAndMemberCount()
+    {
+        TeamSummary team = Team("Business") with { Members = ["A", "B", "C", "D", "E", "F", "G", "H"], TeamType = new VersionedRef("web", "1.2.0") };
+        FakeTeamCatalog catalog = new() { Teams = [team] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            IElement card = cut.Find(".teams-nav-scope-row[data-scope='team']");
+            Assert.Equal("Business", card.QuerySelector(".teams-nav-scope-label")?.TextContent.Trim());
+            Assert.Equal("Web · 8 members", card.QuerySelector(".teams-nav-scope-subtitle")?.TextContent.Trim());
+        });
+    }
+
+    /// <summary>A Team with no type shows just its member count under the name, singular for one member.</summary>
+    [Fact]
+    public async Task TeamHeaderCard_WithoutAType_ShowsOnlyTheMemberCount()
+    {
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [Team("Business"), Team("Lab #2", hasMembers: false) with { Members = ["A", "B"] }],
+        };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] subtitles = [.. cut.FindAll(".teams-nav-scope-row[data-scope='team'] .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
+            string[] expected = ["1 member", "2 members"];
+            Assert.Equal(expected, subtitles);
+        });
+    }
+
+    /// <summary>A Project row is the unchanged chip, name and count: it has no subtitle.</summary>
+    [Fact]
+    public async Task ProjectRows_HaveNoSubtitle()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll(".teams-nav-scope-row[data-scope='project']"));
+            Assert.Empty(cut.FindAll(".teams-nav-scope-row[data-scope='project'] .teams-nav-scope-subtitle"));
+            Assert.Single(cut.FindAll(".teams-nav-scope-subtitle"));
+        });
+    }
+
     /// <summary>Right-clicking the Team row opens the same menu as its button does.</summary>
     [Fact]
     public async Task RightClickingATeamRow_OpensTheSameMenu()
@@ -132,11 +195,11 @@ public sealed class TeamsNavTests
     }
 
     /// <summary>
-    /// Narrowed to one Team (its Activity bar shortcut), the nav lists only that Team's folders, open without a click on
-    /// any chevron: no Team rows, no other Team's links, and no "Build a team".
+    /// Narrowed to one Team (its Activity bar shortcut), the nav lists only that Team's scope rows and sections, open without a
+    /// click on any chevron: no Team rows of the all-Teams list, no other Team's links, and no "Build a team".
     /// </summary>
     [Fact]
-    public async Task Team_Set_ListsOnlyThatTeamsFolders()
+    public async Task Team_Set_ListsOnlyThatTeamsScopesAndSections()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -144,19 +207,16 @@ public sealed class TeamsNavTests
         };
 
         await using MudBunitContext ctx = NewContext(catalog);
-        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TeamsNav>(0);
-            builder.AddComponentParameter(1, nameof(TeamsNav.Team), "lab #2");
-            builder.CloseComponent();
-        });
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "lab #2");
 
         Assert.Empty(cut.FindAll("div.hover-reveal-row"));
         string?[] expectedHrefs =
         [
+            "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
             "/teams/Lab%20%232/tasks/all-tasks",
             "/teams/Lab%20%232/tasks/my-tasks",
+            "/teams/Lab%20%232/files",
         ];
         cut.WaitForAssertion(() =>
         {
@@ -165,28 +225,26 @@ public sealed class TeamsNavTests
         });
     }
 
-    /// <summary>A Team with no Rooms, Projects or Task Views says so under its shortcut and links to its Team page, rather than showing nothing.</summary>
+    /// <summary>A Team with no Rooms, Projects or Task Views says so under its shortcut, below its header card, which is the one link to its Team page and keeps the switcher.</summary>
     [Fact]
-    public async Task Team_SetAndEmpty_ShowsAnEmptyStateAndTheTeamPageLink()
+    public async Task Team_SetAndEmpty_ShowsAnEmptyStateUnderTheHeaderCard()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
 
-        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
-        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TeamsNav>(0);
-            builder.AddComponentParameter(1, nameof(TeamsNav.Team), "Business");
-            builder.CloseComponent();
-        });
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, libraryEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
 
         cut.WaitForAssertion(() => Assert.Equal("Nothing in Business yet", cut.Find(".empty-state .empty-state-title").TextContent.Trim()));
         string? href = Assert.Single(cut.FindAll(".teams-nav a[href]")).GetAttribute("href");
         Assert.Equal("/teams/Business", href);
+        IElement card = Assert.Single(cut.FindAll(".teams-nav-scope-row"));
+        Assert.Equal("team", card.GetAttribute("data-scope"));
+        Assert.NotNull(card.QuerySelector(".teams-nav-switcher-button"));
     }
 
-    /// <summary>Under a Team shortcut with nothing waiting on the Human, the Rooms folder lists its Rooms flat, with no Needs you or All folder, and ends with "New chat".</summary>
+    /// <summary>Under a Team shortcut with nothing waiting on the Human, the Rooms section lists its Rooms flat, with no Needs you or All folder and no "New chat" row (the header's "+" opens it).</summary>
     [Fact]
-    public async Task Team_SetAndNothingWaiting_ListsTheRoomsFlat_ThenNewChat()
+    public async Task Team_SetAndNothingWaiting_ListsTheRoomsFlat_UnderTheRoomsHeader()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
@@ -199,9 +257,10 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             string?[] rooms = ["/rooms/teamroom", "/rooms/chat"];
-            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
             Assert.Empty(cut.FindAll(".teams-nav-subfolder"));
-            Assert.Equal("New chat", Folder(cut, "Rooms").QuerySelectorAll(".mud-collapse-container .mud-nav-link-text")[^1].TextContent.Trim());
+            Assert.Empty(cut.FindAll(".teams-nav-new-chat"));
+            Assert.DoesNotContain("New chat", cut.Find(".teams-nav").TextContent, StringComparison.Ordinal); // contains-ok: haystack is the rendered nav's text
         });
     }
 
@@ -234,8 +293,8 @@ public sealed class TeamsNavTests
     }
 
     /// <summary>
-    /// Under a Team shortcut, a Room waiting on the Human splits the Rooms folder into "Needs you" (that Room) above "All"
-    /// (the rest, then "New chat"), as the Chats view's All grouping does; once nothing waits the Rooms are flat again.
+    /// Under a Team shortcut, a Room waiting on the Human splits the Rooms section into "Needs you" (that Room) above "All"
+    /// (the rest), as the Chats view's All grouping does; once nothing waits the Rooms are flat again.
     /// </summary>
     [Fact]
     public async Task Team_SetAndARoomWaiting_SplitsTheRoomsIntoNeedsYouAndAll()
@@ -248,7 +307,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
         Agency.Huddle.App.NeedsYou.NeedsYouTracker tracker = ctx.Services.GetRequiredService<Agency.Huddle.App.NeedsYou.NeedsYouTracker>();
-        cut.WaitForAssertion(() => Assert.Equal(2, FolderHrefs(cut, "Rooms").Length));
+        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "rooms").Length));
 
         await cut.InvokeAsync(() => tracker.Seed("chat", DateTimeOffset.UnixEpoch, "coo"));
 
@@ -261,7 +320,6 @@ public sealed class TeamsNavTests
             Assert.Equal("/rooms/chat", Assert.Single(needsYou.QuerySelectorAll("a[href]")).GetAttribute("href"));
             IElement all = cut.Find(".teams-nav-subfolder.teams-nav-all");
             Assert.Equal("/rooms/teamroom", Assert.Single(all.QuerySelectorAll("a[href]")).GetAttribute("href"));
-            Assert.Equal("New chat", all.QuerySelectorAll(".mud-nav-link-text")[^1].TextContent.Trim());
         });
 
         await cut.InvokeAsync(() => tracker.Dismiss("chat"));
@@ -269,9 +327,9 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".teams-nav-subfolder")));
     }
 
-    /// <summary>The "New chat" row under a Team shortcut opens the New chat panel for that Team.</summary>
+    /// <summary>The Rooms header's "+" under a Team shortcut opens the New chat panel for that Team (no Project) and a second click closes it.</summary>
     [Fact]
-    public async Task Team_Set_NewChatRow_OpensTheTeamsNewChatPanel()
+    public async Task Team_Set_RoomsPlus_OpensTheTeamsNewChatPanel()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
 
@@ -279,17 +337,156 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business");
         Assert.Empty(cut.FindAll(".new-chat-panel"));
 
-        await cut.InvokeAsync(() => cut.Find(".teams-nav-new-chat .mud-nav-link").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-panel").GetAttribute("aria-label")));
+        Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-panel")));
     }
 
+    /// <summary>Under a Team shortcut, the header card's Unfold More button unfolds the other Teams inside the same card (not a popover), each drawn as the Team row is, and picking one folds it, raises <see cref="TeamsNav.TeamChanged"/> with it and opens its Team page.</summary>
+    [Fact]
+    public async Task Team_Set_Switcher_UnfoldsTheOtherTeamsUnderTheCard_AndRaisesThePickedOne()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Taxes"]), Team("Lab #2"), Team("Sales")] };
+        List<string?> picked = [];
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business", picked.Add);
+
+        IElement button = cut.Find(".teams-nav-scope-header button.teams-nav-switcher-button");
+        Assert.Equal("Switch team", button.GetAttribute("aria-label"));
+        Assert.Equal("false", button.GetAttribute("aria-expanded"));
+        Assert.Empty(cut.FindAll(".teams-nav-switcher-list"));
+        await cut.InvokeAsync(() => button.ClickAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            IElement card = cut.Find(".teams-nav-team-card.teams-nav-team-card-open");
+            IElement list = Assert.Single(card.Children, child => child.ClassList.Contains("teams-nav-switcher-list"));
+            Assert.True(list.PreviousElementSibling?.ClassList.Contains("teams-nav-scope-header"));
+            string[] expected = ["Lab #2", "Sales"];
+            string[] names = [.. list.QuerySelectorAll(".teams-nav-switcher-item:not(.teams-nav-switcher-build) .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
+            Assert.Equal(expected, names);
+            Assert.Equal("Build a team", list.Children[^1].TextContent.Trim());
+            string[] subtitles = [.. list.QuerySelectorAll(".teams-nav-switcher-item .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
+            string[] expectedSubtitles = ["1 member", "1 member"];
+            Assert.Equal(expectedSubtitles, subtitles);
+            Assert.Equal(2, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
+        });
+        Assert.Equal("true", cut.Find("button.teams-nav-switcher-button").GetAttribute("aria-expanded"));
+
+        IElement sales = cut.FindAll(".teams-nav-switcher-item").Single(item => item.GetAttribute("title") == "Sales");
+        await cut.InvokeAsync(() => sales.ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales"], picked));
+        Assert.EndsWith("/teams/Sales", ctx.Services.GetRequiredService<NavigationManager>().Uri, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll(".teams-nav-switcher-list"));
+        Assert.Empty(cut.FindAll(".teams-nav-team-card-open"));
+    }
+
+    /// <summary>The Activity bar's Teams view shows one Team as a shortcut does, the catalog's first while none was used, with its Team list unfolded from the start and still unfolded after a pick.</summary>
+    [Fact]
+    public async Task TeamsView_ShowsTheFirstTeam_WithTheListUnfolded_AndKeepsItUnfoldedAfterAPick()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Taxes"]), Team("Sales")] };
+        List<string?> picked = [];
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, null, picked.Add);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("Business", cut.Find(".teams-nav-scope-header .teams-nav-scope-label").TextContent.Trim());
+            Assert.Equal("true", cut.Find("button.teams-nav-switcher-button").GetAttribute("aria-expanded"));
+            Assert.Single(cut.FindAll(".teams-nav-switcher-item[title='Sales']"));
+        });
+        Assert.Empty(cut.FindAll(".teams-nav > div.hover-reveal-row"));
+
+        await cut.InvokeAsync(() => cut.Find(".teams-nav-switcher-item[title='Sales']").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales"], picked));
+        Assert.Single(cut.FindAll(".teams-nav-team-card-open"));
+    }
+
+    /// <summary>The Teams view shows the last used Team while the catalog lists it, and falls back to the first when it is gone.</summary>
+    [Fact]
+    public async Task TeamsView_ShowsTheLastUsedTeam_OrTheFirstWhenItIsGone()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales")] };
+
+        await using MudBunitContext salesCtx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> sales = RenderTeamsView(salesCtx, "Sales");
+        sales.WaitForAssertion(() => Assert.Equal("Sales", sales.Find(".teams-nav-scope-header .teams-nav-scope-label").TextContent.Trim()));
+
+        await using MudBunitContext goneCtx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> gone = RenderTeamsView(goneCtx, "Archived Lab");
+        gone.WaitForAssertion(() => Assert.Equal("Business", gone.Find(".teams-nav-scope-header .teams-nav-scope-label").TextContent.Trim()));
+    }
+
+    /// <summary>"Build a team", the last row of the unfolded Team list, opens the Build a team page.</summary>
+    [Fact]
+    public async Task Switcher_BuildATeam_OpensTheBuildPage()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, null);
+
+        IElement build = cut.Find(".teams-nav-switcher-list > .teams-nav-switcher-build");
+        await cut.InvokeAsync(() => build.ClickAsync());
+
+        Assert.EndsWith("/teams/build", ctx.Services.GetRequiredService<NavigationManager>().Uri, StringComparison.Ordinal);
+    }
+
+    /// <summary>The nav with no Team lists every Team already, so its header cards carry no switcher.</summary>
+    [Fact]
+    public async Task AllTeams_HeaderCard_HasNoSwitcher()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".teams-nav-scope-header")));
+        Assert.Empty(cut.FindAll(".teams-nav-switcher-button"));
+    }
+
+    /// <summary>Renders the nav as the Activity bar's Teams view does: one Team, the last used or the first, with its Team list unfolded.</summary>
+    /// <param name="ctx">The test context.</param>
+    /// <param name="lastUsed">The last Team used, or <see langword="null"/> before any was.</param>
+    /// <param name="onTeamChanged">Receives the Team picked in the switcher, when given.</param>
+    private static IRenderedComponent<ContainerFragment> RenderTeamsView(MudBunitContext ctx, string? lastUsed, Action<string?>? onTeamChanged = null) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamsNav>(0);
+            builder.AddComponentParameter(1, nameof(TeamsNav.IsTeamsView), true);
+            builder.AddComponentParameter(2, nameof(TeamsNav.Team), lastUsed);
+            if (onTeamChanged is not null)
+            {
+                builder.AddComponentParameter(3, nameof(TeamsNav.TeamChanged), EventCallback.Factory.Create(ctx, onTeamChanged));
+            }
+
+            builder.CloseComponent();
+        });
+
     /// <summary>Renders the nav narrowed to <paramref name="team"/>, as its Activity bar shortcut does.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderShortcut(MudBunitContext ctx, string team) =>
+    /// <param name="ctx">The test context.</param>
+    /// <param name="team">The Team the shortcut shows.</param>
+    /// <param name="onTeamChanged">Receives the Team picked in the switcher, when given.</param>
+    private static IRenderedComponent<ContainerFragment> RenderShortcut(MudBunitContext ctx, string team, Action<string?>? onTeamChanged = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TeamsNav>(0);
             builder.AddComponentParameter(1, nameof(TeamsNav.Team), team);
+            if (onTeamChanged is not null)
+            {
+                builder.AddComponentParameter(2, nameof(TeamsNav.TeamChanged), EventCallback.Factory.Create(ctx, onTeamChanged));
+            }
+
             builder.CloseComponent();
         });
 
@@ -332,8 +529,8 @@ public sealed class TeamsNavTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/files");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        Assert.Contains("active", cut.Find("a[href='/teams/Business']").ClassList);
-        Assert.DoesNotContain("active", cut.Find("a[href='/teams/Sales%20%26%20Ops']").ClassList);
+        Assert.Contains("active", cut.Find(".hover-reveal-link a[href='/teams/Business']").ClassList);
+        Assert.DoesNotContain("active", cut.Find(".hover-reveal-link a[href='/teams/Sales%20%26%20Ops']").ClassList);
     }
 
     /// <summary>The Teams group ends with a "Build a team" action that opens <c>/teams/build</c>.</summary>
@@ -413,6 +610,7 @@ public sealed class TeamsNavTests
         {
             Assert.Equal(1, Reads(ctx));
             Assert.Empty(ProjectTexts(cut));
+            Assert.Empty(cut.FindAll(".teams-nav-scope-row"));
             Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
             Assert.Equal("Expand Business", Chevron(cut, "Business").GetAttribute("aria-label"));
             Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
@@ -874,9 +1072,9 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
-    /// <summary>T1/T5 sidebar half: an expanded Team lists its Team Room first, then its other scoped Rooms oldest first (the Rooms folder), then its Projects (the Library folder); an archived scoped Room is left out.</summary>
+    /// <summary>T1/T5 sidebar half: an open Team lists its scope rows, then (in the Team scope) its Team Room and other Project-less Rooms oldest first, its Tasks and its Files link; an archived scoped Room and a Project's Room are left out.</summary>
     [Fact]
-    public async Task ExpandedTeam_ListsTeamRoomFirst_ThenScopedRooms_ThenProjects()
+    public async Task ExpandedTeam_ListsScopeRows_ThenTeamRoomFirst_ThenScopedRooms_ThenTasksAndFiles()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         DateTimeOffset t0 = DateTimeOffset.UnixEpoch;
@@ -884,6 +1082,7 @@ public sealed class TeamsNavTests
         script.Rooms.Add(new Room("older", "Nova, Bo", t0) { Team = "business" });
         script.Rooms.Add(new Room("teamroom", "Business", t0.AddDays(1)) { Team = "Business", IsTeamRoom = true });
         script.Rooms.Add(new Room("gone", "Archived one", t0.AddDays(3)) { Team = "Business", Archived = true });
+        script.Rooms.Add(new Room("inproject", "In Marketing", t0.AddDays(4)) { Team = "Business", Project = "Marketing" });
         script.Rooms.Add(new Room("other", "Other team chat", t0) { Team = "Sales" });
         script.Rooms.Add(new Room("root", "Root chat", t0));
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"]), Team("Sales")] };
@@ -897,115 +1096,78 @@ public sealed class TeamsNavTests
             string?[] expected =
             [
                 "/teams/Business",
+                "/teams/Business",
+                "/teams/Business/projects/Marketing",
                 "/rooms/teamroom",
                 "/rooms/older",
                 "/rooms/newer",
-                "/teams/Business/projects/Marketing",
                 "/teams/Business/tasks/all-tasks",
                 "/teams/Business/tasks/my-tasks",
+                "/teams/Business/files",
+                "/teams/Sales",
                 "/teams/Sales",
                 "/rooms/other",
                 "/teams/Sales/tasks/all-tasks",
                 "/teams/Sales/tasks/my-tasks",
+                "/teams/Sales/files",
                 "/teams/build",
             ];
             Assert.Equal(expected, hrefs);
         });
     }
 
-    /// <summary>An open Team holds a Rooms folder with its Rooms, a Library folder with its Projects, then a Tasks folder with the Views, all open; nothing else sits in any.</summary>
+    /// <summary>The sections of the selected scope are headed ROOMS, TASKS and LIBRARY, in that order, each header above its own links.</summary>
     [Fact]
-    public async Task ExpandedTeam_GroupsItsRoomsProjectsAndViews_IntoRoomsLibraryThenTasksFolders()
+    public async Task ExpandedTeam_SectionHeaders_AppearInTheOrderRoomsTasksLibrary()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
-        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing", "Taxes"])] };
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
 
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         cut.WaitForAssertion(() =>
         {
-            string[] folders = ["Rooms", "Library", "Tasks"];
-            Assert.Equal(folders, FolderTitles(cut));
-            string?[] rooms = ["/rooms/teamroom", "/rooms/chat"];
-            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
-            string?[] projects = ["/teams/Business/projects/Marketing", "/teams/Business/projects/Taxes"];
-            Assert.Equal(projects, FolderHrefs(cut, "Library"));
-            string?[] views = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks"];
-            Assert.Equal(views, FolderHrefs(cut, "Tasks"));
-            Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
-            Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
-            Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded"));
-        });
-    }
-
-    /// <summary>An empty folder is not drawn: a Team with Rooms and no Projects has only Rooms (and Tasks), one with Projects and no Rooms only Library (and Tasks).</summary>
-    [Fact]
-    public async Task ExpandedTeam_DrawsNoFolderForWhatItDoesNotHave()
-    {
-        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
-        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales", projects: ["Budget"])] };
-
-        await using MudBunitContext ctx = NewContext(catalog, stored: """["business","sales"]""", directory: directory);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-
-        cut.WaitForAssertion(() =>
-        {
-            string[] folders = ["Rooms", "Tasks", "Library", "Tasks"];
-            Assert.Equal(folders, FolderTitles(cut));
+            string[] titles = ["Rooms", "Tasks", "Library"];
+            Assert.Equal(titles, SectionTitles(cut));
+            string[] kinds = [.. cut.FindAll(".teams-nav-section").Select(section => section.GetAttribute("data-section") ?? string.Empty)];
+            string[] expectedKinds = ["rooms", "tasks", "library"];
+            Assert.Equal(expectedKinds, kinds);
             string?[] rooms = ["/rooms/teamroom"];
-            Assert.Equal(rooms, FolderHrefs(cut, "Rooms"));
-            string?[] projects = ["/teams/Sales/projects/Budget"];
-            Assert.Equal(projects, FolderHrefs(cut, "Library"));
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
+            string?[] views = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks"];
+            Assert.Equal(views, SectionHrefs(cut, "tasks"));
+            string?[] library = ["/teams/Business/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+            Assert.Empty(cut.FindAll(".teams-nav-section .teams-nav-folder"));
+            Assert.Equal("teams-nav-section teams-nav-section-rooms", Section(cut, "rooms").GetAttribute("class"));
+            Assert.Equal("teams-nav-section teams-nav-section-tasks", Section(cut, "tasks").GetAttribute("class"));
+            Assert.Equal("teams-nav-section teams-nav-section-library", Section(cut, "library").GetAttribute("class"));
+            Assert.Single(cut.FindAll("div.teams-nav-scopes"));
         });
     }
 
-    /// <summary>Clicking a folder's header closes that folder only, and writes nothing to storage (folders are not remembered).</summary>
+    /// <summary>The Rooms header and its "+" are drawn for an open Team that has no Rooms at all, and the section holds no row.</summary>
     [Fact]
-    public async Task FolderHeader_Click_ClosesThatFolderOnly()
+    public async Task ExpandedTeam_DrawsTheRoomsHeaderAndItsPlus_EvenWithNoRooms()
     {
-        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
-        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal(3, FolderTitles(cut).Length));
-
-        await cut.InvokeAsync(() => FolderHeader(cut, "Library").ClickAsync());
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Equal("false", FolderHeader(cut, "Library").GetAttribute("aria-expanded"));
-            Assert.Equal("true", FolderHeader(cut, "Rooms").GetAttribute("aria-expanded"));
-            Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded"));
-        });
-        Assert.Empty(Writes(ctx));
-    }
-
-    /// <summary>Navigating to a Project reopens its Team's Library folder the Human closed, so the page they are on is never folded away.</summary>
-    [Fact]
-    public async Task NavigatingToAProject_ReopensAClosedLibraryFolder()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
-        await cut.InvokeAsync(() => FolderHeader(cut, "Library").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Equal("false", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
 
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
-
-        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Library").GetAttribute("aria-expanded")));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("Rooms", Section(cut, "rooms").QuerySelector(".teams-nav-section-title")?.TextContent.Trim());
+            Assert.Equal("New chat in Business", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label"));
+            Assert.Empty(SectionHrefs(cut, "rooms"));
+        });
     }
 
-    /// <summary>The Tasks folder lists every View in the store's order, each linking to the escaped <c>/teams/{Team}/tasks/{ViewId}</c> route under its View's name.</summary>
+    /// <summary>The Tasks section lists every View in the store's order, each linking to the escaped <c>/teams/{Team}/tasks/{ViewId}</c> route under its View's name.</summary>
     [Fact]
-    public async Task TasksFolder_ListsEveryView_LinkingToTheTeamScopedRoute()
+    public async Task TasksSection_ListsEveryView_LinkingToTheTeamScopedRoute()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Sales & Ops")] };
         await using MudBunitContext ctx = NewContext(catalog, stored: """["sales & ops"]""");
@@ -1017,60 +1179,49 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             string?[] hrefs = ["/teams/Sales%20%26%20Ops/tasks/all-tasks", "/teams/Sales%20%26%20Ops/tasks/my-tasks", "/teams/Sales%20%26%20Ops/tasks/board"];
-            Assert.Equal(hrefs, FolderHrefs(cut, "Tasks"));
+            Assert.Equal(hrefs, SectionHrefs(cut, "tasks"));
             string[] names = [.. views.Views.Select(static view => view.Name)];
-            string[] labels = [.. Folder(cut, "Tasks").QuerySelectorAll(".nav-team-view-link .sidebar-row-label").Select(static label => label.TextContent.Trim())];
+            string[] labels = [.. Section(cut, "tasks").QuerySelectorAll(".nav-team-view-link .sidebar-row-label").Select(static label => label.TextContent.Trim())];
             Assert.Equal(names, labels);
         });
     }
 
-    /// <summary>A View saved after the nav rendered appears in the Team's Tasks folder: the nav follows <see cref="ViewStore.ViewsChanged"/>.</summary>
+    /// <summary>A View saved after the nav rendered appears in the Team's Tasks section: the nav follows <see cref="ViewStore.ViewsChanged"/>.</summary>
     [Fact]
-    public async Task ViewsChanged_AddsTheNewViewToTheTasksFolder()
+    public async Task ViewsChanged_AddsTheNewViewToTheTasksSection()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal(2, FolderHrefs(cut, "Tasks").Length));
+        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "tasks").Length));
 
         Assert.True(ctx.Services.GetRequiredService<ViewStore>().Save(new TaskView { Id = "late", Name = "Late", Kind = ViewKind.List }).Saved);
 
         string?[] expected = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks", "/teams/Business/tasks/late"];
-        cut.WaitForAssertion(() => Assert.Equal(expected, FolderHrefs(cut, "Tasks")));
+        cut.WaitForAssertion(() => Assert.Equal(expected, SectionHrefs(cut, "tasks")));
     }
 
-    /// <summary>With Tasks turned off, an open Team draws no Tasks folder.</summary>
+    /// <summary>With Tasks turned off, an open Team draws no Tasks section and no count on its scope rows.</summary>
     [Fact]
-    public async Task TasksFolder_NotDrawn_WhenTasksAreOff()
+    public async Task TasksSection_NotDrawn_WhenTasksAreOff()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, tasksEnabled: false);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        string[] expected = ["Library"];
-        cut.WaitForAssertion(() => Assert.Equal(expected, FolderTitles(cut)));
+        string?[] library = ["/teams/Business/files"];
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+            string[] titles = ["Rooms", "Library"];
+            Assert.Equal(titles, SectionTitles(cut));
+            Assert.Empty(cut.FindAll(".teams-nav-scope-count"));
+        });
     }
 
-    /// <summary>Navigating to a Team-scoped View reopens that Team's Tasks folder the Human closed, so the page they are on is never folded away.</summary>
+    /// <summary>Each list keeps its own 8-row limit: nine Projects fold behind a "Show all (9)" row while two Rooms show in full, and Show all lists every Project.</summary>
     [Fact]
-    public async Task NavigatingToATeamView_ReopensAClosedTasksFolder()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
-        await cut.InvokeAsync(() => FolderHeader(cut, "Tasks").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Equal("false", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
-
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/tasks/my-tasks"));
-
-        cut.WaitForAssertion(() => Assert.Equal("true", FolderHeader(cut, "Tasks").GetAttribute("aria-expanded")));
-    }
-
-    /// <summary>Each folder keeps its own 8-row limit: nine Projects fold behind the Library's "Show all (9)" while two Rooms show in full, and Show all lists every Project.</summary>
-    [Fact]
-    public async Task LibraryOverTheLimit_FoldsBehindItsOwnShowAll()
+    public async Task ProjectsOverTheLimit_FoldBehindTheirOwnShowAll()
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
@@ -1083,16 +1234,36 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal(2, FolderHrefs(cut, "Rooms").Length);
+            Assert.Equal(2, SectionHrefs(cut, "rooms").Length);
             Assert.Equal(8, ProjectTexts(cut).Length);
         });
-        Assert.Empty(Folder(cut, "Rooms").QuerySelectorAll(".sidebar-show-all"));
-        IElement showAll = Folder(cut, "Library").QuerySelectorAll(".sidebar-show-all .mud-nav-link").Single();
+        Assert.Empty(Section(cut, "rooms").QuerySelectorAll(".sidebar-show-all"));
+        IElement showAll = cut.FindAll(".sidebar-show-all .mud-nav-link").Single();
         Assert.Equal("Show all (9)", showAll.TextContent.Trim());
 
         await cut.InvokeAsync(() => showAll.ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(9, ProjectTexts(cut).Length));
+    }
+
+    /// <summary>A selected Project past the 8-row limit stays in the folded list, so the row the sections belong to is never hidden.</summary>
+    [Fact]
+    public async Task SelectedProjectBeyondTheLimit_StaysVisible()
+    {
+        string[] projects = [.. Enumerable.Range(1, 9).Select(i => $"Project {i}")];
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: projects)] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Project%209");
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(9, ProjectTexts(cut).Length);
+            string[] selected = ["Project 9"];
+            Assert.Equal(selected, SelectedLabels(cut));
+            Assert.Equal("Show all (9)", cut.FindAll(".sidebar-show-all .mud-nav-link").Single().TextContent.Trim());
+        });
     }
 
     /// <summary>A collapsed Team shows none of its Rooms, only its row.</summary>
@@ -1279,8 +1450,9 @@ public sealed class TeamsNavTests
     /// <c>huddleStorage</c> JS calls: <c>get</c> answers <paramref name="stored"/> (or throws), and
     /// <c>set</c> is recorded (or throws when <paramref name="storageThrows"/>). Later tasks add their
     /// own services here so these rows stay green. The create actions' <see cref="ITeamFolders"/> is
-    /// <paramref name="folders"/> (a fresh fake when omitted), and <paramref name="libraryEnabled"/> /
-    /// <paramref name="tasksEnabled"/> set <c>Library.Enabled</c> / <c>Tasks.Enabled</c> (both on by default).
+    /// <paramref name="folders"/> (a fresh fake when omitted), <paramref name="libraryEnabled"/> /
+    /// <paramref name="tasksEnabled"/> set <c>Library.Enabled</c> / <c>Tasks.Enabled</c> (both on by default), and the
+    /// Task store starts with <paramref name="tasks"/> (none when omitted).
     /// </summary>
     private static MudBunitContext NewContext(
         FakeTeamCatalog catalog,
@@ -1289,7 +1461,8 @@ public sealed class TeamsNavTests
         FakeTeamFolders? folders = null,
         bool libraryEnabled = true,
         bool tasksEnabled = true,
-        ITeamDirectory? directory = null)
+        ITeamDirectory? directory = null,
+        IReadOnlyList<TaskItem>? tasks = null)
     {
         MudBunitContext ctx = new();
         ITeamDirectory rooms = directory ?? ScriptedRoomsDirectory.Create(out _);
@@ -1314,6 +1487,8 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddPersonaStore();
+        ctx.Services.AddTaskStore(tasks);
+        ctx.Services.AddTeamTypes();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(folders ?? new FakeTeamFolders());
         ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
@@ -1354,10 +1529,6 @@ public sealed class TeamsNavTests
     private static Task ClickChevronAsync(IRenderedComponent<ContainerFragment> cut, string team) =>
         cut.InvokeAsync(() => Chevron(cut, team).ClickAsync());
 
-    /// <summary>The trimmed text of every Project link, in render order.</summary>
-    private static string[] ProjectTexts(IRenderedComponent<ContainerFragment> cut) =>
-        [.. cut.FindAll(".nav-project-link a").Select(a => a.TextContent.Trim())];
-
     private static IRenderedComponent<ContainerFragment> RenderNav(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
         {
@@ -1384,25 +1555,457 @@ public sealed class TeamsNavTests
     private static string[] MenuItemTexts(IRenderedComponent<ContainerFragment> cut) =>
         [.. cut.FindAll("div.mud-menu-item").Select(item => item.TextContent.Trim())];
 
-    /// <summary>The titles of every Rooms or Library folder, in render order.</summary>
-    private static string[] FolderTitles(IRenderedComponent<ContainerFragment> cut) =>
-        [.. cut.FindAll(".teams-nav-folder > .mud-nav-link .mud-nav-link-text").Select(text => text.TextContent.Trim())];
+    /// <summary>The trimmed name of every Project row of the scope lists, in render order.</summary>
+    private static string[] ProjectTexts(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".teams-nav-scope-row[data-scope='project'] .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
 
-    /// <summary>The one folder titled <paramref name="title"/>.</summary>
-    private static IElement Folder(IRenderedComponent<ContainerFragment> cut, string title) =>
-        cut.FindAll(".teams-nav-folder").Single(folder => string.Equals(folder.QuerySelector(":scope > .mud-nav-link .mud-nav-link-text")?.TextContent.Trim(), title, StringComparison.Ordinal));
+    /// <summary>The trimmed name of every scope row (the Team's, then its Projects'), in render order.</summary>
+    private static string[] ScopeLabels(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".teams-nav-scope-row .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
 
-    /// <summary>The header of the one folder titled <paramref name="title"/>, which opens and closes it.</summary>
-    private static IElement FolderHeader(IRenderedComponent<ContainerFragment> cut, string title) =>
-        Folder(cut, title).QuerySelectorAll(":scope > .mud-nav-link").Single();
+    /// <summary>The name of every scope row wearing the Selected shape.</summary>
+    private static string[] SelectedLabels(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".teams-nav-scope-row.selected-shape .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
 
-    /// <summary>The href of every link inside the folder titled <paramref name="title"/>, in render order.</summary>
-    private static string?[] FolderHrefs(IRenderedComponent<ContainerFragment> cut, string title) =>
-        [.. Folder(cut, title).QuerySelectorAll("a[href]").Select(a => a.GetAttribute("href"))];
+    /// <summary>The scope row named <paramref name="label"/> (the Team's or a Project's).</summary>
+    private static IElement ScopeRow(IRenderedComponent<ContainerFragment> cut, string label) =>
+        cut.FindAll(".teams-nav-scope-row").Single(row => string.Equals(row.QuerySelector(".teams-nav-scope-label")?.TextContent.Trim(), label, StringComparison.Ordinal));
+
+    /// <summary>The count text trailing the scope row named <paramref name="label"/>.</summary>
+    private static string CountOf(IRenderedComponent<ContainerFragment> cut, string label) =>
+        ScopeRow(cut, label).QuerySelector(".teams-nav-scope-count")?.TextContent.Trim() ?? string.Empty;
+
+    /// <summary>The first section of kind <paramref name="kind"/> (<c>rooms</c>, <c>tasks</c> or <c>library</c>).</summary>
+    private static IElement Section(IRenderedComponent<ContainerFragment> cut, string kind) =>
+        cut.Find($".teams-nav-section[data-section='{kind}']");
+
+    /// <summary>The href of every link inside the section of kind <paramref name="kind"/>, in render order.</summary>
+    private static string?[] SectionHrefs(IRenderedComponent<ContainerFragment> cut, string kind) =>
+        [.. Section(cut, kind).QuerySelectorAll("a[href]").Select(a => a.GetAttribute("href"))];
+
+    /// <summary>The header label of every section, in render order.</summary>
+    private static string[] SectionTitles(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".teams-nav-section-title").Select(title => title.TextContent.Trim())];
 
     /// <summary>The trimmed text of every Team link, in render order.</summary>
     private static string[] LinkTexts(IRenderedComponent<ContainerFragment> cut) =>
         [.. cut.FindAll(".hover-reveal-link a .sidebar-row-label").Select(label => label.TextContent.Trim())];
+
+    /// <summary>A Room directory with one Team Room, one Room in the Project Marketing and one whose Project is gone, all of Business.</summary>
+    private static ITeamDirectory ProjectRooms()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("inproject", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business", Project = "marketing" });
+        script.Rooms.Add(new Room("orphan", "Bo", DateTimeOffset.UnixEpoch.AddDays(2)) { Team = "Business", Project = "Vanished" });
+        return directory;
+    }
+
+    /// <summary>A Task of Business (under <paramref name="project"/> when given) in <paramref name="status"/>, numbered <paramref name="number"/>.</summary>
+    private static TaskItem BusinessTask(int number, TaskState status, string? project = null) =>
+        TestTasks.Make(id: $"BIZ-{number:0000}", status: status, location: new TaskLocation("Business", project, false));
+
+    /// <summary>The list starts with the Team's own row (its rounded-square avatar) and then one row per Project in catalog order, each with the Project icon.</summary>
+    [Fact]
+    public async Task ScopeList_StartsWithTheTeamRow_ThenTheProjectsInOrder_WithTheProjectIcon()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Taxes", "Marketing"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] labels = ["Business", "Taxes", "Marketing"];
+            Assert.Equal(labels, ScopeLabels(cut));
+            string[] kinds = [.. cut.FindAll(".teams-nav-scope-row").Select(row => row.GetAttribute("data-scope") ?? string.Empty)];
+            string[] expectedKinds = ["team", "project", "project"];
+            Assert.Equal(expectedKinds, kinds);
+            string?[] hrefs = [.. cut.FindAll(".teams-nav-scope-row a").Select(a => a.GetAttribute("href"))];
+            string?[] expectedHrefs = ["/teams/Business", "/teams/Business/projects/Taxes", "/teams/Business/projects/Marketing"];
+            Assert.Equal(expectedHrefs, hrefs);
+            Assert.Equal(2, cut.FindAll(".teams-nav-scope-chip svg rect[stroke='currentColor']").Count);
+            Assert.Single(ScopeRow(cut, "Business").QuerySelectorAll(".mud-avatar.avatar-square"));
+            Assert.Empty(ScopeRow(cut, "Taxes").QuerySelectorAll(".mud-avatar"));
+        });
+    }
+
+    /// <summary>The Team row is selected by default and its sections list only the Rooms with no Project, the Team's Task Views and the Team's Files link; exactly one row wears the Selected shape.</summary>
+    [Fact]
+    public async Task TeamScope_IsSelectedByDefault_AndItsSectionsHoldOnlyTeamLevelItems()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] selected = ["Business"];
+            Assert.Equal(selected, SelectedLabels(cut));
+            Assert.Equal("true", ScopeRow(cut, "Business").QuerySelector("a")?.GetAttribute("aria-current"));
+            Assert.Null(ScopeRow(cut, "Marketing").QuerySelector("a")?.GetAttribute("aria-current"));
+            string?[] rooms = ["/rooms/teamroom", "/rooms/orphan"];
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
+            string?[] views = ["/teams/Business/tasks/all-tasks", "/teams/Business/tasks/my-tasks"];
+            Assert.Equal(views, SectionHrefs(cut, "tasks"));
+            string?[] library = ["/teams/Business/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+        });
+    }
+
+    /// <summary>The scope rows are plain links wearing the Selected shape themselves: none carries NavLink's <c>active</c> class, so a selected row is never highlighted twice.</summary>
+    [Fact]
+    public async Task ScopeRows_NeverWearNavLinkActiveClass()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] selected = ["Marketing"];
+            Assert.Equal(selected, SelectedLabels(cut));
+            Assert.Empty(cut.FindAll(".teams-nav-scope-row .active"));
+            Assert.Empty(cut.FindAll(".teams-nav-scope-row .mud-nav-link"));
+        });
+    }
+
+    /// <summary>Navigating to a Project's address selects its row, and the sections switch to its Rooms, its <c>/projects/{P}/tasks/{V}</c> Views and its <c>/projects/{P}/files</c> link.</summary>
+    [Fact]
+    public async Task NavigatingToAProject_SelectsIt_AndTheSectionsSwitchToIt()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing", "Q4 Launch"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "rooms").Length));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] selected = ["Marketing"];
+            Assert.Equal(selected, SelectedLabels(cut));
+            string?[] rooms = ["/rooms/inproject"];
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
+            string?[] views = ["/teams/Business/projects/Marketing/tasks/all-tasks", "/teams/Business/projects/Marketing/tasks/my-tasks"];
+            Assert.Equal(views, SectionHrefs(cut, "tasks"));
+            string?[] library = ["/teams/Business/projects/Marketing/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+        });
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Q4%20Launch/files"));
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] selected = ["Q4 Launch"];
+            Assert.Equal(selected, SelectedLabels(cut));
+            Assert.Empty(SectionHrefs(cut, "rooms"));
+            string?[] library = ["/teams/Business/projects/Q4%20Launch/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+        });
+    }
+
+    /// <summary>Any address inside a Project selects it, whatever its spelling: its page, its Files or one of its Task Views, in any case.</summary>
+    [Theory]
+    [InlineData("/teams/Business/projects/Marketing")]
+    [InlineData("/teams/Business/projects/marketing/files")]
+    [InlineData("/teams/Business/projects/Marketing/tasks/my-tasks")]
+    public async Task ProjectAddresses_SelectThatProject(string route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing", "Taxes"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo(route);
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] selected = ["Marketing"];
+            Assert.Equal(selected, SelectedLabels(cut));
+        });
+    }
+
+    /// <summary>The Team page, its Task Views and its Files select the Team row again after a Project was selected.</summary>
+    [Theory]
+    [InlineData("/teams/Business")]
+    [InlineData("/teams/Business/tasks/my-tasks")]
+    [InlineData("/teams/Business/files")]
+    public async Task TeamAddresses_SelectTheTeamRow(string route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/teams/Business/projects/Marketing");
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        string[] project = ["Marketing"];
+        cut.WaitForAssertion(() => Assert.Equal(project, SelectedLabels(cut)));
+
+        await cut.InvokeAsync(() => nav.NavigateTo(route));
+
+        string[] team = ["Business"];
+        cut.WaitForAssertion(() => Assert.Equal(team, SelectedLabels(cut)));
+    }
+
+    /// <summary>A Room route selects the Room's Project when the Team lists it, and the Team row for a Room with no Project.</summary>
+    [Fact]
+    public async Task RoomRoute_SelectsTheRoomsProject_OrTheTeamRowWhenItHasNone()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(2, SectionHrefs(cut, "rooms").Length));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/inproject"));
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] project = ["Marketing"];
+            Assert.Equal(project, SelectedLabels(cut));
+            string?[] rooms = ["/rooms/inproject"];
+            Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
+        });
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/teamroom"));
+
+        string[] team = ["Business"];
+        cut.WaitForAssertion(() => Assert.Equal(team, SelectedLabels(cut)));
+    }
+
+    /// <summary>An address outside every scope (another page, or an unknown page of the Team) keeps the Team's last selection.</summary>
+    [Theory]
+    [InlineData("/agents")]
+    [InlineData("/teams/Business/members")]
+    public async Task UnrelatedAddress_KeepsThePreviousSelection(string route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/teams/Business/projects/Marketing");
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        string[] project = ["Marketing"];
+        cut.WaitForAssertion(() => Assert.Equal(project, SelectedLabels(cut)));
+
+        await cut.InvokeAsync(() => nav.NavigateTo(route));
+        await Flush(cut);
+
+        Assert.Equal(project, SelectedLabels(cut));
+    }
+
+    /// <summary>A Room whose Project is gone from the catalog is listed in the Team scope, which stays selected on its address.</summary>
+    [Fact]
+    public async Task RoomWhoseProjectIsGone_ShowsInTheTeamScope()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: ProjectRooms());
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/orphan");
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] team = ["Business"];
+            Assert.Equal(team, SelectedLabels(cut));
+            Assert.Contains("/rooms/orphan", SectionHrefs(cut, "rooms"));
+        });
+    }
+
+    /// <summary>A Project address for a Project the catalog does not list (archived or gone) falls back to the Team row and the Team's sections.</summary>
+    [Fact]
+    public async Task ProjectGoneFromTheCatalog_FallsBackToTheTeamScope()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Vanished");
+
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string[] team = ["Business"];
+            Assert.Equal(team, SelectedLabels(cut));
+            string?[] library = ["/teams/Business/files"];
+            Assert.Equal(library, SectionHrefs(cut, "library"));
+        });
+    }
+
+    /// <summary>Each Team keeps its own selection for the circuit: selecting a Project of one Team does not move the other's.</summary>
+    [Fact]
+    public async Task Selection_IsKeptPerTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"]), Team("Sales", projects: ["Budget"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: """["business","sales"]""");
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/teams/Business/projects/Marketing");
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        string[] first = ["Marketing", "Sales"];
+        cut.WaitForAssertion(() => Assert.Equal(first, SelectedLabels(cut)));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Sales/projects/Budget"));
+
+        string[] second = ["Marketing", "Budget"];
+        cut.WaitForAssertion(() => Assert.Equal(second, SelectedLabels(cut)));
+    }
+
+    /// <summary>Clicking a Project row selects it at once and offers its page to the Tabs; the row links to that page.</summary>
+    [Fact]
+    public async Task ClickingAScopeRow_SelectsIt_AndOpensItsPageInATab()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        string[] team = ["Business"];
+        cut.WaitForAssertion(() => Assert.Equal(team, SelectedLabels(cut)));
+        IElement link = ScopeRow(cut, "Marketing").QuerySelectorAll("a").Single();
+        Assert.Equal("/teams/Business/projects/Marketing", link.GetAttribute("href"));
+
+        await cut.InvokeAsync(() => link.ClickAsync());
+
+        string[] project = ["Marketing"];
+        cut.WaitForAssertion(() => Assert.Equal(project, SelectedLabels(cut)));
+        Tab tab = Assert.Single(ctx.Services.GetRequiredService<TabService>().Tabs);
+        Assert.Equal("/teams/Business/projects/Marketing", tab.Url);
+        Assert.Equal("Marketing", tab.Title);
+    }
+
+    /// <summary>Each Project row counts its open Tasks (not Done, Cancelled, Duplicate or Rejected, as the Tasks page counts them), a Project with none shows an em dash, and the tooltip says what the number is; the Team's header card shows no count.</summary>
+    [Fact]
+    public async Task Counts_ShowTheOpenTasksOfEachScope_AndADashForZero()
+    {
+        TaskItem[] tasks =
+        [
+            BusinessTask(1, TaskState.ToDo),
+            BusinessTask(2, TaskState.InProgress),
+            BusinessTask(3, TaskState.Done),
+            BusinessTask(4, TaskState.ToDo, "Marketing"),
+            BusinessTask(5, TaskState.Cancelled, "Marketing"),
+            TestTasks.Make(id: "SAL-0001", status: TaskState.ToDo, location: new TaskLocation("Sales", null, false)),
+        ];
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing", "Taxes"]), Team("Sales")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen, tasks: tasks);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(ScopeRow(cut, "Business").QuerySelectorAll(".teams-nav-scope-count"));
+            Assert.Equal("1", CountOf(cut, "Marketing"));
+            Assert.Equal("—", CountOf(cut, "Taxes"));
+            Assert.Equal("1 open task", ScopeRow(cut, "Marketing").QuerySelector(".teams-nav-scope-count")?.GetAttribute("title"));
+            Assert.Equal("No open tasks", ScopeRow(cut, "Taxes").QuerySelector(".teams-nav-scope-count")?.GetAttribute("title"));
+        });
+    }
+
+    /// <summary>A Task created after the nav rendered changes its scope's count: the nav follows <see cref="TaskEvents"/> as the Tasks page does.</summary>
+    [Fact]
+    public async Task Counts_FollowTaskEvents()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, tasks: [BusinessTask(1, TaskState.ToDo, "Marketing")]);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("1", CountOf(cut, "Marketing"));
+        });
+
+        TaskItem added = BusinessTask(2, TaskState.ToDo, "Marketing");
+        TaskStore store = ctx.Services.GetRequiredService<TaskStore>();
+        Assert.NotNull(store.Create(added, TaskFileFormat.Compose(added)));
+        ctx.Services.GetRequiredService<TaskEvents>().RaiseTasksReloaded();
+
+        cut.WaitForAssertion(() => Assert.Equal("2", CountOf(cut, "Marketing")));
+    }
+
+    /// <summary>The "+" in the Rooms header opens the New chat panel for the Team scope: the Team and no Project.</summary>
+    [Fact]
+    public async Task RoomsPlus_InTheTeamScope_OpensNewChatForTheTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label")));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim());
+            Assert.Single(cut.FindAll(".new-chat-panel"));
+            Assert.Single(Section(cut, "rooms").QuerySelectorAll(".new-chat-panel"));
+        });
+    }
+
+    /// <summary>With a Project selected, the "+" opens the New chat panel for the Team and that Project, under the Rooms header; the Project's scope names the button.</summary>
+    [Fact]
+    public async Task RoomsPlus_InAProject_OpensNewChatForTheTeamAndProject()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Marketing", cut.Find("button.teams-nav-section-add").GetAttribute("aria-label")));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("New chat in Business / Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
+            Assert.Single(Section(cut, "rooms").QuerySelectorAll(".new-chat-panel"));
+        });
+    }
+
+    /// <summary>Moving to another scope closes a New chat panel left open for the old one, so the panel never names a scope that is no longer selected.</summary>
+    [Fact]
+    public async Task NewChatPanel_ClosesWhenAnotherScopeIsSelected()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-section-add")));
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-section-add").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".new-chat-panel")));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Business/projects/Marketing"));
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-panel")));
+    }
+
+    /// <summary>The Library section is one Files link to the Files tab of the scope, and is not drawn at all (header included) while the Library is off.</summary>
+    [Fact]
+    public async Task LibrarySection_LinksToTheFilesTabOfTheScope_AndIsNotDrawnWhenTheLibraryIsOff()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Sales & Ops", projects: ["Q4 Launch"])] };
+        await using (MudBunitContext on = NewContext(catalog, stored: """["sales & ops"]"""))
+        {
+            on.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Sales%20%26%20Ops/projects/Q4%20Launch");
+            IRenderedComponent<ContainerFragment> cut = RenderNav(on);
+
+            cut.WaitForAssertion(() =>
+            {
+                string?[] expected = ["/teams/Sales%20%26%20Ops/projects/Q4%20Launch/files"];
+                Assert.Equal(expected, SectionHrefs(cut, "library"));
+                Assert.Equal("Files", Section(cut, "library").QuerySelector(".teams-nav-library-link .sidebar-row-label")?.TextContent.Trim());
+            });
+        }
+
+        await using MudBunitContext off = NewContext(catalog, stored: """["sales & ops"]""", libraryEnabled: false);
+        IRenderedComponent<ContainerFragment> offCut = RenderNav(off);
+
+        offCut.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(offCut.FindAll(".teams-nav-section"));
+            Assert.Empty(offCut.FindAll(".teams-nav-section-library"));
+            Assert.DoesNotContain("Library", SectionTitles(offCut));
+        });
+    }
 
     /// <summary>Each Team row leads with the Team's avatar as a rounded square, before the label: its own label when it has one, else the monogram.</summary>
     [Fact]

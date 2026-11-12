@@ -112,7 +112,7 @@ it beat.
                                           add missing members
                                           archive Rooms whose Team is gone
         │
- UI: RoomList (root only) · TeamsNav (Team ▸ Rooms, Projects; menu: New chat)
+ UI: RoomList (root only) · TeamsNav (Team ▸ scope list, ROOMS, TASKS, LIBRARY; menu: New chat)
      NewChat (Team parameter) · TeamMembers Message → EnsureTeamOneToOneAsync
  Prompt: turn.roomLabel gains {{team}}
  Tools: read_records accepts a Room scoped to the Team
@@ -208,8 +208,7 @@ that has never connected is added on the run after it does: User creation raises
 
 - **`RoomList`** lists Rooms with `Team is null`, plus unarchived Rooms whose Team is no
   longer in the catalog, those with a muted `(<Team>)` after the name (T12).
-- **`TeamsNav`**: an expanded Team shows its Team Room first, then its other non-archived
-  scoped Rooms (oldest first), then its Projects. Room rows use the same `NavTabLink
+- **`TeamsNav`**: an expanded Team shows a selectable scope list: the Team row first, then one row per Project, each trailing its open Task count. Clicking a row selects it and opens its page; the address also selects it (a Room selects its Project, ADR-0082, or the Team row when it has none or its Project is gone). Below the list sit the selected scope's **ROOMS** (with a "+" that opens New chat in that scope), **TASKS** and **LIBRARY** sections. The Team scope lists its Rooms with no Project, or whose Project is archived or gone: the Team Room first, then its other non-archived scoped Rooms, oldest first. Room rows use the same `NavTabLink
   /rooms/{id}` and Archive/Delete menu as `RoomList` — extract that row into a shared
   `RoomNavRow` rather than copying it. The Team's `MudMenu` gains **New chat** and is now
   rendered whatever `ProjectsAllowed` says (only **New project** stays behind it).

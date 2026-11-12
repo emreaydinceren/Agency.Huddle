@@ -89,7 +89,7 @@ public sealed class SecondBrainWalkTests
 
         ITeamDirectory directory = services.GetRequiredService<ITeamDirectory>();
         Room? room = await directory.FindTeamRoomAsync(Finances, ct);
-        room ??= await directory.CreateRoomAsync(Finances, [KnownIds.Human], Finances, teamRoom: true, ct);
+        room ??= await directory.CreateRoomAsync(Finances, [KnownIds.Human], Finances, teamRoom: true, ct: ct);
         Assert.Equal(Finances, room.Team);
         Assert.True(Directory.Exists(financesDir));
     }

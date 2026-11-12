@@ -80,7 +80,7 @@ A skin file looks like this (abridged from `lumen.dark.json`):
 ## The token registry and expression grammar
 
 `SkinTokens` registers every token once, with a light and a dark default written as an expression over the
-palette: 130 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
+palette: 136 tokens, such as `ground.page`, `current.background`, `line.region` and `shadow.card`. Each one becomes a
 `--hu-*` custom property in one `<style id="hu-skin">` block that `MainLayout` writes as a `MarkupString` (a text
 child would be HTML-encoded on prerender). The `wwwroot/css/` files read these tokens and the MudBlazor palette variables and hold
 no colour literal. The exception to the `--hu-` prefix is the four ink rungs, `ink.strip`, `ink.wash`, `ink.line` and `ink.field`,

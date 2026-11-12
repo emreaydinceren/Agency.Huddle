@@ -177,7 +177,7 @@ public sealed class ArchivedChatsDialogTests
         Assert.NotNull(agent);
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events).Chat;
         var rootRoom = await chat.EnsureRoomForAsync(agent, ct);
-        var teamRoom = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", false, ct);
+        var teamRoom = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", false, ct: ct);
         _ = await chat.SetRoomArchivedAsync(rootRoom.Id, archived: true, ct);
         _ = await chat.SetRoomArchivedAsync(teamRoom.Id, archived: true, ct);
 

@@ -205,7 +205,7 @@ public sealed class ChatPageTests
 
         await using var factory = new TeamWebApplicationFactory();
         var (directory, _, _) = ChatPageTests.Services(factory);
-        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct: ct);
 
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, teamRoom.Id);
@@ -223,8 +223,8 @@ public sealed class ChatPageTests
 
         await using var factory = new TeamWebApplicationFactory();
         var (directory, _, _) = ChatPageTests.Services(factory);
-        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct);
-        Room other = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human], "Marketing", false, ct);
+        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct: ct);
+        Room other = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human], "Marketing", false, ct: ct);
 
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, other.Id);

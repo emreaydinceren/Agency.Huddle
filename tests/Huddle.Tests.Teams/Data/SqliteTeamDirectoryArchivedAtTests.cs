@@ -21,7 +21,7 @@ public sealed class SqliteTeamDirectoryArchivedAtTests
         FakeTimeProvider clock = new(ArchivedMoment);
         SqliteTeamDirectory directory = new(dir.Options(), clock);
         await directory.InitializeAsync("You", ct);
-        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct);
+        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct: ct);
 
         await directory.SetRoomArchivedAsync(room.Id, archived: true, ct);
 
@@ -39,7 +39,7 @@ public sealed class SqliteTeamDirectoryArchivedAtTests
         using TempDataDir dir = new();
         SqliteTeamDirectory directory = new(dir.Options(), new FakeTimeProvider(ArchivedMoment));
         await directory.InitializeAsync("You", ct);
-        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct);
+        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct: ct);
         Assert.Null((await directory.GetRoomAsync(room.Id, ct))?.ArchivedAt);
 
         await directory.SetRoomArchivedAsync(room.Id, archived: true, ct);
@@ -58,7 +58,7 @@ public sealed class SqliteTeamDirectoryArchivedAtTests
         using TempDataDir dir = new();
         SqliteTeamDirectory directory = new(dir.Options());
         await directory.InitializeAsync("You", ct);
-        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct);
+        Room room = await directory.CreateRoomAsync("Plan", [KnownIds.Human], null, false, ct: ct);
         string dbPath = Path.Combine(dir.Options().Value.DataDir, "team.db");
         await using (SqliteConnection connection = new($"Data Source={dbPath};Pooling=False"))
         {

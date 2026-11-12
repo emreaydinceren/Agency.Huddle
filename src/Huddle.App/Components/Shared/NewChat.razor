@@ -21,10 +21,10 @@
     }
     @if (this.isOpen)
     {
-        <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New chat" : $"New chat in {this.Team}")">
+        <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New chat" : $"New chat in {this.Scope}")">
             @if (this.Team is not null)
             {
-                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Team</MudText>
+                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Scope</MudText>
             }
 
             @if (this.agents.Count == 0)
@@ -66,6 +66,12 @@
     /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Agents first.</summary>
     [Parameter]
     public string? Team { get; set; }
+
+    /// <summary>The Team's Project the new Room belongs to, or <see langword="null"/> for none. Only meaningful with <see cref="Team"/>; with both the panel is headed "New chat in {Team} / {Project}" and the Room is created in that Project.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    private string? Scope => this.Project is null ? this.Team : $"{this.Team} / {this.Project}";
 
     /// <summary>Raised after a chat has been started, so the host that opened the panel can close it.</summary>
     [Parameter]
@@ -114,7 +120,7 @@
         Room room;
         try
         {
-            room = await this.Chat.CreateRoomForAsync([.. this.selectedAgentIds], this.Team);
+            room = await this.Chat.CreateRoomForAsync([.. this.selectedAgentIds], this.Team, this.Project);
         }
         catch (ChatException ex)
         {

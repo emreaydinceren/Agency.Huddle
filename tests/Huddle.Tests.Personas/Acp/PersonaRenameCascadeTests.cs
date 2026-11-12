@@ -103,7 +103,7 @@ public sealed class PersonaRenameCascadeTests
         harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
         var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(echo);
-        var teamRoom = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], "echo", true, ct);
+        var teamRoom = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], "echo", true, ct: ct);
         var chat = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], team: "echo", ct: ct);
         CreateWorkDir(dir, "echo");
 

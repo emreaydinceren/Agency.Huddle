@@ -81,15 +81,16 @@
                 <NeedsYouCard />
                 <RoomList />
             </div>
-            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teams)">
-                <TeamsNav />
+            <div class="sidebar-view sidebar-view-team" hidden="@(this.sidebarView != SidebarView.Teams)">
+                @* The Teams view is a Team shortcut's view with its Team list unfolded: the last Team used, else the first. *@
+                <TeamsNav IsTeamsView="true" Team="@this.shortcutTeam" TeamChanged="this.OnTeamsViewTeamChanged" />
             </div>
             @* The Team view a shortcut opens is its own TeamsNav, narrowed to that Team; it is mounted while a shortcut
                has been used, so its open folders survive a switch to another view and back. *@
             @if (this.shortcutTeam is not null)
             {
                 <div class="sidebar-view sidebar-view-team" hidden="@(this.sidebarView != SidebarView.Team)">
-                    <TeamsNav Team="@this.shortcutTeam" />
+                    <TeamsNav Team="@this.shortcutTeam" TeamChanged="this.OnShortcutChanged" />
                 </div>
             }
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Agents)">
@@ -176,6 +177,16 @@
 
         this.shortcutTeam = team;
         this.sidebarView = SidebarView.Team;
+    }
+
+    /// <summary>Remembers the Team picked in the Teams view as the last used one; the Sidebar stays on the Teams view.</summary>
+    /// <param name="team">The Team picked.</param>
+    private void OnTeamsViewTeamChanged(string? team)
+    {
+        if (team is not null)
+        {
+            this.shortcutTeam = team;
+        }
     }
 
     /// <summary>

@@ -7,14 +7,15 @@ public sealed class TabTrailTests
     private static string Draw(IReadOnlyList<TrailCrumb> trail) =>
         string.Join(" > ", trail.Select(static crumb => crumb.Href is null ? crumb.Text : $"[{crumb.Text}]({crumb.Href})"));
 
-    /// <summary>Each routed page gets its ancestors only, never itself: every page shows its name as its h1. A page with no ancestor has an empty trail; every ancestor with a page of its own is a link.</summary>
+    /// <summary>Each routed page gets its ancestors only, never itself: every page shows its name as its h1. A page with no ancestor has an empty trail; every ancestor with a page of its own is a link. A Project page is the exception: its trail ends in the Project as plain text.</summary>
     [Theory]
     [InlineData("/", "")]
     [InlineData("/rooms/ab12", "[Rooms](/)")]
     [InlineData("/teams/Core", "Teams")]
     [InlineData("/teams/Core/tasks", "Teams")]
-    [InlineData("/teams/Core/projects/Alpha", "Teams > [Core](/teams/Core)")]
-    [InlineData("/teams/Core/projects/Alpha/files", "Teams > [Core](/teams/Core)")]
+    [InlineData("/teams/Core/projects/Alpha", "Teams > [Core](/teams/Core) > Alpha")]
+    [InlineData("/teams/Core/projects/Alpha/files", "Teams > [Core](/teams/Core) > Alpha")]
+    [InlineData("/teams/Core/projects/Alpha/tasks/board", "Teams > [Core](/teams/Core) > [Alpha](/teams/Core/projects/Alpha)")]
     [InlineData("/teams/build", "Teams")]
     [InlineData("/tasks", "")]
     [InlineData("/tasks/my-tasks", "[Tasks](/tasks)")]
@@ -47,7 +48,7 @@ public sealed class TabTrailTests
     {
         IReadOnlyList<TrailCrumb> trail = TabTrail.Build("/teams/Sales%20%26%20Ops/projects/Launch");
 
-        Assert.Equal("Teams > [Sales & Ops](/teams/Sales%20%26%20Ops)", Draw(trail));
+        Assert.Equal("Teams > [Sales & Ops](/teams/Sales%20%26%20Ops) > Launch", Draw(trail));
     }
 
     /// <summary>A page with no ancestor (Agents, Settings, a Task View's own page) has an empty trail, so the bar draws no one-crumb trail that repeats the h1.</summary>

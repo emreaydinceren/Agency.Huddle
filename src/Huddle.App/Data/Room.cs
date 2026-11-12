@@ -22,6 +22,13 @@ public sealed record Room(string Id, string Name, DateTimeOffset Created)
     public string? Team { get; init; }
 
     /// <summary>
+    /// The Project of <see cref="Team"/> this Room belongs to, or <see langword="null"/> for a Room with
+    /// no Project. Only meaningful when <see cref="Team"/> is set; a root Room never has one. Chosen when
+    /// the Room is created and never changed.
+    /// </summary>
+    public string? Project { get; init; }
+
+    /// <summary>
     /// Whether this is its Team's Team Room (ADR-0052): the one Room of a Team that holds all its Members
     /// and is named after the Team. Always <see langword="false"/> for a root Room. A Team Room is never
     /// renamed, whatever its name looks like.

@@ -1691,7 +1691,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Pass if — all of these**
 
-- Every page has a slim bar above it: *Rooms* alone on a Room (the Room's name is the page's own heading, not a crumb), *Teams › {Team}* on a Project, *Teams* alone on a Team, a single crumb on Agents and Settings.
+- Every page has a slim bar above it: *Rooms* alone on a Room (the Room's name is the page's own heading, not a crumb), *Teams › {Team} › {Project}* on a Project (the Project is the current crumb), *Teams* alone on a Team, a single crumb on Agents and Settings.
 - The page title text under the bar is not repeated on Agents, Settings and Library pages; a Room, Team or Project draws its own name as the page heading under the bar, and the bar holds only its ancestors.
 - Step 3 changes the same tab to the Team page, leaves the tab count unchanged, and the Team's name in the bar is plain text afterwards.
 - Step 4 shows the new name in the tab and in the Room's heading; the crumb still reads `Rooms`.

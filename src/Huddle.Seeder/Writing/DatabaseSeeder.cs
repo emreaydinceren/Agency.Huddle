@@ -76,7 +76,7 @@ internal static class DatabaseSeeder
 
         // A Team Room is named for its Team, as the app's own reconciler creates it; every other Room starts with the derived name.
         string initialName = room.IsTeamRoom ? room.Name : string.Join(", ", room.Members);
-        Room created = await directory.CreateRoomAsync(initialName, memberIds, room.Team, room.IsTeamRoom, ct).ConfigureAwait(false);
+        Room created = await directory.CreateRoomAsync(initialName, memberIds, room.Team, room.IsTeamRoom, ct: ct).ConfigureAwait(false);
 
         if (!string.Equals(room.Name, initialName, StringComparison.Ordinal))
         {

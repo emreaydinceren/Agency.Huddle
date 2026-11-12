@@ -127,7 +127,7 @@ public sealed class ServiceCollectionExtensionsTests
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(nova);
 
-        Room room = await provider.GetRequiredService<Agency.Huddle.App.Services.ChatService>().CreateRoomForAsync([nova.Id], "Marketing", ct);
+        Room room = await provider.GetRequiredService<Agency.Huddle.App.Services.ChatService>().CreateRoomForAsync([nova.Id], "Marketing", ct: ct);
 
         Assert.Equal("Marketing", room.Team);
     }

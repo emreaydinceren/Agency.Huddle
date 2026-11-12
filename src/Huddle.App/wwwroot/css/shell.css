@@ -502,10 +502,22 @@ emoji-picker {
     }
 }
 
-/* The Room's kind ("Group", "1:1", "Team") beside its title is for a style pack that draws it as a chip (ADR-0057);
-   every Theme without one leaves the member count to say it. */
-.room-kind-chip {
-    display: none;
+/* A page's kind beside its h1: a Room's ("Group", "1:1", "Team") and a Team or Project page's ("Team", "Project").
+   Drawn in every Theme in paper's chip look, in tokens; the paper and hairline traits below restyle the Room's. */
+.room-kind-chip,
+.page-kind-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border: 1px solid var(--hu-line-control);
+    border-radius: var(--hu-radius-full);
+    background: var(--hu-ground-raised);
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 /* The Top bar's "N Tasks need you" pill: every Theme's mockup shows it, so it is drawn in the needs hue unless a surface
@@ -812,13 +824,13 @@ emoji-picker {
 }
 
 .activity-bar-shortcut.activity-bar-item-selected {
-    background-color: var(--hu-current-background);
-    box-shadow: var(--hu-current-shadow);
+    background-color: var(--hu-shortcut-selected-background);
+    box-shadow: var(--hu-shortcut-selected-shadow);
 }
 
 .activity-bar-shortcut.activity-bar-item-selected:hover,
 .activity-bar-shortcut.activity-bar-item-selected:focus-visible {
-    background-color: var(--hu-current-background-hover);
+    background-color: var(--hu-shortcut-selected-background-hover);
 }
 
 .activity-bar-divider {

@@ -58,9 +58,9 @@ sidebar shows: **Chats**, **Teams**, **Agents**, **Tasks**, **Library**, **Sched
 bottom. Selecting the active button folds the sidebar away. PRs: #206, then #334.
 
 **Team shortcuts.** Every Team gets an avatar tile at the top of the Activity bar, on by
-default. Clicking one narrows the sidebar to that Team's **Rooms**, **Library** and
-**Tasks** folders. The Rooms folder splits into **Needs you** and **All** while a Room is
-waiting, and always ends with **New chat**. Right-click removes a shortcut or turns them
+default. Clicking one narrows the sidebar to that Team's list of itself and its Projects, with the selected one's **ROOMS**,
+**TASKS** and **LIBRARY** below. ROOMS splits into **Needs you** and **All** while a Room is
+waiting, and its "+" starts a new chat. Right-click removes a shortcut or turns them
 all off; the Team page has **Add shortcut**. The choice is remembered per browser. PRs:
 #277, then #278.
 
@@ -677,6 +677,7 @@ Behaviour that an earlier PR description promises but that no longer exists:
 | The View editor panel and its Save button | Filter chips, auto-saved Views, and Rename and Fields dialogs | #79, #94 → #177 |
 | The in-page "Linked from N notes" block and the History under a note | The **Backlinks** and **History** panels in the Right sidebar | #85, #220 → #255 |
 | Teams listed under a "Teams" group header, with chats and Projects mixed together | Teams as root rows with Rooms, Library and Tasks folders | #96 → #273, #276 |
+| Teams' Library folder listing the Projects, and Rooms and Task Views that were Team-wide only | A selectable list of the Team and its Projects, each with its open Task count, and the Rooms, Tasks and Library link of the selected one below it; a Room may belong to one Project (ADR-0082) | ADR-0082 |
 | A Chief of Staff-only team build | **Build a team** wizard, with the Chief of Staff as one route | #71 → #185 |
 | Three radio buttons in the avatar editor | Choice cards | #68 → #272 |
 | The MudToggleGroup | The animated segmented control | #93 |

@@ -95,7 +95,7 @@ public sealed class R3RightSidebarTests
         await fixture.InitializeAsync(ct);
         User human = await fixture.Directory.GetHumanAsync(ct);
         User agent = await fixture.AddAgentAsync("Ada", ct);
-        Room room = await fixture.Directory.CreateRoomAsync("Room", [human.Id, agent.Id], "Alpha", false, ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Room", [human.Id, agent.Id], "Alpha", false, ct: ct);
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
 

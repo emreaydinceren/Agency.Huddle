@@ -121,6 +121,10 @@ public sealed class SkinTokensTests
         Add("current.icon", "var(--hu-accent-ink)");
         Add("current.weight", "500");
         Add("current.shadow", "none");
+        Add("shortcut.selected.background", "var(--hu-current-background)");
+        Add("shortcut.selected.background.hover", "var(--hu-current-background-hover)");
+        Add("shortcut.selected.shadow", "var(--hu-current-shadow)");
+        Add("switcher.background", "var(--hu-ground-sunk)");
         Add("selected.background", Mix("primary", 14, Surface));
         Add("selected.background.hover", Mix("primary", 20, Surface));
         Add("selected.task.background", "var(--hu-selected-background)");
