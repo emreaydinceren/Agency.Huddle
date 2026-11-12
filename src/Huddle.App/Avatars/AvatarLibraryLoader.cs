@@ -115,6 +115,11 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
                 : null;
     }
 
+    /// <summary>
+    /// Reads the record's tags trimmed, dropping blank ones, so the tag cloud, the chip match, the search and the
+    /// accessible name all see the same strings: <c>" hat"</c> and <c>"hat"</c> are one tag, never two chips that
+    /// look alike.
+    /// </summary>
     private static List<string> ReadTags(JsonElement record)
     {
         List<string> tags = [];
@@ -124,7 +129,7 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
         {
             foreach (JsonElement tag in array.EnumerateArray())
             {
-                if (tag.ValueKind == JsonValueKind.String && tag.GetString() is string text)
+                if (tag.ValueKind == JsonValueKind.String && tag.GetString()?.Trim() is { Length: > 0 } text)
                 {
                     tags.Add(text);
                 }
@@ -179,8 +184,8 @@ internal sealed class AvatarLibraryLoader(AvatarLibraryLocator locator, ILogger<
             seen.Add(file);
             valid.Add(new LibraryAvatar(
                 file,
-                ReadString(record, "skin_tone") ?? string.Empty,
-                ReadString(record, "gender_presentation") ?? string.Empty,
+                ReadString(record, "skin_tone")?.Trim() ?? string.Empty,
+                ReadString(record, "gender_presentation")?.Trim() ?? string.Empty,
                 ReadTags(record)));
         }
 

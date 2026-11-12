@@ -39,7 +39,10 @@ on darker skin never has black frames. The swaps keep every count exact.
 
 ## Regenerate
 
-Needs Python 3 and Pillow (`pip install pillow`). From the repository root:
+Needs Python 3 and Pillow (`pip install pillow`). The committed files were written with Pillow 12.2.0;
+the PNG encoder's compressed bytes can differ between Pillow and zlib versions, so another version may
+rewrite every PNG with identical pixels. Regenerate with the same version to keep the diff to the files
+you meant to change. From the repository root:
 
 ```powershell
 python tools/avatar-pixel-art/generate.py

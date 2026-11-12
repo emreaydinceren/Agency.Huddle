@@ -23,6 +23,17 @@ public sealed class AvatarCatalogTests
         Assert.Equal(["glasses"], pool);
     }
 
+    /// <summary>A blank or white-space tag never becomes an empty chip in the pool.</summary>
+    [Fact]
+    public void TagPool_ExcludesBlankTags()
+    {
+        AvatarCatalog catalog = new([Av("A", "", "  ", "hat")]);
+
+        string[] pool = [.. catalog.Tags.Select(t => t.Tag)];
+
+        Assert.Equal(["hat"], pool);
+    }
+
     /// <summary>A tag that merely resembles an excluded one stays in the pool.</summary>
     [Fact]
     public void TagPool_KeepsLookalikeTags()

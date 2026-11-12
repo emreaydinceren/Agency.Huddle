@@ -130,7 +130,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Read the dialog from top to bottom: the skin switch, the search box with the placeholder `type a tag, for example red hair`, the tag chips with **Show all**, the count line with **Clear all**, then the grid.
+1. Read the dialog from top to bottom: the skin switch, the search box with the placeholder `type a tag, for example beard`, the tag chips with **Show all**, the count line with **Clear all**, then the grid.
 2. Scroll the grid to its end. Confirm that the skin switch, search box, tag cloud and count line stay where they are.
 3. Press **Show all (21)** in the tag cloud (the button then reads **Show fewer**). If the tag cloud shows a scrollbar, scroll inside it; then scroll the grid.
 4. Resize the browser window to below 600 px wide (for example 400 px). Repeat steps 2 and 3.
@@ -167,7 +167,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - No picture shows text, a caption or a tooltip, at rest or on hover.
-- The accessibility name of a picture is the raw skin tone and the gender, then the picture's tags, joined with `, `: for `pixel-avatar_fair_m_03.png`, `fair man, short hair, black hair, black top, glasses, red glasses, beard`. It has no `skin-fair` and no second `man`, and the picture has no `title` attribute.
+- The accessibility name of a picture is the raw skin tone and the gender, then the picture's tags, joined with `, `: for `pixel-avatar_fair_m_03.png`, `fair man, short hair, black hair, black top, red glasses, beard`: a bare `glasses` is left out when `red glasses` already says it, and a hyphen is read as a space (`no glasses`). It has no `skin-fair` and no second `man`, and the picture has no `title` attribute.
 
 **Fail if — any of these**
 
@@ -193,7 +193,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Pass if — all of these**
 
-- The announcement for a picture is close to `fair man, short hair, black hair, black top, glasses, red glasses, beard` (skin and gender, then the tags), with no file name and no `skin-` tag.
+- The announcement for a picture is close to `fair man, short hair, black hair, black top, red glasses, beard` (skin and gender, then the tags), with no file name and no `skin-` tag.
 - The focused picture shows a visible ring, the same ring the pointer hover shows.
 
 **Fail if — any of these**
@@ -303,13 +303,13 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Pass if — all of these**
 
-- After step 1 the count reads `76 of 126`. After step 2 it reads `20 of 126`: smaller, never larger.
+- After step 1 the count reads `76 of 126`. After step 2 it reads `19 of 126`: smaller, never larger.
 - Every remaining picture carries both tags in `master.json`.
 - Both tags are at the left of the tag cloud with an X each, `glasses` first.
 
 **Fail if — any of these**
 
-- The count grows when `long hair` is added (to `90 of 126`, the pictures with either tag) -> tags are combined with OR.
+- The count grows when `long hair` is added (to `91 of 126`, the pictures with either tag) -> tags are combined with OR.
 
 ### AVATARLIB-12 — Filters combine across the three controls as AND (L8 setup)
 
@@ -330,8 +330,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Pass if — all of these**
 
-- The counts read `42 of 126`, `12 of 126`, `8 of 126` and `2 of 126`, each smaller than the step before.
-- The two remaining pictures are `pixel-avatar_tan_m_04.png` and `pixel-avatar_tan_m_10.png`: each is tan, carries the tag `long hair` (the word starting `long`), and carries the tags `glasses` and `blue glasses`.
+- The counts read `42 of 126`, `13 of 126`, `9 of 126` and `3 of 126`, each smaller than the step before.
+- The three remaining pictures are `pixel-avatar_tan_m_04.png`, `pixel-avatar_tan_m_10.png` and `pixel-avatar_tan_f_04.png`: each is tan, carries the tag `long hair` (the word starting `long`), and carries the tags `glasses` and `blue glasses`.
 
 **Fail if — any of these**
 
@@ -408,7 +408,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - Selected chips sit at the left of the cloud in the order pressed, each with an X: `[black hair X] [glasses X]`, although `glasses` comes before `black hair` in the cloud. The rest follow in their usual order.
 - After step 3 the unselected chips are in the same order and places as before step 1, apart from the selected ones moved to the left. None is hidden, disabled or recounted, and `beige top` is still the last tag before **Show all (21)**.
-- The count line gives the number of pictures that match the filters: `12 of 126` after step 1, `7 of 126` after `black hair`, `4 of 126` after `glasses`, and it rises to `8 of 126` when `black hair` is deselected in step 4.
+- The count line gives the number of pictures that match the filters: `13 of 126` after step 1, `7 of 126` after `black hair`, `4 of 126` after `glasses`, and it rises to `9 of 126` when `black hair` is deselected in step 4.
 - After step 4, `black hair` is back in its place between `no-glasses` and `brown hair`, and `[glasses X]` alone sits at the left.
 - Each selected chip has `aria-pressed="true"`, and is shown by its bracket and X, not by colour alone.
 
@@ -621,7 +621,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - The first Escape, with focus in the search box, clears the text and leaves the dialog open. The second closes the dialog.
-- After the reopening, with no restart, the tag cloud has a `green hat` chip, last under **Show all (22)**, and `green` reads `1 of 126` and finds the picture changed in step 2 (accessible name `dark man, medium hair, brown hair, pink top, no-glasses, green hat`).
+- After the reopening, with no restart, the tag cloud has a `green hat` chip, last under **Show all (22)**, and `green` reads `1 of 126` and finds the picture changed in step 2 (accessible name `dark man, medium hair, brown hair, pink top, no glasses, green hat`).
 - `gardener` reads `0 of 126`, and no **Professions** cloud appears: the old `profession` field is ignored, and the record is not skipped for carrying it.
 - Enter on a focused picture closes the dialog and sets the pending image, as a click does.
 

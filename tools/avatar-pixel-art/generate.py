@@ -335,6 +335,45 @@ def repair(avatars):
         raise ValueError(f"{len(left)} avatar(s) still clash; adjust the counts or the rules")
 
 
+LOOK = ("gender", "skin", "hair_color", "hair_length", "glasses", "facial_hair", "outfit")
+
+
+def look(a):
+    """Everything that shows in the picture: two avatars with the same look are the same PNG."""
+    return tuple(a[k] for k in LOOK)
+
+
+def make_distinct(avatars):
+    """Swap hair length or glasses (within a gender) until no two avatars look the same.
+
+    Each gender x skin x outfit is drawn three times and the other attributes are dealt out
+    independently, so two of the three can come out alike. A swap keeps every count exact and is
+    taken only when it leaves both avatars unique and clash-free. The scan order is fixed, so the
+    result is deterministic.
+    """
+    seen = collections.Counter(look(a) for a in avatars)
+    for a in avatars:
+        for key in ("hair_length", "glasses"):
+            if seen[look(a)] == 1:
+                break
+            for b in avatars:
+                if b is a or b["gender"] != a["gender"] or a[key] == b[key]:
+                    continue
+                before = (look(a), look(b))
+                a[key], b[key] = b[key], a[key]
+                after = (look(a), look(b))
+                if not clashes(a) and not clashes(b) and all(seen[s] == 0 for s in after):
+                    for s in before:
+                        seen[s] -= 1
+                    for s in after:
+                        seen[s] += 1
+                    break
+                a[key], b[key] = b[key], a[key]
+    left = sum(n - 1 for n in seen.values() if n > 1)
+    if left:
+        raise ValueError(f"{left} avatar(s) still look like another; adjust the counts or the rules")
+
+
 def build_set():
     rng = random.Random(SEED)
     avatars = []
@@ -348,6 +387,7 @@ def build_set():
             avatars.append({"gender": gender, "skin": s, "hair_color": colours[s].pop(), "hair_length": ln,
                             "glasses": gl, "facial_hair": fh, "outfit": o})
     repair(avatars)
+    make_distinct(avatars)
     numbers = collections.Counter()
     for a in avatars:
         tone = SKINS[a["skin"]][0]

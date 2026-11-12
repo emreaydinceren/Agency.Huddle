@@ -566,10 +566,11 @@ Choosing **An image** in the **Avatar** window shows a second button,
 pictures to pick from.
 
 - **Narrow the pictures.** Press a skin tone (**All**, **Light**, **Tan** or
-  **Dark**). Type a word in the search box, such as `red hair` or `glasses`: each
-  word must match the start of a word of a tag. Press a tag to select it; the
-  cloud shows the 12 most used, and **Show all** shows the rest. Selections
-  combine: two tags show only pictures with both.
+  **Dark**). Type a word in the search box, such as `beard` or `glasses`: each
+  word must match the start of a word of any tag, so `red hair` also finds red
+  tops and red glasses. To get exactly one tag, press it instead. Press a tag to
+  select it; the cloud shows the 12 most used, and **Show all** shows the rest.
+  Selections combine: two tags show only pictures with both.
 - **Selected chips move to the left.** Each one has an **X**. Press the X to
   turn it off, and it returns to its place. **Clear all** turns everything off.
 - **Pick a picture.** Select it, and the library window closes. The **Avatar**

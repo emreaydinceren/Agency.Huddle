@@ -77,7 +77,7 @@ They open a dialog, narrow the library's pictures to a handful, and click one.
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
 | L13 | `Team:AvatarLibrary:Dir` is set to a folder that is missing or has no `master.json` | No **Choose from library** button anywhere. (Unset uses the bundled library.) |
 | L14 | `master.json` is malformed | The dialog opens, shows **The avatar library could not be read**, and a warning is logged |
-| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair man, short hair, black hair, black top, glasses, red glasses, beard* |
+| L15 | A screen-reader user tabs to a picture | It announces, for example, *fair man, short hair, black hair, black top, red glasses, beard* |
 | L16 | The dialog is closed | The parsed catalogue is no longer reachable (R-1) |
 
 ## 3. Non-goals
@@ -253,7 +253,7 @@ There is no profession cloud.
 
 | Cloud | Pool | Order |
 | --- | --- | --- |
-| Tags | The records' tags, **minus** `skin-*`, `bg-*`, `man` and `woman` (`AvatarTags.IsDescriptive`; 21 in the bundled library). There is no profession-slug exclusion, so a library of your own whose tags include a former profession slug, such as `gardener`, shows it as an ordinary tag | Most frequent first, then alphabetical |
+| Tags | The records' tags, **minus** blank ones, `skin-*`, `bg-*`, `man` and `woman` (`AvatarTags.IsDescriptive`; 21 in the bundled library). There is no profession-slug exclusion, so a library of your own whose tags include a former profession slug, such as `gardener`, shows it as an ordinary tag | Most frequent first, then alphabetical |
 
 - **Selected chips float to the far left**, in the order they were selected, each with an **X** that
   switches it off. Unselected chips follow in the order above.
@@ -269,7 +269,7 @@ There is no profession cloud.
 backdrop click, with focus trapped. It is not a `MudDrawer` or any sliding panel.
 
 Top to bottom: the title **Choose an avatar**; the skin switch `[All | Light | Tan | Dark]`; the
-text box, with the placeholder `type a tag, for example red hair`; the tag chips and **Show all**; a
+text box, with the placeholder `type a tag, for example beard`; the tag chips and **Show all**; a
 line **{matches} of {total}** (how
 many avatars satisfy the filters, out of the whole library; paging never changes it) with **Clear
 all**; then the grid.
@@ -279,9 +279,11 @@ all**; then the grid.
 - **A thumbnail** is a `<button>` containing an `<img>` of the library file at `/avatar-library/<file>`
   with `alt=""`, and an `aria-label` (`LibraryAvatar.AccessibleName`): the **raw** `skin_tone` and
   the `gender_presentation`, then the descriptive tags (the tag cloud's rule, §6.5) in record order,
-  joined with `, `. For example `fair man, short hair, black hair, black top, glasses, red glasses,
-  beard`, never `Light man, …`. With no skin or gender it is the tags alone; with nothing at all, the
-  file name without its extension. No `title`, no caption, no tooltip.
+  joined with `, `. For example `fair man, short hair, black hair, black top, red glasses, beard`,
+  never `Light man, …`. Parts are trimmed and blank ones left out, a tag repeated in another case is
+  read once, a hyphen is read as a space (`no glasses`), and a bare `glasses` is dropped when a tag
+  such as `red glasses` already says it. With no skin or gender it is the tags alone; with nothing at
+  all, the file name without its extension. No `title`, no caption, no tooltip.
 - Result is `DialogResult.Ok(fileName)`; cancelling returns `DialogResult.Cancel()`.
 - **Nested dialog.** From `AgentProfileCard`, which is itself a `MudDialog`, this opens a second dialog
   above it. Confirm the stack's focus and Escape behaviour in task 6 before relying on it. From
@@ -343,7 +345,7 @@ upload button. It appears only in the **An image** choice, and only when a libra
 ```text
 +- Choose an avatar ------------------------------------------- X -+
 |  Skin tone   [ All ][ Light ][ Tan ][ Dark ]                     |
-|  Search      [ type a tag, for example red hair ............. ]   |
+|  Search      [ type a tag, for example beard ............... ]   |
 |                                                                  |
 |  Tags                                                            |
 |  (glasses) (short hair) (no-glasses) (black hair) (brown hair)   |

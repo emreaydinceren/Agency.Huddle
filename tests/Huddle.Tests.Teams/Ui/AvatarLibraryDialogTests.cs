@@ -151,7 +151,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.DoesNotContain(harness.Cut.FindAll(".chip-cloud-title"), static t => t.TextContent.Contains("Profession", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain("Profession", harness.Cut.Markup, StringComparison.OrdinalIgnoreCase);
         Assert.Single(harness.Cut.FindAll(".chip-cloud"));
-        Assert.Equal("type a tag, for example red hair", harness.Cut.Find(SearchInput).GetAttribute("placeholder"));
+        Assert.Equal("type a tag, for example beard", harness.Cut.Find(SearchInput).GetAttribute("placeholder"));
     }
 
     /// <summary>Pressing the selected tag chip's X deselects it: the cloud returns to its opening order and the count to 120 of 120.</summary>

@@ -81,6 +81,38 @@ public sealed class BundledAvatarLibraryTests
         Assert.Empty(problems);
     }
 
+    /// <summary>
+    /// No two shipped avatars are the same picture or carry the same tags: two alike would sit side by side in
+    /// the picker with the same accessible name, so a screen reader could not tell them apart.
+    /// </summary>
+    [Fact]
+    public async Task BundledAvatars_AreAllDifferent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        AvatarLibraryLoadResult result = await LoadAsync(ct);
+        Assert.NotNull(result.Catalog);
+
+        Dictionary<string, string> byPicture = new(StringComparer.Ordinal);
+        Dictionary<string, string> byName = new(StringComparer.Ordinal);
+        List<string> problems = [];
+        foreach (LibraryAvatar avatar in result.Catalog.All)
+        {
+            byte[] bytes = await File.ReadAllBytesAsync(Path.Combine(AvatarLibraryLocator.BundledDir, avatar.File), ct);
+            string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+            if (!byPicture.TryAdd(hash, avatar.File))
+            {
+                problems.Add($"{avatar.File} is the same picture as {byPicture[hash]}");
+            }
+
+            if (!byName.TryAdd(avatar.AccessibleName, avatar.File))
+            {
+                problems.Add($"{avatar.File} has the same name as {byName[avatar.AccessibleName]}: {avatar.AccessibleName}");
+            }
+        }
+
+        Assert.Empty(problems);
+    }
+
     /// <summary>The folder holds exactly the pictures the index names: no orphan file the picker can never show, and none missing.</summary>
     [Fact]
     public async Task BundledFolder_HoldsExactlyTheIndexedPictures()
