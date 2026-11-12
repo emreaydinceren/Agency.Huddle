@@ -70,7 +70,7 @@
     chat), /teams/Platform with each of its five tabs, /teams/Sandbox, a second Team, a Project page (Files, Tasks),
     /tasks/all-tasks, a Kanban View, a List View, /tasks/item/PLAT-0002 (read view) and its /edit page, a Request Task,
     every /settings/<tab> the Settings menu shows (read from the running app) and /settings/theme-lab. Four opened states
-    are captured by JavaScript clicks: the notifications panel, the New chat panel, the Archived chats dialog and a Room's
+    are captured by JavaScript clicks: the notifications panel, the New chat panel, the Archived page (opened from its Activity bar button) and a Room's
     @ reference picker.
 
     RECORDED: for every element under body, a stable path (tag, sorted classes without generated ones, and the count of

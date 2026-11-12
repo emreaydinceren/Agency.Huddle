@@ -52,17 +52,17 @@ public sealed class ShellSidebarRowsTests
         ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
     }
 
-    /// <summary>The footer stays icon-only (OP-4), so the Settings link and the Archived chats entry each carry an <c>aria-label</c> and a tooltip (UX-017).</summary>
+    /// <summary>The footer stays icon-only (OP-4), so the Settings link and the Archived entry each carry an <c>aria-label</c> and a tooltip (UX-017).</summary>
     [Fact]
     public void Footer_IconOnlyLinks_HaveAriaLabelAndTooltip()
     {
         string layout = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
-        string archived = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ArchivedChats.razor"));
+        string archived = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ArchivedLink.razor"));
 
         ShellSidebarRowsTests.SourceHas(layout, "<MudTooltip Text=\"Settings\"");
         ShellSidebarRowsTests.SourceHas(layout, "aria-label=\"Settings\"");
-        ShellSidebarRowsTests.SourceHas(archived, "<MudTooltip Text=\"Archived chats\">");
-        ShellSidebarRowsTests.SourceHas(archived, "aria-label=\"Archived chats\"");
+        ShellSidebarRowsTests.SourceHas(archived, "<MudTooltip Text=\"Archived\"");
+        ShellSidebarRowsTests.SourceHas(archived, "aria-label=\"Archived\"");
     }
 
     /// <summary>The Team chevron takes the Theme's secondary text colour, not a MudBlazor default grey (F4: one family of greys).</summary>
@@ -125,13 +125,15 @@ public sealed class ShellSidebarRowsTests
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }
 
-    /// <summary>Neither <c>RoomNavRow</c> nor <c>ArchivedChatsDialog</c> catches <c>ChatException</c> itself any more: both call <c>RoomActions</c> (UX-R29).</summary>
+    /// <summary>Neither <c>RoomNavRow</c> nor the Archived page catches <c>ChatException</c> itself: both call <c>RoomActions</c> (UX-R29).</summary>
+    /// <param name="folder">The component's folder under <c>Components</c>.</param>
+    /// <param name="file">The component's file.</param>
     [Theory]
-    [InlineData("RoomNavRow.razor")]
-    [InlineData("ArchivedChatsDialog.razor")]
-    public void RoomRows_UseRoomActions_NotTheirOwnCatch(string file)
+    [InlineData("Shared", "RoomNavRow.razor")]
+    [InlineData("Pages", "ArchivedPage.razor")]
+    public void RoomRows_UseRoomActions_NotTheirOwnCatch(string folder, string file)
     {
-        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", file));
+        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", folder, file));
 
         ShellSidebarRowsTests.SourceHas(markup, "RoomActions.");
         Assert.DoesNotContain("catch (ChatException", markup, StringComparison.Ordinal);

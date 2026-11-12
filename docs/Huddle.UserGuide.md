@@ -110,14 +110,15 @@ give the page more room. The sidebar opens on **Chats**.
 | Activity bar button | What the sidebar shows |
 | --- | --- |
 | **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the chats waiting on you, and **All** with the rest, plus **New chat**. It never folds the list behind "Show all". A Team's chats are not listed under **All**; see [Team chats](#team-chats). Pick **Team** to list every chat in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A chat that is waiting on you also wears a **Needs you** pill in the list. |
-| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
+| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat**, **New project** and **Archive team**. A Project row has its own More (⋮) menu with **Archive project**. |
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
 | **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
 | **Scheduled** | Every Job, for you and for each Agent, and **New job**. See [Scheduling jobs](#scheduling-jobs). |
 | **Remote access** | Who may reach Huddle from other devices. **Strict local** (on by default) means only this computer, no sign-in; turn it off to use the rest: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
 
-The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
+The two buttons at the bottom of the Activity bar are **Archived** and **Settings**. **Archived**
+opens the [Archived page](#the-archived-page).
 
 ![The Activity bar beside the sidebar, which shows Chats with Grace selected](images/user-guide/sidebar.png)
 
@@ -126,7 +127,7 @@ The two buttons at the bottom of the Activity bar are **Archived chats** and **S
 3. **Agents**.
 4. **Tasks**.
 5. **Library**.
-6. **Archived chats**.
+6. **Archived**.
 7. **Settings**.
 8. **Rooms**. The arrow folds the group away.
 9. A Room. Its More (⋮) menu sits at the end of the row.
@@ -1501,7 +1502,7 @@ session; nothing new is written to disk for the compaction itself.
 | Action | In the background |
 | --- | --- |
 | **Rename** (pencil icon beside the Room name) | Updates `team.db`. A name you type is kept even when members change. Not offered for a Team Room, whose name is its Team's. |
-| **Archive** | Adds the Room to the archived list in `team.db`. It only hides the Room; it still works and can still be woken. Find it under **Archived chats**. |
+| **Archive** | Adds the Room to the archived list in `team.db`. It only hides the Room; it still works and can still be woken. Find it on the **Chats** tab of the [Archived page](#the-archived-page). |
 | **Delete** | Removes the Room from `team.db` and **permanently deletes** `rooms/<roomId>.jsonl`. Asks for confirmation. |
 
 > [!WARNING]
@@ -1534,7 +1535,7 @@ the chat; they differ in where they are listed.
   whose original chat is gone wakes its assignee in a chat of that Team.
 - **A Team that goes away** (no folder and no Agent's label names it any more,
   which is what renaming its folder in Explorer does while no Agent still
-  carries the old name) has its chats archived, with their history kept. Find them under **Archived chats**. If you unarchive one of them
+  carries the old name) has its chats archived, with their history kept. Find them on the **Chats** tab of the [Archived page](#the-archived-page). If you restore one of them
   while its Team is still gone, it is listed under Rooms with "(Marketing)" after
   its name.
 
@@ -1698,16 +1699,35 @@ old facts into `memory/archive/`. They're kept, but no longer carried in every s
 
 ### Archiving a Team or a Project
 
-When an area of your life or work goes quiet, archive it from the Team's **Details** tab, or from
-a Project's row. Archiving moves the whole folder, unchanged, into the **Archive** root, which is
+When an area of your life or work goes quiet, archive it. For a Team, choose **Archive team** from
+the More (⋮) menu on its row in the sidebar, or **Archive** on the Team's **Details** tab. For a
+Project, choose **Archive project** from the More (⋮) menu on its row, or **Archive** at the top of
+the Project's page. Archiving moves the whole folder, unchanged, into the **Archive** root, which is
 laid out just like Teams.
 
 - It leaves every Agent's prompt and is no longer offered for new work. Its Rooms are archived,
-  and its Tasks leave the Boards. Before archiving, Huddle tells you how many open Tasks it would
-  hide.
+  and its Tasks leave the Boards. Before archiving a Team, Huddle tells you how many open Tasks it
+  would hide and which Agents would be left with no Team. A Project is archived at once, since
+  nothing is lost.
 - Nothing is deleted. You can open its files in the Archive root, and links written before the
   move still open them in Huddle.
-- **Unarchive** puts everything back where it was, members and Rooms included.
+- **Restore** on the [Archived page](#the-archived-page) puts everything back where it was,
+  members and Rooms included.
+
+### The Archived page
+
+The **Archived** button at the bottom of the Activity bar opens one page with three tabs:
+**Teams**, **Projects** and **Chats**. Each tab lists what you archived. Select a row and choose
+**Restore**, or double-click it. On the **Chats** tab you can also **Delete** a chat for good;
+Huddle asks first.
+
+- A chat shows where it belongs after its name: its Team, and its Project when it has one
+  ("Kickoff · Marketing / Q3 launch").
+- **Projects** lists the archived Projects of the Teams you still have. An archived Team's
+  Projects come back with it when you restore the Team.
+- If something now has the same name (a Team or Project you created since), Huddle refuses and
+  says so. Rename one of them first.
+- The page updates by itself when you archive something from the sidebar.
 
 ### Teams with a workspace
 

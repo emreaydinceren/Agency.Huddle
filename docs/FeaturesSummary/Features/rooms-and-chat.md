@@ -171,7 +171,7 @@ promise of later work needs a way back, such as a Task, a Job or a Mention. Othe
 | Action | Result |
 | --- | --- |
 | **Rename** | A name you type is kept even when members change |
-| **Archive** | The Room moves to **Archived chats**. It still works and can still be woken, and its files stay |
+| **Archive** | The Room moves to the **Chats** tab of the **Archived** page. It still works and can still be woken, and its files stay |
 | **Delete** | The transcript is permanently deleted, and the Room's **Raw** files go to the Recycle Bin |
 
 > [!WARNING]

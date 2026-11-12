@@ -115,4 +115,23 @@ public sealed class TabReconcilerTests
 
         Assert.Single(tabs.Tabs);
     }
+
+    /// <summary>
+    /// Archiving a Team closes its page, its Task Views and its Projects' pages and Views, matching the Team ignoring case,
+    /// and leaves another Team whose name it starts with alone. Unlike <see cref="TabReconciler.ReconcileTeams"/> it needs no
+    /// catalog, so the last Team's Tabs close too.
+    /// </summary>
+    [Fact]
+    public void CloseTeamTabs_ClosesEveryTabOfTheTeam_AndOnlyThose()
+    {
+        TabService tabs = new();
+        foreach (string url in (string[])["/teams/Core", "/teams/Core/tasks/all", "/teams/Core/projects/Alpha", "/teams/Core/projects/Alpha/tasks/all", "/teams/Corefx", "/agents"])
+        {
+            tabs.Keep(tabs.Open(url).Id);
+        }
+
+        TabReconciler.CloseTeamTabs(tabs, "CORE");
+
+        Assert.Equal(["/teams/Corefx", "/agents"], tabs.Tabs.Select(static tab => tab.Url));
+    }
 }

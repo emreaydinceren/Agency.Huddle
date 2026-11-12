@@ -522,7 +522,7 @@ public sealed class RoomListTests
         cut.WaitForAssertion(() => Assert.Contains(rootRoom.Name, cut.Markup, StringComparison.Ordinal));
         await cut.InvokeAsync(() => cut.Find(".room-folder > .mud-nav-link").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\",\"Archive\"]")));
+        cut.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations, call => call.Identifier == "huddleStorage.set" && call.Arguments.Count == 2 && Equals(call.Arguments[0], "roomList:closedFolders") && Equals(call.Arguments[1], "[\"\"]")));
     }
 
     /// <summary>A remembered Team grouping is applied when the list first renders.</summary>
@@ -563,18 +563,18 @@ public sealed class RoomListTests
         Assert.Equal(["e", "d"], groups[1].Rooms.Select(room => room.Id));
     }
 
-    /// <summary>The Archive Team's group is listed after every other Team, whatever its name would sort to.</summary>
+    /// <summary>A Team named "Archive" is no shelf any more (finished work is archived for real): its group sorts by name like any other.</summary>
     [Fact]
-    public void RoomGroups_ByTeam_PutsArchiveLast()
+    public void RoomGroups_ByTeam_ATeamNamedArchive_SortsByName()
     {
         DateTimeOffset start = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
         Room archive = new("a", "Old", start) { Team = "Archive" };
         Room growth = new("b", "Growth chat", start) { Team = "Growth" };
         Room support = new("c", "Support chat", start) { Team = "Support" };
 
-        var groups = RoomGroups.ByTeam([archive, growth, support]);
+        var groups = RoomGroups.ByTeam([support, growth, archive]);
 
-        Assert.Equal(["Growth", "Support", "Archive"], groups.Select(group => group.Team));
+        Assert.Equal(["Archive", "Growth", "Support"], groups.Select(group => group.Team));
     }
 
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>

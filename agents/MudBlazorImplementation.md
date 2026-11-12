@@ -22,7 +22,7 @@ styles and tests the component, which the MudBlazor example does not.
 | `MudTabs`, `MudTabPanel` | [`Settings.razor`](../src/Huddle.App/Components/Pages/Settings.razor) |
 | `MudSelect`, `MudRadioGroup`, `MudColorPicker`, `MudFileUpload` | [`AgentProfileCard.razor`](../src/Huddle.App/Components/Shared/AgentProfileCard.razor) |
 | `MudList`, `MudPaper` | [`Appearance.razor`](../src/Huddle.App/Components/Settings/Appearance.razor) |
-| `MudDialog` opened through `IDialogService` | [`ArchivedChatsDialog.razor`](../src/Huddle.App/Components/Shared/ArchivedChatsDialog.razor), opened from [`ArchivedChats.razor`](../src/Huddle.App/Components/Shared/ArchivedChats.razor) |
+| `MudDialog` opened through `IDialogService` | [`DuplicateTeamDialog.razor`](../src/Huddle.App/Components/Teams/DuplicateTeamDialog.razor), opened from [`TeamPage.razor`](../src/Huddle.App/Components/Pages/TeamPage.razor) |
 | Confirm through `ShowMessageBoxAsync`, report through `ISnackbar` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudExpansionPanels`, `MudTable` | [`ProposalCard.razor`](../src/Huddle.App/Components/Shared/ProposalCard.razor) |
 | `MudSimpleTable`, `MudChip` | [`SkillsPanel.razor`](../src/Huddle.App/Components/Settings/SkillsPanel.razor) |

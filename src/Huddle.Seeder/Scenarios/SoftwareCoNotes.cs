@@ -270,8 +270,8 @@ internal static class SoftwareCoNotes
             Each one a Task with an owner. See [[Incident-0412]] for a finished example.
             """),
 
-        // ---- Archive ----
-        new("Teams/Archive/Retention-Schedule.md", """
+        // ---- Records ----
+        new("Teams/Records/Retention-Schedule.md", """
             # Retention schedule
 
             | Data | Kept for | Then |
@@ -281,22 +281,22 @@ internal static class SoftwareCoNotes
             | Invoices | 7 years | Moved to cold storage |
             | Product analytics | 25 months | Aggregated, then deleted |
             """),
-        new("Teams/Archive/Support-Export-2025.md", """
+        new("Teams/Records/Support-Export-2025.md", """
             # 2025 support export
 
-            The 2025 tickets are exported for ARCH-0001 before they are archived. The export holds ticket
+            The 2025 tickets are exported for RECO-0001 before they are archived. The export holds ticket
             text, tags and timestamps; attachments stay behind and are deleted on schedule.
 
             See the [[Retention-Schedule]] for how long each part is kept.
             """),
-        new("Teams/Archive/Archive-Index.md", """
-            # Archive index
+        new("Teams/Records/Records-Index.md", """
+            # Records index
 
             - [[Support-Export-2025]]: last year's support tickets.
             - [[Retention-Schedule]]: what is kept and for how long.
             - [[Handover-Checklist]]: what to check before a folder moves here.
             """),
-        new("Teams/Archive/Handover-Checklist.md", """
+        new("Teams/Records/Handover-Checklist.md", """
             # Handover checklist
 
             1. Every open Task in the folder is closed or moved.
@@ -314,9 +314,9 @@ internal static class SoftwareCoNotes
         new("Teams/Growth/memory/experiment-length.md", "An experiment runs for at least two full weeks before anyone reads the result.\n"),
         new("Teams/Support/memory/escalation-owner.md", "Dana owns every customer escalation until it is handed to an engineer by name.\n"),
         new("Teams/Support/memory/macro-review-yearly.md", "Every support macro is reviewed at least once a year.\n"),
-        new("Teams/Archive/memory/retention-before-archive.md", "Nothing moves into Archive until its retention period is written down.\n"),
-        new("Teams/Archive/memory/exports-keep-no-attachments.md", "Archive exports keep ticket text and timestamps, never attachments.\n"),
-        new("Teams/Archive/memory/archive-is-read-only.md", "Archived notes are read-only; a change starts a new note in the active Team.\n"),
+        new("Teams/Records/memory/retention-before-archive.md", "Nothing moves into Records until its retention period is written down.\n"),
+        new("Teams/Records/memory/exports-keep-no-attachments.md", "Records exports keep ticket text and timestamps, never attachments.\n"),
+        new("Teams/Records/memory/archive-is-read-only.md", "Archived notes are read-only; a change starts a new note in the active Team.\n"),
 
         // ---- Project memory ----
         new("Teams/Platform/Observability/memory/page-only-on-customer-impact.md", "An alert pages someone only when customers feel the problem.\n"),

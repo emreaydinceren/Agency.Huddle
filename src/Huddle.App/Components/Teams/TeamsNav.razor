@@ -35,8 +35,9 @@
     the Rooms header (so a first chat can be started) and the Library link in place of the list.
 
     With IsTeamsView set (the Activity bar's Teams view, MainLayout.razor) it is that same single-Team view, for the last
-    Team used (Team) or the catalog's first, with the card's Team list unfolded from the start and after a pick, and the
-    Archived Teams group under the sections. Neither Team nor IsTeamsView set lists every Team, as the Teams view used to.
+    Team used (Team) or the catalog's first, with the card's Team list unfolded from the start and after a pick. Neither
+    Team nor IsTeamsView set lists every Team, as the Teams view used to. Archived Teams and Projects are listed and restored
+    on the Archived page; this nav only archives (the Team row's menu, and the scope rows' menus).
 *@
 
 @using System.Globalization
@@ -74,7 +75,8 @@
             string? scope = this.SelectedProject(team);
             @if (this.OneTeam is null)
             {
-                <div class="hover-reveal-row"
+                @* Keyed by the Team, so its menu is never reused for another Team's row and keeps its own @ref (see menuRefs). *@
+                <div class="hover-reveal-row" @key="team.Name"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
                      @oncontextmenu:preventDefault="true">
                     <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
@@ -103,6 +105,8 @@
                             {
                                 <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
                             }
+                            <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
+                                         OnClick="@(() => this.ArchiveTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Archive team…</MudMenuItem>
                         </ChildContent>
                     </MudMenu>
                 </div>
@@ -147,22 +151,6 @@
             <ShowAllRow Total="this.Catalog.Teams.Count" Expanded="this.showAllTeams" OnToggle="this.ToggleShowAllTeams" />
             <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">Build a team</NavTabLink>
         }
-        @* Spec 6.9: archived Teams, each with Unarchive; not drawn while none is archived. The Teams view keeps them under its Team's sections. *@
-        @if ((this.OneTeam is null || this.IsTeamsView) && this.archivedTeams.Count > 0)
-        {
-            <MudNavGroup Class="teams-nav-folder teams-nav-archived" Title="Archived Teams" Icon="@Icons.Material.Outlined.Inventory2"
-                         Expanded="this.IsFolderOpen(ArchivedFolder)" ExpandedChanged="@(open => this.SetFolderOpen(ArchivedFolder, open))">
-                @foreach (string archived in this.archivedTeams)
-                {
-                    string archivedName = archived;
-                    <div class="teams-nav-archived-row" @key="archivedName">
-                        <span class="teams-nav-archived-name sidebar-row-label" title="@archivedName">@archivedName</span>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="teams-nav-archived-unarchive"
-                                   OnClick="@(() => this.UnarchiveAsync(archivedName))">Unarchive</MudButton>
-                    </div>
-                }
-            </MudNavGroup>
-        }
     </MudNavMenu>
 </div>
 
@@ -174,10 +162,17 @@
     /// <summary>
     /// Whether this is the Activity bar's Teams view: it shows one Team as a shortcut does (<see cref="Team"/>, the last
     /// one used, or the catalog's first while there is none or it is gone), with the header card's Team list unfolded
-    /// by default and kept unfolded after a pick, and the Archived Teams group under the sections.
+    /// by default and kept unfolded after a pick. Archived Teams are listed on the Archived page, not here.
     /// </summary>
     [Parameter]
     public bool IsTeamsView { get; set; }
+
+    /// <summary>
+    /// Raised with the shortcut's <see cref="Team"/> when the catalog no longer lists it (it was archived or removed), so the
+    /// layout can stop showing this view, which would be empty. Never raised in the Teams view, which falls back to another Team.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> TeamGone { get; set; }
 
     /// <summary>The one Team this nav shows, or <see langword="null"/> for every Team: <see cref="Team"/>, or in the Teams view the last used Team while the catalog still lists it, else the catalog's first.</summary>
     private string? OneTeam => !this.IsTeamsView
@@ -196,24 +191,6 @@
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
 
     private const string ExpandedKey = "teamsNav:expanded";
-
-    /// <summary>The folder key of the Archived Teams group, after a control character that keeps it apart from any Team name.</summary>
-    private const string ArchivedFolder = "\u0001archived-teams";
-
-    /// <summary>The archived Teams the group lists, read again at start, on every catalog change and after an Unarchive.</summary>
-    private IReadOnlyList<string> archivedTeams = [];
-
-    /// <summary>Unarchives the Team; a refusal (T17) is shown as a warning and the row stays.</summary>
-    /// <param name="team">The archived Team's name.</param>
-    private async Task UnarchiveAsync(string team)
-    {
-        ArchiveOutcome outcome = await this.Archive.UnarchiveTeamAsync(team, CancellationToken.None);
-        this.archivedTeams = this.Archive.ArchivedTeams();
-        if (!outcome.Done && outcome.Refusal is { } refusal)
-        {
-            _ = this.Snackbar.Add(refusal, Severity.Warning, key: "teams-nav");
-        }
-    }
 
     /// <summary>Lower-cased names of the Teams the user opened (stored under <c>teamsNav:expanded</c>); a Team not in it is collapsed unless the route is inside it.</summary>
     private readonly HashSet<string> opened = new(StringComparer.Ordinal);
@@ -303,11 +280,102 @@
                     <span class="sidebar-row-meta teams-nav-scope-count" title="@(open == 0 ? "No open tasks" : Plural.Of(open, "open task", "open tasks"))">@(open == 0 ? "—" : open.ToString(CultureInfo.InvariantCulture))</span>
                 }
             </a>
+            @* The Team's own row in a one-Team view, and every Project row, carry an Archive menu; in the list of every
+               Team the Team row above holds its Archive, so its header card here does not repeat it. *@
+            @if (project is not null || this.OneTeam is not null)
+            {
+                @this.ScopeMenu(team.Name, project)
+            }
             @if (project is null && this.OneTeam is not null)
             {
                 @this.TeamSwitcher()
             }
         </div>;
+    }
+
+    /// <summary>The icon of every Archive action, the one the Team page's and the Project page's Archive buttons use. The Archived page and its Activity bar button use the Archive box instead, for the place rather than the act.</summary>
+    private const string ArchiveIcon = Icons.Material.Outlined.Inventory2;
+
+    /// <summary>
+    /// The scope rows' menus, by <see cref="ScopeMenuKey"/>, so an item that opens a dialog closes its menu first. Never cleared:
+    /// a ref is set only when its menu is created, so clearing would lose the refs of menus that stay on screen; a gone row's entry is
+    /// never looked up again.
+    /// </summary>
+    private readonly Dictionary<string, MudMenu> scopeMenuRefs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The key of a scope row's menu: the Team, then the Project after a control character no name holds.</summary>
+    private static string ScopeMenuKey(string team, string? project) => team + "\u0001" + project;
+
+    /// <summary>
+    /// A scope row's "..." menu, shown while the row is hovered or focused (sidebar.css): Archive team… on the Team's row,
+    /// Archive project on a Project's. It sits beside the row's link, not inside it, so opening it never opens the page.
+    /// </summary>
+    /// <param name="team">The row's Team.</param>
+    /// <param name="project">The row's Project, or <see langword="null"/> for the Team's own row.</param>
+    private RenderFragment ScopeMenu(string team, string? project)
+    {
+        string key = ScopeMenuKey(team, project);
+        string label = project ?? team;
+        // Keyed by Team and Project: Blazor sets @ref only when it creates the instance, so a menu reused for another Team's
+        // header (the row keeps its place when the Team changes) would leave this key without a ref and the menu could not close first.
+        RenderFragment menu = @<MudMenu @key="key" @ref="@this.scopeMenuRefs[key]" Class="teams-nav-scope-menu" Dense="true">
+            <ActivatorContent Context="menuContext">
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Class="teams-nav-scope-menu-button"
+                               aria-label="@MenuDialogs.ActivatorLabel(label)" OnClick="menuContext.ToggleAsync" />
+            </ActivatorContent>
+            <ChildContent>
+                @if (project is null)
+                {
+                    <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
+                                 OnClick="@(() => this.ArchiveTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)))">Archive team…</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-project"
+                                 OnClick="@(() => this.ArchiveProjectAsync(team, project))">Archive project</MudMenuItem>
+                }
+            </ChildContent>
+        </MudMenu>;
+        return menu;
+    }
+
+    /// <summary>
+    /// Asks T16's question and archives the Team (see <see cref="TeamArchiveActions"/>). Once archived, its Tabs close here
+    /// rather than waiting for TabSync, which leaves them open when the last Team goes; the page follows the Tab that is
+    /// active afterwards, or goes Home when none is left. The catalog change then drops the Team's rows.
+    /// </summary>
+    /// <param name="team">The Team whose menu was used.</param>
+    /// <param name="menu">That menu, closed before the confirm opens.</param>
+    private async Task ArchiveTeamAsync(string team, MudMenu? menu)
+    {
+        if (!await TeamArchiveActions.ArchiveTeamAsync(this.Archive, this.Dialogs, this.Snackbar, team, menu))
+        {
+            return;
+        }
+
+        string? activeBefore = this.Tabs.Active?.Id;
+        TabReconciler.CloseTeamTabs(this.Tabs, team);
+        if (activeBefore is null)
+        {
+            return;
+        }
+
+        if (this.Tabs.Active is not { } now)
+        {
+            this.Navigation.NavigateTo("/");
+        }
+        else if (!string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
+    }
+
+    /// <summary>Archives the Project with no confirmation, as the Project page's own Archive does; the selection falls back to the Team row once the catalog drops it.</summary>
+    /// <param name="team">The Project's Team.</param>
+    /// <param name="project">The Project.</param>
+    private async Task ArchiveProjectAsync(string team, string project)
+    {
+        _ = await TeamArchiveActions.ArchiveProjectAsync(this.Archive, this.Snackbar, team, project);
     }
 
     /// <summary>Whether the header card's Team list is unfolded under it: folded at first under a shortcut, unfolded at first in the Teams view.</summary>
@@ -547,7 +615,6 @@
     protected override async Task OnInitializedAsync()
     {
         this.switcherOpen = this.IsTeamsView;
-        this.archivedTeams = this.Archive.ArchivedTeams();
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Views.ViewsChanged += this.OnViewsChanged;
@@ -851,10 +918,18 @@
         this.closedFolders.Remove(FolderKey(teamName, AllFolder + project));
     }
 
+    /// <summary>
+    /// Reads the Rooms again for the new catalog. The menu refs are kept: Blazor sets a ref only when it creates the menu, so
+    /// clearing them would leave the rows still on screen with none. A shortcut's view whose Team has left the catalog (archived
+    /// or removed) raises <see cref="TeamGone"/>, so the layout stops showing an empty view.
+    /// </summary>
     private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
-        this.menuRefs.Clear();
-        this.archivedTeams = this.Archive.ArchivedTeams();
+        if (!this.IsTeamsView && this.Team is { } shown && this.Catalog.Find(shown) is null)
+        {
+            await this.TeamGone.InvokeAsync(shown);
+        }
+
         await this.LoadRoomsAsync();
         this.StateHasChanged();
     });

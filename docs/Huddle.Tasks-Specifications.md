@@ -1365,7 +1365,7 @@ release).
 | **The List** | **`MudDataGrid<TaskItem>`**: read-only by default, multi-sort by default, multi-level grouping through `GroupByOrder`, `Hidden` columns, `RowClick`, `RowClassFunc` | [Grouping](https://mudblazor.com/components/datagrid#grouping), [Advanced Sorting](https://mudblazor.com/components/datagrid#advanced-sorting) | `ProposalCard.razor` uses the older `MudTable` |
 | The Board, ghost buckets, reordering fields | `MudDropContainer<T>` + `MudDropZone<T>` | [Miscellaneous](https://mudblazor.com/components/dropzone#miscellaneous) (kanban), [Drop Rules](https://mudblazor.com/components/dropzone#drop-rules) | none; this is the first use |
 | Detail panel | `MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary"` | [Anchor Drawer](https://mudblazor.com/components/drawer#anchor-drawer) | `MainLayout.razor` |
-| Large editor, Duplicate picker, Reason prompt | `MudDialog` through `IDialogService` | [Passing Data](https://mudblazor.com/components/dialog#passing-data) | `ArchivedChatsDialog.razor` |
+| Large editor, Duplicate picker, Reason prompt | `MudDialog` through `IDialogService` | [Passing Data](https://mudblazor.com/components/dialog#passing-data) | `DuplicateTeamDialog.razor` (formerly `ArchivedChatsDialog.razor`, replaced by a page on 2026-11-12) |
 | Confirm deleting a View | `IDialogService.ShowMessageBoxAsync` | [Message Box](https://mudblazor.com/components/messagebox#message-box) | `SkillsPanel.razor:138-147` |
 | Warn before leaving unsaved edits | `MudExitPrompt` (`Disabled`, `Title`, `Text`) | [Usage](https://mudblazor.com/components/exitprompt#usage) | none |
 | Status and priority chips | `MudChip<T>` with `Color` (no custom CSS) | [Filled Chips](https://mudblazor.com/components/chips#filled-chips) | `SkillsPanel.razor` |
@@ -2103,7 +2103,7 @@ checks, wait 750 ms, which is longer than the debounce (:1105).
 
 **bUnit:** `Ui/MudBunitContext.cs`, with `RenderWithPopovers` for anything that opens a popover or
 dialog. A dialog is always driven through the real `IDialogService`
-(`ArchivedChatsDialogTests.cs:74-103`). Dispose with `await using`.
+(`ArchiveTeamUiTests.cs`, whose Archive confirm opens through it). Dispose with `await using`.
 
 **Goldens change.** The six tools change `systemPrompt.txt`, `systemPrompt.unprefixed.txt`,
 `getHelp.txt` and `toolDescriptions.txt`.

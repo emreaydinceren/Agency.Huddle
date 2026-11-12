@@ -2,7 +2,7 @@ namespace Agency.Huddle.App.Services;
 
 /// <summary>
 /// The Archive, Unarchive and Delete a Room list row performs through <see cref="ChatService"/>, shared by
-/// <c>RoomNavRow</c> and <c>ArchivedChatsDialog</c> so a refusal is turned into a message in one place (UX-R29).
+/// <c>RoomNavRow</c> and the Archived page (<c>ArchivedPage</c>) so a refusal is turned into a message in one place (UX-R29).
 /// </summary>
 internal static class RoomActions
 {

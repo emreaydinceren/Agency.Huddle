@@ -1,7 +1,5 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Components.Layout;
-using Agency.Huddle.App.Components.Shared;
-using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.Tests.Css;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
@@ -102,16 +100,16 @@ public sealed partial class R3ShellTests
         Assert.DoesNotMatch(@"flex-direction:\s*column", R3ShellTests.DeclarationsFor(".needs-you-text"));
     }
 
-    /// <summary>Archived chats is a 600px short picker, and a row offers Unarchive as a text button with Delete in its menu (B10).</summary>
+    /// <summary>The Archived page, which replaced the Archived chats dialog, offers Restore as its one filled primary button and a chat's Delete as Error text, asked first.</summary>
     [Fact]
-    public void ArchivedChatsDialog_IsAShortPicker_WithTextUnarchive_AndADeleteMenu()
+    public void ArchivedPage_RestoreIsFilledPrimary_AndDeleteIsErrorTextAskedFirst()
     {
-        Assert.Same(HuddleDialogOptions.ShortPicker, ArchivedChatsDialog.Options);
+        string source = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "ArchivedPage.razor"));
 
-        string source = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ArchivedChatsDialog.razor"));
-        Assert.Matches(@"<MudButton[^\r\n]*Variant=""Variant\.Text""[^\r\n]*>Unarchive</MudButton>", source);
-        Assert.Matches(@"AriaLabel=""@MenuDialogs\.ActivatorLabel\(room\.Name\)""", source);
-        Assert.Matches(@"menu-item-destructive[^\r\n]*>Delete</MudMenuItem>", source);
+        // The attributes hold lambdas ("=>"), so each pattern spans them lazily rather than stopping at the first '>'.
+        Assert.Matches(@"<MudButton Variant=""Variant\.Filled"" Color=""Color\.Primary""[^<]*?Class=""archived-restore""[^<]*?>Restore</MudButton>", source);
+        Assert.Matches(@"<MudButton Variant=""Variant\.Text""[^<]*?Color=""Color\.Error""[^<]*?Class=""archived-delete""[^<]*?>Delete…</MudButton>", source);
+        Assert.Matches(@"<InlineConfirm Class=""archived-delete-confirm""", source);
     }
 
     /// <summary>New chat is a floating panel with Cancel and Start chat (B10), not an inline full-width block.</summary>

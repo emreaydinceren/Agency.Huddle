@@ -1,0 +1,300 @@
+@page "/archived"
+@page "/archived/{Tab}"
+@*
+    The Archived page, opened from the Activity bar's Archived button: everything the Human archived, in three tabs,
+    Teams | Projects | Chats. Each tab lists its entries (ArchivedEntryList); the Human selects one and presses Restore,
+    or double-clicks it. A chat can also be deleted, asked first with the inline confirm RoomNavRow uses.
+
+    The tab is the address (/archived/teams, /archived/projects, /archived/chats; /archived is Teams), read from the Tab's
+    own URL as FeedPage does, and a tab click only navigates, as on the Team page. The lists are read again whenever the
+    Team catalog or the Rooms change, so a Team or Project archived from the sidebar, or a chat archived from its row
+    menu, appears here without a reload, and a selection whose row is gone is dropped.
+
+    Projects lists the archived Projects of the live Teams. An archived Team's Projects travel with it: they come back
+    when the Team is restored. A refusal from the archive service (a name taken in the meantime, a file open in another
+    program) is a warning snackbar, as on the Team page; a chat's refusal is an error snackbar, as in the sidebar.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.SecondBrain
+@using Agency.Huddle.App.Tabs
+@inject IArchiveService Archive
+@inject ITeamCatalog Catalog
+@inject ITeamDirectory TeamDirectory
+@inject ChatService ChatService
+@inject RoomEvents Events
+@inject TimeProvider Clock
+@inject ISnackbar Snackbar
+@inject TabService Tabs
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4 archived-page">
+    <PageHeader Title="Archived" Subtitle="Teams, Projects and chats you archived. Select one and restore it." />
+
+    <MudTabs Class="archived-tabs" KeepPanelsAlive="false" Elevation="0" MinimumTabWidth="96px" AlwaysShowScrollButtons="false"
+             ActivePanelIndex="@((int)this.ActiveTab)" ActivePanelIndexChanged="this.OnTabChanged">
+        <MudTabPanel Text="Teams" Icon="@TabIcons.For("team")">
+            <ArchivedEntryList Label="Archived Teams" Icon="@TabIcons.For("team")" Entries="this.teams"
+                               Selected="@this.selectedTeam" SelectedChanged="@(key => this.selectedTeam = key)" OnActivate="this.RestoreTeamAsync"
+                               EmptyTitle="No archived Teams" EmptyText="Teams you archive are kept here, with their files and Tasks, so you can restore them.">
+                <Actions>
+                    @this.RestoreButton(this.selectedTeam, this.RestoreTeamAsync)
+                </Actions>
+            </ArchivedEntryList>
+        </MudTabPanel>
+        <MudTabPanel Text="Projects" Icon="@ActionIcons.Project">
+            <ArchivedEntryList Label="Archived Projects" Icon="@ActionIcons.Project" Entries="this.projects"
+                               Selected="@this.selectedProject" SelectedChanged="@(key => this.selectedProject = key)" OnActivate="this.RestoreProjectAsync"
+                               EmptyTitle="No archived Projects" EmptyText="Projects you archive are kept here, with their files and Tasks, so you can restore them.">
+                <Actions>
+                    @this.RestoreButton(this.selectedProject, this.RestoreProjectAsync)
+                </Actions>
+            </ArchivedEntryList>
+        </MudTabPanel>
+        <MudTabPanel Text="Chats" Icon="@ActionIcons.Chat">
+            <ArchivedEntryList Label="Archived chats" Icon="@ActionIcons.Chat" Entries="this.chats"
+                               Selected="@this.selectedChat" SelectedChanged="this.SelectChat" OnActivate="this.RestoreChatAsync"
+                               EmptyTitle="No archived chats" EmptyText="Chats you archive are kept here, so you can restore them.">
+                <Actions>
+                    @if (this.confirmingDelete && this.SelectedRoom is { } room)
+                    {
+                        <InlineConfirm Class="archived-delete-confirm" Prompt="@RoomDeleteCopy.Prompt(room.Name, this.uploadCount)" Busy="this.busy"
+                                       OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+                    }
+                    else
+                    {
+                        @this.RestoreButton(this.selectedChat, this.RestoreChatAsync)
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                                   Class="archived-delete" Disabled="@(this.selectedChat is null || this.busy)" OnClick="this.BeginDelete">Delete…</MudButton>
+                    }
+                </Actions>
+            </ArchivedEntryList>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private IReadOnlyList<ArchivedEntry> teams = [];
+    private IReadOnlyList<ArchivedEntry> projects = [];
+    private IReadOnlyList<ArchivedEntry> chats = [];
+
+    /// <summary>Each Projects row's Team and Project, by its key.</summary>
+    private Dictionary<string, (string Team, string Project)> projectsByKey = new(StringComparer.Ordinal);
+
+    /// <summary>The archived Rooms the Chats tab lists, by id.</summary>
+    private Dictionary<string, Room> roomsById = new(StringComparer.Ordinal);
+
+    private string? selectedTeam;
+    private string? selectedProject;
+    private string? selectedChat;
+    private bool confirmingDelete;
+    private int uploadCount;
+    private bool busy;
+
+    /// <summary>Counts the loads started; a load that finds a higher number than its own has been overtaken and drops its result.</summary>
+    private int loadVersion;
+
+    /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <summary>The tab segment of the route (<c>teams</c>, <c>projects</c> or <c>chats</c>); anything else is Teams.</summary>
+    [Parameter]
+    public string? Tab { get; set; }
+
+    /// <summary>The tab shown: from the Tab's own address inside a Tab, since a route value missing from a new address is not supplied again; else from the route.</summary>
+    private ArchivedTab ActiveTab => this.Page is { } page ? ArchivedTabs.FromUrl(page.Url) : ArchivedTabs.Parse(this.Tab);
+
+    private Room? SelectedRoom => this.selectedChat is { } id ? this.roomsById.GetValueOrDefault(id) : null;
+
+    /// <summary>Subscribes to the Team catalog and the Rooms, then reads the three lists.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        this.Catalog.Changed += this.OnChanged;
+        this.Events.RoomsChanged += this.OnChanged;
+        await this.LoadAsync();
+    }
+
+    /// <summary>Unsubscribes from the catalog and <see cref="RoomEvents"/>: both are singletons, and a leaked subscription never dies (rules.md).</summary>
+    public void Dispose()
+    {
+        this.Catalog.Changed -= this.OnChanged;
+        this.Events.RoomsChanged -= this.OnChanged;
+    }
+
+    /// <summary>The toolbar's Restore button, enabled while a row is selected.</summary>
+    /// <param name="selected">The selected row's key, or <see langword="null"/>.</param>
+    /// <param name="restore">Restores the row with that key.</param>
+    private RenderFragment RestoreButton(string? selected, Func<string, Task> restore) =>
+        @<MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Unarchive"
+                    Class="archived-restore" Disabled="@(selected is null || this.busy)"
+                    OnClick="@(() => selected is null ? Task.CompletedTask : restore(selected))">Restore</MudButton>;
+
+    private void OnChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+    {
+        await this.LoadAsync();
+        this.StateHasChanged();
+    });
+
+    /// <summary>Navigates to the clicked tab's address; the address, not this handler, moves the active tab.</summary>
+    /// <param name="index">The clicked tab's index.</param>
+    private void OnTabChanged(int index)
+    {
+        if (!Enum.IsDefined((ArchivedTab)index) || (ArchivedTab)index == this.ActiveTab)
+        {
+            return;
+        }
+
+        string url = ArchivedTabs.Href((ArchivedTab)index);
+        if (this.Page is { } page)
+        {
+            _ = this.Tabs.Navigate(page.TabId, url);
+        }
+
+        this.Navigation.NavigateTo(url);
+    }
+
+    /// <summary>Reads the archived Teams, the live Teams' archived Projects and the archived Rooms, and drops a selection whose row is gone.</summary>
+    private async Task LoadAsync()
+    {
+        int version = Interlocked.Increment(ref this.loadVersion);
+        IReadOnlyList<Room> all = await this.TeamDirectory.GetRoomsAsync();
+        if (version != Volatile.Read(ref this.loadVersion))
+        {
+            // A newer load started while this one was reading; it owns the result.
+            return;
+        }
+
+        this.teams = [.. this.Archive.ArchivedTeams().Select(static name => new ArchivedEntry(name, name, null, null))];
+        this.LoadProjects();
+        List<Room> archived = [.. all.Where(static room => room.Archived).OrderByDescending(static room => room.ArchivedAt ?? room.Created)];
+        this.roomsById = archived.ToDictionary(static room => room.Id, StringComparer.Ordinal);
+        this.chats = [.. archived.Select(room => new ArchivedEntry(room.Id, room.Name, ScopeLabel(room), this.DateLabel(room)))];
+
+        this.selectedTeam = Kept(this.selectedTeam, this.teams);
+        this.selectedProject = Kept(this.selectedProject, this.projects);
+        this.selectedChat = Kept(this.selectedChat, this.chats);
+        this.confirmingDelete &= this.selectedChat is not null;
+    }
+
+    /// <summary>Reads the archived Projects of every live Team, by Project name then Team name.</summary>
+    private void LoadProjects()
+    {
+        Dictionary<string, (string Team, string Project)> byKey = new(StringComparer.Ordinal);
+        List<ArchivedEntry> rows = [];
+        foreach (TeamSummary team in this.Catalog.Teams)
+        {
+            foreach (string project in this.Archive.ArchivedProjects(team.Name))
+            {
+                string key = team.Name + "/" + project;
+                byKey[key] = (team.Name, project);
+                rows.Add(new ArchivedEntry(key, project, team.Name, null));
+            }
+        }
+
+        this.projectsByKey = byKey;
+        this.projects = [.. rows.OrderBy(static row => row.Name, StringComparer.OrdinalIgnoreCase).ThenBy(static row => row.Detail, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>The selection, or <see langword="null"/> when its row is no longer listed.</summary>
+    private static string? Kept(string? selected, IReadOnlyList<ArchivedEntry> rows) =>
+        selected is not null && rows.Any(row => string.Equals(row.Key, selected, StringComparison.Ordinal)) ? selected : null;
+
+    /// <summary>Where a chat belongs, shown after its name: "Marketing / Q3 launch" for a Project's Room, "Marketing" for a Team's, none for a root Room.</summary>
+    /// <param name="room">The archived Room.</param>
+    private static string? ScopeLabel(Room room) => room switch
+    {
+        { Team: { } team, Project: { Length: > 0 } project } => $"{team} / {project}",
+        { Team: { } team } => team,
+        _ => null,
+    };
+
+    /// <summary>The row's date: "Archived Oct 3", or "Created Oct 3" for a Room archived before the instant was recorded.</summary>
+    /// <param name="room">The archived Room.</param>
+    private string DateLabel(Room room)
+    {
+        DateTimeOffset now = this.Clock.GetLocalNow();
+        DateOnly today = DateOnly.FromDateTime(now.Date);
+        (string verb, DateTimeOffset when) = room.ArchivedAt is DateTimeOffset archivedAt ? ("Archived", archivedAt) : ("Created", room.Created);
+        return $"{verb} {HumanDate.InPhrase(HumanDate.Format(DateOnly.FromDateTime(when.ToOffset(now.Offset).Date), today))}";
+    }
+
+    private Task RestoreTeamAsync(string team) =>
+        this.RunAsync(async () =>
+        {
+            _ = TeamArchiveActions.Report(await this.Archive.UnarchiveTeamAsync(team, CancellationToken.None), this.Snackbar);
+        });
+
+    private Task RestoreProjectAsync(string key) =>
+        this.RunAsync(async () =>
+        {
+            if (this.projectsByKey.TryGetValue(key, out (string Team, string Project) entry))
+            {
+                _ = TeamArchiveActions.Report(await this.Archive.UnarchiveProjectAsync(entry.Team, entry.Project, CancellationToken.None), this.Snackbar);
+            }
+        });
+
+    private Task RestoreChatAsync(string roomId) =>
+        this.RunAsync(async () => this.ShowChatError(await RoomActions.SetArchivedAsync(this.ChatService, roomId, archived: false, CancellationToken.None)));
+
+    private void SelectChat(string? roomId)
+    {
+        this.selectedChat = roomId;
+        this.confirmingDelete = false;
+    }
+
+    private void BeginDelete()
+    {
+        if (this.SelectedRoom is not { } room)
+        {
+            return;
+        }
+
+        this.uploadCount = this.ChatService.CountRoomUploads(room);
+        this.confirmingDelete = true;
+    }
+
+    private void CancelDelete() => this.confirmingDelete = false;
+
+    private Task ConfirmDeleteAsync() =>
+        this.RunAsync(async () =>
+        {
+            if (this.selectedChat is { } roomId)
+            {
+                this.ShowChatError(await RoomActions.DeleteAsync(this.ChatService, roomId, CancellationToken.None));
+            }
+
+            this.confirmingDelete = false;
+        });
+
+    private void ShowChatError(string? message)
+    {
+        if (message is not null)
+        {
+            _ = this.Snackbar.Add(message, Severity.Error, key: "archived-chats");
+        }
+    }
+
+    /// <summary>
+    /// Runs one action at a time, then reads the lists again so the restored or deleted row goes at once. Busy lasts until the
+    /// reload is done: until then the selection still names the row just restored, and a second press would send it again.
+    /// </summary>
+    /// <param name="action">The restore or delete.</param>
+    private async Task RunAsync(Func<Task> action)
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            await action();
+            await this.LoadAsync();
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+}

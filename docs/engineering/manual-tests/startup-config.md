@@ -49,7 +49,7 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Agents`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
+- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Agents`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived) may sit between them; their order and content are not judged here.
 - On a data folder with no `profile.json` (a fresh install), the address bar reads `/settings/profile` and the main column shows the Settings **Profile** tab with its welcome line - the first-run redirect STARTUPCONFIG-35 covers. Where `profile.json` already exists, the main column shows the same empty state as the sidebar, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**

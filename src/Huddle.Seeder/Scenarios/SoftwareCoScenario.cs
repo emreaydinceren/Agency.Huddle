@@ -5,7 +5,7 @@ namespace Agency.Huddle.Seeder.Scenarios;
 /// <summary>
 /// A small software company and the family of the Human who runs it: three working Teams (Platform, Growth, Support) with
 /// shared Agents, the household Team Home and Family (<see cref="SoftwareCoHome"/>), plus two edge-case Teams (Sandbox with
-/// nobody in it, Archive with people but no Projects). Seeder spec §8 (SEED-SC-1 to -15) and §9 (SEED-HOME-1 to -9).
+/// nobody in it, Records with people but no Projects). Seeder spec §8 (SEED-SC-1 to -15) and §9 (SEED-HOME-1 to -9).
 /// </summary>
 internal sealed class SoftwareCoScenario : IScenario
 {
@@ -167,7 +167,7 @@ internal sealed class SoftwareCoScenario : IScenario
     public string Name => "software-co";
 
     /// <inheritdoc/>
-    public string Description => "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
+    public string Description => "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records.";
 
     /// <inheritdoc/>
     public SeedPlan Build(DateOnly today) => new()

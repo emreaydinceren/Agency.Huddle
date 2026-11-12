@@ -172,26 +172,8 @@
 
 /* ---- Teams nav: the Team, scope, section and Room rows in the sidebar -------------------------
    A Team is a root row of the Teams view, under no section header: its chevron fills the leading slot and its name
-   starts on the text line, with "Build a team" in line with them. The Archived Teams folder is one level in (Left
-   menu): its folder icon sits under the Team's name. A folder's rows step a quarter level further, as the Chats
-   view's folders do. The level is set on the folder, and its header and rows inherit it. */
-.teams-nav-host .teams-nav-folder {
-    --nav-level: 1;
-}
-
-.teams-nav-host .teams-nav-folder .mud-collapse-container {
-    --nav-level: 1.25;
-}
-
-/* A Team shortcut's view (TeamShortcutBar.razor) lists one Team's folders with no Team row above them, so they are
-   root rows, as the Chats view's folders are, and their rows step the same quarter level in. */
-.sidebar-view-team .teams-nav-host .teams-nav-folder {
-    --nav-level: 0;
-}
-
-.sidebar-view-team .teams-nav-host .teams-nav-folder .mud-collapse-container {
-    --nav-level: 0.25;
-}
+   starts on the text line, with "Build a team" in line with them. The scope blocks and their folders below set their
+   own levels. */
 
 /* An open Team's scope list and the sections under it (TeamsNav.razor) sit one level in from the Team row, so their
    marks sit under its name; a shortcut has no Team row, so they are root rows. Every row inside inherits the level. */
@@ -320,6 +302,62 @@
     margin-inline-end: 4px;
 }
 
+/* A scope row's "..." menu (Archive). On a Project row it sits over the trailing end, where the open-Task count gives
+   way to it while the row is hovered or focused, so the link keeps the full width; on the Team's header row it is a
+   flex item before the Unfold More button. Only its opacity is gated, so it stays reachable by Tab. */
+.teams-nav-host .teams-nav-scope-row {
+    position: relative;
+}
+
+.teams-nav-host .teams-nav-scope-row .teams-nav-scope-menu {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 4px;
+    transform: translateY(-50%);
+}
+
+.teams-nav-host .teams-nav-scope-header .teams-nav-scope-menu {
+    position: static;
+    flex: none;
+    transform: none;
+}
+
+.teams-nav-host .teams-nav-scope-menu-button {
+    opacity: 0;
+    border-radius: var(--hu-radius-card);
+    transition: opacity 120ms ease;
+}
+
+.teams-nav-host .teams-nav-scope-count {
+    transition: opacity 120ms ease;
+}
+
+.teams-nav-host .teams-nav-scope-row:hover .teams-nav-scope-menu-button,
+.teams-nav-host .teams-nav-scope-row:focus-within .teams-nav-scope-menu-button {
+    opacity: 1;
+}
+
+.teams-nav-host .teams-nav-scope-row:hover .teams-nav-scope-count,
+.teams-nav-host .teams-nav-scope-row:focus-within .teams-nav-scope-count {
+    opacity: 0;
+}
+
+/* On touch there is no hover: the button is always shown and the count steps in before it. */
+@media (hover: none) {
+    .teams-nav-host .teams-nav-scope-menu-button {
+        opacity: 1;
+    }
+
+    .teams-nav-host .teams-nav-scope-row:not(.teams-nav-scope-header) .teams-nav-scope-link {
+        padding-inline-end: calc(var(--nav-end) + var(--nav-step));
+    }
+
+    .teams-nav-host .teams-nav-scope-row:hover .teams-nav-scope-count,
+    .teams-nav-host .teams-nav-scope-row:focus-within .teams-nav-scope-count {
+        opacity: 1;
+    }
+}
+
 /* The unfolded switcher, inside the card under the Team's row: each Team laid out as that row is, left-aligned. */
 .teams-nav-host .teams-nav-switcher-list {
     display: flex;
@@ -433,12 +471,6 @@
 }
 
 .sidebar-views .teams-nav-host .teams-nav-subfolder.mud-nav-group > .mud-nav-link {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-/* A folder header is a row, not a section: no gap above or below it. Outranks the section rules in Left menu. */
-.sidebar-views .teams-nav-host .teams-nav-folder.mud-nav-group > .mud-nav-link {
     margin-top: 0;
     margin-bottom: 0;
 }

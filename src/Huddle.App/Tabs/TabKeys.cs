@@ -68,6 +68,7 @@ internal static class TabKeys
             ["scheduled"] => new("scheduled", "Scheduled", "scheduled"),
             ["scheduled", var jobId, ..] => new($"job:{jobId}", "Job", "scheduled"),
             ["feed"] => new("feed", "Feed", "feed"),
+            ["archived", ..] => new("archived", "Archived", "archived"),
             _ => new(path, segments[^1], "page"),
         };
     }

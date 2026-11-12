@@ -1455,20 +1455,60 @@ body.sidebar-resizing {
     white-space: nowrap;
 }
 
-/* ---- Archived chats dialog: one row per archived Room ---------------------------------------- */
+/* ---- Archived page: a toolbar, then one selectable row per archived Team, Project or Room ------ */
 
-.archived-chats-row {
+.archived-toolbar {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 32px;
-    padding: 0 4px;
-    font-size: var(--mud-typography-body2-size);
-    border-bottom: 1px solid var(--ink-line);
+    min-height: 40px;
+    margin-block: 12px 4px;
 }
 
-/* The icon fills the 24px leading slot of a picker row; the name truncates; the date trails in Quiet ink. */
-.archived-chats-icon {
+.archived-toolbar .archived-delete-confirm {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.archived-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* A row is a button: the icon fills the 24px leading slot, the name truncates (its Team quiet after it), and the date
+   trails in Quiet ink. The selected row wears .selected-shape. */
+.archived-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: var(--nav-row-height);
+    padding: 0 8px;
+    border: 0;
+    border-bottom: 1px solid var(--ink-line);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: start;
+    cursor: pointer;
+}
+
+.archived-row:last-child {
+    border-bottom: none;
+}
+
+.archived-row:not(.selected-shape):hover {
+    background-color: var(--hu-hover);
+}
+
+/* The list is one Tab stop and arrow keys move the focus between rows, so the focused row shows the shell's focus ring. */
+.archived-row:focus-visible {
+    outline: 2px solid var(--hu-focus);
+    outline-offset: -2px;
+}
+
+.archived-row-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1477,18 +1517,18 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-.archived-chats-icon .mud-icon-root {
+.archived-row-icon .mud-icon-root {
     font-size: var(--icon-size-row);
 }
 
-.archived-chats-date {
-    flex: 0 0 auto;
-    font-size: var(--mud-typography-caption-size);
+.archived-row-detail,
+.archived-row-date {
     color: var(--mud-palette-text-secondary);
 }
 
-.archived-chats-row:last-child {
-    border-bottom: none;
+.archived-row-date {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
 }
 
 /* ---- Inviting an agent into the open room ----------------------------- */

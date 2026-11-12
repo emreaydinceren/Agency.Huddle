@@ -391,7 +391,7 @@ public sealed partial class FeedPageTests
         Assert.Empty(cut.FindAll(".mud-toggle-item"));
     }
 
-    /// <summary>Source pin: the Feed link is the first entry of the Activity bar's bottom toolbar, above Archived chats, with an icon, label and tooltip, and only while the Feed is enabled.</summary>
+    /// <summary>Source pin: the Feed link is the first entry of the Activity bar's bottom toolbar, above Archived, with an icon, label and tooltip, and only while the Feed is enabled.</summary>
     [Fact]
     public void MainLayout_PutsTheFeedLinkAtTheTopOfTheActivityBar_OnlyWhenEnabled()
     {
@@ -401,8 +401,8 @@ public sealed partial class FeedPageTests
         int bottom = layout.IndexOf("<Bottom>", StringComparison.Ordinal);
         int guard = layout.IndexOf("@if (this.FeedOptions.Value.Feed.Enabled)", StringComparison.Ordinal);
         int link = layout.IndexOf("Href=\"/feed\"", StringComparison.Ordinal);
-        int archived = layout.IndexOf("<ArchivedChats", StringComparison.Ordinal);
-        Assert.True(top >= 0 && top < guard && guard < link && link < bottom && bottom < archived, "The Feed link must sit in the Top slot, behind the Enabled guard, above the Bottom slot that holds Archived chats");
+        int archived = layout.IndexOf("<ArchivedLink", StringComparison.Ordinal);
+        Assert.True(top >= 0 && top < guard && guard < link && link < bottom && bottom < archived, "The Feed link must sit in the Top slot, behind the Enabled guard, above the Bottom slot that holds Archived");
         string tag = layout[layout.LastIndexOf("<MudTooltip", link, StringComparison.Ordinal)..layout.IndexOf("</MudTooltip>", link, StringComparison.Ordinal)];
         Assert.Contains("Text=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file
         Assert.Contains("aria-label=\"Feed\"", tag, StringComparison.Ordinal); // contains-ok: a source pin on one element of a layout file

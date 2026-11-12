@@ -51,8 +51,8 @@ A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team 
 - **Give a Team an avatar**, drawn as a rounded square so it never reads as a person.
 - **See the Team's spend** as a total per currency.
 - **Connect a workspace**, such as a code repository, so members know where the real work lives.
-- **Archive** a Team or a Project. The folder moves unchanged into the read-only **Archive**, and
-  **Unarchive** restores it. See [Second Brain and Memory](second-brain-and-memory.md).
+- **Archive** a Team or a Project, from its row's More (⋮) menu in the sidebar or from its page. The folder moves unchanged into the read-only **Archive**, and
+  **Restore** on the **Archived** page brings it back. See [Second Brain and Memory](second-brain-and-memory.md).
 
 ## Good to know
 

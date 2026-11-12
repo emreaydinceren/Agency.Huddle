@@ -69,7 +69,7 @@
             </Top>
             <Bottom>
                 <MudNavMenu Class="nav-settings">
-                    <ArchivedChats />
+                    <ArchivedLink />
                     <MudTooltip Text="Settings" Placement="Placement.Right">
                         <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Settings" />
                     </MudTooltip>
@@ -90,7 +90,7 @@
             @if (this.shortcutTeam is not null)
             {
                 <div class="sidebar-view sidebar-view-team" hidden="@(this.sidebarView != SidebarView.Team)">
-                    <TeamsNav Team="@this.shortcutTeam" TeamChanged="this.OnShortcutChanged" />
+                    <TeamsNav Team="@this.shortcutTeam" TeamChanged="this.OnShortcutChanged" TeamGone="this.OnShortcutTeamGone" />
                 </div>
             }
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Agents)">
@@ -177,6 +177,25 @@
 
         this.shortcutTeam = team;
         this.sidebarView = SidebarView.Team;
+    }
+
+    /// <summary>
+    /// The shortcut's Team was archived or removed: its view would be empty, so it is unmounted, and the Sidebar collapses if it
+    /// was showing it. The Teams view keeps going without it, falling back to the catalog's first Team.
+    /// </summary>
+    /// <param name="team">The Team the shortcut's view showed.</param>
+    private void OnShortcutTeamGone(string team)
+    {
+        if (!string.Equals(team, this.shortcutTeam, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        this.shortcutTeam = null;
+        if (this.sidebarView == SidebarView.Team)
+        {
+            this.sidebarView = null;
+        }
     }
 
     /// <summary>Remembers the Team picked in the Teams view as the last used one; the Sidebar stays on the Teams view.</summary>

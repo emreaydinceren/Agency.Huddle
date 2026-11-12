@@ -237,7 +237,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | `LibraryProperties` | `Components/Library/` | `Fields` | A note's frontmatter as a Properties card: key/value rows, with a list field's items (`PersonaFrontmatterField.Items`) as small outlined chips and no leading `#` |
 | `AvatarEditorDialog`, `AvatarLibraryDialog` | `Components/Shared/` | `Name`, `Current`, `Deferred` | A thin dialog around a buffered `AvatarEditor`; the library dialog draws its filters with `ChipCloud` |
 | `AgentProfileCard` | `Components/Shared/` | `Mode`, `Name`, … | Its header comment explains why an open dialog's parameters are frozen The avatar is paired with a quiet **Edit avatar…** text button (`Variant.Text`, `Size.Small`, no icon) under it in every mode. |
-| `ArchivedChatsDialog` | `Components/Shared/` | | A list dialog opened from `ArchivedChats` |
+| `ArchivedEntryList` | `Components/Archived/` | `Entries`, `Selected`, `Label`, `Icon`, `Actions` | A toolbar and a single-select list (`role="listbox"`, rows in the Selected shape); the Archived page's three tabs each use one |
 | `ReasonDialog`, `DuplicatePickerDialog` | `Components/Tasks/` | `Excluding` | |
 | `FieldsDialog` | `Components/Tasks/` | `ViewId` | A View's Fields, opened from `T2a`'s "Fields…": show, hide, reorder (drag or up and down), add and remove; Save writes through `ViewStore`, Cancel writes nothing. It replaced the View editor's Fields section |
 | `SkillImportDialog` | `Components/Settings/` | | A multi-step dialog with Back |

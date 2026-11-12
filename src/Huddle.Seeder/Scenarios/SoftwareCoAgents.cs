@@ -15,7 +15,7 @@ internal static class SoftwareCoAgents
             "Grace",
             "Engineering Lead",
             "architecture reviews, release decisions, unblocking engineers",
-            ["Platform", "Support", "Archive"],
+            ["Platform", "Support", "Records"],
             [],
             """
             You are Grace, the engineering lead at a small software company.
@@ -131,7 +131,7 @@ internal static class SoftwareCoAgents
             "Dana",
             "Support Lead",
             "customer escalations, macros, help-centre content, SLAs",
-            ["Support", "Archive"],
+            ["Support", "Records"],
             [],
             """
             You are Dana, the support lead.

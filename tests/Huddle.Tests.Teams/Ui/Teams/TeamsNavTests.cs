@@ -120,7 +120,7 @@ public sealed class TeamsNavTests
         Assert.Equal("Actions for Business", button.GetAttribute("aria-label"));
         await cut.InvokeAsync(() => button.ClickAsync());
 
-        string[] expected = ["New chat", "New project…"];
+        string[] expected = ["New chat", "New project…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -190,7 +190,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Business").ContextMenuAsync());
 
-        string[] expected = ["New chat", "New project…"];
+        string[] expected = ["New chat", "New project…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -1058,11 +1058,11 @@ public sealed class TeamsNavTests
             await cut.InvokeAsync(() => button.ClickAsync());
         }
 
-        string[] expected = ["New chat"];
+        string[] expected = ["New chat", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
-    /// <summary>Spec §6.5: the Team menu is rendered whatever Library and Tasks say, so a Team with both off still offers New chat and nothing else.</summary>
+    /// <summary>Spec §6.5: the Team menu is rendered whatever Library and Tasks say, so a Team with both off still offers New chat and Archive team… and nothing else.</summary>
     [Fact]
     public async Task NewChat_Shown_WhenLibraryAndTasksAreBothOff()
     {
@@ -1072,7 +1072,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New chat"];
+        string[] expected = ["New chat", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -1415,7 +1415,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New chat", "New project…"];
+        string[] expected = ["New chat", "New project…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
