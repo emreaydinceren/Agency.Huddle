@@ -180,7 +180,7 @@ reached in one Room with one Agent part of every member's starting context.
 ```text
                 ┌──────────────────────────── Browser (Blazor Server circuit) ───────────────────────────┐
                 │                                                                                        │
-                │  MainLayout ── RoomList ── TeamsNav ── Agents ── TaskViewNav ── LibraryNavLink       │
+                │  MainLayout ── RoomList ── TeamsNav ── Agents ── TaskViewNav ── LibrarySidebarTree   │
                 │                              │  (new)                                                   │
                 │                              ▼                                                          │
                 │   TeamPage.razor  /teams/{Team}/{Tab?}  ·  /teams/{Team}/projects/{Project}/{Tab?}     │

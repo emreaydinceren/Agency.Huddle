@@ -56,6 +56,12 @@ internal sealed record SeedPlan
     /// <summary>The Feed items; empty stores none.</summary>
     public IReadOnlyList<SeedFeedItem> Feed { get; init; } = [];
 
+    /// <summary>The Jobs, written to their owners' <c>schedule.md</c>; empty writes none.</summary>
+    public IReadOnlyList<SeedJob> Jobs { get; init; } = [];
+
+    /// <summary><c>schedule.md</c> sections Huddle cannot read, written after the owner's Jobs.</summary>
+    public IReadOnlyList<SeedJobProblem> JobProblems { get; init; } = [];
+
     /// <summary>The run date every offset is measured from.</summary>
     public required DateOnly Today { get; init; }
 }

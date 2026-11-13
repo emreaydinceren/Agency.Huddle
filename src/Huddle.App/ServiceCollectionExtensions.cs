@@ -652,6 +652,7 @@ public static class ServiceCollectionExtensions
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryEvents>();
         services.AddSingleton<LibraryFileService>();
+        services.AddScoped<LibraryBrowserBridge>();
 
         // Chat uploads (ChatUploads spec 5): the folder lookup is an interface so the Room delete can be
         // tested against a fake; the service and the per-circuit chip list need no abstraction.

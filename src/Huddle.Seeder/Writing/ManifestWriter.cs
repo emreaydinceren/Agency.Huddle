@@ -35,6 +35,7 @@ internal static partial class ManifestWriter
         AppendSprints(text, plan);
         AppendRequests(text, plan);
         AppendRooms(text, plan, ids);
+        AppendJobs(text, plan, ids);
         AppendUploads(text, plan, root, ids);
         AppendTaskAttachments(text, plan, root);
         AppendDocHistory(text, plan);
@@ -166,6 +167,40 @@ internal static partial class ManifestWriter
             .Append(Join(plan.Rooms.Where(r => !r.Archived && r.Messages.Count > 0 && r.Messages[^1].Sender != plan.HumanName && r.Messages[^1].Text.Contains("@" + plan.HumanName, StringComparison.Ordinal)).Select(r => r.Name).ToList(), "none"))
             .Append("\n\n");
     }
+
+    private static void AppendJobs(StringBuilder text, SeedPlan plan, DatabaseResult ids)
+    {
+        if (plan.Jobs.Count == 0 && plan.JobProblems.Count == 0)
+        {
+            return;
+        }
+
+        text.Append("## Jobs\n\nNext runs are worked out when Huddle starts; a run date in the past leaves the stored ones stale.\n\n");
+        text.Append("| Title | Id | For | When | Time zone | By | Paused | Runs | Last outcome | Job Room |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+        foreach (SeedJob j in plan.Jobs)
+        {
+            string room = "none yet";
+            if (ids.JobRoomIds.TryGetValue(j.Id, out string? roomId))
+            {
+                room = j.RoomArchived ? $"`{roomId}` (archived)" : $"`{roomId}`";
+            }
+
+            string outcome = j.Runs.Count == 0 ? "never ran" : OutcomeName(j.LastOutcome);
+            text.Append(CultureInfo.InvariantCulture, $"| {j.Title} | `{j.Id}` | {j.Owner ?? plan.HumanName} | `{j.When}` | {j.TimeZone ?? "machine"} | {j.By ?? "unknown"} | {(j.Paused ? "yes" : "no")} | {j.Runs.Count} | {outcome} | {room} |\n");
+        }
+
+        text.Append("\nSections Huddle cannot read (the Scheduled page lists them): ")
+            .Append(Join(plan.JobProblems.Select(p => $"{p.Title} in `{JobSeeder.RelativePath(p.Owner)}`").ToList(), "none"))
+            .Append("\n\n");
+    }
+
+    private static string OutcomeName(App.Jobs.JobOutcome outcome) => outcome switch
+    {
+        App.Jobs.JobOutcome.Delivered => "Delivered",
+        App.Jobs.JobOutcome.BudgetSpent => "Budget spent",
+        App.Jobs.JobOutcome.NoAgent => "No Agent",
+        _ => "Failed",
+    };
 
     private static string RoomScope(SeedRoom room)
     {

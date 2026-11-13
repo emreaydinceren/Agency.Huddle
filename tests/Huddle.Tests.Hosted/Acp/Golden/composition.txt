@@ -106,6 +106,7 @@ Singleton Agency.Huddle.App.Library.ILibraryNoteResolver -> factory Agency.Huddl
 Singleton Agency.Huddle.App.Library.ILibraryReferenceResolver -> factory Agency.Huddle.App.Library.ILibraryReferenceResolver
 Singleton Agency.Huddle.App.Library.IRecycleBin -> factory Agency.Huddle.App.Library.IRecycleBin
 Singleton Agency.Huddle.App.Library.ITeamFolders -> factory Agency.Huddle.App.Library.ITeamFolders
+Scoped Agency.Huddle.App.Library.LibraryBrowserBridge -> Agency.Huddle.App.Library.LibraryBrowserBridge
 Singleton Agency.Huddle.App.Library.LibraryDocumentCollector -> Agency.Huddle.App.Library.LibraryDocumentCollector
 Singleton Agency.Huddle.App.Library.LibraryEvents -> Agency.Huddle.App.Library.LibraryEvents
 Singleton Agency.Huddle.App.Library.LibraryFileService -> Agency.Huddle.App.Library.LibraryFileService
