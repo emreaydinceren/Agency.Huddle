@@ -439,8 +439,7 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        IElement duplicate = cut.Find("button.team-page-actions");
-        Assert.Equal("Duplicate", duplicate.TextContent.Trim());
+        IElement duplicate = Assert.Single(cut.FindAll("button.team-page-actions"), static button => button.TextContent.Trim() == "Duplicate");
         Assert.Same(cut.Find("h1").Closest(".page-header-row"), duplicate.Closest(".page-header-row"));
         Assert.DoesNotContain("team-page-duplicate", duplicate.ClassList);
     }
@@ -708,7 +707,7 @@ public sealed class TeamPageTests
             builder.CloseComponent();
         });
 
-    /// <summary>A Team with a team file has a spelled-out "Edit avatar…" button in the header before Duplicate, and pressing it opens the editor.</summary>
+    /// <summary>A Team with a team file has a spelled-out "Edit avatar…" button first in the header, then the shortcut toggle beside it, and pressing it opens the editor.</summary>
     [Fact]
     public async Task EditAvatarButton_SitsBeforeDuplicate_AndOpensTheEditor()
     {
@@ -722,8 +721,10 @@ public sealed class TeamPageTests
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         IRenderedComponent<ContainerFragment> cut = RenderPageWithDialogs(ctx);
 
-        string[] actions = [.. cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())];
-        Assert.Equal(["Edit avatar…", "Duplicate", "Archive"], actions);
+        // The shortcut toggle draws once the stored shortcut choice is read, after the first render.
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Edit avatar…", "Hide shortcut", "Duplicate", "Archive"],
+            cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())));
         // Every header action is the same small outlined button, as Duplicate is.
         Assert.All(cut.FindAll(".page-header-actions button"), static button => Assert.Contains("mud-button-outlined", button.ClassList));
         await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions button"));
@@ -740,7 +741,9 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        Assert.Equal(["Duplicate", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Hide shortcut", "Duplicate", "Archive"],
+            cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())));
         Assert.Empty(cut.FindAll("button.team-page-avatar"));
     }
 }

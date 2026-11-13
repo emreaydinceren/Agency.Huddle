@@ -107,6 +107,10 @@ what the **sidebar** beside it shows. The highlighted button is the one showing 
 Select another to switch; select the highlighted one again to fold the sidebar away and
 give the page more room. The sidebar opens on **Chats**.
 
+The **Feed** icon is always the first button in the Activity bar. Below it is one avatar tile
+per Team, its shortcut. To hide or bring back a Team's tile, open the Team's page and select
+**Hide shortcut** or **Show shortcut** beside **Edit avatar…**, or right-click the tile.
+
 | Activity bar button | What the sidebar shows |
 | --- | --- |
 | **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the chats waiting on you, and **All** with the rest, plus **New chat**. It never folds the list behind "Show all". A Team's chats are not listed under **All**; see [Team chats](#team-chats). Pick **Team** to list every chat in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A chat that is waiting on you also wears a **Needs you** pill in the list. |

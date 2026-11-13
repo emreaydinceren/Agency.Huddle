@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Ui.Layout;
 /// Pins the Team shortcuts at the top of the Activity bar (<c>S5</c>): every Team has one by default, in the catalog's
 /// order and above a hairline; a click selects the Team and a click on the selected one collapses the Sidebar; the
 /// right-click menu removes one or turns them all off, and the choice is remembered in <c>localStorage</c>; the Team
-/// page offers "Add shortcut" only while its Team has none.
+/// page's toggle shows or hides its Team's shortcut.
 /// </summary>
 public sealed class TeamShortcutTests
 {
@@ -148,22 +148,42 @@ public sealed class TeamShortcutTests
         Assert.Empty(cut.FindAll("hr.activity-bar-divider"));
     }
 
-    /// <summary>The Team page's "Add shortcut" is absent while the Team has a shortcut, and adding one makes it go.</summary>
+    /// <summary>The Team page's toggle reads "Hide shortcut" while the Team has one and "Show shortcut" while it has none, and each click flips the shortcut and the label.</summary>
     [Fact]
-    public async Task Button_ShownOnlyWithoutAShortcut_AndAddingHidesIt()
+    public async Task Button_TogglesTheShortcut_AndItsLabelFollows()
     {
         await using MudBunitContext ctx = NewContext(stored: """{"Off":false,"Removed":["Ops"]}""");
+        TeamShortcutStore store = ctx.Services.GetRequiredService<TeamShortcutStore>();
         IRenderedComponent<TeamShortcutButton> withShortcut = ctx.Render<TeamShortcutButton>(p => p.Add(c => c.Team, "Data"));
         IRenderedComponent<TeamShortcutButton> without = ctx.Render<TeamShortcutButton>(p => p.Add(c => c.Team, "Ops"));
 
-        without.WaitForAssertion(() => Assert.Single(without.FindAll("button.team-shortcut-add")));
-        Assert.Empty(withShortcut.FindAll("button.team-shortcut-add"));
+        without.WaitForAssertion(() => Assert.Equal("Show shortcut", Label(without)));
+        Assert.Equal("Hide shortcut", Label(withShortcut));
 
-        await without.Find("button.team-shortcut-add").ClickAsync(new());
+        await without.Find("button.team-shortcut-toggle").ClickAsync(new());
+        await withShortcut.Find("button.team-shortcut-toggle").ClickAsync(new());
 
-        without.WaitForAssertion(() => Assert.Empty(without.FindAll("button.team-shortcut-add")));
-        Assert.True(ctx.Services.GetRequiredService<TeamShortcutStore>().Has("Ops"));
+        without.WaitForAssertion(() => Assert.Equal("Hide shortcut", Label(without)));
+        withShortcut.WaitForAssertion(() => Assert.Equal("Show shortcut", Label(withShortcut)));
+        Assert.True(store.Has("Ops"));
+        Assert.False(store.Has("Data"));
     }
+
+    /// <summary>Nothing is drawn before the stored choice is read, so the label never shows the wrong way on a reload.</summary>
+    [Fact]
+    public async Task Button_BeforeTheChoiceIsRead_DrawsNothing()
+    {
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = ThreeTeams });
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", TeamShortcutStore.StorageKey); // never answered
+
+        IRenderedComponent<TeamShortcutButton> cut = ctx.Render<TeamShortcutButton>(p => p.Add(c => c.Team, "Ops"));
+
+        Assert.False(ctx.Services.GetRequiredService<TeamShortcutStore>().IsLoaded);
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    private static string Label(IRenderedComponent<TeamShortcutButton> cut) => cut.Find("button.team-shortcut-toggle").TextContent.Trim();
 
     /// <summary>A context whose catalog lists <see cref="ThreeTeams"/> and whose <c>huddleStorage.get</c> answers <paramref name="stored"/>.</summary>
     private static MudBunitContext NewContext(string? stored)
