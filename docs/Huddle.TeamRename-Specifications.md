@@ -1,22 +1,23 @@
 # Huddle.TeamRename — Design Specification
 
-**Date:** 2026-11-12, revised 2026-11-12 after an independent review · **Status:** Proposed, not built ·
-**Decision record:** none yet; §9 holds the decisions an ADR would record, and that ADR amends
-[ADR-0055](adr/0055-a-reference-is-text-with-a-stable-key.md) OP-1 ("Huddle offers no Team rename") ·
+**Date:** 2026-11-12, revised 2026-11-12 after an independent review and again once built · **Status:** Built ·
+**Decision record:** [ADR-0084](adr/0084-a-team-or-project-can-be-renamed.md), which amends
+[ADR-0055](adr/0055-a-reference-is-text-with-a-stable-key.md) OP-1 ("Huddle offers no Team rename"); §9 holds the decisions ·
 **Builds on:** [ADR-0011](adr/0011-a-rename-moves-the-agent-not-its-history.md) (an Agent rename),
 [ADR-0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) and
 [ADR-0082](adr/0082-a-room-may-belong-to-one-project-of-its-team.md) (Room Scope),
 [ADR-0065](adr/0065-huddle-posts-as-itself.md) (Huddle posts as itself),
 [ADR-0075](adr/0075-a-second-brain-layout-in-every-team.md) (the Team folder layout)
 
-This is the design for **renaming a Team or a Project** from the app. Today neither can be renamed, and
-the Team Name is the Team's only identity, so a folder renamed by hand reads as one Team vanishing and
-another appearing.
+This is the design for **renaming a Team or a Project** from the app. The Team Name is the Team's only
+identity, so a folder renamed by hand still reads as one Team vanishing and another appearing; only the
+in-app rename is a rename.
 
 It is written for the engineers or agents building it, with no memory of the conversation that produced
 it. §4 lists every place that holds a Team or Project name, §5 is the rename itself, §6 is how Agents
 that already have context learn of it, §7 is the confirmation the Human sees, and Appendix A is the
-ordered, test-first task list.
+task list it was built from. The manual checks are in
+[team-rename.md](engineering/manual-tests/team-rename.md).
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
@@ -47,8 +48,8 @@ ordered, test-first task list.
 | R1 | The Human renames *Marketing* to *Growth* from the Team's **Details** tab | The name dialog checks the new name, then the confirmation (§7) opens. Nothing changes until **Rename** |
 | R2 | The rename completes, with three or more members | `Teams/Growth/` exists, `Teams/Marketing/` does not and is not re-created, every member's `teams:` line says *Growth*, and the sidebar shows one Team |
 | R3 | *Marketing* had a Team Room and five other Rooms | All six are listed under *Growth*. None is archived and no second Team Room is created. The Team Room is named *Growth* unless the Human had renamed it by hand |
-| R4 | *Marketing* had 40 open Tasks | Their ids keep the `MARK-` prefix and the counter continues. No Task gains a Change log line and no assignee is woken |
-| R5 | *Research* filed a Request into *Marketing*'s backlog, and *Marketing* filed one into *Research*'s | The *Research* copy now says `from_team: Growth`. Wakes, notifications and QA confirmation work for both, and no *Research* Task is reported as an outside edit |
+| R4 | *Marketing* had 40 open Tasks | Their ids keep the `MARK-` prefix and the counter continues. No Task of *Growth* gains a Change log line, because its files are moved, not rewritten. No assignee is woken |
+| R5 | *Research* filed a Request into *Marketing*'s backlog, and *Marketing* filed one into *Research*'s | The *Research* copy now says `from_team: Growth`, and its Change log gains one entry, "Team renamed from Marketing to Growth", so the next start does not report an outside edit. Wakes, notifications and QA confirmation work for both |
 | R6 | Nova, a *Marketing* member, takes its next Message Turn after the restart | Nova's session is fresh and its system prompt names *Growth*. Its Catch-up holds Messages from before the rename, so the Turn starts with the rename notice (§6.2) |
 | R7 | Bo, the *Research* manager, has a session still open | Bo's next Message Turn in that session starts with the notice |
 | R8 | The Team Room after the rename | One line from Huddle: "This Team was renamed from Marketing to Growth." No Agent takes a Turn because of it |
@@ -56,10 +57,10 @@ ordered, test-first task list.
 | R10 | Nova writes Team Memory with scope `Marketing` | Refused: "Team 'Marketing' was renamed to 'Growth'. Use 'Growth'." Nothing is written |
 | R11 | The Human opens an old Message linking to the *Marketing* Team, or an upload under `Teams/Marketing/raw/` | The Team link opens *Growth*'s page, and the upload opens from `Teams/Growth/raw/` |
 | R12 | The Human renames the *Launch* Project of *Growth* to *Launch-2027* | Its Rooms, Tasks, Views and history follow. No Agent is restarted. Agents with open sessions in *Growth*'s Rooms get the notice |
-| R13 | The Human renames *Growth* to *growth* (case only) | It works, through a temporary name (§5.5) |
-| R14 | The Human types a name another Team, an archived Team, a Project of this Team, or a name in the rename journal already uses | The name dialog refuses it and says which one |
+| R13 | The Human renames *Growth* to *growth* (case only) | It works, through a temporary name (§5.5). So does a rename back to the Team's own former name |
+| R14 | The Human types a name another Team, an archived Team, or a name in the rename journal already uses; for a Project, a name another live or archived Project of the Team uses | The name dialog refuses it and says which one. While any rename is still finishing, no new rename starts |
 | R15 | A Team folder is renamed by hand in Explorer | Unchanged from today: the old Team's Rooms are archived ([TeamChats](Huddle.TeamChats-Specifications.md) T11). Only the in-app rename is a rename |
-| R16 | Huddle stops between the folder move and the label rewrite | On the next start the rename is finished from its journal row (§5.4). No *Marketing* folder or Team Room is re-created |
+| R16 | Huddle stops between the folder move and the label rewrite | On the next start the rename is finished from its journal row (§5.4). No *Marketing* folder or Team Room is re-created. A rename that cannot finish shows one Notification in the Feed |
 
 ---
 
@@ -110,66 +111,99 @@ changes it; "Journal" means it keeps the old name and is resolved through the re
 
 ### 5.1 Who and where
 
-A Team is renamed from its **Details** tab (a pencil beside the Name) and from its row's More (⋮) menu
-in the sidebar. A Project is renamed from its row's More (⋮) menu. Only the Human can rename; there is no
-Agent tool.
+A Team is renamed from a **Rename** button beside **Archive** on its **Details** tab (Outlined, Small, the
+pencil icon) and from **Rename team…**, just above **Archive team…**, in the More (⋮) menu of its row in the
+sidebar. The button stands where an earlier draft had a pencil beside the Name, because the Details tab does
+not show the Name as an editable field. A Project is renamed from **Rename project…**, just above **Archive
+project**, in its row's More (⋮) menu. Only the Human can rename; there is no Agent tool.
+
+The Human first enters the new name in the `NameDialog` ("Rename team" or "Rename project"), whose
+validation is the service's own name check (§5.5), run as the Human types. **Rename** there closes it with
+the name and opens the confirmation (§7); **Rename** in the confirmation runs the rename. A refusal shows
+as a Warning snackbar. Nothing changes before the confirmation's **Rename**. After a rename from the Team's
+page the Tab shows the new Team; from the sidebar, a Tab showing the old Team or Project is replaced by the
+new address.
 
 ### 5.2 Locks
 
 A new `TeamRenameService` copies `ArchiveService`'s shape, not a single lock around everything:
 
-- **A service-level `SemaphoreSlim`** serialises renames and archives of the same Team. The async work
-  (`team.db`, Task files) runs under it.
+- **A `TeamOperationGate`**, one singleton shared with `ArchiveService`, serialises every rename and archive.
+  The async work (`team.db`, Task files) runs under it.
 - **`ITeamFolders.RunExclusive` wraps only the folder moves.** It is a synchronous `lock`, and the
   documented lock order forbids holding `folderGate` while a membership change runs
   (`TeamFolderProvisioner`), so the label rewrite runs outside it.
 - **`TaskStore.PauseWrites`** is held for the old name, the new name, and **every Team whose Task files
   step 6 rewrites** (the Teams with a `from_team:` of the old name). Files are written directly while
   paused, and lifting the pause adopts them as seen, so nothing is reported as an outside edit.
-- **A reconciler suspend scope** (`TeamRoomReconciler.Suspend()`, taking the reconciler's own gate) is
+- **A reconciler suspend scope** (`TeamRoomReconciler.SuspendAsync()`, taking the reconciler's own gate) is
   held from the folder move to the end, then released with one reconcile. While suspended, no catalog
   change creates or archives a Team Room.
-- **The provisioner skips a name with a pending journal row.** `TeamFolderProvisioner.SyncFoldersLocked`
-  does not create a folder for a label whose rename is in progress, so `Teams/Marketing/` is not
-  re-created while some labels still say it, nor at startup after a crash.
+- **The provisioner and the `AgentsMdWatcher` skip a name with a pending journal row.**
+  `TeamFolderProvisioner.SyncFoldersLocked` does not create a folder for a label whose rename is in
+  progress, so `Teams/Marketing/` is not re-created while some labels still say it, nor at startup after a
+  crash. A pending Project row also reserves its names against `EnsureProject`.
+- **No rename starts while any row is Pending.** The notice hook (§6.2) remembers the highest row id a
+  session has heard; a lower id that finished later would be missed, so a new rename waits until the
+  earlier one is done.
 
 ### 5.3 The order
 
 1. Validate the new name (§5.5). List the members that are mid-Turn for the confirmation (§7).
 2. Write a `team_renames` row with `state = pending`.
 3. Take the pauses and suspend the reconciler.
-4. Move the folder, then `Archive/<Old>/` if it exists, each through `ArchiveMove` (staging folder, retry
-   while a file is in use).
-5. In one `team.db` transaction: `room_teams`, the Team Room's `rooms.name` (if still auto-named),
-   `task_prefixes`, `cadence_state`.
+4. Move the folder, then `Archive/<Old>/` if it exists, each through `ArchiveMove.Rename` (a retrying
+   rename that refuses an existing destination; the journal row is the journal, so it writes no other).
+5. Rewrite the store rows: `room_teams`, the Team Room's `rooms.name` (if still auto-named),
+   `task_prefixes`, `cadence_state`. Each store keeps its own connection, so there is no one transaction:
+   each rename runs in its own transaction and is idempotent, and roll-forward recovery makes that safe.
 6. Rewrite `from_team:` in the paused Teams' Requests, the Task attachment paths, `views.json`,
-   `_team.md` `workspace:`, the Library root id, the ledgers and `raw_baselines`. Move doc-history.
-7. Rewrite every member's `teams:` line **in one batch**: a new `PersonaStore.UpdateMany` that writes
-   every file, then raises `PersonasChanged` once. This rebuilds the catalog and restarts the members.
-8. Post the Team Room line (§6.4).
-9. Mark the journal row `state = done`, release the reconciler with one reconcile, and lift the pauses.
+   `_team.md` `workspace:`, the ledgers and `raw_baselines`. The Library root id is computed from the Team
+   Name, so "rewriting the id" means moving doc-history from the old slug to the new. Each Task file
+   rewritten gets a Change log entry, "Team renamed from Old to New" (`TaskFileFormat.AppendEntry`), because
+   otherwise the next start's `ReconcileOutsideEdits` would stamp it as an outside edit. The renamed Team's
+   own Tasks are moved, not rewritten, and gain no entry.
+7. Rewrite every member's `teams:` line **in one batch**: `PersonaStore.UpdateMany` writes
+   every file, then raises `PersonasChanged` once. `TeamMembership.RenameLabel` runs it under the
+   membership gate, then checks that no Persona still holds the old name and retries if one does. This
+   rebuilds the catalog and restarts the members.
+8. Mark the journal row `state = done`, lift the pauses, then release the reconciler with one reconcile,
+   in that order: a hook that reads the journal sees a finished rename only once the pauses are gone.
+9. Post the Team Room line (§6.4), after the scope is released. A failed post is logged and never fails
+   the rename; recovery posts it too when it completes a row.
 
 ### 5.4 Failure and recovery
 
-- **Before step 4 finishes,** a failure undoes the move through `ArchiveMove`, deletes the pending row,
-  and the dialog says which file was locked. The Team is as it was.
-- **From step 5 on, the rename rolls forward, never back.** A failed step is retried; a step that still
-  fails is listed in one Feed Notification, and the row stays `pending`.
-- **At startup,** `TeamRenameService.RecoverAsync` finishes every `pending` row from its first unfinished
-  step, before the provisioner and the reconciler run. Every step is idempotent, so running one twice is
-  harmless.
+- **Before step 4 finishes,** a failure puts the Teams folder back (a rename of `Teams/New` to
+  `Teams/Old`), discards the pending row, and the snackbar says which folder had files open. The Team is as
+  it was.
+- **From step 5 on, the rename rolls forward, never back.** A failed step is retried up to three times; a
+  step that still fails is listed in one Feed Notification of the source `TeamRenameStuck` (category
+  Second Brain), and the row stays `pending`. The Human also gets the refusal sentence.
+- **At startup,** `TeamRenameRecoveryService`, registered before `ArchiveRecoveryService`, calls
+  `TeamRenameService.RecoverAsync`. It finishes every `pending` row, in id order, before the provisioner and
+  the reconciler run (it does not suspend the reconciler, which has not started). It reads the step from
+  disk: the old folder (the move never happened, so the row is discarded), the temporary folder, then the
+  new one, in that order. Every step is idempotent, so running one twice is harmless. A Project row is
+  recovered the same way.
 
 ### 5.5 Name rules
 
-- The new name is entered in the house `NameDialog`; its `Validate` applies these rules, so the Human
-  types it once.
+- The new name is entered in the house `NameDialog`; its `Validate` calls
+  `TeamRenameService.CheckTeamName` or `CheckProjectName`, thin wrappers over the checks that
+  `RenameTeamAsync` and `RenameProjectAsync` run again under the gate. The Human types the name once, and
+  a refusal says which Team, archived Team, Project or journalled name holds it (`TeamNames`).
 - The Team Name rules apply (`TeamNames`): no `,` `;` `[` `]`, no leading `_` or `.`, the Library's
   file-name rules, unique regardless of case **among live Teams, archived Teams and names in the rename
   journal**.
 - A `task_prefixes` row already held by the new name (from an earlier, deleted Team) is refused with a
   plain sentence, because its prefix and counter would collide.
 - A Project name follows the Project rules (not `memory`, `raw`, `outputs`, no leading `_` or `.`), and is
-  unique among the Team's Projects, live and archived.
+  unique among the Team's Projects, live and archived (`TeamNames.ValidateProjectName`). Case-only is
+  allowed. A Project's old name stays reserved for that Team (`ITeamRenames.IsProjectReserved`).
+- **A Team may take back its own former name.** A journalled name is reserved only against another Team, so
+  renaming *Growth* back to *Marketing* is allowed.
+- **No rename starts while any journal row is Pending** (§5.2).
 - **A case-only rename** leaves the Team itself out of the uniqueness check
   (`TeamNames.ValidateTeamName` refuses it today) and moves through a temporary name, because Windows
   treats the two as one folder.
@@ -204,22 +238,30 @@ A Project rename has the same text with the Team-qualified Project name.
 - **Who gets it: every session that is not fresh, once,** plus a fresh session whose Catch-up starts
   before the rename. This needs no rule about who is involved with the Team: the notice is one short
   block, and sending it to an Agent that never knew the Team costs a sentence. It also covers the Chief
-  of Staff and any Agent that read the Team's files.
+  of Staff and any Agent that read the Team's files, and, after a Project rename, every non-fresh session
+  rather than only those in the Team's Rooms.
+- **It comes first.** `TeamRenamedTurnHook` is first in `TurnHookPipeline.ProductionOrder`, before
+  `AgentsMdTurnHook`, and always returns an addition (its text may be empty) so the carry is saved.
 - **Once per session:** the hook state holds the id of the last `team_renames` row the session has heard.
-  - A **fresh** open records the latest row whose rename is older than the oldest Message in its Catch-up,
-    so it hears the renames its Catch-up predates and nothing else.
-  - A **resumed** or still-open session hears every `done` row after its recorded id.
+  - A **fresh** open stores a marker, because `SessionOpening` has no Room and runs before the Catch-up
+    exists. On that session's first Message Turn the hook reads the Room, takes the timestamp of the oldest
+    of the last `SessionSettings.CatchUpMessages` Messages, and records the latest row done before it as
+    heard. It then hears the renames its Catch-up predates and nothing else. With no Messages it records
+    the newest done row and hears nothing.
+  - A **resumed** or still-open session hears every `done` row after its recorded id, and the carry is the
+    highest id the notice actually included, not a re-read afterwards. A compaction leaves the state as it was.
   - A session with **no hook state** (opened before this feature) hears the `done` rows from the last
     14 days.
 - **Message Turns only.** Hooks run only for `WorkItemKind.Message` (`RoomSession.cs`, `RunBeforeHooksAsync`),
   which is how Mentions, Room posts and Task wakes arrive. A Command Turn such as `@Nova /compact` does not
   carry it; the next Message Turn does.
-- The notice text is a Prompt in `prompts.default.json`, so the Human can edit it (ADR-0007), and a
-  golden pins it.
-- **Project rename only:** `AgentsMdTurnHook` maps a heard Project-level `AGENTS.md` path to its new
-  place, so open sessions see the same file rather than a removal and an addition. A Team rename needs
-  no mapping, because its members' sessions are gone and `AgentsMdScopes` covers only an Agent's own
-  Teams.
+- The notice text is two Prompts, `turn.teamRenamed` and `turn.projectRenamed`, in `prompts.default.json`,
+  so the Human can edit them (ADR-0007), and a golden pins the Turn. They sit in Settings with the Team
+  Room lines, below.
+- **Project rename only:** `AgentsMdTurnHook` re-keys a heard Project-level `AGENTS.md` path to its new
+  place before it collects, so open sessions see the same file rather than a removal and an addition. A Team
+  rename needs no mapping, because its members' sessions are gone and `AgentsMdScopes` covers only an
+  Agent's own Teams.
 
 ### 6.3 The rename journal and redirects
 
@@ -232,9 +274,8 @@ reserved (§5.5), it is never also a live name.
 
 | Caller | On an old name |
 | --- | --- |
-| `memory` reads (`list`, `read`) with scope `<Team>` or `<Team>/<Project>` | Forwarded; the result starts with "Team 'Old' was renamed to 'New'" |
+| `memory` reads (`list`, `read`) with a `folder` that starts `<Team>` or `<Team>/<Project>` | Forwarded; the result starts with "Team 'Old' was renamed to 'New'" |
 | `memory` writes, `file_request` `toTeam`, any other tool that writes | Refused: "Team 'Old' was renamed to 'New'. Use 'New'." (D-6) |
-| `search` Team scope | Forwarded with the note |
 | Team References and `/teams/{Team}` routes | Redirect to the new name |
 | Upload links and Library-file References under `Teams/Old/` | A path prefix map `Teams/Old/` to `Teams/New/` in the opener |
 | The Feed's Team filter | Matches rows carrying any earlier name |
@@ -242,34 +283,44 @@ reserved (§5.5), it is never also a live name.
 | Process gates (`ProcessGateService`) | Read through `Resolve`, so a gate never fails open on a label that still says the old name |
 | UI state in localStorage | Rewritten on the next circuit |
 
+`search` has no Team scope, so it needs no redirect. `RenamedTeamPaths.Map` is the one helper that turns an
+old Team (or Project) path into its current one, and the tools, the resolvers and the upload opener share it.
+
 **An Agent's own file tools** go straight to disk. A Read of `Teams/Old/x` finds nothing; a **Write**
-creates `Teams/Old/` and the catalog would list it as a Team. A guard in `WorkDirPermissionHandler`
-refuses a Write under a journalled folder with the same hint, if spike V-2 shows those calls reach it.
-Until then the confirmation says so (§7).
+creates `Teams/Old/` and the catalog would list it as a Team. Spike V-2 showed that Edit and Write reach
+`WorkDirPermissionHandler`, so `RenamedFolderGuard`, in `PermissionGuardList`, refuses a write under a
+journalled folder. The permission reply carries no reason text, so the refusal is **silent** (it is logged);
+the Turn notice carries the hint. `MultiEdit`, `NotebookEdit` and `Bash` writes are not covered, and the
+confirmation says so (§7).
 
 ### 6.4 The Team Room line
 
-Step 8 posts one line into the Team Room through `ChatService.PostAsHuddleAsync` (ADR-0065):
+Step 9 posts one line into the Team Room through `ChatService.PostAsHuddleAsync` (ADR-0065):
 
 > This Team was renamed from **Marketing** to **Growth**.
 
 A Project rename posts "Project **Launch** was renamed to **Launch-2027**." into the Team Room.
 
 - **It mentions no one, so it wakes no one.** It spends no Budget, answers no Mention and clears nothing
-  (ADR-0065). Spike V-3 confirms the Reply Gate delivers a Huddle post with no Mention to no Agent in a
-  Room with several Agents.
+  (ADR-0065). Spike V-3 failed at first: in a Room of two Agents the Reply Gate answered any post, and
+  `PersonaRunner` ignored the sender. `ReplyGate.Decide` now takes `fromHuddle`
+  (`SenderId == KnownIds.Huddle`), and a Huddle post with no Mention only adds to Catch-up. Huddle posts that
+  are meant to wake, such as a Job's or a Task wake's, Mention their target and are unaffected.
 - **It is history, not instruction.** It lands in the Transcript, so it reaches members in their next
   Catch-up, and the Human sees when the name changed. The notice (§6.2) is what tells an Agent what to do.
-- The text is a Prompt, like the notice.
+- The text is a Prompt, like the notice: `room.teamRenamed` and `room.projectRenamed`. The Settings Prompts
+  page lists them in the group "Team Room lines".
 
 ---
 
 ## 7. The confirmation ("Are you sure?")
 
 The Human enters the new name in `NameDialog` (§5.5). **Rename** then opens a confirmation through the
-shared confirm component (UX-R12), with the verb **Rename** and `Color.Error`, and **Cancel** first.
+shared `ConfirmDialog` (UX-R12), with the verb **Rename** and `Color.Error`, and **Cancel** first.
+`ConfirmDialog` takes an optional list of points (`ConfirmPoint(Lead, Text)`, the lead in bold), shown under
+the message; the pure `TeamRenameConfirmation` builds them, and existing confirmations are unchanged.
 
-**Title:** Rename *Marketing* to *Growth*?
+**Title:** Rename *Marketing* to *Growth*? (a Project: Rename project *Launch* to *Launch-2027*?)
 
 **Body:** a short list of what can go wrong, filled in with this Team's numbers. This is a deliberate
 exception to [design-system.md](engineering/design-system.md)'s "one sentence of body says what is
@@ -289,11 +340,17 @@ lost": a rename loses several different things, and the Human asked to see them 
 > - **This can't be undone in one step,** and *Marketing* stays reserved. Renaming back is another rename,
 >   with the same effects.
 
-- The mid-Turn sentence appears only when a member is mid-Turn, naming up to three. There is no wait
-  option: Turns keep starting, so the Human chooses **Rename** or **Cancel** now.
-- A Project rename has the same dialog with "No Agent restarts" in place of the first bullet.
-- Update [wireframes.md](engineering/wireframes.md) with both dialogs, named per
-  [UXDesignGuidelines.md](engineering/UXDesignGuidelines.md).
+- The mid-Turn sentence appears only when a member has a Turn running in any Room, naming up to three
+  ("A, B, C and 2 others" beyond that). With one member the first bullet reads "1 member restarts and starts
+  a new conversation."; with none it is left out. There is no wait option: Turns keep starting, so the Human
+  chooses **Rename** or **Cancel** now.
+- A Project rename has the same dialog, "the Project's folder" in the message, "No Agent restarts." with
+  "Agents in its Rooms keep their conversations." as the first bullet, and `Teams/{Team}/{Old}` in the
+  links bullet.
+- The second bullet's warning stands for Edit and Write, which the guard refuses silently, and for
+  `MultiEdit`, `NotebookEdit` and `Bash`, which it does not see.
+- [wireframes.md](engineering/wireframes.md) names both name dialogs, both confirmations, the Details
+  button and the three menu items (`M12`, `S2l`, `S2m`, `O11` to `O14`).
 
 ---
 
@@ -301,9 +358,9 @@ lost": a rename loses several different things, and the Human asked to see them 
 
 | Id | Question | How it is settled |
 | --- | --- | --- |
-| V-1 | Does a member's first Turn after the rename read the notice before acting on Catch-up? | A live run: rename, then post in a member's Room and check it uses the new name |
-| V-2 | Do the Adapter's Write calls reach `WorkDirPermissionHandler`, so a guard can refuse a Write under the old folder? | A live run with a Write to an old path. If not, the dialog keeps its warning |
-| V-3 | Does the Reply Gate deliver a Huddle post with no Mention to no Agent in a Team Room? | A test against `ChatService` and the Reply Gate, before building §6.4 |
+| V-1 | Does a member's first Turn after the rename read the notice before acting on Catch-up? | **Open: a live, paid run** (TEAMRENAME-14): rename, then post in a member's Room and check it uses the new name |
+| V-2 | Do the Adapter's Write calls reach `WorkDirPermissionHandler`, so a guard can refuse a Write under the old folder? | **Settled:** Edit and Write reach it, and `RenamedFolderGuard` refuses silently. `MultiEdit`, `NotebookEdit` and `Bash` are not covered. A live check is TEAMRENAME-15 |
+| V-3 | Does the Reply Gate deliver a Huddle post with no Mention to no Agent in a Team Room? | **Settled:** it did not; `ReplyGate` now takes `fromHuddle` (§6.4), pinned by a test |
 
 ---
 
@@ -321,6 +378,12 @@ lost": a rename loses several different things, and the Human asked to see them 
 | D-8 | `watches:` paths are resolved through the journal, not rewritten | Rewriting them: it changes a non-member's Persona text, which restarts that Agent |
 | D-9 | The Team Room gets one Huddle line that wakes no one | Posting to every Room, or Mentioning members: every Agent would take a paid Turn just to be told |
 | D-10 | The confirmation lists every consequence | One sentence, as the house rule says: the restart and the broken links are not obvious from "rename" |
+
+Settled during the build, and part of the same record: the step 9 order (done, lift the pauses, release
+the reconciler); a `TeamOperationGate` shared with archives; a Change log entry on every rewritten Task
+file; no rename while any row is Pending; a rename back to the Team's own former name; the fresh-session
+timestamp taken at the first Turn; `ReplyGate` `fromHuddle`; the silent guard; no `search` redirect; the
+`TeamRenameStuck` Feed source; and the Details button in place of the pencil.
 
 ---
 
@@ -342,8 +405,8 @@ Test first: each task starts with a test that fails, per [agents/Testing.md](../
 8. `TeamRenamedTurnHook`, its Prompt and golden (R6, R7); Project-level `AGENTS.md` path mapping.
 9. Redirects: `memory` reads forwarded and writes refused (R9, R10), `file_request`, `search`, References,
    routes, the upload path map (R11), the Feed filter, `watches:`, process gates.
-10. The Team Room line (R8), after V-3.
+10. The Team Room line (R8), after V-3 (which failed and led to `fromHuddle`).
 11. Project rename through the same service (R12).
-12. `NameDialog` validation (R14), the confirmation (§7), the Details pencil and the More (⋮) items; the
-    manual test page, `wireframes.md`, the ADR amending ADR-0055 OP-1, and the
+12. `NameDialog` validation (R14), the confirmation (§7), the Details Rename button and the More (⋮) items;
+    the manual test page, `wireframes.md`, the ADR amending ADR-0055 OP-1, and the
     [known-limits.md](engineering/known-limits.md) entry for Team links.

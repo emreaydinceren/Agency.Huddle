@@ -88,7 +88,8 @@ a row never carries Message text or file content and the search box keeps its be
 
 - **Teams have no id (OP-1).** A Team is keyed by its Name, as a Room's Scope is. Huddle offers no Team
   rename, so only a by-hand folder rename breaks a Team reference; the snapshot then shows it as
-  unavailable.
+  unavailable. *Amended by [ADR-0084](0084-a-team-or-project-can-be-renamed.md): an in-app rename is
+  journalled and the old name still resolves.*
 - **A Library file has no id (D-8).** Its reference is its absolute path, so a file that is renamed or
   moved shows as unavailable. Library link rewriting covers notes, never a Transcript, and no form of
   link is rename-safe in chat. The snapshot reports the loss instead of hiding it, and the limit is
