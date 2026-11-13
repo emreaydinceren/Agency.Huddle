@@ -20,6 +20,9 @@ internal sealed record SeedPlan
     /// <summary>The Teams and their Projects.</summary>
     public required IReadOnlyList<SeedTeam> Teams { get; init; }
 
+    /// <summary>Teams already archived, under <c>Archive/</c>; never in <see cref="Teams"/>, which lists the live ones.</summary>
+    public IReadOnlyList<SeedArchivedTeam> ArchivedTeams { get; init; } = [];
+
     /// <summary>The Tasks.</summary>
     public required IReadOnlyList<SeedTask> Tasks { get; init; }
 

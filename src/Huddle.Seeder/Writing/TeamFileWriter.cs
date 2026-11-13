@@ -14,14 +14,22 @@ namespace Agency.Huddle.Seeder.Writing;
 /// </summary>
 internal static class TeamFileWriter
 {
-    /// <summary>Writes every Team's files, giving each a different palette colour.</summary>
+    /// <summary>Writes every Team's files, live and archived, giving each a different palette colour.</summary>
     /// <param name="plan">The plan whose Teams are written.</param>
     /// <param name="dataDir">The data folder.</param>
+    /// <param name="roomIds">The Room ids by key, for the archived Teams' <c>archivedRooms</c>.</param>
     /// <exception cref="InvalidOperationException">A Team names a team type, or a type's process, that the app does not know.</exception>
-    internal static void Write(SeedPlan plan, string dataDir)
+    internal static void Write(SeedPlan plan, string dataDir, IReadOnlyDictionary<string, string> roomIds)
     {
         TeamTypeCatalog types = new(Options.Create(new TeamOptions { DataDir = dataDir }), NullLogger<TeamTypeCatalog>.Instance);
-        IReadOnlyList<string> colours = AvatarWriter.Spread(plan.Teams.Count);
+
+        // Archived Teams take the colours after the live ones, so adding one never repaints a live Team.
+        IReadOnlyList<string> colours = AvatarWriter.Spread(plan.Teams.Count + plan.ArchivedTeams.Count);
+        for (int index = 0; index < plan.ArchivedTeams.Count; index++)
+        {
+            WriteArchived(plan, plan.ArchivedTeams[index], colours[plan.Teams.Count + index], dataDir, roomIds);
+        }
+
         for (int index = 0; index < plan.Teams.Count; index++)
         {
             SeedTeam team = plan.Teams[index];
@@ -41,6 +49,37 @@ internal static class TeamFileWriter
             {
                 EnsureScope(SeedIo.Resolve(dataDir, $"{folder}/{project}"));
             }
+
+            // Archive project moves the whole Project folder, so it keeps its raw, memory and outputs folders.
+            foreach (string project in team.ArchivedProjects)
+            {
+                EnsureScope(SeedIo.Resolve(dataDir, $"Archive/{team.Name}/{project}"));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes an archived Team as <c>ArchiveService</c> leaves it: <c>Archive/&lt;T&gt;/_team.md</c> holding the roster and the ids of
+    /// the Team's Rooms (<c>archivedMembers</c>, <c>archivedRooms</c>), the Team and Project folders, and no manager.
+    /// </summary>
+    private static void WriteArchived(SeedPlan plan, SeedArchivedTeam team, string colour, string dataDir, IReadOnlyDictionary<string, string> roomIds)
+    {
+        string[] rooms = [.. plan.Rooms
+            .Where(r => string.Equals(r.Team, team.Name, StringComparison.OrdinalIgnoreCase))
+            .Select(r => roomIds[r.Key])];
+        TeamFile file = new(new VersionedRef(BlankTeamType.Id, BlankTeamType.Manifest.Version), Manager: null, Workspace: null, Owns: null, Notes: string.Empty)
+        {
+            Onboarded = true,
+            Avatar = new Avatar(Label: null, Image: null, Background: colour),
+            ArchivedMembers = team.Members,
+            ArchivedRooms = rooms,
+        };
+
+        SeedIo.WriteText(SeedIo.Resolve(dataDir, $"{team.Folder}/{TeamPaths.TeamFileName}"), file.Compose());
+        EnsureScope(SeedIo.Resolve(dataDir, team.Folder));
+        foreach (string project in team.Projects)
+        {
+            EnsureScope(SeedIo.Resolve(dataDir, $"{team.Folder}/{project}"));
         }
     }
 

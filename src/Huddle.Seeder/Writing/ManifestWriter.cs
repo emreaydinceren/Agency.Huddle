@@ -30,6 +30,7 @@ internal static partial class ManifestWriter
 
         AppendAgents(text, plan, ids);
         AppendTeams(text, plan);
+        AppendArchive(text, plan, ids);
         AppendTasks(text, plan);
         AppendSprints(text, plan);
         AppendRequests(text, plan);
@@ -109,6 +110,36 @@ internal static partial class ManifestWriter
         text.Append('\n');
     }
 
+    /// <summary>What is already archived (SEED-SC-16 to -18), as the Archived page's Teams, Projects and Chats tabs list it.</summary>
+    private static void AppendArchive(StringBuilder text, SeedPlan plan, DatabaseResult ids)
+    {
+        if (plan.ArchivedTeams.Count == 0 && !plan.Teams.Any(t => t.ArchivedProjects.Count > 0))
+        {
+            return;
+        }
+
+        text.Append("## Archived\n\nRestore each from the Archived page (`/archived`).\n\n| Kind | Name | Folder | Roster or Room id |\n| --- | --- | --- | --- |\n");
+        foreach (SeedArchivedTeam team in plan.ArchivedTeams)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"| Team | {team.Name} (Projects: {Join(team.Projects, "none")}) | `{team.Folder}` | {Join(team.Members, "none")} |\n");
+        }
+
+        foreach (SeedTeam team in plan.Teams)
+        {
+            foreach (string project in team.ArchivedProjects)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"| Project | {team.Name} / {project} | `Archive/{team.Name}/{project}` | - |\n");
+            }
+        }
+
+        foreach (SeedRoom room in plan.Rooms.Where(r => r.Archived))
+        {
+            text.Append(CultureInfo.InvariantCulture, $"| Chat | {room.Name} ({RoomScope(room)}) | - | `{ids.RoomIds[room.Key]}` |\n");
+        }
+
+        text.Append('\n');
+    }
+
     private static void AppendTasks(StringBuilder text, SeedPlan plan)
     {
         text.Append("## Tasks\n\n| Id | Where | Title | Status | Priority | Assignee | Closed | Due | Blocked by | Parent |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
@@ -143,7 +174,12 @@ internal static partial class ManifestWriter
             return "root";
         }
 
-        return room.IsTeamRoom ? $"{room.Team} Team Room" : $"{room.Team} chat";
+        if (room.IsTeamRoom)
+        {
+            return $"{room.Team} Team Room";
+        }
+
+        return room.Project is null ? $"{room.Team} chat" : $"{room.Team} / {room.Project} chat";
     }
 
     private static void AppendSprints(StringBuilder text, SeedPlan plan)

@@ -9,6 +9,7 @@ namespace Agency.Huddle.Seeder.Model;
 /// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room.</param>
 /// <param name="IsTeamRoom">Whether the Room is its Team's Team Room (at most one per Team).</param>
 /// <param name="WithReferences">Whether the Messages carry <c>References</c>; <see langword="false"/> leaves them null so the reader's text scan is exercised.</param>
+/// <param name="Project">The Project of <paramref name="Team"/> the Room belongs to, or <see langword="null"/> for none; only valid with a Team.</param>
 internal sealed record SeedRoom(
     string Key,
     string Name,
@@ -17,4 +18,5 @@ internal sealed record SeedRoom(
     IReadOnlyList<SeedMessage> Messages,
     string? Team = null,
     bool IsTeamRoom = false,
-    bool WithReferences = true);
+    bool WithReferences = true,
+    string? Project = null);

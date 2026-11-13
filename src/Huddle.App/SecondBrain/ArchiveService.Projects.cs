@@ -67,9 +67,11 @@ internal sealed partial class ArchiveService
             return [];
         }
 
+        // An archived Team's whole folder moved, so it still holds its own raw, memory and outputs folders: skip every name a
+        // live Project may not take, not only the _ and . ones.
         string teamFolder = Path.Combine(archiveRoot, folder);
         return [.. this.files.ListEntries(teamFolder)
-            .Where(e => !TaskLayout.IsReservedFolderName(e) && !this.files.FileExists(Path.Combine(teamFolder, e)))
+            .Where(e => !TeamNames.IsReservedProjectName(e) && !this.files.FileExists(Path.Combine(teamFolder, e)))
             .Order(StringComparer.OrdinalIgnoreCase)];
     }
 

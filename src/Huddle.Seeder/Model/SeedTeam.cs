@@ -16,4 +16,10 @@ internal sealed record SeedTeam(string Name, IReadOnlyList<string> Projects)
 
     /// <summary>The one-line "What it's for" shown on the Team page's Details tab, or <see langword="null"/>.</summary>
     public string? Owns { get; init; }
+
+    /// <summary>
+    /// Projects already archived, each at <c>Archive/&lt;Team&gt;/&lt;Project&gt;</c>, where the app's Archive project moves them
+    /// (Seeder spec SEED-SC-17). They are not in <see cref="Projects"/>, which lists the live ones only.
+    /// </summary>
+    public IReadOnlyList<string> ArchivedProjects { get; init; } = [];
 }
