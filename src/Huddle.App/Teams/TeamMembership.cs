@@ -56,6 +56,35 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
     }
 
     /// <inheritdoc />
+    public void RenameLabel(string oldName, string newName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        lock (this.gate)
+        {
+            List<PersonaTextEdit> edits = [];
+            foreach (string name in personas.ListNames())
+            {
+                if (personas.Get(name) is { } persona
+                    && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
+                    && TeamLabels.Contains(identity.Teams, oldName))
+                {
+                    List<string> labels = [.. identity.Teams.Select(label => string.Equals(label, oldName, StringComparison.OrdinalIgnoreCase) ? newName : label)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)];
+                    string text = PersonaFrontmatter.WriteListField(persona.Text, TeamsKey, labels);
+                    edits.Add(new PersonaTextEdit(persona.Name, persona.Text, text));
+                }
+            }
+
+            if (edits.Count > 0)
+            {
+                _ = personas.UpdateMany(edits);
+            }
+        }
+    }
+
+    /// <inheritdoc />
     public MembershipResult Remove(string team, string personaName) => this.RemoveLabel(team, personaName, guardManager: true);
 
     /// <inheritdoc />

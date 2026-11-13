@@ -26,4 +26,9 @@ internal interface ITeamMembership
     /// <param name="newManager">The member's Name; their <c>_role</c> must be a manager role of the Team's type.</param>
     /// <returns>ManagerReplaced, NotFound (no such Persona), NotMember, or Rejected (not a manager role, or no readable team file).</returns>
     MembershipResult ReplaceManager(string team, string newManager);
+
+    /// <summary>Rewrites the label in every Persona that holds it, in one batch that raises <c>PersonasChanged</c> once. Never call it inside <c>ITeamFolders.RunExclusive</c>.</summary>
+    /// <param name="oldName">The label to replace, compared ignoring case.</param>
+    /// <param name="newName">The label to write.</param>
+    void RenameLabel(string oldName, string newName);
 }

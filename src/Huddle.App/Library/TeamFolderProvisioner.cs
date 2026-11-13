@@ -43,6 +43,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     private readonly ILogger<TeamFolderProvisioner> logger;
     private readonly ITeamCatalog catalog;
     private readonly TaskStore? tasks;
+    private readonly ITeamRenames? renames;
     private bool subscribed = true;
 
     /// <param name="personas">The source of Team labels (<see cref="PersonaStore.Teams"/>) and the
@@ -55,8 +56,10 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// <param name="catalog">The Teams as the pages see them, read by <see cref="EnsureTeam"/> and
     /// <see cref="EnsureProjectIn"/>. It lags the disk by the Task store's ~500 ms rebuild.</param>
     /// <param name="tasks">Rebuilt as soon as <see cref="CreateTeam"/> has made a Team, so that lag cannot reach the sessions of the Agents hired into it; <see langword="null"/> leaves it to the store's watcher.</param>
-    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog, TaskStore? tasks = null)
+    /// <param name="renames">The rename journal; a label with a pending rename gets no folder. <see langword="null"/> skips none.</param>
+    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog, TaskStore? tasks = null, ITeamRenames? renames = null)
     {
+        this.renames = renames;
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -745,6 +748,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
             if (!this.LabelIsFolderName(label)
                 || Array.Exists(existing, d => string.Equals(Path.GetFileName(d), label, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (this.renames?.IsPending(label) == true)
             {
                 continue;
             }
