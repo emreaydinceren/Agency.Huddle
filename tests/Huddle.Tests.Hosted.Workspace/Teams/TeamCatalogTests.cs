@@ -1,6 +1,7 @@
 using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp;
@@ -183,6 +184,78 @@ public sealed class TeamCatalogTests
         Assert.Equal("Nova", ops.Manager);
         Assert.Equal("Releases", ops.Owns);
     }
+
+    /// <summary>
+    /// A Project folder's <c>_project.md</c> (ADR-0083) gives that Project its avatar in the first snapshot, never its image; a Project
+    /// with no file has <see cref="Avatar.None"/>, matched ignoring case.
+    /// </summary>
+    [Fact]
+    public void Teams_AtStart_ExposeTheProjectAvatarFromProjectFile()
+    {
+        using TempDataDir dir = new();
+        CreateFolder(dir, "Ops", "Launch");
+        CreateFolder(dir, "Ops", "Audit");
+        WriteProjectFile(dir, "Ops", "Launch", "---\navatarLabel: '🚀'\navatarImage: 'face.png'\navatarBackground: '#336699'\n---\nNotes\n");
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
+        using TeamCatalog catalog = new(personas, tasks);
+
+        TeamSummary? ops = catalog.Find("Ops");
+
+        Assert.NotNull(ops);
+        Assert.Equal(new Avatar("🚀", null, "#336699"), ops.ProjectAvatar("launch"));
+        Assert.Equal(Avatar.None, ops.ProjectAvatar("Audit"));
+    }
+
+    /// <summary>Writing a Project's <c>_project.md</c> after start raises <c>Changed</c> and the snapshot carries the new avatar.</summary>
+    [Fact]
+    public async Task Changed_WhenAProjectFileIsWritten_FiresAndRefreshesTheAvatar()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        CreateFolder(dir, "Ops", "Launch");
+        using PersonaStore personas = dir.CreatePersonaStore();
+        using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
+        using TeamCatalog catalog = new(personas, tasks);
+        int raised = 0;
+        void Count() => Interlocked.Increment(ref raised);
+        catalog.Changed += Count;
+
+        WriteProjectFile(dir, "Ops", "Launch", "---\navatarLabel: 'LA'\n---\n");
+
+        await Eventually.UntilAsync(() => Volatile.Read(ref raised) > 0, ct, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        catalog.Changed -= Count;
+
+        Assert.Equal("LA", catalog.Find("Ops")?.ProjectAvatar("Launch").Label);
+    }
+
+    /// <summary>
+    /// The watcher reacts to <c>_team.md</c> only directly in a Team folder and to <c>_project.md</c> only directly in a Project folder,
+    /// ignoring case; either file one level off, and any other file, is ignored.
+    /// </summary>
+    [Theory]
+    [InlineData("Ops/_team.md", true)]
+    [InlineData("Ops/_TEAM.md", true)]
+    [InlineData("Ops/Launch/_project.md", true)]
+    [InlineData("Ops/Launch/_Project.MD", true)]
+    [InlineData("Ops/_project.md", false)]
+    [InlineData("Ops/Launch/_team.md", false)]
+    [InlineData("Ops/Launch/raw/_project.md", false)]
+    [InlineData("_team.md", false)]
+    [InlineData("Ops/Launch/notes.md", false)]
+    public void IsWatchedFile_MatchesEachFileOnlyAtItsOwnDepth(string relative, bool expected)
+    {
+        ArgumentNullException.ThrowIfNull(relative);
+        string root = Path.Combine(Path.GetTempPath(), "teams-root");
+
+        bool watched = TeamCatalog.IsWatchedFile(root, Path.Combine([root, .. relative.Split('/')]));
+
+        Assert.Equal(expected, watched);
+    }
+
+    /// <summary>Writes a Project's <c>_project.md</c> under the Teams root.</summary>
+    private static void WriteProjectFile(TempDataDir dir, string team, string project, string text) =>
+        File.WriteAllText(Path.Combine(TestTaskStore.Root(dir), team, project, TeamPaths.ProjectFileName), text);
 
     /// <summary>Writes a Team's <c>_team.md</c> under the Teams root.</summary>
     /// <param name="dir">The temporary data directory.</param>

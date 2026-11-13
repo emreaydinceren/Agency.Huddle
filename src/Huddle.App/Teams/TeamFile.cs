@@ -170,9 +170,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         return new Avatar(label, image, ValidColour(NullIfBlank(values.GetValueOrDefault(AvatarBackgroundKey))));
     }
 
-    /// <summary>Returns <paramref name="raw"/> when MudBlazor parses it as a colour, else <see langword="null"/>.</summary>
+    /// <summary>Returns <paramref name="raw"/> when MudBlazor parses it as a colour, else <see langword="null"/>. <see cref="ProjectFile"/> reads its background through it too.</summary>
     /// <param name="raw">The stored background text, or <see langword="null"/>.</param>
-    private static string? ValidColour(string? raw)
+    internal static string? ValidColour(string? raw)
     {
         if (raw is null)
         {

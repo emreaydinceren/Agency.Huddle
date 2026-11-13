@@ -1,0 +1,30 @@
+@*
+    A Project's face (ADR-0083): the shared AgentAvatar drawn as a square with sharp corners, so a Project never reads as its Team
+    (a rounded square) or as a person (a circle). It is a thin wrapper, as TeamAvatar is: the label-then-monogram precedence and the
+    colours stay in AgentAvatar. A Project's avatar is initials or a short label (an emoji) and never a picture, and it is drawn a
+    size below its Team's wherever the two meet: 24px in the sidebar beside the Team card's 40px, and 24px in the Project page
+    header where the Team page's is 32px. It is read from ITeamCatalog (Find(team)?.ProjectAvatar(project)); its fields live in
+    the Project folder's _project.md.
+*@
+@using Agency.Huddle.App.Avatars
+
+<AgentAvatar Name="@this.Project" Avatar="this.Avatar" Size="this.Size" Class="@this.Class" Shape="AvatarShape.Square" />
+
+@code {
+    /// <summary>The Project's name, the source of the monogram fallback.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Project { get; set; } = string.Empty;
+
+    /// <summary>The Project's avatar, or <see langword="null"/> for none, which draws the monogram of the name.</summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>The avatar's size; <see cref="MudBlazor.Size.Small"/> (24px) by default, a size below a Team's.</summary>
+    [Parameter]
+    public Size Size { get; set; } = Size.Small;
+
+    /// <summary>Extra CSS classes for the root avatar.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+}

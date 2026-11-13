@@ -18,6 +18,9 @@ internal static class TeamPaths
     /// <summary>A Team's own file.</summary>
     public const string TeamFileName = "_team.md";
 
+    /// <summary>A Project's own file, in its folder: today it holds only the Project's avatar (ADR-0083).</summary>
+    public const string ProjectFileName = "_project.md";
+
     /// <summary>The Human's standing Instructions, at the Teams root, in a Team folder or in an Agent's Work Dir (Instructions and Memory §3.1).</summary>
     public const string InstructionsFileName = "Instructions.md";
 

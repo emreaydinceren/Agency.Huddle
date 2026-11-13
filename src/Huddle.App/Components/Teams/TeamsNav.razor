@@ -3,7 +3,7 @@
     Activity bar already says it). An open Team is a scope list followed by the sections of the selected scope.
 
     The scope list is the Team itself (its avatar as the chip, linking to /teams/{Team}) and then one row per Project
-    in catalog order (the Project icon as the chip, linking to /teams/{Team}/projects/{Project}). The Team row is a header
+    in catalog order (the Project's 24px square avatar, linking to /teams/{Team}/projects/{Project}). The Team row is a header
     card with no count; every Project row trails the count of its open Tasks, an em dash when there are none. One row at a time is selected and wears the Selected shape; the Team row is the default. A click selects
     the row and opens its page, and the selection also follows the address: the Team page, its Tasks and its Files
     select the Team row, a Project page and its Tasks and Files select that Project, and a Room selects its Project (or
@@ -325,7 +325,7 @@
                 }
                 else
                 {
-                    <span class="teams-nav-scope-chip"><MudIcon Icon="@ActionIcons.Project" Size="Size.Small" /></span>
+                    <ProjectAvatar Project="@project" Avatar="team.ProjectAvatar(project)" Class="teams-nav-scope-avatar teams-nav-project-avatar" />
                     <span class="sidebar-row-label teams-nav-scope-label">@label</span>
                 }
                 @if (project is not null && this.TeamConfig.Value.Tasks.Enabled)

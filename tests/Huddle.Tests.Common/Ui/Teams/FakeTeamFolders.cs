@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 
@@ -95,6 +96,22 @@ internal sealed class FakeTeamFolders : ITeamFolders
             {
                 this.ReadResult = change(current);
             }
+        }
+
+        return this.UpdateResult;
+    }
+
+    /// <summary>Every avatar <see cref="UpdateProjectAvatar"/> was given, with its Team and Project, in call order.</summary>
+    public List<(string Team, string Project, Avatar Avatar)> ProjectAvatarWrites { get; } = [];
+
+    /// <inheritdoc />
+    /// <remarks>Records the write and returns <see cref="UpdateResult"/>.</remarks>
+    public bool UpdateProjectAvatar(string team, string project, Avatar avatar)
+    {
+        lock (this.gate)
+        {
+            this.calls.Add($"UpdateProjectAvatar:{team}/{project}");
+            this.ProjectAvatarWrites.Add((team, project, avatar));
         }
 
         return this.UpdateResult;

@@ -48,6 +48,18 @@ internal interface ITeamFolders
     /// <returns><see langword="false"/> when the Team has no readable <c>_team.md</c>; <paramref name="change"/> is then not called.</returns>
     bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change);
 
+    /// <summary>
+    /// Writes a Project's avatar into its folder's <c>_project.md</c> atomically (ADR-0083), creating the file when it is missing and
+    /// keeping any other line and the notes of one that exists. A Project's avatar has no image, so <paramref name="avatar"/>'s image is
+    /// not written. An avatar equal to the stored one (<see cref="Avatars.Avatar.None"/> for a Project with no file) writes nothing and
+    /// returns <see langword="true"/>. The default writes nothing.
+    /// </summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="project">The Project's name.</param>
+    /// <param name="avatar">The avatar to keep: a label and a background.</param>
+    /// <returns><see langword="false"/> when the Project folder does not exist or cannot be written.</returns>
+    bool UpdateProjectAvatar(string team, string project, Avatars.Avatar avatar) => false;
+
     /// <summary>Runs <paramref name="action"/> while no label sync or folder creation can touch the Teams root. The default runs it unguarded.</summary>
     /// <typeparam name="T">The action's result.</typeparam>
     /// <param name="action">The folder move; it must not call <c>ITeamMembership</c>.</param>

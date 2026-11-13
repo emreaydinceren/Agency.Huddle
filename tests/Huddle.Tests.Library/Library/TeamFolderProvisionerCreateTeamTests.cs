@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
@@ -204,6 +205,56 @@ public sealed class TeamFolderProvisionerCreateTeamTests
 
         Assert.False(updated);
         Assert.Equal(0, calls);
+    }
+
+    /// <summary>
+    /// <see cref="ITeamFolders.UpdateProjectAvatar"/> (ADR-0083) creates the Project's <c>_project.md</c> with the label and background and
+    /// never the image; a second write keeps the file's other lines and notes.
+    /// </summary>
+    [Fact]
+    public void UpdateProjectAvatar_WritesLabelAndBackground_NeverTheImage_AndKeepsOtherLines()
+    {
+        using Fixture fixture = new("Business", Path.Combine("Business", "Launch"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string path = Path.Combine(fixture.TeamsRoot, "Business", "Launch", TeamPaths.ProjectFileName);
+
+        Assert.True(provisioner.UpdateProjectAvatar("Business", "Launch", new Avatar("🚀", "face.png", "#336699")));
+        Assert.Equal("---\navatarLabel: '🚀'\navatarBackground: '#336699'\n---\n", File.ReadAllText(path));
+
+        File.WriteAllText(path, "---\navatarLabel: '🚀'\nowner: 'Ada'\n---\nNotes\n");
+        Assert.True(provisioner.UpdateProjectAvatar("Business", "Launch", new Avatar("LA", null, null)));
+        Assert.Equal("---\navatarLabel: 'LA'\nowner: 'Ada'\n---\nNotes\n", File.ReadAllText(path));
+    }
+
+    /// <summary>
+    /// Saving the avatar a Project already has writes nothing: a Project with no file and <see cref="Avatar.None"/> keeps no file, and
+    /// an unchanged hand-edited file keeps its blank line rather than being tidied.
+    /// </summary>
+    [Fact]
+    public void UpdateProjectAvatar_Unchanged_WritesNothing()
+    {
+        using Fixture fixture = new("Business", Path.Combine("Business", "Launch"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string path = Path.Combine(fixture.TeamsRoot, "Business", "Launch", TeamPaths.ProjectFileName);
+
+        Assert.True(provisioner.UpdateProjectAvatar("Business", "Launch", Avatar.None));
+        Assert.False(File.Exists(path));
+
+        const string HandEdited = "---\navatarLabel: 'LA'\n\nowner: 'Ada'\n---\n";
+        File.WriteAllText(path, HandEdited);
+        Assert.True(provisioner.UpdateProjectAvatar("Business", "Launch", new Avatar("LA", null, null)));
+        Assert.Equal(HandEdited, File.ReadAllText(path));
+    }
+
+    /// <summary>Writing the avatar of a Project with no folder returns false and creates nothing.</summary>
+    [Fact]
+    public void UpdateProjectAvatar_NoProjectFolder_ReturnsFalse()
+    {
+        using Fixture fixture = new("Business");
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+
+        Assert.False(provisioner.UpdateProjectAvatar("Business", "Nope", new Avatar("NO", null, null)));
+        Assert.False(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Business", "Nope")));
     }
 
     /// <summary>Reading a Team that does not exist, or has no file, returns null.</summary>

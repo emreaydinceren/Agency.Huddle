@@ -26,4 +26,19 @@ public sealed record TeamSummary(
 
     /// <summary>The Team's avatar from <c>_team.md</c>, or <see cref="Avatar.None"/> when it has none.</summary>
     public Avatar Avatar { get; init; } = Avatar.None;
+
+    /// <summary>
+    /// The avatars of the Projects that have one, by Project name compared ignoring case, from each Project folder's <c>_project.md</c>
+    /// (ADR-0083). A Project with no entry draws the initials of its name; read through <see cref="ProjectAvatar"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, Avatar> ProjectAvatars { get; init; } = new Dictionary<string, Avatar>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The avatar of <paramref name="project"/>, or <see cref="Avatar.None"/> when it has none.</summary>
+    /// <param name="project">The Project's name, matched ignoring case.</param>
+    /// <returns>The Project's avatar.</returns>
+    public Avatar ProjectAvatar(string project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        return this.ProjectAvatars.GetValueOrDefault(project) ?? Avatar.None;
+    }
 }

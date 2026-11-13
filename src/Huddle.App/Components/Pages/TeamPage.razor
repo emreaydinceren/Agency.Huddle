@@ -127,12 +127,24 @@
         {
             string projectTeam = summary.Name;
             string projectName = project ?? string.Empty;
+            Avatar projectAvatar = summary.ProjectAvatar(projectName);
             <PageHeader Title="@project">
+                <TitleLeading>
+                    @* ADR-0083: the Project's square avatar, 24px (Small) where the Team page's is 32px, is the way into its avatar
+                       editor, as the Team page's avatar is. A Project always has a folder, so it always has somewhere to keep one. *@
+                    <button type="button" class="agent-profile-card-avatar team-page-avatar team-project-avatar" aria-label="Change avatar" title="Change avatar"
+                            @onclick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">
+                        <ProjectAvatar Project="@projectName" Avatar="projectAvatar" />
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
+                    </button>
+                </TitleLeading>
                 <TitleTrailing>
                     @* The page's kind, drawn in every Theme (shell.css), so a Project page is told apart from its Team's page. *@
                     <span class="page-kind-chip team-project-kind">Project</span>
                 </TitleTrailing>
                 <Actions>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
+                               Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</MudButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
                                Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</MudButton>
@@ -312,6 +324,47 @@
         if (!string.Equals(replaced, toSave.Image, StringComparison.Ordinal))
         {
             store.DeleteImage(replaced);
+        }
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> for <paramref name="project"/>'s avatar (ADR-0083) with no picture cards, so it is initials or a
+    /// short label (an emoji), and previews a sharp square; when the Human saves, writes it to the Project folder's <c>_project.md</c>.
+    /// </summary>
+    private async Task EditProjectAvatarAsync(string team, string project)
+    {
+        if (this.Catalog.Find(team) is not { } summary)
+        {
+            return;
+        }
+
+        DialogParameters<AvatarEditorDialog> parameters = new()
+        {
+            { dialog => dialog.Name, project },
+            { dialog => dialog.Current, summary.ProjectAvatar(project) },
+            { dialog => dialog.Deferred, false },
+            { dialog => dialog.AllowImages, false },
+            { dialog => dialog.AllowLibrary, false },
+            { dialog => dialog.Shape, AvatarShape.Square },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
+        {
+            return;
+        }
+
+        // Save with nothing changed writes nothing, so a Project nobody gave an avatar keeps no _project.md (ADR-0083).
+        if (edited.Avatar with { Image = null } == summary.ProjectAvatar(project))
+        {
+            return;
+        }
+
+        bool saved = this.Services.GetService<ITeamFolders>()?.UpdateProjectAvatar(summary.Name, project, edited.Avatar) ?? false;
+        if (!saved)
+        {
+            _ = this.Snackbar.Add($"The avatar of {project} could not be saved.", Severity.Warning, configure: null, key: "project-avatar-error");
         }
     }
 

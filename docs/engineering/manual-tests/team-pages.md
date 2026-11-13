@@ -203,7 +203,7 @@ the Project, showing the Files tab scoped to the Project's folder, with no Membe
 **Steps**
 
 1. In the sidebar Teams group, expand Business (click the chevron `Expand Business` if collapsed).
-   The scope list shows the Business row selected, then one row per Project with the Project icon. Each row ends in its number of open Tasks ("—" when none). Under it sit the **ROOMS**, **TASKS** and **LIBRARY** sections for Business.
+   The scope list shows the Business row selected, then one row per Project led by its small sharp-cornered square avatar (the Project's initials, or the label set on its page). Each row ends in its number of open Tasks ("—" when none). Under it sit the **ROOMS**, **TASKS** and **LIBRARY** sections for Business.
 2. Click the `Marketing Project` row in the scope list.
 
 **Pass if**

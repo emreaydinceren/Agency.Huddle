@@ -1707,11 +1707,18 @@ public sealed class TeamsNavTests
     private static TaskItem BusinessTask(int number, TaskState status, string? project = null) =>
         TestTasks.Make(id: $"BIZ-{number:0000}", status: status, location: new TaskLocation("Business", project, false));
 
-    /// <summary>The list starts with the Team's own row (its rounded-square avatar) and then one row per Project in catalog order, each with the Project icon.</summary>
+    /// <summary>
+    /// The list starts with the Team's own row (its rounded-square avatar) and then one row per Project in catalog order, each with its
+    /// sharp square avatar (ADR-0083) in place of the old Project icon: the stored label, else the initials of the name.
+    /// </summary>
     [Fact]
-    public async Task ScopeList_StartsWithTheTeamRow_ThenTheProjectsInOrder_WithTheProjectIcon()
+    public async Task ScopeList_StartsWithTheTeamRow_ThenTheProjectsInOrder_WithTheProjectAvatar()
     {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Taxes", "Marketing"])] };
+        TeamSummary business = Team("Business", projects: ["Taxes", "Marketing"]) with
+        {
+            ProjectAvatars = new Dictionary<string, Avatar>(StringComparer.OrdinalIgnoreCase) { ["Taxes"] = new("🧾", null, null) },
+        };
+        FakeTeamCatalog catalog = new() { Teams = [business] };
 
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
@@ -1726,9 +1733,13 @@ public sealed class TeamsNavTests
             string?[] hrefs = [.. cut.FindAll(".teams-nav-scope-row a").Select(a => a.GetAttribute("href"))];
             string?[] expectedHrefs = ["/teams/Business", "/teams/Business/projects/Taxes", "/teams/Business/projects/Marketing"];
             Assert.Equal(expectedHrefs, hrefs);
-            Assert.Equal(2, cut.FindAll(".teams-nav-scope-chip svg rect[stroke='currentColor']").Count);
             Assert.Single(ScopeRow(cut, "Business").QuerySelectorAll(".mud-avatar.avatar-square"));
-            Assert.Empty(ScopeRow(cut, "Taxes").QuerySelectorAll(".mud-avatar"));
+            Assert.Empty(ScopeRow(cut, "Business").QuerySelectorAll(".mud-avatar.avatar-sharp"));
+            IElement taxes = Assert.Single(ScopeRow(cut, "Taxes").QuerySelectorAll(".mud-avatar.avatar-square.avatar-sharp.mud-avatar-small"));
+            Assert.Equal("🧾", taxes.TextContent.Trim());
+            IElement marketing = Assert.Single(ScopeRow(cut, "Marketing").QuerySelectorAll(".mud-avatar.avatar-sharp"));
+            Assert.Equal("MA", marketing.TextContent.Trim());
+            Assert.Empty(cut.FindAll(".teams-nav-scope-row svg rect[stroke='currentColor']"));
         });
     }
 

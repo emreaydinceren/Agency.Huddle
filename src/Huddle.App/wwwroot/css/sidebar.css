@@ -222,29 +222,12 @@
     text-decoration: none;
 }
 
-.teams-nav-host .teams-nav-scope-chip,
+/* A Project row's square avatar (ADR-0083) sits in the 24px slot; the Team card's avatar is made 40px further down. */
 .teams-nav-host .mud-avatar.teams-nav-scope-avatar {
     flex: none;
     width: var(--nav-slot);
     height: var(--nav-slot);
     margin-inline-end: var(--nav-gap);
-}
-
-.teams-nav-host .teams-nav-scope-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background-color: var(--hu-hover);
-    color: var(--mud-palette-text-secondary);
-}
-
-.teams-nav-host .teams-nav-scope-chip .mud-icon-root {
-    font-size: var(--icon-size-row);
-}
-
-.teams-nav-host .selected-shape .teams-nav-scope-chip {
-    color: var(--hu-accent-ink);
 }
 
 .teams-nav-host .teams-nav-scope-label {
