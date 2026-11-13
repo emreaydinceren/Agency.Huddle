@@ -1,0 +1,9 @@
+Team 'Marketing' is now called 'Growth'. Its folder moved from `Teams/Marketing` to `Teams/Growth`.
+Earlier Messages and your own notes use the old name and old paths; use the new ones from now on, and
+update your own memory notes if they name the old Team.
+
+Project 'Growth/Launch' is now called 'Growth/Launch-2027'. Its folder moved from `Teams/Growth/Launch` to `Teams/Growth/Launch-2027`.
+Earlier Messages and your own notes use the old name and old paths; use the new ones from now on, and
+update your own memory notes if they name the old Project.
+
+[Room: Nova & You (id: room-1)] You: hello there

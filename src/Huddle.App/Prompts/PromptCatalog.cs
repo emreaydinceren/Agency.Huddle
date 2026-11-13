@@ -155,7 +155,48 @@ internal static class PromptCatalog
     /// <summary>Builds the <c>turn.agentsMd*</c> change-notice prompts, which span four slices.</summary>
     /// <returns>The prompt definitions of those slices, in catalog order.</returns>
     private static PromptDefinition[] BuildAgentsMdNoticeParts() =>
-        [.. BuildPart55(), .. BuildPart56(), .. BuildPart57(), .. BuildPart58(), .. BuildHuddleMemoryParts()];
+        [.. BuildPart55(), .. BuildPart56(), .. BuildPart57(), .. BuildPart58(), .. BuildHuddleMemoryParts(), .. BuildTeamRenameParts()];
+
+    /// <summary>Builds the Team Rename prompts: the two Turn notices and the two Team Room lines (Team Rename Spec §6.2, §6.4).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildTeamRenameParts() =>
+    [
+        new PromptDefinition(
+            Key: "turn.teamRenamed",
+            Label: "Team renamed: Turn notice",
+            HelperText: "Tells an Agent that a Team was renamed. {{oldName}} is the old name, {{newName}} the new one.",
+            Default:
+                "Team '{{oldName}}' is now called '{{newName}}'. Its folder moved from `Teams/{{oldName}}` to `Teams/{{newName}}`.\n" +
+                "Earlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\n" +
+                "update your own memory notes if they name the old Team.",
+            Placeholders: ["{{oldName}}", "{{newName}}"], RequiredPlaceholders: ["{{oldName}}", "{{newName}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.projectRenamed",
+            Label: "Project renamed: Turn notice",
+            HelperText: "Tells an Agent that a Project was renamed. {{team}} is its Team, {{oldProject}} and {{newProject}} the Project's names.",
+            Default:
+                "Project '{{team}}/{{oldProject}}' is now called '{{team}}/{{newProject}}'. Its folder moved from `Teams/{{team}}/{{oldProject}}` to `Teams/{{team}}/{{newProject}}`.\n" +
+                "Earlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\n" +
+                "update your own memory notes if they name the old Project.",
+            Placeholders: ["{{team}}", "{{oldProject}}", "{{newProject}}"],
+            RequiredPlaceholders: ["{{team}}", "{{oldProject}}", "{{newProject}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "room.teamRenamed",
+            Label: "Team renamed: Team Room line",
+            HelperText: "The line posted into the Team Room when the Team is renamed. {{oldName}} and {{newName}} are the names.",
+            Default: "This Team was renamed from **{{oldName}}** to **{{newName}}**.",
+            Placeholders: ["{{oldName}}", "{{newName}}"], RequiredPlaceholders: ["{{oldName}}", "{{newName}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "room.projectRenamed",
+            Label: "Project renamed: Team Room line",
+            HelperText: "The line posted into the Team Room when a Project is renamed. {{oldProject}} and {{newProject}} are the names.",
+            Default: "Project **{{oldProject}}** was renamed to **{{newProject}}**.",
+            Placeholders: ["{{oldProject}}", "{{newProject}}"], RequiredPlaceholders: ["{{oldProject}}", "{{newProject}}"], Timing: PromptTiming.Live),
+    ];
 
     /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.orientation</c> to <c>systemPrompt.identity</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>

@@ -14,11 +14,13 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     internal IReadOnlyList<string> HookNames => [.. this.applicable.Select(hook => hook.Name)];
 
     /// <summary>
-    /// The one place that knows the production order of the hooks, by name: AGENTS.md first because a rule change governs how the Agent
-    /// reads everything after it, then the Huddle-wide Memory hook, then File Changes. A new hook is one class and one entry here.
+    /// The one place that knows the production order of the hooks, by name: the Team rename notice first because it says where files
+    /// moved, then AGENTS.md because a rule change governs how the Agent reads everything after it, then the Huddle-wide Memory hook,
+    /// then File Changes. A new hook is one class and one entry here.
     /// </summary>
     private static readonly List<string> ProductionOrder =
     [
+        TeamRenamedTurnHook.HookName,
         AgentsMdTurnHook.HookName,
         HuddleMemoryTurnHook.HookName,
         FileChangesTurnHook.HookName,
