@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
@@ -11,7 +12,8 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Renames a Team (Team Rename Spec §5.2-5.5, as settled in corrections-batch2 tr5): validates the new name, journals the
 /// rename, pauses Task writes and the Team Room reconciler, moves the folders, renames the store rows, runs the step-6
-/// rewrites, rewrites every member's label and finishes. The Team Room line (step 8) is not this class's. Renames and
+/// rewrites, rewrites every member's label and finishes. Once the row is Done and the pauses and the scope are released it posts
+/// the Team Room line (step 8, <c>room.teamRenamed</c>); a failed post is logged and never fails the rename. Renames and
 /// archives serialise on one <see cref="TeamOperationGate"/>.
 /// </summary>
 internal sealed class TeamRenameService(
@@ -30,7 +32,9 @@ internal sealed class TeamRenameService(
     IEnumerable<ITeamRenameRewrite> rewrites,
     TeamOperationGate gate,
     ILogger<TeamRenameService> logger,
-    IFeedPublisher? feed = null)
+    IFeedPublisher? feed = null,
+    ChatService? chat = null,
+    IPromptSource? prompts = null)
 {
     /// <summary>The prefix of the temporary folder a case-only rename passes through; it is not an archive dot prefix.</summary>
     internal const string RenamingPrefix = ".huddle-renaming-";
@@ -79,10 +83,11 @@ internal sealed class TeamRenameService(
         foreach (TeamRename row in renames.Pending().Where(static r => r.Kind == TeamRenameKind.Team).OrderBy(static r => r.Id))
         {
             List<IDisposable> pauses = [];
+            bool completed;
             try
             {
                 this.PauseWrites(row, pauses);
-                await this.RecoverRowAsync(row, ct).ConfigureAwait(false);
+                completed = await this.RecoverRowAsync(row, ct).ConfigureAwait(false);
             }
             finally
             {
@@ -91,27 +96,56 @@ internal sealed class TeamRenameService(
                     pause.Dispose();
                 }
             }
+
+            if (completed)
+            {
+                await this.PostRoomLineAsync(row.OldName, row.NewName, ct).ConfigureAwait(false);
+            }
         }
     }
 
-    private async Task RecoverRowAsync(TeamRename row, CancellationToken ct)
+    /// <summary>Step 8: tells the Team Room, if it has one, that the Team was renamed. A failure is logged and swallowed.</summary>
+    private async Task PostRoomLineAsync(string oldName, string newName, CancellationToken ct)
+    {
+        if (chat is null || prompts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Room? room = await directory.FindTeamRoomAsync(newName, ct).ConfigureAwait(false);
+            if (room is not null)
+            {
+                string text = prompts.Say("room.teamRenamed", ("oldName", oldName), ("newName", newName));
+                _ = await chat.PostAsHuddleAsync(room.Id, text, ct).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "The Team Room line for the rename of {Team} to {NewName} could not be posted.", oldName, newName);
+        }
+    }
+
+    private async Task<bool> RecoverRowAsync(TeamRename row, CancellationToken ct)
     {
         string? failure = this.FinishMovesFromDisk(row, out bool neverMoved);
         if (neverMoved)
         {
             renames.Discard(row.Id);
-            return;
+            return false;
         }
 
         failure ??= await this.RollForwardAsync(row, ct).ConfigureAwait(false);
         if (failure is null)
         {
             renames.Complete(row.Id);
-            return;
+            return true;
         }
 
         logger.LogWarning("Recovering the rename of {Team} to {NewName} left it Pending: {Problem}", row.OldName, row.NewName, failure);
         this.NotifyUnfinished(row, failure);
+        return false;
     }
 
     /// <summary>Posts the one Feed Notification (§5.4) that a rename from step 5 on did not finish.</summary>
@@ -128,7 +162,7 @@ internal sealed class TeamRenameService(
         string text = $"Renaming {row.OldName} to {row.NewName} did not finish: {what}. Huddle will try again at the next start.";
         try
         {
-            feed.Post(new FeedMessage(FeedSourceType.TeamArchived, "team-rename:" + row.NewName, FeedActor.Huddle, true, new TeamArchivedPayload(row.NewName, text)));
+            feed.Post(new FeedMessage(FeedSourceType.TeamRenameStuck, "team-rename:" + row.NewName, FeedActor.Huddle, true, new TeamRenameStuckPayload(row.NewName, text)));
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
@@ -207,6 +241,21 @@ internal sealed class TeamRenameService(
             throw;
         }
 
+        TeamRenameOutcome outcome = await this.FinishInScopeAsync(row, scope, caseOnly, ct).ConfigureAwait(false);
+        if (outcome.Renamed)
+        {
+            await this.PostRoomLineAsync(oldName, newName, ct).ConfigureAwait(false);
+        }
+
+        return outcome;
+    }
+
+    /// <summary>Steps 3 to 7 inside the entered scope; the scope is released before this returns.</summary>
+    private async Task<TeamRenameOutcome> FinishInScopeAsync(TeamRename row, RenameScope scope, bool caseOnly, CancellationToken ct)
+    {
+        string oldName = row.OldName;
+        string newName = row.NewName;
+        long id = row.Id;
         bool finished = false;
         try
         {

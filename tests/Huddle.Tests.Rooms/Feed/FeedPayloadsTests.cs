@@ -59,6 +59,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.BuiltinAgentUpdateAvailable, "builtin-agent-update-available"),
             (FeedSourceType.AgentConnectorsChanged, "agent-connectors-changed"),
             (FeedSourceType.RoomMentionHeld, "room-mention-held"),
+            (FeedSourceType.TeamRenameStuck, "team-rename-stuck"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);

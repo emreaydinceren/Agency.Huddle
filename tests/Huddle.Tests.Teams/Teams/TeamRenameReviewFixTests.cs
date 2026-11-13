@@ -155,7 +155,7 @@ public sealed class TeamRenameReviewFixTests
         Assert.False(outcome.Renamed);
         FeedMessage post = Assert.Single(f.Feed.Posts);
         Assert.True(post.Notify);
-        string text = Assert.IsType<TeamArchivedPayload>(post.Payload).Message;
+        string text = Assert.IsType<TeamRenameStuckPayload>(post.Payload).Message;
         Assert.StartsWith("Renaming Marketing to Growth did not finish: ", text, StringComparison.Ordinal);
         Assert.EndsWith(". Huddle will try again at the next start.", text, StringComparison.Ordinal);
     }
@@ -172,7 +172,7 @@ public sealed class TeamRenameReviewFixTests
         await f.Service.RecoverAsync(ct);
 
         Assert.Single(f.Renames.Pending());
-        string text = Assert.IsType<TeamArchivedPayload>(Assert.Single(f.Feed.Posts).Payload).Message;
+        string text = Assert.IsType<TeamRenameStuckPayload>(Assert.Single(f.Feed.Posts).Payload).Message;
         Assert.StartsWith("Renaming Marketing to Growth did not finish: ", text, StringComparison.Ordinal);
         Assert.EndsWith(". Huddle will try again at the next start.", text, StringComparison.Ordinal);
     }
