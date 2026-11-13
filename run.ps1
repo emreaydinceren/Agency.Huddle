@@ -25,6 +25,15 @@
 .PARAMETER Port
     Port to listen on (default: 5100, matching launchSettings.json).
 
+.PARAMETER PipeName
+    The named pipe Agents connect on, passed to the app as --Team:PipeName (default:
+    team-<Port>, so team-5100 on the default port). The app stops at start-up when another
+    program already listens on its pipe, so a pipe per port is what lets two copies run side
+    by side - ./run.ps1 in one terminal and ./run.ps1 -Port 5200 in another - and keeps a
+    development run off the installed app's pipe (team). $env:Team__PipeName is honoured
+    when -PipeName is not passed. Two copies on one -DataDir share its database and Agent
+    folders; give the second copy its own -DataDir (or -Seed) unless that is what you want.
+
 .PARAMETER NoAcp
     Set Team__Acp__Enabled=false for this run, so no node process is spawned per
     Persona. The variable is restored when the script exits.
@@ -75,6 +84,8 @@
 .EXAMPLE
     ./run.ps1
     ./run.ps1 -Port 5200
+    ./run.ps1 -Port 5200 -DataDir C:\temp\second-copy
+    ./run.ps1 -PipeName my-pipe
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
     ./run.ps1 -Seed
@@ -87,6 +98,7 @@
 [CmdletBinding()]
 param(
     [int]$Port = 5100,
+    [string]$PipeName,
     [switch]$NoAcp,
     [switch]$NoBuild,
     [string]$DataDir,
@@ -119,6 +131,13 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $solution = Join-Path $scriptDir 'Huddle.slnx'
 $appProject = Join-Path $scriptDir 'src/Huddle.App'
 $url = "http://localhost:$Port"
+
+# One pipe per port: the app refuses to start when its pipe is taken (PipeAcceptLoop), so two
+# copies on the shipped name "team" cannot run at once, nor can a development run beside an
+# installed copy. -PipeName wins, then $env:Team__PipeName, then team-<Port>.
+if (-not $PipeName) {
+    $PipeName = if ($env:Team__PipeName) { $env:Team__PipeName } else { "team-$Port" }
+}
 
 # TeamOptions.DataDir defaults to "App_Data" (resolved relative to src/Huddle.App - see
 # launchSettings.json, which sets no workingDirectory), honouring the Team__DataDir
@@ -255,7 +274,7 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
 }
 
 # Everything after `--` goes to Huddle.App rather than to `dotnet run`.
-$appArgs = @($seedArgs)
+$appArgs = @($seedArgs) + @("--Team:PipeName=$PipeName")
 if ($LogLevel) {
     $appArgs += @('--log-level', $LogLevel)
 }
@@ -299,6 +318,7 @@ if ($DryRun) {
     }
     Write-Host "   Run   : $runCommand" -ForegroundColor Gray
     Write-Host "   URL   : $url" -ForegroundColor Gray
+    Write-Host "   Pipe  : $PipeName" -ForegroundColor Gray
     Write-Host ''
     Write-Host 'Dry run complete. Nothing was built or started.' -ForegroundColor Green
     exit 0
@@ -477,6 +497,7 @@ try {
     if ($Seed) {
         Write-Host "Seed data: $dataDir" -ForegroundColor Gray
     }
+    Write-Host "Agent pipe: $PipeName" -ForegroundColor Gray
     if ($LogLevel) {
         Write-Host "Console log level: $LogLevel" -ForegroundColor Gray
     }
