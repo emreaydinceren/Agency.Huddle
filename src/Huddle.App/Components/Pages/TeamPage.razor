@@ -106,14 +106,15 @@
                     <span class="page-kind-chip team-page-kind">Team</span>
                 </TitleTrailing>
                 <Actions>
-                    <TeamShortcutButton Team="@sourceTeam" />
                     @* Every header action is the same small outlined button with a leading icon, so none reads as primary.
-                       Edit avatar says plainly what the avatar's pencil does; same condition as the avatar button. *@
+                       Edit avatar says plainly what the avatar's pencil does; same condition as the avatar button. The
+                       shortcut toggle follows it: the shortcut is the avatar's tile in the Activity bar. *@
                     @if (summary.TeamType is not null)
                     {
                         <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
                                    Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
                     }
+                    <TeamShortcutButton Team="@sourceTeam" />
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
                                Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
                     @* Asks T16's question first (TeamArchiveActions), as the Details tab's Archive does. *@

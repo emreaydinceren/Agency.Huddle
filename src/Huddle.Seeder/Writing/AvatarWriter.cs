@@ -160,7 +160,7 @@ internal static class AvatarWriter
         for (int index = 0; index < pictures.Count; index++)
         {
             (SeedAgent agent, AvatarLibraryImage image) = pictures[index];
-            string fileName = StableImageName(agent.Name) + image.Extension;
+            string fileName = StableImageName(agent.Name, image.Bytes) + image.Extension;
             SeedIo.WriteBytes(Path.Combine(store.ImageDirectory, fileName), image.Bytes);
             store.Save(agent.Name, new Avatar(Label: null, Image: fileName, Background: backgrounds[index]));
         }
@@ -180,10 +180,18 @@ internal static class AvatarWriter
             ?? throw new InvalidOperationException($"{agent.Name}'s picture '{agent.AvatarFile}' could not be read.");
     }
 
-    /// <summary>A 32-character hex name derived from the Agent's name, so every run writes the same file and the seed diffs cleanly.</summary>
-    private static string StableImageName(string agentName)
+    /// <summary>
+    /// A 32-character hex name derived from the Agent's name and the picture's bytes. The same picture gets the same name on every
+    /// run, so the seed diffs cleanly; a redrawn picture gets a new name. The app serves avatars with an immutable year-long cache
+    /// because it assumes a new image means a new URL (<c>Program.cs</c>, <c>/agent-avatars</c>), so a name from the Agent alone
+    /// would leave a browser showing the old art after the library changes.
+    /// </summary>
+    private static string StableImageName(string agentName, ReadOnlySpan<byte> imageBytes)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(agentName.ToUpperInvariant()));
+        using IncrementalHash hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hasher.AppendData(Encoding.UTF8.GetBytes(agentName.ToUpperInvariant()));
+        hasher.AppendData(imageBytes);
+        byte[] hash = hasher.GetHashAndReset();
         return "5eed" + Convert.ToHexStringLower(hash.AsSpan(0, 14));
     }
 }

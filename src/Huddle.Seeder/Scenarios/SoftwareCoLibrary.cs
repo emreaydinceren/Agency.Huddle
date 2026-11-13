@@ -98,7 +98,7 @@ internal static class SoftwareCoLibrary
     internal static IReadOnlyList<SeedTeam> Teams { get; } =
     [
         new("Platform", ["API v2", "Observability"]),
-        new("Growth", ["Onboarding Revamp", "Pricing Page", "Lifecycle Emails"]),
+        new("Growth", ["Onboarding Revamp", "Pricing Page", "Lifecycle Emails"]) { ArchivedProjects = [SoftwareCoArchive.SpringPromo] },
         new("Support", ["Help Center", "Incident Tooling"]),
         new("Sandbox", []),
         new("Records", []),
