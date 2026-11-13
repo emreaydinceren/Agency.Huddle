@@ -22,8 +22,35 @@
 
     See docs/Huddle.EngineeringGuide.md ("Build, test, run") for the commands this wraps.
 
+    Parameters (one line each; Get-Help ./run.ps1 -Detailed has the full text):
+
+      -Port <int>          Port to listen on. Default 5100.
+      -PipeName <string>   Pipe Agents connect on. Default team-<Port>, so two
+                           ports can run side by side.
+      -NoAcp               Start no node process per Persona for this run.
+      -NoBuild             Skip the build; run what is already compiled.
+      -DataDir <path>      Data folder. Default App_Data under src/Huddle.App;
+                           wins over $env:Team__DataDir.
+      -Seed                Run on the data set built by src/Huddle.Seeder.
+      -SeedRoot <path>     Seed root -Seed reads. Default <system drive>:\seeds\huddle\software-co.
+      -Clean               Delete team.db and every Agent definition file first.
+                           No prompt, cannot be undone.
+      -CleanOnly           Do -Clean's deletion, then exit.
+      -DryRun              Print what would run (and what -Clean would delete), then exit.
+      -LogLevel <level>    Console level for Huddle's own logs: Trace, Debug,
+                           Information, Warning, Error, Critical or None.
+
 .PARAMETER Port
     Port to listen on (default: 5100, matching launchSettings.json).
+
+.PARAMETER PipeName
+    The named pipe Agents connect on, passed to the app as --Team:PipeName (default:
+    team-<Port>, so team-5100 on the default port). The app stops at start-up when another
+    program already listens on its pipe, so a pipe per port is what lets two copies run side
+    by side - ./run.ps1 in one terminal and ./run.ps1 -Port 5200 in another - and keeps a
+    development run off the installed app's pipe (team). $env:Team__PipeName is honoured
+    when -PipeName is not passed. Two copies on one -DataDir share its database and Agent
+    folders; give the second copy its own -DataDir (or -Seed) unless that is what you want.
 
 .PARAMETER NoAcp
     Set Team__Acp__Enabled=false for this run, so no node process is spawned per
@@ -75,6 +102,8 @@
 .EXAMPLE
     ./run.ps1
     ./run.ps1 -Port 5200
+    ./run.ps1 -Port 5200 -DataDir C:\temp\second-copy
+    ./run.ps1 -PipeName my-pipe
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
     ./run.ps1 -Seed
@@ -87,6 +116,7 @@
 [CmdletBinding()]
 param(
     [int]$Port = 5100,
+    [string]$PipeName,
     [switch]$NoAcp,
     [switch]$NoBuild,
     [string]$DataDir,
@@ -119,6 +149,13 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $solution = Join-Path $scriptDir 'Huddle.slnx'
 $appProject = Join-Path $scriptDir 'src/Huddle.App'
 $url = "http://localhost:$Port"
+
+# One pipe per port: the app refuses to start when its pipe is taken (PipeAcceptLoop), so two
+# copies on the shipped name "team" cannot run at once, nor can a development run beside an
+# installed copy. -PipeName wins, then $env:Team__PipeName, then team-<Port>.
+if (-not $PipeName) {
+    $PipeName = if ($env:Team__PipeName) { $env:Team__PipeName } else { "team-$Port" }
+}
 
 # TeamOptions.DataDir defaults to "App_Data" (resolved relative to src/Huddle.App - see
 # launchSettings.json, which sets no workingDirectory), honouring the Team__DataDir
@@ -255,7 +292,7 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
 }
 
 # Everything after `--` goes to Huddle.App rather than to `dotnet run`.
-$appArgs = @($seedArgs)
+$appArgs = @($seedArgs) + @("--Team:PipeName=$PipeName")
 if ($LogLevel) {
     $appArgs += @('--log-level', $LogLevel)
 }
@@ -299,6 +336,7 @@ if ($DryRun) {
     }
     Write-Host "   Run   : $runCommand" -ForegroundColor Gray
     Write-Host "   URL   : $url" -ForegroundColor Gray
+    Write-Host "   Pipe  : $PipeName" -ForegroundColor Gray
     Write-Host ''
     Write-Host 'Dry run complete. Nothing was built or started.' -ForegroundColor Green
     exit 0
@@ -477,6 +515,7 @@ try {
     if ($Seed) {
         Write-Host "Seed data: $dataDir" -ForegroundColor Gray
     }
+    Write-Host "Agent pipe: $PipeName" -ForegroundColor Gray
     if ($LogLevel) {
         Write-Host "Console log level: $LogLevel" -ForegroundColor Gray
     }
