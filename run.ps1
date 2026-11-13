@@ -24,56 +24,70 @@
 
     Parameters (one line each; Get-Help ./run.ps1 -Detailed has the full text):
 
-      -Port <int>          Port to listen on. Default 5100.
-      -PipeName <string>   Pipe Agents connect on. Default team-<Port>, so two
-                           ports can run side by side.
+      -Port <int>          Port to listen on.
+                           Default: 5100.
+      -PipeName <string>   Pipe Agents connect on, so two ports can run side by side.
+                           Default: $env:Team__PipeName if set, else team-<Port>.
       -NoAcp               Start no node process per Persona for this run.
+                           Default: off (one node process per Persona).
       -NoBuild             Skip the build; run what is already compiled.
-      -DataDir <path>      Data folder. Default App_Data under src/Huddle.App;
-                           wins over $env:Team__DataDir.
+                           Default: off (builds src/Huddle.App first).
+      -DataDir <path>      Data folder; relative paths resolve against src/Huddle.App.
+                           Default: $env:Team__DataDir if set, else App_Data
+                           (with -Seed: <SeedRoot>\data).
       -Seed                Run on the data set built by src/Huddle.Seeder.
-      -SeedRoot <path>     Seed root -Seed reads. Default <system drive>:\seeds\huddle\software-co.
+                           Default: off (runs on -DataDir).
+      -SeedRoot <path>     Seed root -Seed reads.
+                           Default: <system drive>:\seeds\huddle\software-co.
       -Clean               Delete team.db and every Agent definition file first.
-                           No prompt, cannot be undone.
+                           No prompt, cannot be undone. Default: off (deletes nothing).
       -CleanOnly           Do -Clean's deletion, then exit.
+                           Default: off.
       -DryRun              Print what would run (and what -Clean would delete), then exit.
+                           Default: off (builds and starts the app).
       -LogLevel <level>    Console level for Huddle's own logs: Trace, Debug,
                            Information, Warning, Error, Critical or None.
+                           Default: Error (errors plus the start-up lines).
 
 .PARAMETER Port
-    Port to listen on (default: 5100, matching launchSettings.json).
+    Port to listen on.
+    Default: 5100, matching launchSettings.json.
 
 .PARAMETER PipeName
-    The named pipe Agents connect on, passed to the app as --Team:PipeName (default:
-    team-<Port>, so team-5100 on the default port). The app stops at start-up when another
+    The named pipe Agents connect on, passed to the app as --Team:PipeName. The app stops at start-up when another
     program already listens on its pipe, so a pipe per port is what lets two copies run side
     by side - ./run.ps1 in one terminal and ./run.ps1 -Port 5200 in another - and keeps a
-    development run off the installed app's pipe (team). $env:Team__PipeName is honoured
-    when -PipeName is not passed. Two copies on one -DataDir share its database and Agent
-    folders; give the second copy its own -DataDir (or -Seed) unless that is what you want.
+    development run off the installed app's pipe (team). Two copies on one -DataDir share
+    its database and Agent folders; give the second copy its own -DataDir (or -Seed) unless
+    that is what you want.
+    Default: $env:Team__PipeName if set, else team-<Port> (team-5100 on the default port).
 
 .PARAMETER NoAcp
     Set Team__Acp__Enabled=false for this run, so no node process is spawned per
     Persona. The variable is restored when the script exits.
+    Default: off - Development configuration starts one node process per Persona.
 
 .PARAMETER NoBuild
     Skip the build and run whatever is already compiled.
+    Default: off - src/Huddle.App is built before the app starts.
 
 .PARAMETER DataDir
-    Overrides the data directory (default: App_Data under src/Huddle.App).
-    $env:Team__DataDir is honoured when -DataDir is not passed; -DataDir wins
-    over the environment variable. Relative values are resolved against
-    src/Huddle.App, matching TeamOptions.DataDir's own default resolution.
+    Overrides the data directory. $env:Team__DataDir is honoured when -DataDir is not
+    passed; -DataDir wins over the environment variable. Relative values are resolved
+    against src/Huddle.App, matching TeamOptions.DataDir's own default resolution.
+    Default: $env:Team__DataDir if set, else App_Data under src/Huddle.App; with -Seed,
+    <SeedRoot>\data.
 
 .PARAMETER Seed
     Run against the data set built by src/Huddle.Seeder instead of App_Data. Only the data
     folder changes; the app runs with its normal configuration and every other switch behaves
     as it does without -Seed. -DataDir still wins over the seed root. Cannot be combined with
     -Clean: rebuild the seed with `dotnet run --project src/Huddle.Seeder` instead.
+    Default: off - the app runs on -DataDir.
 
 .PARAMETER SeedRoot
-    The seed root -Seed reads (default: <system drive>:\seeds\huddle\software-co, the
-    seeder's own default). Its data folder is <SeedRoot>\data.
+    The seed root -Seed reads. Its data folder is <SeedRoot>\data.
+    Default: <system drive>:\seeds\huddle\software-co, the seeder's own default.
 
 .PARAMETER Clean
     Delete the previous run's SQLite database (Team:DataDir/team.db, plus its -wal/-shm
@@ -84,20 +98,24 @@
     Teams/ (Team folders and Library notes) are left alone, as is
     Agents/_unsorted and the Agents/.layout-migrated marker. Other App_Data
     content (prompts, appearance, avatars, rooms, logs) is left alone too.
+    Default: off - nothing is deleted.
 
 .PARAMETER CleanOnly
     Run -Clean's deletion, then exit without building or starting anything. Implies -Clean.
+    Default: off.
 
 .PARAMETER DryRun
     Print what would run, then exit without building or starting anything. With -Clean
     (or -CleanOnly), lists the actual files that would be deleted.
+    Default: off - the script builds and starts the app.
 
 .PARAMETER LogLevel
     How much of Huddle's own logging the console shows for this run: Trace, Debug,
     Information, Warning, Error, Critical or None. Passed to the app as --log-level.
-    Left out, the console shows only errors (plus the "Now listening on" start-up lines).
     Framework logs stay at errors either way, and the log file under
     <DataDir>/logs is not affected: it keeps the levels in appsettings*.json.
+    Default: Error - the console shows only errors, plus the "Now listening on" start-up
+    lines.
 
 .EXAMPLE
     ./run.ps1
