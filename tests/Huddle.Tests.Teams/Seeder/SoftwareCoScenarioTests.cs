@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
@@ -552,6 +553,64 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Equal(SoftwareCoHome.Team, planning.Team);
         Assert.Equal("Mia is allergic to peanuts: nothing with peanuts comes into the kitchen.\n", fact.Content);
         Assert.Equal("Five dinners in {{lib:Teams/Home and Family/Meals/Weekly-Meal-Plan.md}}. No peanuts anywhere, as always for Mia's allergy.", quote.Text);
+    }
+
+    /// <summary>
+    /// SEED-SC-19: Thirteen Jobs cover every timetable preset, the Human and Agents as owners, Jobs scheduled by the Human, by
+    /// the owner, by a manager for a member of its Team and by the Chief of Staff, a paused Job, three named time zones, a
+    /// one-off still ahead, and two sections Huddle cannot read.
+    /// </summary>
+    [Fact]
+    public void Plan_HasJobsInEveryShape()
+    {
+        SeedPlan plan = Plan();
+        Job[] jobs = [.. plan.Jobs.Select(JobSeeder.ToJob)];
+
+        Assert.Equal(13, jobs.Length);
+        Assert.Equal(Enum.GetValues<JobCadence>(), jobs.Select(j => j.When.Cadence).Distinct().Order());
+        Assert.All(jobs, j => Assert.Matches("^job-[0-9a-f]{6}$", j.Id));
+        Assert.Equal(jobs.Length, jobs.Select(j => j.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.All(plan.Jobs.Where(j => j.Owner is not null), j => Assert.Contains(plan.Agents, a => a.Name == j.Owner));
+        Assert.Equal(2, jobs.Count(j => j.Owner.IsHuman));
+        Assert.Equal("Chief of Staff", Assert.Single(jobs, j => j.Owner.IsHuman && j.CreatedBy != plan.HumanName).CreatedBy);
+        Assert.Contains(plan.Jobs, j => j.Owner is not null && j.By == plan.HumanName);
+        Assert.Contains(plan.Jobs, j => j.Owner is not null && j.By == j.Owner);
+        Assert.Contains(plan.Jobs, j => j.Owner is not null && j.By != j.Owner && plan.Teams.Any(t => t.Manager == j.By && plan.Agents.Single(a => a.Name == j.Owner).Teams.Contains(t.Name)));
+        Assert.Single(jobs, j => j.Paused);
+        Assert.Equal(["America/New_York", "Europe/London", "UTC"], jobs.Select(j => j.TimeZoneId).OfType<string>().Distinct().Order(StringComparer.Ordinal));
+        SeedJob once = Assert.Single(plan.Jobs, j => JobSeeder.ToJob(j).When.Cadence == JobCadence.Once);
+        Assert.Empty(once.Runs);
+        Assert.NotNull(JobSeeder.ToJob(once).When.NextAfter(new DateTimeOffset(plan.Today.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero), TimeZoneInfo.Utc));
+        Assert.All(plan.JobProblems, p => Assert.Null(Assert.Single(JobDocument.Parse(p.Raw, p.Owner is null ? JobOwner.Human : JobOwner.Agent(p.Owner))).Job));
+        Assert.Equal(["Fortnightly SLA report", "Pantry stock-take"], plan.JobProblems.Select(p => p.Title));
+    }
+
+    /// <summary>
+    /// SEED-SC-19, SEED-INV-8: A Job's past runs are before the run date and run forward in time, every reply comes from its
+    /// owner or the Human, a last run that posted nothing drew no reply, and one Job each found its Budget spent and has an
+    /// archived Room.
+    /// </summary>
+    [Fact]
+    public void Plan_JobRunsAreConsistent()
+    {
+        SeedPlan plan = Plan();
+
+        Assert.All(plan.Jobs, job =>
+        {
+            DateTimeOffset[] times = [.. job.Runs.SelectMany(r => (IEnumerable<DateTimeOffset>)[DatabaseSeeder.Timestamp(plan.Today, r.DaysAgo, r.Time), .. r.Replies.Select(m => DatabaseSeeder.Timestamp(plan.Today, m.DaysAgo, m.Time))])];
+            Assert.Equal([.. times.Order()], times);
+            Assert.All(times, t => Assert.True(t < new DateTimeOffset(plan.Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero), job.Id));
+            Assert.All(job.Runs.SelectMany(r => r.Replies), m => Assert.True(m.Sender == (job.Owner ?? plan.HumanName) || m.Sender == plan.HumanName, job.Id));
+            if (job.Runs.Count > 0 && job.LastOutcome != JobOutcome.Delivered)
+            {
+                Assert.Empty(job.Runs[^1].Replies);
+            }
+        });
+        Assert.Equal(SoftwareCoJobs.BudgetSpentJob, Assert.Single(plan.Jobs, j => j.LastOutcome == JobOutcome.BudgetSpent).Id);
+        SeedJob archived = Assert.Single(plan.Jobs, j => j.RoomArchived);
+        Assert.Equal(SoftwareCoJobs.ArchivedRoomJob, archived.Id);
+        Assert.NotEmpty(archived.Runs);
+        Assert.Contains(plan.Jobs, j => j.Owner is null && j.Runs.Count > 0);
     }
 
     private static bool IsDocument(string path) =>

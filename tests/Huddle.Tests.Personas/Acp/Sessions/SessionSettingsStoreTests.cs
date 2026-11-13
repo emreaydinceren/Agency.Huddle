@@ -125,8 +125,10 @@ public sealed class SessionSettingsStoreTests
         Assert.Equal(30, store.Current.CatchUpMessages);
     }
 
-#pragma warning disable S2699 // The test's only check besides Changed is the Eventually.UntilAsync wait, which fails the test when the condition never holds; Sonar cannot see an assertion inside the shared helper.
-    /// <summary>A hand edit made outside the process is picked up by the watcher once its debounce settles: <c>Current</c> updates and <c>Changed</c> is raised.</summary>
+    /// <summary>
+    /// A hand edit made outside the process is picked up by the watcher once its debounce settles: <c>Current</c> updates and <c>Changed</c> is raised.
+    /// The wait covers both, because the watcher publishes <c>Current</c> before it raises <c>Changed</c> on its own thread.
+    /// </summary>
     [Fact]
     public async Task Current_ExternalEdit_IsPickedUpByTheWatcherAndRaisesChanged()
     {
@@ -137,10 +139,9 @@ public sealed class SessionSettingsStoreTests
 
         File.WriteAllText(store.FilePath, "{\"" + MessagesKey + "\":123}");
 
-        await Eventually.UntilAsync(() => store.Current.CatchUpMessages == 123, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
-        Assert.True(Volatile.Read(ref changed) >= 1);
+        await Eventually.UntilAsync(() => Volatile.Read(ref changed) >= 1 && store.Current.CatchUpMessages == 123, TestContext.Current.CancellationToken, timeout: TestBudgets.Slow, interval: TimeSpan.FromMilliseconds(50));
+        Assert.Equal(123, store.Current.CatchUpMessages);
     }
-#pragma warning restore S2699
 
     /// <summary>The store's own save raises <c>Changed</c> once, and the watcher's later re-read of that same write raises nothing more.</summary>
     [Fact]

@@ -123,7 +123,7 @@ public sealed class SeedRoundTripTests
         Assert.All(SavedViewIds, id => Assert.NotNull(store.Get(id)));
     }
 
-    /// <summary>SEED-RT-5: The database holds the Human, every Agent under its seeded id, and the Rooms with their members, names and archive flag.</summary>
+    /// <summary>SEED-RT-5: The database holds the Human, every Agent under its seeded id, and the Rooms with their members, names and archive flag; the only other Rooms are the Job Rooms (SEED-RT-8).</summary>
     [Fact]
     public async Task Database_HoldsUsersAndRooms()
     {
@@ -142,7 +142,7 @@ public sealed class SeedRoundTripTests
             Assert.Equal(seed.Summary.Ids.UserIds[agent.Name], user?.Id);
         }
 
-        Assert.Equal(plan.Rooms.Count, rooms.Count);
+        Assert.Equal(plan.Rooms.Count + seed.Summary.Ids.JobRoomIds.Count, rooms.Count);
         foreach (SeedRoom seeded in plan.Rooms)
         {
             Room room = Assert.Single(rooms, r => r.Id == seed.Summary.Ids.RoomIds[seeded.Key]);
@@ -379,7 +379,7 @@ public sealed class SeedRoundTripTests
         Assert.Equal(seed.Summary.Plan.Tasks.Count, Directory.EnumerateFiles(Path.Combine(second.DataDir, "Teams"), "*.md", SearchOption.AllDirectories).Count(f => f.Contains("_tasks", StringComparison.Ordinal)));
     }
 
-    /// <summary>SEED-RT-7: The manifest lists every Task, every Room id, the derived-state facts and what is archived.</summary>
+    /// <summary>SEED-RT-7: The manifest lists every Task, every Room id, every Job and its Room, the sections Huddle cannot read, the derived-state facts and what is archived.</summary>
     [Fact]
     public async Task Manifest_ListsTheSeededEntities()
     {
@@ -390,6 +390,12 @@ public sealed class SeedRoundTripTests
 
         Assert.All(seed.Summary.Plan.Tasks, t => Assert.Contains(t.Id, manifest, StringComparison.Ordinal));
         Assert.All(seed.Summary.Ids.RoomIds.Values, id => Assert.Contains(id, manifest, StringComparison.Ordinal));
+        string[][] jobRows = [.. manifest.Split('\n').Where(static line => line.StartsWith("| ", StringComparison.Ordinal) && line.Split(" | ").Length == 10 && line.Split(" | ")[1].StartsWith("`job-", StringComparison.Ordinal)).Select(static line => line.TrimEnd(' ', '|').Split(" | "))];
+        Assert.Equal(seed.Summary.Plan.Jobs.Select(j => $"`{j.Id}`"), jobRows.Select(static cells => cells[1]));
+        Assert.Equal(seed.Summary.Plan.Jobs.Select(j => RoomCell(seed, j)), jobRows.Select(static cells => cells[^1]));
+        Assert.Equal(
+            "Sections Huddle cannot read (the Scheduled page lists them): Fortnightly SLA report in `Agents/Dana/schedule.md`, Pantry stock-take in `Agents/Theo/schedule.md`",
+            Assert.Single(manifest.Split('\n'), static line => line.StartsWith("Sections Huddle cannot read", StringComparison.Ordinal)));
         Assert.Contains("Legal-Checklist (unresolved)", manifest, StringComparison.Ordinal);
         Assert.Contains("Overdue: ", manifest, StringComparison.Ordinal);
         Assert.Contains("| Team | Legacy Site (Projects: Checkout v1, Old Marketing Site) | `Archive/Legacy Site` | Lena, Owen, Sofia |", manifest, StringComparison.Ordinal); // contains-ok: one whole table row of a generated multi-section file
@@ -416,5 +422,16 @@ public sealed class SeedRoundTripTests
         }
 
         return [.. roles];
+    }
+
+    /// <summary>The manifest's Job Room cell a Job should get: its Room id, marked when archived, or "none yet".</summary>
+    private static string RoomCell(SeededFolder seed, SeedJob job)
+    {
+        if (!seed.Summary.Ids.JobRoomIds.TryGetValue(job.Id, out string? room))
+        {
+            return "none yet";
+        }
+
+        return job.RoomArchived ? $"`{room}` (archived)" : $"`{room}`";
     }
 }

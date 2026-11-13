@@ -149,8 +149,10 @@ internal sealed partial class JobScheduler(
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
     }
 
-    /// <summary>What a stored next run was worked out from; a change means the timetable was edited.</summary>
-    private static string KeyOf(Job job) => job.When + "|" + (job.TimeZoneId ?? string.Empty);
+    /// <summary>What a stored next run was worked out from; a change means the timetable was edited. The seeder stores the same key.</summary>
+    /// <param name="job">The Job.</param>
+    /// <returns>The key kept in <c>job_state.when_key</c>.</returns>
+    internal static string KeyOf(Job job) => job.When + "|" + (job.TimeZoneId ?? string.Empty);
 
     private async Task TickJobAsync(Job job, DateTimeOffset now, CancellationToken ct)
     {
