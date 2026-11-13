@@ -175,17 +175,15 @@ public sealed partial class AuditBatchBCssTests
         Assert.Matches(@"color:\s*var\(--mud-palette-text-primary\)", text);
     }
 
-    /// <summary>Only a group with children keeps the section-header look, and the old <c>nav-section-link</c> class is gone from the CSS and from both links.</summary>
+    /// <summary>Only a group with children keeps the section-header look, and the old <c>nav-section-link</c> class is gone from the CSS and from the Agents link.</summary>
     [Fact]
     public void Sidebar_OnlyGroupsAreSectionHeaders()
     {
         string css = CssText.AppCss(CssNewlines.AsIs);
         string layout = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
-        string library = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryNavLink.razor"));
 
         Assert.DoesNotContain("nav-section-link", css, StringComparison.Ordinal);
         Assert.Matches(@"<NavTabLink Href=""/agents""[^>]*Class=""nav-row-link""", layout);
-        Assert.Matches(@"<NavTabLink Href=""/library""[^>]*Class=""nav-row-link""", library);
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link \.mud-nav-link-text\s*\{[^}]*font-weight:\s*600", css);
     }
 

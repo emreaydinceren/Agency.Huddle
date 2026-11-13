@@ -29,21 +29,20 @@ public sealed class LibraryPageTests : IDisposable
     public void Dispose() => this.fixture.Dispose();
 
     /// <summary>
-    /// The page renders the <c>LibraryExplorer</c> with <c>Layout</c> SideBySide and <c>StateKey</c> "page",
-    /// which passes the underlying <see cref="MudSplitPanel"/> <c>Horizontal="false"</c> - a vertical
-    /// dividing line, panels left/right (see <c>LibraryExplorerTests.Layout_SideBySide_IsHorizontal</c>
-    /// for why that reads backwards from the parameter's name).
+    /// The page renders only the document half of the <c>LibraryExplorer</c> (<c>Part</c> DocumentOnly, <c>StateKey</c> "page"):
+    /// the tree is the Sidebar's Library view, so the page has no divider and no tree of its own.
     /// </summary>
     [Fact]
-    public async Task Page_RendersSideBySideExplorer()
+    public async Task Page_RendersOnlyTheDocumentHalf()
     {
         this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, root: null, path: null, scopeRoot: null, scopePath: null);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudSplitPanel>()));
-        Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
+        Assert.Empty(cut.FindComponents<MudSplitPanel>());
+        Assert.Empty(cut.FindAll(".library-tree"));
     }
 
     /// <summary>The page draws no <c>h1</c> of its own: the shell breadcrumb (<c>S1a</c>) names it, as on the Tasks page.</summary>
@@ -135,15 +134,11 @@ public sealed class LibraryPageTests : IDisposable
     }
 
     /// <summary>
-    /// <c>?scopeRoot=teams&amp;scopePath=Marketing</c> keeps the scope and, since the only current
-    /// producer of that query (<c>LibraryNavLink</c>'s own sidebar rows) already names the folder
-    /// there, the page passes <c>ShowScopeRoot=false</c>: no redundant title above the tree (just the
-    /// root's full path as a header), and
-    /// <see cref="LibraryTree"/> flattens straight to the scoped folder's own children instead of a
-    /// wrapper row that exists only to be expanded.
+    /// <c>?scopeRoot=teams&amp;scopePath=Marketing</c> keeps the scope for the document's boundary and, since the page
+    /// passes <c>ShowScopeRoot=false</c>, shows no title above it; the tree is the Sidebar's, so none renders here.
     /// </summary>
     [Fact]
-    public async Task Page_ScopeQuery_FlattensToTheScopesOwnChildren()
+    public async Task Page_ScopeQuery_ShowsNoTitleAndNoTree()
     {
         Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Marketing", "Campaigns"));
 
@@ -154,9 +149,7 @@ public sealed class LibraryPageTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
         Assert.Empty(cut.FindAll(".library-explorer-title"));
         Assert.Empty(cut.FindAll(".library-explorer-root-path"));
-        cut.WaitForAssertion(() => Assert.Equal(
-            ["Campaigns"],
-            cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
+        Assert.Empty(cut.FindAll(".library-tree"));
     }
 
     /// <summary>An unresolvable scope shows the explorer's unavailable alert.</summary>

@@ -478,9 +478,9 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LayoutGuard.cs` | Validates that `Teams:Dir` and `Acp:AgentsDir` do not overlap. |
 | `Library/LibraryLocation.cs` | The public record a host passes to say which folder the explorer starts from. |
 | `Library/LibraryLinkQuery.cs` | Pure text handling for a `?library=` link and the `/library` page address it opens. |
-| `Components/Library/LibraryExplorer.razor` | The reusable control: tree + document, scoped by its `Scopes` parameter. |
+| `Components/Library/LibraryExplorer.razor` | The reusable control: tree + document, scoped by its `Scopes` parameter. `Part` mounts one half apart: `TreeOnly` in the Sidebar, `DocumentOnly` on the Library page; they talk through `Library/LibraryBrowserBridge.cs`. |
 | `Components/Library/LibraryTree.razor`, `LibraryDocument.razor`, `LibraryEditor.razor`, `BacklinksPanel.razor`, `LibraryFileOps.razor` | The explorer's parts; file operations open `RenameDialog`, `MoveDialog` and `NamePromptDialog`. |
-| `Components/Library/LibraryNavLink.razor` | The sidebar's Library link. |
+| `Components/Library/LibrarySidebarTree.razor` | The Sidebar's Library view: the explorer's tree half. |
 | `Components/Library/LibraryLinkRouter.razor` | Sends a `?library=` link to the Library page; renders nothing. |
 | `Components/Pages/Library.razor` | The `/library` page: the only Library surface, one Tab. |
 | `Components/Settings/LibraryPanel.razor` | Pinned roots editor. |

@@ -21,13 +21,13 @@ public sealed class MainLayoutTeamsTests
         int teams = html.IndexOf("teams-nav", StringComparison.Ordinal);
         int agents = html.IndexOf("href=\"/agents\"", StringComparison.Ordinal);
         int tasks = html.IndexOf("task-view-nav", StringComparison.Ordinal);
-        int library = html.IndexOf("library-nav", StringComparison.Ordinal);
+        int library = html.IndexOf("library-sidebar-tree", StringComparison.Ordinal);
 
         Assert.True(rooms >= 0, "the Rooms list's 'Group by' line is missing from the drawer");
         Assert.True(teams >= 0, "the 'teams-nav' marker is missing from the drawer");
         Assert.True(agents >= 0, "the Agents link is missing from the drawer");
         Assert.True(tasks >= 0, "the 'task-view-nav' marker is missing from the drawer");
-        Assert.True(library >= 0, "the 'library-nav' marker is missing from the drawer");
+        Assert.True(library >= 0, "the 'library-sidebar-tree' marker is missing from the drawer");
         Assert.True(rooms < teams, "Rooms must come before Teams");
         Assert.True(teams < agents, "Teams must come before Agents");
         Assert.True(agents < tasks, "Agents must come before Tasks");
