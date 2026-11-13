@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ namespace Agency.Huddle.App.Teams;
 internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeProvider? timeProvider = null) : ITeamRenameRewrite
 {
     private const string Actor = "Huddle";
+    private static readonly UTF8Encoding Utf8NoBom = new(false);
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
 
     private readonly string root = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
@@ -27,7 +29,7 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
         ArgumentNullException.ThrowIfNull(rename);
 
         List<string> teams = [];
-        foreach (string file in this.TaskFiles())
+        foreach (string file in this.TaskFiles(rename))
         {
             string text = File.ReadAllText(file);
             if (this.Rewrite(text, rename) is not null)
@@ -48,7 +50,7 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
     {
         ArgumentNullException.ThrowIfNull(rename);
 
-        foreach (string file in this.TaskFiles())
+        foreach (string file in this.TaskFiles(rename))
         {
             ct.ThrowIfCancellationRequested();
             string text = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
@@ -66,7 +68,10 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
                 logged = logged.Replace("\n", "\r\n", StringComparison.Ordinal);
             }
 
-            await File.WriteAllTextAsync(file, logged, new UTF8Encoding(false), ct).ConfigureAwait(false);
+            if (!await AtomicFile.TryWriteAsync(file, Utf8NoBom.GetBytes(logged), ct).ConfigureAwait(false))
+            {
+                throw new IOException($"The Task file \"{Path.GetFileName(file)}\" is open in another program.");
+            }
         }
     }
 
@@ -95,9 +100,11 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
         return close < 0 ? 0 : close;
     }
 
-    /// <summary>The Task files under the Teams folder, Teams not yet created included as absent.</summary>
-    private List<string> TaskFiles() => Directory.Exists(this.root)
-        ? [.. Directory.EnumerateFiles(this.root, "*.md", SearchOption.AllDirectories).Where(file => TaskLayout.AffectsTasks(this.root, file))]
+    /// <summary>The Task files under the Teams folder, except the renamed Team's own (they moved with the folder).</summary>
+    /// <param name="rename">The rename whose new name is the moved folder.</param>
+    private List<string> TaskFiles(TeamRename rename) => Directory.Exists(this.root)
+        ? [.. Directory.EnumerateFiles(this.root, "*.md", SearchOption.AllDirectories)
+            .Where(file => TaskLayout.AffectsTasks(this.root, file) && !string.Equals(this.TeamOf(file), rename.NewName, StringComparison.OrdinalIgnoreCase))]
         : [];
 
     /// <summary>The Team folder a Task file sits in.</summary>

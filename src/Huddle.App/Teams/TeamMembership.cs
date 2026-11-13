@@ -72,8 +72,11 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
                 {
                     List<string> labels = [.. identity.Teams.Select(label => string.Equals(label, oldName, StringComparison.OrdinalIgnoreCase) ? newName : label)
                         .Distinct(StringComparer.OrdinalIgnoreCase)];
-                    string text = PersonaFrontmatter.WriteListField(persona.Text, TeamsKey, labels);
-                    edits.Add(new PersonaTextEdit(persona.Name, persona.Text, text));
+                    if (!labels.SequenceEqual(identity.Teams, StringComparer.Ordinal))
+                    {
+                        string text = PersonaFrontmatter.WriteListField(persona.Text, TeamsKey, labels);
+                        edits.Add(new PersonaTextEdit(persona.Name, persona.Text, text));
+                    }
                 }
             }
 

@@ -1,7 +1,9 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.SecondBrain;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Teams;
@@ -27,7 +29,8 @@ internal sealed class TeamRenameService(
     TeamRoomReconciler reconciler,
     IEnumerable<ITeamRenameRewrite> rewrites,
     TeamOperationGate gate,
-    ILogger<TeamRenameService> logger)
+    ILogger<TeamRenameService> logger,
+    IFeedPublisher? feed = null)
 {
     /// <summary>The prefix of the temporary folder a case-only rename passes through; it is not an archive dot prefix.</summary>
     internal const string RenamingPrefix = ".huddle-renaming-";
@@ -75,9 +78,10 @@ internal sealed class TeamRenameService(
         using IDisposable entered = await gate.EnterAsync(ct).ConfigureAwait(false);
         foreach (TeamRename row in renames.Pending().Where(static r => r.Kind == TeamRenameKind.Team).OrderBy(static r => r.Id))
         {
-            List<IDisposable> pauses = this.PauseWrites(row);
+            List<IDisposable> pauses = [];
             try
             {
+                this.PauseWrites(row, pauses);
                 await this.RecoverRowAsync(row, ct).ConfigureAwait(false);
             }
             finally
@@ -107,6 +111,29 @@ internal sealed class TeamRenameService(
         }
 
         logger.LogWarning("Recovering the rename of {Team} to {NewName} left it Pending: {Problem}", row.OldName, row.NewName, failure);
+        this.NotifyUnfinished(row, failure);
+    }
+
+    /// <summary>Posts the one Feed Notification (§5.4) that a rename from step 5 on did not finish.</summary>
+    /// <param name="row">The Pending row.</param>
+    /// <param name="problem">What failed; a trailing "Huddle will finish it at the next start." is not repeated.</param>
+    private void NotifyUnfinished(TeamRename row, string problem)
+    {
+        if (feed is null)
+        {
+            return;
+        }
+
+        string what = problem.Replace(" Huddle will finish it at the next start.", string.Empty, StringComparison.Ordinal).TrimEnd('.', ' ');
+        string text = $"Renaming {row.OldName} to {row.NewName} did not finish: {what}. Huddle will try again at the next start.";
+        try
+        {
+            feed.Post(new FeedMessage(FeedSourceType.TeamArchived, "team-rename:" + row.NewName, FeedActor.Huddle, true, new TeamArchivedPayload(row.NewName, text)));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            logger.LogWarning(ex, "The Feed Notification for the unfinished rename of {Team} could not be posted.", row.OldName);
+        }
     }
 
     /// <summary>Reads the folders and finishes the move that a crash cut short.</summary>
@@ -117,11 +144,12 @@ internal sealed class TeamRenameService(
     {
         string teamsRoot = this.RootPath(LibraryRootKind.Teams);
         string archiveRoot = this.RootPath(LibraryRootKind.Archive);
-        List<string> entries = [.. files.ListEntries(teamsRoot)];
-        string temp = RenamingPrefix + row.NewName;
-        string? tempOnDisk = entries.FirstOrDefault(e => string.Equals(e, temp, StringComparison.OrdinalIgnoreCase));
-        bool oldThere = entries.Contains(row.OldName, StringComparer.Ordinal);
-        bool newThere = entries.Contains(row.NewName, StringComparer.Ordinal);
+        bool caseOnly = CaseOnly(row.OldName, row.NewName);
+        string? tempOnDisk = this.Spelling(teamsRoot, RenamingPrefix + row.NewName);
+        string? newSpelling = this.Spelling(teamsRoot, row.NewName);
+        bool newRespelled = newSpelling is not null && string.Equals(newSpelling, row.NewName, StringComparison.Ordinal);
+        bool newThere = newSpelling is not null && (!caseOnly || newRespelled);
+        bool oldThere = caseOnly ? newSpelling is not null && !newRespelled : this.Spelling(teamsRoot, row.OldName) is not null;
         neverMoved = oldThere && tempOnDisk is null && !newThere;
         if (neverMoved)
         {
@@ -133,17 +161,28 @@ internal sealed class TeamRenameService(
             return $"Neither {row.OldName} nor {row.NewName} has a folder to finish.";
         }
 
-        bool caseOnly = CaseOnly(row.OldName, row.NewName);
         return folders.RunExclusive(() =>
         {
             string? failure = tempOnDisk is null
                 ? null
                 : this.MoveOne(teamsRoot, tempOnDisk, row.NewName, false, "The Team folder");
-            bool archivedOld = files.ListEntries(archiveRoot).Contains(row.OldName, StringComparer.Ordinal);
-            return failure is not null || !archivedOld
-                ? failure
-                : this.MoveOne(archiveRoot, row.OldName, row.NewName, caseOnly, "The archived folder");
+            return failure ?? this.FinishArchivedMove(archiveRoot, row, caseOnly);
         });
+    }
+
+    /// <summary>Finishes <c>Archive/Old</c>: from the temporary folder a case-only crash left, or from the old spelling (found ignoring case).</summary>
+    private string? FinishArchivedMove(string archiveRoot, TeamRename row, bool caseOnly)
+    {
+        string? archivedTemp = this.Spelling(archiveRoot, RenamingPrefix + row.NewName);
+        if (archivedTemp is not null)
+        {
+            return this.MoveOne(archiveRoot, archivedTemp, row.NewName, false, "The archived folder");
+        }
+
+        string? archivedOld = this.Spelling(archiveRoot, row.OldName);
+        return archivedOld is null || (caseOnly && string.Equals(archivedOld, row.NewName, StringComparison.Ordinal))
+            ? null
+            : this.MoveOne(archiveRoot, archivedOld, row.NewName, caseOnly, "The archived folder");
     }
 
     private static TeamRenameOutcome Refuse(string error) => new(false, error);
@@ -156,11 +195,27 @@ internal sealed class TeamRenameService(
         bool caseOnly = CaseOnly(oldName, newName);
         long id = renames.Begin(TeamRenameKind.Team, oldName, oldName, newName);
         TeamRename row = renames.Pending().First(r => r.Id == id);
-        RenameScope scope = await this.EnterScopeAsync(row, ct).ConfigureAwait(false);
+        RenameScope scope;
+        try
+        {
+            scope = await this.EnterScopeAsync(row, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Nothing has moved yet, so the row is dropped; the scope entry released whatever it had taken.
+            renames.Discard(id);
+            throw;
+        }
+
         bool finished = false;
         try
         {
-            string? moveFailure = this.MoveFolders(oldName, newName, caseOnly);
+            string? moveFailure = this.MoveFolders(oldName, newName, caseOnly, out bool undoFailed);
+            if (undoFailed)
+            {
+                return Refuse($"{moveFailure} The Team folder could not be put back, so Huddle will finish the rename at the next start.");
+            }
+
             if (moveFailure is not null)
             {
                 renames.Discard(id);
@@ -172,6 +227,10 @@ internal sealed class TeamRenameService(
             {
                 renames.Complete(id);
                 finished = true;
+            }
+            else
+            {
+                this.NotifyUnfinished(row, error);
             }
 
             return new TeamRenameOutcome(finished, error);
@@ -219,7 +278,7 @@ internal sealed class TeamRenameService(
             {
                 membership.RenameLabel(row.OldName, row.NewName);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ChatException)
             {
                 logger.LogWarning(ex, "Rewriting the {Team} labels failed; checking and retrying.", row.OldName);
             }
@@ -297,7 +356,7 @@ internal sealed class TeamRenameService(
             return null;
         }
 
-        if (renames.IsReserved(newName))
+        if (renames.IsReserved(newName) && !string.Equals(renames.Resolve(newName), oldName, StringComparison.OrdinalIgnoreCase))
         {
             return $"The name \"{newName}\" was used by an earlier Team rename and is kept for its old links. Pick another name.";
         }
@@ -318,13 +377,29 @@ internal sealed class TeamRenameService(
     /// <summary>Step 3: the pauses (old, new and every Team a rewrite names) and the reconciler suspension.</summary>
     private async Task<RenameScope> EnterScopeAsync(TeamRename row, CancellationToken ct)
     {
-        List<IDisposable> pauses = this.PauseWrites(row);
-        IAsyncDisposable suspension = await reconciler.SuspendAsync(ct).ConfigureAwait(false);
-        return new RenameScope(pauses, suspension);
+        List<IDisposable> pauses = [];
+        try
+        {
+            this.PauseWrites(row, pauses);
+            IAsyncDisposable suspension = await reconciler.SuspendAsync(ct).ConfigureAwait(false);
+            return new RenameScope(pauses, suspension);
+        }
+        catch (Exception)
+        {
+            // Whatever was paused before the failure (a cancelled wait for the reconciler) is lifted again.
+            foreach (IDisposable pause in pauses)
+            {
+                pause.Dispose();
+            }
+
+            throw;
+        }
     }
 
     /// <summary>Pauses Task writes for the old and new names and every Team a rewrite names.</summary>
-    private List<IDisposable> PauseWrites(TeamRename row)
+    /// <param name="row">The rename.</param>
+    /// <param name="pauses">Receives each pause as it is taken, so a caller can lift them when a later one fails.</param>
+    private void PauseWrites(TeamRename row, List<IDisposable> pauses)
     {
         List<string> names = [row.OldName, row.NewName];
         foreach (ITeamRenameRewrite rewrite in this.rewriteList)
@@ -332,19 +407,21 @@ internal sealed class TeamRenameService(
             names.AddRange(rewrite.TeamsTouched(row));
         }
 
-        List<IDisposable> pauses = [];
         foreach (string name in names.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             pauses.Add(tasks.PauseWrites(name));
         }
-
-        return pauses;
     }
 
     /// <summary>Step 4: moves <c>Teams/Old</c>, then <c>Archive/Old</c> when it exists; a failure puts back what moved.</summary>
+    /// <param name="oldName">The Team's current name.</param>
+    /// <param name="newName">The new name.</param>
+    /// <param name="caseOnly">Whether only the case differs.</param>
+    /// <param name="undoFailed">Set when the Teams folder moved but could not be put back after the archived move failed.</param>
     /// <returns>The refusal sentence, or <see langword="null"/> when both moved.</returns>
-    private string? MoveFolders(string oldName, string newName, bool caseOnly)
+    private string? MoveFolders(string oldName, string newName, bool caseOnly, out bool undoFailed)
     {
+        undoFailed = false;
         string teamsRoot = this.RootPath(LibraryRootKind.Teams);
         string archiveRoot = this.RootPath(LibraryRootKind.Archive);
         string? onDisk = this.Spelling(teamsRoot, oldName);
@@ -354,7 +431,8 @@ internal sealed class TeamRenameService(
         }
 
         string? archived = this.Spelling(archiveRoot, oldName);
-        return folders.RunExclusive(() =>
+        bool stranded = false;
+        string? result = folders.RunExclusive(() =>
         {
             string? failure = this.MoveOne(teamsRoot, onDisk, newName, caseOnly, "The Team folder");
             if (failure is not null || archived is null)
@@ -365,11 +443,13 @@ internal sealed class TeamRenameService(
             failure = this.MoveOne(archiveRoot, archived, newName, caseOnly, "The archived folder");
             if (failure is not null)
             {
-                _ = this.MoveOne(teamsRoot, newName, onDisk, caseOnly, "The Team folder");
+                stranded = this.MoveOne(teamsRoot, newName, onDisk, caseOnly, "The Team folder") is not null;
             }
 
             return failure;
         });
+        undoFailed = stranded;
+        return result;
     }
 
     private string? Spelling(string parent, string name) =>
