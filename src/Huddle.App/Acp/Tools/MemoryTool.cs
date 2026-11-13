@@ -97,7 +97,7 @@ internal sealed class MemoryTool(
         string? note = null;
         if (folder is null && this.RenamedFolder(request.Folder) is { } renamed)
         {
-            string sentence = string.Create(CultureInfo.InvariantCulture, $"Team '{renamed.Old}' was renamed to '{renamed.New}'");
+            string sentence = string.Create(CultureInfo.InvariantCulture, $"{renamed.Kind} '{renamed.Old}' was renamed to '{renamed.New}'");
             if (request.Mutates)
             {
                 return string.Create(CultureInfo.InvariantCulture, $"{sentence}. Use '{renamed.New}'.");
@@ -122,7 +122,7 @@ internal sealed class MemoryTool(
     /// <summary>Maps a <c>folder</c> argument that names a Team, and a Project, by an old name onto today's names.</summary>
     /// <param name="folder">The <c>folder</c> argument.</param>
     /// <returns>The old and new Team name and the folder to retry, or <see langword="null"/> when the first segment was never renamed.</returns>
-    private (string Old, string New, string Folder)? RenamedFolder(string? folder)
+    private (string Kind, string Old, string New, string Folder)? RenamedFolder(string? folder)
     {
         if (renames is null || string.IsNullOrWhiteSpace(folder))
         {
@@ -130,20 +130,32 @@ internal sealed class MemoryTool(
         }
 
         string[] segments = folder.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length == 0 || renames.Resolve(segments[0]) is not { } today
-            || string.Equals(today, segments[0], StringComparison.OrdinalIgnoreCase))
+        if (segments.Length == 0)
         {
             return null;
         }
 
         string old = segments[0];
-        segments[0] = today;
-        if (segments.Length > 1)
+        string today = renames.Resolve(old);
+        bool teamRenamed = !string.Equals(today, old, StringComparison.OrdinalIgnoreCase);
+        string? oldProject = segments.Length > 1 ? segments[1] : null;
+        string? newProject = oldProject is null ? null : renames.ResolveProject(old, oldProject);
+        bool projectRenamed = oldProject is not null && !string.Equals(newProject, oldProject, StringComparison.OrdinalIgnoreCase);
+        if (!teamRenamed && !projectRenamed)
         {
-            segments[1] = renames.ResolveProject(old, segments[1]);
+            return null;
         }
 
-        return (old, today, string.Join('/', segments));
+        segments[0] = today;
+        if (newProject is not null)
+        {
+            segments[1] = newProject;
+        }
+
+        string retry = string.Join('/', segments);
+        return teamRenamed
+            ? ("Team", old, today, retry)
+            : ("Project", $"{old}/{oldProject}", $"{today}/{newProject}", retry);
     }
 
     /// <summary>Runs a command that names a file, after the file name and the caller's right to change the folder are checked.</summary>

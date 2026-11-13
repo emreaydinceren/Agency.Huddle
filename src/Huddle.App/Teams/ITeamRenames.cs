@@ -59,6 +59,18 @@ internal interface ITeamRenames
     /// <returns><see langword="true"/> when a rename is pending.</returns>
     bool IsPending(string team);
 
+    /// <summary>Tells whether a Project row, Pending or Done, of the Team holds the name as old or new name.</summary>
+    /// <param name="team">A Team name, possibly old.</param>
+    /// <param name="project">The Project name.</param>
+    /// <returns><see langword="true"/> when reserved.</returns>
+    bool IsProjectReserved(string team, string project);
+
+    /// <summary>Tells whether a Pending Project row of the Team holds the name as old or new name.</summary>
+    /// <param name="team">A Team name, possibly old.</param>
+    /// <param name="project">The Project name.</param>
+    /// <returns><see langword="true"/> when a rename is pending.</returns>
+    bool IsProjectPending(string team, string project);
+
     /// <summary>Lists every earlier name of today's Team, from Done Team rows, in id order.</summary>
     /// <param name="team">A Team name, normally today's.</param>
     /// <returns>The earlier names; empty when none.</returns>

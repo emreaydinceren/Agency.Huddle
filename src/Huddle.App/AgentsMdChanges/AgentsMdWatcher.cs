@@ -76,6 +76,11 @@ internal sealed class AgentsMdWatcher(
         foreach (AgentsMdFile file in AgentsMdLocator.Enumerate(teamsRoot, names))
         {
             ct.ThrowIfCancellationRequested();
+            if (renames is not null && file.Team is not null && file.Project is not null && renames.IsProjectPending(file.Team, file.Project))
+            {
+                continue;
+            }
+
             _ = enumerated.Add(file.RelativePath);
             try
             {

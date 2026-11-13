@@ -117,6 +117,12 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new LibraryResult<LibraryPath>(null, "That Team folder doesn't exist yet.");
         }
 
+        string teamName = freshTeamFolder.RelativePath.Split('/')[0];
+        if (this.renames is not null && this.renames.IsProjectReserved(teamName, project))
+        {
+            return new LibraryResult<LibraryPath>(null, ReservedProjectSentence(project));
+        }
+
         // A FILE already occupying the Project's name resolves with Role.File, not Role.ProjectFolder
         // (LibraryPathResolver classifies by what's already on disk) - accepted here too, so
         // Directory.CreateDirectory below is what refuses it (as an IOException, caught just below),
@@ -149,6 +155,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
         return new LibraryResult<LibraryPath>(created, null);
     }
+
+    /// <summary>The refusal for a Project name the rename journal holds.</summary>
+    /// <param name="project">The refused name.</param>
+    private static string ReservedProjectSentence(string project) =>
+        string.Create(CultureInfo.InvariantCulture, $"A Project named \"{project}\" was renamed in this Team, so the name is reserved.");
 
     /// <summary>Validates a new Project folder name: a valid folder name that is not the reserved Memory or Uploads folder.</summary>
     /// <param name="project">The proposed Project folder name.</param>
@@ -223,6 +234,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         if (projectProblem is not null)
         {
             return new LibraryResult<LibraryPath>(null, projectProblem);
+        }
+
+        if (this.renames is not null && this.renames.IsProjectReserved(summary.Name, project))
+        {
+            return new LibraryResult<LibraryPath>(null, ReservedProjectSentence(project));
         }
 
         if (!summary.HasFolder)

@@ -151,6 +151,22 @@ internal sealed class TeamRenameStore : ITeamRenames
     }
 
     /// <inheritdoc/>
+    public bool IsProjectReserved(string team, string project)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(project);
+        return this.HoldsProject("WHERE kind = 'Project' ", team, project);
+    }
+
+    /// <inheritdoc/>
+    public bool IsProjectPending(string team, string project)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(project);
+        return this.HoldsProject("WHERE kind = 'Project' AND state = 'Pending' ", team, project);
+    }
+
+    /// <inheritdoc/>
     public IReadOnlyList<string> EarlierNames(string team)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
@@ -175,6 +191,14 @@ internal sealed class TeamRenameStore : ITeamRenames
         }
 
         return names;
+    }
+
+    private bool HoldsProject(string where, string team, string project)
+    {
+        List<TeamRename> done = this.Read("WHERE state = 'Done' ", 0);
+        string today = ResolveTeam(done, team);
+        return this.Read(where, 0).Any(r => Holds(r, project)
+            && string.Equals(ResolveTeam(done, r.Team), today, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool Holds(TeamRename row, string name) =>

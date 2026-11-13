@@ -485,6 +485,12 @@ public sealed class TeamRenameServiceTests
         public bool IsPending(string team) => inner.IsPending(team);
 
         /// <inheritdoc />
+        public bool IsProjectReserved(string team, string project) => inner.IsProjectReserved(team, project);
+
+        /// <inheritdoc />
+        public bool IsProjectPending(string team, string project) => inner.IsProjectPending(team, project);
+
+        /// <inheritdoc />
         public IReadOnlyList<string> EarlierNames(string team) => inner.EarlierNames(team);
     }
 
