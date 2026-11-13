@@ -228,6 +228,7 @@ Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.WorkspaceRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.DocHistoryRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.LedgerRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenamer -> factory Agency.Huddle.App.Teams.ITeamRenamer
 Singleton Agency.Huddle.App.Teams.ITeamRenames -> factory Agency.Huddle.App.Teams.ITeamRenames
 Singleton Agency.Huddle.App.Teams.ProcessGateService -> Agency.Huddle.App.Teams.ProcessGateService
 Singleton Agency.Huddle.App.Teams.ProcessProvisioner -> Agency.Huddle.App.Teams.ProcessProvisioner

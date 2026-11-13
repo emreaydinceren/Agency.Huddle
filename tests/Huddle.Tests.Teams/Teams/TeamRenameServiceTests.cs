@@ -321,6 +321,77 @@ public sealed class TeamRenameServiceTests
         f.AssertUntouched();
     }
 
+    /// <summary>The UI's live check gives exactly the refusal <c>RenameTeamAsync</c> gives for each refused name (another Team in any case, bad characters, the Team's own name), and changes nothing.</summary>
+    /// <param name="newName">The refused name.</param>
+    [Theory]
+    [InlineData("sales")]
+    [InlineData("SALES")]
+    [InlineData("_Growth")]
+    [InlineData("Gro,wth")]
+    [InlineData(Marketing)]
+    public async Task CheckTeamName_RefusedName_SameSentenceAsRenameTeamAsync(string newName)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(new Setup(), ct);
+
+        string? check = f.Service.CheckTeamName(Marketing, newName);
+        TeamRenameOutcome outcome = await f.Service.RenameTeamAsync(Marketing, newName, ct);
+
+        Assert.False(string.IsNullOrWhiteSpace(check));
+        Assert.Equal(outcome.Error, check);
+        f.AssertUntouched();
+    }
+
+    /// <summary>The live check refuses the name of an archived Team, a name the journal holds and a leftover Task prefix row, each with the sentence the rename gives.</summary>
+    [Fact]
+    public async Task CheckTeamName_ArchivedJournalledAndPrefixNames_SameSentenceAsRenameTeamAsync()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(new Setup(), ct);
+        string legacy = Path.Combine(f.ArchiveRoot, "Legacy");
+        Directory.CreateDirectory(legacy);
+        File.WriteAllText(Path.Combine(legacy, TeamPaths.TeamFileName), "---\narchivedMembers: []\n---\n");
+        long earlier = f.Renames.Begin(TeamRenameKind.Team, "Alpha", "Alpha", "Beta");
+        f.Renames.Complete(earlier);
+        _ = f.Prefixes.PrefixFor("Ghost");
+
+        foreach (string name in new[] { "legacy", "alpha", "Ghost" })
+        {
+            string? check = f.Service.CheckTeamName(Marketing, name);
+            TeamRenameOutcome outcome = await f.Service.RenameTeamAsync(Marketing, name, ct);
+
+            Assert.False(string.IsNullOrWhiteSpace(check));
+            Assert.Equal(outcome.Error, check);
+        }
+    }
+
+    /// <summary>The live check refuses while any rename row is Pending, as the rename does.</summary>
+    [Fact]
+    public async Task CheckTeamName_AnyRowPending_Refused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(new Setup(), ct);
+        _ = f.Renames.Begin(TeamRenameKind.Team, "Alpha", "Alpha", "Beta");
+
+        string? check = f.Service.CheckTeamName(Marketing, Growth);
+        TeamRenameOutcome outcome = await f.Service.RenameTeamAsync(Marketing, Growth, ct);
+
+        Assert.False(string.IsNullOrWhiteSpace(check));
+        Assert.Equal(outcome.Error, check);
+    }
+
+    /// <summary>A fresh name and a case-only change are acceptable, so the check returns no problem.</summary>
+    [Fact]
+    public async Task CheckTeamName_FreshNameAndCaseOnly_ReturnNull()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(new Setup(), ct);
+
+        Assert.Null(f.Service.CheckTeamName(Marketing, Growth));
+        Assert.Null(f.Service.CheckTeamName(Marketing, "marketing"));
+        f.AssertUntouched();
+    }
+
     /// <summary>The source folder is in use: Renamed is false, the Error names the folder, <c>Teams/Marketing</c> is intact and the journal is empty.</summary>
     [Fact]
     public async Task RenameTeamAsync_SourceFolderInUse_RefusedAndNothingChanged()

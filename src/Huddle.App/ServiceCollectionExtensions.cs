@@ -682,6 +682,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeamRenameStore>();
         services.AddSingleton<ITeamRenames>(static sp => sp.GetRequiredService<TeamRenameStore>());
         services.AddSingleton<TeamRenameService>();
+        services.AddSingleton<ITeamRenamer>(static sp => sp.GetRequiredService<TeamRenameService>());
         services.AddSingleton<ITeamRenameRewrite, TaskFileRenameRewrite>();
         services.AddSingleton<ITeamRenameRewrite, ViewsRenameRewrite>();
         services.AddSingleton<ITeamRenameRewrite, WorkspaceRenameRewrite>();

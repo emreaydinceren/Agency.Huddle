@@ -95,6 +95,71 @@ public sealed class TeamRenameProjectTests
         Assert.Single(f.Renames.DoneAfter(0));
     }
 
+    /// <summary>The UI's live check gives exactly the refusal <c>RenameProjectAsync</c> gives for a live Project of the Team (any case), an archived one, a reserved name, a reserved folder name or an underscore.</summary>
+    /// <param name="newName">The refused name.</param>
+    [Theory]
+    [InlineData("Beta")]
+    [InlineData("bETA")]
+    [InlineData("Old")]
+    [InlineData("old")]
+    [InlineData("Gone")]
+    [InlineData("memory")]
+    [InlineData("_hidden")]
+    [InlineData(Launch)]
+    public async Task CheckProjectName_RefusedName_SameSentenceAsRenameProjectAsync(string newName)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(ct);
+        long earlier = f.Renames.Begin(TeamRenameKind.Project, Growth, "Gone", "Elsewhere");
+        f.Renames.Complete(earlier);
+
+        string? check = f.Service.CheckProjectName(Growth, Launch, newName);
+        TeamRenameOutcome outcome = await f.Service.RenameProjectAsync(Growth, Launch, newName, ct);
+
+        Assert.False(string.IsNullOrWhiteSpace(check));
+        Assert.Equal(outcome.Error, check);
+    }
+
+    /// <summary>The live check for a Project the Team does not have names the Team and the Project, as the rename does.</summary>
+    [Fact]
+    public async Task CheckProjectName_UnknownProject_SameSentenceAsRenameProjectAsync()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(ct);
+
+        string? check = f.Service.CheckProjectName(Growth, "Nowhere", Launch2027);
+        TeamRenameOutcome outcome = await f.Service.RenameProjectAsync(Growth, "Nowhere", Launch2027, ct);
+
+        Assert.Equal($"{Growth} has no Project named \"Nowhere\".", check);
+        Assert.Equal(outcome.Error, check);
+    }
+
+    /// <summary>The live check refuses while any rename row is Pending, as the rename does.</summary>
+    [Fact]
+    public async Task CheckProjectName_AnyRowPending_Refused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(ct);
+        _ = f.Renames.Begin(TeamRenameKind.Team, "Alpha", "Alpha", "Beta2");
+
+        string? check = f.Service.CheckProjectName(Growth, Launch, Launch2027);
+        TeamRenameOutcome outcome = await f.Service.RenameProjectAsync(Growth, Launch, Launch2027, ct);
+
+        Assert.False(string.IsNullOrWhiteSpace(check));
+        Assert.Equal(outcome.Error, check);
+    }
+
+    /// <summary>A fresh name and a case-only change are acceptable, so the check returns no problem.</summary>
+    [Fact]
+    public async Task CheckProjectName_FreshNameAndCaseOnly_ReturnNull()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(ct);
+
+        Assert.Null(f.Service.CheckProjectName(Growth, Launch, Launch2027));
+        Assert.Null(f.Service.CheckProjectName(Growth, Launch, "launch"));
+    }
+
     /// <summary>§5.5: Launch to launch succeeds through a temporary name, leaves no temporary folder and journals one Done row.</summary>
     [Fact]
     public async Task RenameProjectAsync_CaseOnly_SucceedsViaTempAndLeavesNoTemp()

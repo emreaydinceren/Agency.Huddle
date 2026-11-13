@@ -34,7 +34,8 @@ internal sealed partial class TeamRenameService(
     ILogger<TeamRenameService> logger,
     IFeedPublisher? feed = null,
     ChatService? chat = null,
-    IPromptSource? prompts = null)
+    IPromptSource? prompts = null,
+    TurnActivity? turnActivity = null)
 {
     /// <summary>The prefix of the temporary folder a case-only rename passes through; it is not an archive dot prefix.</summary>
     internal const string RenamingPrefix = ".huddle-renaming-";

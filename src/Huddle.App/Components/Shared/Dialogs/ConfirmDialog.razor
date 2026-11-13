@@ -1,12 +1,22 @@
 @*
     The one shared confirm (UX-026, UX-R12): the title is the caller's question ending in "?", the body one
-    sentence, then Cancel and a Filled Small button repeating the verb (Color.Error when Danger). Open it
+    sentence, then optional Points (a bold lead and its text each) for the rare confirm that must list several
+    consequences (Team Rename Spec §7), then Cancel and a Filled Small button repeating the verb (Color.Error when Danger). Open it
     through ConfirmDialogExtensions.ConfirmAsync, which supplies HuddleDialogOptions.SmallForm.
 *@
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body1">@this.Message</MudText>
+        @if (this.Points is { Count: > 0 })
+        {
+            <ul class="mt-2 mb-0 ps-5">
+                @foreach (ConfirmPoint point in this.Points)
+                {
+                    <li class="mud-typography mud-typography-body1"><strong>@point.Lead</strong>@point.Text</li>
+                }
+            </ul>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
@@ -29,6 +39,10 @@
     /// <summary>Whether the confirm destroys something, which makes the button <c>Color.Error</c>.</summary>
     [Parameter]
     public bool Danger { get; set; }
+
+    /// <summary>Optional points listed under <see cref="Message"/>, each with its lead in bold.</summary>
+    [Parameter]
+    public IReadOnlyList<ConfirmPoint>? Points { get; set; }
 
     private void Confirm() => this.Dialog?.Close(DialogResult.Ok(true));
 

@@ -392,11 +392,11 @@ public sealed class ArchiveTeamUiTests
     }
 
     /// <summary>The confirm's button with the given text.</summary>
-    private static AngleSharp.Dom.IElement DialogButton(IRenderedComponent<ContainerFragment> cut, string text) =>
+    internal static AngleSharp.Dom.IElement DialogButton(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll(".mud-dialog-actions button").Single(button => string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal));
 
     /// <summary>Renders the Details tab of Team Home with popovers and the dialog provider.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderDetails(MudBunitContext ctx) =>
+    internal static IRenderedComponent<ContainerFragment> RenderDetails(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TeamDetails>(0);
@@ -405,7 +405,7 @@ public sealed class ArchiveTeamUiTests
         });
 
     /// <summary>Renders the sidebar Teams nav.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderNav(MudBunitContext ctx, bool teamsView = false) =>
+    internal static IRenderedComponent<ContainerFragment> RenderNav(MudBunitContext ctx, bool teamsView = false) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TeamsNav>(0);
@@ -420,7 +420,7 @@ public sealed class ArchiveTeamUiTests
             .Add(x => x.Project, project));
 
     /// <summary>A context for the Details tab: a catalog holding Home, the build form stubbed, and the archive service.</summary>
-    private static MudBunitContext NewDetailsContext(RecordingArchiveService archive)
+    internal static MudBunitContext NewDetailsContext(RecordingArchiveService archive)
     {
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Home", [], ["Nova"], true)] };
         MudBunitContext ctx = UiTestHost.Create(services =>
@@ -454,7 +454,7 @@ public sealed class ArchiveTeamUiTests
     }
 
     /// <summary>A context for the sidebar Teams nav (the services TeamsNavTests registers) plus the archive service; the catalog holds one live Team.</summary>
-    private static MudBunitContext NewNavContext(RecordingArchiveService archive, FakeTeamCatalog? teams = null)
+    internal static MudBunitContext NewNavContext(RecordingArchiveService archive, FakeTeamCatalog? teams = null)
     {
         FakeTeamCatalog catalog = teams ?? new() { Teams = [new TeamSummary("Live", [], ["Nova"], true)] };
         MudBunitContext ctx = new();

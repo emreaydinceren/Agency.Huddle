@@ -54,6 +54,7 @@
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject IArchiveService Archive
+@inject ITeamRenamer Renamer
 @inject ITeamCatalog Catalog
 @inject ITeamDirectory TeamDirectory
 @inject RoomEvents Events
@@ -109,6 +110,8 @@
                             {
                                 <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">New project…</MudMenuItem>
                             }
+                            <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-team"
+                                         OnClick="@(() => this.RenameTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Rename team…</MudMenuItem>
                             <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
                                          OnClick="@(() => this.ArchiveTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Archive team…</MudMenuItem>
                         </ChildContent>
@@ -379,11 +382,15 @@
             <ChildContent>
                 @if (project is null)
                 {
+                    <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-team"
+                                 OnClick="@(() => this.RenameTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)))">Rename team…</MudMenuItem>
                     <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
                                  OnClick="@(() => this.ArchiveTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)))">Archive team…</MudMenuItem>
                 }
                 else
                 {
+                    <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-project"
+                                 OnClick="@(() => this.RenameProjectAsync(team, project, this.scopeMenuRefs.GetValueOrDefault(key)))">Rename project…</MudMenuItem>
                     <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-project"
                                  OnClick="@(() => this.ArchiveProjectAsync(team, project))">Archive project</MudMenuItem>
                 }
@@ -420,6 +427,32 @@
         else if (!string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
         {
             this.Navigation.NavigateTo(now.Url);
+        }
+    }
+
+    /// <summary>The icon of the Rename actions, the one the Team page's Rename button uses.</summary>
+    private const string RenameIcon = Icons.Material.Outlined.Edit;
+
+    /// <summary>Asks for the new name and the confirmation (see <see cref="TeamRenameActions"/>); when the address is the old Team's page, it is replaced with the new one's.</summary>
+    /// <param name="team">The Team whose menu was used.</param>
+    /// <param name="menu">That menu, closed before the name dialog opens.</param>
+    private async Task RenameTeamAsync(string team, MudMenu? menu)
+    {
+        if (await TeamRenameActions.RenameTeamAsync(this.Renamer, this.Catalog, this.Dialogs, this.Snackbar, team, menu) is { } renamed)
+        {
+            TeamRenameActions.FollowRename(this.Navigation, team, renamed);
+        }
+    }
+
+    /// <summary>Asks for the new name and the confirmation (see <see cref="TeamRenameActions"/>); when the address is the old Project's page, it is replaced with the new one's.</summary>
+    /// <param name="team">The Project's Team.</param>
+    /// <param name="project">The Project.</param>
+    /// <param name="menu">The Project row's menu, closed before the name dialog opens.</param>
+    private async Task RenameProjectAsync(string team, string project, MudMenu? menu)
+    {
+        if (await TeamRenameActions.RenameProjectAsync(this.Renamer, this.Dialogs, this.Snackbar, team, project, menu) is { } renamed)
+        {
+            TeamRenameActions.FollowRename(this.Navigation, team, team, project, renamed);
         }
     }
 
