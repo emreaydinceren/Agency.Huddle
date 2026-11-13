@@ -98,10 +98,11 @@ public sealed class AgentsMdLedgerMovePrefixTests : IDisposable
         Assert.Equal(3, Directory.GetFiles(this.LedgerDir, "*.json").Length);
     }
 
-    /// <summary>A case-only change keeps the case-folded key, so nothing moves and both spellings still find the entry.</summary>
+    /// <summary>Windows and macOS: a case-only change keeps the case-folded key, so nothing moves and both spellings still find the entry.</summary>
     [Fact]
-    public void MovePrefix_CaseOnly_IsANoOp()
+    public void MovePrefix_CaseOnly_IsANoOpWhereFileNamesIgnoreCase()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS(), "Only a case-insensitive file system folds the key, so only there is a case-only change a no-op.");
         AgentsMdLedger ledger = this.NewLedger();
         _ = this.Observed(ledger, "Growth/AGENTS.md", "One.\n");
         string[] filesBefore = [.. Directory.GetFiles(this.LedgerDir, "*.json").Order(StringComparer.Ordinal)];
@@ -112,5 +113,23 @@ public sealed class AgentsMdLedgerMovePrefixTests : IDisposable
         Assert.NotNull(ledger.FirstSightHash("Growth/AGENTS.md"));
         Assert.NotNull(ledger.FirstSightHash("growth/AGENTS.md"));
         Assert.Equal(filesBefore, filesAfter);
+    }
+
+    /// <summary>Linux: the key is the path as spelled, so a case-only change re-keys the entry; the new spelling finds it and the old one no longer does.</summary>
+    [Fact]
+    public void MovePrefix_CaseOnly_ReKeysWhereFileNamesKeepCase()
+    {
+        Assert.SkipUnless(!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS(), "Only a case-sensitive file system keys Growth and growth apart.");
+        AgentsMdLedger ledger = this.NewLedger();
+        _ = this.Observed(ledger, "Growth/AGENTS.md", "One.\n");
+        string? firstSight = ledger.FirstSightHash("Growth/AGENTS.md");
+        Assert.NotNull(firstSight);
+        int filesBefore = Directory.GetFiles(this.LedgerDir, "*.json").Length;
+
+        ledger.MovePrefix("Growth", "growth");
+
+        Assert.Equal(firstSight, ledger.FirstSightHash("growth/AGENTS.md"));
+        Assert.Null(ledger.FirstSightHash("Growth/AGENTS.md"));
+        Assert.Equal(filesBefore, Directory.GetFiles(this.LedgerDir, "*.json").Length);
     }
 }

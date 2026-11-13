@@ -62,7 +62,9 @@ internal sealed class AgentsMdLedger
 
     /// <summary>
     /// Re-keys every entry whose file lies under <paramref name="oldRelative"/> to the same path under <paramref name="newRelative"/>,
-    /// in the ledger files and in memory. A case-only change moves nothing, because the key is the hash of the case-folded path.
+    /// in the ledger files and in memory. Paths compare as the file system does (<see cref="PathContainment.Comparison"/>), as
+    /// <see cref="KeyFor"/> does: where case is folded, a case-only change keeps every key and moves nothing; where it is not,
+    /// a case-only change is a real rename and re-keys the entries.
     /// </summary>
     /// <param name="oldRelative">The old folder, relative to the Teams root, with <c>/</c> separators.</param>
     /// <param name="newRelative">The new folder.</param>
@@ -71,7 +73,7 @@ internal sealed class AgentsMdLedger
         ArgumentException.ThrowIfNullOrWhiteSpace(oldRelative);
         ArgumentException.ThrowIfNullOrWhiteSpace(newRelative);
 
-        if (string.Equals(oldRelative, newRelative, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(this.Folder))
+        if (string.Equals(oldRelative, newRelative, PathContainment.Comparison) || !Directory.Exists(this.Folder))
         {
             return;
         }
@@ -91,12 +93,19 @@ internal sealed class AgentsMdLedger
         try
         {
             AgentsMdLedgerDocument? document = JsonSerializer.Deserialize(File.ReadAllBytes(file), AgentsMdLedgerJson.Default.AgentsMdLedgerDocument);
-            if (document?.RelativePath is not { } relative || !relative.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (document?.RelativePath is not { } relative || !relative.StartsWith(prefix, PathContainment.Comparison))
             {
                 return;
             }
 
             string moved = newPrefix + relative[prefix.Length..];
+            string oldKey = Path.GetFileNameWithoutExtension(file);
+            if (string.Equals(KeyFor(moved), oldKey, StringComparison.OrdinalIgnoreCase))
+            {
+                // Same key: writing the copy and then deleting the file would delete the entry itself.
+                return;
+            }
+
             AgentsMdLedgerDocument copy = new()
             {
                 RelativePath = moved,
@@ -105,7 +114,6 @@ internal sealed class AgentsMdLedger
                 HeadText = document.HeadText,
                 Revisions = document.Revisions,
             };
-            string oldKey = Path.GetFileNameWithoutExtension(file);
             AtomicFile.WriteBytes(Path.Combine(this.Folder, KeyFor(moved) + ".json"), JsonSerializer.SerializeToUtf8Bytes(copy, AgentsMdLedgerJson.Default.AgentsMdLedgerDocument));
             File.Delete(file);
             lock (this.gate)
