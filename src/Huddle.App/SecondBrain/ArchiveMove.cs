@@ -77,7 +77,7 @@ internal static class ArchiveMove
             {
                 // An empty destination (left by hand or an earlier run) would make a whole-folder rename fail on Windows.
                 files.DeleteEmptyFolder(destination);
-                renamed = Rename(source, destination, files);
+                renamed = RenameRetrying(source, destination, files);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -285,7 +285,7 @@ internal static class ArchiveMove
         }
 
         c.Write(PlacedStep);
-        if (Rename(c.Source, c.Deleting, files) != ArchiveMoveResult.Moved)
+        if (RenameRetrying(c.Source, c.Deleting, files) != ArchiveMoveResult.Moved)
         {
             // The destination is a complete copy but the source cannot be retired: take the copy back out so nothing looks archived.
             c.Write(UnplacingStep);
@@ -316,17 +316,17 @@ internal static class ArchiveMove
         {
             if (!c.Merge)
             {
-                return Rename(c.Staging, c.Destination, c.Files);
+                return RenameRetrying(c.Staging, c.Destination, c.Files);
             }
 
-            if (Rename(c.Destination, c.Aside, c.Files) != ArchiveMoveResult.Moved)
+            if (RenameRetrying(c.Destination, c.Aside, c.Files) != ArchiveMoveResult.Moved)
             {
                 return ArchiveMoveResult.InUse;
             }
 
-            if (Rename(c.Staging, c.Destination, c.Files) != ArchiveMoveResult.Moved)
+            if (RenameRetrying(c.Staging, c.Destination, c.Files) != ArchiveMoveResult.Moved)
             {
-                _ = Rename(c.Aside, c.Destination, c.Files);
+                _ = RenameRetrying(c.Aside, c.Destination, c.Files);
                 return ArchiveMoveResult.InUse;
             }
 
@@ -381,7 +381,7 @@ internal static class ArchiveMove
         if (merge && Exists(aside, files))
         {
             files.DeleteTree(destination);
-            if (Rename(aside, destination, files) != ArchiveMoveResult.Moved)
+            if (RenameRetrying(aside, destination, files) != ArchiveMoveResult.Moved)
             {
                 throw new IOException($"{Path.GetFileName(destination)} could not be put back.");
             }
@@ -403,8 +403,31 @@ internal static class ArchiveMove
         }
     }
 
+    /// <summary>
+    /// The Team rename's folder rename: <see cref="RenameRetrying"/> that refuses a destination that already exists and writes no
+    /// journal (the <c>team_renames</c> row is the journal).
+    /// </summary>
+    /// <param name="source">The folder to rename.</param>
+    /// <param name="destination">The new path; it must not exist.</param>
+    /// <param name="files">The disk operations.</param>
+    /// <returns><see cref="ArchiveMoveResult.Moved"/>, or <see cref="ArchiveMoveResult.InUse"/> after every retry; nothing has changed then.</returns>
+    /// <exception cref="IOException">The destination already exists.</exception>
+    internal static ArchiveMoveResult Rename(string source, string destination, IArchiveFileSystem files)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(files);
+
+        if (Exists(destination, files))
+        {
+            throw new IOException($"'{destination}' already exists.");
+        }
+
+        return RenameRetrying(source, destination, files);
+    }
+
     /// <summary>One rename, retried with a growing wait while the answer is <see cref="ArchiveMoveResult.InUse"/>.</summary>
-    private static ArchiveMoveResult Rename(string source, string destination, IArchiveFileSystem files)
+    private static ArchiveMoveResult RenameRetrying(string source, string destination, IArchiveFileSystem files)
     {
         for (int attempt = 1; ; attempt++)
         {

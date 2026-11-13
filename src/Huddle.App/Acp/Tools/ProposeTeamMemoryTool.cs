@@ -23,6 +23,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="budget">Tells whether the Helper is paused for today.</param>
 /// <param name="prompts">Renders the description and every reply.</param>
 /// <param name="options">Supplies the size caps and whether Adapters are on.</param>
+/// <param name="renames">Names today's Team when the call carries the old name of a renamed one; optional.</param>
 internal sealed class ProposeTeamMemoryTool(
     string personaName,
     TeamMemoryAccess access,
@@ -31,7 +32,8 @@ internal sealed class ProposeTeamMemoryTool(
     HelperSettingsResolver settings,
     HelperBudget budget,
     IPromptSource prompts,
-    IOptions<TeamOptions> options) : IAppTool
+    IOptions<TeamOptions> options,
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "propose_team_memory";
@@ -73,6 +75,11 @@ internal sealed class ProposeTeamMemoryTool(
     {
         string teamArgument = Text(arguments, "team");
         TeamSummary? team = teamArgument.Length == 0 ? null : access.Find(teamArgument);
+        if (team is null && RenamedTeamRefusal.For(renames, teamArgument) is { } renamedRefusal)
+        {
+            return renamedRefusal;
+        }
+
         if (team is null || !team.HasFolder || !access.CanRead(personaName, team))
         {
             string teams = string.Join(", ", access.Readable(personaName).Select(static readable => readable.Name));

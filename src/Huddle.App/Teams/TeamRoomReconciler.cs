@@ -30,6 +30,7 @@ internal sealed partial class TeamRoomReconciler(
     private bool catalogLoaded;
     private bool disposed;
     private bool running;
+    private int holds;
     private bool dirty;
     private Task lastRun = Task.CompletedTask;
 
@@ -41,6 +42,92 @@ internal sealed partial class TeamRoomReconciler(
             lock (this.sync)
             {
                 return this.lastRun;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Waits for the run gate and holds it, so no reconcile, signal-driven or direct, creates or archives a Team Room
+    /// until the returned scope is disposed. Disposing the scope releases the gate and runs exactly one reconcile, which
+    /// has finished when the dispose completes. The hold counts like a run: a Dispose of the reconciler while it is held
+    /// leaves the gate alive until the scope ends, and a scope ended after that reconciles nothing.
+    /// </summary>
+    /// <param name="ct">Cancels the wait for the gate.</param>
+    /// <returns>The scope; disposing it more than once is harmless.</returns>
+    internal async Task<IAsyncDisposable> SuspendAsync(CancellationToken ct = default)
+    {
+        lock (this.sync)
+        {
+            ObjectDisposedException.ThrowIf(this.disposed, this);
+            this.holds++;
+        }
+
+        try
+        {
+            await this.gate.WaitAsync(ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            _ = this.EndHold(releaseGate: false);
+            throw;
+        }
+
+        return new SuspendScope(this);
+    }
+
+    /// <summary>
+    /// Ends one hold taken by <see cref="SuspendAsync"/>, releasing the gate when it was acquired, and frees the
+    /// resources when the reconciler was disposed meanwhile and nothing else still uses them.
+    /// </summary>
+    /// <param name="releaseGate">Whether the gate was acquired and must be released.</param>
+    /// <returns>True when the reconciler is still live, so the caller should reconcile.</returns>
+    private bool EndHold(bool releaseGate)
+    {
+        lock (this.sync)
+        {
+            if (releaseGate)
+            {
+                _ = this.gate.Release();
+            }
+
+            this.holds--;
+            if (!this.disposed)
+            {
+                return true;
+            }
+
+            if (!this.running && this.holds == 0)
+            {
+                this.ReleaseResources();
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>The scope <see cref="SuspendAsync"/> returns; its first dispose releases the gate and reconciles once.</summary>
+    private sealed class SuspendScope(TeamRoomReconciler owner) : IAsyncDisposable
+    {
+        private int ended;
+
+        /// <inheritdoc />
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref this.ended, 1) != 0)
+            {
+                return;
+            }
+
+            if (owner.EndHold(releaseGate: true))
+            {
+                try
+                {
+                    await owner.ReconcileAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The reconciler was disposed while this reconcile waited: nothing left to bring in line.
+                }
             }
         }
     }
@@ -97,7 +184,7 @@ internal sealed partial class TeamRoomReconciler(
             catalog.Changed -= this.OnSignal;
             events.RoomsChanged -= this.OnSignal;
             this.stopping.Stop();
-            if (!this.running)
+            if (!this.running && this.holds == 0)
             {
                 this.ReleaseResources();
             }
@@ -331,7 +418,7 @@ internal sealed partial class TeamRoomReconciler(
                 {
                     this.dirty = false;
                     this.running = false;
-                    if (this.disposed)
+                    if (this.disposed && this.holds == 0)
                     {
                         this.ReleaseResources();
                     }

@@ -47,6 +47,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
+@inject IServiceProvider Services
 @inject TabService Tabs
 @inject RightSidebarService Sidebar
 
@@ -265,6 +266,11 @@
     /// <summary>Resolves the effective View from the route's ViewId, then (Spec §13.13.3) the item route's <see cref="TaskIdText"/>, every time either changes.</summary>
     protected override async Task OnParametersSetAsync()
     {
+        if (this.RedirectRenamedRoute())
+        {
+            return;
+        }
+
         this.ResolveEffectiveViewFromRoute();
         this.ResolveItemRoute();
 
@@ -273,6 +279,57 @@
             IReadOnlyList<Room> rooms = await this.Directory.GetRoomsAsync();
             this.roomNames = rooms.ToDictionary(room => room.Id, room => room.Name, StringComparer.Ordinal);
         }
+    }
+
+    /// <summary>When a Team route names a Team or Project the catalog does not have, but the rename journal knows it under today's name, replaces the address with the new route (R11).</summary>
+    /// <returns><see langword="true"/> when the address was replaced, so the caller stops resolving with the old route values.</returns>
+    private bool RedirectRenamedRoute()
+    {
+        if (string.IsNullOrWhiteSpace(this.Team) || this.Services.GetService<ITeamRenames>() is not { } renames)
+        {
+            return false;
+        }
+
+        ITeamCatalog? catalog = this.Services.GetService<ITeamCatalog>();
+        TeamSummary? summary = catalog?.Find(this.Team);
+        string team;
+        string? project;
+        if (summary is null)
+        {
+            team = renames.Resolve(this.Team);
+            if (catalog is null || string.Equals(team, this.Team, StringComparison.Ordinal) || catalog.Find(team) is null)
+            {
+                return false;
+            }
+
+            project = this.Project is null ? null : renames.ResolveProject(this.Team, this.Project);
+        }
+        else if (this.Project is not null && !summary.Projects.Contains(this.Project, StringComparer.OrdinalIgnoreCase))
+        {
+            team = this.Team;
+            project = renames.ResolveProject(this.Team, this.Project);
+            if (string.Equals(project, this.Project, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        string route = $"/teams/{Uri.EscapeDataString(team)}";
+        if (project is not null)
+        {
+            route += $"/projects/{Uri.EscapeDataString(project)}";
+        }
+        else if (this.Navigation.Uri.Contains("/no-project/tasks/", StringComparison.OrdinalIgnoreCase))
+        {
+            route += "/no-project";
+        }
+
+        this.Navigation.NavigateTo($"{route}/tasks/{Uri.EscapeDataString(this.ViewId ?? ViewStore.AllTasksId)}", replace: true);
+        return true;
     }
 
     /// <summary>Room names by id, for the Origin field of cards and rows.</summary>

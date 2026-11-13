@@ -92,4 +92,7 @@ public enum FeedSourceType
 
     /// <summary>An Agent's Message mentioned another Agent in a Room whose Budget was spent, so the Turn was refused and waits for the Human (#428).</summary>
     RoomMentionHeld,
+
+    /// <summary>A Team rename did not finish and Huddle will try again at the next start.</summary>
+    TeamRenameStuck,
 }

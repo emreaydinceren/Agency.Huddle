@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 
@@ -14,7 +15,8 @@ namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 /// <param name="scopes">Says which files apply to the Agent.</param>
 /// <param name="source">Works out and renders what the session has not heard.</param>
 /// <param name="logger">Receives the warnings for a file that cannot be read and for a state that cannot be parsed.</param>
-internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSource source, ILogger<AgentsMdTurnHook> logger)
+/// <param name="renames">The rename journal; a heard Project <c>AGENTS.md</c> is re-keyed to the Project's new name. Optional.</param>
+internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSource source, ILogger<AgentsMdTurnHook> logger, ITeamRenames? renames = null)
     : TurnHook<IReadOnlyDictionary<string, string>>
 {
     private static readonly JsonSerializerOptions StateOptions = new()
@@ -67,7 +69,7 @@ internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSour
         }
 
         AgentsMdCollected collected = await source
-            .CollectAsync(scope, state?.Heard, turn.Scope.ReadsFiles, complete, cancellationToken)
+            .CollectAsync(scope, this.Rekeyed(state?.Heard), turn.Scope.ReadsFiles, complete, cancellationToken)
             .ConfigureAwait(false);
 
         string? block = string.IsNullOrEmpty(collected.Block) ? null : collected.Block;
@@ -86,6 +88,38 @@ internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSour
         }
 
         return Task.FromResult<string?>(Serialize(this.Parse(turn.State)?.Started, carry));
+    }
+
+    /// <summary>Moves each heard <c>&lt;Team&gt;/&lt;OldProject&gt;/AGENTS.md</c> to its Project's new name for every Done Project rename, in id order.</summary>
+    /// <param name="heard">The heard map, or null.</param>
+    private IReadOnlyDictionary<string, string>? Rekeyed(IReadOnlyDictionary<string, string>? heard)
+    {
+        if (heard is null || renames is null)
+        {
+            return heard;
+        }
+
+        Dictionary<string, string>? result = null;
+        foreach (TeamRename row in renames.DoneAfter(0))
+        {
+            if (row.Kind != TeamRenameKind.Project)
+            {
+                continue;
+            }
+
+            string team = renames.Resolve(row.Team);
+            foreach (string oldTeam in new[] { row.Team, team }.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string oldKey = $"{oldTeam}/{row.OldName}/{TeamPaths.AgentsMdFileName}";
+                result ??= new Dictionary<string, string>(heard, StringComparer.OrdinalIgnoreCase);
+                if (result.Remove(oldKey, out string? hash))
+                {
+                    result[$"{team}/{row.NewName}/{TeamPaths.AgentsMdFileName}"] = hash;
+                }
+            }
+        }
+
+        return result ?? heard;
     }
 
     private static string Serialize(IReadOnlyDictionary<string, string>? started, IReadOnlyDictionary<string, string> heard) =>

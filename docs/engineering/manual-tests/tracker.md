@@ -140,6 +140,7 @@ the per-area tables below.
 | [File Changes, Watched Folders and Memory](file-changes.md) | [below](#file-changes) |
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | [below](#team-chats) |
+| [Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks](team-rename.md) | [below](#team-rename) |
 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | [below](#uploads) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
@@ -1344,3 +1345,25 @@ AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's
 | [AGCONN-11](agent-connectors.md#agconn-11--a-connector-call-held-past-the-wait) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-12](agent-connectors.md#agconn-12--the-switch-flipped-while-a-card-is-open) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-13](agent-connectors.md#agconn-13--hostile-arguments) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
+
+## team-rename
+
+Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks — [area file](team-rename.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TEAMRENAME-01](team-rename.md#teamrename-01--the-details-tab-has-a-rename-button-and-its-name-dialog-checks-the-name-as-you-type) |  | Active |  |  |
+| [TEAMRENAME-02](team-rename.md#teamrename-02--the-confirmation-lists-what-can-go-wrong-and-cancel-changes-nothing) |  | Active |  |  |
+| [TEAMRENAME-03](team-rename.md#teamrename-03--the-rename-moves-the-folder-the-labels-and-the-rooms-and-one-team-is-left) |  | Active |  |  |
+| [TEAMRENAME-04](team-rename.md#teamrename-04--task-ids-keep-their-prefix-and-the-teams-own-tasks-gain-no-change-log-line) |  | Active |  |  |
+| [TEAMRENAME-05](team-rename.md#teamrename-05--the-team-room-gets-one-line-from-huddle-and-no-agent-takes-a-turn-because-of-it) |  | Active |  |  |
+| [TEAMRENAME-06](team-rename.md#teamrename-06--an-old-team-link-an-old-address-and-an-old-upload-open-the-new-team) |  | Active |  |  |
+| [TEAMRENAME-07](team-rename.md#teamrename-07--a-member-and-a-non-member-are-each-told-of-the-rename-once-at-their-next-turn) |  | Active |  |  |
+| [TEAMRENAME-08](team-rename.md#teamrename-08--a-taken-archived-or-earlier-name-is-refused-and-the-refusal-says-which) |  | Active |  |  |
+| [TEAMRENAME-09](team-rename.md#teamrename-09--a-case-only-rename-works-and-a-rename-back-to-the-old-name-works) |  | Active |  |  |
+| [TEAMRENAME-10](team-rename.md#teamrename-10--a-project-is-renamed-from-the-sidebar-and-no-agent-restarts) |  | Active |  |  |
+| [TEAMRENAME-11](team-rename.md#teamrename-11--a-locked-file-refuses-the-rename-and-leaves-the-team-as-it-was) |  | Active |  |  |
+| [TEAMRENAME-12](team-rename.md#teamrename-12--a-rename-that-stopped-after-the-folder-moved-is-finished-at-the-next-start) |  | Active |  |  |
+| [TEAMRENAME-13](team-rename.md#teamrename-13--a-request-filed-to-a-team-keeps-working-after-the-filers-team-is-renamed-) | 💰 | Active |  |  |
+| [TEAMRENAME-14](team-rename.md#teamrename-14--a-real-agents-read-of-the-old-name-is-forwarded-and-its-write-is-refused-and-it-learns-the-new-name-first-) | 💰 | Active |  |  |
+| [TEAMRENAME-15](team-rename.md#teamrename-15--a-real-agents-write-to-the-old-folder-is-refused-silently-and-bash-is-not-caught-) | 💰 | Active |  |  |

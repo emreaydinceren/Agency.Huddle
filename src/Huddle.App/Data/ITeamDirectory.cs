@@ -128,6 +128,25 @@ public interface ITeamDirectory
     /// <param name="ct">Cancels the read.</param>
     Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default);
 
+    /// <summary>
+    /// Moves every Room's Team Scope from <paramref name="oldName"/> to <paramref name="newName"/> (archived Rooms too) in one
+    /// transaction, and gives the Team Room the new name when it still carries the old one exactly (ADR-0011).
+    /// Idempotent: a second call moves nothing.
+    /// </summary>
+    /// <param name="oldName">The Team's old name.</param>
+    /// <param name="newName">The Team's new name.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The number of Rooms moved.</returns>
+    Task<int> RenameTeamScopeAsync(string oldName, string newName, CancellationToken ct = default);
+
+    /// <summary>Renames a Project in the Rooms of one Team; a same-named Project in another Team is untouched. Idempotent.</summary>
+    /// <param name="team">The Team whose Rooms change.</param>
+    /// <param name="oldProject">The Project's old name.</param>
+    /// <param name="newProject">The Project's new name.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The number of Rooms moved.</returns>
+    Task<int> RenameProjectScopeAsync(string team, string oldProject, string newProject, CancellationToken ct = default);
+
     Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default);
 
     Task RenameRoomAsync(string roomId, string name, CancellationToken ct = default);

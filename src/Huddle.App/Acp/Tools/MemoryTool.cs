@@ -31,6 +31,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="options">Supplies the Teams root and the size cap.</param>
 /// <param name="warnings">Warns once about a memory file with malformed frontmatter when the tool lists or describes it.</param>
 /// <param name="logger">Records each mutation, and each refusal that points at a boundary.</param>
+/// <param name="renames">Resolves a Team's old name in a <c>folder</c> argument to today's; optional.</param>
 internal sealed class MemoryTool(
     string personaName,
     AgentPaths agentPaths,
@@ -40,7 +41,8 @@ internal sealed class MemoryTool(
     IPromptSource prompts,
     IOptions<TeamOptions> options,
     MemoryWarnings warnings,
-    ILogger<MemoryTool> logger) : IAppTool
+    ILogger<MemoryTool> logger,
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";
@@ -92,18 +94,73 @@ internal sealed class MemoryTool(
         }
 
         MemoryFolder? folder = this.paths.ResolveFolder(personaName, request.Folder);
+        string? note = null;
+        if (folder is null && this.RenamedFolder(request.Folder) is { } renamed)
+        {
+            string sentence = string.Create(CultureInfo.InvariantCulture, $"{renamed.Kind} '{renamed.Old}' was renamed to '{renamed.New}'");
+            if (request.Mutates)
+            {
+                return string.Create(CultureInfo.InvariantCulture, $"{sentence}. Use '{renamed.New}'.");
+            }
+
+            folder = this.paths.ResolveFolder(personaName, renamed.Folder);
+            note = folder is null ? null : sentence + ".\n";
+        }
+
         if (folder is null)
         {
             logger.LogWarning("Refused a memory call from '{Caller}': '{Folder}' is not a folder it may use.", personaName, request.Folder);
             return this.Say("systemPrompt.memoryBadFolder", ("folder", request.Folder ?? string.Empty), ("folders", string.Join(", ", this.UsableFolders())));
         }
 
-        if (request.Command == "list")
+        string result = request.Command == "list"
+            ? this.List(folder)
+            : await this.RunFileCommandAsync(request, folder, cancellationToken).ConfigureAwait(false);
+        return note is null ? result : note + result;
+    }
+
+    /// <summary>Maps a <c>folder</c> argument that names a Team, and a Project, by an old name onto today's names.</summary>
+    /// <param name="folder">The <c>folder</c> argument.</param>
+    /// <returns>The old and new Team name and the folder to retry, or <see langword="null"/> when the first segment was never renamed.</returns>
+    private (string Kind, string Old, string New, string Folder)? RenamedFolder(string? folder)
+    {
+        if (renames is null || string.IsNullOrWhiteSpace(folder))
         {
-            return this.List(folder);
+            return null;
         }
 
-        return await this.RunFileCommandAsync(request, folder, cancellationToken).ConfigureAwait(false);
+        string[] segments = folder.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            return null;
+        }
+
+        if (segments.Take(2).Any(string.IsNullOrWhiteSpace))
+        {
+            return null;
+        }
+
+        string old = segments[0];
+        string today = renames.Resolve(old);
+        bool teamRenamed = !string.Equals(today, old, StringComparison.OrdinalIgnoreCase);
+        string? oldProject = segments.Length > 1 ? segments[1] : null;
+        string? newProject = oldProject is null ? null : renames.ResolveProject(old, oldProject);
+        bool projectRenamed = oldProject is not null && !string.Equals(newProject, oldProject, StringComparison.OrdinalIgnoreCase);
+        if (!teamRenamed && !projectRenamed)
+        {
+            return null;
+        }
+
+        segments[0] = today;
+        if (newProject is not null)
+        {
+            segments[1] = newProject;
+        }
+
+        string retry = string.Join('/', segments);
+        return teamRenamed
+            ? ("Team", old, today, retry)
+            : ("Project", $"{old}/{oldProject}", $"{today}/{newProject}", retry);
     }
 
     /// <summary>Runs a command that names a file, after the file name and the caller's right to change the folder are checked.</summary>

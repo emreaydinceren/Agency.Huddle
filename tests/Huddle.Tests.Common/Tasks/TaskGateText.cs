@@ -27,7 +27,7 @@ internal static class TaskGateText
         $"---\nteamType: 'web@1.2.0'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n";
 
     /// <summary>Builds a gate service for Team Platform whose <c>_team.md</c> is <paramref name="teamFileText"/>, or has no settings when null.</summary>
-    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText)
+    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText, ITeamRenames? renames = null)
     {
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
@@ -48,6 +48,6 @@ internal static class TaskGateText
             ["web/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
-        return new ProcessGateService(catalog, folders, types);
+        return new ProcessGateService(catalog, folders, types, null, renames);
     }
 }

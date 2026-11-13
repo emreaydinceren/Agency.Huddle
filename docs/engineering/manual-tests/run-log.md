@@ -6704,3 +6704,110 @@ File: [`docs/engineering/manual-tests/agent-connectors.md`](agent-connectors.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | Pass | `bca0f249` | #357 | By an agent acting as the Human, on Sonnet at low Effort. On the stand-in `claude_ai_probe`. Markup, `**bold**` and a `javascript:` link showed as plain text, short fields were all shown, and a 6000-character body was cut with a count. Bidi was not tested: the model dropped the character. An earlier apparent hang was most likely a stale binary. |
+
+## Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks
+
+### TEAMRENAME-01 — The Details tab has a Rename button, and its name dialog checks the name as you type
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-01--the-details-tab-has-a-rename-button-and-its-name-dialog-checks-the-name-as-you-type)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-02 — The confirmation lists what can go wrong, and Cancel changes nothing
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-02--the-confirmation-lists-what-can-go-wrong-and-cancel-changes-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-03 — The rename moves the folder, the labels and the Rooms, and one Team is left
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-03--the-rename-moves-the-folder-the-labels-and-the-rooms-and-one-team-is-left)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-04 — Task ids keep their prefix and the Team's own Tasks gain no Change log line
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-04--task-ids-keep-their-prefix-and-the-teams-own-tasks-gain-no-change-log-line)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-05 — The Team Room gets one line from Huddle, and no Agent takes a Turn because of it
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-05--the-team-room-gets-one-line-from-huddle-and-no-agent-takes-a-turn-because-of-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-06 — An old Team link, an old address and an old upload open the new Team
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-06--an-old-team-link-an-old-address-and-an-old-upload-open-the-new-team)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-07 — A member and a non-member are each told of the rename once, at their next Turn
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-07--a-member-and-a-non-member-are-each-told-of-the-rename-once-at-their-next-turn)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-08 — A taken, archived or earlier name is refused, and the refusal says which
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-08--a-taken-archived-or-earlier-name-is-refused-and-the-refusal-says-which)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-09 — A case-only rename works, and a rename back to the old name works
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-09--a-case-only-rename-works-and-a-rename-back-to-the-old-name-works)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-10 — A Project is renamed from the sidebar, and no Agent restarts
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-10--a-project-is-renamed-from-the-sidebar-and-no-agent-restarts)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-11 — A locked file refuses the rename and leaves the Team as it was
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-11--a-locked-file-refuses-the-rename-and-leaves-the-team-as-it-was)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-12 — A rename that stopped after the folder moved is finished at the next start
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-12--a-rename-that-stopped-after-the-folder-moved-is-finished-at-the-next-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-13 — A Request filed to a Team keeps working after the filer's Team is renamed 💰
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-13--a-request-filed-to-a-team-keeps-working-after-the-filers-team-is-renamed-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-14 — A real Agent's read of the old name is forwarded and its write is refused, and it learns the new name first 💰
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-14--a-real-agents-read-of-the-old-name-is-forwarded-and-its-write-is-refused-and-it-learns-the-new-name-first-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TEAMRENAME-15 — A real Agent's Write to the old folder is refused silently, and Bash is not caught 💰
+
+File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename-15--a-real-agents-write-to-the-old-folder-is-refused-silently-and-bash-is-not-caught-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |

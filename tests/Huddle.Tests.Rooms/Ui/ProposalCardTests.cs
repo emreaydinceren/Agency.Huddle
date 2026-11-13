@@ -572,6 +572,18 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<int> RenameTeamScopeAsync(string oldName, string newName, CancellationToken ct = default)
+        {
+            return inner.RenameTeamScopeAsync(oldName, newName, ct);
+        }
+
+        /// <inheritdoc />
+        public Task<int> RenameProjectScopeAsync(string team, string oldProject, string newProject, CancellationToken ct = default)
+        {
+            return inner.RenameProjectScopeAsync(team, oldProject, newProject, ct);
+        }
+
+        /// <inheritdoc />
         public Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
         {
             return inner.AddMemberAsync(roomId, userId, ct);

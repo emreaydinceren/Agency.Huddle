@@ -249,6 +249,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.
 - [Chat uploads](manual-tests/uploads.md): the paperclip, paste and drop in the composer, the chips, the Message's path lines, the Library's Uploads root and Room delete.
 - [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
+- [Team rename](manual-tests/team-rename.md): renaming a Team or a Project: the name dialog, the confirmation, the folder and Rooms, old links, the Agent notice, case-only, refusals, recovery from a stopped rename, and the paid checks of V-1 and V-2.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
 - [Agent card](manual-tests/agent-profile-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.

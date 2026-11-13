@@ -92,6 +92,32 @@ public sealed class CadenceStateStore
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// Moves a Team's stored state to its new name, replacing any leftover row under the new name. A no-op when the old
+    /// name has no row, so a replayed rename is safe.
+    /// </summary>
+    /// <param name="oldName">The Team's old name.</param>
+    /// <param name="newName">The Team's new name.</param>
+    public void Rename(string oldName, string newName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            DELETE FROM cadence_state
+            WHERE team = $new AND $old <> $new COLLATE NOCASE AND EXISTS (SELECT 1 FROM cadence_state WHERE team = $old);
+            UPDATE cadence_state SET team = $new WHERE team = $old;
+            """;
+        _ = command.Parameters.AddWithValue("$old", oldName);
+        _ = command.Parameters.AddWithValue("$new", newName);
+        _ = command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
     private static object FormatTime(DateTimeOffset? time) =>
         time is { } value ? value.UtcDateTime.ToString("O", CultureInfo.InvariantCulture) : DBNull.Value;
 

@@ -1,6 +1,8 @@
 using System.Globalization;
 
+#pragma warning disable CA1716 // The namespace follows the Components/Shared folder (dotnet_style_namespace_match_folder); ConfirmDialog's Points parameter makes ConfirmPoint public, and nothing outside this assembly consumes it.
 namespace Agency.Huddle.App.Components.Shared.Dialogs;
+#pragma warning restore CA1716
 
 /// <summary>Words shared by the confirms (design-system "Confirming"): the one quoting style, so the shared confirm and <c>InlineConfirm</c> read alike.</summary>
 internal static class ConfirmCopy

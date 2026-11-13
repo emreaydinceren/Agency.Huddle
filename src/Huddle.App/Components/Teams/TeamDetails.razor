@@ -5,6 +5,7 @@
 @inject IArchiveService Archive
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
+@inject ITeamRenamer Renamer
 @inject NavigationManager Navigation
 
 @*
@@ -22,11 +23,23 @@
 
 @* Archive (Spec 6.9, D-46, T16): asks first, then the service moves the Team out of the Boards and the sidebar. *@
 <div class="team-details-archive-row">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
+               Class="team-details-rename" OnClick="this.RenameAsync">Rename</MudButton>
     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
                Class="team-details-archive" OnClick="this.ArchiveAsync">Archive</MudButton>
 </div>
 
 @code {
+    /// <summary>Asks for the new name and the confirmation (see <see cref="TeamRenameActions"/>), then follows the renamed Team to its page, on the same tab.</summary>
+    private async Task RenameAsync()
+    {
+        string old = this.Team;
+        if (await TeamRenameActions.RenameTeamAsync(this.Renamer, this.Catalog, this.Dialogs, this.Snackbar, old) is { } renamed)
+        {
+            TeamRenameActions.FollowRename(this.Navigation, old, renamed);
+        }
+    }
+
     /// <summary>Asks T16's question with the counts and the Agents left without a Team, then archives the Team once on Archive.</summary>
     private async Task ArchiveAsync()
     {

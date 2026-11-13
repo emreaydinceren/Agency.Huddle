@@ -27,16 +27,16 @@ public sealed class AgentsMdRegistrationTests
         Assert.NotNull(services.GetService<AgentsMdScopes>());
     }
 
-    /// <summary>The supervisor the real container builds plans a pipeline whose first hook is AGENTS.md, so the hook is wired, not just registered.</summary>
+    /// <summary>The supervisor the real container builds plans a pipeline whose first hook is Team Renamed and whose second is AGENTS.md, so the hooks are wired, not just registered.</summary>
     [Fact]
-    public async Task Container_SupervisorBuildsAPipelineWithAgentsMdFirst()
+    public async Task Container_SupervisorBuildsAPipelineWithTeamRenamedFirstThenAgentsMd()
     {
         await using TeamWebApplicationFactory factory = new();
         PersonaSupervisor supervisor = factory.Services.GetRequiredService<PersonaSupervisor>();
 
         PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", "---\nname: 'Vera'\n---\nYou help."));
 
-        Assert.Equal("AgentsMd", plan.Hooks.HookNames[0]);
+        Assert.Equal(["TeamRenamed", "AgentsMd"], plan.Hooks.HookNames.Take(2));
     }
 
     /// <summary>The supervisor's File Changes hook is built with the AGENTS.md scopes: an in-scope AGENTS.md change is left out of File Changes through the real provider.</summary>

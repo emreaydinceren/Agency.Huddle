@@ -14,6 +14,7 @@ internal static class PermissionGuardList
     /// <param name="settings">Refuses a write to the Agent's local settings file and the merge gate hook (issue #432).</param>
     /// <param name="protectedDirectory">Refuses a write into the Agent's own configuration directory; <see langword="null"/> when it cannot be resolved.</param>
     /// <param name="mergeGate">Asks the Team's gate about <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
+    /// <param name="renamedFolder">Refuses a write under a renamed Team's old folder, consulted after Team Memory; <see langword="null"/> when no rename journal is registered.</param>
     /// <returns>The guards, in the order the handler consults them.</returns>
     public static IReadOnlyList<IToolCallGuard> InOrder(
         AgentsMdGuard agentsMd,
@@ -22,7 +23,8 @@ internal static class PermissionGuardList
         PromptsRootGuard prompts,
         AgentSettingsGuard? settings = null,
         ProtectedDirectoryGuard? protectedDirectory = null,
-        MergeGateGuard? mergeGate = null)
+        MergeGateGuard? mergeGate = null,
+        RenamedFolderGuard? renamedFolder = null)
     {
         ArgumentNullException.ThrowIfNull(agentsMd);
         ArgumentNullException.ThrowIfNull(teamMemory);
@@ -35,6 +37,7 @@ internal static class PermissionGuardList
         guards.Add(raw);
         guards.Add(prompts);
         guards.Add(teamMemory);
+        AddIfPresent(guards, renamedFolder);
         AddIfPresent(guards, settings);
         AddIfPresent(guards, mergeGate);
         return guards;

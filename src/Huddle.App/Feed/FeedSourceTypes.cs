@@ -39,6 +39,7 @@ internal static class FeedSourceTypes
         FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         FeedSourceType.AgentConnectorsChanged => "agent-connectors-changed",
         FeedSourceType.RoomMentionHeld => "room-mention-held",
+        FeedSourceType.TeamRenameStuck => "team-rename-stuck",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

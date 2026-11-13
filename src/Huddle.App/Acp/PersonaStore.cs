@@ -471,6 +471,79 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
+    /// Replaces the text of several Personas in one call: every candidate is validated first, so one
+    /// invalid text refuses the whole batch before any write; the files are then written atomically and
+    /// <see cref="PersonasChanged"/> is raised once. Model, Effort and Work Mode are untouched. An edit
+    /// whose file no longer holds its expected text (or has vanished) is skipped, never overwritten.
+    /// </summary>
+    /// <param name="edits">The edits to apply.</param>
+    /// <returns>The Names of the edits that were skipped.</returns>
+    /// <exception cref="ChatException">A candidate would not load cleanly, or would rename its Persona.</exception>
+    internal IReadOnlyList<string> UpdateMany(IReadOnlyList<PersonaTextEdit> edits)
+    {
+        ArgumentNullException.ThrowIfNull(edits);
+
+        List<string> skipped = [];
+        (PersonaIndex Previous, PersonaIndex Updated)? change = null;
+        try
+        {
+            lock (this.writeGate)
+            {
+                List<(string Path, string NewText)> writes = this.PlanWrites(edits, skipped);
+                try
+                {
+                    foreach ((string path, string newText) in writes)
+                    {
+                        AtomicFile.WriteText(path, newText);
+                    }
+                }
+                finally
+                {
+                    // Published BEFORE writeGate is released, even after a partial failure, so the index matches the disk.
+                    if (writes.Count > 0)
+                    {
+                        change = this.PublishFreshIndex();
+                    }
+                }
+            }
+        }
+        finally
+        {
+            this.NotifyChanged(change);
+        }
+
+        return skipped;
+    }
+
+    /// <summary>Validates every edit against its file; an edit whose file changed or vanished is added to <paramref name="skipped"/>.</summary>
+    /// <param name="edits">The edits.</param>
+    /// <param name="skipped">Receives the Names of the skipped edits.</param>
+    private List<(string Path, string NewText)> PlanWrites(IReadOnlyList<PersonaTextEdit> edits, List<string> skipped)
+    {
+        List<(string Path, string NewText)> writes = [];
+        foreach (PersonaTextEdit edit in edits)
+        {
+            var current = this.index.ByName(edit.Name);
+            if (current is null || !File.Exists(current.Path)
+                || !string.Equals(File.ReadAllText(current.Path), edit.ExpectedText, StringComparison.Ordinal))
+            {
+                skipped.Add(edit.Name);
+                continue;
+            }
+
+            var entry = this.ValidateCandidate(current.Path, edit.NewText, excludingPath: current.Path);
+            if (!string.Equals(entry.Name, current.Name, StringComparison.Ordinal))
+            {
+                throw new ChatException(ErrorCodes.BadMessage, "Replacing the text must not rename the Persona.");
+            }
+
+            writes.Add((current.Path, edit.NewText));
+        }
+
+        return writes;
+    }
+
+    /// <summary>
     /// Replaces a Persona's file text only if the file still holds <paramref name="expectedText"/>,
     /// leaving its stored Model, Effort and Work Mode untouched. The compare and the write run under
     /// the same lock as <see cref="Add"/> and <see cref="Update"/>, and the write is atomic, so a

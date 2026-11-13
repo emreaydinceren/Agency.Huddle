@@ -20,6 +20,7 @@ namespace Agency.Huddle.App.References;
 /// <param name="types">The Team types, for a Team's type label.</param>
 /// <param name="library">Decides whether a Library path names an existing file.</param>
 /// <param name="options">Supplies the Tasks and Library feature flags.</param>
+/// <param name="renames">The rename journal, so a Reference naming a renamed Team by its old name still resolves.</param>
 internal sealed class ReferenceResolver(
     TaskStore tasks,
     ITaskPrefixes prefixes,
@@ -27,8 +28,10 @@ internal sealed class ReferenceResolver(
     ITeamCatalog teams,
     TeamTypeCatalog types,
     ILibraryReferenceResolver library,
-    IOptions<TeamOptions> options)
+    IOptions<TeamOptions> options,
+    ITeamRenames? renames = null)
 {
+
     /// <summary>Resolves candidates in order. A Task or file candidate whose feature is disabled yields nothing, not a gone reference.</summary>
     /// <param name="candidates">What the scanner found.</param>
     /// <param name="ct">Cancels the Room and Team Room lookups.</param>
@@ -160,6 +163,12 @@ internal sealed class ReferenceResolver(
     private async Task<ResolvedReference> ResolveTeamAsync(string key, CancellationToken ct)
     {
         TeamSummary? team = teams.Find(key);
+        if (team is null && renames is not null)
+        {
+            string current = renames.Resolve(key);
+            team = string.Equals(current, key, StringComparison.Ordinal) ? null : teams.Find(current);
+        }
+
         if (team is null)
         {
             return new GoneReference(ReferenceKind.Team, key);
@@ -183,6 +192,16 @@ internal sealed class ReferenceResolver(
         }
 
         LibraryReference? reference = library.ResolvePath(key);
+        if (reference is not { Exists: true } && renames is not null)
+        {
+            string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
+            string mapped = RenamedTeamPaths.Map(teamsRoot, key, renames);
+            if (!string.Equals(mapped, key, StringComparison.Ordinal) && library.ResolvePath(mapped) is { Exists: true })
+            {
+                return new ResolvedLibraryFile(mapped, Path.GetFileName(mapped));
+            }
+        }
+
         if (reference is { Exists: true })
         {
             return new ResolvedLibraryFile(key, Path.GetFileName(key));

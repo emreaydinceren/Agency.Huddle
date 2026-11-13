@@ -18,15 +18,8 @@ internal sealed partial class ArchiveService
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(project);
 
-        await this.gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return this.MoveProject(team, project, archiving: true);
-        }
-        finally
-        {
-            _ = this.gate.Release();
-        }
+        using IDisposable entered = await this.gate.EnterAsync(ct).ConfigureAwait(false);
+        return this.MoveProject(team, project, archiving: true);
     }
 
     /// <inheritdoc />
@@ -35,15 +28,8 @@ internal sealed partial class ArchiveService
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(project);
 
-        await this.gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return this.MoveProject(team, project, archiving: false);
-        }
-        finally
-        {
-            _ = this.gate.Release();
-        }
+        using IDisposable entered = await this.gate.EnterAsync(ct).ConfigureAwait(false);
+        return this.MoveProject(team, project, archiving: false);
     }
 
     /// <inheritdoc />

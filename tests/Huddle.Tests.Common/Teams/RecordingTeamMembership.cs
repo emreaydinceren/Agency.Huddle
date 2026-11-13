@@ -35,6 +35,9 @@ internal sealed class RecordingTeamMembership : ITeamMembership
     /// <inheritdoc />
     public MembershipResult ReplaceManager(string team, string newManager) => this.Record(new MembershipCall("ReplaceManager", team, newManager));
 
+    /// <inheritdoc />
+    public void RenameLabel(string oldName, string newName) => _ = this.Record(new MembershipCall("RenameLabel", oldName, newName));
+
     private MembershipResult Record(MembershipCall call)
     {
         this.OnCall?.Invoke(call);

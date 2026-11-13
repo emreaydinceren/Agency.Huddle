@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.IO.Pipes;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Contracts;
 
@@ -77,7 +78,7 @@ public sealed class DemoAgentHost : BackgroundService
                 // following is always false: the demo echo agents hold no App Tools, so they have no
                 // mcp__team__follow_room to call and can never be following a Room.
                 if (message is MessagePosted posted
-                    && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following: false)
+                    && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following: false, fromHuddle: string.Equals(posted.Message.SenderId, KnownIds.Huddle, StringComparison.Ordinal))
                         == ReplyDecision.Reply)
                 {
                     await StreamReplyAsync(stream, posted, name, ct).ConfigureAwait(false);

@@ -17,7 +17,7 @@ public sealed class HuddleMemoryRegistrationTests
         Assert.NotNull(factory.Services.GetService<HuddleMemoryTurnHook>());
     }
 
-    /// <summary>The real container registers all three hooks as <see cref="ITurnHook"/>, so a new hook is one class and one registration.</summary>
+    /// <summary>The real container registers all four hooks as <see cref="ITurnHook"/>, so a new hook is one class and one registration.</summary>
     [Fact]
     public async Task Container_RegistersEveryTurnHook()
     {
@@ -25,7 +25,7 @@ public sealed class HuddleMemoryRegistrationTests
 
         IEnumerable<string> names = factory.Services.GetServices<ITurnHook>().Select(static hook => hook.Name).Order(StringComparer.Ordinal);
 
-        Assert.Equal(["AgentsMd", "FileChanges", "HuddleMemory"], names);
+        Assert.Equal(["AgentsMd", "FileChanges", "HuddleMemory", "TeamRenamed"], names);
     }
 
     /// <summary>The supervisor the real container builds plans a pipeline that runs AGENTS.md, then the Huddle-wide hook, so it is wired and not only registered.</summary>
@@ -37,6 +37,6 @@ public sealed class HuddleMemoryRegistrationTests
 
         PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", "---\nname: 'Vera'\n---\nYou help."));
 
-        Assert.Equal(["AgentsMd", "HuddleMemory"], plan.Hooks.HookNames.Take(2));
+        Assert.Equal(["TeamRenamed", "AgentsMd", "HuddleMemory"], plan.Hooks.HookNames.Take(3));
     }
 }

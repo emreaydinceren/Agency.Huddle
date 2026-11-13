@@ -27,6 +27,8 @@ Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.HuddleMemoryTurnHook -> Agenc
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.TeamRenamedTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.TeamRenamedTurnHook
 Singleton Agency.Huddle.App.Acp.Tools.IRequestNotifier -> Agency.Huddle.App.Acp.Tools.RequestNotifier
 Singleton Agency.Huddle.App.Acp.WorkModePolicy -> Agency.Huddle.App.Acp.WorkModePolicy
 Singleton Agency.Huddle.App.Agents.BuiltinAgentReset -> Agency.Huddle.App.Agents.BuiltinAgentReset
@@ -222,6 +224,13 @@ Singleton Agency.Huddle.App.Teams.IPersonaStartGate -> factory Agency.Huddle.App
 Singleton Agency.Huddle.App.Teams.ISkillAvailability -> factory Agency.Huddle.App.Teams.ISkillAvailability
 Singleton Agency.Huddle.App.Teams.ITeamCatalog -> factory Agency.Huddle.App.Teams.ITeamCatalog
 Singleton Agency.Huddle.App.Teams.ITeamMembership -> Agency.Huddle.App.Teams.TeamMembership
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.TaskFileRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.ViewsRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.WorkspaceRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.DocHistoryRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.LedgerRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenamer -> factory Agency.Huddle.App.Teams.ITeamRenamer
+Singleton Agency.Huddle.App.Teams.ITeamRenames -> factory Agency.Huddle.App.Teams.ITeamRenames
 Singleton Agency.Huddle.App.Teams.ProcessGateService -> Agency.Huddle.App.Teams.ProcessGateService
 Singleton Agency.Huddle.App.Teams.ProcessProvisioner -> Agency.Huddle.App.Teams.ProcessProvisioner
 Singleton Agency.Huddle.App.Teams.RecordsBundleBuilder -> Agency.Huddle.App.Teams.RecordsBundleBuilder
@@ -232,6 +241,10 @@ Singleton Agency.Huddle.App.Teams.RoleHirer -> Agency.Huddle.App.Teams.RoleHirer
 Singleton Agency.Huddle.App.Teams.TeamCatalog -> Agency.Huddle.App.Teams.TeamCatalog
 Singleton Agency.Huddle.App.Teams.TeamDuplicator -> Agency.Huddle.App.Teams.TeamDuplicator
 Singleton Agency.Huddle.App.Teams.TeamOnboarding -> Agency.Huddle.App.Teams.TeamOnboarding
+Singleton Agency.Huddle.App.Teams.TeamOperationGate -> Agency.Huddle.App.Teams.TeamOperationGate
+Singleton Agency.Huddle.App.Teams.TeamRenameService -> Agency.Huddle.App.Teams.TeamRenameService
+Singleton Agency.Huddle.App.Teams.TeamRenameStore -> Agency.Huddle.App.Teams.TeamRenameStore
+Singleton Agency.Huddle.App.Teams.TeamRoomReconciler -> Agency.Huddle.App.Teams.TeamRoomReconciler
 Singleton Agency.Huddle.App.Uploads.ChatUploadService -> Agency.Huddle.App.Uploads.ChatUploadService
 Singleton Agency.Huddle.App.Uploads.IRoomUploadFolders -> Agency.Huddle.App.Uploads.RoomUploadFolders
 Scoped Agency.Huddle.App.Uploads.PendingUploads -> Agency.Huddle.App.Uploads.PendingUploads
@@ -242,6 +255,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Tasks
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskFeedPublisher
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Helpers.HelperFeedStartup
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.NeedsYou.HeldMentions
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.TeamRenameRecoveryService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.ArchiveRecoveryService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Library.TeamFolderProvisioner
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.SkillSources.RegistryWatcher
@@ -261,7 +275,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.A
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Jobs.JobScheduler
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Acp.PersonaRenameCascade
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.NeedsYou.NeedsYouStartupScan
-Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.TeamRoomReconciler
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Teams.TeamRoomReconciler
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.HelperDispatcher
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.AgentsMdChanges.AgentsMdWatcher
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger

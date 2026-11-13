@@ -10,10 +10,12 @@
     A storage that throws or is unavailable means "start with no stored Tabs", never an error.
 *@
 @using Agency.Huddle.App.Tabs
+@using Agency.Huddle.App.Teams
 @implements IDisposable
 @inject TabService Tabs
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IServiceProvider Services
 
 @code {
     private const string StorageKey = "huddle:tabs";
@@ -29,7 +31,13 @@
         }
 
         string? stored = await BrowserStorage.TryGetAsync(this.JS, StorageKey);
-        if (this.Tabs.Restore(TabSnapshot.TryParse(stored)))
+        TabSnapshot? snapshot = TabSnapshot.TryParse(stored);
+        if (snapshot is not null && this.Services.GetService<ITeamRenames>() is { } renames)
+        {
+            snapshot = snapshot.MapTeamNames(renames);
+        }
+
+        if (this.Tabs.Restore(snapshot))
         {
             this.Tabs.Open(this.Navigation.Uri);
         }

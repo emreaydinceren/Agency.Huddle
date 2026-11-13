@@ -60,7 +60,75 @@ internal sealed class AgentsMdLedger
     /// <summary>The Helper's daily cap.</summary>
     internal HelperBudget Budget { get; }
 
-    private string Folder => Path.Combine(this.options.Value.DataDir, "agents-md-ledger");
+    /// <summary>
+    /// Re-keys every entry whose file lies under <paramref name="oldRelative"/> to the same path under <paramref name="newRelative"/>,
+    /// in the ledger files and in memory. Paths compare as the file system does (<see cref="PathContainment.Comparison"/>), as
+    /// <see cref="KeyFor"/> does: where case is folded, a case-only change keeps every key and moves nothing; where it is not,
+    /// a case-only change is a real rename and re-keys the entries.
+    /// </summary>
+    /// <param name="oldRelative">The old folder, relative to the Teams root, with <c>/</c> separators.</param>
+    /// <param name="newRelative">The new folder.</param>
+    internal void MovePrefix(string oldRelative, string newRelative)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldRelative);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newRelative);
+
+        if (string.Equals(oldRelative, newRelative, PathContainment.Comparison) || !Directory.Exists(this.Folder))
+        {
+            return;
+        }
+
+        string prefix = oldRelative.TrimEnd('/') + "/";
+        lock (this.writeGate)
+        {
+            foreach (string file in Directory.EnumerateFiles(this.Folder, "*.json").ToList())
+            {
+                this.MoveOne(file, prefix, newRelative.TrimEnd('/') + "/");
+            }
+        }
+    }
+
+    private void MoveOne(string file, string prefix, string newPrefix)
+    {
+        try
+        {
+            AgentsMdLedgerDocument? document = JsonSerializer.Deserialize(File.ReadAllBytes(file), AgentsMdLedgerJson.Default.AgentsMdLedgerDocument);
+            if (document?.RelativePath is not { } relative || !relative.StartsWith(prefix, PathContainment.Comparison))
+            {
+                return;
+            }
+
+            string moved = newPrefix + relative[prefix.Length..];
+            string oldKey = Path.GetFileNameWithoutExtension(file);
+            if (string.Equals(KeyFor(moved), oldKey, StringComparison.OrdinalIgnoreCase))
+            {
+                // Same key: writing the copy and then deleting the file would delete the entry itself.
+                return;
+            }
+
+            AgentsMdLedgerDocument copy = new()
+            {
+                RelativePath = moved,
+                FirstSightHash = document.FirstSightHash,
+                HeadHash = document.HeadHash,
+                HeadText = document.HeadText,
+                Revisions = document.Revisions,
+            };
+            AtomicFile.WriteBytes(Path.Combine(this.Folder, KeyFor(moved) + ".json"), JsonSerializer.SerializeToUtf8Bytes(copy, AgentsMdLedgerJson.Default.AgentsMdLedgerDocument));
+            File.Delete(file);
+            lock (this.gate)
+            {
+                _ = this.entries.Remove(oldKey);
+                _ = this.entries.Remove(KeyFor(moved));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            this.logger.LogWarning(ex, "Could not move the ledger file '{Path}'; it keeps its old key.", file);
+        }
+    }
+
+    private string Folder =>Path.Combine(this.options.Value.DataDir, "agents-md-ledger");
 
     /// <summary>Compares the file's current body with the head, records a first sight, and moves the pending marker. Never queues a judgement.</summary>
     /// <param name="file">The file to observe.</param>

@@ -10,7 +10,8 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="folders">Locates the Team's folder and its <c>_team.md</c>.</param>
 /// <param name="types">Confirms the Team's type exists.</param>
 /// <param name="logger">Warns once per Team about gate ids it does not know; optional.</param>
-internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folders, TeamTypeCatalog types, ILogger<ProcessGateService>? logger = null)
+/// <param name="renames">Resolves a Team's old name to today's; optional.</param>
+internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folders, TeamTypeCatalog types, ILogger<ProcessGateService>? logger = null, ITeamRenames? renames = null)
 {
     private const string VerifyCoverage = "verify";
 
@@ -155,6 +156,8 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
     private ProcessSettings? Load(string team)
     {
+        // A label written before a rename still carries the old name; resolve it so the gates never fail open.
+        team = renames?.Resolve(team) ?? team;
         if (teams.Find(team) is not { } summary || folders.ReadTeamFile(team) is not { } file)
         {
             return null;

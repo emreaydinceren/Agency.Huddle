@@ -162,8 +162,10 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
+        services.AddSingleton<TeamRenamedTurnHook>();
 
         // The pipeline sorts these by its own production order, so the order here does not matter.
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<TeamRenamedTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
     }
@@ -670,6 +672,28 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Team Rename (Spec §5): the gate shared with <see cref="ArchiveService"/>, the journal and the service. Step-6 rewrites
+    /// register as <see cref="ITeamRenameRewrite"/> (none yet) and run in registration order.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddTeamRenameServices(IServiceCollection services)
+    {
+        services.AddSingleton<TeamOperationGate>();
+        services.AddSingleton<TeamRenameStore>();
+        services.AddSingleton<ITeamRenames>(static sp => sp.GetRequiredService<TeamRenameStore>());
+        services.AddSingleton<TeamRenameService>();
+        services.AddSingleton<ITeamRenamer>(static sp => sp.GetRequiredService<TeamRenameService>());
+        services.AddSingleton<ITeamRenameRewrite, TaskFileRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, ViewsRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, WorkspaceRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, DocHistoryRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, LedgerRenameRewrite>();
+
+        // Before archive recovery: a half-renamed Team folder is finished before anything reads the Teams folder.
+        services.AddHostedService<TeamRenameRecoveryService>();
+    }
+
     /// <summary>Registers the Team folder provisioner, the Team catalog and membership, the view store and the Sprint stores.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, for chaining.</returns>
@@ -680,6 +704,7 @@ public static class ServiceCollectionExtensions
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
         // Archive recovery goes first so an interrupted archive is undone or finished before the provisioner
         // synchronises folders and the reconciler reads the catalog (corrections-12 items 4, 8, 16).
+        AddTeamRenameServices(services);
         services.AddHostedService<ArchiveRecoveryService>();
         services.AddSingleton<TeamFolderProvisioner>();
         services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
@@ -939,7 +964,8 @@ public static class ServiceCollectionExtensions
 
         // Team chats (ADR-0052): one Team Room per Team, reconciled from the catalog. Registered after
         // DataInitializer so the Team Directory exists, and after the catalog it subscribes to.
-        services.AddHostedService<Agency.Huddle.App.Teams.TeamRoomReconciler>();
+        services.AddSingleton<Agency.Huddle.App.Teams.TeamRoomReconciler>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Teams.TeamRoomReconciler>());
 
         return services;
     }

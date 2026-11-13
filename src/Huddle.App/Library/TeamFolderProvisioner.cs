@@ -43,6 +43,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     private readonly ILogger<TeamFolderProvisioner> logger;
     private readonly ITeamCatalog catalog;
     private readonly TaskStore? tasks;
+    private readonly ITeamRenames? renames;
     private bool subscribed = true;
 
     /// <param name="personas">The source of Team labels (<see cref="PersonaStore.Teams"/>) and the
@@ -55,8 +56,10 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     /// <param name="catalog">The Teams as the pages see them, read by <see cref="EnsureTeam"/> and
     /// <see cref="EnsureProjectIn"/>. It lags the disk by the Task store's ~500 ms rebuild.</param>
     /// <param name="tasks">Rebuilt as soon as <see cref="CreateTeam"/> has made a Team, so that lag cannot reach the sessions of the Agents hired into it; <see langword="null"/> leaves it to the store's watcher.</param>
-    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog, TaskStore? tasks = null)
+    /// <param name="renames">The rename journal; a label with a pending rename gets no folder. <see langword="null"/> skips none.</param>
+    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog, TaskStore? tasks = null, ITeamRenames? renames = null)
     {
+        this.renames = renames;
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -114,6 +117,12 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new LibraryResult<LibraryPath>(null, "That Team folder doesn't exist yet.");
         }
 
+        string teamName = freshTeamFolder.RelativePath.Split('/')[0];
+        if (this.renames is not null && this.renames.IsProjectReserved(teamName, project))
+        {
+            return new LibraryResult<LibraryPath>(null, ReservedProjectSentence(project));
+        }
+
         // A FILE already occupying the Project's name resolves with Role.File, not Role.ProjectFolder
         // (LibraryPathResolver classifies by what's already on disk) - accepted here too, so
         // Directory.CreateDirectory below is what refuses it (as an IOException, caught just below),
@@ -146,6 +155,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
         return new LibraryResult<LibraryPath>(created, null);
     }
+
+    /// <summary>The refusal for a Project name the rename journal holds.</summary>
+    /// <param name="project">The refused name.</param>
+    private static string ReservedProjectSentence(string project) =>
+        string.Create(CultureInfo.InvariantCulture, $"A Project named \"{project}\" was renamed in this Team, so the name is reserved.");
 
     /// <summary>Validates a new Project folder name: a valid folder name that is not the reserved Memory or Uploads folder.</summary>
     /// <param name="project">The proposed Project folder name.</param>
@@ -220,6 +234,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         if (projectProblem is not null)
         {
             return new LibraryResult<LibraryPath>(null, projectProblem);
+        }
+
+        if (this.renames is not null && this.renames.IsProjectReserved(summary.Name, project))
+        {
+            return new LibraryResult<LibraryPath>(null, ReservedProjectSentence(project));
         }
 
         if (!summary.HasFolder)
@@ -745,6 +764,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
             if (!this.LabelIsFolderName(label)
                 || Array.Exists(existing, d => string.Equals(Path.GetFileName(d), label, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (this.renames?.IsPending(label) == true)
             {
                 continue;
             }

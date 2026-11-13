@@ -657,6 +657,23 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// Pins the Team Rename notices (Team Rename Spec §6.2, tr8): a Team notice and a Project notice, as the hook adds them, lead the
+    /// Turn's text as hook blocks.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_TeamRenamedBlocks_MatchesGolden()
+    {
+        var prompts = new FakePromptSource();
+        string team = prompts.Say("turn.teamRenamed", ("oldName", "Marketing"), ("newName", "Growth"));
+        string project = prompts.Say("turn.projectRenamed", ("team", "Growth"), ("oldProject", "Launch"), ("newProject", "Launch-2027"));
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { HookBlocks = [team, project] };
+
+        var actual = TurnPromptFramer.BuildPrompt(item, prompts);
+
+        AssertMatchesGolden("turnPromptTeamRenamed.txt", actual);
+    }
+
+    /// <summary>
     /// An empty (or absent) File Changes report leaves <c>turnPromptPlain.txt</c> and
     /// <c>turnPromptCatchUp.txt</c> byte-identical to today's output: "absent means unchanged".
     /// </summary>
