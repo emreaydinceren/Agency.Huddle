@@ -506,6 +506,7 @@
    A row is one line. The label truncates with an ellipsis (its full text is the span's title), and meta such
    as a Team's member count trails it on the trailing line (Left menu) instead of wrapping the row. Where a row
    starts and where its mark sits is the grid in Left menu, not a rule here. */
+.task-view-nav .mud-nav-link,
 .mud-nav-group .mud-collapse-container .mud-nav-link {
     min-width: 0;
     min-height: var(--nav-row-height);
@@ -515,10 +516,12 @@
 }
 
 /* A row's icon is 18px; the section header's stays its own size. Both are centred in the leading slot (Left menu). */
+.task-view-nav .mud-nav-link .mud-nav-link-icon,
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
     font-size: var(--icon-size-row);
 }
 
+.task-view-nav .mud-nav-link .mud-nav-link-text,
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {
     flex: 1 1 auto;
     min-width: 0;

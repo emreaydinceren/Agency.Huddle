@@ -42,7 +42,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/ConflictChoice.cs` | Which side of a conflicting field the Human picked when resolving a `TaskResult.Conflict` (Spec §13.7). |
 | `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a new Task's edit page should start in (Spec §13.3). |
 | `Components/Tasks/TaskToolbar.razor` | The page's toolbar (Spec §13.3): the header row (counts, Group by, List | Kanban, New task) and the Filter-menu row with a `TaskFilterChip` per filter that is set. Every change is saved to the View as it is made. |
-| `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), one `MudNavGroup` titled "Tasks" between Agents and Settings. |
+| `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), listed at the root of the Tasks sidebar view, with no "Tasks" group header. |
 | `Sidebar/SidebarPanelCatalog.cs` | The Right sidebar's panel picker: for a Subject, the registered panels that apply and whose feature switch is on, in Order. Pure over the registrations and the bound options. |
 | `Sidebar/SidebarPanel.cs` | One registered panel: id, title, icon, Order, the Subject test, its component and the optional feature switch. |
 | `Components/Sidebar/` | `SidebarPanelFrame`, `PageSubjectSource`, `PageCommandHandler` and the v1 panels: `MembersPanel`, `RoomTasksPanel`, `RoomDocumentsPanel`, `OutlinePanel`, `LinkedDocumentsPanel`, `RecentEditsPanel`. |

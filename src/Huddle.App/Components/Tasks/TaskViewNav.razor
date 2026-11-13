@@ -1,6 +1,6 @@
 @*
-    Spec §13.1: the sidebar's list of Views, one MudNavGroup titled "Tasks" between the Agents
-    MudNavMenu and the settings menu in MainLayout.razor. Copies RoomList.razor's own subscribe/
+    Spec §13.1: the sidebar's list of Views, listed right at the root of the Tasks sidebar view in
+    MainLayout.razor (no "Tasks" group header: the Activity bar's Tasks button is the heading). Copies RoomList.razor's own subscribe/
     unsubscribe and DispatchAsync shape (§13.11) - ViewStore is a singleton, so an undisposed
     subscription here would throw on the next publish after this component is torn down.
 
@@ -23,7 +23,6 @@
 @if (this.Options.Value.Tasks.Enabled)
 {
     <MudNavMenu Class="task-view-nav">
-        <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
             @foreach (TaskView view in SidebarRows.Visible(this.ViewStore.Views, this.showAll, this.IsActiveView))
             {
                 <div @key="view.Id" class="hover-reveal-row"
@@ -75,13 +74,11 @@
                 }
             }
             <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" Class="nav-action-link">New view</MudNavLink>
-        </MudNavGroup>
     </MudNavMenu>
 
 }
 
 @code {
-    private bool expanded;
     private bool showAll;
     private string currentPath = string.Empty;
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
@@ -92,7 +89,6 @@
         this.ViewStore.ViewsChanged += this.OnViewsChanged;
         this.Navigation.LocationChanged += this.OnLocationChanged;
         this.currentPath = SidebarRows.CurrentPath(this.Navigation);
-        this.expanded = SidebarRows.InSection(this.currentPath, "tasks");
     }
 
     /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> and navigation.</summary>
@@ -107,13 +103,12 @@
 
     private void ToggleShowAll() => this.showAll = !this.showAll;
 
-    /// <summary>Opens the group when navigation lands inside Tasks; it never closes it.</summary>
+    /// <summary>Tracks the current path so the active View's row stays visible when the list is folded.</summary>
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.currentPath = SidebarRows.CurrentPath(this.Navigation);
-            this.expanded |= SidebarRows.InSection(this.currentPath, "tasks");
             this.StateHasChanged();
             return Task.CompletedTask;
         });
