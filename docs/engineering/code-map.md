@@ -42,7 +42,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/ConflictChoice.cs` | Which side of a conflicting field the Human picked when resolving a `TaskResult.Conflict` (Spec §13.7). |
 | `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a new Task's edit page should start in (Spec §13.3). |
 | `Components/Tasks/TaskToolbar.razor` | The page's toolbar (Spec §13.3): the header row (counts, Group by, List | Kanban, New task) and the Filter-menu row with a `TaskFilterChip` per filter that is set. Every change is saved to the View as it is made. |
-| `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), one `MudNavGroup` titled "Tasks" between Agents and Settings. |
+| `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), listed at the root of the Tasks sidebar view, with no "Tasks" group header. |
 | `Sidebar/SidebarPanelCatalog.cs` | The Right sidebar's panel picker: for a Subject, the registered panels that apply and whose feature switch is on, in Order. Pure over the registrations and the bound options. |
 | `Sidebar/SidebarPanel.cs` | One registered panel: id, title, icon, Order, the Subject test, its component and the optional feature switch. |
 | `Components/Sidebar/` | `SidebarPanelFrame`, `PageSubjectSource`, `PageCommandHandler` and the v1 panels: `MembersPanel`, `RoomTasksPanel`, `RoomDocumentsPanel`, `OutlinePanel`, `LinkedDocumentsPanel`, `RecentEditsPanel`. |
@@ -478,9 +478,9 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LayoutGuard.cs` | Validates that `Teams:Dir` and `Acp:AgentsDir` do not overlap. |
 | `Library/LibraryLocation.cs` | The public record a host passes to say which folder the explorer starts from. |
 | `Library/LibraryLinkQuery.cs` | Pure text handling for a `?library=` link and the `/library` page address it opens. |
-| `Components/Library/LibraryExplorer.razor` | The reusable control: tree + document, scoped by its `Scopes` parameter. |
+| `Components/Library/LibraryExplorer.razor` | The reusable control: tree + document, scoped by its `Scopes` parameter. `Part` mounts one half apart: `TreeOnly` in the Sidebar, `DocumentOnly` on the Library page; they talk through `Library/LibraryBrowserBridge.cs`. |
 | `Components/Library/LibraryTree.razor`, `LibraryDocument.razor`, `LibraryEditor.razor`, `BacklinksPanel.razor`, `LibraryFileOps.razor` | The explorer's parts; file operations open `RenameDialog`, `MoveDialog` and `NamePromptDialog`. |
-| `Components/Library/LibraryNavLink.razor` | The sidebar's Library link. |
+| `Components/Library/LibrarySidebarTree.razor` | The Sidebar's Library view: the explorer's tree half. |
 | `Components/Library/LibraryLinkRouter.razor` | Sends a `?library=` link to the Library page; renders nothing. |
 | `Components/Pages/Library.razor` | The `/library` page: the only Library surface, one Tab. |
 | `Components/Settings/LibraryPanel.razor` | Pinned roots editor. |

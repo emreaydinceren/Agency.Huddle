@@ -779,7 +779,6 @@ public sealed class R3TasksTests
             builder.OpenComponent<TaskViewNav>(0);
             builder.CloseComponent();
         });
-        await cut.InvokeAsync(() => cut.Find("button.mud-nav-group-header, .mud-nav-group button").ClickAsync());
 
         Assert.NotNull(cut.Find("button[aria-label='Actions for Sprint board']"));
         Assert.Empty(cut.FindAll(".hover-reveal-row .mud-tooltip-root"));

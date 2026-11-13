@@ -7,22 +7,15 @@
     (Spec §6.16) - a single, not the pair, leaves the page unscoped. When the Library is disabled
     the page shows the settled refusal instead of ever constructing an explorer.
 
-    ShowScopeRoot is false exactly when scoped: the only producer of ScopeRoot/ScopePath today is
-    LibraryNavLink.razor's own sidebar rows, each already highlighted/selected while this page is
-    open, so neither the title above the tree nor a folder row that exists only to be expanded
-    (Spec §6.16's scope top node) earns its place - LibraryTree flattens straight to that root's own
-    children instead. Unscoped (the whole Library, every root), ShowScopeRoot stays true since names
-    are the only way to tell those roots apart. The reason is the same as for a
-    scoped explorer anywhere else.
+    The page shows only the document (LibraryExplorerPart.DocumentOnly): the tree is the Sidebar's Library view
+    (LibrarySidebarTree.razor), and the two meet through LibraryBrowserBridge. A click on a file in that tree opens
+    this page's Tab on ?root=&path=, which arrives here as a changed Root/Path, so LibraryExplorer asks the open
+    document to leave and then opens the file. ShowScopeRoot is false exactly when scoped.
 
-    <LibraryExplorer /> carries @key="this.QueryKey()": a same-page navigation (the sidebar's own
-    per-root rows, LibraryNavLink.razor, each linking here with a different ?scopeRoot=) changes
-    only this routable page's query parameters, so the Router reuses the existing page instance and
-    calls SetParametersAsync again rather than remounting it - LibraryExplorer's own Scopes are only
-    ever resolved once, from OnInitialized, so without this key a second root's link would update
-    Scopes but go on showing the first root's already-resolved tree. The key doubles as the fix: a
-    differing query also tears down and remounts LibraryExplorer, so it resolves the new Scopes/
-    InitialFile fresh.
+    <LibraryExplorer /> carries @key="this.QueryKey()": only the scope is in it. A scope change is a same-page
+    navigation the Router answers by calling SetParametersAsync again, and LibraryExplorer resolves its Scopes
+    once, from OnInitialized, so the key remounts it on the new scope. The file is deliberately not in the key:
+    a remount would drop unsaved edits without asking.
 
     Named "Library" in Agency.Huddle.App.Components.Pages: distinct from the Agency.Huddle.App.Library
     namespace (no type there is named Library), so no @namespace override is needed - only fully
@@ -46,8 +39,11 @@
     }
     else
     {
-        <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
-                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" ShowTitle="false" InitialFile="@this.InitialFile()"
+        @* Only the document: the tree is the Sidebar's Library view. A new file arrives as a changed InitialFile, so the
+           open document is asked to leave first, and the key names just the scope. *@
+        <LibraryExplorer @key="@this.QueryKey()" Part="LibraryExplorerPart.DocumentOnly" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
+                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" ShowTitle="false"
+                          InitialRoot="@this.Root" InitialFile="@this.InitialFile()"
                           OnOpenFileChanged="@this.OnOpenFileChanged" />
     }
 </MudContainer>
@@ -94,8 +90,8 @@
 
     private string? InitialFile() => this.Root is not null && this.Path is not null ? this.Path : null;
 
-    /// <summary>Every query parameter that changes what <see cref="LibraryExplorer"/> shows, joined so a differing value forces the <c>@key</c> remount described above.</summary>
+    /// <summary>Every query parameter that changes what <see cref="LibraryExplorer"/> shows, joined so a differing scope forces the <c>@key</c> remount described above; the file is not part of it.</summary>
     private string QueryKey() => string.Create(
         System.Globalization.CultureInfo.InvariantCulture,
-        $"{this.Root}|{this.Path}|{this.ScopeRoot}|{this.ScopePath}");
+        $"{this.ScopeRoot}|{this.ScopePath}");
 }

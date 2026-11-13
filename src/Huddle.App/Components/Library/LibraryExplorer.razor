@@ -52,6 +52,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject LibraryFileService FileService
+@inject IServiceProvider Services
 
 <div class="library-explorer" @onfocusin="@this.OnFocusInAsync" @onmouseup="@this.OnDividerMouseUpAsync">
     @if (this.ShowScopeRoot)
@@ -74,9 +75,7 @@
     }
     else
     {
-        <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
-                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" PanelGap="1" Class="@this.SplitClass()">
-            <FirstPanel>
+        RenderFragment treePanel = @<text>
                 @* The tree is never unmounted while filtered (nothing persists its expansion): it is
                    hidden, and the results render beside it. *@
                 @* L2c: the tree panel's own header, shared by every host: search, New note, New folder, in one row that is the
@@ -128,8 +127,8 @@
                         }
                     </div>
                 }
-            </FirstPanel>
-            <SecondPanel>
+            </text>;
+        RenderFragment documentPanel = @<text>
                 @if (this.currentPath is not null)
                 {
                     <LibraryDocument @ref="this.document" Path="@this.currentPath" Scope="@this.SingleScope()" OnOpenInLibrary="@this.OnOpenInLibrary" OnNavigate="@this.OnOpenFileAsync" />
@@ -139,16 +138,36 @@
                     @* Nothing is open: say what to do rather than leave the whole pane blank. *@
                     <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.Description" Title="No note open" Text="Select a note in the tree to read it, or start a new one.">
                         <Action>
-                            @if (this.SingleScope() is not null)
+                            @if (this.SingleScope() is not null && this.Part != LibraryExplorerPart.DocumentOnly)
                             {
                                 <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote" OnClick="this.NewNoteAsync">New note</MudButton>
                             }
                         </Action>
                     </EmptyState>
                 }
+            </text>;
+        if (this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            <text>@treePanel</text>
+                <LibraryFileOps @ref="this.fileOps" Scope="@this.SingleScope()" OnChanged="@this.OnFileOpsChangedAsync" BeforeChangeAsync="@this.BeforeChangeAsync" />
+        }
+        else if (this.Part == LibraryExplorerPart.DocumentOnly)
+        {
+            <text>@documentPanel</text>
+        }
+        else
+        {
+        <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
+                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" PanelGap="1" Class="@this.SplitClass()">
+            <FirstPanel>
+                @treePanel
+            </FirstPanel>
+            <SecondPanel>
+                @documentPanel
                 <LibraryFileOps @ref="this.fileOps" Scope="@this.SingleScope()" OnChanged="@this.OnFileOpsChangedAsync" BeforeChangeAsync="@this.BeforeChangeAsync" />
             </SecondPanel>
         </MudSplitPanel>
+        }
     }
 </div>
 
@@ -169,6 +188,14 @@
     private LibraryTree? tree;
     private LibraryDocument? document;
     private MudSplitPanel? splitPanel;
+    private LibraryBrowserBridge? bridge;
+    private string? appliedInitial;
+
+    /// <summary>The Library's two halves meet here when mounted apart; a standalone explorer keeps its own, so it needs no registration.</summary>
+    private LibraryBrowserBridge Bridge => this.bridge ??= this.Services.GetService(typeof(LibraryBrowserBridge)) as LibraryBrowserBridge ?? new LibraryBrowserBridge();
+
+    /// <summary>The key of the file <see cref="InitialFile"/> and <see cref="InitialRoot"/> name, so a change shows up as a different string.</summary>
+    private string? InitialKey => this.InitialFile is null ? null : string.Create(CultureInfo.InvariantCulture, $"{this.InitialRoot}|{this.InitialFile}");
 
     /// <summary>The most hits shown across every scope (Spec §6.8).</summary>
     private const int MaxHits = 200;
@@ -221,9 +248,17 @@
     [Parameter]
     public LibraryExplorerLayout Layout { get; set; } = LibraryExplorerLayout.Stacked;
 
-    /// <summary>A file, relative to the first scope, to open on first render.</summary>
+    /// <summary>Which half this host mounts: both (the default), only the tree (the Sidebar) or only the document (the Library page). The halves meet through <see cref="LibraryBrowserBridge"/>.</summary>
+    [Parameter]
+    public LibraryExplorerPart Part { get; set; } = LibraryExplorerPart.Both;
+
+    /// <summary>A file, relative to the first scope, to open on first render. A <see cref="LibraryExplorerPart.DocumentOnly"/> explorer opens the new file whenever this changes.</summary>
     [Parameter]
     public string? InitialFile { get; set; }
+
+    /// <summary>The id of the Root <see cref="InitialFile"/> lies in, or <see langword="null"/> to try every scope in turn. Names the Root when the same relative path exists in more than one.</summary>
+    [Parameter]
+    public string? InitialRoot { get; set; }
 
     /// <summary>Keys the remembered expanded folders, open file and divider position in
     /// <c>window.huddleStorage</c> (Task 12.7b).</summary>
@@ -262,7 +297,64 @@
     protected override void OnInitialized()
     {
         this.ResolveScopes();
+        this.appliedInitial = this.InitialKey;
+        if (this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            this.currentPath = this.Bridge.OpenPath;
+            this.Bridge.OpenPathObserver = this.OnBridgeOpenPathAsync;
+        }
+        else if (this.Part == LibraryExplorerPart.DocumentOnly)
+        {
+            this.Bridge.TryLeave = this.TryLeaveDocumentAsync;
+            this.Bridge.BeforeChange = this.BeforeChangeAsync;
+            this.Bridge.ChangeObserver = this.OnBridgeChangeAsync;
+        }
+
         this.Navigation.LocationChanged += this.OnLocationChanged;
+    }
+
+    /// <summary>Asked by the tree half before it opens another file: the open document settles its unsaved edits.</summary>
+    private async Task<bool> TryLeaveDocumentAsync()
+    {
+        return this.document is null || await this.document.TryLeaveAsync();
+    }
+
+    /// <summary>The document half opened a file: the tree reveals and selects it.</summary>
+    private async Task OnBridgeOpenPathAsync(LibraryPath? path)
+    {
+        await this.InvokeAsync(() =>
+        {
+            this.currentPath = path;
+            this.revealedPath = null;
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>The tree half changed a file: the open document follows a rename or move and refreshes after a link rewrite.</summary>
+    private async Task OnBridgeChangeAsync(LibraryChange change)
+    {
+        await this.InvokeAsync(async () =>
+        {
+            await this.OnFileOpsChangedAsync(change);
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Opens the file <see cref="InitialFile"/> now names, when it changed after the explorer mounted.</summary>
+    private async Task OpenChangedInitialFileAsync()
+    {
+        string? key = this.InitialKey;
+        if (string.Equals(key, this.appliedInitial, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.appliedInitial = key;
+        if (this.ResolveInitialFile() is { } resolved
+            && (this.currentPath is null || !LibraryPathComparer.Instance.Equals(resolved, this.currentPath)))
+        {
+            await this.OnOpenFileAsync(resolved);
+        }
     }
 
     /// <summary>Searches only when the normalised <see cref="Filter"/> differs from the last one searched:
@@ -273,6 +365,11 @@
         {
             this.hostFilter = this.Filter;
             this.searchText = this.Filter;
+        }
+
+        if (this.Part == LibraryExplorerPart.DocumentOnly)
+        {
+            await this.OpenChangedInitialFileAsync();
         }
 
         await this.RunSearchAsync();
@@ -420,7 +517,11 @@
     /// <inheritdoc/>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            // The tree opens nothing itself: the document half does, and tells it through the bridge.
+        }
+        else if (firstRender)
         {
             await this.TryOpenInitialFileAsync();
             this.TryOpenFromQuery(this.Navigation.Uri);
@@ -428,11 +529,16 @@
             await this.TryOpenDefaultDocumentAsync();
         }
 
-        if (this.OnOpenFileChanged.HasDelegate && (!this.locationPublished || this.currentPath != this.publishedPath))
+        bool publishes = this.OnOpenFileChanged.HasDelegate || this.Part == LibraryExplorerPart.DocumentOnly;
+        if (publishes && (!this.locationPublished || this.currentPath != this.publishedPath))
         {
             this.locationPublished = true;
             this.publishedPath = this.currentPath;
             await this.OnOpenFileChanged.InvokeAsync(this.currentPath);
+            if (this.Part == LibraryExplorerPart.DocumentOnly)
+            {
+                await this.Bridge.PublishOpenPathAsync(this.currentPath);
+            }
         }
 
         await this.RevealOpenFileAsync();
@@ -686,13 +792,30 @@
 
     private Task TryOpenInitialFileAsync()
     {
-        if (string.IsNullOrEmpty(this.InitialFile))
+        if (this.ResolveInitialFile() is not { } resolved)
         {
             return Task.CompletedTask;
         }
 
+        this.currentPath = resolved;
+        return this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary>The existing file or folder <see cref="InitialFile"/> names in the first scope that holds it (only the scope in <see cref="InitialRoot"/> when that is set), or <see langword="null"/>.</summary>
+    private LibraryPath? ResolveInitialFile()
+    {
+        if (string.IsNullOrEmpty(this.InitialFile))
+        {
+            return null;
+        }
+
         foreach (LibraryPath scope in this.resolvedScopes)
         {
+            if (this.InitialRoot is not null && !string.Equals(scope.Root.Id, this.InitialRoot, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             string relative = scope.RelativePath.Length == 0
                 ? this.InitialFile
                 : string.Create(CultureInfo.InvariantCulture, $"{scope.RelativePath}/{this.InitialFile}");
@@ -700,12 +823,11 @@
             if (this.Resolver.TryResolve(scope.Root.Id, relative, out LibraryPath? resolved, out _)
                 && (File.Exists(resolved.FullPath) || Directory.Exists(resolved.FullPath)))
             {
-                this.currentPath = resolved;
-                return this.InvokeAsync(this.StateHasChanged);
+                return resolved;
             }
         }
 
-        return Task.CompletedTask;
+        return null;
     }
 
     /// <summary>Opens the root's own first document (<see cref="LibraryRoots.DefaultDocument"/>, SKILLS.md for the Skill
@@ -777,6 +899,12 @@
     /// H5 judgement 45), so both doors go through the same guard.</summary>
     private async Task OnOpenFileAsync(LibraryPath path)
     {
+        if (this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            await this.ShowOnLibraryPageAsync(path);
+            return;
+        }
+
         if (this.document is not null && !await this.document.TryLeaveAsync())
         {
             return;
@@ -784,6 +912,19 @@
 
         this.currentPath = path;
         await this.SaveOpenStateAsync(path);
+    }
+
+    /// <summary>The tree half's way of opening a file: the page's document settles its unsaved edits first (so the Human is asked once, before anything moves), then the Library Tab opens on the file and the page tells the tree through the bridge, which selects it.</summary>
+    private async Task ShowOnLibraryPageAsync(LibraryPath path)
+    {
+        if (!await this.Bridge.TryLeaveAsync())
+        {
+            return;
+        }
+
+        string url = LibraryLinkQuery.BuildPageUri(path);
+        _ = (this.Services.GetService(typeof(Agency.Huddle.App.Tabs.TabService)) as Agency.Huddle.App.Tabs.TabService)?.Open(url, "Library");
+        this.Navigation.NavigateTo(url);
     }
 
     /// <summary>[12.7b] Remembers the open file under <see cref="StateKey"/> (corrections-B6 item 28).</summary>
@@ -811,6 +952,11 @@
     /// containing it, this asks the document to leave first; anything else is unaffected.</summary>
     private async Task<bool> BeforeChangeAsync(LibraryPath item)
     {
+        if (this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            return await this.Bridge.CanChangeAsync(item);
+        }
+
         if (this.currentPath is null || !ContainsOrEquals(item, this.currentPath))
         {
             return true;
@@ -831,6 +977,11 @@
             this.currentPath = change.NewPath is null
                 ? null
                 : this.RepointPath(change.OldPath, change.NewPath, this.currentPath);
+            if (this.currentPath is not null)
+            {
+                // The Tab's address still names the old file, so the remembered one is what a remount reopens.
+                await this.SaveOpenStateAsync(this.currentPath);
+            }
         }
         else if (this.currentPath is not null
             && change.RewrittenNotes.Contains(this.currentPath.RelativePath, StringComparer.Ordinal))
@@ -846,6 +997,11 @@
         if (documentNeedsRefresh && this.document is not null)
         {
             await this.document.RefreshAsync();
+        }
+
+        if (this.Part == LibraryExplorerPart.TreeOnly)
+        {
+            await this.Bridge.PublishChangeAsync(change);
         }
     }
 
@@ -919,10 +1075,43 @@
         return this.Resolver.TryResolve(newPath.Root.Id, newRelative, out LibraryPath? resolved, out _) ? resolved : null;
     }
 
+    /// <summary>Unregisters this half's callbacks, unless a newer half has replaced them.</summary>
+    private void ReleaseBridge()
+    {
+        if (this.bridge is null)
+        {
+            return;
+        }
+
+        if (this.Part == LibraryExplorerPart.TreeOnly && this.bridge.OpenPathObserver == this.OnBridgeOpenPathAsync)
+        {
+            this.bridge.OpenPathObserver = null;
+        }
+        else if (this.Part == LibraryExplorerPart.DocumentOnly)
+        {
+            if (this.bridge.TryLeave == this.TryLeaveDocumentAsync)
+            {
+                this.bridge.TryLeave = null;
+                _ = this.bridge.PublishOpenPathAsync(null);
+            }
+
+            if (this.bridge.BeforeChange == this.BeforeChangeAsync)
+            {
+                this.bridge.BeforeChange = null;
+            }
+
+            if (this.bridge.ChangeObserver == this.OnBridgeChangeAsync)
+            {
+                this.bridge.ChangeObserver = null;
+            }
+        }
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
         this.Navigation.LocationChanged -= this.OnLocationChanged;
+        this.ReleaseBridge();
         this.search.Dispose();
     }
 }

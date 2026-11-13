@@ -207,21 +207,18 @@ public sealed class SidebarDensityTests
         cut.WaitForAssertion(() => Assert.Equal(10, cut.FindAll("div.hover-reveal-row").Count));
     }
 
-    /// <summary>The Tasks group starts closed away from Tasks and is open on a View's page.</summary>
+    /// <summary>The Views list at the root of the Tasks sidebar view: no "Tasks" group header, and every View row is visible without opening anything.</summary>
     [Fact]
-    public async Task TasksGroup_IsClosedByDefault_AndOpenOnAViewPage()
+    public async Task TaskViewNav_HasNoTasksGroup_AndListsViewsAtTheRoot()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        await using MudBunitContext closed = SidebarDensityTests.NewTasksContext(harness);
-        IRenderedComponent<ContainerFragment> closedCut = SidebarDensityTests.Render<TaskViewNav>(closed);
-        Assert.Equal("false", SidebarDensityTests.GroupHeader(closedCut).GetAttribute("aria-expanded"));
+        await using MudBunitContext ctx = SidebarDensityTests.NewTasksContext(harness);
 
-        await using MudBunitContext open = SidebarDensityTests.NewTasksContext(harness);
-        open.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/my-tasks");
-        IRenderedComponent<ContainerFragment> openCut = SidebarDensityTests.Render<TaskViewNav>(open);
+        IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<TaskViewNav>(ctx);
 
-        Assert.Equal("true", SidebarDensityTests.GroupHeader(openCut).GetAttribute("aria-expanded"));
+        Assert.Empty(cut.FindAll(".mud-nav-group"));
+        Assert.Equal(2, cut.FindAll("div.hover-reveal-row").Count);
     }
 
     /// <summary>More than eight Views show eight and "Show all (N)", which expands to every View.</summary>
