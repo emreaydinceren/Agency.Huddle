@@ -32,7 +32,7 @@ internal static class SeedRunner
         DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
         FeedSeeder.Write(plan, dataDir, ids, TimeProvider.System);
 
-        WriteFolders(plan, dataDir);
+        WriteFolders(plan, dataDir, ids);
         WriteAgents(plan, dataDir);
         WriteTasks(plan, dataDir, ids);
         WriteFiles(plan, dataDir);
@@ -46,9 +46,9 @@ internal static class SeedRunner
         return new SeedSummary(root, dataDir, plan, ids);
     }
 
-    private static void WriteFolders(SeedPlan plan, string dataDir)
+    private static void WriteFolders(SeedPlan plan, string dataDir, DatabaseResult ids)
     {
-        TeamFileWriter.Write(plan, dataDir);
+        TeamFileWriter.Write(plan, dataDir, ids.RoomIds);
         foreach (SeedTeam team in plan.Teams)
         {
             foreach (string project in team.Projects)

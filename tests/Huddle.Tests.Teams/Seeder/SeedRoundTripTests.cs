@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.SecondBrain;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -14,6 +15,9 @@ using Agency.Huddle.Seeder;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
+using Agency.Huddle.Tests.Feed;
+using Agency.Huddle.Tests.Library;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Seeder;
 
@@ -227,6 +231,94 @@ public sealed class SeedRoundTripTests
     }
 
     /// <summary>
+    /// SEED-SC-16, SEED-SC-17: the archive on disk is what <c>ArchiveService</c> leaves. <c>Archive/Legacy Site/_team.md</c> parses
+    /// with the roster and exactly the ids of the Team's Rooms, no manager and a colour no live Team has; no <c>Teams/Legacy Site</c>
+    /// exists; Growth's Spring Promo sits under <c>Archive/Growth/</c> with no team file there; and every archived Room is stored
+    /// archived with its Team and Project.
+    /// </summary>
+    [Fact]
+    public async Task Archive_IsWhatTheArchiveServiceLeaves()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        SeedPlan plan = seed.Summary.Plan;
+        SeedArchivedTeam legacy = Assert.Single(plan.ArchivedTeams);
+        string archive = Path.Combine(seed.DataDir, "Archive");
+
+        string text = await File.ReadAllTextAsync(Path.Combine(archive, legacy.Name, TeamPaths.TeamFileName), ct);
+        Assert.True(TeamFile.TryParse(text, out TeamFile? file));
+        Assert.Equal(legacy.Members, file.ArchivedMembers);
+        string[] roomIds = [.. plan.Rooms.Where(r => r.Team == legacy.Name).Select(r => seed.Summary.Ids.RoomIds[r.Key])];
+        Assert.Equal(roomIds.Order(StringComparer.Ordinal), file.ArchivedRooms.Order(StringComparer.Ordinal));
+        Assert.Null(file.Manager);
+        Assert.False(Directory.Exists(Path.Combine(seed.DataDir, "Teams", legacy.Name)));
+        Assert.All(legacy.Projects, p => Assert.True(Directory.Exists(Path.Combine(archive, legacy.Name, p, TeamNames.MemoryFolder))));
+        string[] liveColours = [.. plan.Teams.Select(t => TeamFile.TryParse(File.ReadAllText(Path.Combine(seed.DataDir, "Teams", t.Name, TeamPaths.TeamFileName)), out TeamFile? f) ? f.Avatar.Background ?? string.Empty : string.Empty)];
+        Assert.DoesNotContain(file.Avatar.Background, liveColours, StringComparer.OrdinalIgnoreCase);
+
+        Assert.True(Directory.Exists(Path.Combine(archive, "Growth", SoftwareCoArchive.SpringPromo)));
+        Assert.False(File.Exists(Path.Combine(archive, "Growth", TeamPaths.TeamFileName)));
+        Assert.False(Directory.Exists(Path.Combine(seed.DataDir, "Teams", "Growth", SoftwareCoArchive.SpringPromo)));
+
+        SqliteTeamDirectory directory = new(seed.Options());
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
+        foreach (SeedRoom seeded in plan.Rooms.Where(r => r.Archived && r.Team is not null))
+        {
+            Room room = Assert.Single(rooms, r => r.Id == seed.Summary.Ids.RoomIds[seeded.Key]);
+            Assert.True(room.Archived);
+            Assert.Equal(seeded.Team, room.Team);
+            Assert.Equal(seeded.Project, room.Project);
+        }
+    }
+
+    /// <summary>
+    /// SEED-SC-16, SEED-SC-17: the app's own <see cref="ArchiveService"/>, built over the seeded folder, leaves the archive alone at
+    /// start-up (<c>RecoverAsync</c>), lists Legacy Site and Spring Promo as the Archived page does, and restores both: Legacy Site's
+    /// folder returns to <c>Teams/</c>, its roster gets the label back and both its Rooms are open again; Spring Promo returns under
+    /// <c>Teams/Growth/</c>. Nothing else in the archive is left behind.
+    /// </summary>
+    [Fact]
+    public async Task Archive_RestoresThroughTheAppsArchiveService()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        SeedPlan plan = seed.Summary.Plan;
+        SeedArchivedTeam legacy = Assert.Single(plan.ArchivedTeams);
+        var options = seed.Options();
+        using LibraryFileServiceFixture library = LibraryFileServiceFixture.Attach(seed.DataDir);
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using TaskStore tasks = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+        FakeTeamCatalog catalog = new()
+        {
+            Teams = [.. plan.Teams.Select(t => new TeamSummary(t.Name, t.Projects, [.. plan.Agents.Where(a => a.Teams.Contains(t.Name, StringComparer.OrdinalIgnoreCase)).Select(a => a.Name)], HasFolder: true) { Manager = t.Manager })],
+        };
+        TeamFolderProvisioner folders = new(personas, library.RootStore, library.Resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog);
+        TeamMembership membership = new(personas, catalog, folders, new TeamTypeCatalog(options, NullLogger<TeamTypeCatalog>.Instance));
+        SqliteTeamDirectory directory = new(options);
+        using ArchiveService archive = new(library.RootStore, catalog, membership, folders, tasks, new CadenceStateStore(options), personas, directory, new PhysicalArchiveFileSystem(), new RecordingFeedPublisher(), NullLogger<ArchiveService>.Instance);
+
+        await archive.RecoverAsync(ct);
+        Assert.Equal([legacy.Name], archive.ArchivedTeams());
+        Assert.Equal([SoftwareCoArchive.SpringPromo], archive.ArchivedProjects("Growth"));
+        Assert.Equal(legacy.Projects, archive.ArchivedProjects(legacy.Name));
+
+        ArchiveOutcome team = await archive.UnarchiveTeamAsync(legacy.Name, ct);
+        ArchiveOutcome project = await archive.UnarchiveProjectAsync("Growth", SoftwareCoArchive.SpringPromo, ct);
+
+        Assert.True(team.Done, team.Refusal);
+        Assert.Empty(team.Skipped);
+        Assert.True(project.Done, project.Refusal);
+        Assert.Empty(archive.ArchivedTeams());
+        Assert.Empty(archive.ArchivedProjects("Growth"));
+        Assert.All(legacy.Projects, p => Assert.True(Directory.Exists(Path.Combine(seed.DataDir, "Teams", legacy.Name, p))));
+        Assert.True(Directory.Exists(Path.Combine(seed.DataDir, "Teams", "Growth", SoftwareCoArchive.SpringPromo)));
+        Assert.Equal(legacy.Members, plan.Agents.Where(a => personas.Get(a.Name) is { } p && PersonaFrontmatter.TryReadIdentity(p.Text, out PersonaIdentity? identity, out _) && identity.Teams.Contains(legacy.Name, StringComparer.OrdinalIgnoreCase)).Select(a => a.Name).Order(StringComparer.Ordinal));
+        IReadOnlyList<Room> rooms = await directory.GetRoomsForTeamAsync(legacy.Name, ct);
+        Assert.Equal(2, rooms.Count);
+        Assert.All(rooms, r => Assert.False(r.Archived));
+    }
+
+    /// <summary>
     /// SEED-HOME-8: Home and Family is set up as a hire from <c>household@1.1.0</c> would leave it: a typed, onboarded
     /// <c>_team.md</c> naming Hattie as manager, the type's default process prose as <c>AGENTS.md</c>, and a <c>_role</c> on every member.
     /// </summary>
@@ -287,7 +379,7 @@ public sealed class SeedRoundTripTests
         Assert.Equal(seed.Summary.Plan.Tasks.Count, Directory.EnumerateFiles(Path.Combine(second.DataDir, "Teams"), "*.md", SearchOption.AllDirectories).Count(f => f.Contains("_tasks", StringComparison.Ordinal)));
     }
 
-    /// <summary>SEED-RT-7: The manifest lists every Task, every Room id and the derived-state facts.</summary>
+    /// <summary>SEED-RT-7: The manifest lists every Task, every Room id, the derived-state facts and what is archived.</summary>
     [Fact]
     public async Task Manifest_ListsTheSeededEntities()
     {
@@ -300,6 +392,18 @@ public sealed class SeedRoundTripTests
         Assert.All(seed.Summary.Ids.RoomIds.Values, id => Assert.Contains(id, manifest, StringComparison.Ordinal));
         Assert.Contains("Legal-Checklist (unresolved)", manifest, StringComparison.Ordinal);
         Assert.Contains("Overdue: ", manifest, StringComparison.Ordinal);
+        Assert.Contains("| Team | Legacy Site (Projects: Checkout v1, Old Marketing Site) | `Archive/Legacy Site` | Lena, Owen, Sofia |", manifest, StringComparison.Ordinal); // contains-ok: one whole table row of a generated multi-section file
+        Assert.Contains("| Project | Growth / Spring Promo | `Archive/Growth/Spring Promo` | - |", manifest, StringComparison.Ordinal); // contains-ok: one whole table row of a generated multi-section file
+        IReadOnlyDictionary<string, string> ids = seed.Summary.Ids.RoomIds;
+        Assert.Equal(
+            [
+                $"| Chat | Q2 retro (root) | - | `{ids[SoftwareCoRooms.Q2Retro]}` |",
+                $"| Chat | Legacy Site (Legacy Site Team Room) | - | `{ids[SoftwareCoArchive.TeamLegacySite]}` |",
+                $"| Chat | Checkout v1 sunset (Legacy Site / Checkout v1 chat) | - | `{ids[SoftwareCoArchive.ChatLegacyCheckout]}` |",
+                $"| Chat | Log shipping spike (Platform / Observability chat) | - | `{ids[SoftwareCoArchive.ChatPlatformLogSpike]}` |",
+                $"| Chat | Spring promo wrap-up (Growth / Spring Promo chat) | - | `{ids[SoftwareCoArchive.ChatGrowthSpringPromo]}` |",
+            ],
+            manifest.Split('\n').Where(static line => line.StartsWith("| Chat | ", StringComparison.Ordinal)));
     }
 
     private static async Task<string?[]> RolesAsync(SeededFolder seed, string[] names, CancellationToken ct)

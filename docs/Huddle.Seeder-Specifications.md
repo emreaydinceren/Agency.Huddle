@@ -103,7 +103,7 @@ the database, and Feed items need both.
 | 2. Layout marker | `data/Agents/.layout-migrated` | Without it, Huddle's one-time migration moves every non-Task note under `Teams/` into `Agents/_unsorted/` |
 | 3. Database | `team.db`, `profile.json`, Room transcripts | Through `SqliteTeamDirectory` and `FileChatStore`, never through raw SQL |
 | 4. Feed | Feed items, Helper usage and status in `team.db` | `FeedSeeder` |
-| 5. Folders | `Teams/<Team>/<Project>/` | Projects with no Tasks still get their folder |
+| 5. Folders | `Teams/<Team>/<Project>/`, `Archive/<Team>/…` | Projects with no Tasks still get their folder. An archived Team's `_team.md` needs the Room ids from step 3 |
 | 6. Agents and Skills | `Agents/<Name>/<Name>.md`, `Skills/<name>/SKILL.md` | `AgentFileWriter` |
 | 7. Tasks | Task files, with their modified time set to the last Change log entry | Otherwise Huddle logs them as "edited outside Huddle" |
 | 8. Notes and binaries | Library notes, memory, images, chat uploads, Task uploads | |
@@ -119,10 +119,11 @@ A scenario is an `IScenario` (`Name`, `Description`, `Build(DateOnly today)`) li
 | --- | --- | --- |
 | `Agents` | `SeedAgent(Name, Title, Specialty, Teams, Skills, Personality) { Gender, AvatarFile, Role? }` | An Agent file, an Agent user in `team.db`, and an avatar copied from the bundled Avatar Library ([§6.1](#61-avatars)). The alias is the lower-cased name |
 | `Skills` | `SeedSkill(Name, Description, Body)` | A Skill folder |
-| `Teams` | `SeedTeam(Name, Projects) { TeamType?, Manager?, Owns? }` | Team and Project folders, a `_team.md` holding the Team's avatar colour ([§6.1](#61-avatars)), and for a typed Team its manager and `Process.md` (SEED-HOME-8). Team membership lives on the Agents; `Role` writes a persona's `_role` |
+| `Teams` | `SeedTeam(Name, Projects) { TeamType?, Manager?, Owns?, ArchivedProjects }` | Team and Project folders, a `_team.md` holding the Team's avatar colour ([§6.1](#61-avatars)), and for a typed Team its manager and `Process.md` (SEED-HOME-8). Team membership lives on the Agents; `Role` writes a persona's `_role`. Each of `ArchivedProjects` is a folder at `Archive/<Team>/<Project>/` (SEED-SC-17) |
+| `ArchivedTeams` | `SeedArchivedTeam(Name, Projects, Members)` | A Team as `ArchiveService` leaves it (SEED-SC-16): `Archive/<Team>/` with its Projects, and a `_team.md` with `archivedMembers` and `archivedRooms` (the ids of every Room scoped to it) and no manager. Its colour follows the live Teams'. No Agent lists it in `Teams` |
 | `Tasks` | `SeedTask` | A Task file under `Teams/<Team>[/<Project>][/_closed]/` |
 | `Files` | `SeedFile(RelativePath, Content)` | Library notes and memory facts |
-| `Rooms` | `SeedRoom(Key, Name, Members, Archived, Messages, Team, IsTeamRoom, WithReferences)` | A Room in `team.db`, plus its transcript |
+| `Rooms` | `SeedRoom(Key, Name, Members, Archived, Messages, Team, IsTeamRoom, WithReferences, Project)` | A Room in `team.db`, plus its transcript. `Project` needs `Team` |
 | `BinaryFiles`, `Uploads`, `TaskUploads` | `SeedBinaryFile`, `SeedUpload`, `SeedTaskUpload` | Images and files in the Library, in chat upload folders, and in `Uploads/Tasks/<ID>/` |
 | `DocHistory` | `SeedDocEdit` | `doc-history/…jsonl` entries |
 | `Sprints` | `SeedSprint(Number, Name)` | `sprints.md`. The highest number is `@current` |
@@ -209,13 +210,21 @@ They are what turns the seeder red when the app changes underneath it.
 | SEED-SC-6 | Three kinds of memory: Team, Project and Agent work memory. | `Plan_HasThreeKindsOfMemory` |
 | SEED-SC-7 | Library backlinks, every wikilink form, and exactly one unresolved link (`[[Legal-Checklist]]`). | `Plan_LibraryHasBacklinksAndOneUnresolvedLink`, `SeedRefreshTests.Library_OffersOutlineHeadings_AndEveryWikilinkForm` |
 | SEED-SC-8 | Tags in every form the Tags panel reads, including nested tags shared across Teams. | `Plan_TaggedNotes_HaveTheExpectedTags`, `Plan_Library_HasNestedSharedTagsAcrossTeams` |
-| SEED-SC-9 | Six root Rooms (two one-to-one, three groups, one archived, one custom-named) and ten Team-scoped Rooms (four Team Rooms, four Team chats, two Team one-to-ones). Each transcript has 8 to 15 Messages. | `Plan_HasTheAgreedRooms` |
+| SEED-SC-9 | Six root Rooms (two one-to-one, three groups, one archived, one custom-named) and fourteen Team-scoped Rooms (four live Team Rooms and the archived Team's, seven Team chats, two Team one-to-ones; four of them archived, SEED-SC-18). Each transcript has 8 to 15 Messages. | `Plan_HasTheAgreedRooms` |
 | SEED-SC-10 | Views cover list, Kanban and closed scope. | `Plan_ViewsCoverListKanbanAndClosed` |
 | SEED-SC-11 | Team Rooms, Message References, uploads, Task attachments, doc history, Sprints, Requests, avatars, Needs You and the Feed, as listed in [DataSeeding.md](../agents/DataSeeding.md#what-the-software-co-seed-contains-for-the-newer-features). | The `SeedRefreshTests` and `SeedFeedTests` classes |
 | SEED-SC-12 | The description names the features it covers. | `Description_NamesTheCoveredFeatures` |
-| SEED-SC-13 | **At least four documents** sit directly in every Team root and every Project folder, Sandbox excepted (it stays empty on purpose). A document is a `.md` or `.txt` Library note: not memory, not an image, not an upload, and not a note in a subfolder. Added 2026-10-30. | `Plan_EveryTeamAndProjectHasFourDocuments` |
-| SEED-SC-14 | **Memory is plentiful.** Every Team with members has at least three Team memory facts, every Project at least one Project memory fact, and every Agent at least two facts in `Agents/<Name>/work/memory/`. Each fact is one line. Added 2026-10-30. | `Plan_MemoryCoversEveryTeamProjectAndAgent` |
+| SEED-SC-13 | **At least four documents** sit directly in every live Team root and every live Project folder, Sandbox excepted (it stays empty on purpose). A document is a `.md` or `.txt` Library note: not memory, not an image, not an upload, and not a note in a subfolder. Added 2026-10-30. | `Plan_EveryTeamAndProjectHasFourDocuments` |
+| SEED-SC-14 | **Memory is plentiful.** Every live Team with members has at least three Team memory facts, every live Project at least one Project memory fact, and every Agent at least two facts in `Agents/<Name>/work/memory/`. Each fact is one line. Added 2026-10-30. | `Plan_MemoryCoversEveryTeamProjectAndAgent` |
 | SEED-SC-15 | Documents added since 2026-10-30 never use a pinned tag (`support/incident`, `growth/research`) and link only to notes that exist, so the Tags panel counts (SEED-SC-8) and the single unresolved link (SEED-SC-7) stay as pinned. Other tags, such as `home/…`, are welcome. | `Plan_LibraryHasBacklinksAndOneUnresolvedLink`, `Plan_Library_HasNestedSharedTagsAcrossTeams` |
+| SEED-SC-16 | **An archived Team**, Legacy Site, as `ArchiveService` leaves one: `Archive/Legacy Site/` holds two notes and a memory fact at its root, and its Projects Checkout v1 (two notes, a memory fact) and Old Marketing Site (two notes); `_team.md` records the roster in ordinal order (Lena, Owen, Sofia), as the app writes it, and the ids of its two Rooms; no Agent carries its label; it is not a live Team; both its Rooms, its Team Room included, are archived. The app's own `ArchiveService` lists it and restores it: the folder, the labels and the Rooms come back. Added 2026-11-12. | `Plan_HasAnArchivedTeam_AsTheArchiveLeavesIt`, `SeedRoundTripTests.Archive_IsWhatTheArchiveServiceLeaves`, `SeedRoundTripTests.Archive_RestoresThroughTheAppsArchiveService` |
+| SEED-SC-17 | **An archived Project**, Growth's Spring Promo, at `Archive/Growth/Spring Promo/` with two notes and a memory fact, and no `_team.md` in `Archive/Growth/` (Growth itself is live). The app lists it under Growth and restores it to `Teams/Growth/`. Added 2026-11-12. | `Plan_GrowthHasAnArchivedProject`, `SeedRoundTripTests.Archive_IsWhatTheArchiveServiceLeaves`, `SeedRoundTripTests.Archive_RestoresThroughTheAppsArchiveService` |
+| SEED-SC-18 | **Archived Team chats** in every kind of scope: the archived Team's Team Room, a chat in one of its Projects (Checkout v1 sunset), a chat in a live Project (Platform / Observability, Log shipping spike) and a chat whose Project is archived (Growth / Spring Promo, Spring promo wrap-up). Added 2026-11-12. | `Plan_HasArchivedTeamChatsInEveryKindOfScope` |
+
+No Task sits in an archived folder, because a Task restored with its Team or Project would carry an id
+the live allocator never counted. No Feed item reports an archive, because the Feed's counts are pinned.
+The Archived page shows every archived chat as "Archived today": the app stamps the time when the
+seeder archives the Room, and the seeder writes `team.db` only through the app's API.
 
 ### `uat`
 
@@ -398,8 +407,9 @@ are relative to `src/Huddle.Seeder/` unless they start with `tests/`. Checked ag
 | `Scenarios/SoftwareCoNotes.cs` | Documents and memory added for SEED-SC-13 and -14. **Put new notes and memory here** |
 | `Scenarios/SoftwareCoTasks.cs` | `Core` (41 Tasks), `Sprints`, the Sprint and former-title maps, and `All`, which appends the Requests |
 | `Scenarios/SoftwareCoRequests.cs` | The five Request Tasks |
+| `Scenarios/SoftwareCoArchive.cs` | What is already archived (SEED-SC-16 to -18): Legacy Site, Spring Promo's notes, and the four archived Team chats |
 | `Scenarios/SoftwareCoHome.cs` | The Home and Family Team (§9): its `SeedTeam`, four Agents, 18 Tasks, four Rooms and Feed items. The Library and memory are in `SoftwareCoHomeNotes.cs` |
-| `Writing/TeamFileWriter.cs` | Each Team's `_team.md` (blank, or typed with a manager) and a typed Team's `Process.md` |
+| `Writing/TeamFileWriter.cs` | Each Team's `_team.md` (blank, or typed with a manager), a typed Team's `Process.md`, and the archived Teams' and Projects' folders |
 | `Scenarios/SoftwareCoRooms.cs` | Room keys (constants) and every transcript |
 | `Scenarios/SoftwareCoFeed.cs` | Feed items, and the Helper's id and name |
 | `Scenarios/UatScenario.cs` | `uat`: Ada, Bo and their empty Rooms, with their own `ViewsJson` |
@@ -444,12 +454,13 @@ When you change one of these on purpose, change the test in the same commit.
 | `Plan_HasFourWorkingTeamsAndSharedAgents` | Exactly Platform, Growth, Support and Home and Family have two or more Projects, and exactly three Agents span two or more of them |
 | `Plan_HasTheEdgeTeams` | Records' members are exactly Grace and Dana |
 | `Plan_CoversEveryTaskStatus` | 64 Tasks (41 core, 5 Requests, 18 Home and Family) |
-| `Plan_HasTheAgreedRooms` | The six root Room names in order, the four Team Rooms, six other Team-scoped Rooms, two root one-to-ones, and the one archived Room |
+| `Plan_HasTheAgreedRooms` | The six root Room names in order, the five Team Rooms (Legacy Site's last), nine other Team-scoped Rooms, two root one-to-ones, and the five archived Rooms in order |
+| `Plan_HasArchivedTeamChatsInEveryKindOfScope` | The four archived Team chats' keys, Teams and Projects in order |
 | `Plan_LibraryHasBacklinksAndOneUnresolvedLink` | The only unresolved link is `Legal-Checklist` |
 | `Plan_Library_HasNestedSharedTagsAcrossTeams`, `Plan_TaggedNotes_HaveTheExpectedTags` | Which notes carry `support/incident` and `growth/research`, and the exact tags of named notes |
 | `SeedRoundTripTests.SavedViewIds` | The twelve View ids |
 | `SeedRefreshTests.NeedsYou_OneRoomHoldsAnUnansweredMention` | Exactly `launch-crew` and `chat-home-grandma-70th` wait on You |
-| `SeedRefreshTests.TeamRooms_AreScopedAsSeeded` | Four Team Rooms |
+| `SeedRefreshTests.TeamRooms_AreScopedAsSeeded` | Four live Team Rooms and Legacy Site's archived one |
 | `SeedCliTests.Run_FreshRoot_SeedsAndPrintsTheLaunchCommand` | The printed summary "Seeded 13 Agents, 6 Teams, 64 Tasks" |
 | `SeedRefreshTests.Sprints_ParseWithTheAppsParser_AndTasksHoldThem` | Two Sprints |
 | `SeedFeedTests` | Five TaskCreated items by Owen; the Helper has three consecutive failures |
@@ -516,3 +527,4 @@ The seeder tests take a few seconds; the whole suite takes several minutes. Buil
 | 2026-10-30 | Decided D-2: the Team is named `Home and Family` (prefix `HOME`); §9 updated to match. |
 | 2026-10-30 | Added back-links from code to spec: `Seeder spec §N` on every seeder type and test class, and the requirement ids at the start of every pinning test's summary (§1). |
 | 2026-10-30 | Added Appendix A, the maintainer's map: a file map, edit recipes with the tests each trips, the values tests pin exactly, commands, and traps already hit. |
+| 2026-11-12 | Added SEED-SC-16 to -18: an archived Team (Legacy Site), an archived Project (Growth / Spring Promo) and four archived Team chats, written as `ArchiveService` leaves them. `SeedPlan.ArchivedTeams`, `SeedTeam.ArchivedProjects` and `SeedRoom.Project` are new; SEED-SC-9 counts fourteen Team-scoped Rooms; SEED-SC-13 and -14 now say "live". A defensive fix rode along: `ArchiveService.ArchivedProjects`, documented as working for archived Teams too, listed an archived Team's `raw`, `memory` and `outputs` folders as Projects. No caller asks it about an archived Team today (the Archived page asks about live Teams only), so nothing visible changed; it now skips the same names a live Project may not take. |

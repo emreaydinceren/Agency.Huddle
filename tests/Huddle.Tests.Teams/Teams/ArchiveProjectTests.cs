@@ -120,6 +120,25 @@ public sealed class ArchiveProjectTests
         Assert.Equal(["Alpha"], f.Service.ArchivedProjects("Home"));
     }
 
+    /// <summary>
+    /// An archived Team keeps its own raw, memory and outputs folders (the whole Team folder moves), and those are not Projects:
+    /// the archived list applies the same reserved names as a live Team's Projects, in any letter case.
+    /// </summary>
+    [Fact]
+    public async Task ArchivedProjects_OfAnArchivedTeam_SkipItsRawMemoryAndOutputsFolders()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture f = await Fixture.CreateAsync(labelOnly: false, ct);
+        string old = Path.Combine(f.ArchiveRoot, "Old");
+        await File.WriteAllTextAsync(Path.Combine(Directory.CreateDirectory(old).FullName, "_team.md"), "---\n---\n", ct);
+        foreach (string folder in new[] { "Beta", "raw", "Memory", "outputs" })
+        {
+            _ = Directory.CreateDirectory(Path.Combine(old, folder));
+        }
+
+        Assert.Equal(["Beta"], f.Service.ArchivedProjects("Old"));
+    }
+
     /// <summary>A crash after the archive copy is placed but before the source is retired converges at start-up: the Project is archived whole and no dot folder or journal remains.</summary>
     [Fact]
     public async Task ArchiveProject_CrashAfterPlacing_RecoversToArchived()

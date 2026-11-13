@@ -22,7 +22,7 @@ public sealed partial class SoftwareCoScenarioTests
     public void Description_NamesTheCoveredFeatures()
     {
         Assert.Equal(
-            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records.",
+            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records, and an archived Team, Project and chats to restore.",
             new SoftwareCoScenario().Description);
     }
 
@@ -225,8 +225,8 @@ public sealed partial class SoftwareCoScenarioTests
     }
 
     /// <summary>
-    /// SEED-SC-9: Six root Rooms (two one-to-one, three groups and one archived; one custom-named) and six Team-scoped ones (three Team Rooms,
-    /// two Team chats and a Team one-to-one); transcripts of 8 to 15 messages.
+    /// SEED-SC-9: Six root Rooms (two one-to-one, three groups and one archived; one custom-named) and the Team-scoped ones: a Team
+    /// Room per live Team and the archived Team, and nine other Team chats, three of them archived (SEED-SC-18); transcripts of 8 to 15 messages.
     /// </summary>
     [Fact]
     public void Plan_HasTheAgreedRooms()
@@ -234,11 +234,73 @@ public sealed partial class SoftwareCoScenarioTests
         SeedPlan plan = Plan();
 
         Assert.Equal(["Grace", "Owen", "Platform standup", "Launch crew", "Q2 retro", "Incident 0412 war room"], plan.Rooms.Where(r => r.Team is null).Select(r => r.Name));
-        Assert.Equal(["Platform", "Growth", "Support", "Home and Family"], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
-        Assert.Equal(6, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
+        Assert.Equal(["Platform", "Growth", "Support", "Home and Family", SoftwareCoArchive.LegacySite], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
+        Assert.Equal(9, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
         Assert.Equal(2, plan.Rooms.Count(r => r.Team is null && r.Members.Count == 1));
-        Assert.Equal(["Q2 retro"], plan.Rooms.Where(r => r.Archived).Select(r => r.Name));
+        Assert.Equal(["Q2 retro", SoftwareCoArchive.LegacySite, "Checkout v1 sunset", "Log shipping spike", "Spring promo wrap-up"], plan.Rooms.Where(r => r.Archived).Select(r => r.Name));
         Assert.All(plan.Rooms, r => Assert.InRange(r.Messages.Count, 8, 15));
+    }
+
+    /// <summary>
+    /// SEED-SC-16: Legacy Site is archived as <c>ArchiveService</c> leaves a Team: it is not a live Team, its notes are under
+    /// <c>Archive/Legacy Site/</c>, its roster names Agents who exist, none of them still carries its label, and every Room
+    /// scoped to it, its Team Room included, is archived.
+    /// </summary>
+    [Fact]
+    public void Plan_HasAnArchivedTeam_AsTheArchiveLeavesIt()
+    {
+        SeedPlan plan = Plan();
+
+        SeedArchivedTeam archived = Assert.Single(plan.ArchivedTeams);
+        Assert.Equal(SoftwareCoArchive.LegacySite, archived.Name);
+        Assert.Equal([SoftwareCoArchive.CheckoutV1, "Old Marketing Site"], archived.Projects);
+        Assert.DoesNotContain(plan.Teams, t => string.Equals(t.Name, archived.Name, StringComparison.OrdinalIgnoreCase));
+        Assert.All(archived.Members, member => Assert.Contains(plan.Agents, a => a.Name == member));
+        Assert.DoesNotContain(plan.Agents, a => a.Teams.Contains(archived.Name, StringComparer.OrdinalIgnoreCase));
+        SeedRoom[] rooms = [.. plan.Rooms.Where(r => r.Team == archived.Name)];
+        Assert.Equal(2, rooms.Length);
+        Assert.All(rooms, r => Assert.True(r.Archived));
+        Assert.Single(rooms, r => r.IsTeamRoom);
+        Assert.All(rooms, r => Assert.All(r.Members, m => Assert.Contains(m, archived.Members)));
+        Assert.DoesNotContain(plan.Files, f => f.RelativePath.StartsWith("Teams/" + archived.Name + "/", StringComparison.Ordinal));
+        string[] projectsWithNotes = [.. archived.Projects.Where(p => plan.Files.Any(f => f.RelativePath.StartsWith($"{archived.Folder}/{p}/", StringComparison.Ordinal)))];
+        Assert.Equal(archived.Projects, projectsWithNotes);
+    }
+
+    /// <summary>SEED-SC-17: Growth has one archived Project, Spring Promo, kept out of its live Projects and holding notes and a memory fact under <c>Archive/Growth/</c>.</summary>
+    [Fact]
+    public void Plan_GrowthHasAnArchivedProject()
+    {
+        SeedPlan plan = Plan();
+
+        SeedTeam growth = Assert.Single(plan.Teams, t => t.Name == "Growth");
+        Assert.Equal([SoftwareCoArchive.SpringPromo], growth.ArchivedProjects);
+        Assert.DoesNotContain(SoftwareCoArchive.SpringPromo, growth.Projects);
+        Assert.All(plan.Teams.Where(t => t.Name != "Growth"), t => Assert.Empty(t.ArchivedProjects));
+        string folder = $"Archive/Growth/{SoftwareCoArchive.SpringPromo}/";
+        Assert.Equal(2, plan.Files.Count(f => f.RelativePath.StartsWith(folder, StringComparison.Ordinal) && !f.RelativePath.Contains("/memory/", StringComparison.Ordinal)));
+        Assert.Single(plan.Files, f => f.RelativePath.StartsWith(folder + "memory/", StringComparison.Ordinal));
+        Assert.DoesNotContain(plan.Tasks, t => t.Location.Project == SoftwareCoArchive.SpringPromo);
+    }
+
+    /// <summary>
+    /// SEED-SC-18: Four archived Team chats cover each place a chat can belong: the archived Team's Team Room, a chat in one of its
+    /// Projects, a chat in a live Team's live Project (Platform / Observability), and a chat whose Project is archived (Growth / Spring Promo).
+    /// </summary>
+    [Fact]
+    public void Plan_HasArchivedTeamChatsInEveryKindOfScope()
+    {
+        SeedPlan plan = Plan();
+
+        SeedRoom[] archived = [.. plan.Rooms.Where(r => r.Archived && r.Team is not null)];
+
+        Assert.Equal(
+            [SoftwareCoArchive.TeamLegacySite, SoftwareCoArchive.ChatLegacyCheckout, SoftwareCoArchive.ChatPlatformLogSpike, SoftwareCoArchive.ChatGrowthSpringPromo],
+            archived.Select(r => r.Key));
+        Assert.Equal(
+            [(SoftwareCoArchive.LegacySite, (string?)null), (SoftwareCoArchive.LegacySite, SoftwareCoArchive.CheckoutV1), ("Platform", "Observability"), ("Growth", SoftwareCoArchive.SpringPromo)],
+            archived.Select(r => (r.Team ?? string.Empty, r.Project)));
+        Assert.All(plan.Rooms.Where(r => r.Project is not null), r => Assert.NotNull(r.Team));
     }
 
     /// <summary>SEED-INV-6, SEED-INV-8: Messages come only from the Human or a member, run forward in time, and every Task id they mention exists.</summary>
