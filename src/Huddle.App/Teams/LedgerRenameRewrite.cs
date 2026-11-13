@@ -25,17 +25,27 @@ internal sealed class LedgerRenameRewrite(AgentsMdLedger ledger, FileStateStore 
         ArgumentNullException.ThrowIfNull(rename);
 
         TeamOptions team = options.Value;
+        bool project = rename.Kind == TeamRenameKind.Project;
         string teamsDir = team.Teams.Dir.Replace('\\', '/').Trim('/');
-        string oldRelative = $"{teamsDir}/{rename.OldName}";
-        string newRelative = $"{teamsDir}/{rename.NewName}";
-        string oldAbsolute = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, rename.OldName)).Replace('\\', '/');
-        string newAbsolute = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, rename.NewName)).Replace('\\', '/');
+        string oldInTeams = project ? $"{rename.Team}/{rename.OldName}" : rename.OldName;
+        string newInTeams = project ? $"{rename.Team}/{rename.NewName}" : rename.NewName;
+        string oldRelative = $"{teamsDir}/{oldInTeams}";
+        string newRelative = $"{teamsDir}/{newInTeams}";
+        string oldAbsolute = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, oldInTeams)).Replace('\\', '/');
+        string newAbsolute = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, newInTeams)).Replace('\\', '/');
 
-        ledger.MovePrefix(rename.OldName, rename.NewName);
+        ledger.MovePrefix(oldInTeams, newInTeams);
         (string Old, string New)[] forms = [(oldRelative, newRelative), ("./" + oldRelative, "./" + newRelative), (oldAbsolute, newAbsolute)];
         foreach ((string oldPrefix, string newPrefix) in forms)
         {
-            files.RenameTeam(rename.OldName, rename.NewName, oldPrefix, newPrefix);
+            if (project)
+            {
+                files.RenamePrefix(oldPrefix, newPrefix);
+            }
+            else
+            {
+                files.RenameTeam(rename.OldName, rename.NewName, oldPrefix, newPrefix);
+            }
         }
 
         baselines.RenamePrefix(oldRelative, newRelative);

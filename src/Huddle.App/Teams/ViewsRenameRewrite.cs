@@ -14,7 +14,15 @@ internal sealed class ViewsRenameRewrite(ViewStore views) : ITeamRenameRewrite
     {
         ArgumentNullException.ThrowIfNull(rename);
 
-        views.RenameTeam(rename.OldName, rename.NewName);
+        if (rename.Kind == TeamRenameKind.Project)
+        {
+            views.RenameProject(rename.Team, rename.OldName, rename.NewName);
+        }
+        else
+        {
+            views.RenameTeam(rename.OldName, rename.NewName);
+        }
+
         return Task.CompletedTask;
     }
 }

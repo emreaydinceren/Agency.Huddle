@@ -62,7 +62,7 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
 
             string logged = TaskFileFormat.AppendEntry(
                 rewritten,
-                new ChangeLogEntry(this.clock.GetUtcNow(), Actor, $"Team renamed from {rename.OldName} to {rename.NewName}"));
+                new ChangeLogEntry(this.clock.GetUtcNow(), Actor, $"{(rename.Kind == TeamRenameKind.Project ? "Project" : "Team")} renamed from {rename.OldName} to {rename.NewName}"));
             if (text.Contains("\r\n", StringComparison.Ordinal))
             {
                 logged = logged.Replace("\n", "\r\n", StringComparison.Ordinal);
@@ -100,12 +100,25 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
         return close < 0 ? 0 : close;
     }
 
-    /// <summary>The Task files under the Teams folder, except the renamed Team's own (they moved with the folder).</summary>
+    /// <summary>The Task files under the Teams folder, except those inside the moved folder (a Team's own, or the renamed Project's): they moved with it.</summary>
     /// <param name="rename">The rename whose new name is the moved folder.</param>
     private List<string> TaskFiles(TeamRename rename) => Directory.Exists(this.root)
         ? [.. Directory.EnumerateFiles(this.root, "*.md", SearchOption.AllDirectories)
-            .Where(file => TaskLayout.AffectsTasks(this.root, file) && !string.Equals(this.TeamOf(file), rename.NewName, StringComparison.OrdinalIgnoreCase))]
+            .Where(file => TaskLayout.AffectsTasks(this.root, file) && !this.InMovedFolder(file, rename))]
         : [];
+
+    /// <summary>Whether the file sits in the folder the rename moved: the Team's folder, or the Project's folder inside its Team.</summary>
+    /// <param name="file">The file path.</param>
+    /// <param name="rename">The rename.</param>
+    private bool InMovedFolder(string file, TeamRename rename)
+    {
+        string[] segments = Path.GetRelativePath(this.root, file).Split(['/', '\\']);
+        return rename.Kind == TeamRenameKind.Project
+            ? segments.Length > 2
+                && string.Equals(segments[0], rename.Team, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(segments[1], rename.NewName, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(segments[0], rename.NewName, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>The Team folder a Task file sits in.</summary>
     /// <param name="file">The file path.</param>
@@ -126,7 +139,7 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
         head = fromTeam.Replace(head, match =>
         {
             string value = match.Groups[2].Value;
-            if (!string.Equals(value, rename.OldName, StringComparison.OrdinalIgnoreCase) || string.Equals(value, newName, StringComparison.Ordinal))
+            if (rename.Kind == TeamRenameKind.Project || !string.Equals(value, rename.OldName, StringComparison.OrdinalIgnoreCase) || string.Equals(value, newName, StringComparison.Ordinal))
             {
                 return match.Value;
             }
@@ -135,8 +148,9 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
             return match.Groups[1].Value + newName + match.Groups[3].Value + match.Groups[4].Value;
         });
 
+        string teamSegment = rename.Kind == TeamRenameKind.Project ? $@"{Regex.Escape(rename.Team)}[\\/]" : string.Empty;
         Regex path = new(
-            $@"(?<=[\\/]{Regex.Escape(this.teamsSegment)}[\\/]){Regex.Escape(rename.OldName)}(?=[\\/])",
+            $@"(?<=[\\/]{Regex.Escape(this.teamsSegment)}[\\/]{teamSegment}){Regex.Escape(rename.OldName)}(?=[\\/])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
             RegexTimeout);
         string body = path.Replace(

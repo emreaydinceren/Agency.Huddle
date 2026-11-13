@@ -159,6 +159,42 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         }
     }
 
+    /// <summary>
+    /// Rewrites, in every Agent's file, each <c>subscribed</c> path equal to or under <paramref name="oldPrefix"/> to <paramref name="newPrefix"/>.
+    /// Paths only: the <c>team:</c> keys, Room ids and Writers stay (a Project rename does not change the Team's label).
+    /// </summary>
+    /// <param name="oldPrefix">The old folder prefix, with <c>/</c> separators and no trailing separator.</param>
+    /// <param name="newPrefix">The new folder prefix.</param>
+    internal void RenamePrefix(string oldPrefix, string newPrefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldPrefix);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPrefix);
+
+        lock (this.gate)
+        {
+            if (!Directory.Exists(this.Folder))
+            {
+                return;
+            }
+
+            foreach (string file in Directory.EnumerateFiles(this.Folder, "*.json"))
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                FileState? state = this.LoadCore(name);
+                if (state is null)
+                {
+                    continue;
+                }
+
+                List<string> subscribed = [.. state.Subscribed.Select(path => SwapPrefix(path, oldPrefix, newPrefix))];
+                if (!subscribed.SequenceEqual(state.Subscribed, StringComparer.Ordinal))
+                {
+                    this.SaveCore(name, new FileState(subscribed, state.Rooms, state.Writers));
+                }
+            }
+        }
+    }
+
     private static string SwapPrefix(string path, string oldPrefix, string newPrefix)
     {
         if (string.Equals(path, oldPrefix, StringComparison.OrdinalIgnoreCase))

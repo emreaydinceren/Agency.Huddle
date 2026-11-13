@@ -17,9 +17,10 @@ internal sealed class WorkspaceRenameRewrite(ITeamFolders folders, IOptions<Team
         ArgumentNullException.ThrowIfNull(rename);
 
         TeamOptions team = options.Value;
-        string oldFolder = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, rename.OldName));
-        string newFolder = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, rename.NewName));
-        _ = folders.UpdateTeamFile(rename.NewName, file => file with { Workspace = Moved(file.Workspace, oldFolder, newFolder) });
+        bool project = rename.Kind == TeamRenameKind.Project;
+        string oldFolder = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, project ? Path.Combine(rename.Team, rename.OldName) : rename.OldName));
+        string newFolder = Path.GetFullPath(Path.Combine(team.DataDir, team.Teams.Dir, project ? Path.Combine(rename.Team, rename.NewName) : rename.NewName));
+        _ = folders.UpdateTeamFile(project ? rename.Team : rename.NewName, file => file with { Workspace = Moved(file.Workspace, oldFolder, newFolder) });
         return Task.CompletedTask;
     }
 

@@ -16,7 +16,7 @@ namespace Agency.Huddle.App.Teams;
 /// the Team Room line (step 8, <c>room.teamRenamed</c>); a failed post is logged and never fails the rename. Renames and
 /// archives serialise on one <see cref="TeamOperationGate"/>.
 /// </summary>
-internal sealed class TeamRenameService(
+internal sealed partial class TeamRenameService(
     LibraryRootStore roots,
     ITeamCatalog catalog,
     ITeamMembership membership,
@@ -80,7 +80,7 @@ internal sealed class TeamRenameService(
     public async Task RecoverAsync(CancellationToken ct)
     {
         using IDisposable entered = await gate.EnterAsync(ct).ConfigureAwait(false);
-        foreach (TeamRename row in renames.Pending().Where(static r => r.Kind == TeamRenameKind.Team).OrderBy(static r => r.Id))
+        foreach (TeamRename row in renames.Pending().OrderBy(static r => r.Id))
         {
             List<IDisposable> pauses = [];
             bool completed;
@@ -99,13 +99,21 @@ internal sealed class TeamRenameService(
 
             if (completed)
             {
-                await this.PostRoomLineAsync(row.OldName, row.NewName, ct).ConfigureAwait(false);
+                await this.PostRenamedLineAsync(row, ct).ConfigureAwait(false);
             }
         }
     }
 
     /// <summary>Step 8: tells the Team Room, if it has one, that the Team was renamed. A failure is logged and swallowed.</summary>
-    private async Task PostRoomLineAsync(string oldName, string newName, CancellationToken ct)
+    private Task PostRoomLineAsync(string oldName, string newName, CancellationToken ct) =>
+        this.PostLineAsync(newName, "room.teamRenamed", [("oldName", oldName), ("newName", newName)], ct);
+
+    /// <summary>Posts one rendered Prompt into the Team's Room, if it has one. A failure is logged and swallowed.</summary>
+    /// <param name="team">The Team whose Room is told.</param>
+    /// <param name="key">The Prompt key.</param>
+    /// <param name="values">The Prompt's placeholder values.</param>
+    /// <param name="ct">Cancels the post.</param>
+    private async Task PostLineAsync(string team, string key, (string Name, string Value)[] values, CancellationToken ct)
     {
         if (chat is null || prompts is null)
         {
@@ -114,22 +122,24 @@ internal sealed class TeamRenameService(
 
         try
         {
-            Room? room = await directory.FindTeamRoomAsync(newName, ct).ConfigureAwait(false);
+            Room? room = await directory.FindTeamRoomAsync(team, ct).ConfigureAwait(false);
             if (room is not null)
             {
-                string text = prompts.Say("room.teamRenamed", ("oldName", oldName), ("newName", newName));
-                _ = await chat.PostAsHuddleAsync(room.Id, text, ct).ConfigureAwait(false);
+                _ = await chat.PostAsHuddleAsync(room.Id, prompts.Say(key, values), ct).ConfigureAwait(false);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "The Team Room line for the rename of {Team} to {NewName} could not be posted.", oldName, newName);
+            logger.LogWarning(ex, "The Team Room line {Key} for {Team} could not be posted.", key, team);
         }
     }
 
     private async Task<bool> RecoverRowAsync(TeamRename row, CancellationToken ct)
     {
-        string? failure = this.FinishMovesFromDisk(row, out bool neverMoved);
+        bool neverMoved;
+        string? failure = row.Kind == TeamRenameKind.Project
+            ? this.FinishProjectMoveFromDisk(row, out neverMoved)
+            : this.FinishMovesFromDisk(row, out neverMoved);
         if (neverMoved)
         {
             renames.Discard(row.Id);
@@ -159,10 +169,13 @@ internal sealed class TeamRenameService(
         }
 
         string what = problem.Replace(" Huddle will finish it at the next start.", string.Empty, StringComparison.Ordinal).TrimEnd('.', ' ');
-        string text = $"Renaming {row.OldName} to {row.NewName} did not finish: {what}. Huddle will try again at the next start.";
+        bool project = row.Kind == TeamRenameKind.Project;
+        string subject = project ? $"Project {row.OldName} to {row.NewName} in {row.Team}" : $"{row.OldName} to {row.NewName}";
+        string text = $"Renaming {subject} did not finish: {what}. Huddle will try again at the next start.";
+        string team = project ? row.Team : row.NewName;
         try
         {
-            feed.Post(new FeedMessage(FeedSourceType.TeamRenameStuck, "team-rename:" + row.NewName, FeedActor.Huddle, true, new TeamRenameStuckPayload(row.NewName, text)));
+            feed.Post(new FeedMessage(FeedSourceType.TeamRenameStuck, "team-rename:" + team, FeedActor.Huddle, true, new TeamRenameStuckPayload(team, text)));
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
@@ -179,11 +192,7 @@ internal sealed class TeamRenameService(
         string teamsRoot = this.RootPath(LibraryRootKind.Teams);
         string archiveRoot = this.RootPath(LibraryRootKind.Archive);
         bool caseOnly = CaseOnly(row.OldName, row.NewName);
-        string? tempOnDisk = this.Spelling(teamsRoot, RenamingPrefix + row.NewName);
-        string? newSpelling = this.Spelling(teamsRoot, row.NewName);
-        bool newRespelled = newSpelling is not null && string.Equals(newSpelling, row.NewName, StringComparison.Ordinal);
-        bool newThere = newSpelling is not null && (!caseOnly || newRespelled);
-        bool oldThere = caseOnly ? newSpelling is not null && !newRespelled : this.Spelling(teamsRoot, row.OldName) is not null;
+        (string? tempOnDisk, bool newThere, bool oldThere) = this.ReadDisk(teamsRoot, row.OldName, row.NewName);
         neverMoved = oldThere && tempOnDisk is null && !newThere;
         if (neverMoved)
         {
@@ -202,6 +211,21 @@ internal sealed class TeamRenameService(
                 : this.MoveOne(teamsRoot, tempOnDisk, row.NewName, false, "The Team folder");
             return failure ?? this.FinishArchivedMove(archiveRoot, row, caseOnly);
         });
+    }
+
+    /// <summary>Reads how far a folder rename under <paramref name="parent"/> got: the temporary folder, and whether the new and the old name are there (a case-only rename compares the spelling).</summary>
+    /// <param name="parent">The folder that holds the renamed one.</param>
+    /// <param name="oldName">The old name.</param>
+    /// <param name="newName">The new name.</param>
+    private (string? TempOnDisk, bool NewThere, bool OldThere) ReadDisk(string parent, string oldName, string newName)
+    {
+        bool caseOnly = CaseOnly(oldName, newName);
+        string? tempOnDisk = this.Spelling(parent, RenamingPrefix + newName);
+        string? newSpelling = this.Spelling(parent, newName);
+        bool newRespelled = newSpelling is not null && string.Equals(newSpelling, newName, StringComparison.Ordinal);
+        bool newThere = newSpelling is not null && (!caseOnly || newRespelled);
+        bool oldThere = caseOnly ? newSpelling is not null && !newRespelled : this.Spelling(parent, oldName) is not null;
+        return (tempOnDisk, newThere, oldThere);
     }
 
     /// <summary>Finishes <c>Archive/Old</c>: from the temporary folder a case-only crash left, or from the old spelling (found ignoring case).</summary>
@@ -293,6 +317,11 @@ internal sealed class TeamRenameService(
     /// <summary>Steps 5 to 7: the store rows, the rewrites and the labels, each retried; the first that still fails is the error.</summary>
     private async Task<string?> RollForwardAsync(TeamRename row, CancellationToken ct)
     {
+        if (row.Kind == TeamRenameKind.Project)
+        {
+            return await this.RollForwardProjectAsync(row, ct).ConfigureAwait(false);
+        }
+
         string? error = await this.RetryAsync(
             "the Room, Task prefix and cadence rows",
             async () =>
@@ -306,16 +335,24 @@ internal sealed class TeamRenameService(
             return error;
         }
 
+        error = await this.RunRewritesAsync(row, ct).ConfigureAwait(false);
+        return error ?? this.RewriteLabels(row);
+    }
+
+    /// <summary>Runs every step-6 rewrite in registration order, each retried.</summary>
+    /// <returns>The first error sentence, or <see langword="null"/> when all ran.</returns>
+    private async Task<string?> RunRewritesAsync(TeamRename row, CancellationToken ct)
+    {
         foreach (ITeamRenameRewrite rewrite in this.rewriteList)
         {
-            error = await this.RetryAsync("the files that mention the Team", () => rewrite.RunAsync(row, ct)).ConfigureAwait(false);
+            string? error = await this.RetryAsync("the files that mention the Team", () => rewrite.RunAsync(row, ct)).ConfigureAwait(false);
             if (error is not null)
             {
                 return error;
             }
         }
 
-        return this.RewriteLabels(row);
+        return null;
     }
 
     /// <summary>Step 7: rewrites the labels, then re-checks every Persona and retries while one still holds the old name.</summary>
@@ -450,7 +487,7 @@ internal sealed class TeamRenameService(
     /// <param name="pauses">Receives each pause as it is taken, so a caller can lift them when a later one fails.</param>
     private void PauseWrites(TeamRename row, List<IDisposable> pauses)
     {
-        List<string> names = [row.OldName, row.NewName];
+        List<string> names = row.Kind == TeamRenameKind.Project ? [row.Team] : [row.OldName, row.NewName];
         foreach (ITeamRenameRewrite rewrite in this.rewriteList)
         {
             names.AddRange(rewrite.TeamsTouched(row));

@@ -19,6 +19,12 @@ internal sealed class DocHistoryRenameRewrite(DocHistoryStore history) : ITeamRe
         ArgumentNullException.ThrowIfNull(rename);
 
         LibraryRoot teams = new("teams", "Teams", string.Empty, LibraryRootKind.Teams);
+        if (rename.Kind == TeamRenameKind.Project)
+        {
+            history.Move(Folder(teams, $"{rename.Team}/{rename.OldName}"), Folder(teams, $"{rename.Team}/{rename.NewName}"));
+            return Task.CompletedTask;
+        }
+
         LibraryRoot archive = new("archive", "Archive", string.Empty, LibraryRootKind.Archive, ReadOnly: true);
         history.Move(Folder(teams, rename.OldName), Folder(teams, rename.NewName));
         history.Move(Folder(archive, rename.OldName), Folder(archive, rename.NewName));
