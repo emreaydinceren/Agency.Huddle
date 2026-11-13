@@ -14,6 +14,7 @@
 @inject TabService Tabs
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IServiceProvider Services
 
 @code {
     private const string StorageKey = "huddle:tabs";
@@ -29,7 +30,13 @@
         }
 
         string? stored = await BrowserStorage.TryGetAsync(this.JS, StorageKey);
-        if (this.Tabs.Restore(TabSnapshot.TryParse(stored)))
+        TabSnapshot? snapshot = TabSnapshot.TryParse(stored);
+        if (snapshot is not null && this.Services.GetService<Agency.Huddle.App.Teams.ITeamRenames>() is { } renames)
+        {
+            snapshot = snapshot.MapTeamNames(renames);
+        }
+
+        if (this.Tabs.Restore(snapshot))
         {
             this.Tabs.Open(this.Navigation.Uri);
         }

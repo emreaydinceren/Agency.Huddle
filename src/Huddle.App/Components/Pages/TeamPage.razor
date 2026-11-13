@@ -231,6 +231,7 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        this.RedirectRenamedRoute();
         if (!string.Equals(this.lastTeam, this.Team, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(this.lastProject, this.Project, StringComparison.OrdinalIgnoreCase))
         {
@@ -238,6 +239,59 @@
             this.lastTeam = this.Team;
             this.lastProject = this.Project;
         }
+    }
+
+    /// <summary>When the route names a Team or Project the catalog does not have, but the rename journal knows it under today's name, replaces the address with the new route (R11).</summary>
+    private void RedirectRenamedRoute()
+    {
+        if (this.Services.GetService<ITeamRenames>() is not { } renames)
+        {
+            return;
+        }
+
+        TeamSummary? summary = this.Catalog.Find(this.Team);
+        bool hasProject = !string.IsNullOrWhiteSpace(this.Project);
+        string team = this.Team;
+        string? project;
+        if (summary is null)
+        {
+            team = renames.Resolve(this.Team);
+            if (string.Equals(team, this.Team, StringComparison.Ordinal) || this.Catalog.Find(team) is null)
+            {
+                return;
+            }
+
+            project = hasProject ? renames.ResolveProject(this.Team, this.Project!) : null;
+        }
+        else if (hasProject && this.FindProject(summary) is null)
+        {
+            project = renames.ResolveProject(this.Team, this.Project!);
+            if (string.Equals(project, this.Project, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        string route = TeamHref(team);
+        if (project is not null)
+        {
+            route += $"/projects/{Uri.EscapeDataString(project)}";
+        }
+        else if (this.Navigation.Uri.Contains("/no-project/files", StringComparison.OrdinalIgnoreCase))
+        {
+            route += "/no-project/files";
+        }
+
+        if (!string.IsNullOrWhiteSpace(this.Tab) && !route.EndsWith("/files", StringComparison.Ordinal))
+        {
+            route += $"/{Uri.EscapeDataString(this.Tab)}";
+        }
+
+        this.Navigation.NavigateTo(route, replace: true);
     }
 
     /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>.</summary>

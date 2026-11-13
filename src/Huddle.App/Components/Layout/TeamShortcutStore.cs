@@ -21,8 +21,10 @@ namespace Agency.Huddle.App.Components.Layout;
 /// </remarks>
 /// <param name="js">Reaches <c>huddleStorage</c> in <c>app.js</c>.</param>
 /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
-internal sealed class TeamShortcutStore(IJSRuntime js, ILogger<TeamShortcutStore>? logger = null)
+/// <param name="renames">The rename journal, so a name stored before a Team rename loads as today's name.</param>
+internal sealed class TeamShortcutStore(IJSRuntime js, ILogger<TeamShortcutStore>? logger = null, ITeamRenames? renames = null)
 {
+
     private readonly ILogger<TeamShortcutStore> logger = logger ?? NullLogger<TeamShortcutStore>.Instance;
 
     /// <summary>The <c>localStorage</c> key the Human's choice is remembered under.</summary>
@@ -69,7 +71,7 @@ internal sealed class TeamShortcutStore(IJSRuntime js, ILogger<TeamShortcutStore
                 {
                     if (!string.IsNullOrWhiteSpace(team))
                     {
-                        this.removed.Add(team);
+                        this.removed.Add(renames?.Resolve(team) ?? team);
                     }
                 }
             }

@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Teams;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Library;
@@ -28,6 +29,7 @@ internal static class LibraryFilesEndpoint
     /// <param name="resolver">Resolves the (rootId, path) pair to a path inside the Library.</param>
     /// <param name="options">The bound <see cref="TeamOptions"/>, for <see cref="LibraryOptions.Enabled"/> and the hidden-folder ignore list.</param>
     /// <param name="loggerFactory">Creates the endpoint's logger (a static class can't be a generic <c>ILogger</c> argument, CS0718), which logs an unexpected file-system failure while reading the head.</param>
+    /// <param name="renames">The rename journal, so a link under a renamed Team's old folder name still opens.</param>
     /// <param name="ct">Cancels the head read.</param>
     /// <returns>A file result on success, a 404 result otherwise.</returns>
     internal static async Task<IResult> HandleAsync(
@@ -37,6 +39,7 @@ internal static class LibraryFilesEndpoint
         LibraryPathResolver resolver,
         IOptions<TeamOptions> options,
         ILoggerFactory loggerFactory,
+        ITeamRenames? renames,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(rootId);
@@ -49,6 +52,13 @@ internal static class LibraryFilesEndpoint
         if (!options.Value.Library.Enabled)
         {
             return Results.NotFound();
+        }
+
+        if (renames is not null && string.Equals(rootId, "teams", StringComparison.OrdinalIgnoreCase))
+        {
+            // An old upload link names the Team folder by its old name; the folder now carries today's name.
+            const string Prefix = "teams/";
+            path = RenamedTeamPaths.Map("teams", Prefix + path, renames)[Prefix.Length..];
         }
 
         if (!resolver.TryResolve(rootId, path, out LibraryPath? resolved, out string? _))

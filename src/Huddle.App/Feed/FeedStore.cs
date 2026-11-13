@@ -40,12 +40,15 @@ internal sealed class FeedStore
     private const string TeamExpression = "(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.data.team') END)";
 
     private readonly string connectionString;
+    private readonly Agency.Huddle.App.Teams.ITeamRenames? renames;
 
     /// <summary>Opens the database and creates the tables when they are missing.</summary>
     /// <param name="options">Supplies the data folder holding <c>team.db</c>.</param>
-    public FeedStore(IOptions<TeamOptions> options)
+    /// <param name="renames">The rename journal, so a Team filter also finds rows recorded under an earlier name.</param>
+    public FeedStore(IOptions<TeamOptions> options, Agency.Huddle.App.Teams.ITeamRenames? renames = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        this.renames = renames;
         this.connectionString = SqliteTable.Open(options.Value, DdlCreate);
     }
 
@@ -291,7 +294,7 @@ internal sealed class FeedStore
         return command.ExecuteNonQuery();
     }
 
-    private static void AppendActorAndTeam(StringBuilder sql, SqliteCommand command, string? agent, string? team)
+    private void AppendActorAndTeam(StringBuilder sql, SqliteCommand command, string? agent, string? team)
     {
         if (agent is not null)
         {
@@ -301,8 +304,24 @@ internal sealed class FeedStore
 
         if (team is not null)
         {
-            _ = sql.Append(" AND ").Append(TeamExpression).Append(" = $team COLLATE NOCASE");
-            _ = command.Parameters.AddWithValue("$team", team);
+            List<string> names = [team];
+            if (this.renames is not null)
+            {
+                string current = this.renames.Resolve(team);
+                names.Add(current);
+                names.AddRange(this.renames.EarlierNames(current));
+            }
+
+            string[] distinct = [.. names.Distinct(StringComparer.OrdinalIgnoreCase)];
+            _ = sql.Append(" AND (");
+            for (int i = 0; i < distinct.Length; i++)
+            {
+                string parameter = string.Create(CultureInfo.InvariantCulture, $"$team{i}");
+                _ = sql.Append(i == 0 ? string.Empty : " OR ").Append(TeamExpression).Append(" = ").Append(parameter).Append(" COLLATE NOCASE");
+                _ = command.Parameters.AddWithValue(parameter, distinct[i]);
+            }
+
+            _ = sql.Append(')');
         }
     }
 
