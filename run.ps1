@@ -22,6 +22,24 @@
 
     See docs/Huddle.EngineeringGuide.md ("Build, test, run") for the commands this wraps.
 
+    Parameters (one line each; Get-Help ./run.ps1 -Detailed has the full text):
+
+      -Port <int>          Port to listen on. Default 5100.
+      -PipeName <string>   Pipe Agents connect on. Default team-<Port>, so two
+                           ports can run side by side.
+      -NoAcp               Start no node process per Persona for this run.
+      -NoBuild             Skip the build; run what is already compiled.
+      -DataDir <path>      Data folder. Default App_Data under src/Huddle.App;
+                           wins over $env:Team__DataDir.
+      -Seed                Run on the data set built by src/Huddle.Seeder.
+      -SeedRoot <path>     Seed root -Seed reads. Default <system drive>:\seeds\huddle\software-co.
+      -Clean               Delete team.db and every Agent definition file first.
+                           No prompt, cannot be undone.
+      -CleanOnly           Do -Clean's deletion, then exit.
+      -DryRun              Print what would run (and what -Clean would delete), then exit.
+      -LogLevel <level>    Console level for Huddle's own logs: Trace, Debug,
+                           Information, Warning, Error, Critical or None.
+
 .PARAMETER Port
     Port to listen on (default: 5100, matching launchSettings.json).
 
