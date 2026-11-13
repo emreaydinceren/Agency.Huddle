@@ -142,4 +142,58 @@ public sealed class ReplyGateTests
 
         Assert.Equal(ReplyDecision.Reply, result);
     }
+
+    /// <summary>A Huddle post with no Mention wakes nobody, even in the 2-Member Room that answers every Human Message (Spec §6.4, V-3).</summary>
+    [Fact]
+    public void FromHuddle_NoMention_TwoMemberRoom_GetsCatchUp()
+    {
+        var result = ReplyGate.Decide(mentioned: false, memberCount: 2, agentMessagesSinceHuman: 0, budget: Uncapped, following: false, fromHuddle: true);
+
+        Assert.Equal(ReplyDecision.CatchUp, result);
+    }
+
+    /// <summary>Following does not turn a Huddle post with no Mention into a wake.</summary>
+    [Fact]
+    public void FromHuddle_NoMention_Following_GetsCatchUp()
+    {
+        var result = ReplyGate.Decide(mentioned: false, memberCount: 3, agentMessagesSinceHuman: 0, budget: Uncapped, following: true, fromHuddle: true);
+
+        Assert.Equal(ReplyDecision.CatchUp, result);
+    }
+
+    /// <summary>A Huddle post that Mentions the Agent wakes it, as the Job and Task wakes do.</summary>
+    [Fact]
+    public void FromHuddle_Mentioned_GetsReply()
+    {
+        var result = ReplyGate.Decide(mentioned: true, memberCount: 2, agentMessagesSinceHuman: 0, budget: Uncapped, following: false, fromHuddle: true);
+
+        Assert.Equal(ReplyDecision.Reply, result);
+    }
+
+    /// <summary>A Human post is unchanged: no Mention in a 2-Member Room still replies.</summary>
+    [Fact]
+    public void NotFromHuddle_TwoMemberRoom_StillReplies()
+    {
+        var result = ReplyGate.Decide(mentioned: false, memberCount: 2, agentMessagesSinceHuman: 0, budget: Uncapped, following: false, fromHuddle: false);
+
+        Assert.Equal(ReplyDecision.Reply, result);
+    }
+
+    /// <summary>A Human post is unchanged: a follower in a 3+ Room still replies without a Mention.</summary>
+    [Fact]
+    public void NotFromHuddle_Following_StillReplies()
+    {
+        var result = ReplyGate.Decide(mentioned: false, memberCount: 3, agentMessagesSinceHuman: 0, budget: Uncapped, following: true, fromHuddle: false);
+
+        Assert.Equal(ReplyDecision.Reply, result);
+    }
+
+    /// <summary>A Human post is unchanged: no Mention in a 3+ Room is still CatchUp.</summary>
+    [Fact]
+    public void NotFromHuddle_ThreeMembersNotMentioned_StillGetsCatchUp()
+    {
+        var result = ReplyGate.Decide(mentioned: false, memberCount: 3, agentMessagesSinceHuman: 0, budget: Uncapped, following: false, fromHuddle: false);
+
+        Assert.Equal(ReplyDecision.CatchUp, result);
+    }
 }

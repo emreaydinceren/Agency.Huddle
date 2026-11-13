@@ -45,14 +45,23 @@ internal static class ReplyGate
     /// <c>isCoordinator</c> frontmatter flag for exactly that reason, because the same Persona can
     /// follow one Room and not another.
     /// </param>
+    /// <param name="fromHuddle">
+    /// Whether Huddle itself posted the Message (ADR-0065). Such a post wakes an Agent only by Mentioning
+    /// it, so without a Mention it is read as context whatever the Member count or following (Spec §6.4).
+    /// </param>
     /// <returns>What to do with this delivery.</returns>
-    internal static ReplyDecision Decide(bool mentioned, int memberCount, int agentMessagesSinceHuman, int budget, bool following)
+    internal static ReplyDecision Decide(bool mentioned, int memberCount, int agentMessagesSinceHuman, int budget, bool following, bool fromHuddle = false)
     {
         // >= rather than >: the count includes the Message just received, so a reply to it would be
         // the Budget-plus-first. ChatService compares the same way, so the two agree by construction.
         if (budget > 0 && agentMessagesSinceHuman >= budget)
         {
             return ReplyDecision.BudgetExhausted;
+        }
+
+        if (fromHuddle && !mentioned)
+        {
+            return ReplyDecision.CatchUp;
         }
 
         return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyDecision.CatchUp;

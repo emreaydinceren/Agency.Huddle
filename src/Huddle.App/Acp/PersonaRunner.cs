@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
@@ -738,7 +739,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         var following = this.agentId is not null && this.roomFollows.IsFollowing(this.agentId, posted.RoomId);
         switch (ReplyGate.Decide(
-            posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following))
+            posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following, string.Equals(posted.Message.SenderId, KnownIds.Huddle, StringComparison.Ordinal)))
         {
             case ReplyDecision.Reply:
                 this.EnqueueReply(posted);
