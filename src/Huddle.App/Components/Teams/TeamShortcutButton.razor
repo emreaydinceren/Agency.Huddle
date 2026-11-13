@@ -1,16 +1,21 @@
 @*
-    The Team page header's "Add shortcut" button: shown only while the Team has no shortcut at the top of the Activity
-    bar (the Human removed it, or turned Team shortcuts off), and gone as soon as it has one again. Nothing is offered
-    until TeamShortcutStore has read the stored choice, so the button never flashes on a Team that has its shortcut.
+    The Team page header's shortcut toggle: "Hide shortcut" while the Team has a shortcut at the top of the Activity bar,
+    "Show shortcut" while it has none (the Human hid it, or turned Team shortcuts off). The label says the action, so
+    there is no aria-pressed as well: a label that changes with the state and a pressed state would contradict each
+    other to a screen reader. Nothing is drawn until TeamShortcutStore has read the
+    stored choice, so the label never flashes the wrong way on a reload.
 *@
 @implements IDisposable
 @inject ITeamCatalog Catalog
 @inject TeamShortcutStore Shortcuts
 
-@if (!this.Shortcuts.Has(this.Team))
+@if (this.Shortcuts.IsLoaded)
 {
-    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AddToPhotos"
-               Class="team-page-actions team-shortcut-add" OnClick="this.AddAsync">Add shortcut</MudButton>
+    bool shown = this.Shortcuts.Has(this.Team);
+    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+               StartIcon="@(shown ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+               Class="team-page-actions team-shortcut-toggle"
+               OnClick="@(() => this.ToggleAsync(shown))">@(shown ? "Hide shortcut" : "Show shortcut")</MudButton>
 }
 
 @code {
@@ -19,7 +24,7 @@
     [EditorRequired]
     public string Team { get; set; } = string.Empty;
 
-    /// <summary>Follows the shortcut choice, so the button goes when the shortcut is added from anywhere.</summary>
+    /// <summary>Follows the shortcut choice, so the label turns when the shortcut is shown or hidden from anywhere.</summary>
     protected override void OnInitialized() => this.Shortcuts.Changed += this.OnChanged;
 
     /// <summary>Reads the remembered shortcut choice once the browser can be reached, if the Activity bar has not already.</summary>
@@ -37,5 +42,8 @@
 
     private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
-    private Task AddAsync() => this.Shortcuts.AddAsync(this.Team, this.Catalog.Teams);
+    /// <summary>Hides the shortcut when it is shown, and shows it when it is not.</summary>
+    /// <param name="shown">Whether the Team had a shortcut when the button was drawn.</param>
+    private Task ToggleAsync(bool shown) =>
+        shown ? this.Shortcuts.RemoveAsync(this.Team) : this.Shortcuts.AddAsync(this.Team, this.Catalog.Teams);
 }

@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Layout;
@@ -62,6 +63,24 @@ public sealed class ActivityBarTests
         Assert.Equal("Teams", pressed.GetAttribute("aria-label"));
         Assert.Contains("activity-bar-item-selected", pressed.ClassList);
         Assert.All(buttons, static b => Assert.Equal(ActivityBar.SidebarElementId, b.GetAttribute("aria-controls")));
+    }
+
+    /// <summary>The Top slot (the Feed link) is the bar's first content, above the Team shortcuts, and outside the Sidebar views toolbar.</summary>
+    [Fact]
+    public async Task Render_TopSlot_ComesFirstAboveTheShortcuts()
+    {
+        await using MudBunitContext ctx = UiTestHost.Create();
+
+        IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p
+            .Add(c => c.Top, (RenderFragment)(b => b.AddMarkupContent(0, "<a class=\"feed-probe\">Feed</a>")))
+            .Add(c => c.Shortcuts, (RenderFragment)(b => b.AddMarkupContent(0, "<div class=\"shortcuts-probe\"></div>"))));
+
+        IElement bar = cut.Find("nav.activity-bar");
+        IElement first = Assert.IsAssignableFrom<IElement>(bar.FirstElementChild);
+        Assert.Contains("activity-bar-pinned", first.ClassList);
+        Assert.NotNull(first.QuerySelector(".feed-probe"));
+        Assert.Contains("shortcuts-probe", Assert.IsAssignableFrom<IElement>(first.NextElementSibling).ClassList);
+        Assert.Null(cut.Find(".feed-probe").Closest("[role='toolbar']"));
     }
 
     /// <summary>Clicking the selected button reports no view (collapse); clicking another reports that view.</summary>

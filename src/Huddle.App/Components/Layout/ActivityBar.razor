@@ -1,17 +1,24 @@
 @*
     The Activity bar (S5): a 52px strip at the left edge of the shell, like VS Code's. Its top toolbar holds one
     button per Sidebar view; the selected one is pressed and the others are not, and clicking the selected one
-    collapses the Sidebar. The Shortcuts slot comes first, above a hairline (MainLayout fills it with the Team
-    shortcuts); the Top slot puts the Feed link above the view buttons. Its bottom toolbar is the Bottom slot, which MainLayout
-    fills with Archived chats and Settings. The bar holds no state: MainLayout owns the selected view.
+    collapses the Sidebar. The Top slot comes first of all (MainLayout puts the Feed link there), so it keeps the bar's
+    first position however many Team shortcuts follow; it sits outside the view toolbar because it opens a Tab, not a
+    Sidebar view. The Shortcuts slot follows, above a hairline (MainLayout fills it with the Team shortcuts). Its bottom
+    toolbar is the Bottom slot, which MainLayout fills with Archived chats and Settings. The bar holds no state:
+    MainLayout owns the selected view.
 *@
 @using Microsoft.Extensions.Options
 @inject IOptions<TeamOptions> Options
 
 <nav class="activity-bar" aria-label="Activity bar">
+    @if (this.Top is not null)
+    {
+        <div class="activity-bar-pinned">
+            @this.Top
+        </div>
+    }
     @this.Shortcuts
     <div class="activity-bar-top" role="toolbar" aria-orientation="vertical" aria-label="Sidebar views">
-        @this.Top
         @foreach (SidebarViewItem item in SidebarViews.Available(this.Options.Value))
         {
             bool pressed = this.Selected == item.View;
@@ -44,11 +51,11 @@
     [Parameter]
     public EventCallback<SidebarView?> SelectedChanged { get; set; }
 
-    /// <summary>What comes before the top toolbar: the Team shortcuts, which draw their own hairline below them.</summary>
+    /// <summary>What comes between <see cref="Top"/> and the view toolbar: the Team shortcuts, which draw their own hairline below them.</summary>
     [Parameter]
     public RenderFragment? Shortcuts { get; set; }
 
-    /// <summary>The top toolbar's leading content, above the Sidebar view buttons: the Feed link.</summary>
+    /// <summary>The bar's first content, above the Team shortcuts and the Sidebar view buttons: the Feed link.</summary>
     [Parameter]
     public RenderFragment? Top { get; set; }
 
