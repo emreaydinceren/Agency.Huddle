@@ -685,6 +685,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITeamRenameRewrite, WorkspaceRenameRewrite>();
         services.AddSingleton<ITeamRenameRewrite, DocHistoryRenameRewrite>();
         services.AddSingleton<ITeamRenameRewrite, LedgerRenameRewrite>();
+
+        // Before archive recovery: a half-renamed Team folder is finished before anything reads the Teams folder.
+        services.AddHostedService<TeamRenameRecoveryService>();
     }
 
     /// <summary>Registers the Team folder provisioner, the Team catalog and membership, the view store and the Sprint stores.</summary>
@@ -697,6 +700,7 @@ public static class ServiceCollectionExtensions
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
         // Archive recovery goes first so an interrupted archive is undone or finished before the provisioner
         // synchronises folders and the reconciler reads the catalog (corrections-12 items 4, 8, 16).
+        AddTeamRenameServices(services);
         services.AddHostedService<ArchiveRecoveryService>();
         services.AddSingleton<TeamFolderProvisioner>();
         services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
@@ -726,7 +730,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IArchiveFileSystem, PhysicalArchiveFileSystem>();
         services.AddSingleton<ArchiveService>();
         services.AddSingleton<IArchiveService>(static sp => sp.GetRequiredService<ArchiveService>());
-        AddTeamRenameServices(services);
 
         // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
         // to the very provisioner instance the host runs (no cycle: it needs the catalog above).

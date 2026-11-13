@@ -63,6 +63,89 @@ internal sealed class TeamRenameService(
         return await this.RenameLockedAsync(summary.Name, newName, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Start-up recovery (§5.4): for each Pending Team row, in id order, decides from disk how far the move got (Old still there:
+    /// it never happened, so the row is discarded; the temporary folder: finish the move; New: finish the archived folder), then
+    /// rolls forward and completes. Task writes are paused as in a rename; the reconciler has not started, so it is not suspended.
+    /// A row that still fails stays Pending and is logged.
+    /// </summary>
+    /// <param name="ct">Cancels the wait for the gate and the awaited work.</param>
+    public async Task RecoverAsync(CancellationToken ct)
+    {
+        using IDisposable entered = await gate.EnterAsync(ct).ConfigureAwait(false);
+        foreach (TeamRename row in renames.Pending().Where(static r => r.Kind == TeamRenameKind.Team).OrderBy(static r => r.Id))
+        {
+            List<IDisposable> pauses = this.PauseWrites(row);
+            try
+            {
+                await this.RecoverRowAsync(row, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                foreach (IDisposable pause in pauses)
+                {
+                    pause.Dispose();
+                }
+            }
+        }
+    }
+
+    private async Task RecoverRowAsync(TeamRename row, CancellationToken ct)
+    {
+        string? failure = this.FinishMovesFromDisk(row, out bool neverMoved);
+        if (neverMoved)
+        {
+            renames.Discard(row.Id);
+            return;
+        }
+
+        failure ??= await this.RollForwardAsync(row, ct).ConfigureAwait(false);
+        if (failure is null)
+        {
+            renames.Complete(row.Id);
+            return;
+        }
+
+        logger.LogWarning("Recovering the rename of {Team} to {NewName} left it Pending: {Problem}", row.OldName, row.NewName, failure);
+    }
+
+    /// <summary>Reads the folders and finishes the move that a crash cut short.</summary>
+    /// <param name="row">The Pending row.</param>
+    /// <param name="neverMoved">Set when <c>Teams/Old</c> is still there with no temporary folder and no <c>Teams/New</c>.</param>
+    /// <returns>The problem sentence, or <see langword="null"/> when the folders are as the row says.</returns>
+    private string? FinishMovesFromDisk(TeamRename row, out bool neverMoved)
+    {
+        string teamsRoot = this.RootPath(LibraryRootKind.Teams);
+        string archiveRoot = this.RootPath(LibraryRootKind.Archive);
+        List<string> entries = [.. files.ListEntries(teamsRoot)];
+        string temp = RenamingPrefix + row.NewName;
+        string? tempOnDisk = entries.FirstOrDefault(e => string.Equals(e, temp, StringComparison.OrdinalIgnoreCase));
+        bool oldThere = entries.Contains(row.OldName, StringComparer.Ordinal);
+        bool newThere = entries.Contains(row.NewName, StringComparer.Ordinal);
+        neverMoved = oldThere && tempOnDisk is null && !newThere;
+        if (neverMoved)
+        {
+            return null;
+        }
+
+        if (tempOnDisk is null && !newThere)
+        {
+            return $"Neither {row.OldName} nor {row.NewName} has a folder to finish.";
+        }
+
+        bool caseOnly = CaseOnly(row.OldName, row.NewName);
+        return folders.RunExclusive(() =>
+        {
+            string? failure = tempOnDisk is null
+                ? null
+                : this.MoveOne(teamsRoot, tempOnDisk, row.NewName, false, "The Team folder");
+            bool archivedOld = files.ListEntries(archiveRoot).Contains(row.OldName, StringComparer.Ordinal);
+            return failure is not null || !archivedOld
+                ? failure
+                : this.MoveOne(archiveRoot, row.OldName, row.NewName, caseOnly, "The archived folder");
+        });
+    }
+
     private static TeamRenameOutcome Refuse(string error) => new(false, error);
 
     private static bool CaseOnly(string oldName, string newName) =>
@@ -235,6 +318,14 @@ internal sealed class TeamRenameService(
     /// <summary>Step 3: the pauses (old, new and every Team a rewrite names) and the reconciler suspension.</summary>
     private async Task<RenameScope> EnterScopeAsync(TeamRename row, CancellationToken ct)
     {
+        List<IDisposable> pauses = this.PauseWrites(row);
+        IAsyncDisposable suspension = await reconciler.SuspendAsync(ct).ConfigureAwait(false);
+        return new RenameScope(pauses, suspension);
+    }
+
+    /// <summary>Pauses Task writes for the old and new names and every Team a rewrite names.</summary>
+    private List<IDisposable> PauseWrites(TeamRename row)
+    {
         List<string> names = [row.OldName, row.NewName];
         foreach (ITeamRenameRewrite rewrite in this.rewriteList)
         {
@@ -247,8 +338,7 @@ internal sealed class TeamRenameService(
             pauses.Add(tasks.PauseWrites(name));
         }
 
-        IAsyncDisposable suspension = await reconciler.SuspendAsync(ct).ConfigureAwait(false);
-        return new RenameScope(pauses, suspension);
+        return pauses;
     }
 
     /// <summary>Step 4: moves <c>Teams/Old</c>, then <c>Archive/Old</c> when it exists; a failure puts back what moved.</summary>
