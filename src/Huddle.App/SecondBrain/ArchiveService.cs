@@ -19,7 +19,8 @@ namespace Agency.Huddle.App.SecondBrain;
 /// </remarks>
 internal sealed partial class ArchiveService : IArchiveService, IDisposable
 {
-    private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly TeamOperationGate gate;
+    private readonly bool ownsGate;
     private readonly LibraryRootStore roots;
     private readonly ITeamCatalog catalog;
     private readonly ITeamMembership membership;
@@ -44,6 +45,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     /// <param name="files">The disk operations.</param>
     /// <param name="feed">Receives the "Team archived" item.</param>
     /// <param name="logger">Logs a label that could not be removed.</param>
+    /// <param name="gate">The gate shared with the Team rename; <see langword="null"/> makes a private one.</param>
     public ArchiveService(
         LibraryRootStore roots,
         ITeamCatalog catalog,
@@ -55,8 +57,11 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
         ITeamDirectory directory,
         IArchiveFileSystem files,
         IFeedPublisher feed,
-        ILogger<ArchiveService> logger)
+        ILogger<ArchiveService> logger,
+        TeamOperationGate? gate = null)
     {
+        this.ownsGate = gate is null;
+        this.gate = gate ?? new TeamOperationGate();
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(membership);
@@ -102,15 +107,8 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        await this.gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return await this.ArchiveLockedAsync(team, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _ = this.gate.Release();
-        }
+        using IDisposable entered = await this.gate.EnterAsync(ct).ConfigureAwait(false);
+        return await this.ArchiveLockedAsync(team, ct).ConfigureAwait(false);
     }
 
     /// <summary>Unarchives the Team: the folder moves back, the recorded members are added again, the recorded Rooms are restored.</summary>
@@ -121,15 +119,8 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(team);
 
-        await this.gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return await this.UnarchiveLockedAsync(team, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _ = this.gate.Release();
-        }
+        using IDisposable entered = await this.gate.EnterAsync(ct).ConfigureAwait(false);
+        return await this.UnarchiveLockedAsync(team, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -139,19 +130,18 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
     /// <param name="ct">Cancels the wait for the gate.</param>
     public async Task RecoverAsync(CancellationToken ct)
     {
-        await this.gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await this.RecoverLockedAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _ = this.gate.Release();
-        }
+        using IDisposable entered = await this.gate.EnterAsync(ct).ConfigureAwait(false);
+        await this.RecoverLockedAsync(ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public void Dispose() => this.gate.Dispose();
+    public void Dispose()
+    {
+        if (this.ownsGate)
+        {
+            this.gate.Dispose();
+        }
+    }
 
     private async Task<ArchiveOutcome> UnarchiveLockedAsync(string request, CancellationToken ct)
     {

@@ -669,6 +669,19 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Team Rename (Spec §5): the gate shared with <see cref="ArchiveService"/>, the journal and the service. Step-6 rewrites
+    /// register as <see cref="ITeamRenameRewrite"/> (none yet) and run in registration order.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddTeamRenameServices(IServiceCollection services)
+    {
+        services.AddSingleton<TeamOperationGate>();
+        services.AddSingleton<TeamRenameStore>();
+        services.AddSingleton<ITeamRenames>(static sp => sp.GetRequiredService<TeamRenameStore>());
+        services.AddSingleton<TeamRenameService>();
+    }
+
     /// <summary>Registers the Team folder provisioner, the Team catalog and membership, the view store and the Sprint stores.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, for chaining.</returns>
@@ -708,6 +721,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IArchiveFileSystem, PhysicalArchiveFileSystem>();
         services.AddSingleton<ArchiveService>();
         services.AddSingleton<IArchiveService>(static sp => sp.GetRequiredService<ArchiveService>());
+        AddTeamRenameServices(services);
 
         // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
         // to the very provisioner instance the host runs (no cycle: it needs the catalog above).
@@ -938,7 +952,8 @@ public static class ServiceCollectionExtensions
 
         // Team chats (ADR-0052): one Team Room per Team, reconciled from the catalog. Registered after
         // DataInitializer so the Team Directory exists, and after the catalog it subscribes to.
-        services.AddHostedService<Agency.Huddle.App.Teams.TeamRoomReconciler>();
+        services.AddSingleton<Agency.Huddle.App.Teams.TeamRoomReconciler>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Teams.TeamRoomReconciler>());
 
         return services;
     }
