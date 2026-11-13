@@ -96,7 +96,7 @@ browser. The whole UI is drawn at 90% zoom.
 ### Team tiles
 
 Clicking a tile narrows the sidebar to that Team's list of itself and its Projects, with the selected one's **ROOMS**, **TASKS** and **LIBRARY** below.
-**ROOMS** splits into **Needs you** and **All** while a Room is waiting, and its "+" starts a new chat. A Team page has **Add shortcut**,
+**ROOMS** splits into **Needs you** and **All** while a Room is waiting, and its "+" starts a new chat. A Team page has **Show shortcut** / **Hide shortcut**,
 and the choice is remembered per browser.
 
 ### Tabs in depth

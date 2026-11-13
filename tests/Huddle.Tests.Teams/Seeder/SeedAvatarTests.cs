@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MudBlazor.Utilities;
@@ -82,6 +83,58 @@ public sealed class SeedAvatarTests
             {
                 Directory.Delete(dataDir, recursive: true);
             }
+        }
+    }
+
+    /// <summary>
+    /// A redrawn library picture gets a new file name, and an unchanged one keeps its name. The app caches <c>/agent-avatars</c>
+    /// as immutable for a year, so a name that ignored the bytes left browsers showing the old art after a reseed.
+    /// </summary>
+    [Fact]
+    public async Task Write_RedrawnPicture_GetsNewFileName()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        SeedPlan plan = Plan(ScenarioCatalog.DefaultName);
+        SeedAgent redrawn = plan.Agents[0];
+        SeedAgent unchanged = plan.Agents[1];
+        string root = Path.Combine(Path.GetTempPath(), "seed-tests", Guid.NewGuid().ToString("N"));
+        string libraryDir = Path.Combine(root, "library");
+
+        try
+        {
+            CopyFolder(AvatarLibraryLocator.BundledDir, libraryDir);
+            await AvatarWriter.WriteAsync(plan, Path.Combine(root, "before"), libraryDir, ct);
+            File.Copy(Path.Combine(libraryDir, plan.Agents[2].AvatarFile), Path.Combine(libraryDir, redrawn.AvatarFile), overwrite: true);
+            await AvatarWriter.WriteAsync(plan, Path.Combine(root, "after"), libraryDir, ct);
+
+            Dictionary<string, string> before = ImageNames(Path.Combine(root, "before"));
+            Dictionary<string, string> after = ImageNames(Path.Combine(root, "after"));
+            Assert.NotEqual(before[redrawn.Name], after[redrawn.Name]);
+            Assert.Equal(before[unchanged.Name], after[unchanged.Name]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private static Dictionary<string, string> ImageNames(string dataDir)
+    {
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(Path.Combine(dataDir, "avatars.json")));
+        return document.RootElement.EnumerateObject()
+            .Where(static p => p.Value.TryGetProperty("image", out _))
+            .ToDictionary(static p => p.Name, static p => p.Value.GetProperty("image").GetString() ?? string.Empty, StringComparer.Ordinal);
+    }
+
+    private static void CopyFolder(string source, string target)
+    {
+        Directory.CreateDirectory(target);
+        foreach (string file in Directory.GetFiles(source))
+        {
+            File.Copy(file, Path.Combine(target, Path.GetFileName(file)));
         }
     }
 

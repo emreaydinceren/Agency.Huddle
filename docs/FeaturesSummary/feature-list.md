@@ -57,11 +57,11 @@ sidebar shows: **Chats**, **Teams**, **Agents**, **Tasks**, **Library**, **Sched
 **Remote access**, plus a **Feed** icon. **Archived** and **Settings** sit at the
 bottom. Selecting the active button folds the sidebar away. PRs: #206, then #334.
 
-**Team shortcuts.** Every Team gets an avatar tile at the top of the Activity bar, on by
-default. Clicking one narrows the sidebar to that Team's list of itself and its Projects, with the selected one's **ROOMS**,
+**Team shortcuts.** Every Team gets an avatar tile near the top of the Activity bar, below
+the Feed link, on by default. Clicking one narrows the sidebar to that Team's list of itself and its Projects, with the selected one's **ROOMS**,
 **TASKS** and **LIBRARY** below. ROOMS splits into **Needs you** and **All** while a Room is
 waiting, and its "+" starts a new chat. Right-click removes a shortcut or turns them
-all off; the Team page has **Add shortcut**. The choice is remembered per browser. PRs:
+all off; the Team page has **Show shortcut** / **Hide shortcut** beside **Edit avatar…**. The choice is remembered per browser. PRs:
 #277, then #278.
 
 **Sidebar views.**
