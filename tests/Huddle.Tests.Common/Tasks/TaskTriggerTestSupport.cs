@@ -487,6 +487,14 @@ internal static class TaskTriggerTestSupport
             inner.FindTeamRoomAsync(team, ct);
 
         /// <inheritdoc />
+        public Task<int> RenameTeamScopeAsync(string oldName, string newName, CancellationToken ct = default) =>
+            inner.RenameTeamScopeAsync(oldName, newName, ct);
+
+        /// <inheritdoc />
+        public Task<int> RenameProjectScopeAsync(string team, string oldProject, string newProject, CancellationToken ct = default) =>
+            inner.RenameProjectScopeAsync(team, oldProject, newProject, ct);
+
+        /// <inheritdoc />
         public Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default) =>
             inner.AddMemberAsync(roomId, userId, ct);
 

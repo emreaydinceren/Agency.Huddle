@@ -494,6 +494,67 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             ct);
     }
 
+    /// <inheritdoc />
+    public async Task<int> RenameTeamScopeAsync(string oldName, string newName, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await using var transactionScope = transaction.ConfigureAwait(false);
+
+        // The name goes first: it finds the Team Room through the old Scope. `=` on rooms.name is ordinal.
+        var renameRoom = connection.CreateCommand();
+        await using (renameRoom.ConfigureAwait(false))
+        {
+            renameRoom.Transaction = transaction;
+            renameRoom.CommandText = """
+                UPDATE rooms SET name = $new
+                WHERE name = $old
+                  AND id IN (SELECT room_id FROM room_teams
+                             WHERE team = $old AND team_room = 1 AND team COLLATE BINARY <> $new);
+                """;
+            renameRoom.Parameters.AddWithValue("$old", oldName);
+            renameRoom.Parameters.AddWithValue("$new", newName);
+            await renameRoom.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+
+        var moveRooms = connection.CreateCommand();
+        await using var moveRoomsScope = moveRooms.ConfigureAwait(false);
+        moveRooms.Transaction = transaction;
+        moveRooms.CommandText = "UPDATE room_teams SET team = $new WHERE team = $old AND team COLLATE BINARY <> $new;";
+        moveRooms.Parameters.AddWithValue("$old", oldName);
+        moveRooms.Parameters.AddWithValue("$new", newName);
+        var moved = await moveRooms.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return moved;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> RenameProjectScopeAsync(string team, string oldProject, string newProject, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldProject);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newProject);
+
+        return await this.ExecuteAsync(
+            """
+            UPDATE room_projects SET project = $new
+            WHERE project = $old AND project COLLATE BINARY <> $new
+              AND room_id IN (SELECT room_id FROM room_teams WHERE team = $team);
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$team", team);
+                command.Parameters.AddWithValue("$old", oldProject);
+                command.Parameters.AddWithValue("$new", newProject);
+            },
+            ct).ConfigureAwait(false);
+    }
+
     public async Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
     {
         var rowsAffected = await this.ExecuteAsync(

@@ -78,6 +78,64 @@ internal sealed class TaskIdAllocator : ITaskPrefixes
         }
     }
 
+    /// <summary>Whether a row exists for the Team, ignoring case.</summary>
+    internal bool HasPrefix(string team)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+
+        lock (this.gate)
+        {
+            using SqliteConnection connection = OpenConnection(this.connectionString);
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT 1 FROM task_prefixes WHERE team = $t;";
+            select.Parameters.AddWithValue("$t", team);
+            return select.ExecuteScalar() is not null;
+        }
+    }
+
+    /// <summary>
+    /// Moves a Team's row to its new name, keeping prefix and counter. A no-op when the old row is absent.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A different row already holds the new name.</exception>
+    internal void RenameTeam(string oldName, string newName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        string oldKey = oldName.ToUpperInvariant();
+        string newKey = newName.ToUpperInvariant();
+
+        lock (this.gate)
+        {
+            using SqliteConnection connection = OpenConnection(this.connectionString);
+            using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
+
+            if (!string.Equals(oldKey, newKey, StringComparison.Ordinal))
+            {
+                using SqliteCommand exists = connection.CreateCommand();
+                exists.Transaction = transaction;
+                exists.CommandText = """
+                    SELECT EXISTS (SELECT 1 FROM task_prefixes WHERE team = $n)
+                       AND EXISTS (SELECT 1 FROM task_prefixes WHERE team = $o);
+                    """;
+                exists.Parameters.AddWithValue("$n", newKey);
+                exists.Parameters.AddWithValue("$o", oldKey);
+                if (Convert.ToInt32(exists.ExecuteScalar(), CultureInfo.InvariantCulture) == 1)
+                {
+                    throw new InvalidOperationException($"Task ids already exist for a Team named '{newName}'.");
+                }
+            }
+
+            using SqliteCommand update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE task_prefixes SET team = $n WHERE team = $o;";
+            update.Parameters.AddWithValue("$o", oldKey);
+            update.Parameters.AddWithValue("$n", newKey);
+            _ = update.ExecuteNonQuery();
+            transaction.Commit();
+        }
+    }
+
     /// <summary>Returns the stored prefix for a Team, deriving and storing one on first use.</summary>
     internal string PrefixFor(string team)
     {
