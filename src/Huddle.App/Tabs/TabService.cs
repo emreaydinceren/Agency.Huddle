@@ -413,7 +413,7 @@ internal sealed class TabService
         else if (string.Equals(root.Kind, TabGroupSnapshot.SplitKind, StringComparison.Ordinal)
             && root.Children is { Count: >= 2 } children
             && children.Count <= MaxGroups
-            && children.All(static child => string.Equals(child.Kind, TabGroupSnapshot.GroupKind, StringComparison.Ordinal) && child.Tabs.Count > 0))
+            && children.All(static child => string.Equals(child.Kind, TabGroupSnapshot.GroupKind, StringComparison.Ordinal) && child.Tabs is { Count: > 0 }))
         {
             nodes = children;
         }

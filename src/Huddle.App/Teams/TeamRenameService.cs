@@ -128,8 +128,9 @@ internal sealed partial class TeamRenameService(
                 _ = await chat.PostAsHuddleAsync(room.Id, prompts.Say(key, values), ct).ConfigureAwait(false);
             }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
+            // Includes a cancellation: the rename is already Done, so a cancelled post must not fail it.
             logger.LogWarning(ex, "The Team Room line {Key} for {Team} could not be posted.", key, team);
         }
     }
@@ -419,10 +420,21 @@ internal sealed partial class TeamRenameService(
         }
     }
 
+    /// <summary>The one rule both a Team and a Project rename share: none starts while any row is Pending.</summary>
+    /// <returns>The refusal sentence, or <see langword="null"/> when no row is Pending.</returns>
+    private string? PendingRefusal() =>
+        // The Turn hook hears "the highest id"; a lower id finished later would be missed.
+        renames.Pending().Count > 0 ? "Another rename is still finishing. Try again after Huddle restarts." : null;
+
     /// <summary>Step 1: the name rules (§5.5), including the journal and the prefix table.</summary>
     /// <returns>The refusal sentence, or <see langword="null"/> when the name is acceptable.</returns>
     private string? Validate(string oldName, string newName)
     {
+        if (this.PendingRefusal() is { } pending)
+        {
+            return pending;
+        }
+
         if (string.Equals(oldName, newName, StringComparison.Ordinal))
         {
             return $"The Team is already named \"{oldName}\".";

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Teams;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 
@@ -40,12 +41,12 @@ internal sealed class FeedStore
     private const string TeamExpression = "(CASE WHEN json_valid(payload) THEN json_extract(payload, '$.data.team') END)";
 
     private readonly string connectionString;
-    private readonly Agency.Huddle.App.Teams.ITeamRenames? renames;
+    private readonly ITeamRenames? renames;
 
     /// <summary>Opens the database and creates the tables when they are missing.</summary>
     /// <param name="options">Supplies the data folder holding <c>team.db</c>.</param>
     /// <param name="renames">The rename journal, so a Team filter also finds rows recorded under an earlier name.</param>
-    public FeedStore(IOptions<TeamOptions> options, Agency.Huddle.App.Teams.ITeamRenames? renames = null)
+    public FeedStore(IOptions<TeamOptions> options, ITeamRenames? renames = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         this.renames = renames;

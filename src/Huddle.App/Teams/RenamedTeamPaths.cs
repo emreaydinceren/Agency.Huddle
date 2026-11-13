@@ -32,7 +32,7 @@ internal static class RenamedTeamPaths
         }
 
         string team = path[teamStart..teamEnd];
-        if (team.Length == 0)
+        if (string.IsNullOrWhiteSpace(team))
         {
             return path;
         }
@@ -56,7 +56,7 @@ internal static class RenamedTeamPaths
         }
 
         string project = path[start..end];
-        resolved = project.Length == 0 ? null : renames.ResolveProject(team, project);
+        resolved = string.IsNullOrWhiteSpace(project) ? null : renames.ResolveProject(team, project);
         return resolved is not null && !string.Equals(resolved, project, StringComparison.Ordinal);
     }
 }

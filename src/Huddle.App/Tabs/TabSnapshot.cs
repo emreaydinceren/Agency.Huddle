@@ -29,25 +29,39 @@ internal sealed record TabSnapshot(int Version, TabGroupSnapshot Root)
     public TabSnapshot MapTeamNames(ITeamRenames renames)
     {
         ArgumentNullException.ThrowIfNull(renames);
-        return this with { Root = MapGroup(this.Root, renames) };
+
+
+        // Storage is hand-editable and this runs before TabService.Restore validates: whatever is missing or empty is left as it is.
+        return this.Root is null ? this : this with { Root = MapGroup(this.Root, renames) ?? this.Root };
     }
 
-    private static TabGroupSnapshot MapGroup(TabGroupSnapshot group, ITeamRenames renames) =>
-        group with
-        {
-            Tabs = [.. group.Tabs.Select(entry => MapEntry(entry, renames))],
-            Children = group.Children is null ? null : [.. group.Children.Select(child => MapGroup(child, renames))],
-        };
-
-    private static TabSnapshotEntry MapEntry(TabSnapshotEntry entry, ITeamRenames renames)
+    private static TabGroupSnapshot? MapGroup(TabGroupSnapshot? group, ITeamRenames renames)
     {
+        if (group is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<TabSnapshotEntry>? stored = group.Tabs;
+        IReadOnlyList<TabSnapshotEntry> tabs = stored is null ? group.Tabs : [.. stored.Select(entry => MapEntry(entry, renames) ?? entry)];
+        IReadOnlyList<TabGroupSnapshot>? children = group.Children is null ? null : [.. group.Children.Select(child => MapGroup(child, renames) ?? child)];
+        return group with { Tabs = tabs, Children = children };
+    }
+
+    private static TabSnapshotEntry? MapEntry(TabSnapshotEntry? entry, ITeamRenames renames)
+    {
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Url))
+        {
+            return entry;
+        }
+
         string url = MapUrl(entry.Url, renames);
         if (string.Equals(url, entry.Url, StringComparison.Ordinal))
         {
             return entry;
         }
 
-        string title = renames.Resolve(entry.Title);
+        string title = string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : renames.Resolve(entry.Title);
         return entry with { Url = url, Title = title };
     }
 
@@ -68,6 +82,11 @@ internal sealed record TabSnapshot(int Version, TabGroupSnapshot Root)
         }
 
         string oldTeam = Uri.UnescapeDataString(url[teamStart..teamEnd]);
+        if (string.IsNullOrWhiteSpace(oldTeam))
+        {
+            return url;
+        }
+
         string rest = url[teamEnd..];
         const string ProjectsMarker = "/projects/";
         if (rest.StartsWith(ProjectsMarker, StringComparison.OrdinalIgnoreCase))
@@ -75,8 +94,11 @@ internal sealed record TabSnapshot(int Version, TabGroupSnapshot Root)
             int projectEnd = rest.IndexOfAny(['/', '?', '#'], ProjectsMarker.Length);
             projectEnd = projectEnd < 0 ? rest.Length : projectEnd;
             string oldProject = Uri.UnescapeDataString(rest[ProjectsMarker.Length..projectEnd]);
-            string project = renames.ResolveProject(oldTeam, oldProject);
-            rest = string.Concat(ProjectsMarker, Uri.EscapeDataString(project), rest.AsSpan(projectEnd));
+            if (!string.IsNullOrWhiteSpace(oldProject))
+            {
+                string project = renames.ResolveProject(oldTeam, oldProject);
+                rest = string.Concat(ProjectsMarker, Uri.EscapeDataString(project), rest.AsSpan(projectEnd));
+            }
         }
 
         string team = renames.Resolve(oldTeam);

@@ -21,7 +21,8 @@ internal sealed class ProposeRetroChangesTool(
     TeamTypeCatalog types,
     ITeamDirectory directory,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <summary>The most changes one proposal carries.</summary>
     private const int MaxChanges = 3;
@@ -84,7 +85,7 @@ internal sealed class ProposeRetroChangesTool(
         TeamSummary? team = teams.Find(teamText);
         if (team is null)
         {
-            return $"There is no Team named {teamText}.";
+            return RenamedTeamRefusal.For(renames, teamText) ?? $"There is no Team named {teamText}.";
         }
 
         string? refusal = RetroCaller.Check(personas, types, team, actor.Name, "Only the Team's manager or its Retro agent may propose retro changes.");

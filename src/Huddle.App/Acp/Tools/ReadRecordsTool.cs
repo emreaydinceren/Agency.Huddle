@@ -31,7 +31,8 @@ internal sealed class ReadRecordsTool(
     ITeamDirectory directory,
     TimeProvider clock,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;
@@ -98,7 +99,7 @@ internal sealed class ReadRecordsTool(
         TeamSummary? team = teams.Find(teamText);
         if (team is null)
         {
-            return $"There is no Team named {teamText}.";
+            return RenamedTeamRefusal.For(renames, teamText) ?? $"There is no Team named {teamText}.";
         }
 
         string? refusal = this.CheckCaller(team, actor.Name);

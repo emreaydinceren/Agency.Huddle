@@ -38,7 +38,7 @@ internal sealed class RenamedFolderGuard(string teamsRoot, string workDir, ITeam
 
             string team = below.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)[0];
             string today = renames.Resolve(team);
-            if (!string.Equals(today, team, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(today, team, StringComparison.Ordinal))
             {
                 return $"Team '{team}' was renamed to '{today}'. Use '{today}'.";
             }

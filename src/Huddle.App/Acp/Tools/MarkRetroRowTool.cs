@@ -21,7 +21,8 @@ internal sealed class MarkRetroRowTool(
     RetroFileStore register,
     ITeamDirectory directory,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "mark_retro_row";
@@ -67,7 +68,7 @@ internal sealed class MarkRetroRowTool(
         TeamSummary? team = teams.Find(texts.Team);
         if (team is null)
         {
-            return $"There is no Team named {texts.Team}.";
+            return RenamedTeamRefusal.For(renames, texts.Team) ?? $"There is no Team named {texts.Team}.";
         }
 
         string? refusal = RetroCaller.Check(personas, types, team, actor.Name, "Only the Team's manager or its Retro agent may mark its register rows.");

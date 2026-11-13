@@ -48,6 +48,7 @@ internal sealed class TaskService : IDisposable
     private readonly ISprintCatalog sprints;
     private readonly TimeProvider clock;
     private readonly ILogger<TaskService> logger;
+    private readonly ITeamRenames? renames;
     private readonly ProcessGateService? gates;
     private readonly IHumanIdentity human;
     private readonly IProofSource? proofSource;
@@ -69,6 +70,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="gates">Decides whether the Team's process gates refuse a status change (PR-7); <see langword="null"/> enforces none.</param>
     /// <param name="human">The Human's live identity; <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="proof">Evaluates a Task's Proof for the Human gate rules; <see langword="null"/> means an empty, complete Proof.</param>
+    /// <param name="renames">Names today's Team when a draft or patch carries the old name of a renamed one; <see langword="null"/> says only that the Team is unknown.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -80,8 +82,10 @@ internal sealed class TaskService : IDisposable
         ILogger<TaskService> logger,
         ProcessGateService? gates = null,
         IHumanIdentity? human = null,
-        IProofSource? proof = null)
+        IProofSource? proof = null,
+        ITeamRenames? renames = null)
     {
+        this.renames = renames;
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
         ArgumentNullException.ThrowIfNull(events);
@@ -1572,7 +1576,7 @@ internal sealed class TaskService : IDisposable
         }
         else if (!this.IsKnownTeam(location.Team))
         {
-            problems.Add(string.Create(
+            problems.Add(RenamedTeamRefusal.For(this.renames, location.Team) ?? string.Create(
                 CultureInfo.InvariantCulture,
                 $"Unknown team '{location.Team}'. Known teams: {string.Join(", ", this.KnownTeamNames())}."));
         }

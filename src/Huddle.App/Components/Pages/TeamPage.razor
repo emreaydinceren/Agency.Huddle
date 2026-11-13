@@ -231,7 +231,11 @@
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        this.RedirectRenamedRoute();
+        if (this.RedirectRenamedRoute())
+        {
+            return;
+        }
+
         if (!string.Equals(this.lastTeam, this.Team, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(this.lastProject, this.Project, StringComparison.OrdinalIgnoreCase))
         {
@@ -242,11 +246,12 @@
     }
 
     /// <summary>When the route names a Team or Project the catalog does not have, but the rename journal knows it under today's name, replaces the address with the new route (R11).</summary>
-    private void RedirectRenamedRoute()
+    /// <returns><see langword="true"/> when the address was replaced, so the caller stops resolving with the old route values.</returns>
+    private bool RedirectRenamedRoute()
     {
         if (this.Services.GetService<ITeamRenames>() is not { } renames)
         {
-            return;
+            return false;
         }
 
         TeamSummary? summary = this.Catalog.Find(this.Team);
@@ -258,7 +263,7 @@
             team = renames.Resolve(this.Team);
             if (string.Equals(team, this.Team, StringComparison.Ordinal) || this.Catalog.Find(team) is null)
             {
-                return;
+                return false;
             }
 
             project = hasProject ? renames.ResolveProject(this.Team, this.Project!) : null;
@@ -268,12 +273,12 @@
             project = renames.ResolveProject(this.Team, this.Project!);
             if (string.Equals(project, this.Project, StringComparison.Ordinal))
             {
-                return;
+                return false;
             }
         }
         else
         {
-            return;
+            return false;
         }
 
         string route = TeamHref(team);
@@ -292,6 +297,7 @@
         }
 
         this.Navigation.NavigateTo(route, replace: true);
+        return true;
     }
 
     /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>.</summary>

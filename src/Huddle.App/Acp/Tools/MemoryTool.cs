@@ -135,6 +135,11 @@ internal sealed class MemoryTool(
             return null;
         }
 
+        if (segments.Take(2).Any(string.IsNullOrWhiteSpace))
+        {
+            return null;
+        }
+
         string old = segments[0];
         string today = renames.Resolve(old);
         bool teamRenamed = !string.Equals(today, old, StringComparison.OrdinalIgnoreCase);

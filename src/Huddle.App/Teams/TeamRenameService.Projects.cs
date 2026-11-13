@@ -53,6 +53,11 @@ internal sealed partial class TeamRenameService
             return "A rename of this Project is still unfinished. Huddle will finish it at the next start.";
         }
 
+        if (this.PendingRefusal() is { } pending)
+        {
+            return pending;
+        }
+
         bool caseOnly = CaseOnly(oldProject, newProject);
         TeamSummary others = summary with { Projects = [.. summary.Projects.Where(p => !caseOnly || !string.Equals(p, oldProject, StringComparison.OrdinalIgnoreCase))] };
         string? problem = TeamNames.ValidateProjectName(newProject, others, this.ArchivedProjectNames(summary.Name));
