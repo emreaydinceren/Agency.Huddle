@@ -751,7 +751,8 @@ emoji-picker {
 
 /* NavTabLink's wrapper takes no part in layout, so a link keeps the box it had as a direct child of
    its row. Clicks still bubble through a display: contents element. */
-.nav-tab-link {
+.nav-tab-link,
+.activity-bar-page-tiles {
     display: contents;
 }
 
