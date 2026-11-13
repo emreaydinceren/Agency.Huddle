@@ -15,6 +15,7 @@ internal static class PromptFieldFactory
 {
     private const string SystemPromptPrefix = "systemPrompt.";
     private const string TurnPrefix = "turn.";
+    private const string RoomPrefix = "room.";
     private const string GetHelpPrefix = "getHelp.";
     private const string ToolPrefix = "tool.";
     private const string TaskPrefix = "task.";
@@ -36,6 +37,7 @@ internal static class PromptFieldFactory
     [
         (SystemPromptPrefix, "System prompt"),
         (TurnPrefix, "Turn"),
+        (RoomPrefix, "Team Room lines"),
         (GetHelpPrefix, "Get help"),
         (ToolPrefix, "Tool descriptions"),
         (TaskPrefix, "Tasks"),
