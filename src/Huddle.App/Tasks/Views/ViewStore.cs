@@ -287,6 +287,101 @@ internal sealed partial class ViewStore : IDisposable
         EventRaise.Isolated(this.ViewsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ViewsChanged)));
     }
 
+    /// <summary>Rewrites the Team entries of every View's filter, and the Team of each Project entry, from <paramref name="oldName"/> to <paramref name="newName"/>, ignoring case.</summary>
+    /// <param name="oldName">The Team's current Name.</param>
+    /// <param name="newName">The Team's new Name.</param>
+    internal void RenameTeam(string oldName, string newName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        this.RewriteFilters(filter =>
+        {
+            bool teams = filter.Teams.Any(team => Same(team, oldName));
+            bool projects = filter.Projects.Any(project => Same(project.Team, oldName));
+            if (!teams && !projects)
+            {
+                return null;
+            }
+
+            return filter with
+            {
+                Teams = [.. filter.Teams.Select(team => Same(team, oldName) ? newName : team)],
+                Projects = [.. filter.Projects.Select(project => Same(project.Team, oldName) ? project with { Team = newName } : project)],
+            };
+        });
+    }
+
+    /// <summary>Rewrites a Team's Project entries in every View's filter from <paramref name="oldProject"/> to <paramref name="newProject"/>, ignoring case.</summary>
+    /// <param name="team">The Team that holds the Project.</param>
+    /// <param name="oldProject">The Project's current Name.</param>
+    /// <param name="newProject">The Project's new Name.</param>
+    internal void RenameProject(string team, string oldProject, string newProject)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldProject);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newProject);
+
+        this.RewriteFilters(filter =>
+        {
+            if (!filter.Projects.Any(project => Matches(project, team, oldProject)))
+            {
+                return null;
+            }
+
+            return filter with { Projects = [.. filter.Projects.Select(project => Matches(project, team, oldProject) ? project with { Project = newProject } : project)] };
+        });
+    }
+
+    private static bool Same(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private static bool Matches(ProjectRef project, string team, string name) => Same(project.Team, team) && project.Project is not null && Same(project.Project, name);
+
+    /// <summary>Applies <paramref name="rewrite"/> to each View's filter (null means unchanged), then writes the changed Views once under the gate.</summary>
+    private void RewriteFilters(Func<TaskFilter, TaskFilter?> rewrite)
+    {
+        lock (this.watched.Gate)
+        {
+            if (this.watched.Current.LoadError is not null)
+            {
+                return;
+            }
+
+            List<TaskView> changed = [];
+            foreach (TaskView view in this.watched.Current.Views)
+            {
+                TaskFilter? filter = rewrite(view.Filter);
+                if (filter is not null)
+                {
+                    changed.Add(view with { Filter = filter });
+                }
+            }
+
+            if (changed.Count == 0)
+            {
+                return;
+            }
+
+            ReadResult current = ReadDocumentFromDisk(this.path);
+            if (current.LoadError is not null)
+            {
+                return;
+            }
+
+            JsonArray entries = current.Entries;
+            foreach (TaskView view in changed)
+            {
+                RemoveEntryById(entries, view.Id);
+                entries.Add(JsonSerializer.SerializeToNode(view, ViewJson.Options));
+            }
+
+            WriteDocumentToDisk(this.path, entries);
+            this.watched.Current = BuildSnapshot(entries);
+        }
+
+        EventRaise.Isolated(this.ViewsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.ViewsChanged)));
+    }
+
     /// <summary>Whether <paramref name="id"/> names one of the two built-in Views.</summary>
     private static bool IsBuiltIn(string id) =>
         string.Equals(id, AllTasksId, StringComparison.Ordinal) || string.Equals(id, MyTasksId, StringComparison.Ordinal);

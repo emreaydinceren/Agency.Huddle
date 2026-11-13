@@ -106,6 +106,69 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         }
     }
 
+    /// <summary>
+    /// Rewrites, in every Agent's file, the <c>team:&lt;oldLabel&gt;</c> Room folder and Writers keys to the new label and each
+    /// <c>subscribed</c> path equal to or under <paramref name="oldPrefix"/> to <paramref name="newPrefix"/>. Room ids and other keys stay.
+    /// </summary>
+    /// <param name="oldLabel">The Team's old label, matched ignoring case.</param>
+    /// <param name="newLabel">The Team's new label.</param>
+    /// <param name="oldPrefix">The old folder prefix, with <c>/</c> separators and no trailing separator.</param>
+    /// <param name="newPrefix">The new folder prefix.</param>
+    internal void RenameTeam(string oldLabel, string newLabel, string oldPrefix, string newPrefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldPrefix);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPrefix);
+
+        string oldKey = $"team:{oldLabel}";
+        string newKey = $"team:{newLabel}";
+        lock (this.gate)
+        {
+            Directory.CreateDirectory(this.Folder);
+            foreach (string file in Directory.EnumerateFiles(this.Folder, "*.json"))
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                FileState? state = this.LoadCore(name);
+                if (state is null)
+                {
+                    continue;
+                }
+
+                List<string> subscribed = [.. state.Subscribed.Select(path => SwapPrefix(path, oldPrefix, newPrefix))];
+                Dictionary<string, RoomBaseline> rooms = new(StringComparer.Ordinal);
+                foreach ((string roomId, RoomBaseline baseline) in state.Rooms)
+                {
+                    Dictionary<string, FolderSnapshot> folders = new(FolderSnapshotComparer);
+                    foreach ((string key, FolderSnapshot snapshot) in baseline.Folders)
+                    {
+                        folders[string.Equals(key, oldKey, StringComparison.OrdinalIgnoreCase) ? newKey : key] = snapshot;
+                    }
+
+                    rooms[roomId] = new RoomBaseline(folders);
+                }
+
+                Dictionary<string, IReadOnlyDictionary<string, FileWriter>> writers = new(FolderSnapshotComparer);
+                foreach ((string key, IReadOnlyDictionary<string, FileWriter> byPath) in state.Writers)
+                {
+                    writers[string.Equals(key, oldKey, StringComparison.OrdinalIgnoreCase) ? newKey : key] = byPath;
+                }
+
+                this.SaveCore(name, new FileState(subscribed, rooms, writers));
+            }
+        }
+    }
+
+    private static string SwapPrefix(string path, string oldPrefix, string newPrefix)
+    {
+        if (string.Equals(path, oldPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return newPrefix;
+        }
+
+        return path.StartsWith(oldPrefix + "/", StringComparison.OrdinalIgnoreCase) ? newPrefix + path[oldPrefix.Length..] : path;
+    }
+
     /// <summary>Deletes <paramref name="name"/>'s file, then removes it from every other file's <c>subscribed</c>, Room folders and Writers.</summary>
     /// <param name="name">The Agent's Name.</param>
     internal void Remove(string name)

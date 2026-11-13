@@ -85,6 +85,43 @@ internal sealed class RawBaselineStore
         return true;
     }
 
+    /// <summary>
+    /// Moves every row whose path starts with <paramref name="oldPrefix"/> + <c>/</c> to the same path under <paramref name="newPrefix"/>,
+    /// replacing a row already there. The prefix is compared as text (<c>substr</c>), so <c>_</c> and <c>%</c> in a Team name are not wildcards.
+    /// </summary>
+    /// <param name="oldPrefix">The old folder prefix, without a trailing separator.</param>
+    /// <param name="newPrefix">The new folder prefix.</param>
+    public void RenamePrefix(string oldPrefix, string newPrefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldPrefix);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPrefix);
+
+        string from = Normalize(oldPrefix).TrimEnd('/') + "/";
+        string to = Normalize(newPrefix).TrimEnd('/') + "/";
+        if (string.Equals(from, to, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT OR REPLACE INTO raw_baselines(path, size_bytes, modified_utc, recorded_utc)
+            SELECT $to || substr(path, $len + 1), size_bytes, modified_utc, recorded_utc
+            FROM raw_baselines WHERE substr(path, 1, $len) = $from;
+            DELETE FROM raw_baselines WHERE substr(path, 1, $len) = $from;
+            """;
+        _ = command.Parameters.AddWithValue("$from", from);
+        _ = command.Parameters.AddWithValue("$to", to);
+#pragma warning disable HAA0601 // AddWithValue takes object, so the box cannot be avoided.
+        _ = command.Parameters.AddWithValue("$len", from.Length);
+#pragma warning restore HAA0601
+        _ = command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
     private static string Normalize(string path) => path.Replace('\\', '/');
 
     private static string FormatTime(DateTimeOffset time) =>
