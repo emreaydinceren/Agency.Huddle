@@ -681,6 +681,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITeamRenames>(static sp => sp.GetRequiredService<TeamRenameStore>());
         services.AddSingleton<TeamRenameService>();
         services.AddSingleton<ITeamRenameRewrite, TaskFileRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, ViewsRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, WorkspaceRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, DocHistoryRenameRewrite>();
+        services.AddSingleton<ITeamRenameRewrite, LedgerRenameRewrite>();
     }
 
     /// <summary>Registers the Team folder provisioner, the Team catalog and membership, the view store and the Sprint stores.</summary>

@@ -15,12 +15,14 @@ namespace Agency.Huddle.App.AgentsMdChanges;
 /// <param name="options">Supplies the data folder, the Teams folder, the switch and the poll period.</param>
 /// <param name="logger">Reports a failed file or pass.</param>
 /// <param name="timeProvider">The timer's clock; defaults to the system clock.</param>
+/// <param name="renames">The Team Rename journal; a Team with a Pending rename is skipped, because its folder has moved. Optional.</param>
 internal sealed class AgentsMdWatcher(
     AgentsMdLedger ledger,
     ITeamCatalog catalog,
     IOptions<TeamOptions> options,
     ILogger<AgentsMdWatcher> logger,
-    TimeProvider? timeProvider = null) : IHostedService, IDisposable
+    TimeProvider? timeProvider = null,
+    ITeamRenames? renames = null) : IHostedService, IDisposable
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
@@ -62,6 +64,11 @@ internal sealed class AgentsMdWatcher(
         List<string> names = [];
         foreach (TeamSummary summary in catalog.Teams)
         {
+            if (renames is not null && renames.IsPending(summary.Name))
+            {
+                continue;
+            }
+
             names.Add(summary.Name);
         }
 
