@@ -188,6 +188,8 @@ internal sealed class SoftwareCoScenario : IScenario
         DocHistory = SoftwareCoLibrary.DocHistory,
         Sprints = SoftwareCoTasks.Sprints,
         Feed = [.. SoftwareCoFeed.All, .. SoftwareCoHome.Feed],
+        Jobs = SoftwareCoJobs.All(today),
+        JobProblems = SoftwareCoJobs.Problems,
         ViewsJson = ViewsJson,
         Today = today,
     };

@@ -129,9 +129,16 @@ internal static class DatabaseSeeder
         return Convert.ToHexStringLower(hash.AsSpan(0, 16));
     }
 
-    private static DateTimeOffset Timestamp(DateOnly today, SeedMessage message)
+    private static DateTimeOffset Timestamp(DateOnly today, SeedMessage message) => Timestamp(today, message.DaysAgo, message.Time);
+
+    /// <summary>The instant a seeded offset names: <paramref name="daysAgo"/> days before <paramref name="today"/>, at <paramref name="time"/> UTC.</summary>
+    /// <param name="today">The run date.</param>
+    /// <param name="daysAgo">Whole days before it.</param>
+    /// <param name="time">The time of day, <c>HH:mm</c>.</param>
+    /// <returns>The instant.</returns>
+    internal static DateTimeOffset Timestamp(DateOnly today, int daysAgo, string time)
     {
-        TimeOnly time = TimeOnly.ParseExact(message.Time, "HH:mm", CultureInfo.InvariantCulture);
-        return new DateTimeOffset(today.AddDays(-message.DaysAgo).ToDateTime(time), TimeSpan.Zero);
+        TimeOnly at = TimeOnly.ParseExact(time, "HH:mm", CultureInfo.InvariantCulture);
+        return new DateTimeOffset(today.AddDays(-daysAgo).ToDateTime(at), TimeSpan.Zero);
     }
 }

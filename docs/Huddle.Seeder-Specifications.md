@@ -101,10 +101,10 @@ the database, and Feed items need both.
 | --- | --- | --- |
 | 1. Wipe and mark | `<root>/.huddle-seed`, `<root>/data/` | [§4](#4-safety-of-the-seed-root) |
 | 2. Layout marker | `data/Agents/.layout-migrated` | Without it, Huddle's one-time migration moves every non-Task note under `Teams/` into `Agents/_unsorted/` |
-| 3. Database | `team.db`, `profile.json`, Room transcripts | Through `SqliteTeamDirectory` and `FileChatStore`, never through raw SQL |
+| 3. Database | `team.db`, `profile.json`, Room transcripts; then each Job's `job_state` row, and for a Job that has run its Job Room, `room_jobs` row and transcript | Through `SqliteTeamDirectory` and `FileChatStore`, never through raw SQL; Jobs through `JobSeeder` and the app's `JobStateStore` and `JobRoomStore` |
 | 4. Feed | Feed items, Helper usage and status in `team.db` | `FeedSeeder` |
 | 5. Folders | `Teams/<Team>/<Project>/`, `Archive/<Team>/…` | Projects with no Tasks still get their folder. An archived Team's `_team.md` needs the Room ids from step 3 |
-| 6. Agents and Skills | `Agents/<Name>/<Name>.md`, `Skills/<name>/SKILL.md` | `AgentFileWriter` |
+| 6. Agents, Skills and schedules | `Agents/<Name>/<Name>.md`, `Skills/<name>/SKILL.md`, `Agents/<Name>/schedule.md`, `Human/schedule.md` | `AgentFileWriter`; each `schedule.md` through the app's `JobDocument` (`JobSeeder.WriteFiles`) |
 | 7. Tasks | Task files, with their modified time set to the last Change log entry | Otherwise Huddle logs them as "edited outside Huddle" |
 | 8. Notes and binaries | Library notes, memory, images, chat uploads, Task uploads | |
 | 9. Sprints, history, settings | `sprints.md`, `doc-history/`, `views.json`, `avatars.json` | `sprints.md` only when a scenario has Sprints |
@@ -128,6 +128,8 @@ A scenario is an `IScenario` (`Name`, `Description`, `Build(DateOnly today)`) li
 | `DocHistory` | `SeedDocEdit` | `doc-history/…jsonl` entries |
 | `Sprints` | `SeedSprint(Number, Name)` | `sprints.md`. The highest number is `@current` |
 | `Feed` | `SeedFeedItem` | Feed items and Notifications |
+| `Jobs` | `SeedJob(Id, Owner, Title, When, Instruction) { TimeZone?, By?, Paused, Runs, LastOutcome, RoomArchived }`, each run a `SeedJobRun(DaysAgo, Time, Replies)` | A section of the owner's `schedule.md` (`Owner` null is the Human), a `job_state` row, and once it has run a Job Room holding Huddle's post for each run and then the replies. A last run whose outcome is not `Delivered` posts nothing |
+| `JobProblems` | `SeedJobProblem(Owner, Raw)` | A `schedule.md` section Huddle cannot read, written after the owner's Jobs as it stands |
 | `ViewsJson` | raw JSON | `views.json` |
 | `HumanAvatar` | the app's `Avatar` | The Human's entry in `avatars.json`. The Agents' entries come from `Agents` |
 
@@ -150,7 +152,7 @@ round-trip tests in [§7](#7-round-trip-the-seed-loads-in-the-real-app).
 | SEED-INV-5 | **Change logs run forward and end in the past.** `LastTouchedDaysAgo` is at least 1. | `Plan_ChangeLogsRunForwardAndEndInThePast` |
 | SEED-INV-6 | **References resolve.** Parents, `BlockedBy`, `DuplicateOf`, origin Rooms, Task ids in Messages, and attachment paths all exist in the plan. | `Plan_ReferencesResolve`, `Plan_RoomTranscriptsAreConsistent` |
 | SEED-INV-7 | **Agent names and aliases are unique**, and none is `Chief of Staff` or `cos`. Huddle creates that built-in Agent itself (`BuiltinAgentSeeder`). | `Plan_AgentNamesAndAliasesAreUnique` (the built-in name: —) |
-| SEED-INV-8 | **Transcripts are consistent.** Only the Human or a member sends, and Messages run forward in time. | `Plan_RoomTranscriptsAreConsistent` |
+| SEED-INV-8 | **Transcripts are consistent.** Only the Human or a member sends, and Messages run forward in time. The one other sender is Huddle itself, and only in a Job Room (ADR-0065). | `Plan_RoomTranscriptsAreConsistent`, `Plan_JobRunsAreConsistent` |
 | SEED-INV-9 | **No token survives** into a written transcript. | `SeedRefreshTests.Tokens_NeverSurviveIntoATranscript_AndNamedRoomsCiteDocuments` |
 | SEED-INV-10 | **Agents run on the mock adapter.** The printed launch command names `mock-acp`, so browsing a seed costs nothing. | `SeedCliTests.Run_FreshRoot_SeedsAndPrintsTheLaunchCommand` |
 | SEED-INV-11 | **The app owns the formats.** Wherever a writer copies an app format (references, uploads, attachments, Sprints, Requests, doc history), a test compares it with the app's own function or reader. | The `SeedRefreshTests` class |
@@ -186,6 +188,7 @@ They are what turns the seeder red when the app changes underneath it.
 | SEED-RT-5 | `team.db` holds every user and Room. Transcripts read back in order, from members only. | `Database_HoldsUsersAndRooms`, `Transcripts_ReadBackInOrderFromTheRoomMembers` |
 | SEED-RT-6 | The layout marker is written, and notes stay under `Teams/`. | `Layout_MarkerIsWrittenAndNotesStayUnderTeams` |
 | SEED-RT-7 | The manifest lists every seeded entity. | `Manifest_ListsTheSeededEntities` |
+| SEED-RT-8 | **Jobs load as Huddle keeps them.** The app's `JobStore` reads every seeded Job as planned and lists each unreadable section as a problem. Each Job's `job_state` row holds the scheduler's own timetable key (`JobScheduler.KeyOf`), the next run worked out from the seed time, and, if it has run, its last run and outcome. A Job that has run has its own Room, named and peopled as `JobRunner` makes one and linked in `room_jobs`, holding Huddle's posts in `JobRunner.TextOf`'s words; it is never returned as the Agent's one-to-one. Added 2026-11-12. | `SeedJobsTests.Jobs_LoadThroughTheAppsJobStore`, `JobState_IsWhatTheSchedulerWouldHaveStored`, `JobRooms_HoldHuddlesPostsAndAreNotOneToOnes` |
 
 > [!NOTE]
 > The round-trip tests build `software-co` today. Making them run against every scenario in
@@ -220,6 +223,7 @@ They are what turns the seeder red when the app changes underneath it.
 | SEED-SC-16 | **An archived Team**, Legacy Site, as `ArchiveService` leaves one: `Archive/Legacy Site/` holds two notes and a memory fact at its root, and its Projects Checkout v1 (two notes, a memory fact) and Old Marketing Site (two notes); `_team.md` records the roster in ordinal order (Lena, Owen, Sofia), as the app writes it, and the ids of its two Rooms; no Agent carries its label; it is not a live Team; both its Rooms, its Team Room included, are archived. The app's own `ArchiveService` lists it and restores it: the folder, the labels and the Rooms come back. Added 2026-11-12. | `Plan_HasAnArchivedTeam_AsTheArchiveLeavesIt`, `SeedRoundTripTests.Archive_IsWhatTheArchiveServiceLeaves`, `SeedRoundTripTests.Archive_RestoresThroughTheAppsArchiveService` |
 | SEED-SC-17 | **An archived Project**, Growth's Spring Promo, at `Archive/Growth/Spring Promo/` with two notes and a memory fact, and no `_team.md` in `Archive/Growth/` (Growth itself is live). The app lists it under Growth and restores it to `Teams/Growth/`. Added 2026-11-12. | `Plan_GrowthHasAnArchivedProject`, `SeedRoundTripTests.Archive_IsWhatTheArchiveServiceLeaves`, `SeedRoundTripTests.Archive_RestoresThroughTheAppsArchiveService` |
 | SEED-SC-18 | **Archived Team chats** in every kind of scope: the archived Team's Team Room, a chat in one of its Projects (Checkout v1 sunset), a chat in a live Project (Platform / Observability, Log shipping spike) and a chat whose Project is archived (Growth / Spring Promo, Spring promo wrap-up). Added 2026-11-12. | `Plan_HasArchivedTeamChatsInEveryKindOfScope` |
+| SEED-SC-19 | **Jobs in every shape** ([Jobs spec](Huddle.Jobs-Specifications.md)). Thirteen Jobs: every timetable preset (a one-off still ahead of the run date, daily, weekdays, chosen days, a monthly on the 31st and on the 1st, every 4 hours); two for the Human, the rest for Agents; scheduled by the Human, by the owner, by a manager for a member of its Team (Hattie for Theo) and by the Chief of Staff; one paused; time zones `UTC`, `Europe/London` and `America/New_York`. Four have run and have Job Rooms: Alan's on-call handover (three runs), Marcus's error-rate check (last run *Budget spent*, so no post), Dana's paused SLA sweep (Room archived) and the Human's daily plan (answered, so it waits on nobody). Two sections cannot be read: a `fortnightly` timetable in Dana's file and an unknown `remind:` field in Theo's. Runs are before the run date, run forward, and are answered only by the owner or the Human. Added 2026-11-12. | `Plan_HasJobsInEveryShape`, `Plan_JobRunsAreConsistent` |
 
 No Task sits in an archived folder, because a Task restored with its Team or Project would carry an id
 the live allocator never counted. No Feed item reports an archive, because the Feed's counts are pinned.
@@ -412,6 +416,8 @@ are relative to `src/Huddle.Seeder/` unless they start with `tests/`. Checked ag
 | `Writing/TeamFileWriter.cs` | Each Team's `_team.md` (blank, or typed with a manager), a typed Team's `Process.md`, and the archived Teams' and Projects' folders |
 | `Scenarios/SoftwareCoRooms.cs` | Room keys (constants) and every transcript |
 | `Scenarios/SoftwareCoFeed.cs` | Feed items, and the Helper's id and name |
+| `Scenarios/SoftwareCoJobs.cs` | The thirteen Jobs (SEED-SC-19), built from the run date so the one-off stays ahead, and the two unreadable sections |
+| `Writing/JobSeeder.cs` | `schedule.md` files, `job_state`, Job Rooms and their transcripts, through the app's `JobDocument`, `JobStateStore`, `JobRoomStore` and `JobRunner` |
 | `Scenarios/UatScenario.cs` | `uat`: Ada, Bo and their empty Rooms, with their own `ViewsJson` |
 | `Writing/DatabaseSeeder.cs` | `team.db`, `profile.json`, Rooms and transcripts, through the app's `SqliteTeamDirectory` and `FileChatStore` |
 | `Writing/AvatarWriter.cs` | Library pictures, `avatars.json`, and `Spread` (palette colours) |
@@ -437,6 +443,7 @@ means the test pins a literal list or count ([A.3](#a3-values-tests-pin-exactly)
 | **Add a Task** | `SoftwareCoTasks.Core`. The id prefix is the Team's first four letters (`PLAT`, `GROW`, `SUPP`, `RECO`, `HOME`), and the next number is free. Dates are offsets; overdue is `DueOffset <= -2`. `Closed = true` only for a finished status. For a Sprint, add it to `SprintByTask`. | `Plan_CoversEveryTaskStatus` (exact count, 46), `Plan_TaskIdsAreUniqueAndUseTheDerivedPrefix`, `Plan_ClosedMeansFinished`, `Plan_ReferencesResolve` |
 | **Add a Request** | `SoftwareCoRequests.All` (it joins `SoftwareCoTasks.All`). | `Plan_CoversEveryTaskStatus` (64), `Requests_ParseWithTheAppsRequestFields` |
 | **Add a Room or Messages** | A key constant plus an entry in `SoftwareCoRooms.All`. Keep 8 to 15 Messages, sent only by members or the Human, running forward in time. Cite with `{{lib:…}}`, `{{room:key}}`, `{{team:Name}}`, `{{upload:file}}`. An unanswered `@You` outside `Launch crew` breaks Needs You. | `Plan_HasTheAgreedRooms` (exact), `Plan_RoomTranscriptsAreConsistent`, `NeedsYou_OneRoomHoldsAnUnansweredMention` (exact), `Tokens_NeverSurviveIntoATranscript_AndNamedRoomsCiteDocuments` |
+| **Add a Job** | `SoftwareCoJobs`: a `new(id, owner, title, when, instruction) { … }` in `Work` or `Later` (or in `All` when it needs the run date). The id is `job-` and six fresh hex digits. Write `when` exactly as `schedule.md` does; give a Job with runs a time zone when its run times must match its timetable, since run times are UTC. A one-off never has runs: one that ran would have left its file. | `Plan_HasJobsInEveryShape` (exact count, 13), `Plan_JobRunsAreConsistent`, `SeedJobsTests`, `Database_HoldsUsersAndRooms` (Job Rooms count) |
 | **Add a Feed item** | `SoftwareCoFeed.All`. A waiting Notification (`Notify: true` and no `ResolvedMinutesAgo`) must be true of the seed, or Huddle drops it at start-up. | `SeedFeedTests` (five grouped TaskCreated items from Owen, exact) |
 | **Add a saved View** | `ViewsJson` in `SoftwareCoScenario.cs`, using the fields allowed in [DataSeeding.md](../agents/DataSeeding.md#views). | `SeedRoundTripTests.SavedViewIds` (exact list), `Plan_ViewsCoverListKanbanAndClosed` |
 | **Add an image, upload or doc history** | `SoftwareCoLibrary.BinaryFiles`, `Uploads`, `TaskUploads` or `DocHistory`. | `SeedRefreshTests` (the matching test) |
@@ -464,6 +471,8 @@ When you change one of these on purpose, change the test in the same commit.
 | `SeedCliTests.Run_FreshRoot_SeedsAndPrintsTheLaunchCommand` | The printed summary "Seeded 13 Agents, 6 Teams, 64 Tasks" |
 | `SeedRefreshTests.Sprints_ParseWithTheAppsParser_AndTasksHoldThem` | Two Sprints |
 | `SeedFeedTests` | Five TaskCreated items by Owen; the Helper has three consecutive failures |
+| `Plan_HasJobsInEveryShape` | Thirteen Jobs, two for the Human, one paused, the time zones `America/New_York`, `Europe/London` and `UTC`, and the unreadable sections' titles in order |
+| `Plan_JobRunsAreConsistent`, `Manifest_ListsTheSeededEntities` | The Budget-spent Job and the archived-Room Job by id; the manifest's line of unreadable sections |
 | `UatScenarioTests` | Ada and Bo, and their two Rooms |
 
 ### A.4 Commands
@@ -516,7 +525,15 @@ The seeder tests take a few seconds; the whole suite takes several minutes. Buil
   two shades of crimson, and spreading by hue let violet beside magenta and teal beside lime through.
   A colour added to `Families` must stay at least ΔE 50 from every other one
   (`SeedAvatarTests.Families_AreAllAtLeastDeltaE50Apart`).
-- **`Chief of Staff` / `cos` is taken** by the built-in Agent that Huddle creates itself.
+- **`Chief of Staff` / `cos` is taken** by the built-in Agent that Huddle creates itself. The same
+  reason keeps it from owning a seeded Job: its folder does not exist until Huddle's first start.
+  Naming it in a Job's `by:` is fine.
+- **Raw strings carry the checkout's line endings.** A `"""…"""` literal in a CRLF checkout holds
+  `\r\n`, and on Linux it holds `\n`. Split a seeded section with `ReplaceLineEndings("\n")` first
+  (`SeedJobProblem.Title`). A bare `Split('\n')` leaves a `\r` that only Windows shows.
+- **A seeded next run is stale on a pinned `--today`.** The scheduler then skips to the next time
+  after now, so no Job fires on start-up. A seed for today keeps the stored next runs, and the
+  first one fires on schedule.
 
 ## 11. Change log
 
@@ -532,4 +549,5 @@ The seeder tests take a few seconds; the whole suite takes several minutes. Buil
 | 2026-10-30 | Added Appendix A, the maintainer's map: a file map, edit recipes with the tests each trips, the values tests pin exactly, commands, and traps already hit. |
 | 2026-11-12 | SEED-AV-4: the copied picture's name now includes its bytes, so a redrawn library picture gets a new URL; with a name from the Agent alone, browsers kept showing the old art from their immutable cache. Pinned by `SeedAvatarTests.Write_RedrawnPicture_GetsNewFileName`. |
 | 2026-11-12 | Added SEED-SC-16 to -18: an archived Team (Legacy Site), an archived Project (Growth / Spring Promo) and four archived Team chats, written as `ArchiveService` leaves them. `SeedPlan.ArchivedTeams`, `SeedTeam.ArchivedProjects` and `SeedRoom.Project` are new; SEED-SC-9 counts fourteen Team-scoped Rooms; SEED-SC-13 and -14 now say "live". A defensive fix rode along: `ArchiveService.ArchivedProjects`, documented as working for archived Teams too, listed an archived Team's `raw`, `memory` and `outputs` folders as Projects. No caller asks it about an archived Team today (the Archived page asks about live Teams only), so nothing visible changed; it now skips the same names a live Project may not take. |
+| 2026-11-12 | Added SEED-SC-19 and SEED-RT-8: thirteen Jobs in every shape, four Job Rooms and two unreadable `schedule.md` sections, written through the app's `JobDocument`, `JobStateStore` and `JobRoomStore` (`Writing/JobSeeder.cs`, `Scenarios/SoftwareCoJobs.cs`). `SeedPlan.Jobs` and `JobProblems` are new, and so is `DatabaseResult.JobRoomIds`. SEED-INV-8 names Huddle as the one sender outside the Members. `JobScheduler.KeyOf` became `internal` so the seeder stores the scheduler's own key. |
 | 2026-11-12 | SEED-AV-5: Team colours come from named colour families before any computed spread. Spreading by hue still let violet and magenta, and teal and lime, through as one colour each (closest pair ΔE 26); the families keep the closest pair at ΔE 56. |

@@ -30,10 +30,12 @@ internal static class SeedRunner
         SeedIo.WriteText(SeedIo.Resolve(dataDir, "Agents/" + LayoutMarker), string.Empty);
 
         DatabaseResult ids = await DatabaseSeeder.SeedAsync(plan, dataDir, ct).ConfigureAwait(false);
+        ids = ids with { JobRoomIds = await JobSeeder.SeedAsync(plan, dataDir, ids, TimeProvider.System, ct).ConfigureAwait(false) };
         FeedSeeder.Write(plan, dataDir, ids, TimeProvider.System);
 
         WriteFolders(plan, dataDir, ids);
         WriteAgents(plan, dataDir);
+        JobSeeder.WriteFiles(plan, dataDir);
         WriteTasks(plan, dataDir, ids);
         WriteFiles(plan, dataDir);
         WriteBinaryFiles(plan, dataDir, ids);
