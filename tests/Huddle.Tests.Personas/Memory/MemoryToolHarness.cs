@@ -31,7 +31,11 @@ internal sealed class MemoryToolHarness : IDisposable
         this.options = this.dir.Options(configure);
         this.paths = new AgentPaths(this.options);
         this.Access = new TeamMemoryAccess(this.Catalog, name => this.chiefOfStaff.Contains(name));
+        this.Renames = new Agency.Huddle.App.Teams.TeamRenameStore(this.options);
     }
+
+    /// <summary>The rename journal the tool consults; empty until a test journals a rename.</summary>
+    public Agency.Huddle.App.Teams.TeamRenameStore Renames { get; }
 
     /// <summary>The Teams the tool sees; set <see cref="FakeTeamCatalog.Teams"/> before a call.</summary>
     public FakeTeamCatalog Catalog { get; } = new();
@@ -68,7 +72,7 @@ internal sealed class MemoryToolHarness : IDisposable
     /// <summary>Builds the tool for a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>
     public MemoryTool ToolFor(string persona = "Nova") =>
-        new(persona, this.paths, this.Access, this.gate, this.Bin, new FakePromptSource(), this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger);
+        new(persona, this.paths, this.Access, this.gate, this.Bin, new FakePromptSource(), this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger, this.Renames);
 
     /// <summary>Runs one command as a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>

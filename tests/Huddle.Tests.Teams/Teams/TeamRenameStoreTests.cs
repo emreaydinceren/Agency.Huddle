@@ -213,6 +213,28 @@ public sealed class TeamRenameStoreTests : IDisposable
         Assert.Equal("Launch", store.ResolveProject("Other", "Launch"));
     }
 
+    /// <summary>EarlierNames lists every earlier name of today's Team, oldest first, across a chain A to B to C.</summary>
+    [Fact]
+    public void EarlierNames_Chain_ListsEveryEarlierNameInIdOrder()
+    {
+        TeamRenameStore store = this.Open();
+        store.Complete(store.Begin(TeamRenameKind.Team, "A", "A", "B"));
+        store.Complete(store.Begin(TeamRenameKind.Team, "B", "B", "C"));
+
+        Assert.Equal(["A", "B"], store.EarlierNames("C"));
+    }
+
+    /// <summary>EarlierNames of an unknown name, or of a name nothing was renamed to, is empty.</summary>
+    [Fact]
+    public void EarlierNames_UnknownName_IsEmpty()
+    {
+        TeamRenameStore store = this.Open();
+        store.Complete(store.Begin(TeamRenameKind.Team, "A", "A", "B"));
+
+        Assert.Empty(store.EarlierNames("Nobody"));
+        Assert.Empty(store.EarlierNames("A"));
+    }
+
     /// <summary>A Project row never changes the Team name Resolve returns.</summary>
     [Fact]
     public void Resolve_ProjectRow_DoesNotAffectTeamName()

@@ -58,4 +58,9 @@ internal interface ITeamRenames
     /// <param name="team">The name.</param>
     /// <returns><see langword="true"/> when a rename is pending.</returns>
     bool IsPending(string team);
+
+    /// <summary>Lists every earlier name of today's Team, from Done Team rows, in id order.</summary>
+    /// <param name="team">A Team name, normally today's.</param>
+    /// <returns>The earlier names; empty when none.</returns>
+    IReadOnlyList<string> EarlierNames(string team);
 }

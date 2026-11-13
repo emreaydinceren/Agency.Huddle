@@ -150,6 +150,33 @@ internal sealed class TeamRenameStore : ITeamRenames
         return this.Read("WHERE kind = 'Team' AND state = 'Pending' ", 0).Any(r => Holds(r, team));
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<string> EarlierNames(string team)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+
+        List<TeamRename> done = this.Read("WHERE state = 'Done' ", 0);
+        string today = ResolveTeam(done, team);
+        List<string> names = [];
+        if (!string.Equals(today, team, StringComparison.OrdinalIgnoreCase))
+        {
+            return names;
+        }
+
+        foreach (TeamRename row in done)
+        {
+            if (row.Kind == TeamRenameKind.Team
+                && !string.Equals(row.OldName, today, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(ResolveTeam(done, row.OldName), today, StringComparison.OrdinalIgnoreCase)
+                && !names.Contains(row.OldName, StringComparer.OrdinalIgnoreCase))
+            {
+                names.Add(row.OldName);
+            }
+        }
+
+        return names;
+    }
+
     private static bool Holds(TeamRename row, string name) =>
         string.Equals(row.OldName, name, StringComparison.OrdinalIgnoreCase)
         || string.Equals(row.NewName, name, StringComparison.OrdinalIgnoreCase);

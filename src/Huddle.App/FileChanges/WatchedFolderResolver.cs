@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.FileChanges;
 /// <c>DataDir</c> — into a <see cref="WatchedFolder"/>, or refuses it with a reason, per
 /// FC §6.2-§6.3. Pure apart from <see cref="Path.GetFullPath(string)"/>; never touches the disk.
 /// </summary>
-internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, AgentPaths agentPaths)
+internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, AgentPaths agentPaths, ITeamRenames? renames = null)
 {
     /// <summary>
     /// The folder names Huddle reserves for its own data, compared case-insensitively: an entry
@@ -53,6 +53,10 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
 
         string dataDir = options.Value.DataDir;
         string fullPath = this.ResolveFullPath(entry, dataDir, agentNames);
+        if (renames is not null)
+        {
+            fullPath = RenamedTeamPaths.Map(Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir)), fullPath, renames);
+        }
 
         if (string.Equals(fullPath, dataDir, StringComparison.OrdinalIgnoreCase))
         {

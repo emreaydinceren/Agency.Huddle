@@ -22,7 +22,8 @@ internal sealed class FileRequestTool(
     IRequestNotifier notifier,
     ITeamDirectory directory,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    ITeamRenames? renames = null) : IAppTool
 {
     private static readonly string[] Kinds = ["bug", "feature", "feedback", "question"];
 
@@ -178,6 +179,13 @@ internal sealed class FileRequestTool(
         toTeam = teams.Find(toTeamText.Trim());
         if (toTeam is null)
         {
+            string asked = toTeamText.Trim();
+            if (renames is not null && renames.Resolve(asked) is { } today && !string.Equals(today, asked, StringComparison.OrdinalIgnoreCase))
+            {
+                refusal = string.Create(CultureInfo.InvariantCulture, $"Team '{asked}' was renamed to '{today}'. Use '{today}'.");
+                return false;
+            }
+
             refusal = string.Create(CultureInfo.InvariantCulture, $"There is no Team named '{toTeamText.Trim()}'; call list_teams.");
             return false;
         }

@@ -483,6 +483,9 @@ public sealed class TeamRenameServiceTests
 
         /// <inheritdoc />
         public bool IsPending(string team) => inner.IsPending(team);
+
+        /// <inheritdoc />
+        public IReadOnlyList<string> EarlierNames(string team) => inner.EarlierNames(team);
     }
 
     /// <summary>A membership that counts <see cref="RenameLabel"/> calls, skips the first few (or all, when no-op) and otherwise rewrites through the real one, then flips the fake catalog.</summary>
