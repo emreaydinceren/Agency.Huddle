@@ -332,6 +332,12 @@
     border-radius: var(--hu-radius-card);
 }
 
+/* A Project's face is a square with sharp corners, so it never reads as its Team (ADR-0083). ProjectAvatar asks AgentAvatar for it;
+   the third class beats the rounded square above. */
+.mud-avatar.avatar-square.avatar-sharp {
+    border-radius: 0;
+}
+
 /* The avatar editor's emoji picker (the vendored <emoji-picker> in lib/emoji-picker). Its colours are the Theme's: every
    colour variable the element reads is mapped to a MudBlazor palette variable or a skin token built from one, which is
    already swapped for a Dark Theme, so no per-mode rule is needed here. emoji-picker.js also gives the element a light or dark class so its form controls

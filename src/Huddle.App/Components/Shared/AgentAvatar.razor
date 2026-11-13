@@ -68,7 +68,8 @@
 
     /// <summary>
     /// The outline: <see cref="AvatarShape.Circle"/> (the default) for an Agent or the Human, <see cref="AvatarShape.RoundedSquare"/>
-    /// for a Team, which adds <c>avatar-square</c>. Callers draw a Team through <c>TeamAvatar</c> and never set this by hand.
+    /// for a Team, which adds <c>avatar-square</c>, or <see cref="AvatarShape.Square"/> for a Project, which adds <c>avatar-square avatar-sharp</c>.
+    /// Callers draw a Team through <c>TeamAvatar</c> and a Project through <c>ProjectAvatar</c>, and never set this by hand.
     /// </summary>
     [Parameter]
     public AvatarShape Shape { get; set; } = AvatarShape.Circle;
@@ -213,10 +214,12 @@
         get
         {
             string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
-            if (this.Shape == AvatarShape.RoundedSquare)
+            kind = this.Shape switch
             {
-                kind = string.Concat(kind, " avatar-square");
-            }
+                AvatarShape.RoundedSquare => string.Concat(kind, " avatar-square"),
+                AvatarShape.Square => string.Concat(kind, " avatar-square avatar-sharp"),
+                _ => kind,
+            };
 
             if (this.LabelLengthClass is { } lengthClass)
             {

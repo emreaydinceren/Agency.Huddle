@@ -36,6 +36,9 @@ public sealed class AvatarEditorTests
         /// <summary>Whether the parent offers the library card.</summary>
         public bool AllowLibrary { get; init; } = true;
 
+        /// <summary>Whether the parent offers any picture card.</summary>
+        public bool AllowImages { get; init; } = true;
+
         /// <summary>The outline the parent asks the previews to be drawn in.</summary>
         public AvatarShape Shape { get; init; } = AvatarShape.Circle;
 
@@ -77,6 +80,7 @@ public sealed class AvatarEditorTests
             builder.AddAttribute(5, nameof(AvatarEditor.PendingImageChanged), EventCallback.Factory.Create<(byte[]? Bytes, string? Extension)>(probe, probe.Pending.Add));
             builder.AddAttribute(6, nameof(AvatarEditor.AllowLibrary), probe.AllowLibrary);
             builder.AddAttribute(7, nameof(AvatarEditor.Shape), probe.Shape);
+            builder.AddAttribute(8, nameof(AvatarEditor.AllowImages), probe.AllowImages);
             builder.CloseComponent();
         }
     }
@@ -193,6 +197,47 @@ public sealed class AvatarEditorTests
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Immediate));
 
         Assert.Equal(["Initials of the name", "A short label", LibraryCard, UploadCard], cut.FindAll(".avatar-choice-title").Select(title => title.TextContent.Trim()));
+    }
+
+    /// <summary>
+    /// A Project's editor (ADR-0083) passes AllowImages false: even with a library configured it offers only Initials and A short label,
+    /// starts on Initials with the swatches showing, and draws its previews as sharp squares.
+    /// </summary>
+    [Fact]
+    public async Task AllowImagesFalse_OffersOnlyInitialsAndLabel_StartsOnInitials()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        using TempDataDir library = CreateLibraryDir();
+        await using MudBunitContext ctx = NewContext(factory);
+        _ = Register(ctx.Services, library.Path, null);
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, new Probe(AvatarSaveMode.Buffered) { AllowImages = false, Shape = AvatarShape.Square });
+
+        Assert.Equal(["Initials of the name", "A short label"], cut.FindAll(".avatar-choice-title").Select(title => title.TextContent.Trim()));
+        Assert.True(IsSelected(cut, "Initials of the name"));
+        Assert.False(HasButton(cut, "Upload…"));
+        Assert.False(HasButton(cut, ButtonText));
+        Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
+        Assert.Equal(3, cut.FindAll(".mud-avatar.avatar-square.avatar-sharp").Count);
+    }
+
+    /// <summary>With AllowImages false a stored image is not offered or handed back: the editor opens on Initials, and the next change reports an avatar with no image.</summary>
+    [Fact]
+    public async Task AllowImagesFalse_StoredImage_OpensOnInitials_AndIsNeverReportedBack()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+        Probe probe = new(AvatarSaveMode.Buffered) { AllowImages = false, Value = new Avatar(Label: null, Image: "face.png", Background: null) };
+
+        IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        Assert.True(IsSelected(cut, "Initials of the name"));
+        Assert.False(HasText(cut, "face.png"));
+
+        await TypeLabelAsync(cut, "🚀");
+
+        Avatar reported = Assert.Single(probe.Values);
+        Assert.Equal("🚀", reported.Label);
+        Assert.Null(reported.Image);
     }
 
     /// <summary>A stored label starts the editor on the label card with the text in the field and a counter sized from the label limit.</summary>

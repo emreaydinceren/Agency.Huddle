@@ -330,22 +330,71 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 
             TeamFile updated = change(current);
             ArgumentNullException.ThrowIfNull(updated);
-
-            string temp = $"{path}.{Guid.NewGuid():N}.tmp";
-            try
-            {
-                File.WriteAllText(temp, updated.Compose(), TeamFileEncoding);
-                MoveOver(temp, path);
-            }
-            finally
-            {
-                File.Delete(temp);
-            }
+            WriteAtomically(path, updated.Compose());
         }
 
         // The catalog reads the file again only after its debounce; a session that starts now (the manager just hired) must already see the change.
         this.catalog.Refresh();
         return true;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Serialised with the Team-file updates and written through a temporary file, as <see cref="UpdateTeamFile"/> is.</remarks>
+    public bool UpdateProjectAvatar(string team, string project, Avatars.Avatar avatar)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(avatar);
+
+        if (LibraryNames.Validate(team) is not null || TaskLayout.IsReservedFolderName(team) || LibraryNames.Validate(project) is not null
+            || !this.resolver.TryResolve(TeamsRootId, $"{team}/{project}", out LibraryPath? projectPath, out _)
+            || projectPath.Role != LibraryNodeRole.ProjectFolder
+            || !Directory.Exists(projectPath.FullPath))
+        {
+            return false;
+        }
+
+        string path = Path.Combine(projectPath.FullPath, TeamPaths.ProjectFileName);
+        Avatars.Avatar wanted = avatar with { Image = null };
+        try
+        {
+            lock (this.teamFileGate)
+            {
+                ProjectFile current = File.Exists(path) ? ProjectFile.Parse(File.ReadAllText(path, TeamFileEncoding)) : ProjectFile.Empty;
+                if (current.Avatar == wanted)
+                {
+                    // Nothing to change: a Project with no file keeps none, and a hand-edited file is not rewritten.
+                    return true;
+                }
+
+                WriteAtomically(path, (current with { Avatar = wanted }).Compose());
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+
+        // As for a Team file: the catalog's watcher is debounced, and the page that saved should see the avatar at once.
+        this.catalog.Refresh();
+        return true;
+    }
+
+    /// <summary>Writes <paramref name="text"/> to a temporary file beside <paramref name="path"/> and moves it over, so a reader sees the old or the new file and never a partial one.</summary>
+    /// <param name="path">The Team or Project file to replace or create.</param>
+    /// <param name="text">The whole new text.</param>
+    private static void WriteAtomically(string path, string text)
+    {
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, text, TeamFileEncoding);
+            MoveOver(temp, path);
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
     }
 
     /// <summary>Moves <paramref name="temp"/> over <paramref name="path"/>, retrying briefly while a reader (the catalog's watcher) still holds the target open.</summary>

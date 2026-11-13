@@ -305,6 +305,18 @@
     border-radius: var(--hu-radius-card);
 }
 
+/* A Project's avatar button follows its sharp square (ADR-0083), so the focus ring has square corners too. The avatar is only
+   24px, so its pencil is caption-sized with no padding: the Small icon would cover the whole face. Three classes beat both the
+   rule above and MudBlazor's .mud-icon-size-small. */
+.agent-profile-card-avatar.team-page-avatar.team-project-avatar {
+    border-radius: 0;
+}
+
+.agent-profile-card-avatar.team-project-avatar .agent-profile-card-avatar-edit {
+    padding: 0;
+    font-size: var(--mud-typography-caption-size);
+}
+
 /* An editable avatar and the "Edit avatar…" text button under it, centred, 4px apart. */
 .avatar-edit-column {
     display: flex;

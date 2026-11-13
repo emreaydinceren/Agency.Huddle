@@ -732,6 +732,50 @@ public sealed class TeamPageTests
         Assert.True(AgentProfileCardTestSupport.HasEditorButton(cut, "Save"));
     }
 
+    /// <summary>
+    /// ADR-0083: the Project page leads its title with the Project's 24px sharp square avatar (its stored label), smaller than the Team
+    /// page's 32px one; "Edit avatar…" sits before Archive and opens the editor with no picture cards, and Save writes the new label
+    /// through <see cref="ITeamFolders.UpdateProjectAvatar"/>.
+    /// </summary>
+    [Fact]
+    public async Task ProjectPage_Avatar_IsASmallSharpSquare_AndEditAvatarSavesTheLabel()
+    {
+        using TempDataDir dir = new();
+        FakeTeamFolders folders = new() { UpdateResult = true };
+        TeamSummary business = Team("Business", ["Launch"]) with
+        {
+            ProjectAvatars = new Dictionary<string, Avatar>(StringComparer.OrdinalIgnoreCase) { ["Launch"] = new("🚀", null, null) },
+        };
+        await using MudBunitContext ctx = NewContext(new FakeTeamCatalog { Teams = [business] });
+        ctx.Services.AddSingleton(new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddPersonaStore(dir);
+        ctx.Services.AddSingleton<ITeamFolders>(folders);
+        AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamPage>(0);
+            builder.AddAttribute(1, nameof(TeamPage.Team), "Business");
+            builder.AddAttribute(2, nameof(TeamPage.Project), "Launch");
+            builder.CloseComponent();
+        });
+
+        IElement avatar = cut.Find("button.team-project-avatar .mud-avatar");
+        Assert.Contains("avatar-sharp", avatar.ClassList);
+        Assert.Contains("mud-avatar-small", avatar.ClassList);
+        Assert.DoesNotContain("avatar-transcript", avatar.ClassList);
+        Assert.Equal("🚀", avatar.TextContent.Trim());
+        Assert.Equal(["Edit avatar…", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+
+        await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions button"));
+        cut.WaitForElement(AgentProfileCardTestSupport.EditorDialog);
+        Assert.Equal(["Initials of the name", "A short label"], cut.FindAll(".avatar-choice-title").Select(static title => title.TextContent.Trim()));
+        await AgentProfileCardTestSupport.SetAvatarLabelAsync(cut, "LA");
+        await AgentProfileCardTestSupport.ClickEditorButtonAsync(cut, "Save");
+
+        (string team, string project, Avatar saved) = Assert.Single(folders.ProjectAvatarWrites);
+        Assert.Equal(("Business", "Launch", "LA"), (team, project, saved.Label));
+    }
+
     /// <summary>A Team with no team file (no team type) has nowhere to keep an avatar, so it gets neither the avatar button nor the "Edit avatar…" button.</summary>
     [Fact]
     public async Task EditAvatarButton_TeamWithoutATeamFile_IsAbsent()

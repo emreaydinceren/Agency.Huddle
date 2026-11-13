@@ -10,6 +10,8 @@
       Upload an image      - the "Upload…" button. This card can be chosen with no image (the avatar falls back to
                   initials), and "Remove image" keeps it chosen. An avatar with nothing stored opens here, and a stored
                   image always belongs to this card: the saved avatar does not record where it came from.
+    AllowImages false (a Project, ADR-0083) drops both image cards, so only Initials and A short label are left and an avatar
+    with nothing stored opens on Initials.
     There is one image slot (the stored name, or the pending bytes) and a field saying which card owns it; a pick from one
     image card replaces the picture the other held. Each card is a label around a visually hidden radio input (as the
     swatches are), so Tab reaches the group and the arrow keys move within it; a click on empty card space chooses it, and
@@ -125,7 +127,7 @@ else
             </div>
         </div>
 
-        @if (this.AllowLibrary && this.LibraryLocator.IsConfigured)
+        @if (this.AllowImages && this.AllowLibrary && this.LibraryLocator.IsConfigured)
         {
             <div class="@this.CardClass(AvatarChoice.Library)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Library))">
                 <label class="avatar-choice-pick">
@@ -154,6 +156,8 @@ else
             </div>
         }
 
+        @if (this.AllowImages)
+        {
         <div class="@this.CardClass(AvatarChoice.Upload)" @onclick="@(() => this.ChooseAsync(AvatarChoice.Upload))">
             <label class="avatar-choice-pick">
                 <input type="radio" name="avatar-choice" class="visually-hidden"
@@ -182,6 +186,7 @@ else
                 }
             </div>
         </div>
+        }
     </div>
 
     @if (this.error is not null)
@@ -275,7 +280,15 @@ else
     [Parameter]
     public bool AllowLibrary { get; set; } = true;
 
-    /// <summary>The outline the previews are drawn in, so the Human sees the shape they will get: a circle for an Agent or the Human, a rounded square for a Team.</summary>
+    /// <summary>
+    /// Whether any picture is offered: <see langword="false"/> hides both image cards (and so the library), leaving Initials and A short
+    /// label, and an avatar that holds an image opens on Initials and never hands that image back. A Project passes <see langword="false"/>:
+    /// its face is initials or an emoji (ADR-0083).
+    /// </summary>
+    [Parameter]
+    public bool AllowImages { get; set; } = true;
+
+    /// <summary>The outline the previews are drawn in, so the Human sees the shape they will get: a circle for an Agent or the Human, a rounded square for a Team, a square for a Project.</summary>
     [Parameter]
     public AvatarShape Shape { get; set; } = AvatarShape.Circle;
 
@@ -368,13 +381,13 @@ else
     {
         this.choice = avatar switch
         {
-            { Image: not null } => AvatarChoice.Upload,
+            { Image: not null } when this.AllowImages => AvatarChoice.Upload,
             { Label: not null } => AvatarChoice.Label,
-            _ => AvatarChoice.Upload,
+            _ => this.AllowImages ? AvatarChoice.Upload : AvatarChoice.Initials,
         };
         this.imageFromLibrary = false;
         this.label = avatar.Label ?? string.Empty;
-        this.image = avatar.Image;
+        this.image = this.AllowImages ? avatar.Image : null;
         this.background = avatar.Background;
         this.pendingBytes = null;
         this.pendingExtension = null;

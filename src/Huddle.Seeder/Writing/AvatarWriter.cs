@@ -16,6 +16,15 @@ namespace Agency.Huddle.Seeder.Writing;
 /// </summary>
 internal static class AvatarWriter
 {
+    /// <summary>
+    /// One <see cref="AvatarPalette"/> colour from each family the eye names apart, in the order <see cref="Spread(int)"/> hands them
+    /// out: crimson, dodger blue, lime green, purple, olive gold and slate. No computed distance kept a scenario's Teams this far
+    /// apart: spreading by hue let a crimson and a magenta through, and CIE76 a turquoise beside a lime, each pair reading as one pink
+    /// or one green at the avatar's tint. No two entries are closer than ΔE 50, which is why orange red (ΔE 37 from crimson) is not
+    /// one. Each entry must stay in the palette; <see cref="Spread(int)"/> throws if one goes. Agents' backgrounds take the same order.
+    /// </summary>
+    internal static readonly IReadOnlyList<string> Families = ["#dc143c", "#1e90ff", "#32cd32", "#8e24aa", "#988919", "#5e7c8a"];
+
     /// <summary>The word <c>master.json</c> uses for <paramref name="gender"/> in <c>gender_presentation</c>.</summary>
     /// <param name="gender">The gender a scenario read from a name.</param>
     /// <returns><c>man</c> or <c>woman</c>.</returns>
@@ -27,17 +36,20 @@ internal static class AvatarWriter
     };
 
     /// <summary>
-    /// <paramref name="count"/> distinct colours of <see cref="AvatarPalette"/>, spread by hue (SEED-AV-5): the first palette
-    /// colour, then each time the colour farthest in hue from every one already chosen, the earlier one winning a tie. The result
-    /// is in the six-digit hex form the avatar store holds, and is the same on every run.
+    /// <paramref name="count"/> distinct colours of <see cref="AvatarPalette"/>, spread so no two look alike (SEED-AV-5): first the
+    /// <see cref="Families"/> in order, one palette colour per colour family, then each time the colour whose nearest already-chosen
+    /// one is farthest away as the eye sees it (<see cref="Difference"/>, CIE L*a*b*), the earlier one winning a tie. The result is
+    /// in the six-digit hex form the avatar store holds, and is the same on every run.
     /// </summary>
     /// <param name="count">How many colours, at most the palette's number of distinct colours.</param>
     /// <returns>The distinct colours, in the order they were chosen.</returns>
     /// <exception cref="InvalidOperationException">The palette has fewer distinct colours than <paramref name="count"/>.</exception>
     internal static IReadOnlyList<string> Spread(int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         // The palette runs through tints of one hue before the next and repeats a few colours, so taking every n-th entry gives
-        // neighbours of the same hue. Pick by hue distance over the distinct colours instead.
+        // neighbours of the same hue. Pick by perceived distance over the distinct colours instead.
         MudColor[] palette = [.. AvatarPalette.Colours.DistinctBy(static c => c.ToString(MudColorOutputFormats.Hex), StringComparer.OrdinalIgnoreCase)];
         if (count > palette.Length)
         {
@@ -45,21 +57,37 @@ internal static class AvatarWriter
         }
 
         List<MudColor> chosen = [];
+        foreach (string hex in Families)
+        {
+            if (chosen.Count == count)
+            {
+                break;
+            }
+
+            chosen.Add(palette.FirstOrDefault(c => string.Equals(c.ToString(MudColorOutputFormats.Hex), hex, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"The avatar palette no longer holds {hex}; update {nameof(AvatarWriter)}.{nameof(Families)}."));
+        }
+
         while (chosen.Count < count)
         {
-            chosen.Add(chosen.Count == 0 ? palette[0] : FarthestInHue(palette, chosen));
+            chosen.Add(chosen.Count == 0 ? palette[0] : FarthestApart(palette, chosen));
         }
 
         return [.. chosen.Select(static c => c.ToString(MudColorOutputFormats.Hex))];
     }
 
-    private static MudColor FarthestInHue(MudColor[] palette, List<MudColor> chosen)
+    /// <summary>
+    /// The candidate whose nearest chosen colour is farthest away as the eye sees it (<see cref="Difference"/>), the earlier one
+    /// winning a tie. Hue alone let a teal and a lime, or a crimson and a magenta, through as "different" while both read as the
+    /// same green or pink at the avatar's tint.
+    /// </summary>
+    private static MudColor FarthestApart(MudColor[] palette, List<MudColor> chosen)
     {
         MudColor best = palette[0];
         double bestDistance = -1;
         foreach (MudColor candidate in palette.Where(c => !chosen.Contains(c)))
         {
-            double nearest = chosen.Min(c => HueDistance(c.H, candidate.H));
+            double nearest = chosen.Min(c => Difference(c, candidate));
             if (nearest > bestDistance)
             {
                 best = candidate;
@@ -70,11 +98,39 @@ internal static class AvatarWriter
         return best;
     }
 
-    private static double HueDistance(double first, double second)
+    /// <summary>How different two colours look: the CIE76 ΔE, the straight-line distance between them in CIE L*a*b* (D65).</summary>
+    /// <param name="first">One colour.</param>
+    /// <param name="second">The other.</param>
+    /// <returns>The distance; about 2 is the smallest difference the eye notices, and over 30 reads as a different colour.</returns>
+    internal static double Difference(MudColor first, MudColor second)
     {
-        double difference = Math.Abs(first - second) % 360;
-        return Math.Min(difference, 360 - difference);
+        (double l1, double a1, double b1) = Lab(first);
+        (double l2, double a2, double b2) = Lab(second);
+        return Math.Sqrt(((l1 - l2) * (l1 - l2)) + ((a1 - a2) * (a1 - a2)) + ((b1 - b2) * (b1 - b2)));
     }
+
+    /// <summary>Converts an sRGB colour to CIE L*a*b* under the D65 white point.</summary>
+    private static (double L, double A, double B) Lab(MudColor colour)
+    {
+        double r = Linear(colour.R);
+        double g = Linear(colour.G);
+        double b = Linear(colour.B);
+        double x = Pivot(((0.4124 * r) + (0.3576 * g) + (0.1805 * b)) / 0.95047);
+        double y = Pivot((0.2126 * r) + (0.7152 * g) + (0.0722 * b));
+        double z = Pivot(((0.0193 * r) + (0.1192 * g) + (0.9505 * b)) / 1.08883);
+        return ((116 * y) - 16, 500 * (x - y), 200 * (y - z));
+    }
+
+    /// <summary>An sRGB channel (0-255) as linear light (0-1).</summary>
+    private static double Linear(byte channel)
+    {
+        double value = channel / 255.0;
+        return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+    }
+
+    /// <summary>The CIE L*a*b* companding of a white-relative XYZ component.</summary>
+    private static double Pivot(double value) =>
+        value > 216.0 / 24389 ? Math.Cbrt(value) : ((24389.0 / 27 * value) + 16) / 116;
 
     /// <summary>
     /// Copies each Agent's picture into <c>avatars/</c> under a stable name and writes <c>avatars.json</c> with the Human's avatar

@@ -243,6 +243,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0080](adr/0080-an-agent-reaches-the-humans-account-connectors-only-when-the-human-switches-them-on.md) | An Agent reaches the Human's claude.ai account connectors only when the Human switches them on for that Agent, on its card. Off by default for every Agent; the setting is stored outside the Agent's file. | Accepted |
 | [0081](adr/0081-a-features-wiring-lives-in-a-compiled-module-on-a-hand-written-list.md) | A feature may declare its services, tools and Work Dir setup in one compiled class on a hand-written list, for organising Huddle's own code. Guards and hook order stay central; re-measure before moving more features. | Accepted |
 | [0082](adr/0082-a-room-may-belong-to-one-project-of-its-team.md) | A Room may belong to one Project of its Team: optional, set at creation, never changed, stored in a `room_projects` sibling table. For now it decides only where the sidebar lists the Room; a Room whose Project is gone is listed at Team level. Extends 0052. | Accepted |
+| [0083](adr/0083-a-projects-avatar-lives-in-project-md-and-is-a-sharp-square.md) | A Project's avatar is two optional keys (`avatarLabel`, `avatarBackground`) in its folder's `_project.md`: initials or a short label (an emoji), never a picture (`AvatarEditor AllowImages=false`), drawn as a sharp square (`AvatarShape.Square`, `ProjectAvatar`) a size below its Team's. It replaces the Project icon on the sidebar's Project rows and leads the Project page's title, where it is edited. |
 
 ## 5. Manual tests
 

@@ -47,6 +47,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
         };
+        this.teamFileWatcher.Filters.Add(TeamPaths.ProjectFileName);
         this.teamFileWatcher.Changed += this.OnTeamFileEvent;
         this.teamFileWatcher.Created += this.OnTeamFileEvent;
         this.teamFileWatcher.Deleted += this.OnTeamFileEvent;
@@ -98,7 +99,61 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
             [.. this.personas.Entries.Select(static e => (e.Name, e.Teams))],
             this.tasks.Teams,
             this.ReadTeamFiles(),
-            this.tasks.RootDirectory);
+            this.tasks.RootDirectory,
+            this.ReadProjectAvatars());
+
+    /// <summary>
+    /// Reads the <c>_project.md</c> of every Project folder (ADR-0083), keyed by Team and then by Project; a Project with no file, or
+    /// whose file sets no avatar, is simply absent.
+    /// </summary>
+    private Dictionary<string, Dictionary<string, Avatar>> ReadProjectAvatars()
+    {
+        Dictionary<string, Dictionary<string, Avatar>> avatars = new(StringComparer.OrdinalIgnoreCase);
+        foreach (TeamFolder folder in this.tasks.Teams)
+        {
+            foreach (string project in folder.Projects)
+            {
+                string path = Path.Combine(this.tasks.RootDirectory, folder.Name, project, TeamPaths.ProjectFileName);
+                if (TryReadProjectAvatar(path) is not { } avatar)
+                {
+                    continue;
+                }
+
+                if (!avatars.TryGetValue(folder.Name, out Dictionary<string, Avatar>? byProject))
+                {
+                    byProject = new(StringComparer.OrdinalIgnoreCase);
+                    avatars[folder.Name] = byProject;
+                }
+
+                byProject.TryAdd(project, avatar);
+            }
+        }
+
+        return avatars;
+    }
+
+    /// <summary>Reads the avatar from the <c>_project.md</c> at <paramref name="path"/>; a missing or unreadable file, or one with no avatar, is <see langword="null"/>.</summary>
+    private static Avatar? TryReadProjectAvatar(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            Avatar avatar = ProjectFile.Parse(File.ReadAllText(path, Encoding.UTF8)).Avatar;
+            return avatar == Avatar.None ? null : avatar;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Reads the <c>_team.md</c> of every Team folder; a missing or malformed file is simply absent.</summary>
     private Dictionary<string, TeamFile> ReadTeamFiles()
@@ -133,16 +188,43 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         }
     }
 
-    /// <summary>Starts the debounce for a <c>_team.md</c> that sits directly in a Team folder; anything deeper is not a team file.</summary>
+    /// <summary>
+    /// Starts the debounce for a <c>_team.md</c> that sits directly in a Team folder, or a <c>_project.md</c> directly in a Project
+    /// folder; one anywhere else is not that file.
+    /// </summary>
     /// <param name="sender">Unused; required by the event handler shape.</param>
     /// <param name="e">Describes what changed.</param>
     private void OnTeamFileEvent(object sender, FileSystemEventArgs e)
     {
-        string relative = Path.GetRelativePath(this.tasks.RootDirectory, e.FullPath);
-        if (!this.disposed && relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).Length == 2)
+        if (!this.disposed && IsWatchedFile(this.tasks.RootDirectory, e.FullPath))
         {
             this.teamFileTimer.Change(TimeSpan.FromMilliseconds(TeamFileDebounceMilliseconds), Timeout.InfiniteTimeSpan);
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="fullPath"/> is a file the catalog reads: a <c>_team.md</c> directly in a Team folder
+    /// (<c>Team/_team.md</c>) or a <c>_project.md</c> directly in a Project folder (<c>Team/Project/_project.md</c>). The name is
+    /// matched ignoring case, as the watcher's filter is on Windows.
+    /// </summary>
+    /// <param name="root">The Teams root the watcher sits on.</param>
+    /// <param name="fullPath">The path an event reported.</param>
+    /// <returns><see langword="true"/> for one of the two files at its own depth.</returns>
+    internal static bool IsWatchedFile(string root, string fullPath)
+    {
+        string name = Path.GetFileName(fullPath);
+        int expected = -1;
+        if (string.Equals(name, TeamPaths.ProjectFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            expected = 3;
+        }
+        else if (string.Equals(name, TeamPaths.TeamFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            expected = 2;
+        }
+
+        string relative = Path.GetRelativePath(root, fullPath);
+        return relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).Length == expected;
     }
 
     /// <summary>Rebuilds and raises <see cref="Changed"/> once the debounce elapses, unless the catalog was disposed meanwhile.</summary>
@@ -170,13 +252,15 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <param name="folders">Team folders on disk.</param>
     /// <param name="teamFiles">Parsed <c>_team.md</c> files by Team name; a Team without an entry has no team card.</param>
     /// <param name="teamsRoot">The Teams folder; a card naming it as its workspace has none, or <see langword="null"/> to take every card as written.</param>
+    /// <param name="projectAvatars">The Project avatars by Team folder name and then Project name, or <see langword="null"/> for none.</param>
     /// <returns>Sorted list of team summaries.</returns>
     internal static IReadOnlyList<TeamSummary> Build(
         IReadOnlyList<string> labels,
         IReadOnlyList<(string Persona, IReadOnlyList<string> Teams)> members,
         IReadOnlyList<TeamFolder> folders,
         IReadOnlyDictionary<string, TeamFile>? teamFiles = null,
-        string? teamsRoot = null)
+        string? teamsRoot = null,
+        IReadOnlyDictionary<string, Dictionary<string, Avatar>>? projectAvatars = null)
     {
         ArgumentNullException.ThrowIfNull(labels);
         ArgumentNullException.ThrowIfNull(members);
@@ -192,7 +276,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         AddMembers(byName, members);
         FinalizeDisplayNames(byName);
 
-        return BuildSummaries(byName, cards, teamsRoot);
+        return BuildSummaries(byName, cards, teamsRoot, projectAvatars);
     }
 
     /// <summary>Adds the Team folders first; their spelling wins for the display name.</summary>
@@ -306,9 +390,15 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <param name="byName">The teams gathered, compared without case.</param>
     /// <param name="cards">Parsed <c>_team.md</c> files by Team name.</param>
     /// <param name="teamsRoot">The Teams folder, which is never a Team's workspace, or <see langword="null"/>.</param>
+    /// <param name="projectAvatars">The Project avatars by Team folder name and then Project name, or <see langword="null"/> for none.</param>
     /// <returns>The team summaries, sorted by name.</returns>
-    private static List<TeamSummary> BuildSummaries(Dictionary<string, TeamData> byName, Dictionary<string, TeamFile> cards, string? teamsRoot)
+    private static List<TeamSummary> BuildSummaries(
+        Dictionary<string, TeamData> byName,
+        Dictionary<string, TeamFile> cards,
+        string? teamsRoot,
+        IReadOnlyDictionary<string, Dictionary<string, Avatar>>? projectAvatars)
     {
+        Dictionary<string, Avatar> empty = new(StringComparer.OrdinalIgnoreCase);
         List<TeamSummary> result = byName.Values
             .Select(data => new TeamSummary(
                 data.DisplayName,
@@ -328,6 +418,7 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                 Workspace = cards.GetValueOrDefault(data.DisplayName)?.Workspace is { } workspace && (teamsRoot is null || !WorkspaceProbe.IsTeamsRoot(workspace, teamsRoot)) ? workspace : null,
                 Owns = cards.GetValueOrDefault(data.DisplayName)?.Owns,
                 Avatar = cards.GetValueOrDefault(data.DisplayName)?.Avatar ?? Avatar.None,
+                ProjectAvatars = projectAvatars?.GetValueOrDefault(data.DisplayName) ?? empty,
             })
             .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();

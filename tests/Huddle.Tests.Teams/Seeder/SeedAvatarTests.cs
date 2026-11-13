@@ -85,24 +85,65 @@ public sealed class SeedAvatarTests
         }
     }
 
-    /// <summary>SEED-AV-5: the Team colours of <c>software-co</c> are palette colours no two of which are within 30 degrees of hue.</summary>
+    /// <summary>
+    /// SEED-AV-5: the Team colours of <c>software-co</c> are distinct palette colours, one per colour family, and no two are closer
+    /// than ΔE 50 in CIE L*a*b*. The old hue-only spread put its closest pair (violet beside magenta) at ΔE 26, which reads as one colour.
+    /// </summary>
     [Fact]
-    public void Spread_KeepsTeamColoursApartInHue()
+    public void Spread_KeepsTeamColoursApartAsTheEyeSeesThem()
     {
         int teams = Plan(ScenarioCatalog.DefaultName).Teams.Count;
 
-        double[] hues = [.. AvatarWriter.Spread(teams).Select(static hex => new MudColor(hex).H)];
+        IReadOnlyList<string> colours = AvatarWriter.Spread(teams);
 
-        Assert.Equal(teams, hues.Length);
+        Assert.Equal(AvatarWriter.Families.Take(teams), colours);
+        MudColor[] parsed = [.. colours.Select(static hex => new MudColor(hex))];
         Assert.All(
-            hues.SelectMany((first, i) => hues.Skip(i + 1).Select(second => HueDistance(first, second))),
-            distance => Assert.InRange(distance, 30, 180));
+            parsed.SelectMany((first, i) => parsed.Skip(i + 1).Select(second => AvatarWriter.Difference(first, second))),
+            distance => Assert.True(distance >= 50, $"Two Team colours are only ΔE {distance:0.0} apart."));
     }
 
-    private static double HueDistance(double first, double second)
+    /// <summary>
+    /// Every pair of named colour families is at least ΔE 50 apart, not only the ones today's scenario uses, so a scenario that adds
+    /// Teams up to the number of families still never gets two that look alike.
+    /// </summary>
+    [Fact]
+    public void Families_AreAllAtLeastDeltaE50Apart()
     {
-        double difference = Math.Abs(first - second) % 360;
-        return Math.Min(difference, 360 - difference);
+        MudColor[] families = [.. AvatarWriter.Families.Select(static hex => new MudColor(hex))];
+
+        Assert.All(
+            families.SelectMany((first, i) => families.Skip(i + 1).Select(second => (first, second))),
+            pair => Assert.True(AvatarWriter.Difference(pair.first, pair.second) >= 50, $"{pair.first} and {pair.second} are only ΔE {AvatarWriter.Difference(pair.first, pair.second):0.0} apart."));
+    }
+
+    /// <summary>The colour distance is CIE76 in L*a*b*: black and white are ΔE 100 apart, a colour is 0 from itself, and pure red to pure green is about 170.</summary>
+    [Fact]
+    public void Difference_MatchesKnownLabDistances()
+    {
+        Assert.Equal(100, AvatarWriter.Difference(new MudColor("#000000"), new MudColor("#ffffff")), precision: 0);
+        Assert.Equal(0, AvatarWriter.Difference(new MudColor("#dc143c"), new MudColor("#dc143c")), precision: 6);
+        Assert.InRange(AvatarWriter.Difference(new MudColor("#ff0000"), new MudColor("#00ff00")), 169, 171);
+    }
+
+    /// <summary>Every colour family the seeder hands out is still an <see cref="AvatarPalette"/> colour, so a Team's colour is one the editor's swatches can show as chosen.</summary>
+    [Fact]
+    public void Families_AreAllPaletteColours()
+    {
+        string[] palette = [.. AvatarPalette.Colours.Select(static c => c.ToString(MudColorOutputFormats.Hex))];
+
+        Assert.All(AvatarWriter.Families, hex => Assert.Contains(hex, palette, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Past the named families the spread still hands out distinct palette colours, so a plan with more Agents than families never repeats one.</summary>
+    [Fact]
+    public void Spread_PastTheFamilies_StaysDistinct()
+    {
+        int count = AvatarWriter.Families.Count + 5;
+
+        IReadOnlyList<string> colours = AvatarWriter.Spread(count);
+
+        Assert.Equal(count, colours.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     private static SeedPlan Plan(string scenario) =>
