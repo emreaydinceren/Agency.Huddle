@@ -11,7 +11,7 @@
 @inject TabService Tabs
 
 <div class="nav-tab-link" @onclick="this.OnClick" @ondblclick="this.OnDoubleClick">
-    <MudNavLink Href="@this.Href" Match="this.Match" Icon="@this.Icon" IconColor="this.IconColor" Class="@this.Class" @attributes="this.AdditionalAttributes">@this.ChildContent</MudNavLink>
+    <MudNavLink Href="@this.Href" Match="this.Match" ActiveClass="@(this.Highlight ? "active" : "nav-tab-link-quiet")" Icon="@this.Icon" IconColor="this.IconColor" Class="@this.Class" @attributes="this.AdditionalAttributes">@this.ChildContent</MudNavLink>
 </div>
 
 @code {
@@ -26,6 +26,14 @@
     /// <summary>How the active highlight matches <see cref="Href"/>.</summary>
     [Parameter]
     public NavLinkMatch Match { get; set; } = NavLinkMatch.Prefix;
+
+    /// <summary>
+    /// Whether the link wears the active highlight while its page is showing. The Activity bar turns it off when a Sidebar
+    /// view tile was clicked after the page opened, so only one tile reads as selected; the link still sets
+    /// <c>aria-current</c>.
+    /// </summary>
+    [Parameter]
+    public bool Highlight { get; set; } = true;
 
     /// <summary>The link's icon, if any.</summary>
     [Parameter]

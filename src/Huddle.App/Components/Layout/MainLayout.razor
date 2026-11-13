@@ -53,27 +53,31 @@
        Every view stays mounted and only the selected one is shown, so a view keeps its open groups and its
        subscriptions when the Human switches away and back. *@
     <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="@this.DrawerWidth" Elevation="0" ClipMode="DrawerClipMode.Always" Class="shell-nav">
-        <ActivityBar Selected="this.sidebarView" SelectedChanged="this.OnSidebarViewChanged">
+        <ActivityBar Selected="this.ShownView" SelectedChanged="this.OnSidebarViewChanged">
             <Shortcuts>
-                <TeamShortcutBar Selected="@this.ShortcutSelected" SelectedChanged="this.OnShortcutChanged" />
+                <TeamShortcutBar Selected="@this.ShownShortcut" SelectedChanged="this.OnShortcutChanged" />
             </Shortcuts>
             <Top>
                 @if (this.FeedOptions.Value.Feed.Enabled)
                 {
-                    <MudNavMenu Class="nav-settings">
-                        <MudTooltip Text="Feed" Placement="Placement.Right">
-                            <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.Feed" aria-label="Feed" />
-                        </MudTooltip>
-                    </MudNavMenu>
+                    <div class="activity-bar-page-tiles" @onclick="this.LightPageTile">
+                        <MudNavMenu Class="nav-settings">
+                            <MudTooltip Text="Feed" Placement="Placement.Right">
+                                <NavTabLink Href="/feed" TabTitle="Feed" Icon="@Icons.Material.Outlined.Feed" Highlight="this.PageTileLit" aria-label="Feed" />
+                            </MudTooltip>
+                        </MudNavMenu>
+                    </div>
                 }
             </Top>
             <Bottom>
-                <MudNavMenu Class="nav-settings">
-                    <ArchivedLink />
-                    <MudTooltip Text="Settings" Placement="Placement.Right">
-                        <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Outlined.Settings" aria-label="Settings" />
-                    </MudTooltip>
-                </MudNavMenu>
+                <div class="activity-bar-page-tiles" @onclick="this.LightPageTile">
+                    <MudNavMenu Class="nav-settings">
+                        <ArchivedLink Highlight="this.PageTileLit" />
+                        <MudTooltip Text="Settings" Placement="Placement.Right">
+                            <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Outlined.Settings" Highlight="this.PageTileLit" aria-label="Settings" />
+                        </MudTooltip>
+                    </MudNavMenu>
+                </div>
             </Bottom>
         </ActivityBar>
         <div id="@ActivityBar.SidebarElementId" class="sidebar-views" hidden="@(this.sidebarView is null)">
@@ -101,7 +105,7 @@
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Tasks)">
                 <TaskViewNav />
             </div>
-            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Library)">
+            <div class="sidebar-view sidebar-view-library" hidden="@(this.sidebarView != SidebarView.Library)">
                 <LibrarySidebarTree />
             </div>
             <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Scheduled)">
@@ -137,6 +141,24 @@
     /// <summary>The Team whose shortcut is pressed: <see cref="shortcutTeam"/> while its view is the one shown.</summary>
     private string? ShortcutSelected => this.sidebarView == SidebarView.Team ? this.shortcutTeam : null;
 
+    /// <summary>Which Activity bar tile is lit when a page tile's page is open and a view is shown: the one clicked last.</summary>
+    private readonly ActivityBarHighlight highlight = new();
+
+    /// <summary>Whether the page tiles (Feed, Archived, Settings) wear their active highlight.</summary>
+    private bool PageTileLit => this.highlight.PageTileLit;
+
+    /// <summary>The view the Activity bar draws as pressed. A click on an unlit view tile therefore selects it rather than collapsing the Sidebar.</summary>
+    private SidebarView? ShownView => this.highlight.ViewTileLit(this.Tabs.Active?.Url) ? this.sidebarView : null;
+
+    /// <summary>The Team shortcut the Activity bar draws as pressed, under the same rule as <see cref="ShownView"/>.</summary>
+    private string? ShownShortcut => this.highlight.ViewTileLit(this.Tabs.Active?.Url) ? this.ShortcutSelected : null;
+
+    /// <summary>A page tile was clicked: it is the last tile clicked, so it is the one lit.</summary>
+    private void LightPageTile()
+    {
+        this.highlight.PageTileClicked();
+    }
+
     /// <summary>The area the focused pane's page was last in (see <see cref="SidebarViews.AreaOf(string?)"/>), so the Sidebar follows a change of area and not every navigation.</summary>
     private string? followedArea;
 
@@ -163,12 +185,14 @@
     private void OnSidebarViewChanged(SidebarView? view)
     {
         this.sidebarView = view;
+        this.highlight.ViewClicked(collapsed: view is null);
     }
 
     /// <summary>Shows the Team a shortcut selected, or collapses the Sidebar when the shortcut reports none.</summary>
     /// <param name="team">The Team to show, or <see langword="null"/> to collapse.</param>
     private void OnShortcutChanged(string? team)
     {
+        this.highlight.ViewClicked(collapsed: team is null);
         if (team is null)
         {
             this.sidebarView = null;
@@ -238,7 +262,9 @@
     {
         _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            if (this.FollowFocusedArea())
+            bool activeMoved = this.highlight.ActiveTabSeen(this.Tabs.Active?.Url);
+            bool viewMoved = this.FollowFocusedArea();
+            if (activeMoved || viewMoved)
             {
                 this.StateHasChanged();
             }
@@ -256,6 +282,7 @@
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
         this.Tabs.Changed += this.OnTabsChanged;
         this.ApplyAppearance(this.AppearanceStore.Current);
+        _ = this.highlight.ActiveTabSeen(this.Tabs.Active?.Url);
         _ = this.FollowFocusedArea();
         this.RedirectFirstRun();
     }

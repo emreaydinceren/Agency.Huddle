@@ -2,13 +2,14 @@
 @using Agency.Huddle.App.Library
 @inject IOptions<TeamOptions> Options
 
-@* The Library view of the Sidebar: the folders and files of every Root (Teams, Agents, Uploads and each pinned
+@* The Library view of the Sidebar: a "Library" heading in the Team view's section-title type, then the folders and files of every Root (Teams, Agents, Uploads and each pinned
    folder), with the search field, New note and New folder above them. It is the tree half of the Library explorer;
    the open document is the Library page's, in the main area, and a click on a file opens that Tab on it. It
    renders nothing when Library.Enabled is off. *@
 @if (this.Options.Value.Library.Enabled)
 {
     <div class="library-sidebar-tree">
+        <MudText HtmlTag="h2" Typo="Typo.caption" Class="library-sidebar-title">Library</MudText>
         <LibraryExplorer Part="LibraryExplorerPart.TreeOnly" ShowTitle="false" />
     </div>
 }

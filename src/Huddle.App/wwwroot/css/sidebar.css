@@ -449,13 +449,33 @@
     border-top: 1px solid var(--ink-line);
 }
 
-.teams-nav-host .teams-nav-section-title {
+.teams-nav-host .teams-nav-section-title,
+.library-sidebar-title {
     flex: 1 1 auto;
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--mud-palette-text-secondary);
+}
+
+/* The Library view's heading (LibrarySidebarTree.razor), an h2 for the outline, lines up with the search field below it.
+   The view starts 8px down rather than every view's 16px, and the search row drops its own top padding to 4px, so the
+   heading sits close to both the top and the search field. */
+.library-sidebar-title.mud-typography {
+    display: block;
+    margin: 0;
+    padding: 0 16px;
+    line-height: 1.5;
+}
+
+.sidebar-view.sidebar-view-library {
+    padding-top: 8px;
+}
+
+.library-sidebar-tree .library-explorer-tree-header {
+    min-height: 0;
+    padding-top: 4px;
 }
 
 .teams-nav-host .teams-nav-section-add.mud-icon-button {

@@ -644,6 +644,7 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Components/Layout/TopBar.razor` | The fixed bar across the top of the window: the focused pane's breadcrumb trail, with cells reserved for a search box and toolbar buttons. |
 | `Components/Layout/TabStrip.razor` | One group's strip of Tabs, with the right-click Tab menu (pin, move left, move right, close). |
 | `Components/Layout/ActivityBar.razor` | The Activity bar (`S5`): one button per Sidebar view, pressed while selected, and a `Bottom` slot. Holds no state; `MainLayout` owns the selected view. The toggle rule and the list of views are in `SidebarView.cs` (`SidebarViews.Next`, `SidebarViews.Available`). |
+| `Components/Layout/ActivityBarHighlight.cs` | Which Activity bar tile is lit when a page tile's page (Feed, Archived, Settings) is open and a Sidebar view is shown: the last one clicked. `MainLayout` owns one and feeds it view clicks, page tile clicks and active Tab moves; `SidebarViews.IsPageTileAddress` names the page tiles' addresses. |
 | `Components/Layout/NavTabLink.razor` | A left-menu link that opens a Tab (single click previews, double click keeps). |
 | `Components/Layout/TabSync.razor` | Keeps a Room's Tab title and lifetime in step with the Room, and closes the Tab of a removed Team or Project. |
 | `Components/Layout/TabPersistence.razor` | Restores the stored Tabs after the first render and saves every change (`huddle:tabs`). |

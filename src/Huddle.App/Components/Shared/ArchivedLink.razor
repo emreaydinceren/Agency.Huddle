@@ -2,9 +2,15 @@
     The Activity bar's "Archived" entry - sits directly above the Settings link in MainLayout.razor's nav-settings
     MudNavMenu, at the foot of the bar. Icon-only, tooltipped and aria-labelled, matching the Settings link beside it.
     It opens the Archived page (/archived) in a Tab, as Settings opens its own, and wears the active treatment on any
-    of the page's tab addresses (/archived/teams, /archived/projects, /archived/chats).
+    of the page's tab addresses (/archived/teams, /archived/projects, /archived/chats) while Highlight is on.
 *@
 
 <MudTooltip Text="Archived" Placement="Placement.Right">
-    <NavTabLink Href="@ArchivedTabs.Root" TabTitle="Archived" Icon="@Icons.Material.Outlined.Archive" aria-label="Archived" />
+    <NavTabLink Href="@ArchivedTabs.Root" TabTitle="Archived" Icon="@Icons.Material.Outlined.Archive" Highlight="this.Highlight" aria-label="Archived" />
 </MudTooltip>
+
+@code {
+    /// <summary>Whether the link wears the active highlight while the Archived page is showing (see <see cref="NavTabLink.Highlight"/>).</summary>
+    [Parameter]
+    public bool Highlight { get; set; } = true;
+}

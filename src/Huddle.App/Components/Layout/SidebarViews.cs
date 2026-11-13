@@ -46,6 +46,26 @@ internal static class SidebarViews
     public static SidebarView? Next(SidebarView? current, SidebarView clicked) => current == clicked ? null : clicked;
 
     /// <summary>
+    /// Whether an address is the page of one of the Activity bar's page tiles (Feed, Archived and Settings), which open a
+    /// Tab rather than a Sidebar view: its first path segment is <c>feed</c>, <c>archived</c> or <c>settings</c>.
+    /// </summary>
+    /// <param name="url">The site-relative address of the focused pane's active Tab, or <see langword="null"/> when it has none.</param>
+    public static bool IsPageTileAddress(string? url)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return false;
+        }
+
+        string path = url.TrimStart('/');
+        int end = path.IndexOfAny(['/', '?', '#']);
+        string first = end < 0 ? path : path[..end];
+        return first.Equals("feed", StringComparison.OrdinalIgnoreCase)
+            || first.Equals("archived", StringComparison.OrdinalIgnoreCase)
+            || first.Equals("settings", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// The page area a Tab's address belongs to: the first path segment when it names one of the places the
     /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>agents</c>, <c>tasks</c>, <c>library</c>,
     /// <c>scheduled</c>, <c>settings</c>), otherwise <see langword="null"/> (the home page, an unknown address).
