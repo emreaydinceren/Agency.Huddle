@@ -319,25 +319,29 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
     min-height: 61px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--hu-line-region);
     background: var(--hu-ground-sidebar);
 }
 
-/* The search keeps room for its placeholder ("Search notes" is 81px, so the field needs 10rem); in a narrow pane the header
-   wraps (flex-wrap above) and the actions take a second line instead of squeezing it. */
+/* The search always fills its own row, so New note and New folder always wrap to the row below it (flex-wrap above),
+   never beside it, at any pane width. The 4px row gap keeps the two rows close. */
 .library-explorer-tree-header > .library-explorer-search {
-    flex: 1 1 10rem;
-    min-width: 10rem;
+    flex: 1 1 100%;
+    min-width: 0;
 }
 
+/* Both buttons carry a label, so in a pane narrower than the pair (the Team Files tab's tree is 200px) New folder wraps
+   under New note rather than spilling out of the header. */
 .library-explorer-tree-actions {
     display: flex;
-    flex: 0 0 auto;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
+    min-width: 0;
 }
 
 /* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
@@ -346,7 +350,8 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 /* ---- Library tree density ----------------------------------------------------------------------
-   32px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
+   Rows are 1.6x the tree's font size (about 21px at 13px), so the spacing scales with the text instead of
+   leaving a fixed 32px; on a touch screen 44px, the minimum target. The tree is inset 8px
    and each row is inset 4px (the Selected shape) and pads 4px more, so a label column starts 16px from
    the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
@@ -361,7 +366,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 }
 
 .library-tree .mud-treeview-item-content {
-    min-height: 32px;
+    min-height: 1.6em;
     width: calc(100% - 8px);
     margin-inline: 4px;
     padding-block: 0;

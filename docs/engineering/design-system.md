@@ -409,7 +409,7 @@ small mark below them). A row is 32px; there is no density switch and no other r
 | --- | --- |
 | 24px | A Status or Tag chip; an avatar in a row or the sidebar; a Feed row's avatar |
 | 28px | A Small button, an icon button, a toolbar row, a Filter chip; the dialog close button |
-| 32px | Every row: the sidebar, a menu item, a picker row, the Library tree, the Task List, the Task edit page's properties; the page title's row |
+| 32px | Every row: the sidebar, a menu item, a picker row, the Task List, the Task edit page's properties; the page title's row |
 | 40px | The Activity bar's tile |
 | 50px | An avatar on a card or tile, a Feed card's avatar included, and a Message's avatar in the Transcript |
 | 44px | The least a touch target gets: a Library tree row on a touch screen |
@@ -804,7 +804,7 @@ The Room is the Transcript over the Composer in one column.
 
 ### The Library
 
-- **Tree rows** are 32px, 13px text, 16px icons and a 16px indent (44px high on a touch screen).
+- **Tree rows** are 1.6em (about 21px at the 13px text), so their spacing follows the font, with 16px icons and a 16px indent (44px high on a touch screen).
 - **The reader** is `body1` x 8/7 (16px) at 1.65 with a 46.29em measure (35em widened 15% twice),
   centred in the pane rather than set flush left. A note's Markdown h1 is
   24px at 600, the one size above 20px in the app, and only in the reader.

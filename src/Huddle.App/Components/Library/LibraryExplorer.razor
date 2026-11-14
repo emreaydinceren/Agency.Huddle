@@ -78,8 +78,8 @@
         RenderFragment treePanel = @<text>
                 @* The tree is never unmounted while filtered (nothing persists its expansion): it is
                    hidden, and the results render beside it. *@
-                @* L2c: the tree panel's own header, shared by every host: search, New note, New folder, in one row that is the
-                   same height as the document toolbar beside it (audit B2). *@
+                @* L2c: the tree panel's own header, shared by every host: search on its own row, then New note and
+                   New folder on the row below it, in every pane width. *@
                 <div class="library-explorer-tree-header">
                     <SearchField Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search notes"
                                  AriaLabel="Search notes" Compact="true" Class="library-explorer-search" />
@@ -88,10 +88,8 @@
                         <div class="library-explorer-tree-actions">
                             <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote"
                                        OnClick="this.NewNoteAsync" Class="library-explorer-new-note">New note</MudButton>
-                            <MudTooltip Text="New folder">
-                                <MudIconButton Icon="@ActionIcons.NewFolder" Size="Size.Small" aria-label="New folder"
-                                               OnClick="this.NewFolderAsync" Class="library-explorer-new-folder" />
-                            </MudTooltip>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewFolder"
+                                       OnClick="this.NewFolderAsync" Class="library-explorer-new-folder">New folder</MudButton>
                         </div>
                     }
                 </div>

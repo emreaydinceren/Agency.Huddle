@@ -11,13 +11,13 @@ public sealed class LibraryReadingStyleSourceTests
 {
     private const string Measure = "max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 46.29) + 32px);";
 
-    /// <summary>Tree rows are 32px tall (the row height of the sidebar and the menus), their icons 16px and the warning glyph on a folder 14px.</summary>
+    /// <summary>Tree rows are 1.6x the tree's font size tall, so their spacing follows the text, with 16px icons and a 14px warning glyph on a folder.</summary>
     [Fact]
-    public void AppCss_TreeRows_AreThirtyTwoPixelsWithSixteenPixelIcons()
+    public void AppCss_TreeRows_ScaleWithTheFontWithSixteenPixelIcons()
     {
         string css = CssText.AppCss();
 
-        Assert.Contains("min-height: 32px;", CssText.RuleBody(css, ".library-tree .mud-treeview-item-content", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("min-height: 1.6em;", CssText.RuleBody(css, ".library-tree .mud-treeview-item-content", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("height: 16px;", CssText.RuleBody(css, ".library-tree .mud-treeview-item-icon .mud-icon-root", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("height: 14px;", CssText.RuleBody(css, ".library-tree-orphan .mud-icon-root", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
