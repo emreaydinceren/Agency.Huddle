@@ -32,6 +32,8 @@
                            Default: off (one node process per Persona).
       -NoBuild             Skip the build; run what is already compiled.
                            Default: off (builds src/Huddle.App first).
+      -RunAnalyzers        Run the code analyzers in the build, as CI does.
+                           Default: off (analyzers skipped: faster, nothing linted).
       -DataDir <path>      Data folder; relative paths resolve against src/Huddle.App.
                            Default: $env:Team__DataDir if set, else App_Data
                            (with -Seed: <SeedRoot>\data).
@@ -70,6 +72,17 @@
 .PARAMETER NoBuild
     Skip the build and run whatever is already compiled.
     Default: off - src/Huddle.App is built before the app starts.
+
+.PARAMETER RunAnalyzers
+    Run the code analyzers (Sonar, Meziantou, CA, IDE, HUD and the rest) in this script's
+    build, exactly as `dotnet build Huddle.slnx` and CI do. Ignored with -NoBuild.
+    Without it the build passes -p:RunAnalyzers=false: no analyzer runs, source generators
+    still do, so the app compiles faster but nothing is linted.
+    Caveat: MSBuild does not count RunAnalyzers when it decides a project is up to date, so
+    a project this script compiled unlinted is skipped by your next `dotnet build Huddle.slnx`,
+    and its analyzer errors stay hidden until the code changes again (CI still reports them).
+    Run `dotnet build Huddle.slnx --no-incremental` before you push.
+    Default: off - analyzers are skipped.
 
 .PARAMETER DataDir
     Overrides the data directory. $env:Team__DataDir is honoured when -DataDir is not
@@ -124,6 +137,7 @@
     ./run.ps1 -PipeName my-pipe
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
+    ./run.ps1 -RunAnalyzers
     ./run.ps1 -Seed
     ./run.ps1 -Seed -Port 1111
     ./run.ps1 -Clean
@@ -137,6 +151,7 @@ param(
     [string]$PipeName,
     [switch]$NoAcp,
     [switch]$NoBuild,
+    [switch]$RunAnalyzers,
     [string]$DataDir,
     [switch]$Seed,
     [string]$SeedRoot = (Join-Path ([System.IO.Path]::GetPathRoot($env:SystemRoot)) 'seeds/huddle/software-co'),
@@ -315,7 +330,16 @@ if ($LogLevel) {
     $appArgs += @('--log-level', $LogLevel)
 }
 
+# Analyzers are off unless -RunAnalyzers: RunAnalyzers=false skips every diagnostic analyzer
+# but keeps source generators ([LoggerMessage], [GeneratedRegex], Razor), so the app still compiles.
+$buildArgs = @('build', $appProject)
+if (-not $RunAnalyzers) {
+    $buildArgs += '-p:RunAnalyzers=false'
+}
 $buildCommand = "dotnet build `"$appProject`""
+if (-not $RunAnalyzers) {
+    $buildCommand += ' -p:RunAnalyzers=false'
+}
 $runCommand = "dotnet run --project `"$appProject`" --no-build --urls $url"
 if ($appArgs.Count -gt 0) {
     $runCommand += ' -- ' + ($appArgs -join ' ')
@@ -464,10 +488,13 @@ if ($seedCommand) {
 if (-not $NoBuild) {
     Write-Host ''
     Write-Host 'Building Huddle.App (and its project references; tests are not built)...' -ForegroundColor Cyan
+    if (-not $RunAnalyzers) {
+        Write-Host '   Analyzers off (pass -RunAnalyzers to lint). Run `dotnet build Huddle.slnx --no-incremental` before you push.' -ForegroundColor Gray
+    }
 
     Push-Location $scriptDir
     try {
-        dotnet build $appProject
+        & dotnet @buildArgs
         $buildExitCode = $LASTEXITCODE
     } finally {
         Pop-Location
